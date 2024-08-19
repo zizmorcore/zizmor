@@ -56,6 +56,6 @@ pub(crate) struct Finding {
     pub(crate) workflow: String,
     pub(crate) severity: Severity,
     pub(crate) confidence: Confidence,
-    pub(crate) job: JobIdentity,
+    pub(crate) job: Option<JobIdentity>,
     pub(crate) steps: Vec<StepIdentity>,
 }

@@ -7,7 +7,7 @@ use itertools::Itertools;
 use crate::finding::{Confidence, Finding, JobIdentity, Severity, StepIdentity};
 use crate::models::Workflow;
 
-pub(crate) fn artipacked(workflow: &Workflow) -> Vec<Finding> {
+pub(crate) fn audit(workflow: &Workflow) -> Vec<Finding> {
     let mut findings = vec![];
 
     for (jobname, job) in workflow.jobs.iter() {
@@ -50,7 +50,7 @@ pub(crate) fn artipacked(workflow: &Workflow) -> Vec<Finding> {
         }
 
         if vulnerable_uploads.is_empty() {
-            // If we have no vulnerable uploads, then emit lower-severity
+            // If we have no vulnerable uploads, then emit lower-confidence
             // findings for just the checkout steps.
             for checkout in vulnerable_checkouts {
                 findings.push(Finding {
@@ -58,7 +58,7 @@ pub(crate) fn artipacked(workflow: &Workflow) -> Vec<Finding> {
                     workflow: workflow.filename.clone(),
                     severity: Severity::Medium,
                     confidence: Confidence::Low,
-                    job: JobIdentity::new(&jobname, job),
+                    job: Some(JobIdentity::new(&jobname, job)),
                     steps: vec![checkout],
                 })
             }
@@ -76,7 +76,7 @@ pub(crate) fn artipacked(workflow: &Workflow) -> Vec<Finding> {
                         workflow: workflow.filename.clone(),
                         severity: Severity::High,
                         confidence: Confidence::High,
-                        job: JobIdentity::new(&jobname, job),
+                        job: Some(JobIdentity::new(&jobname, job)),
                         steps: vec![checkout, upload],
                     })
                 }

@@ -1,7 +1,4 @@
-use std::{
-    io::stdout,
-    path::{Path, PathBuf},
-};
+use std::{io::stdout, path::PathBuf};
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
@@ -53,7 +50,9 @@ fn main() -> Result<()> {
     let mut findings = vec![];
     for workflow_path in workflow_paths.iter() {
         let workflow = models::Workflow::from_file(workflow_path)?;
-        findings.extend(audit::artipacked(&workflow));
+        // TODO: Proper abstraction for multiple audits here.
+        findings.extend(audit::artipacked::audit(&workflow));
+        findings.extend(audit::pull_request_target::audit(&workflow));
     }
 
     if !findings.is_empty() {
