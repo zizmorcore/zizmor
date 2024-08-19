@@ -49,22 +49,37 @@ pub(crate) fn artipacked(workflow: &Workflow) -> Vec<Finding> {
             }
         }
 
-        // Select only pairs where the vulnerable checkout precedes the
-        // vulnerable upload. There are more efficient ways to do this than
-        // a cartesian product, but this way is simple.
-        for (checkout, upload) in vulnerable_checkouts
-            .iter()
-            .cartesian_product(vulnerable_uploads.iter())
-        {
-            if checkout.number < upload.number {
+        if vulnerable_uploads.is_empty() {
+            // If we have no vulnerable uploads, then emit lower-severity
+            // findings for just the checkout steps.
+            for checkout in vulnerable_checkouts {
                 findings.push(Finding {
                     ident: "artipacked",
                     workflow: workflow.filename.clone(),
-                    severity: Severity::High,
-                    confidence: Confidence::High,
+                    severity: Severity::Medium,
+                    confidence: Confidence::Low,
                     job: JobIdentity::new(&jobname, job),
-                    steps: vec![checkout.clone(), upload.clone()],
+                    steps: vec![checkout],
                 })
+            }
+        } else {
+            // Select only pairs where the vulnerable checkout precedes the
+            // vulnerable upload. There are more efficient ways to do this than
+            // a cartesian product, but this way is simple.
+            for (checkout, upload) in vulnerable_checkouts
+                .into_iter()
+                .cartesian_product(vulnerable_uploads.into_iter())
+            {
+                if checkout.number < upload.number {
+                    findings.push(Finding {
+                        ident: "artipacked",
+                        workflow: workflow.filename.clone(),
+                        severity: Severity::High,
+                        confidence: Confidence::High,
+                        job: JobIdentity::new(&jobname, job),
+                        steps: vec![checkout, upload],
+                    })
+                }
             }
         }
     }

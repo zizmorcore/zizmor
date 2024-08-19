@@ -149,9 +149,9 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "github-actions-models"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "493ff826af5968c10e8bd713f0fc7165d2614f0a69b8d8b692a5234ce2ed61b6"
+checksum = "0abbacd3455c39b0ee742ea5e1ac3ee05c732ddaf6acda88c9ba237cb7150df2"
 dependencies = [
  "serde",
  "serde_yaml",

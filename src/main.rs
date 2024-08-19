@@ -40,6 +40,12 @@ fn main() -> Result<()> {
                 _ => continue,
             }
         }
+
+        if workflow_paths.is_empty() {
+            return Err(anyhow!(
+                "no workflow files collected; empty or wrong directory?"
+            ));
+        }
     } else {
         return Err(anyhow!("input must be a single workflow file or directory"));
     }
