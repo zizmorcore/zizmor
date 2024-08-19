@@ -1,0 +1,13 @@
+[package]
+name = "zizmor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+clap = { version = "4.5.16", features = ["derive"] }
+github-actions-models = "0.3.0"
+itertools = "0.13.0"
+serde = { version = "1.0.208", features = ["derive"] }
+serde_json = "1.0.125"
+serde_yaml = "0.9.34"
