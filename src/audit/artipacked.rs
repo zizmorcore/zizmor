@@ -68,7 +68,7 @@ pub(crate) fn audit(_options: &AuditOptions, workflow: &Workflow) -> Vec<Finding
                     workflow: workflow.filename.clone(),
                     severity: Severity::Medium,
                     confidence: Confidence::Low,
-                    job: Some(JobIdentity::new(&jobname, job)),
+                    job: Some(JobIdentity::new(jobname, job.name.as_deref())),
                     steps: vec![checkout],
                 })
             }
@@ -86,7 +86,7 @@ pub(crate) fn audit(_options: &AuditOptions, workflow: &Workflow) -> Vec<Finding
                         workflow: workflow.filename.clone(),
                         severity: Severity::High,
                         confidence: Confidence::High,
-                        job: Some(JobIdentity::new(&jobname, job)),
+                        job: Some(JobIdentity::new(jobname, job.name.as_deref())),
                         steps: vec![checkout, upload],
                     })
                 }

@@ -15,19 +15,26 @@ struct Args {
     #[arg(short, long)]
     pedantic: bool,
 
+    /// The GitHub API token to use. If not supplied or present in the environment,
+    /// `gh auth token` is attempted.
+    #[arg(long, env)]
+    gh_token: String,
+
     /// The workflow filename or directory to audit.
     input: PathBuf,
 }
 
-impl From<&Args> for AuditOptions {
-    fn from(value: &Args) -> Self {
+impl<'a> From<&'a Args> for AuditOptions<'a> {
+    fn from(value: &'a Args) -> Self {
         Self {
             pedantic: value.pedantic,
+            gh_token: &value.gh_token,
         }
     }
 }
 
-fn main() -> Result<()> {
+#[tokio::main(flavor = "multi_thread", worker_threads = 10)]
+async fn main() -> Result<()> {
     env_logger::init();
     let args = Args::parse();
 
@@ -35,9 +42,9 @@ fn main() -> Result<()> {
 
     let mut workflow_paths = vec![];
     if args.input.is_file() {
-        workflow_paths.push(args.input);
+        workflow_paths.push(args.input.clone());
     } else if args.input.is_dir() {
-        let mut absolute = std::fs::canonicalize(args.input)?;
+        let mut absolute = std::fs::canonicalize(&args.input)?;
         if !absolute.ends_with(".github/workflows") {
             absolute.push(".github/workflows")
         }
@@ -67,6 +74,7 @@ fn main() -> Result<()> {
         // TODO: Proper abstraction for multiple audits here.
         findings.extend(audit::artipacked::audit(&options, &workflow));
         findings.extend(audit::pull_request_target::audit(&options, &workflow));
+        findings.extend(audit::impostor_commits::audit(&options, &workflow).await?);
     }
 
     if !findings.is_empty() {

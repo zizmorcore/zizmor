@@ -35,6 +35,7 @@ impl Workflow {
     }
 }
 
-pub(crate) struct AuditOptions {
+pub(crate) struct AuditOptions<'a> {
     pub(crate) pedantic: bool,
+    pub(crate) gh_token: &'a str,
 }

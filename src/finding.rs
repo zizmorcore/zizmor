@@ -1,4 +1,4 @@
-use github_actions_models::workflow::job::{NormalJob, Step};
+use github_actions_models::workflow::job::Step;
 use serde::Serialize;
 
 // TODO: Traits + more flexible models here.
@@ -41,10 +41,10 @@ pub(crate) struct JobIdentity {
 }
 
 impl JobIdentity {
-    pub(crate) fn new(id: &str, job: &NormalJob) -> Self {
+    pub(crate) fn new(id: &str, name: Option<&str>) -> Self {
         Self {
             id: id.to_string(),
-            name: job.name.clone(),
+            name: name.map(|n| n.to_string()),
         }
     }
 }
