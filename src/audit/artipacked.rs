@@ -4,10 +4,13 @@ use github_actions_models::{
 };
 use itertools::Itertools;
 
-use crate::finding::{Confidence, Finding, JobIdentity, Severity, StepIdentity};
 use crate::models::Workflow;
+use crate::{
+    finding::{Confidence, Finding, JobIdentity, Severity, StepIdentity},
+    models::AuditOptions,
+};
 
-pub(crate) fn audit(workflow: &Workflow) -> Vec<Finding> {
+pub(crate) fn audit(_options: &AuditOptions, workflow: &Workflow) -> Vec<Finding> {
     let mut findings = vec![];
 
     for (jobname, job) in workflow.jobs.iter() {
@@ -29,11 +32,18 @@ pub(crate) fn audit(workflow: &Workflow) -> Vec<Finding> {
             if uses.starts_with("actions/checkout") {
                 match with.get("persist-credentials") {
                     Some(EnvValue::Boolean(false)) => continue,
+                    Some(EnvValue::Boolean(true)) => {
+                        // If a user explicitly sets `persist-credentials: true`,
+                        // they probably mean it. Only report if being pedantic.
+                        if _options.pedantic {
+                            vulnerable_checkouts.push(StepIdentity::new(stepno, step))
+                        } else {
+                            continue;
+                        }
+                    }
                     // TODO: handle expressions and literal strings here.
                     // persist-credentials is true by default.
-                    Some(EnvValue::Boolean(true)) | _ => {
-                        vulnerable_checkouts.push(StepIdentity::new(stepno, step))
-                    }
+                    _ => vulnerable_checkouts.push(StepIdentity::new(stepno, step)),
                 }
             }
 

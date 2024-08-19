@@ -34,3 +34,7 @@ impl Workflow {
         })
     }
 }
+
+pub(crate) struct AuditOptions {
+    pub(crate) pedantic: bool,
+}

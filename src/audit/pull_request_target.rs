@@ -2,9 +2,9 @@ use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::Trigger;
 
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::Workflow;
+use crate::models::{AuditOptions, Workflow};
 
-pub(crate) fn audit(workflow: &Workflow) -> Vec<Finding> {
+pub(crate) fn audit(_options: &AuditOptions, workflow: &Workflow) -> Vec<Finding> {
     let trigger = &workflow.on;
 
     let has_pull_request_target = match trigger {
