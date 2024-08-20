@@ -19,6 +19,12 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
     }
 
     async fn audit(&self, workflow: &Workflow) -> Result<Vec<Finding>> {
+        log::debug!(
+            "audit: {} evaluating {}",
+            Self::AUDIT_IDENT,
+            &workflow.filename
+        );
+
         let trigger = &workflow.on;
 
         let has_pull_request_target = match trigger {
@@ -38,6 +44,12 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
                 steps: vec![],
             })
         }
+
+        log::debug!(
+            "audit: {} completed {}",
+            Self::AUDIT_IDENT,
+            &workflow.filename
+        );
 
         Ok(findings)
     }
