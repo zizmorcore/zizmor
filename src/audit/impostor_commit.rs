@@ -7,12 +7,151 @@
 
 use crate::{
     finding::{Confidence, Finding, JobIdentity, Severity, StepIdentity},
-    models::{AuditOptions, Workflow},
+    models::{AuditConfig, Workflow},
 };
 
 use anyhow::Result;
 use github_actions_models::workflow::{job::StepBody, Job};
 use octocrab::{models::commits::GithubCommitStatus, Error, Octocrab};
+
+use super::WorkflowAudit;
+
+pub(crate) struct ImpostorCommit<'a> {
+    pub(crate) _config: AuditConfig<'a>,
+    pub(crate) client: Octocrab,
+}
+
+impl<'a> ImpostorCommit<'a> {
+    /// Returns a boolean indicating whether or not this commit is an "impostor",
+    /// i.e. resolves due to presence in GitHub's fork network but is not actually
+    /// present in any of the specified `owner/repo`'s tags or branches.
+    async fn impostor(&self, owner: &str, repo: &str, commit: &str) -> Result<bool> {
+        let branches = self
+            .client
+            .repos(owner, repo)
+            .list_branches()
+            .send()
+            .await?;
+
+        for branch in &branches {
+            if self
+                .named_ref_contains_commit(
+                    owner,
+                    repo,
+                    &format!("refs/heads/{}", &branch.name),
+                    commit,
+                )
+                .await?
+            {
+                return Ok(false);
+            }
+        }
+
+        let tags = self.client.repos(owner, repo).list_tags().send().await?;
+
+        for tag in &tags {
+            if self
+                .named_ref_contains_commit(owner, repo, &format!("refs/tags/{}", &tag.name), commit)
+                .await?
+            {
+                return Ok(false);
+            }
+        }
+
+        // If we've made it here, the commit isn't present in any commit or tag's history,
+        // strongly suggesting that it's an impostor.
+        Ok(true)
+    }
+
+    async fn named_ref_contains_commit(
+        &self,
+        owner: &str,
+        repo: &str,
+        named_ref: &str,
+        commit: &str,
+    ) -> Result<bool> {
+        match self
+            .client
+            .commits(owner, repo)
+            .compare(named_ref, commit)
+            .send()
+            .await
+        {
+            Ok(diff) => Ok(matches!(
+                diff.status,
+                GithubCommitStatus::Behind | GithubCommitStatus::Identical
+            )),
+            Err(Error::GitHub { source, .. }) if source.status_code.as_u16() == 404 => Ok(false),
+            Err(err) => Err(err.into()),
+        }
+    }
+}
+
+impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
+    const AUDIT_IDENT: &'static str = "impostor-commit";
+
+    fn new(config: AuditConfig<'a>) -> Result<Self> {
+        let client = octocrab::OctocrabBuilder::new()
+            .personal_token(config.gh_token.to_string())
+            .build()?;
+
+        Ok(ImpostorCommit {
+            _config: config,
+            client,
+        })
+    }
+
+    async fn audit(&self, workflow: &Workflow) -> Result<Vec<Finding>> {
+        let mut findings = vec![];
+
+        for (jobid, job) in workflow.jobs.iter() {
+            match job {
+                Job::NormalJob(job) => {
+                    for (stepno, step) in job.steps.iter().enumerate() {
+                        let StepBody::Uses { uses, .. } = &step.body else {
+                            continue;
+                        };
+
+                        let Some((owner, repo, commit)) = action_components(uses) else {
+                            continue;
+                        };
+
+                        if self.impostor(owner, repo, commit).await? {
+                            findings.push(Finding {
+                                ident: "impostor-commit",
+                                workflow: workflow.filename.clone(),
+                                severity: Severity::High,
+                                confidence: Confidence::High,
+                                job: Some(JobIdentity::new(jobid, job.name.as_deref())),
+                                steps: vec![StepIdentity::new(stepno, step)],
+                            })
+                        }
+                    }
+                }
+                Job::ReusableWorkflowCallJob(job) => {
+                    // Reusable workflows can also be commit pinned, meaning
+                    // they can also be impersonated.
+                    let Some((owner, org, commit)) = reusable_workflow_components(&job.uses) else {
+                        continue;
+                    };
+
+                    if self.impostor(owner, org, commit).await? {
+                        findings.push(Finding {
+                            ident: "impostor-commit",
+                            workflow: workflow.filename.clone(),
+                            severity: Severity::High,
+                            confidence: Confidence::High,
+                            job: Some(JobIdentity::new(jobid, job.name.as_deref())),
+                            steps: vec![],
+                        })
+                    }
+                }
+            }
+        }
+
+        Ok(findings)
+    }
+}
 
 /// Returns a three-tuple of `(owner, repo, commit)` if the given action reference
 /// is fully pinned to a commit, or `None` if the reference is either invalid or not pinned
@@ -73,127 +212,9 @@ fn reusable_workflow_components(uses: &str) -> Option<(&str, &str, &str)> {
     Some((components[0], components[1], maybe_commit))
 }
 
-/// Returns a boolean indicating whether or not this commit is an "impostor",
-/// i.e. resolves due to presence in GitHub's fork network but is not actually
-/// present in any of the specified `owner/repo`'s tags or branches.
-async fn impostor(client: &Octocrab, owner: &str, repo: &str, commit: &str) -> Result<bool> {
-    let branches = client.repos(owner, repo).list_branches().send().await?;
-
-    for branch in &branches {
-        if named_ref_contains_commit(
-            client,
-            owner,
-            repo,
-            &format!("refs/heads/{}", &branch.name),
-            commit,
-        )
-        .await?
-        {
-            return Ok(false);
-        }
-    }
-
-    let tags = client.repos(owner, repo).list_tags().send().await?;
-
-    for tag in &tags {
-        if named_ref_contains_commit(
-            client,
-            owner,
-            repo,
-            &format!("refs/tags/{}", &tag.name),
-            commit,
-        )
-        .await?
-        {
-            return Ok(false);
-        }
-    }
-
-    // If we've made it here, the commit isn't present in any commit or tag's history,
-    // strongly suggesting that it's an impostor.
-    Ok(true)
-}
-
-async fn named_ref_contains_commit(
-    client: &Octocrab,
-    owner: &str,
-    repo: &str,
-    named_ref: &str,
-    commit: &str,
-) -> Result<bool> {
-    match client
-        .commits(owner, repo)
-        .compare(named_ref, commit)
-        .send()
-        .await
-    {
-        Ok(diff) => Ok(matches!(
-            diff.status,
-            GithubCommitStatus::Behind | GithubCommitStatus::Identical
-        )),
-        Err(Error::GitHub { source, .. }) if source.status_code.as_u16() == 404 => Ok(false),
-        Err(err) => Err(err.into()),
-    }
-}
-
-pub(crate) async fn audit(options: &AuditOptions<'_>, workflow: &Workflow) -> Result<Vec<Finding>> {
-    let client = octocrab::OctocrabBuilder::new()
-        .personal_token(options.gh_token.to_string())
-        .build()?;
-
-    let mut findings = vec![];
-
-    for (jobid, job) in workflow.jobs.iter() {
-        match job {
-            Job::NormalJob(job) => {
-                for (stepno, step) in job.steps.iter().enumerate() {
-                    let StepBody::Uses { uses, .. } = &step.body else {
-                        continue;
-                    };
-
-                    let Some((owner, repo, commit)) = action_components(uses) else {
-                        continue;
-                    };
-
-                    if impostor(&client, owner, repo, commit).await? {
-                        findings.push(Finding {
-                            ident: "impostor-commit",
-                            workflow: workflow.filename.clone(),
-                            severity: Severity::High,
-                            confidence: Confidence::High,
-                            job: Some(JobIdentity::new(jobid, job.name.as_deref())),
-                            steps: vec![StepIdentity::new(stepno, step)],
-                        })
-                    }
-                }
-            }
-            Job::ReusableWorkflowCallJob(job) => {
-                // Reusable workflows can also be commit pinned, meaning
-                // they can also be impersonated.
-                let Some((owner, org, commit)) = reusable_workflow_components(&job.uses) else {
-                    continue;
-                };
-
-                if impostor(&client, owner, org, commit).await? {
-                    findings.push(Finding {
-                        ident: "impostor-commit",
-                        workflow: workflow.filename.clone(),
-                        severity: Severity::High,
-                        confidence: Confidence::High,
-                        job: Some(JobIdentity::new(jobid, job.name.as_deref())),
-                        steps: vec![],
-                    })
-                }
-            }
-        }
-    }
-
-    Ok(findings)
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::audit::impostor_commits::{action_components, reusable_workflow_components};
+    use crate::audit::impostor_commit::{action_components, reusable_workflow_components};
 
     #[test]
     fn action_components_parses() {

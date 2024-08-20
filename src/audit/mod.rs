@@ -1,14 +1,18 @@
 use crate::{
     finding::Finding,
-    models::{AuditOptions, Workflow},
+    models::{AuditConfig, Workflow},
 };
 use anyhow::Result;
 
 pub(crate) mod artipacked;
-pub(crate) mod impostor_commits;
+pub(crate) mod impostor_commit;
 pub(crate) mod pull_request_target;
 
-pub(crate) trait WorkflowAudit {
+pub(crate) trait WorkflowAudit<'a> {
     const AUDIT_IDENT: &'static str;
-    fn audit(options: &AuditOptions, workflow: &Workflow) -> Result<Vec<Finding>>;
+
+    fn new(config: AuditConfig<'a>) -> Result<Self>
+    where
+        Self: Sized;
+    async fn audit(&self, workflow: &Workflow) -> Result<Vec<Finding>>;
 }

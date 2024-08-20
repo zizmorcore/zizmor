@@ -8,17 +8,23 @@ use itertools::Itertools;
 use crate::models::Workflow;
 use crate::{
     finding::{Confidence, Finding, JobIdentity, Severity, StepIdentity},
-    models::AuditOptions,
+    models::AuditConfig,
 };
 
 use super::WorkflowAudit;
 
-pub(crate) struct Artipacked;
+pub(crate) struct Artipacked<'a> {
+    pub(crate) config: AuditConfig<'a>,
+}
 
-impl WorkflowAudit for Artipacked {
+impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
     const AUDIT_IDENT: &'static str = "artipacked";
 
-    fn audit(options: &AuditOptions, workflow: &Workflow) -> Result<Vec<Finding>> {
+    fn new(config: AuditConfig<'a>) -> Result<Self> {
+        Ok(Self { config })
+    }
+
+    async fn audit(&self, workflow: &Workflow) -> Result<Vec<Finding>> {
         let mut findings = vec![];
 
         for (jobid, job) in workflow.jobs.iter() {
@@ -43,7 +49,7 @@ impl WorkflowAudit for Artipacked {
                         Some(EnvValue::Boolean(true)) => {
                             // If a user explicitly sets `persist-credentials: true`,
                             // they probably mean it. Only report if being pedantic.
-                            if options.pedantic {
+                            if self.config.pedantic {
                                 vulnerable_checkouts.push(StepIdentity::new(stepno, step))
                             } else {
                                 continue;

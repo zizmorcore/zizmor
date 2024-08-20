@@ -35,7 +35,8 @@ impl Workflow {
     }
 }
 
-pub(crate) struct AuditOptions<'a> {
+#[derive(Copy, Clone)]
+pub(crate) struct AuditConfig<'a> {
     pub(crate) pedantic: bool,
     pub(crate) gh_token: &'a str,
 }

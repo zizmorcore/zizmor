@@ -3,7 +3,7 @@ use std::{io::stdout, path::PathBuf};
 use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
 use clap::Parser;
-use models::AuditOptions;
+use models::AuditConfig;
 
 mod audit;
 mod finding;
@@ -24,7 +24,7 @@ struct Args {
     input: PathBuf,
 }
 
-impl<'a> From<&'a Args> for AuditOptions<'a> {
+impl<'a> From<&'a Args> for AuditConfig<'a> {
     fn from(value: &'a Args) -> Self {
         Self {
             pedantic: value.pedantic,
@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
     env_logger::init();
     let args = Args::parse();
 
-    let options = AuditOptions::from(&args);
+    let config = AuditConfig::from(&args);
 
     let mut workflow_paths = vec![];
     if args.input.is_file() {
@@ -72,11 +72,21 @@ async fn main() -> Result<()> {
     for workflow_path in workflow_paths.iter() {
         let workflow = models::Workflow::from_file(workflow_path)?;
         // TODO: Proper abstraction for multiple audits here.
-        findings.extend(audit::artipacked::Artipacked::audit(&options, &workflow)?);
-        findings.extend(audit::pull_request_target::PullRequestTarget::audit(
-            &options, &workflow,
-        )?);
-        findings.extend(audit::impostor_commits::audit(&options, &workflow).await?);
+        findings.extend(
+            audit::artipacked::Artipacked::new(config)?
+                .audit(&workflow)
+                .await?,
+        );
+        findings.extend(
+            audit::pull_request_target::PullRequestTarget::new(config)?
+                .audit(&workflow)
+                .await?,
+        );
+        findings.extend(
+            audit::impostor_commit::ImpostorCommit::new(config)?
+                .audit(&workflow)
+                .await?,
+        );
     }
 
     if !findings.is_empty() {

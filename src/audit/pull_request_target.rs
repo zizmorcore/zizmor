@@ -3,15 +3,22 @@ use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::Trigger;
 
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::{AuditOptions, Workflow};
+use crate::models::{AuditConfig, Workflow};
 
 use super::WorkflowAudit;
 
-pub(crate) struct PullRequestTarget;
-impl WorkflowAudit for PullRequestTarget {
+pub(crate) struct PullRequestTarget<'a> {
+    pub(crate) _config: AuditConfig<'a>,
+}
+
+impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
     const AUDIT_IDENT: &'static str = "pull-request-target";
 
-    fn audit(_options: &AuditOptions, workflow: &Workflow) -> Result<Vec<Finding>> {
+    fn new(config: AuditConfig<'a>) -> Result<Self> {
+        Ok(Self { _config: config })
+    }
+
+    async fn audit(&self, workflow: &Workflow) -> Result<Vec<Finding>> {
         let trigger = &workflow.on;
 
         let has_pull_request_target = match trigger {
