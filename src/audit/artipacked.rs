@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use anyhow::Result;
 use github_actions_models::{
     common::EnvValue,
@@ -36,19 +38,19 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
 
         let mut findings = vec![];
 
-        for (jobid, job) in workflow.jobs.iter() {
+        for job in workflow.jobs() {
             // Reusable workflows aren't checked, for now,
             // since we'd need to resolve their contents to determine
             // whether their interior steps are vulnerable.
-            let Job::NormalJob(job) = job else {
+            if !matches!(job.inner, Job::NormalJob(_)) {
                 continue;
-            };
+            }
 
             // First, collect all vulnerable checkouts and upload steps independently.
             let mut vulnerable_checkouts = vec![];
             let mut vulnerable_uploads = vec![];
-            for (stepno, step) in job.steps.iter().enumerate() {
-                let StepBody::Uses { uses, with } = &step.body else {
+            for step in job.steps() {
+                let StepBody::Uses { uses, with } = &step.inner.body else {
                     continue;
                 };
 
@@ -59,23 +61,21 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                             // If a user explicitly sets `persist-credentials: true`,
                             // they probably mean it. Only report if being pedantic.
                             if self.config.pedantic {
-                                vulnerable_checkouts.push(StepLocation::new(stepno, step))
+                                vulnerable_checkouts.push(step.clone())
                             } else {
                                 continue;
                             }
                         }
                         // TODO: handle expressions and literal strings here.
                         // persist-credentials is true by default.
-                        _ => vulnerable_checkouts.push(StepLocation::new(stepno, step)),
+                        _ => vulnerable_checkouts.push(step.clone()),
                     }
-                }
-
-                if uses.starts_with("actions/upload-artifact") {
+                } else if uses.starts_with("actions/upload-artifact") {
                     match with.get("path") {
                         // TODO: This is pretty naive -- we should also flag on
                         // `${{ expressions }}` and absolute paths, etc.
                         Some(EnvValue::String(s)) if s == "." || s == ".." => {
-                            vulnerable_uploads.push(StepLocation::new(stepno, step))
+                            vulnerable_uploads.push(step.clone())
                         }
                         _ => continue,
                     }
@@ -92,14 +92,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                             severity: Severity::Medium,
                             confidence: Confidence::Low,
                         },
-                        location: WorkflowLocation {
-                            name: workflow.filename.clone(),
-                            jobs: vec![JobLocation {
-                                id: jobid,
-                                name: job.name.as_deref(),
-                                steps: vec![checkout],
-                            }],
-                        },
+                        locations: vec![checkout.location()],
                     })
                 }
             } else {
@@ -107,8 +100,8 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                 // vulnerable upload. There are more efficient ways to do this than
                 // a cartesian product, but this way is simple.
                 for (checkout, upload) in vulnerable_checkouts
-                    .into_iter()
-                    .cartesian_product(vulnerable_uploads.into_iter())
+                    .iter()
+                    .cartesian_product(vulnerable_uploads.iter())
                 {
                     if checkout.index < upload.index {
                         findings.push(Finding {
@@ -117,14 +110,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
                             },
-                            location: WorkflowLocation {
-                                name: workflow.filename.clone(),
-                                jobs: vec![JobLocation {
-                                    id: jobid,
-                                    name: job.name.as_deref(),
-                                    steps: vec![checkout, upload],
-                                }],
-                            },
+                            locations: vec![checkout.location(), upload.location()],
                         });
                     }
                 }

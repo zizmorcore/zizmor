@@ -131,14 +131,14 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                     severity: Severity::High,
                                     confidence: Confidence::High,
                                 },
-                                location: WorkflowLocation {
-                                    name: workflow.filename.clone(),
-                                    jobs: vec![JobLocation {
+                                locations: vec![WorkflowLocation {
+                                    name: &workflow.filename,
+                                    job: Some(JobLocation {
                                         id: jobid,
                                         name: job.name.as_deref(),
-                                        steps: vec![StepLocation::new(stepno, step)],
-                                    }],
-                                },
+                                        step: Some(StepLocation::new(stepno, step)),
+                                    }),
+                                }],
                             })
                         }
                     }
@@ -157,14 +157,14 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
                             },
-                            location: WorkflowLocation {
-                                name: workflow.filename.clone(),
-                                jobs: vec![JobLocation {
+                            locations: vec![WorkflowLocation {
+                                name: &workflow.filename,
+                                job: Some(JobLocation {
                                     id: jobid,
                                     name: job.name.as_deref(),
-                                    steps: vec![],
-                                }],
-                            },
+                                    step: None,
+                                }),
+                            }],
                         })
                     }
                 }

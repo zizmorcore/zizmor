@@ -41,10 +41,7 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
                     confidence: Confidence::Medium,
                     severity: Severity::High,
                 },
-                location: WorkflowLocation {
-                    name: workflow.filename.clone(),
-                    jobs: vec![],
-                },
+                locations: vec![workflow.location()],
             })
         }
 
