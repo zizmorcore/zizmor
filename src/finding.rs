@@ -12,6 +12,7 @@ pub(crate) enum Confidence {
 
 #[derive(Serialize)]
 pub(crate) enum Severity {
+    Informational,
     Low,
     Medium,
     High,
