@@ -15,8 +15,7 @@ struct Args {
     #[arg(short, long)]
     pedantic: bool,
 
-    /// The GitHub API token to use. If not supplied or present in the environment,
-    /// `gh auth token` is attempted.
+    /// The GitHub API token to use.
     #[arg(long, env)]
     gh_token: String,
 

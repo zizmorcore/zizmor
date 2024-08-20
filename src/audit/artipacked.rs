@@ -13,7 +13,7 @@ use crate::{
 pub(crate) fn audit(_options: &AuditOptions, workflow: &Workflow) -> Vec<Finding> {
     let mut findings = vec![];
 
-    for (jobname, job) in workflow.jobs.iter() {
+    for (jobid, job) in workflow.jobs.iter() {
         // Reusable workflows aren't checked, for now,
         // since we'd need to resolve their contents to determine
         // whether their interior steps are vulnerable.
@@ -68,7 +68,7 @@ pub(crate) fn audit(_options: &AuditOptions, workflow: &Workflow) -> Vec<Finding
                     workflow: workflow.filename.clone(),
                     severity: Severity::Medium,
                     confidence: Confidence::Low,
-                    job: Some(JobIdentity::new(jobname, job.name.as_deref())),
+                    job: Some(JobIdentity::new(jobid, job.name.as_deref())),
                     steps: vec![checkout],
                 })
             }
@@ -86,7 +86,7 @@ pub(crate) fn audit(_options: &AuditOptions, workflow: &Workflow) -> Vec<Finding
                         workflow: workflow.filename.clone(),
                         severity: Severity::High,
                         confidence: Confidence::High,
-                        job: Some(JobIdentity::new(jobname, job.name.as_deref())),
+                        job: Some(JobIdentity::new(jobid, job.name.as_deref())),
                         steps: vec![checkout, upload],
                     })
                 }
