@@ -2,7 +2,7 @@ use anyhow::Result;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::Trigger;
 
-use crate::finding::{Confidence, Finding, Severity};
+use crate::finding::{Confidence, Determinations, Finding, Severity, WorkflowLocation};
 use crate::models::{AuditConfig, Workflow};
 
 use super::WorkflowAudit;
@@ -18,7 +18,7 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
         Ok(Self { _config: config })
     }
 
-    async fn audit(&self, workflow: &Workflow) -> Result<Vec<Finding>> {
+    async fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         log::debug!(
             "audit: {} evaluating {}",
             Self::AUDIT_IDENT,
@@ -36,12 +36,15 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
         let mut findings = vec![];
         if has_pull_request_target {
             findings.push(Finding {
-                ident: "pull-request-target",
-                workflow: workflow.filename.clone(),
-                severity: Severity::High,
-                confidence: Confidence::Medium,
-                job: None,
-                steps: vec![],
+                ident: PullRequestTarget::AUDIT_IDENT,
+                determinations: Determinations {
+                    confidence: Confidence::Medium,
+                    severity: Severity::High,
+                },
+                location: WorkflowLocation {
+                    name: workflow.filename.clone(),
+                    jobs: vec![],
+                },
             })
         }
 

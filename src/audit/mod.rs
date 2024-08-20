@@ -14,5 +14,5 @@ pub(crate) trait WorkflowAudit<'a> {
     fn new(config: AuditConfig<'a>) -> Result<Self>
     where
         Self: Sized;
-    async fn audit(&self, workflow: &Workflow) -> Result<Vec<Finding>>;
+    async fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>>;
 }

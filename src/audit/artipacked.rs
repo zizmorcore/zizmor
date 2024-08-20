@@ -5,10 +5,13 @@ use github_actions_models::{
 };
 use itertools::Itertools;
 
-use crate::models::Workflow;
 use crate::{
-    finding::{Confidence, Finding, JobIdentity, Severity, StepIdentity},
+    finding::{Confidence, Finding, Severity, StepLocation},
     models::AuditConfig,
+};
+use crate::{
+    finding::{Determinations, JobLocation, WorkflowLocation},
+    models::Workflow,
 };
 
 use super::WorkflowAudit;
@@ -24,7 +27,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
         Ok(Self { config })
     }
 
-    async fn audit(&self, workflow: &Workflow) -> Result<Vec<Finding>> {
+    async fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         log::debug!(
             "audit: {} evaluating {}",
             Self::AUDIT_IDENT,
@@ -56,14 +59,14 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                             // If a user explicitly sets `persist-credentials: true`,
                             // they probably mean it. Only report if being pedantic.
                             if self.config.pedantic {
-                                vulnerable_checkouts.push(StepIdentity::new(stepno, step))
+                                vulnerable_checkouts.push(StepLocation::new(stepno, step))
                             } else {
                                 continue;
                             }
                         }
                         // TODO: handle expressions and literal strings here.
                         // persist-credentials is true by default.
-                        _ => vulnerable_checkouts.push(StepIdentity::new(stepno, step)),
+                        _ => vulnerable_checkouts.push(StepLocation::new(stepno, step)),
                     }
                 }
 
@@ -72,7 +75,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                         // TODO: This is pretty naive -- we should also flag on
                         // `${{ expressions }}` and absolute paths, etc.
                         Some(EnvValue::String(s)) if s == "." || s == ".." => {
-                            vulnerable_uploads.push(StepIdentity::new(stepno, step))
+                            vulnerable_uploads.push(StepLocation::new(stepno, step))
                         }
                         _ => continue,
                     }
@@ -85,11 +88,18 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                 for checkout in vulnerable_checkouts {
                     findings.push(Finding {
                         ident: Artipacked::AUDIT_IDENT,
-                        workflow: workflow.filename.clone(),
-                        severity: Severity::Medium,
-                        confidence: Confidence::Low,
-                        job: Some(JobIdentity::new(jobid, job.name.as_deref())),
-                        steps: vec![checkout],
+                        determinations: Determinations {
+                            severity: Severity::Medium,
+                            confidence: Confidence::Low,
+                        },
+                        location: WorkflowLocation {
+                            name: workflow.filename.clone(),
+                            jobs: vec![JobLocation {
+                                id: jobid,
+                                name: job.name.as_deref(),
+                                steps: vec![checkout],
+                            }],
+                        },
                     })
                 }
             } else {
@@ -100,15 +110,22 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                     .into_iter()
                     .cartesian_product(vulnerable_uploads.into_iter())
                 {
-                    if checkout.number < upload.number {
+                    if checkout.index < upload.index {
                         findings.push(Finding {
                             ident: Artipacked::AUDIT_IDENT,
-                            workflow: workflow.filename.clone(),
-                            severity: Severity::High,
-                            confidence: Confidence::High,
-                            job: Some(JobIdentity::new(jobid, job.name.as_deref())),
-                            steps: vec![checkout, upload],
-                        })
+                            determinations: Determinations {
+                                severity: Severity::High,
+                                confidence: Confidence::High,
+                            },
+                            location: WorkflowLocation {
+                                name: workflow.filename.clone(),
+                                jobs: vec![JobLocation {
+                                    id: jobid,
+                                    name: job.name.as_deref(),
+                                    steps: vec![checkout, upload],
+                                }],
+                            },
+                        });
                     }
                 }
             }

@@ -6,7 +6,9 @@
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
 use crate::{
-    finding::{Confidence, Finding, JobIdentity, Severity, StepIdentity},
+    finding::{
+        Confidence, Determinations, Finding, JobLocation, Severity, StepLocation, WorkflowLocation,
+    },
     models::{AuditConfig, Workflow},
 };
 
@@ -101,7 +103,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
         })
     }
 
-    async fn audit(&self, workflow: &Workflow) -> Result<Vec<Finding>> {
+    async fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         log::debug!(
             "audit: {} evaluating {}",
             Self::AUDIT_IDENT,
@@ -124,12 +126,19 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
 
                         if self.impostor(owner, repo, commit).await? {
                             findings.push(Finding {
-                                ident: "impostor-commit",
-                                workflow: workflow.filename.clone(),
-                                severity: Severity::High,
-                                confidence: Confidence::High,
-                                job: Some(JobIdentity::new(jobid, job.name.as_deref())),
-                                steps: vec![StepIdentity::new(stepno, step)],
+                                ident: ImpostorCommit::AUDIT_IDENT,
+                                determinations: Determinations {
+                                    severity: Severity::High,
+                                    confidence: Confidence::High,
+                                },
+                                location: WorkflowLocation {
+                                    name: workflow.filename.clone(),
+                                    jobs: vec![JobLocation {
+                                        id: jobid,
+                                        name: job.name.as_deref(),
+                                        steps: vec![StepLocation::new(stepno, step)],
+                                    }],
+                                },
                             })
                         }
                     }
@@ -143,12 +152,19 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
 
                     if self.impostor(owner, org, commit).await? {
                         findings.push(Finding {
-                            ident: "impostor-commit",
-                            workflow: workflow.filename.clone(),
-                            severity: Severity::High,
-                            confidence: Confidence::High,
-                            job: Some(JobIdentity::new(jobid, job.name.as_deref())),
-                            steps: vec![],
+                            ident: ImpostorCommit::AUDIT_IDENT,
+                            determinations: Determinations {
+                                severity: Severity::High,
+                                confidence: Confidence::High,
+                            },
+                            location: WorkflowLocation {
+                                name: workflow.filename.clone(),
+                                jobs: vec![JobLocation {
+                                    id: jobid,
+                                    name: job.name.as_deref(),
+                                    steps: vec![],
+                                }],
+                            },
                         })
                     }
                 }

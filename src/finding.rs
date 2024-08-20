@@ -19,16 +19,16 @@ pub(crate) enum Severity {
 }
 
 #[derive(Serialize, Clone)]
-pub(crate) struct StepIdentity {
-    pub(crate) number: usize,
+pub(crate) struct StepLocation {
+    pub(crate) index: usize,
     pub(crate) id: Option<String>,
     pub(crate) name: Option<String>,
 }
 
-impl StepIdentity {
-    pub(crate) fn new(number: usize, step: &Step) -> Self {
+impl StepLocation {
+    pub(crate) fn new(index: usize, step: &Step) -> Self {
         Self {
-            number,
+            index,
             id: step.id.clone(),
             name: step.name.clone(),
         }
@@ -36,27 +36,27 @@ impl StepIdentity {
 }
 
 #[derive(Serialize)]
-pub(crate) struct JobIdentity {
-    id: String,
-    name: Option<String>,
-}
-
-impl JobIdentity {
-    pub(crate) fn new(id: &str, name: Option<&str>) -> Self {
-        Self {
-            id: id.to_string(),
-            name: name.map(|n| n.to_string()),
-        }
-    }
+pub(crate) struct JobLocation<'w> {
+    pub(crate) id: &'w str,
+    pub(crate) name: Option<&'w str>,
+    pub(crate) steps: Vec<StepLocation>,
 }
 
 #[derive(Serialize)]
-pub(crate) struct Finding {
-    pub(crate) ident: &'static str,
-    // The base filename of the workflow.
-    pub(crate) workflow: String,
-    pub(crate) severity: Severity,
+pub(crate) struct WorkflowLocation<'w> {
+    pub(crate) name: String,
+    pub(crate) jobs: Vec<JobLocation<'w>>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct Determinations {
     pub(crate) confidence: Confidence,
-    pub(crate) job: Option<JobIdentity>,
-    pub(crate) steps: Vec<StepIdentity>,
+    pub(crate) severity: Severity,
+}
+
+#[derive(Serialize)]
+pub(crate) struct Finding<'w> {
+    pub(crate) ident: &'static str,
+    pub(crate) determinations: Determinations,
+    pub(crate) location: WorkflowLocation<'w>,
 }

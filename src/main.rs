@@ -4,6 +4,7 @@ use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
 use clap::Parser;
 use models::AuditConfig;
+use serde_jsonlines::{AsyncJsonLinesWriter, JsonLinesWriter};
 
 mod audit;
 mod finding;
@@ -68,29 +69,31 @@ async fn main() -> Result<()> {
         return Err(anyhow!("input must be a single workflow file or directory"));
     }
 
-    let mut findings = vec![];
+    let mut writer = AsyncJsonLinesWriter::new(tokio::io::stdout());
     for workflow_path in workflow_paths.iter() {
         let workflow = models::Workflow::from_file(workflow_path)?;
         // TODO: Proper abstraction for multiple audits here.
-        findings.extend(
-            audit::artipacked::Artipacked::new(config)?
-                .audit(&workflow)
-                .await?,
-        );
-        findings.extend(
-            audit::pull_request_target::PullRequestTarget::new(config)?
-                .audit(&workflow)
-                .await?,
-        );
-        findings.extend(
-            audit::impostor_commit::ImpostorCommit::new(config)?
-                .audit(&workflow)
-                .await?,
-        );
-    }
 
-    if !findings.is_empty() {
-        serde_json::to_writer_pretty(stdout(), &findings)?;
+        for result in audit::artipacked::Artipacked::new(config)?
+            .audit(&workflow)
+            .await?
+        {
+            writer.write(&result).await?;
+        }
+
+        for result in audit::pull_request_target::PullRequestTarget::new(config)?
+            .audit(&workflow)
+            .await?
+        {
+            writer.write(&result).await?;
+        }
+
+        for result in audit::impostor_commit::ImpostorCommit::new(config)?
+            .audit(&workflow)
+            .await?
+        {
+            writer.write(&result).await?;
+        }
     }
 
     Ok(())
