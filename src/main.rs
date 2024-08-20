@@ -1,6 +1,7 @@
 use std::{io::stdout, path::PathBuf};
 
 use anyhow::{anyhow, Result};
+use audit::WorkflowAudit;
 use clap::Parser;
 use models::AuditOptions;
 
@@ -71,8 +72,10 @@ async fn main() -> Result<()> {
     for workflow_path in workflow_paths.iter() {
         let workflow = models::Workflow::from_file(workflow_path)?;
         // TODO: Proper abstraction for multiple audits here.
-        findings.extend(audit::artipacked::audit(&options, &workflow));
-        findings.extend(audit::pull_request_target::audit(&options, &workflow));
+        findings.extend(audit::artipacked::Artipacked::audit(&options, &workflow)?);
+        findings.extend(audit::pull_request_target::PullRequestTarget::audit(
+            &options, &workflow,
+        )?);
         findings.extend(audit::impostor_commits::audit(&options, &workflow).await?);
     }
 
