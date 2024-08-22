@@ -74,15 +74,16 @@ fn main() -> Result<()> {
     }
 
     let mut results = vec![];
+    let audits: [&dyn WorkflowAudit; 3] = [
+        &audit::artipacked::Artipacked::new(config)?,
+        &audit::pull_request_target::PullRequestTarget::new(config)?,
+        &audit::impostor_commit::ImpostorCommit::new(config)?,
+    ];
     for workflow in workflows.iter() {
         // TODO: Proper abstraction for multiple audits here.
-
-        results.extend(audit::artipacked::Artipacked::new(config)?.audit(&workflow)?);
-
-        results
-            .extend(audit::pull_request_target::PullRequestTarget::new(config)?.audit(&workflow)?);
-
-        results.extend(audit::impostor_commit::ImpostorCommit::new(config)?.audit(&workflow)?);
+        for audit in audits {
+            results.extend(audit.audit(&workflow)?);
+        }
     }
 
     serde_json::to_writer_pretty(stdout(), &results)?;

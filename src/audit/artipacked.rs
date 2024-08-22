@@ -18,18 +18,16 @@ pub(crate) struct Artipacked<'a> {
 }
 
 impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
-    const AUDIT_IDENT: &'static str = "artipacked";
+    fn ident() -> &'static str {
+        "artipacked"
+    }
 
     fn new(config: AuditConfig<'a>) -> Result<Self> {
         Ok(Self { config })
     }
 
     fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
-        log::debug!(
-            "audit: {} evaluating {}",
-            Self::AUDIT_IDENT,
-            &workflow.filename
-        );
+        log::debug!("audit: {} evaluating {}", Self::ident(), &workflow.filename);
 
         let mut findings = vec![];
 
@@ -82,7 +80,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                 // findings for just the checkout steps.
                 for checkout in vulnerable_checkouts {
                     findings.push(Finding {
-                        ident: Artipacked::AUDIT_IDENT,
+                        ident: Artipacked::ident(),
                         determinations: Determinations {
                             severity: Severity::Medium,
                             confidence: Confidence::Low,
@@ -100,7 +98,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                 {
                     if checkout.index < upload.index {
                         findings.push(Finding {
-                            ident: Artipacked::AUDIT_IDENT,
+                            ident: Artipacked::ident(),
                             determinations: Determinations {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
@@ -112,11 +110,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
             }
         }
 
-        log::debug!(
-            "audit: {} completed {}",
-            Self::AUDIT_IDENT,
-            &workflow.filename
-        );
+        log::debug!("audit: {} completed {}", Self::ident(), &workflow.filename);
 
         Ok(findings)
     }

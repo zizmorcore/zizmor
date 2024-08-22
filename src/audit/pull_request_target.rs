@@ -12,18 +12,16 @@ pub(crate) struct PullRequestTarget<'a> {
 }
 
 impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
-    const AUDIT_IDENT: &'static str = "pull-request-target";
+    fn ident() -> &'static str {
+        "pull-request-target"
+    }
 
     fn new(config: AuditConfig<'a>) -> Result<Self> {
         Ok(Self { _config: config })
     }
 
     fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
-        log::debug!(
-            "audit: {} evaluating {}",
-            Self::AUDIT_IDENT,
-            &workflow.filename
-        );
+        log::debug!("audit: {} evaluating {}", Self::ident(), &workflow.filename);
 
         let trigger = &workflow.on;
 
@@ -36,7 +34,7 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
         let mut findings = vec![];
         if has_pull_request_target {
             findings.push(Finding {
-                ident: PullRequestTarget::AUDIT_IDENT,
+                ident: PullRequestTarget::ident(),
                 determinations: Determinations {
                     confidence: Confidence::Medium,
                     severity: Severity::High,
@@ -45,11 +43,7 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
             })
         }
 
-        log::debug!(
-            "audit: {} completed {}",
-            Self::AUDIT_IDENT,
-            &workflow.filename
-        );
+        log::debug!("audit: {} completed {}", Self::ident(), &workflow.filename);
 
         Ok(findings)
     }

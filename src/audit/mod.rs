@@ -9,7 +9,9 @@ pub(crate) mod impostor_commit;
 pub(crate) mod pull_request_target;
 
 pub(crate) trait WorkflowAudit<'a> {
-    const AUDIT_IDENT: &'static str;
+    fn ident() -> &'static str
+    where
+        Self: Sized;
 
     fn new(config: AuditConfig<'a>) -> Result<Self>
     where

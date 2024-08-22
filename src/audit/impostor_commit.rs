@@ -78,7 +78,9 @@ impl<'a> ImpostorCommit<'a> {
 }
 
 impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
-    const AUDIT_IDENT: &'static str = "impostor-commit";
+    fn ident() -> &'static str {
+        "impostor-commit"
+    }
 
     fn new(config: AuditConfig<'a>) -> Result<Self> {
         let client = github_api::Client::new(&config.gh_token);
@@ -90,11 +92,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
     }
 
     fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
-        log::debug!(
-            "audit: {} evaluating {}",
-            Self::AUDIT_IDENT,
-            &workflow.filename
-        );
+        log::debug!("audit: {} evaluating {}", Self::ident(), &workflow.filename);
 
         let mut findings = vec![];
 
@@ -112,7 +110,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
 
                         if self.impostor(owner, repo, commit)? {
                             findings.push(Finding {
-                                ident: ImpostorCommit::AUDIT_IDENT,
+                                ident: ImpostorCommit::ident(),
                                 determinations: Determinations {
                                     severity: Severity::High,
                                     confidence: Confidence::High,
@@ -132,7 +130,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
 
                     if self.impostor(owner, org, commit)? {
                         findings.push(Finding {
-                            ident: ImpostorCommit::AUDIT_IDENT,
+                            ident: ImpostorCommit::ident(),
                             determinations: Determinations {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
@@ -144,11 +142,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
             }
         }
 
-        log::debug!(
-            "audit: {} completed {}",
-            Self::AUDIT_IDENT,
-            &workflow.filename
-        );
+        log::debug!("audit: {} completed {}", Self::ident(), &workflow.filename);
 
         Ok(findings)
     }
