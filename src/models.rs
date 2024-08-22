@@ -43,8 +43,8 @@ impl Workflow {
         }
     }
 
-    pub(crate) fn jobs<'w>(&'w self) -> Jobs<'w> {
-        Jobs::new(&self)
+    pub(crate) fn jobs(&self) -> Jobs<'_> {
+        Jobs::new(self)
     }
 }
 
@@ -60,11 +60,11 @@ impl<'w> Job<'w> {
     }
 
     pub(crate) fn location(&self) -> WorkflowLocation<'w> {
-        self.parent.with_job(&self)
+        self.parent.with_job(self)
     }
 
     pub(crate) fn steps(&self) -> Steps<'w> {
-        Steps::new(&self)
+        Steps::new(self)
     }
 }
 
@@ -89,7 +89,7 @@ impl<'w> Iterator for Jobs<'w> {
         let item = self.inner.next();
 
         match item {
-            Some((id, job)) => Some(Job::new(id, &job, self.location.clone())),
+            Some((id, job)) => Some(Job::new(id, job, self.location.clone())),
             None => None,
         }
     }
@@ -116,7 +116,7 @@ impl<'w> Step<'w> {
     }
 
     pub(crate) fn location(&self) -> WorkflowLocation<'w> {
-        self.parent.with_step(&self)
+        self.parent.with_step(self)
     }
 }
 

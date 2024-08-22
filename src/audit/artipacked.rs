@@ -1,4 +1,3 @@
-use std::ops::Deref;
 
 use anyhow::Result;
 use github_actions_models::{
@@ -8,11 +7,11 @@ use github_actions_models::{
 use itertools::Itertools;
 
 use crate::{
-    finding::{Confidence, Finding, Severity, StepLocation},
+    finding::{Confidence, Finding, Severity},
     models::AuditConfig,
 };
 use crate::{
-    finding::{Determinations, JobLocation, WorkflowLocation},
+    finding::{Determinations},
     models::Workflow,
 };
 

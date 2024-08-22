@@ -57,7 +57,7 @@ pub(crate) struct JobLocation<'w> {
 impl<'w> JobLocation<'w> {
     fn with_step(&self, step: &Step<'w>) -> JobLocation<'w> {
         JobLocation {
-            id: &self.id,
+            id: self.id,
             name: self.name,
             step: Some(step.into()),
         }
@@ -74,9 +74,9 @@ pub(crate) struct WorkflowLocation<'w> {
 impl<'w> WorkflowLocation<'w> {
     pub(crate) fn with_job(&self, job: &Job<'w>) -> WorkflowLocation<'w> {
         WorkflowLocation {
-            name: &self.name,
+            name: self.name,
             job: Some(JobLocation {
-                id: &job.id,
+                id: job.id,
                 name: job.inner.name(),
                 step: None,
             }),
@@ -87,7 +87,7 @@ impl<'w> WorkflowLocation<'w> {
         match &self.job {
             None => panic!("API misuse: can't set step without parent job"),
             Some(job) => WorkflowLocation {
-                name: &self.name,
+                name: self.name,
                 job: Some(job.with_step(step)),
             },
         }
