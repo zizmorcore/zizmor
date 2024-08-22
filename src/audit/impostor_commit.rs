@@ -6,9 +6,7 @@
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
 use crate::{
-    finding::{
-        Confidence, Determinations, Finding, JobLocation, Severity, StepLocation, WorkflowLocation,
-    },
+    finding::{Confidence, Determinations, Finding, Severity},
     models::{AuditConfig, Workflow},
 };
 
