@@ -1,4 +1,3 @@
-use github_actions_models::workflow::job;
 use serde::Serialize;
 
 use crate::models::{Job, Step};
@@ -25,16 +24,6 @@ pub(crate) struct StepLocation<'w> {
     pub(crate) index: usize,
     pub(crate) id: Option<&'w str>,
     pub(crate) name: Option<&'w str>,
-}
-
-impl<'w> StepLocation<'w> {
-    pub(crate) fn new(index: usize, step: &'w job::Step) -> Self {
-        Self {
-            index,
-            id: step.id.as_deref(),
-            name: step.name.as_deref(),
-        }
-    }
 }
 
 impl<'w> From<&Step<'w>> for StepLocation<'w> {

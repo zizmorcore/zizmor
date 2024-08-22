@@ -112,11 +112,11 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
 
         let mut findings = vec![];
 
-        for (jobid, job) in workflow.jobs.iter() {
-            match job {
-                Job::NormalJob(job) => {
-                    for (stepno, step) in job.steps.iter().enumerate() {
-                        let StepBody::Uses { uses, .. } = &step.body else {
+        for job in workflow.jobs() {
+            match job.inner {
+                Job::NormalJob(_) => {
+                    for step in job.steps() {
+                        let StepBody::Uses { uses, .. } = &step.inner.body else {
                             continue;
                         };
 
@@ -131,22 +131,16 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                     severity: Severity::High,
                                     confidence: Confidence::High,
                                 },
-                                locations: vec![WorkflowLocation {
-                                    name: &workflow.filename,
-                                    job: Some(JobLocation {
-                                        id: jobid,
-                                        name: job.name.as_deref(),
-                                        step: Some(StepLocation::new(stepno, step)),
-                                    }),
-                                }],
+                                locations: vec![step.location()],
                             })
                         }
                     }
                 }
-                Job::ReusableWorkflowCallJob(job) => {
+                Job::ReusableWorkflowCallJob(reusable) => {
                     // Reusable workflows can also be commit pinned, meaning
                     // they can also be impersonated.
-                    let Some((owner, org, commit)) = reusable_workflow_components(&job.uses) else {
+                    let Some((owner, org, commit)) = reusable_workflow_components(&reusable.uses)
+                    else {
                         continue;
                     };
 
@@ -157,14 +151,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
                             },
-                            locations: vec![WorkflowLocation {
-                                name: &workflow.filename,
-                                job: Some(JobLocation {
-                                    id: jobid,
-                                    name: job.name.as_deref(),
-                                    step: None,
-                                }),
-                            }],
+                            locations: vec![job.location()],
                         })
                     }
                 }
