@@ -83,7 +83,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
     }
 
     fn new(config: AuditConfig<'a>) -> Result<Self> {
-        let client = github_api::Client::new(&config.gh_token);
+        let client = github_api::Client::new(config.gh_token);
 
         Ok(ImpostorCommit {
             _config: config,

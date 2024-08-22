@@ -59,7 +59,7 @@ impl Client {
                 break;
             }
 
-            dest.extend(page.into_iter());
+            dest.extend(page);
             pageno += 1;
         }
 
