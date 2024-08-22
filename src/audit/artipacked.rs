@@ -85,7 +85,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                             severity: Severity::Medium,
                             confidence: Confidence::Low,
                         },
-                        locations: vec![checkout.location().clone()],
+                        locations: vec![checkout.location()],
                     })
                 }
             } else {
@@ -103,7 +103,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
                             },
-                            locations: vec![checkout.location().clone(), upload.location().clone()],
+                            locations: vec![checkout.location(), upload.location()],
                         });
                     }
                 }
