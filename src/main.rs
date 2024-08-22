@@ -1,10 +1,10 @@
-use std::{path::PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
 use clap::Parser;
 use models::AuditConfig;
-use serde_jsonlines::{AsyncJsonLinesWriter};
+use serde_jsonlines::AsyncJsonLinesWriter;
 
 mod audit;
 mod finding;
