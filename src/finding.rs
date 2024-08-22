@@ -1,5 +1,6 @@
-use github_actions_models::workflow::job::Step;
 use serde::Serialize;
+
+use crate::models::{Job, Step};
 
 // TODO: Traits + more flexible models here.
 
@@ -19,33 +20,67 @@ pub(crate) enum Severity {
 }
 
 #[derive(Serialize, Clone)]
-pub(crate) struct StepLocation {
+pub(crate) struct StepLocation<'w> {
     pub(crate) index: usize,
-    pub(crate) id: Option<String>,
-    pub(crate) name: Option<String>,
+    pub(crate) id: Option<&'w str>,
+    pub(crate) name: Option<&'w str>,
 }
 
-impl StepLocation {
-    pub(crate) fn new(index: usize, step: &Step) -> Self {
+impl<'w> From<&Step<'w>> for StepLocation<'w> {
+    fn from(step: &Step<'w>) -> Self {
         Self {
-            index,
-            id: step.id.clone(),
-            name: step.name.clone(),
+            index: step.index,
+            id: step.inner.id.as_deref(),
+            name: step.inner.name.as_deref(),
         }
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub(crate) struct JobLocation<'w> {
     pub(crate) id: &'w str,
     pub(crate) name: Option<&'w str>,
-    pub(crate) steps: Vec<StepLocation>,
+    pub(crate) step: Option<StepLocation<'w>>,
 }
 
-#[derive(Serialize)]
+impl<'w> JobLocation<'w> {
+    fn with_step(&self, step: &Step<'w>) -> JobLocation<'w> {
+        JobLocation {
+            id: self.id,
+            name: self.name,
+            step: Some(step.into()),
+        }
+    }
+}
+
+#[derive(Serialize, Clone)]
 pub(crate) struct WorkflowLocation<'w> {
-    pub(crate) name: String,
-    pub(crate) jobs: Vec<JobLocation<'w>>,
+    pub(crate) name: &'w str,
+    /// The job location within this workflow, if present.
+    pub(crate) job: Option<JobLocation<'w>>,
+}
+
+impl<'w> WorkflowLocation<'w> {
+    pub(crate) fn with_job(&self, job: &Job<'w>) -> WorkflowLocation<'w> {
+        WorkflowLocation {
+            name: self.name,
+            job: Some(JobLocation {
+                id: job.id,
+                name: job.inner.name(),
+                step: None,
+            }),
+        }
+    }
+
+    pub(crate) fn with_step(&self, step: &Step<'w>) -> WorkflowLocation<'w> {
+        match &self.job {
+            None => panic!("API misuse: can't set step without parent job"),
+            Some(job) => WorkflowLocation {
+                name: self.name,
+                job: Some(job.with_step(step)),
+            },
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -58,5 +93,5 @@ pub(crate) struct Determinations {
 pub(crate) struct Finding<'w> {
     pub(crate) ident: &'static str,
     pub(crate) determinations: Determinations,
-    pub(crate) location: WorkflowLocation<'w>,
+    pub(crate) locations: Vec<WorkflowLocation<'w>>,
 }

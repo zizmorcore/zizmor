@@ -2,7 +2,7 @@ use anyhow::Result;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::Trigger;
 
-use crate::finding::{Confidence, Determinations, Finding, Severity, WorkflowLocation};
+use crate::finding::{Confidence, Determinations, Finding, Severity};
 use crate::models::{AuditConfig, Workflow};
 
 use super::WorkflowAudit;
@@ -41,10 +41,7 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
                     confidence: Confidence::Medium,
                     severity: Severity::High,
                 },
-                location: WorkflowLocation {
-                    name: workflow.filename.clone(),
-                    jobs: vec![],
-                },
+                locations: vec![workflow.location()],
             })
         }
 

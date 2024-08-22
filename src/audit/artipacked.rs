@@ -1,3 +1,4 @@
+
 use anyhow::Result;
 use github_actions_models::{
     common::EnvValue,
@@ -6,11 +7,11 @@ use github_actions_models::{
 use itertools::Itertools;
 
 use crate::{
-    finding::{Confidence, Finding, Severity, StepLocation},
+    finding::{Confidence, Finding, Severity},
     models::AuditConfig,
 };
 use crate::{
-    finding::{Determinations, JobLocation, WorkflowLocation},
+    finding::{Determinations},
     models::Workflow,
 };
 
@@ -36,19 +37,19 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
 
         let mut findings = vec![];
 
-        for (jobid, job) in workflow.jobs.iter() {
+        for job in workflow.jobs() {
             // Reusable workflows aren't checked, for now,
             // since we'd need to resolve their contents to determine
             // whether their interior steps are vulnerable.
-            let Job::NormalJob(job) = job else {
+            if !matches!(job.inner, Job::NormalJob(_)) {
                 continue;
-            };
+            }
 
             // First, collect all vulnerable checkouts and upload steps independently.
             let mut vulnerable_checkouts = vec![];
             let mut vulnerable_uploads = vec![];
-            for (stepno, step) in job.steps.iter().enumerate() {
-                let StepBody::Uses { uses, with } = &step.body else {
+            for step in job.steps() {
+                let StepBody::Uses { ref uses, ref with } = &step.inner.body else {
                     continue;
                 };
 
@@ -59,23 +60,21 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                             // If a user explicitly sets `persist-credentials: true`,
                             // they probably mean it. Only report if being pedantic.
                             if self.config.pedantic {
-                                vulnerable_checkouts.push(StepLocation::new(stepno, step))
+                                vulnerable_checkouts.push(step)
                             } else {
                                 continue;
                             }
                         }
                         // TODO: handle expressions and literal strings here.
                         // persist-credentials is true by default.
-                        _ => vulnerable_checkouts.push(StepLocation::new(stepno, step)),
+                        _ => vulnerable_checkouts.push(step),
                     }
-                }
-
-                if uses.starts_with("actions/upload-artifact") {
+                } else if uses.starts_with("actions/upload-artifact") {
                     match with.get("path") {
                         // TODO: This is pretty naive -- we should also flag on
                         // `${{ expressions }}` and absolute paths, etc.
                         Some(EnvValue::String(s)) if s == "." || s == ".." => {
-                            vulnerable_uploads.push(StepLocation::new(stepno, step))
+                            vulnerable_uploads.push(step)
                         }
                         _ => continue,
                     }
@@ -92,14 +91,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                             severity: Severity::Medium,
                             confidence: Confidence::Low,
                         },
-                        location: WorkflowLocation {
-                            name: workflow.filename.clone(),
-                            jobs: vec![JobLocation {
-                                id: jobid,
-                                name: job.name.as_deref(),
-                                steps: vec![checkout],
-                            }],
-                        },
+                        locations: vec![checkout.location().clone()],
                     })
                 }
             } else {
@@ -117,14 +109,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
                             },
-                            location: WorkflowLocation {
-                                name: workflow.filename.clone(),
-                                jobs: vec![JobLocation {
-                                    id: jobid,
-                                    name: job.name.as_deref(),
-                                    steps: vec![checkout, upload],
-                                }],
-                            },
+                            locations: vec![checkout.location().clone(), upload.location().clone()],
                         });
                     }
                 }
