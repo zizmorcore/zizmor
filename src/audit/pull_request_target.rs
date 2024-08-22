@@ -18,7 +18,7 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
         Ok(Self { _config: config })
     }
 
-    async fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         log::debug!(
             "audit: {} evaluating {}",
             Self::AUDIT_IDENT,

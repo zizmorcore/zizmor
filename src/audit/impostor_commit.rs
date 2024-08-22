@@ -7,53 +7,47 @@
 
 use crate::{
     finding::{Confidence, Determinations, Finding, Severity},
+    github_api::{self, ComparisonStatus},
     models::{AuditConfig, Workflow},
 };
 
 use anyhow::Result;
 use github_actions_models::workflow::{job::StepBody, Job};
-use octocrab::{models::commits::GithubCommitStatus, Error, Octocrab};
 
 use super::WorkflowAudit;
 
 pub(crate) struct ImpostorCommit<'a> {
     pub(crate) _config: AuditConfig<'a>,
-    pub(crate) client: Octocrab,
+    pub(crate) client: github_api::Client,
 }
 
 impl<'a> ImpostorCommit<'a> {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    async fn impostor(&self, owner: &str, repo: &str, commit: &str) -> Result<bool> {
-        let branches = self
-            .client
-            .repos(owner, repo)
-            .list_branches()
-            .send()
-            .await?;
+    fn impostor(&self, owner: &str, repo: &str, commit: &str) -> Result<bool> {
+        let branches = self.client.list_branches(owner, repo)?;
 
         for branch in &branches {
-            if self
-                .named_ref_contains_commit(
-                    owner,
-                    repo,
-                    &format!("refs/heads/{}", &branch.name),
-                    commit,
-                )
-                .await?
-            {
+            if self.named_ref_contains_commit(
+                owner,
+                repo,
+                &format!("refs/heads/{}", &branch.name),
+                commit,
+            )? {
                 return Ok(false);
             }
         }
 
-        let tags = self.client.repos(owner, repo).list_tags().send().await?;
+        let tags = self.client.list_tags(owner, repo)?;
 
         for tag in &tags {
-            if self
-                .named_ref_contains_commit(owner, repo, &format!("refs/tags/{}", &tag.name), commit)
-                .await?
-            {
+            if self.named_ref_contains_commit(
+                owner,
+                repo,
+                &format!("refs/tags/{}", &tag.name),
+                commit,
+            )? {
                 return Ok(false);
             }
         }
@@ -63,7 +57,7 @@ impl<'a> ImpostorCommit<'a> {
         Ok(true)
     }
 
-    async fn named_ref_contains_commit(
+    fn named_ref_contains_commit(
         &self,
         owner: &str,
         repo: &str,
@@ -72,17 +66,13 @@ impl<'a> ImpostorCommit<'a> {
     ) -> Result<bool> {
         match self
             .client
-            .commits(owner, repo)
-            .compare(named_ref, commit)
-            .send()
-            .await
+            .compare_commits(owner, repo, named_ref, commit)?
         {
-            Ok(diff) => Ok(matches!(
-                diff.status,
-                GithubCommitStatus::Behind | GithubCommitStatus::Identical
+            Some(comparison) => Ok(matches!(
+                comparison.status,
+                ComparisonStatus::Behind | ComparisonStatus::Identical
             )),
-            Err(Error::GitHub { source, .. }) if source.status_code.as_u16() == 404 => Ok(false),
-            Err(err) => Err(err.into()),
+            None => Ok(false),
         }
     }
 }
@@ -91,9 +81,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
     const AUDIT_IDENT: &'static str = "impostor-commit";
 
     fn new(config: AuditConfig<'a>) -> Result<Self> {
-        let client = octocrab::OctocrabBuilder::new()
-            .personal_token(config.gh_token.to_string())
-            .build()?;
+        let client = github_api::Client::new(&config.gh_token);
 
         Ok(ImpostorCommit {
             _config: config,
@@ -101,7 +89,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
         })
     }
 
-    async fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         log::debug!(
             "audit: {} evaluating {}",
             Self::AUDIT_IDENT,
@@ -122,7 +110,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                             continue;
                         };
 
-                        if self.impostor(owner, repo, commit).await? {
+                        if self.impostor(owner, repo, commit)? {
                             findings.push(Finding {
                                 ident: ImpostorCommit::AUDIT_IDENT,
                                 determinations: Determinations {
@@ -142,7 +130,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                         continue;
                     };
 
-                    if self.impostor(owner, org, commit).await? {
+                    if self.impostor(owner, org, commit)? {
                         findings.push(Finding {
                             ident: ImpostorCommit::AUDIT_IDENT,
                             determinations: Determinations {

@@ -1,13 +1,13 @@
-use std::path::PathBuf;
+use std::{io::stdout, path::PathBuf};
 
 use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
 use clap::Parser;
 use models::AuditConfig;
-use serde_jsonlines::AsyncJsonLinesWriter;
 
 mod audit;
 mod finding;
+mod github_api;
 mod models;
 
 /// A tool to detect "ArtiPACKED"-type credential disclosures in GitHub Actions.
@@ -34,8 +34,7 @@ impl<'a> From<&'a Args> for AuditConfig<'a> {
     }
 }
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 10)]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     env_logger::init();
     let args = Args::parse();
 
@@ -69,32 +68,24 @@ async fn main() -> Result<()> {
         return Err(anyhow!("input must be a single workflow file or directory"));
     }
 
-    let mut writer = AsyncJsonLinesWriter::new(tokio::io::stdout());
+    let mut workflows = vec![];
     for workflow_path in workflow_paths.iter() {
-        let workflow = models::Workflow::from_file(workflow_path)?;
+        workflows.push(models::Workflow::from_file(workflow_path)?);
+    }
+
+    let mut results = vec![];
+    for workflow in workflows.iter() {
         // TODO: Proper abstraction for multiple audits here.
 
-        for result in audit::artipacked::Artipacked::new(config)?
-            .audit(&workflow)
-            .await?
-        {
-            writer.write(&result).await?;
-        }
+        results.extend(audit::artipacked::Artipacked::new(config)?.audit(&workflow)?);
 
-        for result in audit::pull_request_target::PullRequestTarget::new(config)?
-            .audit(&workflow)
-            .await?
-        {
-            writer.write(&result).await?;
-        }
+        results
+            .extend(audit::pull_request_target::PullRequestTarget::new(config)?.audit(&workflow)?);
 
-        for result in audit::impostor_commit::ImpostorCommit::new(config)?
-            .audit(&workflow)
-            .await?
-        {
-            writer.write(&result).await?;
-        }
+        results.extend(audit::impostor_commit::ImpostorCommit::new(config)?.audit(&workflow)?);
     }
+
+    serde_json::to_writer_pretty(stdout(), &results)?;
 
     Ok(())
 }

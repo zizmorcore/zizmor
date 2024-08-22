@@ -1,4 +1,3 @@
-
 use anyhow::Result;
 use github_actions_models::{
     common::EnvValue,
@@ -6,13 +5,10 @@ use github_actions_models::{
 };
 use itertools::Itertools;
 
+use crate::{finding::Determinations, models::Workflow};
 use crate::{
     finding::{Confidence, Finding, Severity},
     models::AuditConfig,
-};
-use crate::{
-    finding::{Determinations},
-    models::Workflow,
 };
 
 use super::WorkflowAudit;
@@ -28,7 +24,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
         Ok(Self { config })
     }
 
-    async fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         log::debug!(
             "audit: {} evaluating {}",
             Self::AUDIT_IDENT,
