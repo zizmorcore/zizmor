@@ -50,7 +50,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
             let mut vulnerable_checkouts = vec![];
             let mut vulnerable_uploads = vec![];
             for step in job.steps() {
-                let StepBody::Uses { uses, with } = &step.inner.body else {
+                let StepBody::Uses { ref uses, ref with } = &step.inner.body else {
                     continue;
                 };
 
@@ -61,21 +61,21 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                             // If a user explicitly sets `persist-credentials: true`,
                             // they probably mean it. Only report if being pedantic.
                             if self.config.pedantic {
-                                vulnerable_checkouts.push(step.clone())
+                                vulnerable_checkouts.push(step)
                             } else {
                                 continue;
                             }
                         }
                         // TODO: handle expressions and literal strings here.
                         // persist-credentials is true by default.
-                        _ => vulnerable_checkouts.push(step.clone()),
+                        _ => vulnerable_checkouts.push(step),
                     }
                 } else if uses.starts_with("actions/upload-artifact") {
                     match with.get("path") {
                         // TODO: This is pretty naive -- we should also flag on
                         // `${{ expressions }}` and absolute paths, etc.
                         Some(EnvValue::String(s)) if s == "." || s == ".." => {
-                            vulnerable_uploads.push(step.clone())
+                            vulnerable_uploads.push(step)
                         }
                         _ => continue,
                     }
@@ -92,7 +92,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                             severity: Severity::Medium,
                             confidence: Confidence::Low,
                         },
-                        locations: vec![checkout.location()],
+                        locations: vec![checkout.location().clone()],
                     })
                 }
             } else {
@@ -100,8 +100,8 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                 // vulnerable upload. There are more efficient ways to do this than
                 // a cartesian product, but this way is simple.
                 for (checkout, upload) in vulnerable_checkouts
-                    .iter()
-                    .cartesian_product(vulnerable_uploads.iter())
+                    .into_iter()
+                    .cartesian_product(vulnerable_uploads.into_iter())
                 {
                     if checkout.index < upload.index {
                         findings.push(Finding {
@@ -110,7 +110,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
                             },
-                            locations: vec![checkout.location(), upload.location()],
+                            locations: vec![checkout.location().clone(), upload.location().clone()],
                         });
                     }
                 }

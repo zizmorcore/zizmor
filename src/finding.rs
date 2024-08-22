@@ -37,8 +37,8 @@ impl<'w> StepLocation<'w> {
     }
 }
 
-impl<'w> From<&'w Step<'w>> for StepLocation<'w> {
-    fn from(step: &'w Step<'w>) -> Self {
+impl<'w> From<&Step<'w>> for StepLocation<'w> {
+    fn from(step: &Step<'w>) -> Self {
         Self {
             index: step.index,
             id: step.inner.id.as_deref(),
@@ -55,21 +55,11 @@ pub(crate) struct JobLocation<'w> {
 }
 
 impl<'w> JobLocation<'w> {
-    fn with_step(&'w self, step: &'w Step) -> JobLocation {
+    fn with_step(&self, step: &Step<'w>) -> JobLocation<'w> {
         JobLocation {
             id: &self.id,
             name: self.name,
             step: Some(step.into()),
-        }
-    }
-}
-
-impl<'w> From<&'w Job<'w>> for JobLocation<'w> {
-    fn from(job: &'w Job<'w>) -> Self {
-        Self {
-            id: job.id,
-            name: job.inner.name(),
-            step: None,
         }
     }
 }
@@ -82,14 +72,18 @@ pub(crate) struct WorkflowLocation<'w> {
 }
 
 impl<'w> WorkflowLocation<'w> {
-    pub(crate) fn with_job(&self, job: &'w Job<'w>) -> WorkflowLocation<'w> {
+    pub(crate) fn with_job(&self, job: &Job<'w>) -> WorkflowLocation<'w> {
         WorkflowLocation {
             name: &self.name,
-            job: Some(job.into()),
+            job: Some(JobLocation {
+                id: &job.id,
+                name: job.inner.name(),
+                step: None,
+            }),
         }
     }
 
-    pub(crate) fn with_step(&'w self, step: &'w Step<'w>) -> WorkflowLocation<'w> {
+    pub(crate) fn with_step(&self, step: &Step<'w>) -> WorkflowLocation<'w> {
         match &self.job {
             None => panic!("API misuse: can't set step without parent job"),
             Some(job) => WorkflowLocation {

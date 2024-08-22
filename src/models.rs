@@ -59,11 +59,11 @@ impl<'w> Job<'w> {
         Self { id, inner, parent }
     }
 
-    pub(crate) fn location(&'w self) -> WorkflowLocation<'w> {
+    pub(crate) fn location(&self) -> WorkflowLocation<'w> {
         self.parent.with_job(&self)
     }
 
-    pub(crate) fn steps(&'w self) -> Steps<'w> {
+    pub(crate) fn steps(&self) -> Steps<'w> {
         Steps::new(&self)
     }
 }
@@ -115,7 +115,7 @@ impl<'w> Step<'w> {
         }
     }
 
-    pub(crate) fn location(&'w self) -> WorkflowLocation<'w> {
+    pub(crate) fn location(&self) -> WorkflowLocation<'w> {
         self.parent.with_step(&self)
     }
 }
@@ -126,13 +126,13 @@ pub(crate) struct Steps<'w> {
 }
 
 impl<'w> Steps<'w> {
-    pub(crate) fn new(job: &'w Job) -> Self {
+    pub(crate) fn new(job: &Job<'w>) -> Self {
         // TODO: do something less silly here.
         match &job.inner {
-            workflow::Job::ReusableWorkflowCallJob(r) => {
+            workflow::Job::ReusableWorkflowCallJob(_) => {
                 panic!("API misuse: can't call steps() on a reusable job")
             }
-            workflow::Job::NormalJob(n) => Self {
+            workflow::Job::NormalJob(ref n) => Self {
                 inner: n.steps.iter().enumerate(),
                 location: job.location(),
             },
