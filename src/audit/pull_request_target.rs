@@ -2,7 +2,7 @@ use anyhow::Result;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::Trigger;
 
-use crate::finding::{Confidence, Determinations, Finding, Severity};
+use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{AuditConfig, Workflow};
 
 use super::WorkflowAudit;
@@ -33,16 +33,16 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
 
         let mut findings = vec![];
         if has_pull_request_target {
-            findings.push(Finding {
-                ident: PullRequestTarget::ident(),
-                determinations: Determinations {
-                    confidence: Confidence::Medium,
-                    severity: Severity::High,
-                },
-                locations: vec![workflow.location().with_annotation(
-                    "triggers include pull_request_target, which is almost always used insecurely",
-                )],
-            })
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::Medium)
+                    .severity(Severity::High)
+                    .add_location(workflow.location().annotated(
+                        "triggers include pull_request_target, which is almost always used \
+                         insecurely",
+                    ))
+                    .build(),
+            );
         }
 
         log::debug!("audit: {} completed {}", Self::ident(), &workflow.filename);

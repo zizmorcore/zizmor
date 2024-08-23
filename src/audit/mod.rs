@@ -1,5 +1,5 @@
 use crate::{
-    finding::Finding,
+    finding::{Finding, FindingBuilder},
     models::{AuditConfig, Workflow},
 };
 use anyhow::Result;
@@ -11,6 +11,13 @@ pub(crate) mod ref_confusion;
 pub(crate) mod use_trusted_publishing;
 
 pub(crate) trait WorkflowAudit<'a> {
+    fn finding<'w>() -> FindingBuilder<'w>
+    where
+        Self: Sized,
+    {
+        FindingBuilder::new(Self::ident())
+    }
+
     fn ident() -> &'static str
     where
         Self: Sized;
@@ -18,5 +25,6 @@ pub(crate) trait WorkflowAudit<'a> {
     fn new(config: AuditConfig<'a>) -> Result<Self>
     where
         Self: Sized;
+
     fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>>;
 }

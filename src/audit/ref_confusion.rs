@@ -12,12 +12,15 @@ use anyhow::Result;
 use github_actions_models::workflow::{job::StepBody, Job};
 
 use crate::{
-    finding::{Confidence, Determinations, Finding, Severity},
+    finding::{Confidence, Severity},
     github_api,
     models::{AuditConfig, Uses},
 };
 
 use super::WorkflowAudit;
+
+const REF_CONFUSION_ANNOTATION: &'static str =
+    "uses a ref that's provided by both the branch and tag namespaces";
 
 pub(crate) struct RefConfusion<'a> {
     pub(crate) _config: AuditConfig<'a>,
@@ -30,18 +33,21 @@ impl<'a> RefConfusion<'a> {
             return Ok(false);
         };
 
-        let branches = self
+        let branches_match = self
             .client
             .list_branches(uses.owner, uses.repo)?
-            .into_iter()
-            .map(|b| b.name);
-        let tags = self
+            .iter()
+            .any(|b| b.name == sym_ref);
+
+        let tags_match = self
             .client
             .list_tags(uses.owner, uses.repo)?
-            .into_iter()
-            .map(|t| t.name);
+            .iter()
+            .any(|t| t.name == sym_ref);
 
-        Ok(branches.chain(tags).any(|r| r == sym_ref))
+        // If both the branch and tag namespaces have a match, we have a
+        // confusable ref.
+        Ok(branches_match && tags_match)
     }
 }
 
@@ -84,17 +90,15 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
                         };
 
                         if self.confusable(&uses)? {
-                            findings.push(Finding {
-                                ident: RefConfusion::ident(),
-                                determinations: Determinations {
-                                    severity: Severity::Medium,
-                                    confidence: Confidence::High,
-                                },
-                                locations: vec![step.location().with_annotation(
-                                    "uses a ref that's provided by both the branch and tag \
-                                     namespaces",
-                                )],
-                            })
+                            findings.push(
+                                Self::finding()
+                                    .severity(Severity::Medium)
+                                    .confidence(Confidence::High)
+                                    .add_location(
+                                        step.location().annotated(REF_CONFUSION_ANNOTATION),
+                                    )
+                                    .build(),
+                            );
                         }
                     }
                 }
@@ -104,16 +108,13 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
                     };
 
                     if self.confusable(&uses)? {
-                        findings.push(Finding {
-                            ident: RefConfusion::ident(),
-                            determinations: Determinations {
-                                severity: Severity::Medium,
-                                confidence: Confidence::High,
-                            },
-                            locations: vec![job.location().with_annotation(
-                                "uses a ref that's provided by both the branch and tag namespaces",
-                            )],
-                        })
+                        findings.push(
+                            Self::finding()
+                                .severity(Severity::Medium)
+                                .confidence(Confidence::High)
+                                .add_location(job.location().annotated(REF_CONFUSION_ANNOTATION))
+                                .build(),
+                        )
                     }
                 }
             }

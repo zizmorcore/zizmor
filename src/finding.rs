@@ -64,6 +64,7 @@ pub(crate) struct WorkflowLocation<'w> {
 }
 
 impl<'w> WorkflowLocation<'w> {
+    /// Creates a new `WorkflowLocation` with the given `Job` added to it.
     pub(crate) fn with_job(&self, job: &Job<'w>) -> WorkflowLocation<'w> {
         WorkflowLocation {
             name: self.name,
@@ -76,6 +77,10 @@ impl<'w> WorkflowLocation<'w> {
         }
     }
 
+    /// Creates a new `WorkflowLocation` with the given `Step` added to it.
+    ///
+    /// This can only be called after the `WorkflowLocation` already has a job,
+    /// since steps belong to jobs.
     pub(crate) fn with_step(&self, step: &Step<'w>) -> WorkflowLocation<'w> {
         match &self.job {
             None => panic!("API misuse: can't set step without parent job"),
@@ -87,8 +92,8 @@ impl<'w> WorkflowLocation<'w> {
         }
     }
 
-    // Modifies self, since we expect annotating to be the last phase in location tracking.
-    pub(crate) fn with_annotation(mut self, annotation: impl Into<String>) -> WorkflowLocation<'w> {
+    /// Adds a human-readable annotation to the current `WorkflowLocation`.
+    pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> WorkflowLocation<'w> {
         self.annotation = Some(annotation.into());
         self
     }
@@ -105,4 +110,52 @@ pub(crate) struct Finding<'w> {
     pub(crate) ident: &'static str,
     pub(crate) determinations: Determinations,
     pub(crate) locations: Vec<WorkflowLocation<'w>>,
+}
+
+pub(crate) struct FindingBuilder<'w> {
+    ident: &'static str,
+    severity: Option<Severity>,
+    confidence: Option<Confidence>,
+    locations: Vec<WorkflowLocation<'w>>,
+}
+
+impl<'w> FindingBuilder<'w> {
+    pub(crate) fn new(ident: &'static str) -> Self {
+        Self {
+            ident,
+            severity: None,
+            confidence: None,
+            locations: vec![],
+        }
+    }
+
+    pub(crate) fn severity(mut self, severity: Severity) -> Self {
+        self.severity = Some(severity);
+        self
+    }
+
+    pub(crate) fn confidence(mut self, confidence: Confidence) -> Self {
+        self.confidence = Some(confidence);
+        self
+    }
+
+    pub(crate) fn add_location(mut self, location: WorkflowLocation<'w>) -> Self {
+        self.locations.push(location);
+        self
+    }
+
+    pub(crate) fn build(self) -> Finding<'w> {
+        Finding {
+            ident: self.ident,
+            determinations: Determinations {
+                confidence: self
+                    .confidence
+                    .expect("API misuse: must call confidence() at least once"),
+                severity: self
+                    .severity
+                    .expect("API misuse: must call severity() at least once"),
+            },
+            locations: self.locations,
+        }
+    }
 }

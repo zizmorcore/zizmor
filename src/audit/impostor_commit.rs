@@ -8,7 +8,7 @@
 use std::ops::Deref;
 
 use crate::{
-    finding::{Confidence, Determinations, Finding, Severity},
+    finding::{Confidence, Finding, Severity},
     github_api::{self, ComparisonStatus},
     models::{AuditConfig, Uses, Workflow},
 };
@@ -17,6 +17,9 @@ use anyhow::Result;
 use github_actions_models::workflow::{job::StepBody, Job};
 
 use super::WorkflowAudit;
+
+pub const IMPOSTOR_ANNOTATION: &'static str =
+    "uses a commit that doesn't belong to the specified org/repo";
 
 pub(crate) struct ImpostorCommit<'a> {
     pub(crate) _config: AuditConfig<'a>,
@@ -115,16 +118,13 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                         };
 
                         if self.impostor(uses)? {
-                            findings.push(Finding {
-                                ident: ImpostorCommit::ident(),
-                                determinations: Determinations {
-                                    severity: Severity::High,
-                                    confidence: Confidence::High,
-                                },
-                                locations: vec![step.location().with_annotation(
-                                    "uses a commit that doesn't belong to the specified org/repo",
-                                )],
-                            })
+                            findings.push(
+                                Self::finding()
+                                    .severity(Severity::High)
+                                    .confidence(Confidence::High)
+                                    .add_location(step.location().annotated(IMPOSTOR_ANNOTATION))
+                                    .build(),
+                            );
                         }
                     }
                 }
@@ -136,16 +136,13 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                     };
 
                     if self.impostor(uses)? {
-                        findings.push(Finding {
-                            ident: ImpostorCommit::ident(),
-                            determinations: Determinations {
-                                severity: Severity::High,
-                                confidence: Confidence::High,
-                            },
-                            locations: vec![job.location().with_annotation(
-                                "uses a commit that doesn't belong to the specified org/repo",
-                            )],
-                        })
+                        findings.push(
+                            Self::finding()
+                                .severity(Severity::High)
+                                .confidence(Confidence::High)
+                                .add_location(job.location().annotated(IMPOSTOR_ANNOTATION))
+                                .build(),
+                        );
                     }
                 }
             }

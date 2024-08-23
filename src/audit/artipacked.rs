@@ -7,7 +7,7 @@ use github_actions_models::{
 };
 use itertools::Itertools;
 
-use crate::{finding::Determinations, models::Workflow};
+use crate::models::Workflow;
 use crate::{
     finding::{Confidence, Finding, Severity},
     models::AuditConfig,
@@ -81,16 +81,17 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                 // If we have no vulnerable uploads, then emit lower-confidence
                 // findings for just the checkout steps.
                 for checkout in vulnerable_checkouts {
-                    findings.push(Finding {
-                        ident: Artipacked::ident(),
-                        determinations: Determinations {
-                            severity: Severity::Medium,
-                            confidence: Confidence::Low,
-                        },
-                        locations: vec![checkout
-                            .location()
-                            .with_annotation("does not set persist-credentials: false")],
-                    })
+                    findings.push(
+                        Self::finding()
+                            .severity(Severity::Medium)
+                            .confidence(Confidence::Low)
+                            .add_location(
+                                checkout
+                                    .location()
+                                    .annotated("does not set persist-credentials: false"),
+                            )
+                            .build(),
+                    );
                 }
             } else {
                 // Select only pairs where the vulnerable checkout precedes the
@@ -101,21 +102,22 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                     .cartesian_product(vulnerable_uploads.into_iter())
                 {
                     if checkout.index < upload.index {
-                        findings.push(Finding {
-                            ident: Artipacked::ident(),
-                            determinations: Determinations {
-                                severity: Severity::High,
-                                confidence: Confidence::High,
-                            },
-                            locations: vec![
-                                checkout
-                                    .location()
-                                    .with_annotation("does not set persist-credentials: false"),
-                                upload
-                                    .location()
-                                    .with_annotation("may leak the credentials persisted above"),
-                            ],
-                        });
+                        findings.push(
+                            Self::finding()
+                                .severity(Severity::High)
+                                .confidence(Confidence::High)
+                                .add_location(
+                                    checkout
+                                        .location()
+                                        .annotated("does not set persist-credentials: false"),
+                                )
+                                .add_location(
+                                    upload
+                                        .location()
+                                        .annotated("may leak the credentials persisted above"),
+                                )
+                                .build(),
+                        );
                     }
                 }
             }

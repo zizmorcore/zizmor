@@ -6,7 +6,7 @@ use github_actions_models::{
 };
 
 use crate::{
-    finding::{Confidence, Determinations, Finding, Severity},
+    finding::{Confidence, Severity},
     models::AuditConfig,
 };
 
@@ -90,41 +90,34 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
 
                 if uses.starts_with("pypa/gh-action-pypi-publish") {
                     if self.pypi_publish_uses_manual_credentials(with) {
-                        findings.push(Finding {
-                            ident: UseTrustedPublishing::ident(),
-                            determinations: Determinations {
-                                severity: Severity::Informational,
-                                confidence: Confidence::High,
-                            },
-                            locations: vec![step
-                                .location()
-                                .with_annotation(USES_MANUAL_CREDENTIAL)],
-                        })
+                        findings.push(
+                            Self::finding()
+                                .severity(Severity::Informational)
+                                .confidence(Confidence::High)
+                                .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
+                                .build(),
+                        );
                     }
                 } else if uses.starts_with("rubygems/release-gem") {
                     if self.release_gem_uses_manual_credentials(with) {
-                        findings.push(Finding {
-                            ident: UseTrustedPublishing::ident(),
-                            determinations: Determinations {
-                                confidence: Confidence::High,
-                                severity: Severity::Informational,
-                            },
-                            locations: vec![step
-                                .location()
-                                .with_annotation(USES_MANUAL_CREDENTIAL)],
-                        })
+                        findings.push(
+                            Self::finding()
+                                .severity(Severity::Informational)
+                                .confidence(Confidence::High)
+                                .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
+                                .build(),
+                        );
                     }
                 } else if uses.starts_with("rubygems/configure-rubygems-credential")
                     && self.rubygems_credential_uses_manual_credentials(with)
                 {
-                    findings.push(Finding {
-                        ident: UseTrustedPublishing::ident(),
-                        determinations: Determinations {
-                            confidence: Confidence::High,
-                            severity: Severity::Informational,
-                        },
-                        locations: vec![step.location().with_annotation(USES_MANUAL_CREDENTIAL)],
-                    })
+                    findings.push(
+                        Self::finding()
+                            .severity(Severity::Informational)
+                            .confidence(Confidence::High)
+                            .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
+                            .build(),
+                    );
                 }
             }
         }
