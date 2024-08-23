@@ -258,14 +258,14 @@ impl<'a> Uses<'a> {
 
     pub(crate) fn commit_ref(&self) -> Option<&str> {
         match self.git_ref {
-            Some(git_ref) if self.ref_is_commit() => Some(&git_ref),
+            Some(git_ref) if self.ref_is_commit() => Some(git_ref),
             _ => None,
         }
     }
 
     pub(crate) fn symbolic_ref(&self) -> Option<&str> {
         match self.git_ref {
-            Some(git_ref) if !self.ref_is_commit() => Some(&git_ref),
+            Some(git_ref) if !self.ref_is_commit() => Some(git_ref),
             _ => None,
         }
     }

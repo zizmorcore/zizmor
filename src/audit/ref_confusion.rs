@@ -59,7 +59,7 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
     {
         Ok(Self {
             _config: config,
-            client: github_api::Client::new(&config.gh_token),
+            client: github_api::Client::new(config.gh_token),
         })
     }
 
