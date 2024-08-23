@@ -39,7 +39,9 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
                     confidence: Confidence::Medium,
                     severity: Severity::High,
                 },
-                locations: vec![workflow.location()],
+                locations: vec![workflow.location().with_annotation(
+                    "triggers include pull_request_target, which is almost always used insecurely",
+                )],
             })
         }
 

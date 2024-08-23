@@ -85,7 +85,9 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                             severity: Severity::Medium,
                             confidence: Confidence::Low,
                         },
-                        locations: vec![checkout.location()],
+                        locations: vec![checkout
+                            .location()
+                            .with_annotation("does not set persist-credentials: false")],
                     })
                 }
             } else {
@@ -103,7 +105,14 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
                             },
-                            locations: vec![checkout.location(), upload.location()],
+                            locations: vec![
+                                checkout
+                                    .location()
+                                    .with_annotation("does not set persist-credentials: false"),
+                                upload
+                                    .location()
+                                    .with_annotation("may leak the credentials persisted above"),
+                            ],
                         });
                     }
                 }

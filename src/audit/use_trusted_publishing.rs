@@ -12,6 +12,9 @@ use crate::{
 
 use super::WorkflowAudit;
 
+const USES_MANUAL_CREDENTIAL: &str =
+    "uses a manually-configured credential instead of Trusted Publishing";
+
 const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
     "https://upload.pypi.org/legacy/",
     "https://test.pypi.org/legacy/",
@@ -93,7 +96,9 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
                                 severity: Severity::Informational,
                                 confidence: Confidence::High,
                             },
-                            locations: vec![step.location()],
+                            locations: vec![step
+                                .location()
+                                .with_annotation(USES_MANUAL_CREDENTIAL)],
                         })
                     }
                 } else if uses.starts_with("rubygems/release-gem") {
@@ -104,17 +109,21 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
                                 confidence: Confidence::High,
                                 severity: Severity::Informational,
                             },
-                            locations: vec![step.location()],
+                            locations: vec![step
+                                .location()
+                                .with_annotation(USES_MANUAL_CREDENTIAL)],
                         })
                     }
-                } else if uses.starts_with("rubygems/configure-rubygems-credential") && self.rubygems_credential_uses_manual_credentials(with) {
+                } else if uses.starts_with("rubygems/configure-rubygems-credential")
+                    && self.rubygems_credential_uses_manual_credentials(with)
+                {
                     findings.push(Finding {
                         ident: UseTrustedPublishing::ident(),
                         determinations: Determinations {
                             confidence: Confidence::High,
                             severity: Severity::Informational,
                         },
-                        locations: vec![step.location()],
+                        locations: vec![step.location().with_annotation(USES_MANUAL_CREDENTIAL)],
                     })
                 }
             }

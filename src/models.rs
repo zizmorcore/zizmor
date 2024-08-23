@@ -40,6 +40,7 @@ impl Workflow {
         WorkflowLocation {
             name: &self.filename,
             job: None,
+            annotation: None,
         }
     }
 

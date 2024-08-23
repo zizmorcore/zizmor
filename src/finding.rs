@@ -58,6 +58,9 @@ pub(crate) struct WorkflowLocation<'w> {
     pub(crate) name: &'w str,
     /// The job location within this workflow, if present.
     pub(crate) job: Option<JobLocation<'w>>,
+
+    // An optional annotation describing the location's relevance.
+    pub(crate) annotation: Option<String>,
 }
 
 impl<'w> WorkflowLocation<'w> {
@@ -69,6 +72,7 @@ impl<'w> WorkflowLocation<'w> {
                 name: job.inner.name(),
                 step: None,
             }),
+            annotation: self.annotation.clone(),
         }
     }
 
@@ -78,8 +82,15 @@ impl<'w> WorkflowLocation<'w> {
             Some(job) => WorkflowLocation {
                 name: self.name,
                 job: Some(job.with_step(step)),
+                annotation: self.annotation.clone(),
             },
         }
+    }
+
+    // Modifies self, since we expect annotating to be the last phase in location tracking.
+    pub(crate) fn with_annotation(mut self, annotation: impl Into<String>) -> WorkflowLocation<'w> {
+        self.annotation = Some(annotation.into());
+        self
     }
 }
 
