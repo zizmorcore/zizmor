@@ -115,7 +115,9 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                     severity: Severity::High,
                                     confidence: Confidence::High,
                                 },
-                                locations: vec![step.location()],
+                                locations: vec![step.location().with_annotation(
+                                    "uses a commit that doesn't belong to the specified org/repo",
+                                )],
                             })
                         }
                     }
@@ -135,7 +137,9 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                 severity: Severity::High,
                                 confidence: Confidence::High,
                             },
-                            locations: vec![job.location()],
+                            locations: vec![job.location().with_annotation(
+                                "uses a commit that doesn't belong to the specified org/repo",
+                            )],
                         })
                     }
                 }

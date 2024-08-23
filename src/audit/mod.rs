@@ -7,6 +7,7 @@ use anyhow::Result;
 pub(crate) mod artipacked;
 pub(crate) mod impostor_commit;
 pub(crate) mod pull_request_target;
+pub(crate) mod ref_confusion;
 pub(crate) mod use_trusted_publishing;
 
 pub(crate) trait WorkflowAudit<'a> {

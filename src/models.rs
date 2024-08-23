@@ -55,6 +55,14 @@ pub(crate) struct Job<'w> {
     parent: WorkflowLocation<'w>,
 }
 
+impl<'w> Deref for Job<'w> {
+    type Target = workflow::Job;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner
+    }
+}
+
 impl<'w> Job<'w> {
     pub(crate) fn new(id: &'w str, inner: &'w workflow::Job, parent: WorkflowLocation<'w>) -> Self {
         Self { id, inner, parent }
