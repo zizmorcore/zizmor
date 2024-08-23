@@ -5,10 +5,12 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
+use std::ops::Deref;
+
 use crate::{
     finding::{Confidence, Determinations, Finding, Severity},
     github_api::{self, ComparisonStatus},
-    models::{AuditConfig, Workflow},
+    models::{AuditConfig, Uses, Workflow},
 };
 
 use anyhow::Result;
@@ -25,28 +27,31 @@ impl<'a> ImpostorCommit<'a> {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    fn impostor(&self, owner: &str, repo: &str, commit: &str) -> Result<bool> {
-        let branches = self.client.list_branches(owner, repo)?;
+    fn impostor(&self, uses: Uses<'_>) -> Result<bool> {
+        let branches = self.client.list_branches(uses.owner, uses.repo)?;
+
+        // If there's no ref or the ref is not a commit, there's nothing to impersonate.
+        let Some(head_ref) = uses.commit_ref() else {
+            return Ok(false);
+        };
 
         for branch in &branches {
             if self.named_ref_contains_commit(
-                owner,
-                repo,
+                &uses,
                 &format!("refs/heads/{}", &branch.name),
-                commit,
+                head_ref,
             )? {
                 return Ok(false);
             }
         }
 
-        let tags = self.client.list_tags(owner, repo)?;
+        let tags = self.client.list_tags(uses.owner, uses.repo)?;
 
         for tag in &tags {
             if self.named_ref_contains_commit(
-                owner,
-                repo,
+                &uses,
                 &format!("refs/tags/{}", &tag.name),
-                commit,
+                head_ref,
             )? {
                 return Ok(false);
             }
@@ -59,15 +64,16 @@ impl<'a> ImpostorCommit<'a> {
 
     fn named_ref_contains_commit(
         &self,
-        owner: &str,
-        repo: &str,
-        named_ref: &str,
-        commit: &str,
+        uses: &Uses<'_>,
+        base_ref: &str,
+        head_ref: &str,
     ) -> Result<bool> {
         match self
             .client
-            .compare_commits(owner, repo, named_ref, commit)?
+            .compare_commits(uses.owner, uses.repo, base_ref, head_ref)?
         {
+            // A base ref "contains" a commit if the base is either identical
+            // to the head ("identical") or the target is behind the base ("behind").
             Some(comparison) => Ok(matches!(
                 comparison.status,
                 ComparisonStatus::Behind | ComparisonStatus::Identical
@@ -100,15 +106,15 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
             match job.inner {
                 Job::NormalJob(_) => {
                     for step in job.steps() {
-                        let StepBody::Uses { uses, .. } = &step.inner.body else {
+                        let StepBody::Uses { uses, .. } = &step.deref().body else {
                             continue;
                         };
 
-                        let Some((owner, repo, commit)) = action_components(uses) else {
+                        let Some(uses) = Uses::from_step(uses) else {
                             continue;
                         };
 
-                        if self.impostor(owner, repo, commit)? {
+                        if self.impostor(uses)? {
                             findings.push(Finding {
                                 ident: ImpostorCommit::ident(),
                                 determinations: Determinations {
@@ -125,12 +131,11 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                 Job::ReusableWorkflowCallJob(reusable) => {
                     // Reusable workflows can also be commit pinned, meaning
                     // they can also be impersonated.
-                    let Some((owner, org, commit)) = reusable_workflow_components(&reusable.uses)
-                    else {
+                    let Some(uses) = Uses::from_reusable(&reusable.uses) else {
                         continue;
                     };
 
-                    if self.impostor(owner, org, commit)? {
+                    if self.impostor(uses)? {
                         findings.push(Finding {
                             ident: ImpostorCommit::ident(),
                             determinations: Determinations {
@@ -149,130 +154,5 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
         log::debug!("audit: {} completed {}", Self::ident(), &workflow.filename);
 
         Ok(findings)
-    }
-}
-
-/// Returns a three-tuple of `(owner, repo, commit)` if the given action reference
-/// is fully pinned to a commit, or `None` if the reference is either invalid or not pinned
-/// to a commit.
-fn action_components(uses: &str) -> Option<(&str, &str, &str)> {
-    let (action_path, maybe_commit) = uses.rsplit_once('@')?;
-
-    // Commit refs are always 40 hex characters; truncated commits are not permitted.
-    if !maybe_commit.chars().all(|c| c.is_ascii_hexdigit()) || maybe_commit.len() != 40 {
-        return None;
-    }
-
-    // We don't currently have enough context to resolve same-repository actions,
-    // including third-party actions that get cloned into the current repo context.
-    if action_path.starts_with("./") {
-        log::warn!("can't infer org/repo for {uses}; skipping");
-        return None;
-    }
-
-    // Docker actions are not pinned by commit.
-    if action_path.starts_with("docker://") {
-        return None;
-    }
-
-    // The action path begins with `owner/repo`. We can't assume there's only one
-    // `/`, since the action may be in an arbitrary subdirectory within `repo`.
-    let components = action_path.splitn(3, '/').collect::<Vec<_>>();
-    if components.len() < 2 {
-        return None;
-    }
-
-    Some((components[0], components[1], maybe_commit))
-}
-
-/// Returns a three-tuple of `(owner, repo, commit)` if the given reusable workflow reference
-/// is fully pinned to a commit, or `None` if the reference is either invalid or not pinned
-/// to a commit.
-fn reusable_workflow_components(uses: &str) -> Option<(&str, &str, &str)> {
-    let (workflow_path, maybe_commit) = uses.rsplit_once('@')?;
-
-    // Commit refs are always 40 hex characters; truncated commits are not permitted.
-    if !maybe_commit.chars().all(|c| c.is_ascii_hexdigit()) || maybe_commit.len() != 40 {
-        return None;
-    }
-
-    // We don't currently have enough context to resolve same-repository reusable workflows.
-    if workflow_path.starts_with("./") {
-        log::warn!("can't infer org/repo for {uses}; skipping");
-        return None;
-    }
-
-    // The workflow path begins with `owner/repo`
-    let components = workflow_path.splitn(3, '/').collect::<Vec<_>>();
-    if components.len() != 3 {
-        return None;
-    }
-
-    Some((components[0], components[1], maybe_commit))
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::audit::impostor_commit::{action_components, reusable_workflow_components};
-
-    #[test]
-    fn action_components_parses() {
-        let vectors = [
-            // Valid, as expected.
-            (
-                "actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Some((
-                    "actions",
-                    "checkout",
-                    "8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                )),
-            ),
-            // Valid: arbitrary parts don't interfere with parsing.
-            (
-                "actions/aws/ec2@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Some(("actions", "aws", "8f4b7f84864484a7bf31766abe9204da3cbe65b3")),
-            ),
-            // Invalid: not a commit ref.
-            ("actions/checkout@v4", None),
-            // Invalid: not a valid commit ref (too short).
-            ("actions/checkout@abcd", None),
-            // Invalid: no ref at all
-            ("actions/checkout", None),
-            // Invalid: missing user/repo
-            ("checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3", None),
-            // Invalid: local action refs not supported
-            (
-                "./.github/actions/hello-world-action@172239021f7ba04fe7327647b213799853a9eb89",
-                None,
-            ),
-            // Invalid: Docker refs not supported
-            ("docker://alpine:3.8", None),
-        ];
-
-        for (input, expected) in vectors {
-            assert_eq!(action_components(input), expected);
-        }
-    }
-
-    #[test]
-    fn reusable_workflow_components_parses() {
-        let vectors = [
-            // Valid, as expected.
-            ("octo-org/this-repo/.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89", Some(("octo-org", "this-repo", "172239021f7ba04fe7327647b213799853a9eb89"))),
-            // Invalid: not a commit ref.
-            ("octo-org/this-repo/.github/workflows/workflow-1.yml@notahash", None),
-            // Invalid: not a valid commit ref (too short).
-            ("octo-org/this-repo/.github/workflows/workflow-1.yml@abcd", None),
-            // Invalid: no ref at all
-            ("octo-org/this-repo/.github/workflows/workflow-1.yml", None),
-            // Invalid: missing user/repo
-            ("workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89", None),
-            // Invalid: local reusable workflow refs not supported
-            ("./.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89", None),
-        ];
-
-        for (input, expected) in vectors {
-            assert_eq!(reusable_workflow_components(input), expected);
-        }
     }
 }

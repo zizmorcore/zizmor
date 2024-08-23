@@ -78,6 +78,7 @@ fn main() -> Result<()> {
         &audit::artipacked::Artipacked::new(config)?,
         &audit::pull_request_target::PullRequestTarget::new(config)?,
         &audit::impostor_commit::ImpostorCommit::new(config)?,
+        &audit::ref_confusion::RefConfusion::new(config)?,
         &audit::use_trusted_publishing::UseTrustedPublishing::new(config)?,
     ];
     for workflow in workflows.iter() {

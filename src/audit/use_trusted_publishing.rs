@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 
 use github_actions_models::{
     common::EnvValue,
@@ -84,7 +84,7 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
             }
 
             for step in job.steps() {
-                let StepBody::Uses { uses, with } = &step.inner.body else {
+                let StepBody::Uses { uses, with } = &step.deref().body else {
                     continue;
                 };
 

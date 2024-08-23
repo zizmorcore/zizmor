@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use anyhow::Result;
 use github_actions_models::{
     common::EnvValue,
@@ -43,7 +45,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
             let mut vulnerable_checkouts = vec![];
             let mut vulnerable_uploads = vec![];
             for step in job.steps() {
-                let StepBody::Uses { ref uses, ref with } = &step.inner.body else {
+                let StepBody::Uses { ref uses, ref with } = &step.deref().body else {
                     continue;
                 };
 
