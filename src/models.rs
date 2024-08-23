@@ -7,6 +7,7 @@ use crate::finding::WorkflowLocation;
 
 pub(crate) struct Workflow {
     pub(crate) filename: String,
+    pub(crate) _raw: String,
     inner: workflow::Workflow,
 }
 
@@ -20,7 +21,8 @@ impl Deref for Workflow {
 
 impl Workflow {
     pub(crate) fn from_file<P: AsRef<Path>>(p: P) -> Result<Self> {
-        let inner = serde_yaml::from_slice(&std::fs::read(p.as_ref())?)
+        let raw = std::fs::read_to_string(p.as_ref())?;
+        let inner = serde_yaml::from_str(&raw)
             .with_context(|| format!("invalid GitHub Actions workflow: {:?}", p.as_ref()))?;
 
         // NOTE: file_name().unwrap() is safe since the read above only succeeds
@@ -32,6 +34,7 @@ impl Workflow {
                 .unwrap()
                 .to_string_lossy()
                 .into_owned(),
+            _raw: raw,
             inner,
         })
     }
