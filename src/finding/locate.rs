@@ -15,7 +15,7 @@ const WORKFLOW_TRIGGER_BLOCK: &str = r#"
     key: (flow_node (plain_scalar (string_scalar) @on_key))
     value: (
       [
-        (block_node (block_mapping) @on_value)
+        (block_node (block_mapping))
         (flow_node)
       ] @on_value
     )
