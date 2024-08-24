@@ -18,7 +18,7 @@ use github_actions_models::workflow::{job::StepBody, Job};
 
 use super::WorkflowAudit;
 
-pub const IMPOSTOR_ANNOTATION: &'static str =
+pub const IMPOSTOR_ANNOTATION: &str =
     "uses a commit that doesn't belong to the specified org/repo";
 
 pub(crate) struct ImpostorCommit<'a> {

@@ -9,7 +9,7 @@ use crate::models::Workflow;
 use super::{Finding, WorkflowLocation};
 
 /// Captures just the `on:` block of a workflow.
-const WORKFLOW_TRIGGER_BLOCK: &'static str = r#"
+const WORKFLOW_TRIGGER_BLOCK: &str = r#"
 (
   (block_mapping_pair
     key: (flow_node (plain_scalar (string_scalar) @on_key))
@@ -25,7 +25,7 @@ const WORKFLOW_TRIGGER_BLOCK: &'static str = r#"
 "#;
 
 /// Captures an entire workflow job, including non-step keys.
-const ENTIRE_JOB: &'static str = r#"
+const ENTIRE_JOB: &str = r#"
 (
   (block_mapping_pair
     key: (flow_node (plain_scalar (string_scalar) @jobs_key))
@@ -48,7 +48,7 @@ const ENTIRE_JOB: &'static str = r#"
 /// for e.g. a particular step without capturing chains of `(.)`, so we
 /// use this to collect all steps in a job and then manually walk
 /// the step list to find the step we're interested in.
-const ALL_STEPS_FROM_JOB: &'static str = r#"
+const ALL_STEPS_FROM_JOB: &str = r#"
 (
   (block_mapping_pair
     key: (flow_node (plain_scalar (string_scalar) @jobs_key))
@@ -114,7 +114,7 @@ impl Locator {
 
                         let children = cap.node.children(&mut cap.node.walk()).collect::<Vec<_>>();
                         let step_node = children[step.index];
-                        println!("{}", step_node.utf8_text(&workflow.raw.as_bytes())?);
+                        println!("{}", step_node.utf8_text(workflow.raw.as_bytes())?);
                         // dbg!(children);
                     }
                 }
@@ -141,7 +141,7 @@ impl Locator {
                     workflow
                         .tree
                         .root_node()
-                        .utf8_text(&workflow.raw.as_bytes())?
+                        .utf8_text(workflow.raw.as_bytes())?
                 )
             }
         }

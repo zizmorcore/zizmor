@@ -87,7 +87,7 @@ fn main() -> Result<()> {
         // TODO: Proper abstraction for multiple audits here.
         for audit in audits {
             for finding in audit.audit(workflow)? {
-                extractor.locate(&workflow, &finding)?;
+                extractor.locate(workflow, &finding)?;
                 results.push(finding);
             }
         }
