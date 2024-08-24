@@ -3,7 +3,7 @@ use std::{io::stdout, path::PathBuf};
 use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
 use clap::Parser;
-use finding::extract::Extractor;
+use finding::locate::Locator;
 use models::AuditConfig;
 
 mod audit;
@@ -74,7 +74,7 @@ fn main() -> Result<()> {
         workflows.push(models::Workflow::from_file(workflow_path)?);
     }
 
-    let extractor = Extractor::new();
+    let extractor = Locator::new();
     let mut results = vec![];
     let audits: &[&dyn WorkflowAudit] = &[
         &audit::artipacked::Artipacked::new(config)?,
@@ -87,7 +87,7 @@ fn main() -> Result<()> {
         // TODO: Proper abstraction for multiple audits here.
         for audit in audits {
             for finding in audit.audit(workflow)? {
-                extractor.extract(&workflow, &finding)?;
+                extractor.locate(&workflow, &finding)?;
                 results.push(finding);
             }
         }

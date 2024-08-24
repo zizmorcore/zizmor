@@ -1,5 +1,5 @@
-//! `tree-sitter` helpers for extracting `Finding` features
-//! from YAML.
+//! `tree-sitter` helpers for extracting and locating `Finding` features
+//! in the original YAML.
 
 use anyhow::Result;
 use tree_sitter::{Language, Query, QueryCursor};
@@ -74,18 +74,18 @@ const ALL_STEPS_FROM_JOB: &'static str = r#"
 )
 "#;
 
-pub(crate) struct Extractor {
+pub(crate) struct Locator {
     language: Language,
 }
 
-impl Extractor {
+impl Locator {
     pub(crate) fn new() -> Self {
         Self {
             language: tree_sitter_yaml::language(),
         }
     }
 
-    pub(crate) fn extract(&self, workflow: &Workflow, finding: &Finding) -> Result<()> {
+    pub(crate) fn locate(&self, workflow: &Workflow, finding: &Finding) -> Result<()> {
         for location in &finding.locations {
             self.extract_location(workflow, location)?;
         }
