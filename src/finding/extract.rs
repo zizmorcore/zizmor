@@ -112,8 +112,7 @@ impl Extractor {
                         // The last capture is our `@steps` capture.
                         let cap = capture.captures.last().unwrap();
 
-                        let mut cur = cap.node.walk();
-                        let children = cap.node.children(&mut cur).collect::<Vec<_>>();
+                        let children = cap.node.children(&mut cap.node.walk()).collect::<Vec<_>>();
                         let step_node = children[step.index];
                         println!("{}", step_node.utf8_text(&workflow.raw.as_bytes())?);
                         // dbg!(children);
@@ -137,7 +136,13 @@ impl Extractor {
             None => {
                 // No job means the entire workflow is flagged.
                 // TODO specialize top-level keys.
-                println!("{}", workflow.tree.root_node().to_string())
+                println!(
+                    "{}",
+                    workflow
+                        .tree
+                        .root_node()
+                        .utf8_text(&workflow.raw.as_bytes())?
+                )
             }
         }
 
