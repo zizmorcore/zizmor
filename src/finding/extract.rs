@@ -1,6 +1,13 @@
 //! `tree-sitter` helpers for extracting `Finding` features
 //! from YAML.
 
+use anyhow::Result;
+use tree_sitter::{Language, Query, QueryCursor};
+
+use crate::models::Workflow;
+
+use super::{Finding, WorkflowLocation};
+
 /// Captures just the `on:` block of a workflow.
 const WORKFLOW_TRIGGER_BLOCK: &'static str = r#"
 (
@@ -66,3 +73,74 @@ const ALL_STEPS_FROM_JOB: &'static str = r#"
   (#eq? @steps_key "steps")
 )
 "#;
+
+pub(crate) struct Extractor {
+    language: Language,
+}
+
+impl Extractor {
+    pub(crate) fn new() -> Self {
+        Self {
+            language: tree_sitter_yaml::language(),
+        }
+    }
+
+    pub(crate) fn extract(&self, workflow: &Workflow, finding: &Finding) -> Result<()> {
+        for location in &finding.locations {
+            self.extract_location(workflow, location)?;
+        }
+
+        Ok(())
+    }
+
+    fn extract_location(&self, workflow: &Workflow, location: &WorkflowLocation) -> Result<()> {
+        let mut cursor = QueryCursor::new();
+
+        match &location.job {
+            Some(job) => match &job.step {
+                Some(step) => {
+                    let steps_query = Query::new(
+                        &self.language,
+                        &ALL_STEPS_FROM_JOB.replace("__JOB_NAME__", job.id),
+                    )?;
+
+                    for (capture, idx) in cursor.captures(
+                        &steps_query,
+                        workflow.tree.root_node(),
+                        workflow.raw.as_bytes(),
+                    ) {
+                        // The last capture is our `@steps` capture.
+                        let cap = capture.captures.last().unwrap();
+
+                        let mut cur = cap.node.walk();
+                        let children = cap.node.children(&mut cur).collect::<Vec<_>>();
+                        let step_node = children[step.index];
+                        println!("{}", step_node.utf8_text(&workflow.raw.as_bytes())?);
+                        // dbg!(children);
+                    }
+                }
+                None => {
+                    // Job with no interior step: capture the entire job
+                    // and emit it.
+                    let job_query =
+                        Query::new(&self.language, &ENTIRE_JOB.replace("__JOB_NAME__", job.id))?;
+
+                    for capture in cursor.captures(
+                        &job_query,
+                        workflow.tree.root_node(),
+                        workflow.raw.as_bytes(),
+                    ) {
+                        // println!("{capture:?}");
+                    }
+                }
+            },
+            None => {
+                // No job means the entire workflow is flagged.
+                // TODO specialize top-level keys.
+                println!("{}", workflow.tree.root_node().to_string())
+            }
+        }
+
+        Ok(())
+    }
+}

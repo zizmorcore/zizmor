@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use crate::models::{Job, Step};
 
-mod extract;
+pub(crate) mod extract;
 
 // TODO: Traits + more flexible models here.
 
