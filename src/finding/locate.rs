@@ -1,12 +1,12 @@
 //! `tree-sitter` helpers for extracting and locating `Finding` features
 //! in the original YAML.
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use tree_sitter::{Language, Query, QueryCursor};
 
 use crate::models::Workflow;
 
-use super::{Finding, WorkflowLocation};
+use super::{Feature, WorkflowLocation};
 
 /// Captures just the `on:` block of a workflow.
 const WORKFLOW_TRIGGER_BLOCK: &str = r#"
@@ -85,15 +85,11 @@ impl Locator {
         }
     }
 
-    pub(crate) fn locate(&self, workflow: &Workflow, finding: &Finding) -> Result<()> {
-        for location in &finding.locations {
-            self.extract_location(workflow, location)?;
-        }
-
-        Ok(())
-    }
-
-    fn extract_location(&self, workflow: &Workflow, location: &WorkflowLocation) -> Result<()> {
+    pub(crate) fn concretize<'w>(
+        &self,
+        workflow: &'w Workflow,
+        location: &WorkflowLocation,
+    ) -> Result<Feature<'w>> {
         let mut cursor = QueryCursor::new();
 
         match &location.job {
@@ -105,33 +101,48 @@ impl Locator {
                     )?;
                     let capture_index = steps_query.capture_index_for_name("steps").unwrap();
 
-                    for (capture, _) in cursor.captures(
-                        &steps_query,
-                        workflow.tree.root_node(),
-                        workflow.raw.as_bytes(),
-                    ) {
-                        // The last capture is our `@steps` capture.
-                        let cap = capture.captures[capture_index as usize];
+                    // We expect only one capture group, so we don't bother iterating.
+                    let (group, _) = cursor
+                        .captures(
+                            &steps_query,
+                            workflow.tree.root_node(),
+                            workflow.raw.as_bytes(),
+                        )
+                        .next()
+                        .expect("horrific, embarassing tree-sitter query failure");
 
-                        let children = cap.node.children(&mut cap.node.walk()).collect::<Vec<_>>();
-                        let step_node = children[step.index];
-                        println!("{}", step_node.utf8_text(workflow.raw.as_bytes())?);
-                        // dbg!(children);
-                    }
+                    let cap = group.captures[capture_index as usize];
+
+                    let children = cap.node.children(&mut cap.node.walk()).collect::<Vec<_>>();
+                    let step_node = children[step.index];
+
+                    Ok(Feature {
+                        location: step_node.into(),
+                        feature: step_node.utf8_text(workflow.raw.as_bytes())?,
+                    })
                 }
                 None => {
                     // Job with no interior step: capture the entire job
                     // and emit it.
                     let job_query =
                         Query::new(&self.language, &ENTIRE_JOB.replace("__JOB_NAME__", job.id))?;
+                    let capture_index = job_query.capture_index_for_name("full_job").unwrap();
 
-                    for capture in cursor.captures(
-                        &job_query,
-                        workflow.tree.root_node(),
-                        workflow.raw.as_bytes(),
-                    ) {
-                        // println!("{capture:?}");
-                    }
+                    let (group, _) = cursor
+                        .captures(
+                            &job_query,
+                            workflow.tree.root_node(),
+                            workflow.raw.as_bytes(),
+                        )
+                        .next()
+                        .expect("horrific, embarassing tree-sitter query failure");
+
+                    let cap = group.captures[capture_index as usize];
+
+                    Ok(Feature {
+                        location: cap.node.into(),
+                        feature: cap.node.utf8_text(workflow.raw.as_bytes())?,
+                    })
                 }
             },
             None => {
@@ -143,10 +154,10 @@ impl Locator {
                         .tree
                         .root_node()
                         .utf8_text(workflow.raw.as_bytes())?
-                )
+                );
+
+                todo!()
             }
         }
-
-        Ok(())
     }
 }

@@ -1,6 +1,8 @@
+use anyhow::Result;
+use locate::Locator;
 use serde::Serialize;
 
-use crate::models::{Job, Step};
+use crate::models::{Job, Step, Workflow};
 
 pub(crate) mod locate;
 
@@ -63,7 +65,7 @@ pub(crate) struct WorkflowLocation<'w> {
     /// The job location within this workflow, if present.
     pub(crate) job: Option<JobLocation<'w>>,
 
-    /// An optional annotation describing the location's relevance.
+    /// An optional annotation for this location.
     pub(crate) annotation: Option<String>,
 }
 
@@ -94,6 +96,16 @@ impl<'w> WorkflowLocation<'w> {
                 annotation: self.annotation.clone(),
             },
         }
+    }
+
+    /// Concretize this `WorkflowLocation`, consuming it in the process.
+    pub(crate) fn concretize(self, workflow: &'w Workflow) -> Result<Location<'w>> {
+        let feature = Locator::new().concretize(&workflow, &self)?;
+
+        Ok(Location {
+            symbolic: self,
+            concrete: feature,
+        })
     }
 
     /// Adds a human-readable annotation to the current `WorkflowLocation`.
@@ -129,6 +141,17 @@ pub(crate) struct ConcreteLocation {
     pub(crate) end_offset: usize,
 }
 
+impl From<tree_sitter::Node<'_>> for ConcreteLocation {
+    fn from(value: tree_sitter::Node) -> Self {
+        Self {
+            start_point: value.start_position().into(),
+            end_point: value.end_position().into(),
+            start_offset: value.start_byte(),
+            end_offset: value.end_byte(),
+        }
+    }
+}
+
 /// An extracted feature.
 #[derive(Serialize)]
 pub(crate) struct Feature<'w> {
@@ -140,7 +163,6 @@ pub(crate) struct Feature<'w> {
 pub(crate) struct Location<'w> {
     pub(crate) symbolic: WorkflowLocation<'w>,
     pub(crate) concrete: Feature<'w>,
-    pub(crate) annotation: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -153,7 +175,7 @@ pub(crate) struct Determinations {
 pub(crate) struct Finding<'w> {
     pub(crate) ident: &'static str,
     pub(crate) determinations: Determinations,
-    pub(crate) locations: Vec<WorkflowLocation<'w>>,
+    pub(crate) locations: Vec<Location<'w>>,
 }
 
 pub(crate) struct FindingBuilder<'w> {
@@ -188,8 +210,8 @@ impl<'w> FindingBuilder<'w> {
         self
     }
 
-    pub(crate) fn build(self) -> Finding<'w> {
-        Finding {
+    pub(crate) fn build(self, workflow: &'w Workflow) -> Result<Finding<'w>> {
+        Ok(Finding {
             ident: self.ident,
             determinations: Determinations {
                 confidence: self
@@ -199,7 +221,11 @@ impl<'w> FindingBuilder<'w> {
                     .severity
                     .expect("API misuse: must call severity() at least once"),
             },
-            locations: self.locations,
-        }
+            locations: self
+                .locations
+                .into_iter()
+                .map(|l| l.concretize(workflow))
+                .collect::<Result<Vec<_>>>()?,
+        })
     }
 }

@@ -18,8 +18,7 @@ use github_actions_models::workflow::{job::StepBody, Job};
 
 use super::WorkflowAudit;
 
-pub const IMPOSTOR_ANNOTATION: &str =
-    "uses a commit that doesn't belong to the specified org/repo";
+pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
 
 pub(crate) struct ImpostorCommit<'a> {
     pub(crate) _config: AuditConfig<'a>,
@@ -123,7 +122,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                     .severity(Severity::High)
                                     .confidence(Confidence::High)
                                     .add_location(step.location().annotated(IMPOSTOR_ANNOTATION))
-                                    .build(),
+                                    .build(&workflow)?,
                             );
                         }
                     }
@@ -141,7 +140,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
                                 .add_location(job.location().annotated(IMPOSTOR_ANNOTATION))
-                                .build(),
+                                .build(&workflow)?,
                         );
                     }
                 }
