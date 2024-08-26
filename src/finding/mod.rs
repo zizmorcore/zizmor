@@ -55,13 +55,15 @@ impl<'w> JobLocation<'w> {
     }
 }
 
+/// Represents a symbolic workflow location.
 #[derive(Serialize, Clone)]
 pub(crate) struct WorkflowLocation<'w> {
     pub(crate) name: &'w str,
+
     /// The job location within this workflow, if present.
     pub(crate) job: Option<JobLocation<'w>>,
 
-    // An optional annotation describing the location's relevance.
+    /// An optional annotation describing the location's relevance.
     pub(crate) annotation: Option<String>,
 }
 
@@ -99,6 +101,46 @@ impl<'w> WorkflowLocation<'w> {
         self.annotation = Some(annotation.into());
         self
     }
+}
+
+#[derive(Serialize)]
+pub(crate) struct Point {
+    pub(crate) row: usize,
+    pub(crate) column: usize,
+}
+
+impl From<tree_sitter::Point> for Point {
+    fn from(value: tree_sitter::Point) -> Self {
+        Self {
+            row: value.row,
+            column: value.column,
+        }
+    }
+}
+
+/// A "concrete" location for some feature.
+/// Every concrete location contains two spans: a line-and-column span,
+/// and an offset range.
+#[derive(Serialize)]
+pub(crate) struct ConcreteLocation {
+    pub(crate) start_point: Point,
+    pub(crate) end_point: Point,
+    pub(crate) start_offset: usize,
+    pub(crate) end_offset: usize,
+}
+
+/// An extracted feature.
+#[derive(Serialize)]
+pub(crate) struct Feature<'w> {
+    pub(crate) location: ConcreteLocation,
+    pub(crate) feature: &'w str,
+}
+
+#[derive(Serialize)]
+pub(crate) struct Location<'w> {
+    pub(crate) symbolic: WorkflowLocation<'w>,
+    pub(crate) concrete: Feature<'w>,
+    pub(crate) annotation: Option<String>,
 }
 
 #[derive(Serialize)]

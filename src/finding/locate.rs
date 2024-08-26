@@ -103,14 +103,15 @@ impl Locator {
                         &self.language,
                         &ALL_STEPS_FROM_JOB.replace("__JOB_NAME__", job.id),
                     )?;
+                    let capture_index = steps_query.capture_index_for_name("steps").unwrap();
 
-                    for (capture, idx) in cursor.captures(
+                    for (capture, _) in cursor.captures(
                         &steps_query,
                         workflow.tree.root_node(),
                         workflow.raw.as_bytes(),
                     ) {
                         // The last capture is our `@steps` capture.
-                        let cap = capture.captures.last().unwrap();
+                        let cap = capture.captures[capture_index as usize];
 
                         let children = cap.node.children(&mut cap.node.walk()).collect::<Vec<_>>();
                         let step_node = children[step.index];
