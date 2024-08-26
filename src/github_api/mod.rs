@@ -91,7 +91,7 @@ impl Client {
             api_base = self.api_base
         );
 
-        let resp = self.http.get(&url).send()?;
+        let resp = self.http.get(url).send()?;
         match resp.status() {
             StatusCode::OK => Ok(Some(resp.json()?)),
             StatusCode::NOT_FOUND => Ok(None),

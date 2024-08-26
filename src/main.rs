@@ -84,7 +84,9 @@ fn main() -> Result<()> {
     for workflow in workflows.iter() {
         // TODO: Proper abstraction for multiple audits here.
         for audit in audits {
-            results.extend(audit.audit(workflow)?);
+            for finding in audit.audit(workflow)? {
+                results.push(finding);
+            }
         }
     }
 

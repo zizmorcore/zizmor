@@ -95,7 +95,7 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
                                 .severity(Severity::Informational)
                                 .confidence(Confidence::High)
                                 .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
-                                .build(),
+                                .build(workflow)?,
                         );
                     }
                 } else if uses.starts_with("rubygems/release-gem") {
@@ -105,7 +105,7 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
                                 .severity(Severity::Informational)
                                 .confidence(Confidence::High)
                                 .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
-                                .build(),
+                                .build(workflow)?,
                         );
                     }
                 } else if uses.starts_with("rubygems/configure-rubygems-credential")
@@ -116,7 +116,7 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
                             .severity(Severity::Informational)
                             .confidence(Confidence::High)
                             .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
-                            .build(),
+                            .build(workflow)?,
                     );
                 }
             }

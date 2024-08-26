@@ -90,7 +90,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                                     .location()
                                     .annotated("does not set persist-credentials: false"),
                             )
-                            .build(),
+                            .build(workflow)?,
                     );
                 }
             } else {
@@ -116,7 +116,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                                         .location()
                                         .annotated("may leak the credentials persisted above"),
                                 )
-                                .build(),
+                                .build(workflow)?,
                         );
                     }
                 }

@@ -19,7 +19,7 @@ use crate::{
 
 use super::WorkflowAudit;
 
-const REF_CONFUSION_ANNOTATION: &'static str =
+const REF_CONFUSION_ANNOTATION: &str =
     "uses a ref that's provided by both the branch and tag namespaces";
 
 pub(crate) struct RefConfusion<'a> {
@@ -97,7 +97,7 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
                                     .add_location(
                                         step.location().annotated(REF_CONFUSION_ANNOTATION),
                                     )
-                                    .build(),
+                                    .build(workflow)?,
                             );
                         }
                     }
@@ -113,7 +113,7 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
                                 .severity(Severity::Medium)
                                 .confidence(Confidence::High)
                                 .add_location(job.location().annotated(REF_CONFUSION_ANNOTATION))
-                                .build(),
+                                .build(workflow)?,
                         )
                     }
                 }
