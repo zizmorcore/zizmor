@@ -41,7 +41,7 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
                         "triggers include pull_request_target, which is almost always used \
                          insecurely",
                     ))
-                    .build(&workflow)?,
+                    .build(workflow)?,
             );
         }
 

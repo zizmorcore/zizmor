@@ -100,7 +100,7 @@ impl<'w> WorkflowLocation<'w> {
 
     /// Concretize this `WorkflowLocation`, consuming it in the process.
     pub(crate) fn concretize(self, workflow: &'w Workflow) -> Result<Location<'w>> {
-        let feature = Locator::new().concretize(&workflow, &self)?;
+        let feature = Locator::new().concretize(workflow, &self)?;
 
         Ok(Location {
             symbolic: self,

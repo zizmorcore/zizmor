@@ -122,7 +122,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                     .severity(Severity::High)
                                     .confidence(Confidence::High)
                                     .add_location(step.location().annotated(IMPOSTOR_ANNOTATION))
-                                    .build(&workflow)?,
+                                    .build(workflow)?,
                             );
                         }
                     }
@@ -140,7 +140,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
                                 .add_location(job.location().annotated(IMPOSTOR_ANNOTATION))
-                                .build(&workflow)?,
+                                .build(workflow)?,
                         );
                     }
                 }

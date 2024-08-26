@@ -97,7 +97,7 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
                                     .add_location(
                                         step.location().annotated(REF_CONFUSION_ANNOTATION),
                                     )
-                                    .build(&workflow)?,
+                                    .build(workflow)?,
                             );
                         }
                     }
@@ -113,7 +113,7 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
                                 .severity(Severity::Medium)
                                 .confidence(Confidence::High)
                                 .add_location(job.location().annotated(REF_CONFUSION_ANNOTATION))
-                                .build(&workflow)?,
+                                .build(workflow)?,
                         )
                     }
                 }
