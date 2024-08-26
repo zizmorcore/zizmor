@@ -55,9 +55,14 @@ impl Workflow {
     pub(crate) fn location(&self) -> WorkflowLocation {
         WorkflowLocation {
             name: &self.filename,
+            key: None,
             job: None,
             annotation: None,
         }
+    }
+
+    pub(crate) fn key_location(&self, key: &'static str) -> WorkflowLocation {
+        self.location().with_key(key)
     }
 
     pub(crate) fn jobs(&self) -> Jobs<'_> {

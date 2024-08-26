@@ -37,7 +37,7 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
                 Self::finding()
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
-                    .add_location(workflow.location().annotated(
+                    .add_location(workflow.key_location("on").annotated(
                         "triggers include pull_request_target, which is almost always used \
                          insecurely",
                     ))

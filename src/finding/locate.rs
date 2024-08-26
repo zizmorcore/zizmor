@@ -8,19 +8,19 @@ use crate::models::Workflow;
 
 use super::{Feature, WorkflowLocation};
 
-/// Captures just the `on:` block of a workflow.
-const WORKFLOW_TRIGGER_BLOCK: &str = r#"
+/// Captures an arbitrary top-level key within a YAML stream.
+const TOP_LEVEL_KEY: &str = r#"
 (
   (block_mapping_pair
-    key: (flow_node (plain_scalar (string_scalar) @on_key))
+    key: (flow_node (plain_scalar (string_scalar) @key))
     value: (
       [
         (block_node (block_mapping))
         (flow_node)
-      ] @on_value
+      ]
     )
-  ) @on_block
-  (#eq? @on_key "on")
+  ) @mapping
+  (#eq? @key "__KEY_NAME__")
 )
 "#;
 
@@ -126,7 +126,6 @@ impl Locator {
                     // and emit it.
                     let job_query =
                         Query::new(&self.language, &ENTIRE_JOB.replace("__JOB_NAME__", job.id))?;
-                    let capture_index = job_query.capture_index_for_name("full_job").unwrap();
 
                     let (group, _) = cursor
                         .captures(
@@ -137,7 +136,7 @@ impl Locator {
                         .next()
                         .expect("horrific, embarassing tree-sitter query failure");
 
-                    let cap = group.captures[capture_index as usize];
+                    let cap = group.captures[0];
 
                     Ok(Feature {
                         location: cap.node.into(),
@@ -145,19 +144,34 @@ impl Locator {
                     })
                 }
             },
-            None => {
-                // No job means the entire workflow is flagged.
-                // TODO specialize top-level keys.
-                println!(
-                    "{}",
-                    workflow
-                        .tree
-                        .root_node()
-                        .utf8_text(workflow.raw.as_bytes())?
-                );
+            None => match &location.key {
+                // If we're given a top-level key to isolate, query for it.
+                // Otherwise, return the entire workflow.
+                Some(key) => {
+                    let key_query =
+                        Query::new(&self.language, &TOP_LEVEL_KEY.replace("__KEY_NAME__", &key))?;
 
-                todo!()
-            }
+                    let (group, _) = cursor
+                        .captures(
+                            &key_query,
+                            workflow.tree.root_node(),
+                            workflow.raw.as_bytes(),
+                        )
+                        .next()
+                        .expect("horrific, embarassing tree-sitter query failure");
+
+                    let cap = dbg!(group).captures[0];
+
+                    Ok(Feature {
+                        location: cap.node.into(),
+                        feature: cap.node.utf8_text(workflow.raw.as_bytes())?,
+                    })
+                }
+                None => Ok(Feature {
+                    location: workflow.tree.root_node().into(),
+                    feature: &workflow.raw,
+                }),
+            },
         }
     }
 }

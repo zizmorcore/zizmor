@@ -62,6 +62,9 @@ impl<'w> JobLocation<'w> {
 pub(crate) struct WorkflowLocation<'w> {
     pub(crate) name: &'w str,
 
+    /// A top-level workflow key to isolate, if present.
+    pub(crate) key: Option<&'static str>,
+
     /// The job location within this workflow, if present.
     pub(crate) job: Option<JobLocation<'w>>,
 
@@ -70,10 +73,22 @@ pub(crate) struct WorkflowLocation<'w> {
 }
 
 impl<'w> WorkflowLocation<'w> {
+    /// Creates a new `WorkflowLocation` with the given `key`. Any inner
+    /// job location is cleared.
+    pub(crate) fn with_key(&self, key: &'static str) -> WorkflowLocation<'w> {
+        WorkflowLocation {
+            name: &self.name,
+            key: Some(key),
+            job: None,
+            annotation: self.annotation.clone(),
+        }
+    }
+
     /// Creates a new `WorkflowLocation` with the given `Job` added to it.
     pub(crate) fn with_job(&self, job: &Job<'w>) -> WorkflowLocation<'w> {
         WorkflowLocation {
             name: self.name,
+            key: None,
             job: Some(JobLocation {
                 id: job.id,
                 name: job.inner.name(),
@@ -92,6 +107,7 @@ impl<'w> WorkflowLocation<'w> {
             None => panic!("API misuse: can't set step without parent job"),
             Some(job) => WorkflowLocation {
                 name: self.name,
+                key: None,
                 job: Some(job.with_step(step)),
                 annotation: self.annotation.clone(),
             },
