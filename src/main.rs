@@ -17,6 +17,10 @@ struct Args {
     #[arg(short, long)]
     pedantic: bool,
 
+    /// Only perform audits that don't require network access.
+    #[arg(short, long)]
+    offline: bool,
+
     /// The GitHub API token to use.
     #[arg(long, env)]
     gh_token: String,
@@ -80,6 +84,7 @@ fn main() -> Result<()> {
         &audit::impostor_commit::ImpostorCommit::new(config)?,
         &audit::ref_confusion::RefConfusion::new(config)?,
         &audit::use_trusted_publishing::UseTrustedPublishing::new(config)?,
+        &audit::template_injection::TemplateInjection::new(config)?,
     ];
     for workflow in workflows.iter() {
         // TODO: Proper abstraction for multiple audits here.

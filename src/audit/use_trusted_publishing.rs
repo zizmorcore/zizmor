@@ -79,7 +79,7 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
-            if !matches!(job.inner, Job::NormalJob(_)) {
+            if !matches!(job.deref(), Job::NormalJob(_)) {
                 continue;
             }
 
