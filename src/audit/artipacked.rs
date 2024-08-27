@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use anyhow::Result;
 use github_actions_models::{
-    common::EnvValue,
+    common::{EnvValue, Expression},
     workflow::{job::StepBody, Job},
 };
 use itertools::Itertools;
@@ -20,16 +20,22 @@ pub(crate) struct Artipacked<'a> {
 }
 
 impl<'a> Artipacked<'a> {
-    fn dangerous_artifact_patterns(&self, path: &str) -> Option<Vec<&str>> {
+    fn dangerous_artifact_patterns<'b>(&self, path: &'b str) -> Vec<&'b str> {
+        let mut patterns = vec![];
         for path in split_patterns(path) {
             match path {
-                "." | "./" => todo!(),
-                ".." | "../" => todo!(),
-                _ => todo!(),
+                // TODO: this could be even more generic.
+                "." | "./" | ".." | "../" => patterns.push(path),
+                path => match Expression::from_curly(path.into()) {
+                    Some(expr) if expr.as_bare() == "github.workspace" => patterns.push(path),
+                    // TODO: Other expressions worth flagging here?
+                    Some(_) => continue,
+                    _ => continue,
+                },
             }
         }
 
-        None
+        patterns
     }
 }
 
@@ -80,13 +86,14 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                         _ => vulnerable_checkouts.push(step),
                     }
                 } else if uses.starts_with("actions/upload-artifact") {
-                    match with.get("path") {
-                        // TODO: This is pretty naive -- we should also flag on
-                        // `${{ expressions }}` and absolute paths, etc.
-                        Some(EnvValue::String(s)) if s == "." || s == ".." => {
-                            vulnerable_uploads.push(step)
-                        }
-                        _ => continue,
+                    let Some(EnvValue::String(path)) = with.get("path") else {
+                        continue;
+                    };
+
+                    let dangerous_paths = self.dangerous_artifact_patterns(path);
+                    if !dangerous_paths.is_empty() {
+                        // TODO: plumb dangerous_paths into the annotation here.
+                        vulnerable_uploads.push(step)
                     }
                 }
             }
