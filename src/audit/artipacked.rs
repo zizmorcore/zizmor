@@ -19,6 +19,14 @@ pub(crate) struct Artipacked<'a> {
     pub(crate) config: AuditConfig<'a>,
 }
 
+impl<'a> Artipacked<'a> {
+    fn dangerous_artifact_pattern(&self, path: &str) -> bool {
+        // TODO: shlex path after normalizing templates; match each of:
+        // ., .., github.workspace, etc.
+        false
+    }
+}
+
 impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
     fn ident() -> &'static str {
         "artipacked"
