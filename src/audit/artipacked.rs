@@ -28,8 +28,6 @@ impl<'a> Artipacked<'a> {
                 _ => todo!(),
             }
         }
-        // TODO: shlex path after normalizing templates; match each of:
-        // ., .., github.workspace, etc.
 
         None
     }
