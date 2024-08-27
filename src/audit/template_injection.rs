@@ -23,12 +23,38 @@ pub(crate) struct TemplateInjection<'a> {
 }
 
 impl<'a> TemplateInjection<'a> {
-    fn injectable_template_expressions(&self, run: &str) -> Vec<(&str, Confidence)> {
+    fn injectable_template_expressions<'expr>(
+        &self,
+        run: &'expr str,
+    ) -> Vec<(&'expr str, Severity, Confidence)> {
+        let mut bad_expressions = vec![];
         for (_, [expr]) in self.expr_pattern.captures_iter(run).map(|c| c.extract()) {
-            log::debug!("found expression candidate: {expr}")
+            log::debug!("found expression candidate: {expr}");
+
+            // While not ideal, secret expansion is typically not exploitable.
+            if expr.starts_with("secrets.") {
+                continue;
+            } else if expr.starts_with("inputs.") {
+                // TODO: Currently low confidence because we don't check the
+                // input's type. In the future, we should index back into
+                // the workflow's triggers and exclude input expansions
+                // from innocuous types, e.g. booleans.
+                bad_expressions.push((expr, Severity::High, Confidence::Low));
+            } else if expr.starts_with("env.") {
+                // Almost never exploitable.
+                bad_expressions.push((expr, Severity::Low, Confidence::High));
+            } else if expr.starts_with("github.event.") {
+                // TODO: Filter these more finely; not everything in the event
+                // context is actually attacker-controllable.
+                bad_expressions.push((expr, Severity::High, Confidence::High));
+            } else {
+                // All other contexts are typically not attacker controllable,
+                // but may be in obscure cases.
+                bad_expressions.push((expr, Severity::Informational, Confidence::Low));
+            }
         }
 
-        vec![]
+        bad_expressions
     }
 }
 
@@ -46,7 +72,7 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
     {
         Ok(Self {
             _config: config,
-            expr_pattern: Regex::new("$\\{\\{(.+)\\}\\}").unwrap(),
+            expr_pattern: Regex::new("\\$\\{\\{\\s*(.+)\\s*\\}\\}").unwrap(),
         })
     }
 
@@ -66,10 +92,10 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
                     continue;
                 };
 
-                for (expr, confidence) in self.injectable_template_expressions(run) {
+                for (expr, severity, confidence) in self.injectable_template_expressions(run) {
                     findings.push(
                         Self::finding()
-                            .severity(Severity::High)
+                            .severity(severity)
                             .confidence(confidence)
                             .add_location(step.location().annotated(format!(
                                 "template may expand into attacker-controllable code: {expr}"
