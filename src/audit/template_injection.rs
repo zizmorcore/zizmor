@@ -46,7 +46,7 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
     {
         Ok(Self {
             _config: config,
-            expr_pattern: Regex::new("${{(.+)}}").unwrap(),
+            expr_pattern: Regex::new("$\\{\\{(.+)\\}\\}").unwrap(),
         })
     }
 
