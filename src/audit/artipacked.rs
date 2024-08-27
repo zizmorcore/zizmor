@@ -7,11 +7,11 @@ use github_actions_models::{
 };
 use itertools::Itertools;
 
-use crate::models::Workflow;
 use crate::{
     finding::{Confidence, Finding, Severity},
     models::AuditConfig,
 };
+use crate::{models::Workflow, utils::split_patterns};
 
 use super::WorkflowAudit;
 
@@ -20,10 +20,18 @@ pub(crate) struct Artipacked<'a> {
 }
 
 impl<'a> Artipacked<'a> {
-    fn dangerous_artifact_pattern(&self, path: &str) -> bool {
+    fn dangerous_artifact_patterns(&self, path: &str) -> Option<Vec<&str>> {
+        for path in split_patterns(path) {
+            match path {
+                "." | "./" => todo!(),
+                ".." | "../" => todo!(),
+                _ => todo!(),
+            }
+        }
         // TODO: shlex path after normalizing templates; match each of:
         // ., .., github.workspace, etc.
-        false
+
+        None
     }
 }
 

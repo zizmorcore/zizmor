@@ -9,6 +9,7 @@ mod audit;
 mod finding;
 mod github_api;
 mod models;
+mod utils;
 
 /// A tool to detect "ArtiPACKED"-type credential disclosures in GitHub Actions.
 #[derive(Parser)]
