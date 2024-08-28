@@ -86,6 +86,7 @@ fn main() -> Result<()> {
         &audit::ref_confusion::RefConfusion::new(config)?,
         &audit::use_trusted_publishing::UseTrustedPublishing::new(config)?,
         &audit::template_injection::TemplateInjection::new(config)?,
+        &audit::hardcoded_container_credentials::HardcodedContainerCredentials::new(config)?,
     ];
     for workflow in workflows.iter() {
         // TODO: Proper abstraction for multiple audits here.
