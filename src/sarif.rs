@@ -33,7 +33,7 @@ fn build_run(findings: Vec<Finding<'_>>) -> Run {
 }
 
 fn build_results(findings: Vec<Finding<'_>>) -> Vec<SarifResult> {
-    findings.iter().map(|f| build_result(&f)).collect()
+    findings.iter().map(|f| build_result(f)).collect()
 }
 
 fn build_result(finding: &Finding<'_>) -> SarifResult {
