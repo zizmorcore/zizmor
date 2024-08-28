@@ -27,7 +27,7 @@ impl<'a> TemplateInjection<'a> {
         for expr in iter_expressions(run) {
             let bare = expr.as_bare();
 
-            if bare.starts_with("secrets.") {
+            if bare.starts_with("secrets.") || bare == "github.token" {
                 // While not ideal, secret expansion is typically not exploitable.
                 continue;
             } else if bare.starts_with("inputs.") {
@@ -70,7 +70,7 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
     }
 
     fn audit<'w>(
-        &self,
+        &mut self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];
