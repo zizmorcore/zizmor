@@ -8,49 +8,48 @@
 use std::ops::Deref;
 
 use github_actions_models::workflow::{job::StepBody, Job};
-use regex::Regex;
 
 use crate::{
     finding::{Confidence, Severity},
     models::AuditConfig,
+    utils::iter_expressions,
 };
 
 use super::WorkflowAudit;
 
 pub(crate) struct TemplateInjection<'a> {
     pub(crate) _config: AuditConfig<'a>,
-    expr_pattern: Regex,
 }
 
 impl<'a> TemplateInjection<'a> {
-    fn injectable_template_expressions<'expr>(
+    fn injectable_template_expressions(
         &self,
-        run: &'expr str,
-    ) -> Vec<(&'expr str, Severity, Confidence)> {
+        run: &str,
+    ) -> Vec<(String, Severity, Confidence)> {
         let mut bad_expressions = vec![];
-        for (_, [expr]) in self.expr_pattern.captures_iter(run).map(|c| c.extract()) {
-            log::debug!("found expression candidate: {expr}");
+        for expr in iter_expressions(run) {
+            let bare = expr.as_bare();
 
-            if expr.starts_with("secrets.") {
+            if bare.starts_with("secrets.") {
                 // While not ideal, secret expansion is typically not exploitable.
                 continue;
-            } else if expr.starts_with("inputs.") {
+            } else if bare.starts_with("inputs.") {
                 // TODO: Currently low confidence because we don't check the
                 // input's type. In the future, we should index back into
                 // the workflow's triggers and exclude input expansions
                 // from innocuous types, e.g. booleans.
-                bad_expressions.push((expr, Severity::High, Confidence::Low));
-            } else if expr.starts_with("env.") {
+                bad_expressions.push((bare.into(), Severity::High, Confidence::Low));
+            } else if bare.starts_with("env.") {
                 // Almost never exploitable.
-                bad_expressions.push((expr, Severity::Low, Confidence::High));
-            } else if expr.starts_with("github.event.") {
+                bad_expressions.push((bare.into(), Severity::Low, Confidence::High));
+            } else if bare.starts_with("github.event.") {
                 // TODO: Filter these more finely; not everything in the event
                 // context is actually attacker-controllable.
-                bad_expressions.push((expr, Severity::High, Confidence::High));
+                bad_expressions.push((bare.into(), Severity::High, Confidence::High));
             } else {
                 // All other contexts are typically not attacker controllable,
                 // but may be in obscure cases.
-                bad_expressions.push((expr, Severity::Informational, Confidence::Low));
+                bad_expressions.push((bare.into(), Severity::Informational, Confidence::Low));
             }
         }
 
@@ -70,10 +69,7 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
     where
         Self: Sized,
     {
-        Ok(Self {
-            _config: config,
-            expr_pattern: Regex::new("\\$\\{\\{\\s*(.+)\\s*\\}\\}").unwrap(),
-        })
+        Ok(Self { _config: config })
     }
 
     fn audit<'w>(
