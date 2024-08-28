@@ -31,8 +31,8 @@ impl<'a> TemplateInjection<'a> {
         for (_, [expr]) in self.expr_pattern.captures_iter(run).map(|c| c.extract()) {
             log::debug!("found expression candidate: {expr}");
 
-            // While not ideal, secret expansion is typically not exploitable.
             if expr.starts_with("secrets.") {
+                // While not ideal, secret expansion is typically not exploitable.
                 continue;
             } else if expr.starts_with("inputs.") {
                 // TODO: Currently low confidence because we don't check the
