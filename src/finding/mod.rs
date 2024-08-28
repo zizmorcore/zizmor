@@ -8,15 +8,19 @@ pub(crate) mod locate;
 
 // TODO: Traits + more flexible models here.
 
-#[derive(Serialize)]
+#[derive(Default, Serialize)]
 pub(crate) enum Confidence {
+    #[default]
+    Unknown,
     Low,
     Medium,
     High,
 }
 
-#[derive(Serialize)]
+#[derive(Default, Serialize)]
 pub(crate) enum Severity {
+    #[default]
+    Unknown,
     Informational,
     Low,
     Medium,
@@ -42,8 +46,14 @@ impl<'w> From<&Step<'w>> for StepLocation<'w> {
 
 #[derive(Serialize, Clone)]
 pub(crate) struct JobLocation<'w> {
+    /// The job's unique ID within its parent workflow.
     pub(crate) id: &'w str,
+
+    // TODO: key for non-step isolation, like WorkflowLocation.
+    /// The job's name, if present.
     pub(crate) name: Option<&'w str>,
+
+    /// The location of a step within the job, if present.
     pub(crate) step: Option<StepLocation<'w>>,
 }
 
@@ -131,6 +141,7 @@ impl<'w> WorkflowLocation<'w> {
     }
 }
 
+/// Represents a `(row, column)` point within a file.
 #[derive(Serialize)]
 pub(crate) struct Point {
     pub(crate) row: usize,
@@ -168,19 +179,25 @@ impl From<tree_sitter::Node<'_>> for ConcreteLocation {
     }
 }
 
-/// An extracted feature.
+/// An extracted feature, along with its concrete location.
 #[derive(Serialize)]
 pub(crate) struct Feature<'w> {
+    /// The feature's concrete location, as both an offset range and point span.
     pub(crate) location: ConcreteLocation,
+    /// The feature's textual content.
     pub(crate) feature: &'w str,
 }
 
+/// A location within a GitHub Actions workflow, with both symbolic and concrete components.
 #[derive(Serialize)]
 pub(crate) struct Location<'w> {
+    /// The symbolic workflow location.
     pub(crate) symbolic: WorkflowLocation<'w>,
+    /// The concrete location, including extracted feature.
     pub(crate) concrete: Feature<'w>,
 }
 
+/// A finding's "determination," i.e. its confidence and severity classifications.
 #[derive(Serialize)]
 pub(crate) struct Determinations {
     pub(crate) confidence: Confidence,
@@ -196,8 +213,8 @@ pub(crate) struct Finding<'w> {
 
 pub(crate) struct FindingBuilder<'w> {
     ident: &'static str,
-    severity: Option<Severity>,
-    confidence: Option<Confidence>,
+    severity: Severity,
+    confidence: Confidence,
     locations: Vec<WorkflowLocation<'w>>,
 }
 
@@ -205,19 +222,19 @@ impl<'w> FindingBuilder<'w> {
     pub(crate) fn new(ident: &'static str) -> Self {
         Self {
             ident,
-            severity: None,
-            confidence: None,
+            severity: Default::default(),
+            confidence: Default::default(),
             locations: vec![],
         }
     }
 
     pub(crate) fn severity(mut self, severity: Severity) -> Self {
-        self.severity = Some(severity);
+        self.severity = severity;
         self
     }
 
     pub(crate) fn confidence(mut self, confidence: Confidence) -> Self {
-        self.confidence = Some(confidence);
+        self.confidence = confidence;
         self
     }
 
@@ -230,12 +247,8 @@ impl<'w> FindingBuilder<'w> {
         Ok(Finding {
             ident: self.ident,
             determinations: Determinations {
-                confidence: self
-                    .confidence
-                    .expect("API misuse: must call confidence() at least once"),
-                severity: self
-                    .severity
-                    .expect("API misuse: must call severity() at least once"),
+                confidence: self.confidence,
+                severity: self.severity,
             },
             locations: self
                 .locations
