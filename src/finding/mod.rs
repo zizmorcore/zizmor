@@ -77,7 +77,7 @@ impl<'w> WorkflowLocation<'w> {
     /// job location is cleared.
     pub(crate) fn with_key(&self, key: &'static str) -> WorkflowLocation<'w> {
         WorkflowLocation {
-            name: &self.name,
+            name: self.name,
             key: Some(key),
             job: None,
             annotation: self.annotation.clone(),

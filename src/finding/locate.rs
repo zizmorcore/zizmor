@@ -149,7 +149,7 @@ impl Locator {
                 // Otherwise, return the entire workflow.
                 Some(key) => {
                     let key_query =
-                        Query::new(&self.language, &TOP_LEVEL_KEY.replace("__KEY_NAME__", &key))?;
+                        Query::new(&self.language, &TOP_LEVEL_KEY.replace("__KEY_NAME__", key))?;
 
                     let (group, _) = cursor
                         .captures(

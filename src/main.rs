@@ -9,6 +9,7 @@ mod audit;
 mod finding;
 mod github_api;
 mod models;
+mod utils;
 
 /// A tool to detect "ArtiPACKED"-type credential disclosures in GitHub Actions.
 #[derive(Parser)]
@@ -16,6 +17,10 @@ struct Args {
     /// Emit findings even when the context suggests an explicit security decision made by the user.
     #[arg(short, long)]
     pedantic: bool,
+
+    /// Only perform audits that don't require network access.
+    #[arg(short, long)]
+    offline: bool,
 
     /// The GitHub API token to use.
     #[arg(long, env)]
@@ -80,6 +85,7 @@ fn main() -> Result<()> {
         &audit::impostor_commit::ImpostorCommit::new(config)?,
         &audit::ref_confusion::RefConfusion::new(config)?,
         &audit::use_trusted_publishing::UseTrustedPublishing::new(config)?,
+        &audit::template_injection::TemplateInjection::new(config)?,
     ];
     for workflow in workflows.iter() {
         // TODO: Proper abstraction for multiple audits here.
