@@ -70,7 +70,7 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
     }
 
     fn audit<'w>(
-        &self,
+        &mut self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];

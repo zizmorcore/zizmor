@@ -79,18 +79,18 @@ fn main() -> Result<()> {
     }
 
     let mut results = vec![];
-    let audits: &[&dyn WorkflowAudit] = &[
-        &audit::artipacked::Artipacked::new(config)?,
-        &audit::pull_request_target::PullRequestTarget::new(config)?,
-        &audit::impostor_commit::ImpostorCommit::new(config)?,
-        &audit::ref_confusion::RefConfusion::new(config)?,
-        &audit::use_trusted_publishing::UseTrustedPublishing::new(config)?,
-        &audit::template_injection::TemplateInjection::new(config)?,
-        &audit::hardcoded_container_credentials::HardcodedContainerCredentials::new(config)?,
+    let audits: &mut [&mut dyn WorkflowAudit] = &mut [
+        &mut audit::artipacked::Artipacked::new(config)?,
+        &mut audit::pull_request_target::PullRequestTarget::new(config)?,
+        &mut audit::impostor_commit::ImpostorCommit::new(config)?,
+        &mut audit::ref_confusion::RefConfusion::new(config)?,
+        &mut audit::use_trusted_publishing::UseTrustedPublishing::new(config)?,
+        &mut audit::template_injection::TemplateInjection::new(config)?,
+        &mut audit::hardcoded_container_credentials::HardcodedContainerCredentials::new(config)?,
     ];
     for workflow in workflows.iter() {
         // TODO: Proper abstraction for multiple audits here.
-        for audit in audits {
+        for audit in audits.iter_mut() {
             for finding in audit.audit(workflow)? {
                 results.push(finding);
             }

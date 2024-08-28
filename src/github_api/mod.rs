@@ -96,7 +96,7 @@ impl Client {
             StatusCode::OK => Ok(Some(resp.json()?)),
             StatusCode::NOT_FOUND => Ok(None),
             s => Err(anyhow!(
-                "error from GitHub API while comparing commits: {s}"
+                "{owner}/{repo}: error from GitHub API while comparing commits: {s}"
             )),
         }
     }
@@ -107,7 +107,7 @@ impl Client {
 /// This model is intentionally incomplete.
 ///
 /// See <https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28>.
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub(crate) struct Branch {
     pub(crate) name: String,
 }
@@ -115,7 +115,7 @@ pub(crate) struct Branch {
 /// A single tag, as returned by GitHub's tags endpoints.
 ///
 /// This model is intentionally incomplete.
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub(crate) struct Tag {
     pub(crate) name: String,
 }

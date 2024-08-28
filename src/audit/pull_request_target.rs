@@ -20,7 +20,7 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
         Ok(Self { _config: config })
     }
 
-    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         log::debug!("audit: {} evaluating {}", Self::ident(), &workflow.filename);
 
         let trigger = &workflow.on;

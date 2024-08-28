@@ -5,11 +5,14 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
-use std::ops::Deref;
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    ops::Deref,
+};
 
 use crate::{
     finding::{Confidence, Finding, Severity},
-    github_api::{self, ComparisonStatus},
+    github_api::{self, Branch, ComparisonStatus, Tag},
     models::{AuditConfig, Uses, Workflow},
 };
 
@@ -23,21 +26,84 @@ pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the 
 pub(crate) struct ImpostorCommit<'a> {
     pub(crate) _config: AuditConfig<'a>,
     pub(crate) client: github_api::Client,
+    pub(crate) ref_cache: HashMap<(String, String), (Vec<Branch>, Vec<Tag>)>,
+    /// A cache of `(base_ref, head_ref) => status`.
+    ///
+    /// We don't bother disambiguating this cache by org/repo, since `head_ref`
+    /// is a commit ref and we expect those to be globally unique.
+    /// This is not technically true of Git SHAs due to SHAttered, but is
+    /// effectively true for SHAs on GitHub due to GitHub's collision detection.
+    pub(crate) ref_comparison_cache: HashMap<(String, String), bool>,
 }
 
 impl<'a> ImpostorCommit<'a> {
+    fn named_refs(&mut self, uses: Uses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
+        let entry = match self
+            .ref_cache
+            .entry((uses.owner.to_string(), uses.repo.to_string()))
+        {
+            Entry::Occupied(o) => o.into_mut(),
+            Entry::Vacant(v) => {
+                let branches = self.client.list_branches(uses.owner, uses.repo)?;
+                let tags = self.client.list_tags(uses.owner, uses.repo)?;
+
+                v.insert((branches, tags))
+            }
+        };
+
+        // Dumb: we shold be able to borrow immutably here.
+        Ok((entry.0.clone(), entry.1.clone()))
+    }
+
+    fn named_ref_contains_commit(
+        &mut self,
+        uses: &Uses<'_>,
+        base_ref: &str,
+        head_ref: &str,
+    ) -> Result<bool> {
+        let presence = match self
+            .ref_comparison_cache
+            .entry((base_ref.to_string(), head_ref.to_string()))
+        {
+            Entry::Occupied(o) => {
+                log::debug!("cache hit: {base_ref}..{head_ref}");
+                o.into_mut()
+            }
+            Entry::Vacant(v) => {
+                let presence = match self
+                    .client
+                    .compare_commits(uses.owner, uses.repo, base_ref, head_ref)?
+                {
+                    // A base ref "contains" a commit if the base is either identical
+                    // to the head ("identical") or the target is behind the base ("behind").
+                    Some(comp) => matches!(
+                        comp.status,
+                        ComparisonStatus::Behind | ComparisonStatus::Identical
+                    ),
+                    // GitHub's API returns 404 when the refs under comparison
+                    // are completely divergent, i.e. no contains relationship is possible.
+                    None => false,
+                };
+
+                v.insert(presence)
+            }
+        };
+
+        Ok(*presence)
+    }
+
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    fn impostor(&self, uses: Uses<'_>) -> Result<bool> {
-        let branches = self.client.list_branches(uses.owner, uses.repo)?;
+    fn impostor(&mut self, uses: Uses<'_>) -> Result<bool> {
+        let (branches, tags) = self.named_refs(uses)?;
 
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
         let Some(head_ref) = uses.commit_ref() else {
             return Ok(false);
         };
 
-        for branch in &branches {
+        for branch in branches {
             if self.named_ref_contains_commit(
                 &uses,
                 &format!("refs/heads/{}", &branch.name),
@@ -47,9 +113,7 @@ impl<'a> ImpostorCommit<'a> {
             }
         }
 
-        let tags = self.client.list_tags(uses.owner, uses.repo)?;
-
-        for tag in &tags {
+        for tag in tags {
             if self.named_ref_contains_commit(
                 &uses,
                 &format!("refs/tags/{}", &tag.name),
@@ -61,27 +125,12 @@ impl<'a> ImpostorCommit<'a> {
 
         // If we've made it here, the commit isn't present in any commit or tag's history,
         // strongly suggesting that it's an impostor.
+        log::warn!(
+            "strong impostor candidate: {head_ref} for {org}/{repo}",
+            org = uses.owner,
+            repo = uses.repo
+        );
         Ok(true)
-    }
-
-    fn named_ref_contains_commit(
-        &self,
-        uses: &Uses<'_>,
-        base_ref: &str,
-        head_ref: &str,
-    ) -> Result<bool> {
-        match self
-            .client
-            .compare_commits(uses.owner, uses.repo, base_ref, head_ref)?
-        {
-            // A base ref "contains" a commit if the base is either identical
-            // to the head ("identical") or the target is behind the base ("behind").
-            Some(comparison) => Ok(matches!(
-                comparison.status,
-                ComparisonStatus::Behind | ComparisonStatus::Identical
-            )),
-            None => Ok(false),
-        }
     }
 }
 
@@ -96,10 +145,12 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
         Ok(ImpostorCommit {
             _config: config,
             client,
+            ref_cache: Default::default(),
+            ref_comparison_cache: Default::default(),
         })
     }
 
-    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         log::debug!("audit: {} evaluating {}", Self::ident(), &workflow.filename);
 
         let mut findings = vec![];

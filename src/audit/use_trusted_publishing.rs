@@ -71,7 +71,7 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
     }
 
     fn audit<'w>(
-        &self,
+        &mut self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         log::debug!("audit: {} evaluating {}", Self::ident(), &workflow.filename);
