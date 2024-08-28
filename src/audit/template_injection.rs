@@ -22,10 +22,7 @@ pub(crate) struct TemplateInjection<'a> {
 }
 
 impl<'a> TemplateInjection<'a> {
-    fn injectable_template_expressions(
-        &self,
-        run: &str,
-    ) -> Vec<(String, Severity, Confidence)> {
+    fn injectable_template_expressions(&self, run: &str) -> Vec<(String, Severity, Confidence)> {
         let mut bad_expressions = vec![];
         for expr in iter_expressions(run) {
             let bare = expr.as_bare();
