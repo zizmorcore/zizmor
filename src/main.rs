@@ -2,7 +2,7 @@ use std::{io::stdout, path::PathBuf};
 
 use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use models::AuditConfig;
 
 mod audit;
@@ -26,8 +26,20 @@ struct Args {
     #[arg(long, env)]
     gh_token: String,
 
+    /// The output format to emit. By default, plain text will be emitted
+    /// on an interactive terminal and JSON otherwise.
+    #[arg(long, value_enum)]
+    format: Option<OutputFormat>,
+
     /// The workflow filename or directory to audit.
     input: PathBuf,
+}
+
+#[derive(Debug, Copy, Clone, ValueEnum)]
+pub(crate) enum OutputFormat {
+    Plain,
+    Json,
+    Sarif,
 }
 
 impl<'a> From<&'a Args> for AuditConfig<'a> {
