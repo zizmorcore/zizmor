@@ -87,7 +87,7 @@ impl Client {
         head: &str,
     ) -> Result<Option<Comparison>> {
         let url = format!(
-            "{api_base}/repos/{owner}/{repo}/compare/{base}..{head}",
+            "{api_base}/repos/{owner}/{repo}/compare/{base}...{head}",
             api_base = self.api_base
         );
 
