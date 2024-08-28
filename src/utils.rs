@@ -11,7 +11,7 @@ pub(crate) fn split_patterns(patterns: &str) -> impl Iterator<Item = &str> {
     patterns
         .lines()
         .map(|line| line.trim())
-        .filter(|line| !line.is_empty() && !line.starts_with("#"))
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
 }
 
 #[cfg(test)]
