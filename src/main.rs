@@ -102,7 +102,6 @@ fn main() -> Result<()> {
         &mut audit::hardcoded_container_credentials::HardcodedContainerCredentials::new(config)?,
     ];
     for workflow in workflows.iter() {
-        // TODO: Proper abstraction for multiple audits here.
         for audit in audits.iter_mut() {
             results.extend(audit.audit(workflow)?);
         }
