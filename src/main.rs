@@ -9,6 +9,7 @@ mod audit;
 mod finding;
 mod github_api;
 mod models;
+mod sarif;
 mod utils;
 
 /// A tool to detect "ArtiPACKED"-type credential disclosures in GitHub Actions.
@@ -103,13 +104,18 @@ fn main() -> Result<()> {
     for workflow in workflows.iter() {
         // TODO: Proper abstraction for multiple audits here.
         for audit in audits.iter_mut() {
-            for finding in audit.audit(workflow)? {
-                results.push(finding);
-            }
+            results.extend(audit.audit(workflow)?);
         }
     }
 
-    serde_json::to_writer_pretty(stdout(), &results)?;
+    match args.format {
+        None | Some(OutputFormat::Json) | Some(OutputFormat::Plain) => {
+            serde_json::to_writer_pretty(stdout(), &results)?;
+        }
+        Some(OutputFormat::Sarif) => {
+            serde_json::to_writer_pretty(stdout(), &sarif::build(results))?;
+        }
+    }
 
     Ok(())
 }
