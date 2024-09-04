@@ -62,7 +62,7 @@ impl<'a> WorkflowAudit<'a> for HardcodedContainerCredentials<'a> {
                             .severity(Severity::High)
                             .confidence(Confidence::High)
                             .add_location(
-                                job.location()
+                                job.key_location("container")
                                     .annotated("container registry password is hard-coded"),
                             )
                             .build(workflow)?,
@@ -86,7 +86,7 @@ impl<'a> WorkflowAudit<'a> for HardcodedContainerCredentials<'a> {
                             Self::finding()
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
-                                .add_location(job.location().annotated(format!(
+                                .add_location(job.key_location("services").annotated(format!(
                                     "service {service}: container registry password is hard-coded"
                                 )))
                                 .build(workflow)?,

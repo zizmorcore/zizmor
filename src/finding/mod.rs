@@ -49,7 +49,9 @@ pub(crate) struct JobLocation<'w> {
     /// The job's unique ID within its parent workflow.
     pub(crate) id: &'w str,
 
-    // TODO: key for non-step isolation, like WorkflowLocation.
+    /// A non-step job-level key, like [`WorkflowLocation::key`].
+    pub(crate) key: Option<&'w str>,
+
     /// The job's name, if present.
     pub(crate) name: Option<&'w str>,
 
@@ -58,9 +60,25 @@ pub(crate) struct JobLocation<'w> {
 }
 
 impl<'w> JobLocation<'w> {
+    /// Creates a new `JobLocation` with the given non-step `key`.
+    ///
+    /// Clears any `step` in the process.
+    pub(crate) fn with_key(&self, key: &'w str) -> JobLocation<'w> {
+        JobLocation {
+            id: &self.id,
+            key: Some(key),
+            name: self.name,
+            step: None,
+        }
+    }
+
+    /// Creates a new `JobLocation` with the given interior step location.
+    ///
+    /// Clears any non-step `key` in the process.
     fn with_step(&self, step: &Step<'w>) -> JobLocation<'w> {
         JobLocation {
             id: self.id,
+            key: None,
             name: self.name,
             step: Some(step.into()),
         }
@@ -73,7 +91,7 @@ pub(crate) struct WorkflowLocation<'w> {
     pub(crate) name: &'w str,
 
     /// A top-level workflow key to isolate, if present.
-    pub(crate) key: Option<&'static str>,
+    pub(crate) key: Option<&'w str>,
 
     /// The job location within this workflow, if present.
     pub(crate) job: Option<JobLocation<'w>>,
@@ -85,7 +103,7 @@ pub(crate) struct WorkflowLocation<'w> {
 impl<'w> WorkflowLocation<'w> {
     /// Creates a new `WorkflowLocation` with the given `key`. Any inner
     /// job location is cleared.
-    pub(crate) fn with_key(&self, key: &'static str) -> WorkflowLocation<'w> {
+    pub(crate) fn with_key(&self, key: &'w str) -> WorkflowLocation<'w> {
         WorkflowLocation {
             name: self.name,
             key: Some(key),
@@ -101,6 +119,7 @@ impl<'w> WorkflowLocation<'w> {
             key: None,
             job: Some(JobLocation {
                 id: job.id,
+                key: None,
                 name: job.inner.name(),
                 step: None,
             }),
