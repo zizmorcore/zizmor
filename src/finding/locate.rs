@@ -1,4 +1,4 @@
-//! `tree-sitter` helpers for extracting and locating `Finding` features
+//! `tree-sitter` helpers for extracting and locating concrete features
 //! in the original YAML.
 
 use anyhow::{Ok, Result};
