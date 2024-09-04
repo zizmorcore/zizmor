@@ -93,7 +93,6 @@ impl<'a> ExcessivePermissions<'a> {
                     )),
                 },
                 _ => todo!(),
-                _ => todo!(),
             },
             _ => todo!(),
         }
