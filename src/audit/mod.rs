@@ -5,6 +5,7 @@ use crate::{
 use anyhow::Result;
 
 pub(crate) mod artipacked;
+pub(crate) mod excessive_permissions;
 pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod pull_request_target;
