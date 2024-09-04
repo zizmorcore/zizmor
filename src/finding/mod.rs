@@ -65,7 +65,7 @@ impl<'w> JobLocation<'w> {
     /// Clears any `step` in the process.
     pub(crate) fn with_key(&self, key: &'w str) -> JobLocation<'w> {
         JobLocation {
-            id: &self.id,
+            id: self.id,
             key: Some(key),
             name: self.name,
             step: None,
