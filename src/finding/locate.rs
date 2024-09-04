@@ -37,7 +37,12 @@ const JOB_LEVEL_KEY: &str = r#"
             (block_mapping
               (block_mapping_pair
                 key: (flow_node (plain_scalar (string_scalar) @job_key_name))
-                value: (block_node)
+                value: (
+                  [
+                    (block_node (block_mapping))
+                    (flow_node)
+                  ]
+                )
               ) @job_key_value
             )
           )
@@ -138,7 +143,11 @@ impl Locator {
                         .next()
                         .expect("horrific, embarassing tree-sitter query failure");
 
-                    let cap = group.captures[capture_index as usize];
+                    let cap = group
+                        .captures
+                        .iter()
+                        .find(|qc| qc.index == capture_index)
+                        .unwrap();
 
                     let children = cap.node.children(&mut cap.node.walk()).collect::<Vec<_>>();
                     let step_node = children[step.index];
@@ -159,6 +168,10 @@ impl Locator {
                                 .replace("__JOB_KEY__", key),
                         )?;
 
+                        let capture_index = job_key_query
+                            .capture_index_for_name("job_key_value")
+                            .unwrap();
+
                         let (group, _) = cursor
                             .captures(
                                 &job_key_query,
@@ -168,7 +181,16 @@ impl Locator {
                             .next()
                             .expect("horrific, embarassing tree-sitter query failure");
 
-                        let cap = group.captures[0];
+                        // NOTE(ww): Empirically the captures are sometimes out
+                        // of order here (i.e. the list and index orders don't
+                        // match up). I'm sure there's a good reason for this, but
+                        // it means we have to find() instead of just indexing
+                        // via `capture_index`.
+                        let cap = group
+                            .captures
+                            .iter()
+                            .find(|qc| qc.index == capture_index)
+                            .unwrap();
 
                         Ok(Feature {
                             location: cap.node.into(),
