@@ -1,4 +1,4 @@
-//! `tree-sitter` helpers for extracting and locating `Finding` features
+//! `tree-sitter` helpers for extracting and locating concrete features
 //! in the original YAML.
 
 use anyhow::{Ok, Result};
@@ -21,6 +21,38 @@ const TOP_LEVEL_KEY: &str = r#"
     )
   ) @mapping
   (#eq? @key "__KEY_NAME__")
+)
+"#;
+
+/// Captures an arbitrary job-level key.
+const JOB_LEVEL_KEY: &str = r#"
+(
+  (block_mapping_pair
+    key: (flow_node (plain_scalar (string_scalar) @jobs_key))
+    value: (block_node
+      (block_mapping
+        (block_mapping_pair
+          key: (flow_node (plain_scalar (string_scalar) @job_name))
+          value: (block_node
+            (block_mapping
+              (block_mapping_pair
+                key: (flow_node (plain_scalar (string_scalar) @job_key_name))
+                value: (
+                  [
+                    (block_node (block_mapping))
+                    (flow_node)
+                  ]
+                )
+              ) @job_key_value
+            )
+          )
+        )
+      )
+    )
+  )
+  (#eq? @jobs_key "jobs")
+  (#eq? @job_name "__JOB_NAME__")
+  (#eq? @job_key_name "__JOB_KEY__")
 )
 "#;
 
@@ -111,7 +143,11 @@ impl Locator {
                         .next()
                         .expect("horrific, embarassing tree-sitter query failure");
 
-                    let cap = group.captures[capture_index as usize];
+                    let cap = group
+                        .captures
+                        .iter()
+                        .find(|qc| qc.index == capture_index)
+                        .unwrap();
 
                     let children = cap.node.children(&mut cap.node.walk()).collect::<Vec<_>>();
                     let step_node = children[step.index];
@@ -121,28 +157,71 @@ impl Locator {
                         feature: step_node.utf8_text(workflow.raw.as_bytes())?,
                     })
                 }
-                None => {
-                    // Job with no interior step: capture the entire job
-                    // and emit it.
-                    let job_query =
-                        Query::new(&self.language, &ENTIRE_JOB.replace("__JOB_NAME__", job.id))?;
+                None => match job.key {
+                    Some(key) => {
+                        // Job with a non-step key; capture the matching key's
+                        // span and emit it.
+                        let job_key_query = Query::new(
+                            &self.language,
+                            &JOB_LEVEL_KEY
+                                .replace("__JOB_NAME__", job.id)
+                                .replace("__JOB_KEY__", key),
+                        )?;
 
-                    let (group, _) = cursor
-                        .captures(
-                            &job_query,
-                            workflow.tree.root_node(),
-                            workflow.raw.as_bytes(),
-                        )
-                        .next()
-                        .expect("horrific, embarassing tree-sitter query failure");
+                        let capture_index = job_key_query
+                            .capture_index_for_name("job_key_value")
+                            .unwrap();
 
-                    let cap = group.captures[0];
+                        let (group, _) = cursor
+                            .captures(
+                                &job_key_query,
+                                workflow.tree.root_node(),
+                                workflow.raw.as_bytes(),
+                            )
+                            .next()
+                            .expect("horrific, embarassing tree-sitter query failure");
 
-                    Ok(Feature {
-                        location: cap.node.into(),
-                        feature: cap.node.utf8_text(workflow.raw.as_bytes())?,
-                    })
-                }
+                        // NOTE(ww): Empirically the captures are sometimes out
+                        // of order here (i.e. the list and index orders don't
+                        // match up). I'm sure there's a good reason for this, but
+                        // it means we have to find() instead of just indexing
+                        // via `capture_index`.
+                        let cap = group
+                            .captures
+                            .iter()
+                            .find(|qc| qc.index == capture_index)
+                            .unwrap();
+
+                        Ok(Feature {
+                            location: cap.node.into(),
+                            feature: cap.node.utf8_text(workflow.raw.as_bytes())?,
+                        })
+                    }
+                    None => {
+                        // Job with no interior step and no explicit key:
+                        // capture the entire job and emit it.
+                        let job_query = Query::new(
+                            &self.language,
+                            &ENTIRE_JOB.replace("__JOB_NAME__", job.id),
+                        )?;
+
+                        let (group, _) = cursor
+                            .captures(
+                                &job_query,
+                                workflow.tree.root_node(),
+                                workflow.raw.as_bytes(),
+                            )
+                            .next()
+                            .expect("horrific, embarassing tree-sitter query failure");
+
+                        let cap = group.captures[0];
+
+                        Ok(Feature {
+                            location: cap.node.into(),
+                            feature: cap.node.utf8_text(workflow.raw.as_bytes())?,
+                        })
+                    }
+                },
             },
             None => match &location.key {
                 // If we're given a top-level key to isolate, query for it.

@@ -93,6 +93,14 @@ impl<'w> Job<'w> {
         self.parent.with_job(self)
     }
 
+    pub(crate) fn key_location(&self, key: &'w str) -> WorkflowLocation<'w> {
+        let mut location = self.parent.with_job(self);
+        // NOTE: Infallible unwrap due to job always being supplied above.
+        location.job = Some(location.job.unwrap().with_key(key));
+
+        location
+    }
+
     pub(crate) fn steps(&self) -> Steps<'w> {
         Steps::new(self)
     }
