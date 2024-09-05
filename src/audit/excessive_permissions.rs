@@ -37,11 +37,13 @@ impl<'a> WorkflowAudit<'a> for ExcessivePermissions<'a> {
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];
         // Top-level permissions.
-        if let Some((severity, note)) = self.check_permissions(&workflow.permissions, None) {
+        if let Some((severity, confidence, note)) =
+            self.check_permissions(&workflow.permissions, None)
+        {
             findings.push(
                 Self::finding()
                     .severity(severity)
-                    .confidence(Confidence::High)
+                    .confidence(confidence)
                     .add_location(workflow.key_location("permissions").annotated(note))
                     .build(workflow)?,
             )
@@ -52,13 +54,13 @@ impl<'a> WorkflowAudit<'a> for ExcessivePermissions<'a> {
                 continue;
             };
 
-            if let Some((severity, note)) =
+            if let Some((severity, confidence, note)) =
                 self.check_permissions(&normal.permissions, Some(&workflow.permissions))
             {
                 findings.push(
                     Self::finding()
                         .severity(severity)
-                        .confidence(Confidence::High)
+                        .confidence(confidence)
                         .add_location(job.key_location("permissions").annotated(note))
                         .build(workflow)?,
                 )
@@ -74,7 +76,7 @@ impl<'a> ExcessivePermissions<'a> {
         &self,
         permissions: &Permissions,
         parent: Option<&Permissions>,
-    ) -> Option<(Severity, &'static str)> {
+    ) -> Option<(Severity, Confidence, &'static str)> {
         match permissions {
             Permissions::Base(base) => match base {
                 // If no explicit permissions are specified, our behavior
@@ -89,12 +91,31 @@ impl<'a> ExcessivePermissions<'a> {
                     // being too broad.
                     None => Some((
                         Severity::Medium,
+                        Confidence::Low,
                         "workflow uses default permissions, which may be excessive",
                     )),
                 },
-                _ => todo!(),
+                BasePermission::ReadAll => Some((
+                    Severity::Medium,
+                    Confidence::High,
+                    "uses read-all permissions, which may grant read access to more resources \
+                     than necessary",
+                )),
+                BasePermission::WriteAll => Some((
+                    Severity::High,
+                    Confidence::High,
+                    "uses write-all permissions, which grants destructive access to repository \
+                     resources",
+                )),
             },
-            _ => todo!(),
+            Permissions::Explicit(perms) => match parent {
+                // In the general case, it's impossible to tell whether a
+                // job-level permission block is over-scoped.
+                Some(_) => None,
+                // Top-level permission-blocks should almost never contain
+                // write permissions.
+                None => todo!(),
+            },
         }
     }
 }
