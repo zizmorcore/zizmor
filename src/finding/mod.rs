@@ -8,7 +8,7 @@ pub(crate) mod locate;
 
 // TODO: Traits + more flexible models here.
 
-#[derive(Default, Serialize)]
+#[derive(Copy, Clone, Default, Serialize)]
 pub(crate) enum Confidence {
     #[default]
     Unknown,
@@ -17,7 +17,7 @@ pub(crate) enum Confidence {
     High,
 }
 
-#[derive(Default, Serialize)]
+#[derive(Copy, Clone, Default, Serialize)]
 pub(crate) enum Severity {
     #[default]
     Unknown,

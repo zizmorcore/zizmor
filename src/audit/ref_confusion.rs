@@ -11,13 +11,12 @@ use std::ops::Deref;
 use anyhow::Result;
 use github_actions_models::workflow::{job::StepBody, Job};
 
+use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
     github_api,
     models::{AuditConfig, Uses},
 };
-
-use super::WorkflowAudit;
 
 const REF_CONFUSION_ANNOTATION: &str =
     "uses a ref that's provided by both the branch and tag namespaces";

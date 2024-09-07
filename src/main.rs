@@ -94,6 +94,7 @@ fn main() -> Result<()> {
     let mut results = vec![];
     let audits: &mut [&mut dyn WorkflowAudit] = &mut [
         &mut audit::artipacked::Artipacked::new(config)?,
+        &mut audit::excessive_permissions::ExcessivePermissions::new(config)?,
         &mut audit::pull_request_target::PullRequestTarget::new(config)?,
         &mut audit::impostor_commit::ImpostorCommit::new(config)?,
         &mut audit::ref_confusion::RefConfusion::new(config)?,

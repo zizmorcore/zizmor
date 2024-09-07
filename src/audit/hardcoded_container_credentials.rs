@@ -8,12 +8,11 @@ use github_actions_models::{
     },
 };
 
+use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
     models::AuditConfig,
 };
-
-use super::WorkflowAudit;
 
 pub(crate) struct HardcodedContainerCredentials<'a> {
     pub(crate) _config: AuditConfig<'a>,
