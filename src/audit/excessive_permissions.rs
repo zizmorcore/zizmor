@@ -12,7 +12,7 @@ use crate::{
 };
 
 // Subjective mapping of permissions to severities, when given `write` access.
-const KNOWN_PERMISSIONS: LazyLock<HashMap<&str, Severity>> = LazyLock::new(|| {
+static KNOWN_PERMISSIONS: LazyLock<HashMap<&str, Severity>> = LazyLock::new(|| {
     [
         ("actions", Severity::High),
         ("attestations", Severity::High),
