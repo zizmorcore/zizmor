@@ -4,9 +4,8 @@
 use anyhow::{Ok, Result};
 use tree_sitter::{Language, Query, QueryCursor};
 
-use crate::models::Workflow;
-
 use super::{Feature, WorkflowLocation};
+use crate::models::Workflow;
 
 /// Captures an arbitrary top-level key within a YAML stream.
 const TOP_LEVEL_KEY: &str = r#"

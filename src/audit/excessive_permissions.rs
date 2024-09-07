@@ -1,16 +1,37 @@
-use std::ops::Deref;
+use std::{collections::HashMap, ops::Deref, sync::LazyLock};
 
 use github_actions_models::{
     common::{BasePermission, Permission, Permissions},
     workflow::Job,
 };
 
+use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
     models::AuditConfig,
 };
 
-use super::WorkflowAudit;
+// Subjective mapping of permissions to severities, when given `write` access.
+const KNOWN_PERMISSIONS: LazyLock<HashMap<&str, Severity>> = LazyLock::new(|| {
+    [
+        ("actions", Severity::High),
+        ("attestations", Severity::High),
+        ("checks", Severity::Medium),
+        ("contents", Severity::High),
+        ("deployments", Severity::High),
+        ("discussions", Severity::Medium),
+        ("id-token", Severity::High),
+        ("issues", Severity::High),
+        ("packages", Severity::High),
+        ("pages", Severity::High),
+        ("pull-requests", Severity::High),
+        ("repository-projects", Severity::Medium),
+        ("security-events", Severity::Medium),
+        // What does the write permission even do here?
+        ("statuses", Severity::Low),
+    ]
+    .into()
+});
 
 pub(crate) struct ExcessivePermissions<'a> {
     pub(crate) _config: AuditConfig<'a>,
@@ -74,7 +95,7 @@ impl<'a> ExcessivePermissions<'a> {
         &self,
         permissions: &Permissions,
         parent: Option<&Permissions>,
-    ) -> Vec<(Severity, Confidence, &'static str)> {
+    ) -> Vec<(Severity, Confidence, String)> {
         match permissions {
             Permissions::Base(base) => match base {
                 // If no explicit permissions are specified, our behavior
@@ -90,20 +111,22 @@ impl<'a> ExcessivePermissions<'a> {
                     None => vec![(
                         Severity::Medium,
                         Confidence::Low,
-                        "workflow uses default permissions, which may be excessive",
+                        "workflow uses default permissions, which may be excessive".into(),
                     )],
                 },
                 BasePermission::ReadAll => vec![(
                     Severity::Medium,
                     Confidence::High,
                     "uses read-all permissions, which may grant read access to more resources \
-                     than necessary",
+                     than necessary"
+                        .into(),
                 )],
                 BasePermission::WriteAll => vec![(
                     Severity::High,
                     Confidence::High,
                     "uses write-all permissions, which grants destructive access to repository \
-                     resources",
+                     resources"
+                        .into(),
                 )],
             },
             Permissions::Explicit(perms) => match parent {
@@ -115,69 +138,27 @@ impl<'a> ExcessivePermissions<'a> {
                 None => {
                     let mut results = vec![];
 
-                    // We could check every single explicit permission,
-                    // but not all of them are particularly severe or interesting.
-                    // TODO: macro-ify this.
-                    if matches!(perms.attestations, Permission::Write) {
-                        results.push((
-                            Severity::High,
-                            Confidence::Medium,
-                            "attestations: write in top-level permissions, likely exposing \
-                             attestations more than necessary",
-                        ));
-                    }
-                    if matches!(perms.contents, Permission::Write) {
-                        results.push((
-                            Severity::High,
-                            Confidence::Medium,
-                            "contents: write in top-level permissions, likely exposing repo \
-                             mutation access more than necessary",
-                        ));
-                    }
-                    if matches!(perms.deployments, Permission::Write) {
-                        results.push((
-                            Severity::High,
-                            Confidence::Medium,
-                            "deployments: write in top-level permissions, likely exposing repo \
-                             deployment management more than necessary",
-                        ));
-                    }
-                    if matches!(perms.discussions, Permission::Write) {
-                        results.push((
-                            Severity::Medium,
-                            Confidence::Medium,
-                            "discussions: write in top-level permissions, likely exposing repo \
-                             discussion management permissions more than necessary",
-                        ));
-                    }
-                    if matches!(perms.id_token, Permission::Write) {
-                        results.push((
-                            Severity::High,
-                            Confidence::Medium,
-                            "id-token: write in top-level permissions, likely exposing the OIDC \
-                             credential more than necessary",
-                        ));
-                    }
-                    if matches!(perms.issues, Permission::Write) {
-                        results.push((
-                            Severity::High,
-                            Confidence::Medium,
-                            "issues: write in top-level permissions, likely exposing repo issue management more than necessary",
-                        ));
-                    }
-                    if matches!(perms.packages, Permission::Write) {
-                        results.push((
-                            Severity::High,
-                            Confidence::Medium,
-                            "packages: write in top-level permissions, likely exposing GitHub Packages management more than necessary",
-                        ));
-                    }
-                    if matches!(perms.pages, Permission::Write) {
-                        results.push((
-                            Severity::High,
-                            Confidence::Medium,
-                            "pages: write in top-level permissions, likely exposing GitHub Pages management more than necessary",
-                        ));
+                    for (name, perm) in perms {
+                        if *perm != Permission::Write {
+                            continue;
+                        }
+
+                        match KNOWN_PERMISSIONS.get(name.as_str()) {
+                            Some(sev) => results.push((
+                                *sev,
+                                Confidence::High,
+                                format!("{name}: write is overly broad at the workflow level; move to the job level"),
+                            )),
+                            None => {
+                                log::debug!("unknown permission: {name}");
+
+                                results.push((
+                                    Severity::Unknown,
+                                    Confidence::High,
+                                    format!("{name}: write is overly broad at the workflow level; move to the job level")
+                                ))
+                            },
+                        }
                     }
 
                     results

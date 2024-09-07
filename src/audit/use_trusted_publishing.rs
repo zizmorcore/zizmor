@@ -5,12 +5,11 @@ use github_actions_models::{
     workflow::{job::StepBody, Job},
 };
 
+use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
     models::AuditConfig,
 };
-
-use super::WorkflowAudit;
 
 const USES_MANUAL_CREDENTIAL: &str =
     "uses a manually-configured credential instead of Trusted Publishing";

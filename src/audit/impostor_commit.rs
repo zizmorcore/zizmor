@@ -10,16 +10,15 @@ use std::{
     ops::Deref,
 };
 
+use anyhow::Result;
+use github_actions_models::workflow::{job::StepBody, Job};
+
+use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, Branch, ComparisonStatus, Tag},
     models::{AuditConfig, Uses, Workflow},
 };
-
-use anyhow::Result;
-use github_actions_models::workflow::{job::StepBody, Job};
-
-use super::WorkflowAudit;
 
 pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
 

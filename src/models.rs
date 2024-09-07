@@ -1,8 +1,8 @@
-use anyhow::{anyhow, Context, Ok, Result};
 use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
-use tree_sitter::Tree;
 
+use anyhow::{anyhow, Context, Ok, Result};
 use github_actions_models::workflow;
+use tree_sitter::Tree;
 
 use crate::finding::WorkflowLocation;
 

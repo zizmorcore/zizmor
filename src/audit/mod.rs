@@ -1,8 +1,9 @@
+use anyhow::Result;
+
 use crate::{
     finding::{Finding, FindingBuilder},
     models::{AuditConfig, Workflow},
 };
-use anyhow::Result;
 
 pub(crate) mod artipacked;
 pub(crate) mod excessive_permissions;

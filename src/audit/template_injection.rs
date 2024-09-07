@@ -9,13 +9,12 @@ use std::ops::Deref;
 
 use github_actions_models::workflow::{job::StepBody, Job};
 
+use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
     models::AuditConfig,
     utils::iter_expressions,
 };
-
-use super::WorkflowAudit;
 
 pub(crate) struct TemplateInjection<'a> {
     pub(crate) _config: AuditConfig<'a>,

@@ -7,13 +7,12 @@ use github_actions_models::{
 };
 use itertools::Itertools;
 
+use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Finding, Severity},
     models::AuditConfig,
 };
 use crate::{models::Workflow, utils::split_patterns};
-
-use super::WorkflowAudit;
 
 pub(crate) struct Artipacked<'a> {
     pub(crate) config: AuditConfig<'a>,
