@@ -98,22 +98,11 @@ impl<'a> ExcessivePermissions<'a> {
     ) -> Vec<(Severity, Confidence, String)> {
         match permissions {
             Permissions::Base(base) => match base {
-                // If no explicit permissions are specified, our behavior
-                // depends on the presence of a parent (workflow) permission
-                // specifier.
-                BasePermission::Default => match parent {
-                    // If there's a parent permissions block, this job inherits
-                    // from it and has nothing new to report.
-                    Some(_) => vec![],
-                    // If there's no parent permissions block, we're at the workflow
-                    // level and should report the default permissions as potentially
-                    // being too broad.
-                    None => vec![(
-                        Severity::Medium,
-                        Confidence::Low,
-                        "workflow uses default permissions, which may be excessive".into(),
-                    )],
-                },
+                // TODO: Think more about what to do here. Flagging default
+                // permissions is likely to be noisy and is annoying to do,
+                // since it involves the *absence* of a key in the YAML
+                // rather than its presence.
+                BasePermission::Default => vec![],
                 BasePermission::ReadAll => vec![(
                     Severity::Medium,
                     Confidence::High,

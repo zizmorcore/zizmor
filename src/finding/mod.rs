@@ -27,7 +27,7 @@ pub(crate) enum Severity {
     High,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub(crate) struct StepLocation<'w> {
     pub(crate) index: usize,
     pub(crate) id: Option<&'w str>,
@@ -44,7 +44,7 @@ impl<'w> From<&Step<'w>> for StepLocation<'w> {
     }
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub(crate) struct JobLocation<'w> {
     /// The job's unique ID within its parent workflow.
     pub(crate) id: &'w str,
@@ -86,7 +86,7 @@ impl<'w> JobLocation<'w> {
 }
 
 /// Represents a symbolic workflow location.
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub(crate) struct WorkflowLocation<'w> {
     pub(crate) name: &'w str,
 
@@ -167,15 +167,6 @@ pub(crate) struct Point {
     pub(crate) column: usize,
 }
 
-impl From<tree_sitter::Point> for Point {
-    fn from(value: tree_sitter::Point) -> Self {
-        Self {
-            row: value.row,
-            column: value.column,
-        }
-    }
-}
-
 /// A "concrete" location for some feature.
 /// Every concrete location contains two spans: a line-and-column span,
 /// and an offset range.
@@ -187,13 +178,19 @@ pub(crate) struct ConcreteLocation {
     pub(crate) end_offset: usize,
 }
 
-impl From<tree_sitter::Node<'_>> for ConcreteLocation {
-    fn from(value: tree_sitter::Node) -> Self {
+impl From<&yamlpath::Location> for ConcreteLocation {
+    fn from(value: &yamlpath::Location) -> Self {
         Self {
-            start_point: value.start_position().into(),
-            end_point: value.end_position().into(),
-            start_offset: value.start_byte(),
-            end_offset: value.end_byte(),
+            start_point: Point {
+                row: value.point_span.0 .0,
+                column: value.point_span.0 .1,
+            },
+            end_point: Point {
+                row: value.point_span.1 .0,
+                column: value.point_span.1 .1,
+            },
+            start_offset: value.byte_span.0,
+            end_offset: value.byte_span.1,
         }
     }
 }

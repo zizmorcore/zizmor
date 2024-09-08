@@ -1,15 +1,13 @@
 use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 
-use anyhow::{anyhow, Context, Ok, Result};
+use anyhow::{Context, Result};
 use github_actions_models::workflow;
-use tree_sitter::Tree;
 
 use crate::finding::WorkflowLocation;
 
 pub(crate) struct Workflow {
     pub(crate) filename: String,
-    pub(crate) tree: Tree,
-    pub(crate) raw: String,
+    pub(crate) document: yamlpath::Document,
     inner: workflow::Workflow,
 }
 
@@ -28,14 +26,7 @@ impl Workflow {
         let inner = serde_yaml::from_str(&raw)
             .with_context(|| format!("invalid GitHub Actions workflow: {:?}", p.as_ref()))?;
 
-        let mut parser = tree_sitter::Parser::new();
-        parser.set_language(&tree_sitter_yaml::language())?;
-
-        // Should be infallible without API misuse above.
-        let tree = parser.parse(&raw, None).unwrap();
-        if tree.root_node().has_error() {
-            return Err(anyhow!("tree-sitter couldn't parse YAML"));
-        }
+        let document = yamlpath::Document::new(raw)?;
 
         // NOTE: file_name().unwrap() is safe since the read above only succeeds
         // on a well-formed filepath.
@@ -46,8 +37,7 @@ impl Workflow {
                 .unwrap()
                 .to_string_lossy()
                 .into_owned(),
-            tree,
-            raw,
+            document,
             inner,
         })
     }
