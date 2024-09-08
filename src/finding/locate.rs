@@ -20,8 +20,6 @@ impl Locator {
     ) -> Result<Feature<'w>> {
         let mut path = vec![];
 
-        dbg!(location);
-
         if let Some(job) = &location.job {
             path.extend([
                 yamlpath::Component::Key("jobs".into()),
@@ -29,7 +27,10 @@ impl Locator {
             ]);
 
             if let Some(step) = &job.step {
-                path.push(yamlpath::Component::Index(step.index));
+                path.extend([
+                    yamlpath::Component::Key("steps".into()),
+                    yamlpath::Component::Index(step.index),
+                ]);
             } else if let Some(key) = &job.key {
                 path.push(yamlpath::Component::Key(key.to_string()));
             }
