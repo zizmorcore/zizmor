@@ -18,34 +18,26 @@ impl Locator {
         workflow: &'w Workflow,
         location: &WorkflowLocation,
     ) -> Result<Feature<'w>> {
-        let mut path = vec![];
+        let mut builder = yamlpath::QueryBuilder::new();
 
         if let Some(job) = &location.job {
-            path.extend([
-                yamlpath::Component::Key("jobs".into()),
-                yamlpath::Component::Key(job.id.into()),
-            ]);
+            builder = builder.key("jobs").key(job.id);
 
             if let Some(step) = &job.step {
-                path.extend([
-                    yamlpath::Component::Key("steps".into()),
-                    yamlpath::Component::Index(step.index),
-                ]);
+                builder = builder.key("steps").index(step.index);
             } else if let Some(key) = &job.key {
-                path.push(yamlpath::Component::Key(key.to_string()));
+                builder = builder.key(*key);
             }
         } else {
             // Non-job top-level key.
-            path.push(yamlpath::Component::Key(
+            builder = builder.key(
                 location
                     .key
-                    .expect("API misuse: must provide key if job is not specified")
-                    .to_string(),
-            ));
+                    .expect("API misuse: must provide key if job is not specified"),
+            );
         }
 
-        // Infallible: we always have at least one path component above.
-        let query = yamlpath::Query::new(path).unwrap();
+        let query = builder.build();
         let feature = workflow.document.query(&query)?;
 
         Ok(Feature {
