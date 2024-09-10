@@ -3,7 +3,7 @@ use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 use anyhow::{Context, Result};
 use github_actions_models::workflow;
 
-use crate::finding::WorkflowLocation;
+use crate::finding::{JobOrKey, WorkflowLocation};
 
 pub(crate) struct Workflow {
     pub(crate) filename: String,
@@ -45,8 +45,7 @@ impl Workflow {
     pub(crate) fn location(&self) -> WorkflowLocation {
         WorkflowLocation {
             name: &self.filename,
-            key: None,
-            job: None,
+            job_or_key: None,
             annotation: None,
         }
     }
@@ -85,8 +84,12 @@ impl<'w> Job<'w> {
 
     pub(crate) fn key_location(&self, key: &'w str) -> WorkflowLocation<'w> {
         let mut location = self.parent.with_job(self);
-        // NOTE: Infallible unwrap due to job always being supplied above.
-        location.job = Some(location.job.unwrap().with_key(key));
+        let Some(JobOrKey::Job(job)) = location.job_or_key else {
+            panic!("unreachable")
+        };
+        let job = job.with_key(key);
+
+        location.job_or_key = Some(JobOrKey::Job(job));
 
         location
     }

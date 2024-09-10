@@ -85,19 +85,23 @@ impl<'w> JobLocation<'w> {
     }
 }
 
+/// Represents a workflow-level key or job location.
+#[derive(Serialize, Clone, Debug)]
+pub(crate) enum JobOrKey<'w> {
+    Key(&'w str),
+    Job(JobLocation<'w>),
+}
+
 /// Represents a symbolic workflow location.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct WorkflowLocation<'w> {
+    /// The name of the workflow.
     pub(crate) name: &'w str,
-
-    /// A top-level workflow key to isolate, if present.
-    pub(crate) key: Option<&'w str>,
-
-    /// The job location within this workflow, if present.
-    pub(crate) job: Option<JobLocation<'w>>,
 
     /// An optional annotation for this location.
     pub(crate) annotation: Option<String>,
+
+    pub(crate) job_or_key: Option<JobOrKey<'w>>,
 }
 
 impl<'w> WorkflowLocation<'w> {
@@ -106,8 +110,7 @@ impl<'w> WorkflowLocation<'w> {
     pub(crate) fn with_key(&self, key: &'w str) -> WorkflowLocation<'w> {
         WorkflowLocation {
             name: self.name,
-            key: Some(key),
-            job: None,
+            job_or_key: Some(JobOrKey::Key(&key)),
             annotation: self.annotation.clone(),
         }
     }
@@ -116,13 +119,12 @@ impl<'w> WorkflowLocation<'w> {
     pub(crate) fn with_job(&self, job: &Job<'w>) -> WorkflowLocation<'w> {
         WorkflowLocation {
             name: self.name,
-            key: None,
-            job: Some(JobLocation {
+            job_or_key: Some(JobOrKey::Job(JobLocation {
                 id: job.id,
                 key: None,
                 name: job.inner.name(),
                 step: None,
-            }),
+            })),
             annotation: self.annotation.clone(),
         }
     }
@@ -132,14 +134,13 @@ impl<'w> WorkflowLocation<'w> {
     /// This can only be called after the `WorkflowLocation` already has a job,
     /// since steps belong to jobs.
     pub(crate) fn with_step(&self, step: &Step<'w>) -> WorkflowLocation<'w> {
-        match &self.job {
-            None => panic!("API misuse: can't set step without parent job"),
-            Some(job) => WorkflowLocation {
+        match &self.job_or_key {
+            Some(JobOrKey::Job(job)) => WorkflowLocation {
                 name: self.name,
-                key: None,
-                job: Some(job.with_step(step)),
+                job_or_key: Some(JobOrKey::Job(job.with_step(step))),
                 annotation: self.annotation.clone(),
             },
+            None | _ => panic!("API misuse: can't set step without parent job"),
         }
     }
 
