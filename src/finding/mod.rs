@@ -44,19 +44,23 @@ impl<'w> From<&Step<'w>> for StepLocation<'w> {
     }
 }
 
+/// Represents a job-level key or step location.
+#[derive(Serialize, Clone, Debug)]
+pub(crate) enum StepOrKey<'w> {
+    Key(&'w str),
+    Step(StepLocation<'w>),
+}
+
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct JobLocation<'w> {
     /// The job's unique ID within its parent workflow.
     pub(crate) id: &'w str,
 
-    /// A non-step job-level key, like [`WorkflowLocation::key`].
-    pub(crate) key: Option<&'w str>,
-
     /// The job's name, if present.
     pub(crate) name: Option<&'w str>,
 
-    /// The location of a step within the job, if present.
-    pub(crate) step: Option<StepLocation<'w>>,
+    /// The step or non-step key within this workflow.
+    pub(crate) step_or_key: Option<StepOrKey<'w>>,
 }
 
 impl<'w> JobLocation<'w> {
@@ -66,9 +70,8 @@ impl<'w> JobLocation<'w> {
     pub(crate) fn with_key(&self, key: &'w str) -> JobLocation<'w> {
         JobLocation {
             id: self.id,
-            key: Some(key),
             name: self.name,
-            step: None,
+            step_or_key: Some(StepOrKey::Key(key)),
         }
     }
 
@@ -78,9 +81,8 @@ impl<'w> JobLocation<'w> {
     fn with_step(&self, step: &Step<'w>) -> JobLocation<'w> {
         JobLocation {
             id: self.id,
-            key: None,
             name: self.name,
-            step: Some(step.into()),
+            step_or_key: Some(StepOrKey::Step(step.into())),
         }
     }
 }
@@ -101,6 +103,7 @@ pub(crate) struct WorkflowLocation<'w> {
     /// An optional annotation for this location.
     pub(crate) annotation: Option<String>,
 
+    /// The job or non-job key within this workflow.
     pub(crate) job_or_key: Option<JobOrKey<'w>>,
 }
 
@@ -121,9 +124,8 @@ impl<'w> WorkflowLocation<'w> {
             name: self.name,
             job_or_key: Some(JobOrKey::Job(JobLocation {
                 id: job.id,
-                key: None,
                 name: job.inner.name(),
-                step: None,
+                step_or_key: None,
             })),
             annotation: self.annotation.clone(),
         }
