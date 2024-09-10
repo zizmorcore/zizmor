@@ -110,7 +110,7 @@ impl<'w> WorkflowLocation<'w> {
     pub(crate) fn with_key(&self, key: &'w str) -> WorkflowLocation<'w> {
         WorkflowLocation {
             name: self.name,
-            job_or_key: Some(JobOrKey::Key(&key)),
+            job_or_key: Some(JobOrKey::Key(key)),
             annotation: self.annotation.clone(),
         }
     }
@@ -140,7 +140,7 @@ impl<'w> WorkflowLocation<'w> {
                 job_or_key: Some(JobOrKey::Job(job.with_step(step))),
                 annotation: self.annotation.clone(),
             },
-            None | _ => panic!("API misuse: can't set step without parent job"),
+            _ => panic!("API misuse: can't set step without parent job"),
         }
     }
 
