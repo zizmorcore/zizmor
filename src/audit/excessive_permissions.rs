@@ -136,7 +136,10 @@ impl<'a> ExcessivePermissions<'a> {
                             Some(sev) => results.push((
                                 *sev,
                                 Confidence::High,
-                                format!("{name}: write is overly broad at the workflow level; move to the job level"),
+                                format!(
+                                    "{name}: write is overly broad at the workflow level; move to \
+                                     the job level"
+                                ),
                             )),
                             None => {
                                 log::debug!("unknown permission: {name}");
@@ -144,9 +147,12 @@ impl<'a> ExcessivePermissions<'a> {
                                 results.push((
                                     Severity::Unknown,
                                     Confidence::High,
-                                    format!("{name}: write is overly broad at the workflow level; move to the job level")
+                                    format!(
+                                        "{name}: write is overly broad at the workflow level; \
+                                         move to the job level"
+                                    ),
                                 ))
-                            },
+                            }
                         }
                     }
 

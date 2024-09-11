@@ -20,8 +20,6 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
     }
 
     fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
-        log::debug!("audit: {} evaluating {}", Self::ident(), &workflow.filename);
-
         let trigger = &workflow.on;
 
         let has_pull_request_target = match trigger {
@@ -43,8 +41,6 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
                     .build(workflow)?,
             );
         }
-
-        log::debug!("audit: {} completed {}", Self::ident(), &workflow.filename);
 
         Ok(findings)
     }

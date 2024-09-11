@@ -48,8 +48,6 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
     }
 
     fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
-        log::debug!("audit: {} evaluating {}", Self::ident(), &workflow.filename);
-
         let mut findings = vec![];
 
         for job in workflow.jobs() {
@@ -142,8 +140,6 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                 }
             }
         }
-
-        log::debug!("audit: {} completed {}", Self::ident(), &workflow.filename);
 
         Ok(findings)
     }

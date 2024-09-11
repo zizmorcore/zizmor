@@ -72,8 +72,6 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
         &mut self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
-        log::debug!("audit: {} evaluating {}", Self::ident(), &workflow.filename);
-
         let mut findings = vec![];
 
         for job in workflow.jobs() {
@@ -118,8 +116,6 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
                 }
             }
         }
-
-        log::debug!("audit: {} completed {}", Self::ident(), &workflow.filename);
 
         Ok(findings)
     }

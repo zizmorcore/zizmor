@@ -4,11 +4,13 @@ use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
 use models::AuditConfig;
+use registry::Registry;
 
 mod audit;
 mod finding;
 mod github_api;
 mod models;
+mod registry;
 mod sarif;
 mod utils;
 
@@ -91,20 +93,40 @@ fn main() -> Result<()> {
         workflows.push(models::Workflow::from_file(workflow_path)?);
     }
 
+    let mut registry = Registry::new();
+
+    macro_rules! register_audit {
+        ($rule:path) => {{
+            // HACK: https://github.com/rust-lang/rust/issues/48067
+            use $rule as base;
+            match base::new(config) {
+                Ok(audit) => registry.register_workflow_audit(base::ident(), Box::new(audit)),
+                Err(e) => log::warn!("{audit} is being skipped: {e}", audit = base::ident()),
+            }
+        }};
+    }
+
+    register_audit!(audit::artipacked::Artipacked);
+    register_audit!(audit::excessive_permissions::ExcessivePermissions);
+    register_audit!(audit::pull_request_target::PullRequestTarget);
+    register_audit!(audit::impostor_commit::ImpostorCommit);
+    register_audit!(audit::ref_confusion::RefConfusion);
+    register_audit!(audit::use_trusted_publishing::UseTrustedPublishing);
+    register_audit!(audit::template_injection::TemplateInjection);
+    register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
+
     let mut results = vec![];
-    let audits: &mut [&mut dyn WorkflowAudit] = &mut [
-        &mut audit::artipacked::Artipacked::new(config)?,
-        &mut audit::excessive_permissions::ExcessivePermissions::new(config)?,
-        &mut audit::pull_request_target::PullRequestTarget::new(config)?,
-        &mut audit::impostor_commit::ImpostorCommit::new(config)?,
-        &mut audit::ref_confusion::RefConfusion::new(config)?,
-        &mut audit::use_trusted_publishing::UseTrustedPublishing::new(config)?,
-        &mut audit::template_injection::TemplateInjection::new(config)?,
-        &mut audit::hardcoded_container_credentials::HardcodedContainerCredentials::new(config)?,
-    ];
     for workflow in workflows.iter() {
-        for audit in audits.iter_mut() {
+        for (name, audit) in registry.iter_workflow_audits() {
+            log::info!(
+                "performing {name} on {workflow}",
+                workflow = &workflow.filename
+            );
             results.extend(audit.audit(workflow)?);
+            log::info!(
+                "completed {name} on {workflow}",
+                workflow = &workflow.filename
+            );
         }
     }
 
