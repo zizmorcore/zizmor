@@ -8,7 +8,7 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    models::AuditConfig,
+    AuditConfig,
 };
 
 const USES_MANUAL_CREDENTIAL: &str =

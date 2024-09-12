@@ -11,7 +11,7 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    models::AuditConfig,
+    AuditConfig,
 };
 
 pub(crate) struct HardcodedContainerCredentials<'a> {
@@ -26,7 +26,7 @@ impl<'a> WorkflowAudit<'a> for HardcodedContainerCredentials<'a> {
         "hardcoded-container-credentials"
     }
 
-    fn new(config: crate::models::AuditConfig<'a>) -> anyhow::Result<Self>
+    fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

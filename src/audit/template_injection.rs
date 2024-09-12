@@ -12,8 +12,8 @@ use github_actions_models::workflow::{job::StepBody, Job};
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    models::AuditConfig,
     utils::iter_expressions,
+    AuditConfig,
 };
 
 pub(crate) struct TemplateInjection<'a> {

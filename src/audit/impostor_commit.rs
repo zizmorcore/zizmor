@@ -10,14 +10,15 @@ use std::{
     ops::Deref,
 };
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use github_actions_models::workflow::{job::StepBody, Job};
 
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, Branch, ComparisonStatus, Tag},
-    models::{AuditConfig, Uses, Workflow},
+    models::{Uses, Workflow},
+    AuditConfig,
 };
 
 pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
@@ -139,7 +140,15 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
     }
 
     fn new(config: AuditConfig<'a>) -> Result<Self> {
-        let client = github_api::Client::new(config.gh_token);
+        if config.offline {
+            return Err(anyhow!("offline audits only requested"));
+        }
+
+        let Some(gh_token) = config.gh_token else {
+            return Err(anyhow!("can't audit without a GitHub API token"));
+        };
+
+        let client = github_api::Client::new(gh_token);
 
         Ok(ImpostorCommit {
             _config: config,

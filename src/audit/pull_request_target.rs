@@ -4,7 +4,8 @@ use github_actions_models::workflow::Trigger;
 
 use super::WorkflowAudit;
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::{AuditConfig, Workflow};
+use crate::models::Workflow;
+use crate::AuditConfig;
 
 pub(crate) struct PullRequestTarget<'a> {
     pub(crate) _config: AuditConfig<'a>,

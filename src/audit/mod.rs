@@ -2,7 +2,8 @@ use anyhow::Result;
 
 use crate::{
     finding::{Finding, FindingBuilder},
-    models::{AuditConfig, Workflow},
+    models::Workflow,
+    AuditConfig,
 };
 
 pub(crate) mod artipacked;

@@ -8,7 +8,7 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    models::AuditConfig,
+    AuditConfig,
 };
 
 // Subjective mapping of permissions to severities, when given `write` access.
@@ -45,7 +45,7 @@ impl<'a> WorkflowAudit<'a> for ExcessivePermissions<'a> {
         "excessive-permissions"
     }
 
-    fn new(config: crate::models::AuditConfig<'a>) -> anyhow::Result<Self>
+    fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
