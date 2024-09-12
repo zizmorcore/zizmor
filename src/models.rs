@@ -192,12 +192,6 @@ impl<'w> Iterator for Steps<'w> {
     }
 }
 
-#[derive(Copy, Clone)]
-pub(crate) struct AuditConfig<'a> {
-    pub(crate) pedantic: bool,
-    pub(crate) gh_token: &'a str,
-}
-
 /// Represents the components of an "action ref", i.e. the value
 /// of a `uses:` clause in a normal job step or a reusable workflow job.
 /// Does not support `docker://` refs, or "local" (i.e. `./`) refs.

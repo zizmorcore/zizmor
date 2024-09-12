@@ -3,7 +3,6 @@ use std::{io::stdout, path::PathBuf};
 use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
-use models::AuditConfig;
 use registry::Registry;
 
 mod audit;
@@ -25,9 +24,12 @@ struct Args {
     #[arg(short, long)]
     offline: bool,
 
+    #[command(flatten)]
+    verbose: clap_verbosity_flag::Verbosity,
+
     /// The GitHub API token to use.
     #[arg(long, env)]
-    gh_token: String,
+    gh_token: Option<String>,
 
     /// The output format to emit. By default, plain text will be emitted
     /// on an interactive terminal and JSON otherwise.
@@ -45,18 +47,29 @@ pub(crate) enum OutputFormat {
     Sarif,
 }
 
+#[derive(Copy, Clone)]
+pub(crate) struct AuditConfig<'a> {
+    pub(crate) pedantic: bool,
+    pub(crate) offline: bool,
+    pub(crate) gh_token: Option<&'a str>,
+}
+
 impl<'a> From<&'a Args> for AuditConfig<'a> {
     fn from(value: &'a Args) -> Self {
         Self {
             pedantic: value.pedantic,
-            gh_token: &value.gh_token,
+            offline: value.offline,
+            gh_token: value.gh_token.as_deref(),
         }
     }
 }
 
 fn main() -> Result<()> {
-    env_logger::init();
     let args = Args::parse();
+
+    env_logger::Builder::new()
+        .filter_level(args.verbose.log_level_filter())
+        .init();
 
     let config = AuditConfig::from(&args);
 

@@ -10,7 +10,7 @@ use itertools::Itertools;
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Finding, Severity},
-    models::AuditConfig,
+    AuditConfig,
 };
 use crate::{models::Workflow, utils::split_patterns};
 

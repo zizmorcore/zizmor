@@ -8,14 +8,15 @@
 
 use std::ops::Deref;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use github_actions_models::workflow::{job::StepBody, Job};
 
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
     github_api,
-    models::{AuditConfig, Uses},
+    models::Uses,
+    AuditConfig,
 };
 
 const REF_CONFUSION_ANNOTATION: &str =
@@ -62,9 +63,17 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
     where
         Self: Sized,
     {
+        if config.offline {
+            return Err(anyhow!("offline audits only requested"));
+        }
+
+        let Some(gh_token) = config.gh_token else {
+            return Err(anyhow!("can't audit without a GitHub API token"));
+        };
+
         Ok(Self {
             _config: config,
-            client: github_api::Client::new(config.gh_token),
+            client: github_api::Client::new(gh_token),
         })
     }
 
