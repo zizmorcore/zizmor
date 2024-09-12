@@ -3,7 +3,7 @@ use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 use anyhow::{Context, Result};
 use github_actions_models::workflow;
 
-use crate::finding::{JobOrKey, WorkflowLocation};
+use crate::finding::{JobOrKeys, WorkflowLocation};
 
 pub(crate) struct Workflow {
     pub(crate) filename: String,
@@ -50,8 +50,8 @@ impl Workflow {
         }
     }
 
-    pub(crate) fn key_location(&self, key: &'static str) -> WorkflowLocation {
-        self.location().with_key(key)
+    pub(crate) fn key_location(&self, keys: &[&'static str]) -> WorkflowLocation {
+        self.location().with_keys(keys)
     }
 
     pub(crate) fn jobs(&self) -> Jobs<'_> {
@@ -66,10 +66,10 @@ pub(crate) struct Job<'w> {
 }
 
 impl<'w> Deref for Job<'w> {
-    type Target = workflow::Job;
+    type Target = &'w workflow::Job;
 
     fn deref(&self) -> &Self::Target {
-        self.inner
+        &self.inner
     }
 }
 
@@ -82,14 +82,14 @@ impl<'w> Job<'w> {
         self.parent.with_job(self)
     }
 
-    pub(crate) fn key_location(&self, key: &'w str) -> WorkflowLocation<'w> {
+    pub(crate) fn key_location(&self, keys: &[&'w str]) -> WorkflowLocation<'w> {
         let mut location = self.parent.with_job(self);
-        let Some(JobOrKey::Job(job)) = location.job_or_key else {
+        let Some(JobOrKeys::Job(job)) = location.job_or_key else {
             panic!("unreachable")
         };
-        let job = job.with_key(key);
+        let job = job.with_keys(keys);
 
-        location.job_or_key = Some(JobOrKey::Job(job));
+        location.job_or_key = Some(JobOrKeys::Job(job));
 
         location
     }
@@ -134,10 +134,10 @@ pub(crate) struct Step<'w> {
 }
 
 impl<'w> Deref for Step<'w> {
-    type Target = workflow::job::Step;
+    type Target = &'w workflow::job::Step;
 
-    fn deref(&self) -> &'w Self::Target {
-        self.inner
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 

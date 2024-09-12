@@ -46,8 +46,8 @@ impl<'w> From<&Step<'w>> for StepLocation<'w> {
 
 /// Represents a job-level key or step location.
 #[derive(Serialize, Clone, Debug)]
-pub(crate) enum StepOrKey<'w> {
-    Key(&'w str),
+pub(crate) enum StepOrKeys<'w> {
+    Keys(Vec<&'w str>),
     Step(StepLocation<'w>),
 }
 
@@ -59,19 +59,19 @@ pub(crate) struct JobLocation<'w> {
     /// The job's name, if present.
     pub(crate) name: Option<&'w str>,
 
-    /// The step or non-step key within this workflow.
-    pub(crate) step_or_key: Option<StepOrKey<'w>>,
+    /// The step or non-step keys within this workflow.
+    pub(crate) step_or_keys: Option<StepOrKeys<'w>>,
 }
 
 impl<'w> JobLocation<'w> {
-    /// Creates a new `JobLocation` with the given non-step `key`.
+    /// Creates a new `JobLocation` with the given non-step `keys`.
     ///
     /// Clears any `step` in the process.
-    pub(crate) fn with_key(&self, key: &'w str) -> JobLocation<'w> {
+    pub(crate) fn with_keys(&self, keys: &[&'w str]) -> JobLocation<'w> {
         JobLocation {
             id: self.id,
             name: self.name,
-            step_or_key: Some(StepOrKey::Key(key)),
+            step_or_keys: Some(StepOrKeys::Keys(keys.into())),
         }
     }
 
@@ -82,15 +82,15 @@ impl<'w> JobLocation<'w> {
         JobLocation {
             id: self.id,
             name: self.name,
-            step_or_key: Some(StepOrKey::Step(step.into())),
+            step_or_keys: Some(StepOrKeys::Step(step.into())),
         }
     }
 }
 
 /// Represents a workflow-level key or job location.
 #[derive(Serialize, Clone, Debug)]
-pub(crate) enum JobOrKey<'w> {
-    Key(&'w str),
+pub(crate) enum JobOrKeys<'w> {
+    Keys(Vec<&'w str>),
     Job(JobLocation<'w>),
 }
 
@@ -104,16 +104,16 @@ pub(crate) struct WorkflowLocation<'w> {
     pub(crate) annotation: Option<String>,
 
     /// The job or non-job key within this workflow.
-    pub(crate) job_or_key: Option<JobOrKey<'w>>,
+    pub(crate) job_or_key: Option<JobOrKeys<'w>>,
 }
 
 impl<'w> WorkflowLocation<'w> {
     /// Creates a new `WorkflowLocation` with the given `key`. Any inner
     /// job location is cleared.
-    pub(crate) fn with_key(&self, key: &'w str) -> WorkflowLocation<'w> {
+    pub(crate) fn with_keys(&self, keys: &[&'w str]) -> WorkflowLocation<'w> {
         WorkflowLocation {
             name: self.name,
-            job_or_key: Some(JobOrKey::Key(key)),
+            job_or_key: Some(JobOrKeys::Keys(keys.into())),
             annotation: self.annotation.clone(),
         }
     }
@@ -122,10 +122,10 @@ impl<'w> WorkflowLocation<'w> {
     pub(crate) fn with_job(&self, job: &Job<'w>) -> WorkflowLocation<'w> {
         WorkflowLocation {
             name: self.name,
-            job_or_key: Some(JobOrKey::Job(JobLocation {
+            job_or_key: Some(JobOrKeys::Job(JobLocation {
                 id: job.id,
                 name: job.inner.name(),
-                step_or_key: None,
+                step_or_keys: None,
             })),
             annotation: self.annotation.clone(),
         }
@@ -137,9 +137,9 @@ impl<'w> WorkflowLocation<'w> {
     /// since steps belong to jobs.
     pub(crate) fn with_step(&self, step: &Step<'w>) -> WorkflowLocation<'w> {
         match &self.job_or_key {
-            Some(JobOrKey::Job(job)) => WorkflowLocation {
+            Some(JobOrKeys::Job(job)) => WorkflowLocation {
                 name: self.name,
-                job_or_key: Some(JobOrKey::Job(job.with_step(step))),
+                job_or_key: Some(JobOrKeys::Job(job.with_step(step))),
                 annotation: self.annotation.clone(),
             },
             _ => panic!("API misuse: can't set step without parent job"),

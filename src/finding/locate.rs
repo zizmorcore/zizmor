@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 
-use super::{ConcreteLocation, Feature, JobOrKey, StepOrKey, WorkflowLocation};
+use super::{ConcreteLocation, Feature, JobOrKeys, StepOrKeys, WorkflowLocation};
 use crate::models::Workflow;
 
 pub(crate) struct Locator {}
@@ -21,18 +21,28 @@ impl Locator {
         let mut builder = yamlpath::QueryBuilder::new();
 
         builder = match &location.job_or_key {
-            Some(JobOrKey::Job(job)) => {
+            Some(JobOrKeys::Job(job)) => {
                 builder = builder.key("jobs").key(job.id);
 
-                match &job.step_or_key {
-                    Some(StepOrKey::Step(step)) => builder.key("steps").index(step.index),
-                    Some(StepOrKey::Key(key)) => builder.key(*key),
+                match &job.step_or_keys {
+                    Some(StepOrKeys::Step(step)) => builder.key("steps").index(step.index),
+                    Some(StepOrKeys::Keys(keys)) => {
+                        for key in keys {
+                            builder = builder.key(*key);
+                        }
+
+                        builder
+                    }
                     None => builder,
                 }
             }
-            Some(JobOrKey::Key(key)) => {
+            Some(JobOrKeys::Keys(keys)) => {
                 // Non-job top-level key.
-                builder.key(*key)
+                for key in keys {
+                    builder = builder.key(*key);
+                }
+
+                builder
             }
             None => panic!("API misuse: workflow location must specify a top-level key or job"),
         };
