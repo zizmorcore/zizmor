@@ -54,7 +54,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
             // Reusable workflows aren't checked, for now,
             // since we'd need to resolve their contents to determine
             // whether their interior steps are vulnerable.
-            if !matches!(job.inner, Job::NormalJob(_)) {
+            if !matches!(*job, Job::NormalJob(_)) {
                 continue;
             }
 

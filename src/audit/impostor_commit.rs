@@ -162,7 +162,7 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
-            match job.inner {
+            match *job {
                 Job::NormalJob(_) => {
                     for step in job.steps() {
                         let StepBody::Uses { uses, .. } = &step.deref().body else {

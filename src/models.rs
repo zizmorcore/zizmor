@@ -61,7 +61,7 @@ impl Workflow {
 
 pub(crate) struct Job<'w> {
     pub(crate) id: &'w str,
-    pub(crate) inner: &'w workflow::Job,
+    inner: &'w workflow::Job,
     parent: WorkflowLocation<'w>,
 }
 
@@ -129,7 +129,7 @@ impl<'w> Iterator for Jobs<'w> {
 #[derive(Clone)]
 pub(crate) struct Step<'w> {
     pub(crate) index: usize,
-    pub(crate) inner: &'w workflow::job::Step,
+    inner: &'w workflow::job::Step,
     parent: WorkflowLocation<'w>,
 }
 

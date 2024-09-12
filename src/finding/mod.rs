@@ -38,8 +38,8 @@ impl<'w> From<&Step<'w>> for StepLocation<'w> {
     fn from(step: &Step<'w>) -> Self {
         Self {
             index: step.index,
-            id: step.inner.id.as_deref(),
-            name: step.inner.name.as_deref(),
+            id: step.id.as_deref(),
+            name: step.name.as_deref(),
         }
     }
 }
@@ -124,7 +124,7 @@ impl<'w> WorkflowLocation<'w> {
             name: self.name,
             job_or_key: Some(JobOrKeys::Job(JobLocation {
                 id: job.id,
-                name: job.inner.name(),
+                name: job.name(),
                 step_or_keys: None,
             })),
             annotation: self.annotation.clone(),
