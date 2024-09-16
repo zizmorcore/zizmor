@@ -1,4 +1,7 @@
-use std::{io::stdout, path::PathBuf};
+use std::{
+    io::{stdout, IsTerminal},
+    path::PathBuf,
+};
 
 use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
@@ -143,11 +146,23 @@ fn main() -> Result<()> {
         }
     }
 
-    match args.format {
-        None | Some(OutputFormat::Json) | Some(OutputFormat::Plain) => {
+    let format = match args.format {
+        None => {
+            if stdout().is_terminal() {
+                OutputFormat::Plain
+            } else {
+                OutputFormat::Json
+            }
+        }
+        Some(f) => f,
+    };
+
+    match format {
+        OutputFormat::Plain => todo!(),
+        OutputFormat::Json => {
             serde_json::to_writer_pretty(stdout(), &results)?;
         }
-        Some(OutputFormat::Sarif) => {
+        OutputFormat::Sarif => {
             serde_json::to_writer_pretty(stdout(), &sarif::build(results))?;
         }
     }
