@@ -13,6 +13,7 @@ mod finding;
 mod github_api;
 mod models;
 mod registry;
+mod render;
 mod sarif;
 mod utils;
 
@@ -157,15 +158,9 @@ fn main() -> Result<()> {
         Some(f) => f,
     };
 
-    match format {
-        OutputFormat::Plain => todo!(),
-        OutputFormat::Json => {
-            serde_json::to_writer_pretty(stdout(), &results)?;
-        }
-        OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &sarif::build(results))?;
-        }
-    }
-
-    Ok(())
+    Ok(match format {
+        OutputFormat::Plain => render::render_findings(stdout(), &results)?,
+        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results)?,
+        OutputFormat::Sarif => serde_json::to_writer_pretty(stdout(), &sarif::build(results))?,
+    })
 }
