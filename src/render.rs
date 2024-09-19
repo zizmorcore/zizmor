@@ -2,31 +2,31 @@ use std::io;
 
 use crate::finding::{Confidence, Finding, Severity};
 use anyhow::Result;
-use colored::{ColoredString, Colorize};
+use nu_ansi_term::{AnsiString, Color};
 
 trait Colorized {
-    fn render(&self) -> ColoredString;
+    fn render(&self) -> AnsiString;
 }
 
 impl Colorized for Confidence {
-    fn render(&self) -> ColoredString {
+    fn render(&self) -> AnsiString {
         match self {
-            Confidence::Unknown => "unknown".magenta(),
-            Confidence::Low => "low".yellow(),
-            Confidence::Medium => "medium".cyan(),
-            Confidence::High => "high".red(),
+            Confidence::Unknown => Color::Magenta.paint("unknown"),
+            Confidence::Low => Color::Yellow.paint("low"),
+            Confidence::Medium => Color::Cyan.paint("medium"),
+            Confidence::High => Color::Red.paint("high"),
         }
     }
 }
 
 impl Colorized for Severity {
-    fn render(&self) -> ColoredString {
+    fn render(&self) -> AnsiString {
         match self {
-            Severity::Unknown => "unknown".magenta(),
-            Severity::Informational => "informational".green(),
-            Severity::Low => "low".green(),
-            Severity::Medium => "medium".cyan(),
-            Severity::High => "high".red(),
+            Severity::Unknown => Color::Magenta.paint("unknown"),
+            Severity::Informational => Color::Green.paint("informational"),
+            Severity::Low => Color::Green.paint("low"),
+            Severity::Medium => Color::Cyan.paint("medium"),
+            Severity::High => Color::Red.paint("high"),
         }
     }
 }
@@ -65,6 +65,7 @@ where
             line = location.concrete.location.start_point.row,
             col = location.concrete.location.start_point.column,
         )?;
+        writeln!(&mut writer, "")?;
     }
 
     Ok(())
