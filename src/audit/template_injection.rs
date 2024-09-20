@@ -61,6 +61,13 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
         "template-injection"
     }
 
+    fn desc() -> &'static str
+    where
+        Self: Sized,
+    {
+        "code injection via template expansion"
+    }
+
     fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -90,7 +97,7 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
                             .severity(severity)
                             .confidence(confidence)
                             .add_location(step.location().annotated(format!(
-                                "template may expand into attacker-controllable code: {expr}"
+                                "{expr} may expand into attacker-controllable code"
                             )))
                             .build(workflow)?,
                     )

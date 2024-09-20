@@ -139,6 +139,13 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
         "impostor-commit"
     }
 
+    fn desc() -> &'static str
+    where
+        Self: Sized,
+    {
+        "commit with no history in referenced repository"
+    }
+
     fn new(config: AuditConfig<'a>) -> Result<Self> {
         if config.offline {
             return Err(anyhow!("offline audits only requested"));

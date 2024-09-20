@@ -46,7 +46,7 @@ impl Workflow {
         WorkflowLocation {
             name: &self.filename,
             job_or_key: None,
-            annotation: None,
+            annotation: "this workflow".to_string(),
         }
     }
 

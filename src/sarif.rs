@@ -90,14 +90,7 @@ fn build_locations(locations: &[Location<'_>]) -> Vec<SarifLocation> {
                 )
                 .message(
                     Message::builder()
-                        .text(
-                            location
-                                .symbolic
-                                .annotation
-                                .as_deref()
-                                // Annoying.
-                                .unwrap_or(""),
-                        )
+                        .text(&location.symbolic.annotation)
                         .build(),
                 )
                 .build()

@@ -45,6 +45,13 @@ impl<'a> WorkflowAudit<'a> for ExcessivePermissions<'a> {
         "excessive-permissions"
     }
 
+    fn desc() -> &'static str
+    where
+        Self: Sized,
+    {
+        "overly broad workflow or job-level permissions"
+    }
+
     fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -106,16 +113,12 @@ impl<'a> ExcessivePermissions<'a> {
                 BasePermission::ReadAll => vec![(
                     Severity::Medium,
                     Confidence::High,
-                    "uses read-all permissions, which may grant read access to more resources \
-                     than necessary"
-                        .into(),
+                    "uses read-all permissions".into(),
                 )],
                 BasePermission::WriteAll => vec![(
                     Severity::High,
                     Confidence::High,
-                    "uses write-all permissions, which grants destructive access to repository \
-                     resources"
-                        .into(),
+                    "uses write-all permissions".into(),
                 )],
             },
             Permissions::Explicit(perms) => match parent {
@@ -136,10 +139,7 @@ impl<'a> ExcessivePermissions<'a> {
                             Some(sev) => results.push((
                                 *sev,
                                 Confidence::High,
-                                format!(
-                                    "{name}: write is overly broad at the workflow level; move to \
-                                     the job level"
-                                ),
+                                format!("{name}: write is overly broad at the workflow level"),
                             )),
                             None => {
                                 log::debug!("unknown permission: {name}");
@@ -147,10 +147,7 @@ impl<'a> ExcessivePermissions<'a> {
                                 results.push((
                                     Severity::Unknown,
                                     Confidence::High,
-                                    format!(
-                                        "{name}: write is overly broad at the workflow level; \
-                                         move to the job level"
-                                    ),
+                                    format!("{name}: write is overly broad at the workflow level"),
                                 ))
                             }
                         }

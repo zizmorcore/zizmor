@@ -20,10 +20,14 @@ pub(crate) trait WorkflowAudit<'a> {
     where
         Self: Sized,
     {
-        FindingBuilder::new(Self::ident())
+        FindingBuilder::new(Self::ident(), Self::desc())
     }
 
     fn ident() -> &'static str
+    where
+        Self: Sized;
+
+    fn desc() -> &'static str
     where
         Self: Sized;
 
