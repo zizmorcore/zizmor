@@ -158,9 +158,10 @@ fn main() -> Result<()> {
         Some(f) => f,
     };
 
-    Ok(match format {
+    match format {
         OutputFormat::Plain => render::render_findings(stdout(), &results)?,
         OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results)?,
         OutputFormat::Sarif => serde_json::to_writer_pretty(stdout(), &sarif::build(results))?,
-    })
+    };
+    Ok(())
 }
