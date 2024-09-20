@@ -1,71 +1,48 @@
-use std::io;
+use crate::finding::{Finding, Location, Severity};
+use annotate_snippets::{Level, Renderer, Snippet};
+use anstream::println;
 
-use crate::finding::{Confidence, Finding, Severity};
-use anyhow::Result;
-use colored::{ColoredString, Colorize};
-
-trait Colorized {
-    fn render(&self) -> ColoredString;
-}
-
-impl Colorized for Confidence {
-    fn render(&self) -> ColoredString {
-        match self {
-            Confidence::Unknown => "unknown".magenta(),
-            Confidence::Low => "low".yellow(),
-            Confidence::Medium => "medium".cyan(),
-            Confidence::High => "high".red(),
+impl From<&Severity> for Level {
+    fn from(sev: &Severity) -> Self {
+        match sev {
+            Severity::Unknown => Level::Note,
+            Severity::Informational => Level::Info,
+            Severity::Low => Level::Help,
+            Severity::Medium => Level::Warning,
+            Severity::High => Level::Error,
         }
     }
 }
 
-impl Colorized for Severity {
-    fn render(&self) -> ColoredString {
-        match self {
-            Severity::Unknown => "unknown".magenta(),
-            Severity::Informational => "informational".green(),
-            Severity::Low => "low".green(),
-            Severity::Medium => "medium".cyan(),
-            Severity::High => "high".red(),
-        }
+impl<'w> From<&'w Location<'w>> for Snippet<'w> {
+    fn from(location: &'w Location<'w>) -> Self {
+        // TODO: Use the whole-workflow source here so that we can
+        // use the actual span below, rather than a span representing
+        // the entire extracted feature.
+        Snippet::source(location.concrete.feature)
+            .line_start(location.concrete.location.start_point.row)
+            .origin(&location.symbolic.name)
+            .annotation(
+                Level::Info
+                    .span(0..location.concrete.feature.len())
+                    .label(location.symbolic.annotation.as_deref().unwrap_or("lol")),
+            )
     }
 }
 
-pub(crate) fn render_findings<W>(writer: W, findings: &[Finding]) -> Result<()>
-where
-    W: io::Write,
-{
-    let mut writer = writer;
+pub(crate) fn render_findings(findings: &[Finding]) {
     for finding in findings {
-        render_finding(&mut writer, finding)?;
-        writer.write_all(b"\n")?;
+        render_finding(finding);
+        println!();
     }
-
-    Ok(())
 }
 
-fn render_finding<W>(writer: W, finding: &Finding) -> Result<()>
-where
-    W: io::Write,
-{
-    let mut writer = writer;
-    writeln!(
-        &mut writer,
-        "{ident} (C: {confidence}, S: {severity})",
-        ident = finding.ident,
-        confidence = finding.determinations.confidence.render(),
-        severity = finding.determinations.severity.render(),
-    )?;
+fn render_finding(finding: &Finding) {
+    let message = Level::from(&finding.determinations.severity)
+        .title(&finding.ident)
+        .id(&finding.ident)
+        .snippets(finding.locations.iter().map(|l| l.into()));
 
-    for location in &finding.locations {
-        writeln!(
-            &mut writer,
-            "in {workflow}:{line}:{col}",
-            workflow = location.symbolic.name,
-            line = location.concrete.location.start_point.row,
-            col = location.concrete.location.start_point.column,
-        )?;
-    }
-
-    Ok(())
+    let renderer = Renderer::styled();
+    println!("{}", renderer.render(message));
 }
