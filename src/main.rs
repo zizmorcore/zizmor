@@ -107,7 +107,7 @@ fn main() -> Result<()> {
 
     let mut workflow_registry = WorkflowRegistry::new();
     for workflow_path in workflow_paths.iter() {
-        workflow_registry.register_workflow(&workflow_path)?;
+        workflow_registry.register_workflow(workflow_path)?;
     }
 
     let mut audit_registry = AuditRegistry::new();

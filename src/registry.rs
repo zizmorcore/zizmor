@@ -23,7 +23,7 @@ impl WorkflowRegistry {
 
     pub(crate) fn register_workflow(&mut self, path: &Path) -> Result<()> {
         self.workflows
-            .insert(path.canonicalize()?, Workflow::from_file(&path)?);
+            .insert(path.canonicalize()?, Workflow::from_file(path)?);
 
         Ok(())
     }

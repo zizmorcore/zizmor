@@ -26,11 +26,11 @@ impl Locator {
 
                 match &job.step_or_keys {
                     Some(StepOrKeys::Step(step)) => builder.key("steps").index(step.index),
-                    Some(StepOrKeys::Keys(keys)) => builder.keys(keys.iter().map(|k| *k)),
+                    Some(StepOrKeys::Keys(keys)) => builder.keys(keys.iter().copied()),
                     None => builder,
                 }
             }
-            Some(JobOrKeys::Keys(keys)) => builder.keys(keys.iter().map(|k| *k)),
+            Some(JobOrKeys::Keys(keys)) => builder.keys(keys.iter().copied()),
             None => panic!("API misuse: workflow location must specify a top-level key or job"),
         };
 
