@@ -21,7 +21,7 @@ impl<'w> From<&'w Location<'w>> for Snippet<'w> {
         // the entire extracted feature.
         Snippet::source(location.concrete.feature)
             .line_start(location.concrete.location.start_point.row)
-            .origin(&location.symbolic.name)
+            .origin(location.symbolic.name)
             .annotation(
                 Level::Info
                     .span(0..location.concrete.feature.len())
@@ -39,8 +39,8 @@ pub(crate) fn render_findings(findings: &[Finding]) {
 
 fn render_finding(finding: &Finding) {
     let message = Level::from(&finding.determinations.severity)
-        .title(&finding.ident)
-        .id(&finding.ident)
+        .title(finding.ident)
+        .id(finding.ident)
         .snippets(finding.locations.iter().map(|l| l.into()));
 
     let renderer = Renderer::styled();
