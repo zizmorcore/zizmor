@@ -42,6 +42,10 @@ impl Workflow {
         })
     }
 
+    pub(crate) fn source(&self) -> &str {
+        self.document.source()
+    }
+
     pub(crate) fn location(&self) -> WorkflowLocation {
         WorkflowLocation {
             name: &self.filename,
