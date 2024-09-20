@@ -25,7 +25,7 @@ pub(crate) fn finding_snippets<'w>(
         .locations
         .iter()
         .map(|location| {
-            let workflow = registry.get_workflow(&location.symbolic.name);
+            let workflow = registry.get_workflow(location.symbolic.name);
 
             Snippet::source(workflow.source())
                 .fold(true)
