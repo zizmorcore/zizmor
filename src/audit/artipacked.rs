@@ -43,6 +43,13 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
         "artipacked"
     }
 
+    fn desc() -> &'static str
+    where
+        Self: Sized,
+    {
+        "credential persistence through GitHub Actions artifacts"
+    }
+
     fn new(config: AuditConfig<'a>) -> Result<Self> {
         Ok(Self { config })
     }

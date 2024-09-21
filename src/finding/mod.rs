@@ -8,7 +8,7 @@ pub(crate) mod locate;
 
 // TODO: Traits + more flexible models here.
 
-#[derive(Copy, Clone, Default, Serialize)]
+#[derive(Copy, Clone, Debug, Default, Serialize)]
 pub(crate) enum Confidence {
     #[default]
     Unknown,
@@ -17,7 +17,7 @@ pub(crate) enum Confidence {
     High,
 }
 
-#[derive(Copy, Clone, Default, Serialize)]
+#[derive(Copy, Clone, Debug, Default, Serialize)]
 pub(crate) enum Severity {
     #[default]
     Unknown,
@@ -100,8 +100,8 @@ pub(crate) struct WorkflowLocation<'w> {
     /// The name of the workflow.
     pub(crate) name: &'w str,
 
-    /// An optional annotation for this location.
-    pub(crate) annotation: Option<String>,
+    /// An annotation for this location.
+    pub(crate) annotation: String,
 
     /// The job or non-job key within this workflow.
     pub(crate) job_or_key: Option<JobOrKeys<'w>>,
@@ -158,7 +158,7 @@ impl<'w> WorkflowLocation<'w> {
 
     /// Adds a human-readable annotation to the current `WorkflowLocation`.
     pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> WorkflowLocation<'w> {
-        self.annotation = Some(annotation.into());
+        self.annotation = annotation.into();
         self
     }
 }
@@ -203,6 +203,7 @@ impl From<&yamlpath::Location> for ConcreteLocation {
 pub(crate) struct Feature<'w> {
     /// The feature's concrete location, as both an offset range and point span.
     pub(crate) location: ConcreteLocation,
+
     /// The feature's textual content.
     pub(crate) feature: &'w str,
 }
@@ -226,21 +227,24 @@ pub(crate) struct Determinations {
 #[derive(Serialize)]
 pub(crate) struct Finding<'w> {
     pub(crate) ident: &'static str,
+    pub(crate) desc: &'static str,
     pub(crate) determinations: Determinations,
     pub(crate) locations: Vec<Location<'w>>,
 }
 
 pub(crate) struct FindingBuilder<'w> {
     ident: &'static str,
+    desc: &'static str,
     severity: Severity,
     confidence: Confidence,
     locations: Vec<WorkflowLocation<'w>>,
 }
 
 impl<'w> FindingBuilder<'w> {
-    pub(crate) fn new(ident: &'static str) -> Self {
+    pub(crate) fn new(ident: &'static str, desc: &'static str) -> Self {
         Self {
             ident,
+            desc,
             severity: Default::default(),
             confidence: Default::default(),
             locations: vec![],
@@ -265,6 +269,7 @@ impl<'w> FindingBuilder<'w> {
     pub(crate) fn build(self, workflow: &'w Workflow) -> Result<Finding<'w>> {
         Ok(Finding {
             ident: self.ident,
+            desc: self.desc,
             determinations: Determinations {
                 confidence: self.confidence,
                 severity: self.severity,

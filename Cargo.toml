@@ -6,6 +6,8 @@ repository = "https://github.com/woodruffw/zizmor"
 homepage = "https://github.com/woodruffw/zizmor"
 
 [dependencies]
+annotate-snippets = "0.11.4"
+anstream = "0.6.15"
 anyhow = "1.0.86"
 clap = { version = "4.5.16", features = ["derive", "env"] }
 clap-verbosity-flag = "2.2.1"
@@ -19,4 +21,4 @@ serde = { version = "1.0.208", features = ["derive"] }
 serde-sarif = "0.6.5"
 serde_json = "1.0.125"
 serde_yaml = "0.9.34"
-yamlpath = "0.5.1"
+yamlpath = "0.8.0"

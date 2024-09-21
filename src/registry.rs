@@ -1,15 +1,56 @@
 //! Functionality for registering and managing the lifecycles of
 //! audits.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
-use crate::audit::WorkflowAudit;
+use anyhow::{anyhow, Result};
 
-pub(crate) struct Registry<'config> {
+use crate::{audit::WorkflowAudit, models::Workflow};
+
+pub(crate) struct WorkflowRegistry {
+    pub(crate) workflows: HashMap<String, Workflow>,
+}
+
+impl WorkflowRegistry {
+    pub(crate) fn new() -> Self {
+        Self {
+            workflows: Default::default(),
+        }
+    }
+
+    pub(crate) fn register_workflow(&mut self, path: &Path) -> Result<()> {
+        let name = path
+            .file_name()
+            .ok_or_else(|| anyhow!("invalid workflow: no filename component"))?
+            .to_str()
+            .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
+            .to_string();
+
+        if self.workflows.contains_key(&name) {
+            return Err(anyhow!("can't register {name} more than once"));
+        }
+
+        self.workflows.insert(name, Workflow::from_file(path)?);
+
+        Ok(())
+    }
+
+    pub(crate) fn iter_workflows(&self) -> std::collections::hash_map::Iter<'_, String, Workflow> {
+        self.workflows.iter()
+    }
+
+    pub(crate) fn get_workflow(&self, name: &str) -> &Workflow {
+        self.workflows
+            .get(name)
+            .expect("API misuse: requested an un-registered workflow")
+    }
+}
+
+pub(crate) struct AuditRegistry<'config> {
     pub(crate) workflow_audits: HashMap<&'static str, Box<dyn WorkflowAudit<'config> + 'config>>,
 }
 
-impl<'config> Registry<'config> {
+impl<'config> AuditRegistry<'config> {
     pub(crate) fn new() -> Self {
         Self {
             workflow_audits: Default::default(),

@@ -6,13 +6,14 @@ use std::{
 use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
-use registry::Registry;
+use registry::{AuditRegistry, WorkflowRegistry};
 
 mod audit;
 mod finding;
 mod github_api;
 mod models;
 mod registry;
+mod render;
 mod sarif;
 mod utils;
 
@@ -104,19 +105,19 @@ fn main() -> Result<()> {
         return Err(anyhow!("input must be a single workflow file or directory"));
     }
 
-    let mut workflows = vec![];
+    let mut workflow_registry = WorkflowRegistry::new();
     for workflow_path in workflow_paths.iter() {
-        workflows.push(models::Workflow::from_file(workflow_path)?);
+        workflow_registry.register_workflow(workflow_path)?;
     }
 
-    let mut registry = Registry::new();
+    let mut audit_registry = AuditRegistry::new();
 
     macro_rules! register_audit {
         ($rule:path) => {{
             // HACK: https://github.com/rust-lang/rust/issues/48067
             use $rule as base;
             match base::new(config) {
-                Ok(audit) => registry.register_workflow_audit(base::ident(), Box::new(audit)),
+                Ok(audit) => audit_registry.register_workflow_audit(base::ident(), Box::new(audit)),
                 Err(e) => log::warn!("{audit} is being skipped: {e}", audit = base::ident()),
             }
         }};
@@ -132,16 +133,16 @@ fn main() -> Result<()> {
     register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
 
     let mut results = vec![];
-    for workflow in workflows.iter() {
-        for (name, audit) in registry.iter_workflow_audits() {
+    for (name, audit) in audit_registry.iter_workflow_audits() {
+        for (_, workflow) in workflow_registry.iter_workflows() {
             log::info!(
                 "performing {name} on {workflow}",
-                workflow = &workflow.filename
+                workflow = &workflow.filename()
             );
             results.extend(audit.audit(workflow)?);
             log::info!(
                 "completed {name} on {workflow}",
-                workflow = &workflow.filename
+                workflow = &workflow.filename()
             );
         }
     }
@@ -158,14 +159,9 @@ fn main() -> Result<()> {
     };
 
     match format {
-        OutputFormat::Plain => todo!(),
-        OutputFormat::Json => {
-            serde_json::to_writer_pretty(stdout(), &results)?;
-        }
-        OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &sarif::build(results))?;
-        }
-    }
-
+        OutputFormat::Plain => render::render_findings(&workflow_registry, &results),
+        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results)?,
+        OutputFormat::Sarif => serde_json::to_writer_pretty(stdout(), &sarif::build(results))?,
+    };
     Ok(())
 }

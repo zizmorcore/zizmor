@@ -26,6 +26,13 @@ impl<'a> WorkflowAudit<'a> for HardcodedContainerCredentials<'a> {
         "hardcoded-container-credentials"
     }
 
+    fn desc() -> &'static str
+    where
+        Self: Sized,
+    {
+        "hardcoded credential in GitHub Actions container configurations"
+    }
+
     fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
     where
         Self: Sized,

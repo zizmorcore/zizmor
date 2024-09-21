@@ -16,6 +16,13 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
         "pull-request-target"
     }
 
+    fn desc() -> &'static str
+    where
+        Self: Sized,
+    {
+        "use of fundamentally insecure workflow trigger"
+    }
+
     fn new(config: AuditConfig<'a>) -> Result<Self> {
         Ok(Self { _config: config })
     }

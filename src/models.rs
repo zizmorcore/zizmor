@@ -1,12 +1,12 @@
 use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use github_actions_models::workflow;
 
 use crate::finding::{JobOrKeys, WorkflowLocation};
 
 pub(crate) struct Workflow {
-    pub(crate) filename: String,
+    pub(crate) path: String,
     pub(crate) document: yamlpath::Document,
     inner: workflow::Workflow,
 }
@@ -28,25 +28,32 @@ impl Workflow {
 
         let document = yamlpath::Document::new(raw)?;
 
-        // NOTE: file_name().unwrap() is safe since the read above only succeeds
-        // on a well-formed filepath.
         Ok(Self {
-            filename: p
+            path: p
                 .as_ref()
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .into_owned(),
+                .to_str()
+                .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
+                .to_string(),
             document,
             inner,
         })
     }
 
+    pub(crate) fn filename(&self) -> &str {
+        // NOTE: Unwraps are safe here since we enforce UTF-8 paths
+        // and require a filename as an invariant.
+        Path::new(&self.path).file_name().unwrap().to_str().unwrap()
+    }
+
+    pub(crate) fn source(&self) -> &str {
+        self.document.source()
+    }
+
     pub(crate) fn location(&self) -> WorkflowLocation {
         WorkflowLocation {
-            name: &self.filename,
+            name: self.filename(),
             job_or_key: None,
-            annotation: None,
+            annotation: "this workflow".to_string(),
         }
     }
 

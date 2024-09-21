@@ -59,6 +59,13 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
         "ref-confusion"
     }
 
+    fn desc() -> &'static str
+    where
+        Self: Sized,
+    {
+        "git ref for action with ambiguous ref type"
+    }
+
     fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
     where
         Self: Sized,
