@@ -68,7 +68,8 @@ impl<'a> WorkflowAudit<'a> for HardcodedContainerCredentials<'a> {
                             .severity(Severity::High)
                             .confidence(Confidence::High)
                             .add_location(
-                                job.key_location(&["container", "credentials"])
+                                job.location()
+                                    .with_keys(&["container".into(), "credentials".into()])
                                     .annotated("container registry password is hard-coded"),
                             )
                             .build(workflow)?,
@@ -93,15 +94,16 @@ impl<'a> WorkflowAudit<'a> for HardcodedContainerCredentials<'a> {
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
                                 .add_location(
-                                    job.key_location(&[
-                                        "services",
-                                        service.as_str(),
-                                        "credentials",
-                                    ])
-                                    .annotated(format!(
-                                        "service {service}: container registry password is \
+                                    job.location()
+                                        .with_keys(&[
+                                            "services".into(),
+                                            service.as_str().into(),
+                                            "credentials".into(),
+                                        ])
+                                        .annotated(format!(
+                                            "service {service}: container registry password is \
                                          hard-coded"
-                                    )),
+                                        )),
                                 )
                                 .build(workflow)?,
                         )

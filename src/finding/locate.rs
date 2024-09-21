@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 
-use super::{ConcreteLocation, Feature, JobOrKeys, StepOrKeys, WorkflowLocation};
+use super::{ConcreteLocation, Feature, SymbolicLocation};
 use crate::models::Workflow;
 
 pub(crate) struct Locator {}
@@ -16,23 +16,16 @@ impl Locator {
     pub(crate) fn concretize<'w>(
         &self,
         workflow: &'w Workflow,
-        location: &WorkflowLocation,
+        location: &SymbolicLocation,
     ) -> Result<Feature<'w>> {
         let mut builder = yamlpath::QueryBuilder::new();
 
-        builder = match &location.job_or_key {
-            Some(JobOrKeys::Job(job)) => {
-                builder = builder.key("jobs").key(job.id);
-
-                match &job.step_or_keys {
-                    Some(StepOrKeys::Step(step)) => builder.key("steps").index(step.index),
-                    Some(StepOrKeys::Keys(keys)) => builder.keys(keys.iter().copied()),
-                    None => builder,
-                }
+        for component in &location.route.components {
+            builder = match component {
+                super::RouteComponent::Key(key) => builder.key(key.clone()),
+                super::RouteComponent::Index(idx) => builder.index(*idx),
             }
-            Some(JobOrKeys::Keys(keys)) => builder.keys(keys.iter().copied()),
-            None => panic!("API misuse: workflow location must specify a top-level key or job"),
-        };
+        }
 
         let query = builder.build();
         let feature = workflow.document.query(&query)?;

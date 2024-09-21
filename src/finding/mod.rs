@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use anyhow::Result;
 use locate::Locator;
 use serde::Serialize;
@@ -44,109 +46,80 @@ impl<'w> From<&Step<'w>> for StepLocation<'w> {
     }
 }
 
-/// Represents a job-level key or step location.
 #[derive(Serialize, Clone, Debug)]
-pub(crate) enum StepOrKeys<'w> {
-    Keys(Vec<&'w str>),
-    Step(StepLocation<'w>),
+pub(crate) enum RouteComponent<'w> {
+    Key(Cow<'w, str>),
+    Index(usize),
 }
 
-#[derive(Serialize, Clone, Debug)]
-pub(crate) struct JobLocation<'w> {
-    /// The job's unique ID within its parent workflow.
-    pub(crate) id: &'w str,
-
-    /// The job's name, if present.
-    pub(crate) name: Option<&'w str>,
-
-    /// The step or non-step keys within this workflow.
-    pub(crate) step_or_keys: Option<StepOrKeys<'w>>,
-}
-
-impl<'w> JobLocation<'w> {
-    /// Creates a new `JobLocation` with the given non-step `keys`.
-    ///
-    /// Clears any `step` in the process.
-    pub(crate) fn with_keys(&self, keys: &[&'w str]) -> JobLocation<'w> {
-        JobLocation {
-            id: self.id,
-            name: self.name,
-            step_or_keys: Some(StepOrKeys::Keys(keys.into())),
-        }
-    }
-
-    /// Creates a new `JobLocation` with the given interior step location.
-    ///
-    /// Clears any non-step `key` in the process.
-    fn with_step(&self, step: &Step<'w>) -> JobLocation<'w> {
-        JobLocation {
-            id: self.id,
-            name: self.name,
-            step_or_keys: Some(StepOrKeys::Step(step.into())),
-        }
+impl<'w> From<usize> for RouteComponent<'w> {
+    fn from(value: usize) -> Self {
+        Self::Index(value)
     }
 }
 
-/// Represents a workflow-level key or job location.
+impl<'w> From<&'w str> for RouteComponent<'w> {
+    fn from(value: &'w str) -> Self {
+        Self::Key(Cow::Borrowed(value))
+    }
+}
+
 #[derive(Serialize, Clone, Debug)]
-pub(crate) enum JobOrKeys<'w> {
-    Keys(Vec<&'w str>),
-    Job(JobLocation<'w>),
+pub(crate) struct Route<'w> {
+    components: Vec<RouteComponent<'w>>,
+}
+
+impl<'w> Route<'w> {
+    pub(crate) fn new() -> Route<'w> {
+        Self {
+            components: Default::default(),
+        }
+    }
+
+    fn with_keys(&self, keys: &[RouteComponent<'w>]) -> Route<'w> {
+        let mut components = self.components.clone();
+        components.extend(keys.iter().cloned());
+        Route { components }
+    }
 }
 
 /// Represents a symbolic workflow location.
 #[derive(Serialize, Clone, Debug)]
-pub(crate) struct WorkflowLocation<'w> {
-    /// The name of the workflow.
+pub(crate) struct SymbolicLocation<'w> {
+    /// The name of the workflow, as it appears in the workflow registry.
     pub(crate) name: &'w str,
 
     /// An annotation for this location.
     pub(crate) annotation: String,
 
-    /// The job or non-job key within this workflow.
-    pub(crate) job_or_key: Option<JobOrKeys<'w>>,
+    /// A symbolic route (of keys and indices) to the final location.
+    pub(crate) route: Route<'w>,
 }
 
-impl<'w> WorkflowLocation<'w> {
-    /// Creates a new `WorkflowLocation` with the given `key`. Any inner
-    /// job location is cleared.
-    pub(crate) fn with_keys(&self, keys: &[&'w str]) -> WorkflowLocation<'w> {
-        WorkflowLocation {
-            name: self.name,
-            job_or_key: Some(JobOrKeys::Keys(keys.into())),
+impl<'w> SymbolicLocation<'w> {
+    pub(crate) fn with_keys(&self, keys: &[RouteComponent<'w>]) -> SymbolicLocation<'w> {
+        SymbolicLocation {
+            name: &self.name,
             annotation: self.annotation.clone(),
+            route: self.route.with_keys(keys),
         }
     }
 
-    /// Creates a new `WorkflowLocation` with the given `Job` added to it.
-    pub(crate) fn with_job(&self, job: &Job<'w>) -> WorkflowLocation<'w> {
-        WorkflowLocation {
-            name: self.name,
-            job_or_key: Some(JobOrKeys::Job(JobLocation {
-                id: job.id,
-                name: job.name(),
-                step_or_keys: None,
-            })),
-            annotation: self.annotation.clone(),
-        }
+    pub(crate) fn with_job(&self, job: &Job<'w>) -> SymbolicLocation<'w> {
+        self.with_keys(&["jobs".into(), job.id.into()])
     }
 
-    /// Creates a new `WorkflowLocation` with the given `Step` added to it.
-    ///
-    /// This can only be called after the `WorkflowLocation` already has a job,
-    /// since steps belong to jobs.
-    pub(crate) fn with_step(&self, step: &Step<'w>) -> WorkflowLocation<'w> {
-        match &self.job_or_key {
-            Some(JobOrKeys::Job(job)) => WorkflowLocation {
-                name: self.name,
-                job_or_key: Some(JobOrKeys::Job(job.with_step(step))),
-                annotation: self.annotation.clone(),
-            },
-            _ => panic!("API misuse: can't set step without parent job"),
-        }
+    pub(crate) fn with_step(&self, step: &Step<'w>) -> SymbolicLocation<'w> {
+        self.with_keys(&["steps".into(), step.index.into()])
     }
 
-    /// Concretize this `WorkflowLocation`, consuming it in the process.
+    /// Adds a human-readable annotation to the current `SymbolicLocation`.
+    pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> SymbolicLocation<'w> {
+        self.annotation = annotation.into();
+        self
+    }
+
+    /// Concretize this `SymbolicLocation`, consuming it in the process.
     pub(crate) fn concretize(self, workflow: &'w Workflow) -> Result<Location<'w>> {
         let feature = Locator::new().concretize(workflow, &self)?;
 
@@ -154,12 +127,6 @@ impl<'w> WorkflowLocation<'w> {
             symbolic: self,
             concrete: feature,
         })
-    }
-
-    /// Adds a human-readable annotation to the current `WorkflowLocation`.
-    pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> WorkflowLocation<'w> {
-        self.annotation = annotation.into();
-        self
     }
 }
 
@@ -212,7 +179,7 @@ pub(crate) struct Feature<'w> {
 #[derive(Serialize)]
 pub(crate) struct Location<'w> {
     /// The symbolic workflow location.
-    pub(crate) symbolic: WorkflowLocation<'w>,
+    pub(crate) symbolic: SymbolicLocation<'w>,
     /// The concrete location, including extracted feature.
     pub(crate) concrete: Feature<'w>,
 }
@@ -237,7 +204,7 @@ pub(crate) struct FindingBuilder<'w> {
     desc: &'static str,
     severity: Severity,
     confidence: Confidence,
-    locations: Vec<WorkflowLocation<'w>>,
+    locations: Vec<SymbolicLocation<'w>>,
 }
 
 impl<'w> FindingBuilder<'w> {
@@ -261,7 +228,7 @@ impl<'w> FindingBuilder<'w> {
         self
     }
 
-    pub(crate) fn add_location(mut self, location: WorkflowLocation<'w>) -> Self {
+    pub(crate) fn add_location(mut self, location: SymbolicLocation<'w>) -> Self {
         self.locations.push(location);
         self
     }

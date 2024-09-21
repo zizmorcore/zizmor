@@ -3,7 +3,7 @@ use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 use anyhow::{anyhow, Context, Result};
 use github_actions_models::workflow;
 
-use crate::finding::{JobOrKeys, WorkflowLocation};
+use crate::finding::{Route, SymbolicLocation};
 
 pub(crate) struct Workflow {
     pub(crate) path: String,
@@ -49,16 +49,12 @@ impl Workflow {
         self.document.source()
     }
 
-    pub(crate) fn location(&self) -> WorkflowLocation {
-        WorkflowLocation {
+    pub(crate) fn location(&self) -> SymbolicLocation {
+        SymbolicLocation {
             name: self.filename(),
-            job_or_key: None,
             annotation: "this workflow".to_string(),
+            route: Route::new(),
         }
-    }
-
-    pub(crate) fn key_location(&self, keys: &[&'static str]) -> WorkflowLocation {
-        self.location().with_keys(keys)
     }
 
     pub(crate) fn jobs(&self) -> Jobs<'_> {
@@ -69,7 +65,7 @@ impl Workflow {
 pub(crate) struct Job<'w> {
     pub(crate) id: &'w str,
     inner: &'w workflow::Job,
-    parent: WorkflowLocation<'w>,
+    parent: SymbolicLocation<'w>,
 }
 
 impl<'w> Deref for Job<'w> {
@@ -81,24 +77,12 @@ impl<'w> Deref for Job<'w> {
 }
 
 impl<'w> Job<'w> {
-    pub(crate) fn new(id: &'w str, inner: &'w workflow::Job, parent: WorkflowLocation<'w>) -> Self {
+    pub(crate) fn new(id: &'w str, inner: &'w workflow::Job, parent: SymbolicLocation<'w>) -> Self {
         Self { id, inner, parent }
     }
 
-    pub(crate) fn location(&self) -> WorkflowLocation<'w> {
+    pub(crate) fn location(&self) -> SymbolicLocation<'w> {
         self.parent.with_job(self)
-    }
-
-    pub(crate) fn key_location(&self, keys: &[&'w str]) -> WorkflowLocation<'w> {
-        let mut location = self.parent.with_job(self);
-        let Some(JobOrKeys::Job(job)) = location.job_or_key else {
-            panic!("unreachable")
-        };
-        let job = job.with_keys(keys);
-
-        location.job_or_key = Some(JobOrKeys::Job(job));
-
-        location
     }
 
     pub(crate) fn steps(&self) -> Steps<'w> {
@@ -108,7 +92,7 @@ impl<'w> Job<'w> {
 
 pub(crate) struct Jobs<'w> {
     inner: hash_map::Iter<'w, String, workflow::Job>,
-    location: WorkflowLocation<'w>,
+    location: SymbolicLocation<'w>,
 }
 
 impl<'w> Jobs<'w> {
@@ -137,7 +121,7 @@ impl<'w> Iterator for Jobs<'w> {
 pub(crate) struct Step<'w> {
     pub(crate) index: usize,
     inner: &'w workflow::job::Step,
-    parent: WorkflowLocation<'w>,
+    parent: SymbolicLocation<'w>,
 }
 
 impl<'w> Deref for Step<'w> {
@@ -152,7 +136,7 @@ impl<'w> Step<'w> {
     pub(crate) fn new(
         index: usize,
         inner: &'w workflow::job::Step,
-        parent: WorkflowLocation<'w>,
+        parent: SymbolicLocation<'w>,
     ) -> Self {
         Self {
             index,
@@ -161,14 +145,14 @@ impl<'w> Step<'w> {
         }
     }
 
-    pub(crate) fn location(&self) -> WorkflowLocation<'w> {
+    pub(crate) fn location(&self) -> SymbolicLocation<'w> {
         self.parent.with_step(self)
     }
 }
 
 pub(crate) struct Steps<'w> {
     inner: Enumerate<std::slice::Iter<'w, github_actions_models::workflow::job::Step>>,
-    location: WorkflowLocation<'w>,
+    location: SymbolicLocation<'w>,
 }
 
 impl<'w> Steps<'w> {
