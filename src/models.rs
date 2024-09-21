@@ -51,7 +51,7 @@ impl Workflow {
 
     pub(crate) fn location(&self) -> WorkflowLocation {
         WorkflowLocation {
-            name: &self.filename(),
+            name: self.filename(),
             job_or_key: None,
             annotation: "this workflow".to_string(),
         }
