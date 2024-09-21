@@ -6,7 +6,7 @@ use github_actions_models::workflow;
 use crate::finding::{JobOrKeys, WorkflowLocation};
 
 pub(crate) struct Workflow {
-    pub(crate) filename: String,
+    pub(crate) path: String,
     pub(crate) document: yamlpath::Document,
     inner: workflow::Workflow,
 }
@@ -31,15 +31,18 @@ impl Workflow {
         // NOTE: file_name().unwrap() is safe since the read above only succeeds
         // on a well-formed filepath.
         Ok(Self {
-            filename: p
+            path: p
                 .as_ref()
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .into_owned(),
+                .to_str()
+                .expect("API misuse: workflow paths are UTF-8")
+                .to_string(),
             document,
             inner,
         })
+    }
+
+    pub(crate) fn filename(&self) -> &str {
+        Path::new(&self.path).file_name().unwrap().to_str().unwrap()
     }
 
     pub(crate) fn source(&self) -> &str {
@@ -48,7 +51,7 @@ impl Workflow {
 
     pub(crate) fn location(&self) -> WorkflowLocation {
         WorkflowLocation {
-            name: &self.filename,
+            name: &self.filename(),
             job_or_key: None,
             annotation: "this workflow".to_string(),
         }

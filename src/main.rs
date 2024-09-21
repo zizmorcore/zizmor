@@ -137,12 +137,12 @@ fn main() -> Result<()> {
         for (_, workflow) in workflow_registry.iter_workflows() {
             log::info!(
                 "performing {name} on {workflow}",
-                workflow = &workflow.filename
+                workflow = &workflow.filename()
             );
             results.extend(audit.audit(workflow)?);
             log::info!(
                 "completed {name} on {workflow}",
-                workflow = &workflow.filename
+                workflow = &workflow.filename()
             );
         }
     }

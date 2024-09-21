@@ -29,8 +29,8 @@ pub(crate) fn finding_snippets<'w>(
 
             Snippet::source(workflow.source())
                 .fold(true)
-                .line_start(location.concrete.location.start_point.row)
-                .origin(location.symbolic.name)
+                .line_start(1)
+                .origin(&workflow.path)
                 .annotation(
                     Level::from(&finding.determinations.severity)
                         .span(
