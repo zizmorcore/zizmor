@@ -18,17 +18,23 @@ impl Locator {
         workflow: &'w Workflow,
         location: &SymbolicLocation,
     ) -> Result<Feature<'w>> {
-        let mut builder = yamlpath::QueryBuilder::new();
+        // If we don't have a path into the workflow, all
+        // we have is the workflow itself.
+        let feature = if location.route.components.is_empty() {
+            workflow.document.root()
+        } else {
+            let mut builder = yamlpath::QueryBuilder::new();
 
-        for component in &location.route.components {
-            builder = match component {
-                super::RouteComponent::Key(key) => builder.key(key.clone()),
-                super::RouteComponent::Index(idx) => builder.index(*idx),
+            for component in &location.route.components {
+                builder = match component {
+                    super::RouteComponent::Key(key) => builder.key(key.clone()),
+                    super::RouteComponent::Index(idx) => builder.index(*idx),
+                }
             }
-        }
 
-        let query = builder.build();
-        let feature = workflow.document.query(&query)?;
+            let query = builder.build();
+            workflow.document.query(&query)?
+        };
 
         Ok(Feature {
             location: ConcreteLocation::from(&feature.location),
