@@ -28,8 +28,6 @@ impl Workflow {
 
         let document = yamlpath::Document::new(raw)?;
 
-        // NOTE: file_name().unwrap() is safe since the read above only succeeds
-        // on a well-formed filepath.
         Ok(Self {
             path: p
                 .as_ref()
@@ -42,6 +40,8 @@ impl Workflow {
     }
 
     pub(crate) fn filename(&self) -> &str {
+        // NOTE: Unwraps are safe here since we enforce UTF-8 paths
+        // and require a filename as an invariant.
         Path::new(&self.path).file_name().unwrap().to_str().unwrap()
     }
 
