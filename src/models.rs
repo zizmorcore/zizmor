@@ -45,10 +45,6 @@ impl Workflow {
         Path::new(&self.path).file_name().unwrap().to_str().unwrap()
     }
 
-    pub(crate) fn source(&self) -> &str {
-        self.document.source()
-    }
-
     pub(crate) fn location(&self) -> SymbolicLocation {
         SymbolicLocation {
             name: self.filename(),

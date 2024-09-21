@@ -27,16 +27,21 @@ pub(crate) fn finding_snippets<'w>(
         .map(|location| {
             let workflow = registry.get_workflow(location.symbolic.name);
 
-            Snippet::source(workflow.source())
-                .fold(true)
-                .line_start(1)
+            let source = location.concrete.parent_feature;
+            // Our internal spans are absolute, so we have to recompute
+            // the span here to be relative to its parent feature.
+            let span_start = source
+                .find(location.concrete.feature)
+                .expect("impossible: extracted feature and parent diverge");
+            let span_end = span_start + location.concrete.feature.as_bytes().len();
+
+            Snippet::source(&source)
+                .fold(false)
+                .line_start(location.concrete.parent_location.start_point.row + 1)
                 .origin(&workflow.path)
                 .annotation(
                     Level::from(&finding.determinations.severity)
-                        .span(
-                            location.concrete.location.start_offset
-                                ..location.concrete.location.end_offset,
-                        )
+                        .span(span_start..span_end)
                         .label(&location.symbolic.annotation),
                 )
         })
