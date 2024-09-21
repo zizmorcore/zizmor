@@ -1,6 +1,6 @@
 use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use github_actions_models::workflow;
 
 use crate::finding::{JobOrKeys, WorkflowLocation};
@@ -32,7 +32,7 @@ impl Workflow {
             path: p
                 .as_ref()
                 .to_str()
-                .expect("API misuse: workflow paths are UTF-8")
+                .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
                 .to_string(),
             document,
             inner,
