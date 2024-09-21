@@ -21,9 +21,9 @@ impl WorkflowRegistry {
     pub(crate) fn register_workflow(&mut self, path: &Path) -> Result<()> {
         let name = path
             .file_name()
-            .unwrap()
+            .ok_or_else(|| anyhow!("invalid workflow: no filename component"))?
             .to_str()
-            .ok_or_else(|| anyhow!("workflow paths must be valid UTF-8"))?
+            .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
             .to_string();
 
         if self.workflows.contains_key(&name) {
