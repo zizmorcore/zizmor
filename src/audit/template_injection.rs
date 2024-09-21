@@ -96,9 +96,9 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
                         Self::finding()
                             .severity(severity)
                             .confidence(confidence)
-                            .add_location(step.location().annotated(format!(
-                                "{expr} may expand into attacker-controllable code"
-                            )))
+                            .add_location(step.location().with_keys(&["run".into()]).annotated(
+                                format!("{expr} may expand into attacker-controllable code"),
+                            ))
                             .build(workflow)?,
                     )
                 }
