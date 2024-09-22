@@ -67,7 +67,28 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &[Finding])
     if findings.is_empty() {
         println!("{}", "No findings to report. Good job!".green());
     } else {
-        //
+        let mut findings_by_severity = HashMap::new();
+
+        for finding in findings {
+            match findings_by_severity.entry(&finding.determinations.severity) {
+                Entry::Occupied(mut e) => {
+                    *e.get_mut() += 1;
+                }
+                Entry::Vacant(e) => {
+                    e.insert(1);
+                }
+            }
+        }
+
+        println!(
+            "{nfindings} findings ({nunknown} unknown, {ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high)",
+            nfindings = findings.len().green(),
+            nunknown = findings_by_severity.get(&Severity::Unknown).unwrap_or_else(|| &0),
+            ninformational = findings_by_severity.get(&Severity::Informational).unwrap_or_else(|| &0).purple(),
+            nlow = findings_by_severity.get(&Severity::Low).unwrap_or_else(|| &0).cyan(),
+            nmedium = findings_by_severity.get(&Severity::Medium).unwrap_or_else(|| &0).yellow(),
+            nhigh = findings_by_severity.get(&Severity::High).unwrap_or_else(|| &0).red(),
+        );
     }
 }
 

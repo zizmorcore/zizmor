@@ -180,6 +180,11 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
                         Self::finding()
                             .severity(severity)
                             .confidence(confidence)
+                            .add_location(
+                                step.location()
+                                    .with_keys(&["uses".into()])
+                                    .annotated("this step"),
+                            )
                             .add_location(step.location().with_keys(&["run".into()]).annotated(
                                 format!("{expr} may expand into attacker-controllable code"),
                             ))
