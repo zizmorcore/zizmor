@@ -1741,7 +1741,6 @@ dependencies = [
  "github-actions-models",
  "itertools",
  "log",
- "regex",
  "reqwest",
  "serde",
  "serde-sarif",

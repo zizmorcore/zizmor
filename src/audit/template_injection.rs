@@ -18,7 +18,7 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    utils::iter_expressions,
+    utils::parse_expressions,
     AuditConfig,
 };
 
@@ -77,7 +77,7 @@ impl<'a> TemplateInjection<'a> {
         job: &NormalJob,
     ) -> Vec<(String, Severity, Confidence)> {
         let mut bad_expressions = vec![];
-        for expr in iter_expressions(run) {
+        for expr in parse_expressions(run) {
             let bare = expr.as_bare();
 
             if bare.starts_with("secrets.") || bare == "github.token" {
