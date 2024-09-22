@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 
-use super::{ConcreteLocation, Feature, JobOrKeys, StepOrKeys, WorkflowLocation};
+use super::{ConcreteLocation, Feature, SymbolicLocation};
 use crate::models::Workflow;
 
 pub(crate) struct Locator {}
@@ -16,30 +16,40 @@ impl Locator {
     pub(crate) fn concretize<'w>(
         &self,
         workflow: &'w Workflow,
-        location: &WorkflowLocation,
+        location: &SymbolicLocation,
     ) -> Result<Feature<'w>> {
-        let mut builder = yamlpath::QueryBuilder::new();
+        // If we don't have a path into the workflow, all
+        // we have is the workflow itself.
+        let (feature, parent_feature) = if location.route.components.is_empty() {
+            (workflow.document.root(), workflow.document.root())
+        } else {
+            let mut builder = yamlpath::QueryBuilder::new();
 
-        builder = match &location.job_or_key {
-            Some(JobOrKeys::Job(job)) => {
-                builder = builder.key("jobs").key(job.id);
-
-                match &job.step_or_keys {
-                    Some(StepOrKeys::Step(step)) => builder.key("steps").index(step.index),
-                    Some(StepOrKeys::Keys(keys)) => builder.keys(keys.iter().copied()),
-                    None => builder,
+            for component in &location.route.components {
+                builder = match component {
+                    super::RouteComponent::Key(key) => builder.key(key.clone()),
+                    super::RouteComponent::Index(idx) => builder.index(*idx),
                 }
             }
-            Some(JobOrKeys::Keys(keys)) => builder.keys(keys.iter().copied()),
-            None => panic!("API misuse: workflow location must specify a top-level key or job"),
-        };
 
-        let query = builder.build();
-        let feature = workflow.document.query(&query)?;
+            let query = builder.build();
+
+            let parent_feature = if let Some(parent) = query.parent() {
+                workflow.document.query(&parent)?
+            } else {
+                workflow.document.root()
+            };
+
+            (workflow.document.query(&query)?, parent_feature)
+        };
 
         Ok(Feature {
             location: ConcreteLocation::from(&feature.location),
-            feature: workflow.document.extract(&feature),
+            parent_location: ConcreteLocation::from(&parent_feature.location),
+            feature: workflow.document.extract_with_leading_whitespace(&feature),
+            parent_feature: workflow
+                .document
+                .extract_with_leading_whitespace(&parent_feature),
         })
     }
 }

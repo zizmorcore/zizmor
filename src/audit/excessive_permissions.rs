@@ -70,7 +70,12 @@ impl<'a> WorkflowAudit<'a> for ExcessivePermissions<'a> {
                 Self::finding()
                     .severity(severity)
                     .confidence(confidence)
-                    .add_location(workflow.key_location(&["permissions"]).annotated(note))
+                    .add_location(
+                        workflow
+                            .location()
+                            .with_keys(&["permissions".into()])
+                            .annotated(note),
+                    )
                     .build(workflow)?,
             )
         }
@@ -87,7 +92,11 @@ impl<'a> WorkflowAudit<'a> for ExcessivePermissions<'a> {
                     Self::finding()
                         .severity(severity)
                         .confidence(confidence)
-                        .add_location(job.key_location(&["permissions"]).annotated(note))
+                        .add_location(
+                            job.location()
+                                .with_keys(&["permissions".into()])
+                                .annotated(note),
+                        )
                         .build(workflow)?,
                 )
             }

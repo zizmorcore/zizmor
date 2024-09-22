@@ -98,7 +98,16 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
                             Self::finding()
                                 .severity(Severity::Informational)
                                 .confidence(Confidence::High)
-                                .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
+                                .add_location(
+                                    step.location()
+                                        .with_keys(&["with".into()])
+                                        .annotated("this `with` block"),
+                                )
+                                .add_location(
+                                    step.location()
+                                        .with_keys(&["with".into(), "password".into()])
+                                        .annotated(USES_MANUAL_CREDENTIAL),
+                                )
                                 .build(workflow)?,
                         );
                     }
