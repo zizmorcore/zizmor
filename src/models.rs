@@ -1,3 +1,6 @@
+//! Enriching/context-bearing wrappers over GitHub Actions models
+//! from the `github-actions-models` crate.
+
 use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 
 use anyhow::{anyhow, Context, Result};
