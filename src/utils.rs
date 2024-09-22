@@ -25,9 +25,7 @@ pub(crate) fn split_patterns(patterns: &str) -> impl Iterator<Item = &str> {
 /// Adapted roughly from GitHub's `parseScalar`:
 /// See: <https://github.com/actions/languageservices/blob/3a8c29c2d/workflow-parser/src/templates/template-reader.ts#L448>
 fn extract_expression(text: &str) -> Option<(Expression, usize)> {
-    let Some(start) = text.find("${{") else {
-        return None;
-    };
+    let start = text.find("${{")?;
 
     let mut end = None;
     let mut in_string = false;
@@ -41,10 +39,12 @@ fn extract_expression(text: &str) -> Option<(Expression, usize)> {
         }
     }
 
-    end.map(|end| (
+    end.map(|end| {
+        (
             Expression::from_curly(text[start..=end].to_string()).unwrap(),
             end + 1,
-        ))
+        )
+    })
 }
 
 /// Extract zero or more expressions from the given free-form text.
@@ -52,18 +52,13 @@ pub(crate) fn extract_expressions(text: &str) -> Vec<Expression> {
     let mut exprs = vec![];
     let mut view = text;
 
-    loop {
-        match extract_expression(view) {
-            Some((expr, next)) => {
-                exprs.push(expr);
+    while let Some((expr, next)) = extract_expression(view) {
+        exprs.push(expr);
 
-                if next >= text.len() {
-                    break;
-                } else {
-                    view = &view[next..];
-                }
-            }
-            None => break,
+        if next >= text.len() {
+            break;
+        } else {
+            view = &view[next..];
         }
     }
 
