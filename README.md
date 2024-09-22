@@ -2,30 +2,105 @@
 
 A tool for finding security issues in GitHub Actions CI/CD setups.
 
-At the moment, `zizmor` only supports workflow definitions, and only
-detects a small subset of known issues. See the [roadmap]
-for details on our plans.
+Quick links:
+
+* [Installation](#installation)
+* [Quick start guide](#quickstart)
+* [Usage](#usage)
+  * [Online and offline use](#online-and-offline-use)
+  * [Output formats](#output-formats)
+* [Integration](#integration)
+  * [Use in GitHub Actions](#use-in-github-actions)
+* [Technical details]()
+* [Contributing]()
+* [The name?](#the-name)
+
+Go right to the [Quickstart](#quickstart) or [Usage](#usage) to learn
+how to use `zizmor` locally or in your CI/CD.
+
+## Installation
+
+You can install `zizmor` from <https://crates.io> via `cargo`:
+
+```bash
+cargo install zizmor
+```
+
+## Quickstart
+
+You can run `zizmor` on any file(s) you have locally:
+
+```bash
+# audit a specific workflow
+zizmor my-workflow.yml
+# discovers .github/workflows/*.yml automatically
+zizmor path/to/repo
+```
+
+By default, `zizmor` will emit a Rust-style human-friendly findings, e.g.:
+
+```console
+error[pull-request-target]: use of fundamentally insecure workflow trigger
+  --> /home/william/devel/gha-hazmat/.github/workflows/pull-request-target.yml:20:1
+   |
+20 | / on:
+21 | |   # NOT OK: pull_request_target should almost never be used
+22 | |   pull_request_target:
+   | |______________________^ triggers include pull_request_target, which is almost always used insecurely
+   |
+
+1 findings (0 unknown, 0 informational, 0 low, 0 medium, 1 high)
+```
+
+See the [Usage](#usage) for more examples, including examples of configuration.
 
 ## Usage
 
+### Online and offline use
+
+Some of `zizmor`'s audits require access to GitHub's API. `zizmor` will perform
+online audits by default *if* the user has a `GH_TOKEN` specified
+in their environment. If no `GH_TOKEN` is present, then `zizmor` will operate
+in offline mode by default.
+
+Both of these can be made explicit through their respective command-line flags:
+
 ```bash
-$ zizmor --help
-Finds security issues in GitHub Actions workflows
+# force offline, even if a GH_TOKEN is present
+zizmor --offline workflow.yml
 
-Usage: zizmor [OPTIONS] <INPUT>
-
-Arguments:
-  <INPUT>  The workflow filename or directory to audit
-
-Options:
-  -p, --pedantic             Emit findings even when the context suggests an explicit security decision made by the user
-  -o, --offline              Only perform audits that don't require network access
-  -v, --verbose...           Increase logging verbosity
-  -q, --quiet...             Decrease logging verbosity
-      --gh-token <GH_TOKEN>  The GitHub API token to use [env: GH_TOKEN=]
-      --format <FORMAT>      The output format to emit. By default, plain text will be emitted on an interactive terminal and JSON otherwise [possible values: plain, json, sarif]
-  -h, --help                 Print help
+# passing a token explicitly will forcefully enable online mode
+zizmor --gh-token ghp-... workflow.yml
 ```
+
+### Output formats
+
+`zizmor` always produces output on `stdout`. If a terminal is detected,
+`zizmor` will default to a human-readable diagnostic output; if no terminal
+is detected, `zizmor` will emit JSON.
+
+Output formats can be controlled explicitly via the `--format` option:
+
+```bash
+# force diagnostic output, even if not a terminal
+zizmor --format plain
+
+# emit zizmor's own JSON format
+zizmor --format json
+
+# emit SARIF JSON instead of normal JSON
+zizmor --format sarif
+```
+
+See [Integration](#integration) for suggestions on when to use each format.
+
+## Integration
+
+### Use in GitHub Actions
+
+## Technical details
+
+## Contributing
 
 ## The name?
 
