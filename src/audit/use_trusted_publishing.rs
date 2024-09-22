@@ -100,8 +100,8 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
                                 .confidence(Confidence::High)
                                 .add_location(
                                     step.location()
-                                        .with_keys(&["with".into()])
-                                        .annotated("this `with` block"),
+                                        .with_keys(&["uses".into()])
+                                        .annotated("this step"),
                                 )
                                 .add_location(
                                     step.location()
@@ -117,6 +117,11 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
                             Self::finding()
                                 .severity(Severity::Informational)
                                 .confidence(Confidence::High)
+                                .add_location(
+                                    step.location()
+                                        .with_keys(&["uses".into()])
+                                        .annotated("this step"),
+                                )
                                 .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
                                 .build(workflow)?,
                         );
@@ -128,6 +133,11 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
                         Self::finding()
                             .severity(Severity::Informational)
                             .confidence(Confidence::High)
+                            .add_location(
+                                step.location()
+                                    .with_keys(&["uses".into()])
+                                    .annotated("this step"),
+                            )
                             .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
                             .build(workflow)?,
                     );
