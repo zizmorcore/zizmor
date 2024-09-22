@@ -9,8 +9,22 @@ for details on our plans.
 ## Usage
 
 ```bash
-cargo build
-./target/debug/zizmor --help
+$ zizmor --help
+Finds security issues in GitHub Actions workflows
+
+Usage: zizmor [OPTIONS] <INPUT>
+
+Arguments:
+  <INPUT>  The workflow filename or directory to audit
+
+Options:
+  -p, --pedantic             Emit findings even when the context suggests an explicit security decision made by the user
+  -o, --offline              Only perform audits that don't require network access
+  -v, --verbose...           Increase logging verbosity
+  -q, --quiet...             Decrease logging verbosity
+      --gh-token <GH_TOKEN>  The GitHub API token to use [env: GH_TOKEN=]
+      --format <FORMAT>      The output format to emit. By default, plain text will be emitted on an interactive terminal and JSON otherwise [possible values: plain, json, sarif]
+  -h, --help                 Print help
 ```
 
 ## The name?

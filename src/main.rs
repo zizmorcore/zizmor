@@ -17,7 +17,7 @@ mod render;
 mod sarif;
 mod utils;
 
-/// A tool to detect "ArtiPACKED"-type credential disclosures in GitHub Actions.
+/// Finds security issues in GitHub Actions workflows.
 #[derive(Parser)]
 struct Args {
     /// Emit findings even when the context suggests an explicit security decision made by the user.
