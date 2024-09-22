@@ -83,6 +83,9 @@ impl<'a> TemplateInjection<'a> {
             if bare.starts_with("secrets.") || bare == "github.token" {
                 // While not ideal, secret expansion is typically not exploitable.
                 continue;
+            } else if bare == "github.workspace" {
+                // Expands to a GitHub Actions-controlled directory.
+                continue;
             } else if bare.starts_with("inputs.") {
                 // TODO: Currently low confidence because we don't check the
                 // input's type. In the future, we should index back into
