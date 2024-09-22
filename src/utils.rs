@@ -21,7 +21,7 @@ pub(crate) fn split_patterns(patterns: &str) -> impl Iterator<Item = &str> {
 ///
 /// Returns `None` if no expression is found, or an index past
 /// the end of the text if parsing is successful but exhausted.
-fn parse_expression(text: &str) -> Option<(Expression, usize)> {
+fn extract_expression(text: &str) -> Option<(Expression, usize)> {
     let Some(start) = text.find("${{") else {
         return None;
     };
@@ -47,12 +47,13 @@ fn parse_expression(text: &str) -> Option<(Expression, usize)> {
     }
 }
 
-pub(crate) fn parse_expressions(text: &str) -> Vec<Expression> {
+/// Extract zero or more expressions from the given free-form text.
+pub(crate) fn extract_expressions(text: &str) -> Vec<Expression> {
     let mut exprs = vec![];
     let mut view = text;
 
     loop {
-        match parse_expression(view) {
+        match extract_expression(view) {
             Some((expr, next)) => {
                 exprs.push(expr);
 
@@ -71,7 +72,7 @@ pub(crate) fn parse_expressions(text: &str) -> Vec<Expression> {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::{parse_expression, parse_expressions};
+    use crate::utils::{extract_expression, extract_expressions};
 
     #[test]
     fn split_patterns() {
@@ -120,7 +121,7 @@ mod tests {
         ];
 
         for (text, expected_expr, expected_idx) in exprs {
-            let (actual_expr, actual_idx) = parse_expression(text).unwrap();
+            let (actual_expr, actual_idx) = extract_expression(text).unwrap();
             assert_eq!(*expected_expr, actual_expr.as_bare());
             assert_eq!(*expected_idx, actual_idx);
         }
@@ -129,7 +130,7 @@ mod tests {
     #[test]
     fn test_parse_expressions() {
         let expressions = r#"echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${OPENSSL_HASH}" >> $GITHUB_ENV"#;
-        let exprs = parse_expressions(&expressions)
+        let exprs = extract_expressions(&expressions)
             .into_iter()
             .map(|e| e.as_curly().to_string())
             .collect::<Vec<_>>();
