@@ -21,6 +21,9 @@ pub(crate) fn split_patterns(patterns: &str) -> impl Iterator<Item = &str> {
 ///
 /// Returns `None` if no expression is found, or an index past
 /// the end of the text if parsing is successful but exhausted.
+///
+/// Adapted roughly from GitHub's `parseScalar`:
+/// See: <https://github.com/actions/languageservices/blob/3a8c29c2d/workflow-parser/src/templates/template-reader.ts#L448>
 fn extract_expression(text: &str) -> Option<(Expression, usize)> {
     let Some(start) = text.find("${{") else {
         return None;
