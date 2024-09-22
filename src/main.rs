@@ -69,6 +69,8 @@ impl<'a> From<&'a Args> for AuditConfig<'a> {
 }
 
 fn main() -> Result<()> {
+    human_panic::setup_panic!();
+
     let args = Args::parse();
 
     env_logger::Builder::new()
