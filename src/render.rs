@@ -6,6 +6,7 @@ use crate::{
 };
 use annotate_snippets::{Level, Renderer, Snippet};
 use anstream::println;
+use owo_colors::OwoColorize;
 
 impl From<&Severity> for Level {
     fn from(sev: &Severity) -> Self {
@@ -58,6 +59,10 @@ pub(crate) fn finding_snippet<'w>(
 }
 
 pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &[Finding]) {
+    if findings.is_empty() {
+        println!("{}", "No findings to report. Good job!".green());
+    }
+
     for finding in findings {
         render_finding(registry, finding);
         println!();

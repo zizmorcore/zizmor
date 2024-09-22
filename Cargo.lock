@@ -752,6 +752,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "owo-colors"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb37767f6569cd834a413442455e0f066d0d522de8630436e2a1761d9726ba56"
+
+[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1741,6 +1747,7 @@ dependencies = [
  "github-actions-models",
  "itertools",
  "log",
+ "owo-colors",
  "reqwest",
  "serde",
  "serde-sarif",
