@@ -26,6 +26,16 @@ pub(crate) struct TemplateInjection<'a> {
     pub(crate) _config: AuditConfig<'a>,
 }
 
+/// Context members that are believed to be always safe.
+const SAFE_CONTEXTS: &[&str] = &[
+    // Like `secrets.*`: not safe to expose, but safe to interpolate.
+    "github.token",
+    // GitHub Actions-controlled local directory.
+    "github.workspace",
+    // GitHub Actions-controller runner architecture.
+    "runner.arch",
+];
+
 impl<'a> TemplateInjection<'a> {
     /// Checks whether the given `expr` into `matrix` is static.
     fn matrix_is_static(&self, expr: &str, matrix: &Matrix) -> bool {
@@ -80,11 +90,10 @@ impl<'a> TemplateInjection<'a> {
         for expr in extract_expressions(run) {
             let bare = expr.as_bare();
 
-            if bare.starts_with("secrets.") || bare == "github.token" {
+            if bare.starts_with("secrets.") {
                 // While not ideal, secret expansion is typically not exploitable.
                 continue;
-            } else if bare == "github.workspace" {
-                // Expands to a GitHub Actions-controlled directory.
+            } else if SAFE_CONTEXTS.contains(&bare) {
                 continue;
             } else if bare.starts_with("inputs.") {
                 // TODO: Currently low confidence because we don't check the
