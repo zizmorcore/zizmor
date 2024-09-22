@@ -59,13 +59,15 @@ pub(crate) fn finding_snippet<'w>(
 }
 
 pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &[Finding]) {
-    if findings.is_empty() {
-        println!("{}", "No findings to report. Good job!".green());
-    }
-
     for finding in findings {
         render_finding(registry, finding);
         println!();
+    }
+
+    if findings.is_empty() {
+        println!("{}", "No findings to report. Good job!".green());
+    } else {
+        //
     }
 }
 
