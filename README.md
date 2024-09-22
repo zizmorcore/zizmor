@@ -11,8 +11,8 @@ Quick links:
   * [Output formats](#output-formats)
 * [Integration](#integration)
   * [Use in GitHub Actions](#use-in-github-actions)
-* [Technical details]()
-* [Contributing]()
+* [Technical details](#technical-details)
+* [Contributing](#contributing)
 * [The name?](#the-name)
 
 Go right to the [Quickstart](#quickstart) or [Usage](#usage) to learn
@@ -98,9 +98,22 @@ See [Integration](#integration) for suggestions on when to use each format.
 
 ### Use in GitHub Actions
 
+`zizmor` is trivial to use within GitHub Actions; you can run it just like
+you would locally.
+
+`zizmor` supports [SARIF] as an output format, which GitHub's code scanning
+feature also supports. See [GitHub's documentation] for advice on how to
+integrate `zizmor`'s results directly into a repository's scanning setup.
+
+[SARIF]: https://sarifweb.azurewebsites.net/
+
+[GitHub's documentation]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
+
 ## Technical details
 
 ## Contributing
+
+See [our contributing guide!](./CONTRIBUTING.md)
 
 ## The name?
 
