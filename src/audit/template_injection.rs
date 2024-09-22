@@ -7,7 +7,13 @@
 
 use std::ops::Deref;
 
-use github_actions_models::workflow::{job::StepBody, Job};
+use github_actions_models::{
+    common::LoE,
+    workflow::{
+        job::{NormalJob, StepBody, Strategy},
+        Job,
+    },
+};
 
 use super::WorkflowAudit;
 use crate::{
@@ -21,7 +27,11 @@ pub(crate) struct TemplateInjection<'a> {
 }
 
 impl<'a> TemplateInjection<'a> {
-    fn injectable_template_expressions(&self, run: &str) -> Vec<(String, Severity, Confidence)> {
+    fn injectable_template_expressions(
+        &self,
+        run: &str,
+        job: &NormalJob,
+    ) -> Vec<(String, Severity, Confidence)> {
         let mut bad_expressions = vec![];
         for expr in iter_expressions(run) {
             let bare = expr.as_bare();
@@ -42,6 +52,21 @@ impl<'a> TemplateInjection<'a> {
                 // TODO: Filter these more finely; not everything in the event
                 // context is actually attacker-controllable.
                 bad_expressions.push((bare.into(), Severity::High, Confidence::High));
+            } else if bare.starts_with("matrix.") {
+                // // Matrices can be dynamically generated, or statically laid out.
+                // // If static we don't flag them; if dynamic we do.
+                // if !matches!(
+                //     job.strategy,
+                //     Some(Strategy {
+                //         matrix: LoE::Expr(_),
+                //         ..
+                //     })
+                // ) {
+                //     continue;
+                // }
+
+                // TODO
+                bad_expressions.push((bare.into(), Severity::Medium, Confidence::Medium));
             } else {
                 // All other contexts are typically not attacker controllable,
                 // but may be in obscure cases.
@@ -82,16 +107,18 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
-            if !matches!(job.deref(), Job::NormalJob(_)) {
+            let Job::NormalJob(normal) = job.deref() else {
                 continue;
-            }
+            };
 
             for step in job.steps() {
                 let StepBody::Run { run, .. } = &step.deref().body else {
                     continue;
                 };
 
-                for (expr, severity, confidence) in self.injectable_template_expressions(run) {
+                for (expr, severity, confidence) in
+                    self.injectable_template_expressions(run, &normal)
+                {
                     findings.push(
                         Self::finding()
                             .severity(severity)
