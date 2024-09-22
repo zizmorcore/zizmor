@@ -41,13 +41,10 @@ fn extract_expression(text: &str) -> Option<(Expression, usize)> {
         }
     }
 
-    match end {
-        Some(end) => Some((
+    end.map(|end| (
             Expression::from_curly(text[start..=end].to_string()).unwrap(),
             end + 1,
-        )),
-        None => None,
-    }
+        ))
 }
 
 /// Extract zero or more expressions from the given free-form text.
@@ -133,7 +130,7 @@ mod tests {
     #[test]
     fn test_parse_expressions() {
         let expressions = r#"echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${OPENSSL_HASH}" >> $GITHUB_ENV"#;
-        let exprs = extract_expressions(&expressions)
+        let exprs = extract_expressions(expressions)
             .into_iter()
             .map(|e| e.as_curly().to_string())
             .collect::<Vec<_>>();
