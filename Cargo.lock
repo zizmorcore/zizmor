@@ -1713,9 +1713,9 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "yamlpath"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "625df6f2a04fccf935cb2550215a19b3ed6032e3d58fbce9c2ae9306654cf033"
+checksum = "d918b9724d7e83d8f4402a6c54b26e6114f1bf6a850e9fca50dd89a188e544e3"
 dependencies = [
  "thiserror",
  "tree-sitter",
