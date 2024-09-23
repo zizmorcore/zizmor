@@ -1,11 +1,14 @@
 use std::{
     io::{stdout, IsTerminal},
     path::PathBuf,
+    time::Duration,
 };
 
 use anyhow::{anyhow, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use owo_colors::OwoColorize;
 use registry::{AuditRegistry, WorkflowRegistry};
 
 mod audit;
@@ -134,20 +137,36 @@ fn main() -> Result<()> {
     register_audit!(audit::template_injection::TemplateInjection);
     register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
 
+    let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
+
+    // Hide the bar if the user has explicitly asked for quiet output.
+    if args.verbose.is_silent() {
+        bar.set_draw_target(ProgressDrawTarget::hidden());
+    } else {
+        bar.enable_steady_tick(Duration::from_millis(100));
+        bar.set_style(
+            ProgressStyle::with_template("[{elapsed_precise}] {msg} {bar:!30.cyan/blue}").unwrap(),
+        );
+    }
+
     let mut results = vec![];
-    for (name, audit) in audit_registry.iter_workflow_audits() {
-        for (_, workflow) in workflow_registry.iter_workflows() {
-            log::info!(
-                "performing {name} on {workflow}",
-                workflow = &workflow.filename()
-            );
+    for (_, workflow) in workflow_registry.iter_workflows() {
+        bar.set_message(format!(
+            "auditing {workflow}",
+            workflow = workflow.filename().cyan()
+        ));
+        for (name, audit) in audit_registry.iter_workflow_audits() {
             results.extend(audit.audit(workflow)?);
-            log::info!(
-                "completed {name} on {workflow}",
-                workflow = &workflow.filename()
-            );
+            bar.inc(1);
+            bar.println(format!(
+                "🌈 completed {name} on {workflow}",
+                name = name.green(),
+                workflow = &workflow.filename().cyan()
+            ));
         }
     }
+
+    bar.finish();
 
     let format = match args.format {
         None => {

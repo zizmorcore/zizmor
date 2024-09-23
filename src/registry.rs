@@ -18,6 +18,10 @@ impl WorkflowRegistry {
         }
     }
 
+    pub(crate) fn len(&self) -> usize {
+        self.workflows.len()
+    }
+
     pub(crate) fn register_workflow(&mut self, path: &Path) -> Result<()> {
         let name = path
             .file_name()
@@ -55,6 +59,10 @@ impl<'config> AuditRegistry<'config> {
         Self {
             workflow_audits: Default::default(),
         }
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.workflow_audits.len()
     }
 
     pub(crate) fn register_workflow_audit(
