@@ -69,7 +69,7 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
     where
         Self: Sized,
     {
-        "perfer trusted publishing for authentication"
+        "prefer trusted publishing for authentication"
     }
 
     fn new(config: AuditConfig<'a>) -> anyhow::Result<Self> {
