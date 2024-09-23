@@ -34,6 +34,11 @@ struct Args {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
 
+    /// Disable the progress bar. This is useful primarily when running
+    /// with a high verbosity level, as the two will fight for stderr.
+    #[arg(short, long)]
+    no_progress: bool,
+
     /// The GitHub API token to use.
     #[arg(long, env)]
     gh_token: Option<String>,
@@ -139,8 +144,9 @@ fn main() -> Result<()> {
 
     let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
 
-    // Hide the bar if the user has explicitly asked for quiet output.
-    if args.verbose.is_silent() {
+    // Hide the bar if the user has explicitly asked for quiet output
+    // or to disable just the progress bar.
+    if args.verbose.is_silent() || args.no_progress {
         bar.set_draw_target(ProgressDrawTarget::hidden());
     } else {
         bar.enable_steady_tick(Duration::from_millis(100));
