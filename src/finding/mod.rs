@@ -1,3 +1,5 @@
+//! Models and APIs for handling findings and their locations.
+
 use std::borrow::Cow;
 
 use anyhow::Result;

@@ -1,3 +1,5 @@
+//! Core namespace for zizmor's audits.
+
 use anyhow::Result;
 
 use crate::{

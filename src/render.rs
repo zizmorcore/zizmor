@@ -1,3 +1,5 @@
+//! APIs for rendering zizmor's "plain" (i.e. terminal) output format.
+
 use std::collections::{hash_map::Entry, HashMap};
 
 use crate::{
