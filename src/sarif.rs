@@ -1,3 +1,5 @@
+//! APIs for rendering SARIF outputs.
+
 use serde_sarif::sarif::{
     ArtifactContent, ArtifactLocation, Location as SarifLocation, LogicalLocation, Message,
     PhysicalLocation, PropertyBag, Region, Result as SarifResult, Run, Sarif, Tool, ToolComponent,
