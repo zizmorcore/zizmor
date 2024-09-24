@@ -7,13 +7,13 @@ use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Workflow;
 use crate::AuditConfig;
 
-pub(crate) struct PullRequestTarget<'a> {
+pub(crate) struct DangerousTriggers<'a> {
     pub(crate) _config: AuditConfig<'a>,
 }
 
-impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
+impl<'a> WorkflowAudit<'a> for DangerousTriggers<'a> {
     fn ident() -> &'static str {
-        "pull-request-target"
+        "dangerous-triggers"
     }
 
     fn desc() -> &'static str
@@ -36,16 +36,38 @@ impl<'a> WorkflowAudit<'a> for PullRequestTarget<'a> {
             Trigger::Events(events) => !matches!(events.pull_request_target, OptionalBody::Missing),
         };
 
+        let has_workflow_run = match trigger {
+            Trigger::BareEvent(event) => *event == BareEvent::WorkflowRun,
+            Trigger::BareEvents(events) => events.contains(&BareEvent::WorkflowRun),
+            Trigger::Events(events) => !matches!(events.workflow_run, OptionalBody::Missing),
+        };
+
         let mut findings = vec![];
         if has_pull_request_target {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
-                    .add_location(workflow.location().with_keys(&["on".into()]).annotated(
-                        "triggers include pull_request_target, which is almost always used \
-                         insecurely",
-                    ))
+                    .add_location(
+                        workflow
+                            .location()
+                            .with_keys(&["on".into()])
+                            .annotated("pull_request_target is almost always used insecurely"),
+                    )
+                    .build(workflow)?,
+            );
+        }
+        if has_workflow_run {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::Medium)
+                    .severity(Severity::High)
+                    .add_location(
+                        workflow
+                            .location()
+                            .with_keys(&["on".into()])
+                            .annotated("workflow_run is almost always used insecurely"),
+                    )
                     .build(workflow)?,
             );
         }

@@ -135,7 +135,7 @@ fn main() -> Result<()> {
 
     register_audit!(audit::artipacked::Artipacked);
     register_audit!(audit::excessive_permissions::ExcessivePermissions);
-    register_audit!(audit::pull_request_target::PullRequestTarget);
+    register_audit!(audit::dangerous_triggers::DangerousTriggers);
     register_audit!(audit::impostor_commit::ImpostorCommit);
     register_audit!(audit::ref_confusion::RefConfusion);
     register_audit!(audit::use_trusted_publishing::UseTrustedPublishing);

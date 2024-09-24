@@ -9,10 +9,10 @@ use crate::{
 };
 
 pub(crate) mod artipacked;
+pub(crate) mod dangerous_triggers;
 pub(crate) mod excessive_permissions;
 pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
-pub(crate) mod pull_request_target;
 pub(crate) mod ref_confusion;
 pub(crate) mod template_injection;
 pub(crate) mod use_trusted_publishing;
