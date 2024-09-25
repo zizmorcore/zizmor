@@ -8,12 +8,18 @@
 use crate::AuditConfig;
 
 use anyhow::Result;
-use github_actions_models::workflow::Job;
+use github_actions_models::workflow::{job::RunsOn, Job};
 
 use super::WorkflowAudit;
 
 pub(crate) struct SelfHostedRunner<'a> {
     pub(crate) _config: AuditConfig<'a>,
+}
+
+impl<'a> SelfHostedRunner<'a> {
+    fn runs_on_self_hosted(&self, runs_on: &RunsOn) -> bool {
+        todo!()
+    }
 }
 
 impl<'a> WorkflowAudit<'a> for SelfHostedRunner<'a> {
@@ -45,11 +51,11 @@ impl<'a> WorkflowAudit<'a> for SelfHostedRunner<'a> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
-            let Job::NormalJob(normal) = *job else {
+            let Job::NormalJob(_normal) = *job else {
                 continue;
             };
         }
 
-        results
+        Ok(results)
     }
 }
