@@ -26,7 +26,9 @@ impl<'a> Artipacked<'a> {
                 // TODO: this could be even more generic.
                 "." | "./" | ".." | "../" => patterns.push(path),
                 path => match Expression::from_curly(path.into()) {
-                    Some(expr) if expr.as_bare() == "github.workspace" => patterns.push(path),
+                    Some(expr) if expr.as_bare().contains("github.workspace") => {
+                        patterns.push(path)
+                    }
                     // TODO: Other expressions worth flagging here?
                     Some(_) => continue,
                     _ => continue,
