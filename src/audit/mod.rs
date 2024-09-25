@@ -14,6 +14,7 @@ pub(crate) mod excessive_permissions;
 pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod ref_confusion;
+pub(crate) mod self_hosted_runner;
 pub(crate) mod template_injection;
 pub(crate) mod use_trusted_publishing;
 
