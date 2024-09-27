@@ -86,7 +86,7 @@ impl<'a> WorkflowAudit<'a> for SelfHostedRunner<'a> {
                                 )
                                 .build(workflow)?,
                         );
-                    } else if let Some(_) = Expression::from_curly(label.to_string()) {
+                    } else if Expression::from_curly(label.to_string()).is_some() {
                         // The job might also have its runner expanded via an
                         // expression. Long-term we should perform this evaluation
                         // to increase our confidence, but for now we flag it as
