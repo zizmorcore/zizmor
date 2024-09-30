@@ -22,12 +22,6 @@ pub(crate) struct SelfHostedRunner<'a> {
     pub(crate) _config: AuditConfig<'a>,
 }
 
-impl<'a> SelfHostedRunner<'a> {
-    fn runs_on_self_hosted(&self, runs_on: &RunsOn) -> bool {
-        todo!()
-    }
-}
-
 impl<'a> WorkflowAudit<'a> for SelfHostedRunner<'a> {
     fn ident() -> &'static str
     where
@@ -82,7 +76,7 @@ impl<'a> WorkflowAudit<'a> for SelfHostedRunner<'a> {
                                 .add_location(
                                     job.location()
                                         .with_keys(&["runs-on".into()])
-                                        .annotated("self-runner used here"),
+                                        .annotated("self-hosted runner used here"),
                                 )
                                 .build(workflow)?,
                         );
@@ -104,11 +98,25 @@ impl<'a> WorkflowAudit<'a> for SelfHostedRunner<'a> {
                         );
                     }
                 }
-                // TODO: Figure out how to handle these.
+                // NOTE: GHA docs are unclear on whether runner groups always
+                // imply self-hosted runners or not. All examples suggest that they
+                // do, but I'm not sure.
+                // See: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/managing-access-to-self-hosted-runners-using-groups
+                // See: https://docs.github.com/en/actions/writing-workflows/choosing-where-your-workflow-runs/choosing-the-runner-for-a-job
                 RunsOn::Group {
                     group: _,
                     labels: _,
-                } => continue,
+                } => results.push(
+                    Self::finding()
+                        .confidence(Confidence::Low)
+                        .severity(Severity::Unknown)
+                        .add_location(
+                            job.location()
+                                .with_keys(&["runs-on".into()])
+                                .annotated("runner group implies self-hosted runner"),
+                        )
+                        .build(workflow)?,
+                ),
             }
         }
 
