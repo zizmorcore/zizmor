@@ -141,6 +141,7 @@ fn main() -> Result<()> {
     register_audit!(audit::use_trusted_publishing::UseTrustedPublishing);
     register_audit!(audit::template_injection::TemplateInjection);
     register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
+    register_audit!(audit::self_hosted_runner::SelfHostedRunner);
 
     let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
 
