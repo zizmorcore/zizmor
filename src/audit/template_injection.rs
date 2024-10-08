@@ -1,7 +1,12 @@
 //! (Very) primitive template injection detection.
 //!
-//! This looks for job steps where the step is a `run:` whose body
-//! contains indicators of template expansion, i.e. anything matching `${{ }}`.
+//! This looks for job steps where the step contains indicators of template
+//! expansion, i.e. anything matching `${{ }}`.
+//!
+//! The following steps are currently supported:
+//! * `run:`, indicating template expansion into a shell script or similar
+//! * `actions/github-script`, indicating template expansion into a JavaScript function
+//!
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
@@ -169,20 +174,34 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
             };
 
             for step in job.steps() {
-                let StepBody::Run { run, .. } = &step.deref().body else {
-                    continue;
+                let (script, script_loc) = match &step.deref().body {
+                    StepBody::Uses { uses, with } => {
+                        if uses.starts_with("actions/github-script") {
+                            match with.get("script") {
+                                Some(script) => (
+                                    &script.to_string(),
+                                    step.location().with_keys(&["with".into(), "script".into()]),
+                                ),
+                                None => continue,
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+                    StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
                 };
 
                 for (expr, severity, confidence) in
-                    self.injectable_template_expressions(run, normal)
+                    self.injectable_template_expressions(&script, normal)
                 {
                     findings.push(
                         Self::finding()
                             .severity(severity)
                             .confidence(confidence)
-                            .add_location(step.location().with_keys(&["run".into()]).annotated(
-                                format!("{expr} may expand into attacker-controllable code"),
-                            ))
+                            .add_location(step.location().annotated("this step"))
+                            .add_location(script_loc.clone().annotated(format!(
+                                "{expr} may expand into attacker-controllable code"
+                            )))
                             .build(workflow)?,
                     )
                 }
