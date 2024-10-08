@@ -192,7 +192,7 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
                 };
 
                 for (expr, severity, confidence) in
-                    self.injectable_template_expressions(&script, normal)
+                    self.injectable_template_expressions(script, normal)
                 {
                     findings.push(
                         Self::finding()
