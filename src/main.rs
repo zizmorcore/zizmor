@@ -15,6 +15,7 @@ mod audit;
 mod finding;
 mod github_api;
 mod models;
+mod osv;
 mod registry;
 mod render;
 mod sarif;
@@ -142,6 +143,7 @@ fn main() -> Result<()> {
     register_audit!(audit::template_injection::TemplateInjection);
     register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
     register_audit!(audit::self_hosted_runner::SelfHostedRunner);
+    register_audit!(audit::known_vulnerable_actions::KnownVulnerableActions);
 
     let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
 
