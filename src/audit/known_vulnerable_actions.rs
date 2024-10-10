@@ -34,12 +34,6 @@ impl<'a> KnownVulnerableActions<'a> {
             return Ok(vec![]);
         };
 
-        let version = if version.starts_with('v') {
-            &version[1..]
-        } else {
-            version
-        };
-
         let vulns = self.client.gha_advisories(action, version)?;
 
         let mut results = vec![];
