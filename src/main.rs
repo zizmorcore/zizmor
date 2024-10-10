@@ -15,7 +15,6 @@ mod audit;
 mod finding;
 mod github_api;
 mod models;
-mod osv;
 mod registry;
 mod render;
 mod sarif;

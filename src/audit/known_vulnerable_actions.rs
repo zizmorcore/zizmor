@@ -1,11 +1,9 @@
 //! Detects publicly disclosed action vulnerabilities.
 //!
-//! This audit uses [OSV]'s vulnerability database as a source of ground truth.
-//! Actions are audited based on their pinned version or commit ref. When an
-//! action is pinned by commit, the audit will make an effort to determine
-//! the oldest version it belongs to and use that version for the OSV lookup.
+//! This audit uses GitHub's security advisories API as a source of
+//! ground truth.
 //!
-//! [OSV]: https://osv.dev/
+//! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
 use std::str::FromStr;
 
@@ -14,45 +12,17 @@ use github_actions_models::workflow::{job::StepBody, Job};
 
 use crate::{
     finding::{Confidence, Severity},
-    github_api,
-    osv::Client as OsvClient,
-    AuditConfig,
+    github_api, AuditConfig,
 };
 
 use super::WorkflowAudit;
 
 pub(crate) struct KnownVulnerableActions<'a> {
     pub(crate) config: AuditConfig<'a>,
-    github: Option<github_api::Client>,
-    osv: OsvClient,
+    client: github_api::Client,
 }
 
 impl<'a> KnownVulnerableActions<'a> {
-    /// Convert one or more OSV severity schemata (in CVSS format) into
-    /// a zizmor-level severity.
-    fn cvss_sevs_to_severity(&self, sevs: &[osv::schema::Severity]) -> Severity {
-        let Some(sev) = sevs
-            .iter()
-            .find(|s| matches!(s.severity_type, osv::schema::SeverityType::CVSSv3))
-        else {
-            // The cvss crate doesn't support v2 or v4 CVSS scores yet.
-            // See: https://github.com/rustsec/rustsec/issues/1087
-            return Severity::Unknown;
-        };
-
-        let Ok(cvss) = cvss::v3::Base::from_str(&sev.score) else {
-            return Severity::Unknown;
-        };
-
-        match cvss.severity() {
-            cvss::Severity::None => Severity::Informational,
-            cvss::Severity::Low => Severity::Low,
-            cvss::Severity::Medium => Severity::Medium,
-            cvss::Severity::High => Severity::High,
-            cvss::Severity::Critical => Severity::High,
-        }
-    }
-
     fn action_known_vulnerabilities(&self, uses: &str) -> Result<Vec<(Severity, String)>> {
         // There's no point in asking OSV about repo-relative actions.
         if uses.starts_with("./") {
@@ -70,7 +40,7 @@ impl<'a> KnownVulnerableActions<'a> {
             version
         };
 
-        let vulns = self.osv.query_gha(action, version)?;
+        let vulns = self.client.gha_advisories(action, version)?;
 
         let mut results = vec![];
 
@@ -79,12 +49,15 @@ impl<'a> KnownVulnerableActions<'a> {
             log::debug!("no vulnerabilities for {action}@{version}");
         } else {
             for vuln in vulns {
-                let severity = match &vuln.severity {
-                    Some(sevs) => self.cvss_sevs_to_severity(sevs),
-                    None => Severity::Unknown,
+                let severity = match vuln.severity.as_str() {
+                    "low" => Severity::Unknown,
+                    "medium" => Severity::Medium,
+                    "high" => Severity::High,
+                    "critical" => Severity::High,
+                    "unknown" | _ => Severity::Unknown,
                 };
 
-                results.push((severity, vuln.id));
+                results.push((severity, vuln.ghsa_id));
             }
         }
 
@@ -115,13 +88,13 @@ impl<'a> WorkflowAudit<'a> for KnownVulnerableActions<'a> {
             return Err(anyhow!("offline audits only requested"));
         }
 
-        let github = config.gh_token.map(|token| github_api::Client::new(token));
+        let Some(gh_token) = config.gh_token else {
+            return Err(anyhow!("can't audit without a GitHub API token"));
+        };
 
-        Ok(Self {
-            config,
-            github,
-            osv: OsvClient::new(),
-        })
+        let client = github_api::Client::new(gh_token);
+
+        Ok(Self { config, client })
     }
 
     fn audit<'w>(

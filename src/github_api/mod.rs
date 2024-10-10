@@ -3,6 +3,8 @@
 //! Build on synchronous reqwest to avoid octocrab's need to taint
 //! the whole codebase with async.
 
+use std::fmt::format;
+
 use anyhow::{anyhow, Result};
 use reqwest::{
     blocking,
@@ -100,6 +102,22 @@ impl Client {
             )),
         }
     }
+
+    pub(crate) fn gha_advisories(&self, action: &str, version: &str) -> Result<Vec<Advisory>> {
+        // TODO: Paginate this as well.
+        let url = format!("{api_base}/advisories", api_base = self.api_base);
+
+        self.http
+            .get(url)
+            .query(&[
+                ("ecosystem", "actions"),
+                ("affects", &format!("{action}@{version}")),
+            ])
+            .send()?
+            .error_for_status()?
+            .json()
+            .map_err(Into::into)
+    }
 }
 
 /// A single branch, as returned by GitHub's branches endpoints.
@@ -135,4 +153,12 @@ pub(crate) enum ComparisonStatus {
 #[derive(Deserialize)]
 pub(crate) struct Comparison {
     pub(crate) status: ComparisonStatus,
+}
+
+/// Represents a GHSA advisory.
+#[derive(Deserialize)]
+pub(crate) struct Advisory {
+    pub(crate) ghsa_id: String,
+    pub(crate) html_url: String,
+    pub(crate) severity: String,
 }
