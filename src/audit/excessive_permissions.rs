@@ -8,7 +8,7 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    AuditConfig,
+    State,
 };
 
 // Subjective mapping of permissions to severities, when given `write` access.
@@ -33,11 +33,11 @@ static KNOWN_PERMISSIONS: LazyLock<HashMap<&str, Severity>> = LazyLock::new(|| {
     .into()
 });
 
-pub(crate) struct ExcessivePermissions<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct ExcessivePermissions {
+    pub(crate) _config: State,
 }
 
-impl<'a> WorkflowAudit<'a> for ExcessivePermissions<'a> {
+impl WorkflowAudit for ExcessivePermissions {
     fn ident() -> &'static str
     where
         Self: Sized,
@@ -52,7 +52,7 @@ impl<'a> WorkflowAudit<'a> for ExcessivePermissions<'a> {
         "overly broad workflow or job-level permissions"
     }
 
-    fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
+    fn new(config: State) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
@@ -106,7 +106,7 @@ impl<'a> WorkflowAudit<'a> for ExcessivePermissions<'a> {
     }
 }
 
-impl<'a> ExcessivePermissions<'a> {
+impl ExcessivePermissions {
     fn check_permissions(
         &self,
         permissions: &Permissions,

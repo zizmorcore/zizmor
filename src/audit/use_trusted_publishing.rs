@@ -8,7 +8,7 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    AuditConfig,
+    state::State,
 };
 
 const USES_MANUAL_CREDENTIAL: &str =
@@ -19,11 +19,11 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
     "https://test.pypi.org/legacy/",
 ];
 
-pub(crate) struct UseTrustedPublishing<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct UseTrustedPublishing {
+    pub(crate) _state: State,
 }
 
-impl<'a> UseTrustedPublishing<'a> {
+impl UseTrustedPublishing {
     fn pypi_publish_uses_manual_credentials(&self, with: &HashMap<String, EnvValue>) -> bool {
         // `password` implies the step isn't using Trusted Publishing,
         // but we also need to check `repository-url` to prevent false-positives
@@ -60,7 +60,7 @@ impl<'a> UseTrustedPublishing<'a> {
     }
 }
 
-impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
+impl WorkflowAudit for UseTrustedPublishing {
     fn ident() -> &'static str {
         "use-trusted-publishing"
     }
@@ -72,8 +72,8 @@ impl<'a> WorkflowAudit<'a> for UseTrustedPublishing<'a> {
         "prefer trusted publishing for authentication"
     }
 
-    fn new(config: AuditConfig<'a>) -> anyhow::Result<Self> {
-        Ok(Self { _config: config })
+    fn new(state: State) -> anyhow::Result<Self> {
+        Ok(Self { _state: state })
     }
 
     fn audit<'w>(

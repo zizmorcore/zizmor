@@ -10,15 +10,15 @@ use itertools::Itertools;
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Finding, Severity},
-    AuditConfig,
+    state::State,
 };
 use crate::{models::Workflow, utils::split_patterns};
 
-pub(crate) struct Artipacked<'a> {
-    pub(crate) config: AuditConfig<'a>,
+pub(crate) struct Artipacked {
+    pub(crate) state: State,
 }
 
-impl<'a> Artipacked<'a> {
+impl Artipacked {
     fn dangerous_artifact_patterns<'b>(&self, path: &'b str) -> Vec<&'b str> {
         let mut patterns = vec![];
         for path in split_patterns(path) {
@@ -40,7 +40,7 @@ impl<'a> Artipacked<'a> {
     }
 }
 
-impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
+impl WorkflowAudit for Artipacked {
     fn ident() -> &'static str {
         "artipacked"
     }
@@ -52,8 +52,8 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
         "credential persistence through GitHub Actions artifacts"
     }
 
-    fn new(config: AuditConfig<'a>) -> Result<Self> {
-        Ok(Self { config })
+    fn new(state: State) -> Result<Self> {
+        Ok(Self { state })
     }
 
     fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
@@ -81,7 +81,7 @@ impl<'a> WorkflowAudit<'a> for Artipacked<'a> {
                         Some(EnvValue::Boolean(true)) => {
                             // If a user explicitly sets `persist-credentials: true`,
                             // they probably mean it. Only report if being pedantic.
-                            if self.config.pedantic {
+                            if self.state.config.pedantic {
                                 vulnerable_checkouts.push(step)
                             } else {
                                 continue;

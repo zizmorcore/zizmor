@@ -11,14 +11,14 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    AuditConfig,
+    state::State,
 };
 
-pub(crate) struct HardcodedContainerCredentials<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct HardcodedContainerCredentials {
+    pub(crate) _state: State,
 }
 
-impl<'a> WorkflowAudit<'a> for HardcodedContainerCredentials<'a> {
+impl WorkflowAudit for HardcodedContainerCredentials {
     fn ident() -> &'static str
     where
         Self: Sized,
@@ -33,11 +33,11 @@ impl<'a> WorkflowAudit<'a> for HardcodedContainerCredentials<'a> {
         "hardcoded credential in GitHub Actions container configurations"
     }
 
-    fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
+    fn new(state: State) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self { _config: config })
+        Ok(Self { _state: state })
     }
 
     fn audit<'w>(

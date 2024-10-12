@@ -12,17 +12,17 @@ use crate::{
     finding::{Confidence, Severity},
     github_api,
     models::Uses,
-    AuditConfig,
+    state::State,
 };
 
 use super::WorkflowAudit;
 
-pub(crate) struct KnownVulnerableActions<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct KnownVulnerableActions {
+    pub(crate) _state: State,
     client: github_api::Client,
 }
 
-impl<'a> KnownVulnerableActions<'a> {
+impl KnownVulnerableActions {
     fn action_known_vulnerabilities(&self, uses: &Uses<'_>) -> Result<Vec<(Severity, String)>> {
         let version = match uses.git_ref {
             // If `uses` is pinned to a symbolic ref, we need to perform
@@ -113,7 +113,7 @@ impl<'a> KnownVulnerableActions<'a> {
     }
 }
 
-impl<'a> WorkflowAudit<'a> for KnownVulnerableActions<'a> {
+impl WorkflowAudit for KnownVulnerableActions {
     fn ident() -> &'static str
     where
         Self: Sized,
@@ -128,22 +128,22 @@ impl<'a> WorkflowAudit<'a> for KnownVulnerableActions<'a> {
         "action has a known vulnerability"
     }
 
-    fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
+    fn new(state: State) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        if config.offline {
+        if state.config.offline {
             return Err(anyhow!("offline audits only requested"));
         }
 
-        let Some(gh_token) = config.gh_token else {
+        let Some(gh_token) = &state.config.gh_token else {
             return Err(anyhow!("can't audit without a GitHub API token"));
         };
 
         let client = github_api::Client::new(gh_token);
 
         Ok(Self {
-            _config: config,
+            _state: state,
             client,
         })
     }

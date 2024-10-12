@@ -18,13 +18,13 @@ use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, Branch, ComparisonStatus, Tag},
     models::{Uses, Workflow},
-    AuditConfig,
+    state::State,
 };
 
 pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
 
-pub(crate) struct ImpostorCommit<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct ImpostorCommit {
+    pub(crate) _state: State,
     pub(crate) client: github_api::Client,
     pub(crate) ref_cache: HashMap<(String, String), (Vec<Branch>, Vec<Tag>)>,
     /// A cache of `(base_ref, head_ref) => status`.
@@ -36,7 +36,7 @@ pub(crate) struct ImpostorCommit<'a> {
     pub(crate) ref_comparison_cache: HashMap<(String, String), bool>,
 }
 
-impl<'a> ImpostorCommit<'a> {
+impl ImpostorCommit {
     fn named_refs(&mut self, uses: Uses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
         let entry = match self
             .ref_cache
@@ -134,7 +134,7 @@ impl<'a> ImpostorCommit<'a> {
     }
 }
 
-impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
+impl WorkflowAudit for ImpostorCommit {
     fn ident() -> &'static str {
         "impostor-commit"
     }
@@ -146,19 +146,19 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
         "commit with no history in referenced repository"
     }
 
-    fn new(config: AuditConfig<'a>) -> Result<Self> {
-        if config.offline {
+    fn new(state: State) -> Result<Self> {
+        if state.config.offline {
             return Err(anyhow!("offline audits only requested"));
         }
 
-        let Some(gh_token) = config.gh_token else {
+        let Some(gh_token) = &state.config.gh_token else {
             return Err(anyhow!("can't audit without a GitHub API token"));
         };
 
         let client = github_api::Client::new(gh_token);
 
         Ok(ImpostorCommit {
-            _config: config,
+            _state: state,
             client,
             ref_cache: Default::default(),
             ref_comparison_cache: Default::default(),
