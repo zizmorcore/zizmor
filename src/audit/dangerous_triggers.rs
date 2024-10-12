@@ -5,10 +5,10 @@ use github_actions_models::workflow::Trigger;
 use super::WorkflowAudit;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Workflow;
-use crate::state::State;
+use crate::state::AuditState;
 
 pub(crate) struct DangerousTriggers {
-    pub(crate) _state: State,
+    pub(crate) _state: AuditState,
 }
 
 impl WorkflowAudit for DangerousTriggers {
@@ -23,7 +23,7 @@ impl WorkflowAudit for DangerousTriggers {
         "use of fundamentally insecure workflow trigger"
     }
 
-    fn new(state: State) -> Result<Self> {
+    fn new(state: AuditState) -> Result<Self> {
         Ok(Self { _state: state })
     }
 

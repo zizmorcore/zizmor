@@ -8,7 +8,7 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    state::State,
+    state::AuditState,
 };
 
 const USES_MANUAL_CREDENTIAL: &str =
@@ -20,7 +20,7 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
 ];
 
 pub(crate) struct UseTrustedPublishing {
-    pub(crate) _state: State,
+    pub(crate) _state: AuditState,
 }
 
 impl UseTrustedPublishing {
@@ -72,7 +72,7 @@ impl WorkflowAudit for UseTrustedPublishing {
         "prefer trusted publishing for authentication"
     }
 
-    fn new(state: State) -> anyhow::Result<Self> {
+    fn new(state: AuditState) -> anyhow::Result<Self> {
         Ok(Self { _state: state })
     }
 

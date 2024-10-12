@@ -15,7 +15,7 @@ use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, Branch, ComparisonStatus, Tag},
     models::{Uses, Workflow},
-    state::State,
+    state::AuditState,
 };
 
 pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
@@ -108,7 +108,7 @@ impl WorkflowAudit for ImpostorCommit {
         "commit with no history in referenced repository"
     }
 
-    fn new(state: State) -> Result<Self> {
+    fn new(state: AuditState) -> Result<Self> {
         if state.config.offline {
             return Err(anyhow!("offline audits only requested"));
         }

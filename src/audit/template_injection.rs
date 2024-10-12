@@ -23,12 +23,12 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
-    state::State,
+    state::AuditState,
     utils::extract_expressions,
 };
 
 pub(crate) struct TemplateInjection {
-    pub(crate) _state: State,
+    pub(crate) _state: AuditState,
 }
 
 /// Context members that are believed to be always safe.
@@ -155,7 +155,7 @@ impl WorkflowAudit for TemplateInjection {
         "code injection via template expansion"
     }
 
-    fn new(state: State) -> anyhow::Result<Self>
+    fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

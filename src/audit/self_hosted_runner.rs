@@ -7,7 +7,7 @@
 
 use crate::{
     finding::{Confidence, Severity},
-    State,
+    AuditState,
 };
 
 use anyhow::Result;
@@ -19,7 +19,7 @@ use github_actions_models::{
 use super::WorkflowAudit;
 
 pub(crate) struct SelfHostedRunner {
-    pub(crate) _state: State,
+    pub(crate) _state: AuditState,
 }
 
 impl WorkflowAudit for SelfHostedRunner {
@@ -37,7 +37,7 @@ impl WorkflowAudit for SelfHostedRunner {
         "runs on a self-hosted runner"
     }
 
-    fn new(state: State) -> anyhow::Result<Self>
+    fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

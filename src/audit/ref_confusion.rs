@@ -16,7 +16,7 @@ use crate::{
     finding::{Confidence, Severity},
     github_api,
     models::Uses,
-    state::State,
+    state::AuditState,
 };
 
 const REF_CONFUSION_ANNOTATION: &str =
@@ -24,7 +24,7 @@ const REF_CONFUSION_ANNOTATION: &str =
 
 pub(crate) struct RefConfusion {
     client: github_api::Client,
-    pub(crate) _state: State,
+    pub(crate) _state: AuditState,
 }
 
 impl RefConfusion {
@@ -66,7 +66,7 @@ impl WorkflowAudit for RefConfusion {
         "git ref for action with ambiguous ref type"
     }
 
-    fn new(state: State) -> anyhow::Result<Self>
+    fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

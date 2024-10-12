@@ -10,12 +10,12 @@ use itertools::Itertools;
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Finding, Severity},
-    state::State,
+    state::AuditState,
 };
 use crate::{models::Workflow, utils::split_patterns};
 
 pub(crate) struct Artipacked {
-    pub(crate) state: State,
+    pub(crate) state: AuditState,
 }
 
 impl Artipacked {
@@ -52,7 +52,7 @@ impl WorkflowAudit for Artipacked {
         "credential persistence through GitHub Actions artifacts"
     }
 
-    fn new(state: State) -> Result<Self> {
+    fn new(state: AuditState) -> Result<Self> {
         Ok(Self { state })
     }
 

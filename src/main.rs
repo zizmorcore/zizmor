@@ -10,7 +10,7 @@ use clap::{Parser, ValueEnum};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, WorkflowRegistry};
-use state::State;
+use state::{AuditConfig, AuditState};
 
 mod audit;
 mod finding;
@@ -61,23 +61,6 @@ pub(crate) enum OutputFormat {
     Sarif,
 }
 
-#[derive(Clone)]
-pub(crate) struct AuditConfig {
-    pub(crate) pedantic: bool,
-    pub(crate) offline: bool,
-    pub(crate) gh_token: Option<String>,
-}
-
-impl From<&Args> for AuditConfig {
-    fn from(value: &Args) -> Self {
-        Self {
-            pedantic: value.pedantic,
-            offline: value.offline,
-            gh_token: value.gh_token.clone(),
-        }
-    }
-}
-
 fn main() -> Result<()> {
     human_panic::setup_panic!();
 
@@ -117,7 +100,7 @@ fn main() -> Result<()> {
         return Err(anyhow!("input must be a single workflow file or directory"));
     }
 
-    let audit_state = State::new(config);
+    let audit_state = AuditState::new(config);
 
     let mut workflow_registry = WorkflowRegistry::new();
     for workflow_path in workflow_paths.iter() {

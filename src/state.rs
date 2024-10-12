@@ -6,17 +6,34 @@ use moka::sync::Cache;
 
 use crate::{
     github_api::{Branch, ComparisonStatus, Tag},
-    AuditConfig,
+    Args,
 };
 
 #[derive(Clone)]
-pub(crate) struct State {
+pub(crate) struct AuditConfig {
+    pub(crate) pedantic: bool,
+    pub(crate) offline: bool,
+    pub(crate) gh_token: Option<String>,
+}
+
+impl From<&Args> for AuditConfig {
+    fn from(value: &Args) -> Self {
+        Self {
+            pedantic: value.pedantic,
+            offline: value.offline,
+            gh_token: value.gh_token.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct AuditState {
     /// The current config.
     pub(crate) config: AuditConfig,
     pub(crate) caches: Caches,
 }
 
-impl State {
+impl AuditState {
     pub(crate) fn new(config: AuditConfig) -> Self {
         Self {
             config,

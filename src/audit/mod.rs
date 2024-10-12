@@ -5,7 +5,7 @@ use anyhow::Result;
 use crate::{
     finding::{Finding, FindingBuilder},
     models::Workflow,
-    state::State,
+    state::AuditState,
 };
 
 pub(crate) mod artipacked;
@@ -35,7 +35,7 @@ pub(crate) trait WorkflowAudit {
     where
         Self: Sized;
 
-    fn new(state: State) -> Result<Self>
+    fn new(state: AuditState) -> Result<Self>
     where
         Self: Sized;
 

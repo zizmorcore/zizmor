@@ -12,13 +12,13 @@ use crate::{
     finding::{Confidence, Severity},
     github_api,
     models::Uses,
-    state::State,
+    state::AuditState,
 };
 
 use super::WorkflowAudit;
 
 pub(crate) struct KnownVulnerableActions {
-    pub(crate) _state: State,
+    pub(crate) _state: AuditState,
     client: github_api::Client,
 }
 
@@ -128,7 +128,7 @@ impl WorkflowAudit for KnownVulnerableActions {
         "action has a known vulnerability"
     }
 
-    fn new(state: State) -> anyhow::Result<Self>
+    fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
