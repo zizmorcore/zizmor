@@ -39,5 +39,5 @@ pub(crate) trait WorkflowAudit {
     where
         Self: Sized;
 
-    fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>>;
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>>;
 }

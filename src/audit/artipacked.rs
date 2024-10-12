@@ -56,7 +56,7 @@ impl WorkflowAudit for Artipacked {
         Ok(Self { state })
     }
 
-    fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {

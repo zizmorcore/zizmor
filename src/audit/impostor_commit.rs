@@ -25,14 +25,14 @@ pub(crate) struct ImpostorCommit {
 }
 
 impl ImpostorCommit {
-    fn named_refs(&mut self, uses: Uses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
+    fn named_refs(&self, uses: Uses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
         let branches = self.client.list_branches(uses.owner, uses.repo)?;
         let tags = self.client.list_tags(uses.owner, uses.repo)?;
         Ok((branches, tags))
     }
 
     fn named_ref_contains_commit(
-        &mut self,
+        &self,
         uses: &Uses<'_>,
         base_ref: &str,
         head_ref: &str,
@@ -57,7 +57,7 @@ impl ImpostorCommit {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    fn impostor(&mut self, uses: Uses<'_>) -> Result<bool> {
+    fn impostor(&self, uses: Uses<'_>) -> Result<bool> {
         let (branches, tags) = self.named_refs(uses)?;
 
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
@@ -122,7 +122,7 @@ impl WorkflowAudit for ImpostorCommit {
         Ok(ImpostorCommit { client })
     }
 
-    fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {

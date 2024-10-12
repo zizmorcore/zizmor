@@ -45,7 +45,7 @@ impl WorkflowAudit for SelfHostedRunner {
     }
 
     fn audit<'w>(
-        &mut self,
+        &self,
         workflow: &'w crate::models::Workflow,
     ) -> Result<Vec<crate::finding::Finding<'w>>> {
         let mut results = vec![];

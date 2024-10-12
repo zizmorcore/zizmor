@@ -85,7 +85,7 @@ impl WorkflowAudit for RefConfusion {
     }
 
     fn audit<'w>(
-        &mut self,
+        &self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];
