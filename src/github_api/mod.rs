@@ -3,8 +3,6 @@
 //! Build on synchronous reqwest to avoid octocrab's need to taint
 //! the whole codebase with async.
 
-use std::fmt::format;
-
 use anyhow::{anyhow, Result};
 use reqwest::{
     blocking,
@@ -81,6 +79,22 @@ impl Client {
         Ok(tags)
     }
 
+    pub(crate) fn tag_for_commit(
+        &self,
+        owner: &str,
+        repo: &str,
+        commit: &str,
+    ) -> Result<Option<Tag>> {
+        // Annoying: GitHub doesn't provide a rev-parse or similar API to
+        // perform the commit -> tag lookup, so we download every tag and
+        // do it for them.
+        // This could be optimized in various ways, not least of which
+        // is not pulling every tag eagerly before scanning them.
+        let tags = self.list_tags(owner, repo)?;
+
+        Ok(tags.into_iter().find(|t| t.commit.sha == commit))
+    }
+
     pub(crate) fn compare_commits(
         &self,
         owner: &str,
@@ -103,7 +117,12 @@ impl Client {
         }
     }
 
-    pub(crate) fn gha_advisories(&self, action: &str, version: &str) -> Result<Vec<Advisory>> {
+    pub(crate) fn gha_advisories(
+        &self,
+        owner: &str,
+        repo: &str,
+        version: &str,
+    ) -> Result<Vec<Advisory>> {
         // TODO: Paginate this as well.
         let url = format!("{api_base}/advisories", api_base = self.api_base);
 
@@ -111,7 +130,7 @@ impl Client {
             .get(url)
             .query(&[
                 ("ecosystem", "actions"),
-                ("affects", &format!("{action}@{version}")),
+                ("affects", &format!("{owner}/{repo}@{version}")),
             ])
             .send()?
             .error_for_status()?
@@ -136,6 +155,13 @@ pub(crate) struct Branch {
 #[derive(Deserialize, Clone)]
 pub(crate) struct Tag {
     pub(crate) name: String,
+    pub(crate) commit: TagCommit,
+}
+
+/// Represents the SHA ref bound to a tag.
+#[derive(Deserialize, Clone)]
+pub(crate) struct TagCommit {
+    pub(crate) sha: String,
 }
 
 #[derive(Deserialize)]
@@ -159,6 +185,5 @@ pub(crate) struct Comparison {
 #[derive(Deserialize)]
 pub(crate) struct Advisory {
     pub(crate) ghsa_id: String,
-    pub(crate) html_url: String,
     pub(crate) severity: String,
 }

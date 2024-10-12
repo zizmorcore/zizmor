@@ -5,42 +5,68 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
-use std::str::FromStr;
-
 use anyhow::{anyhow, Result};
 use github_actions_models::workflow::{job::StepBody, Job};
 
 use crate::{
     finding::{Confidence, Severity},
-    github_api, AuditConfig,
+    github_api,
+    models::Uses,
+    AuditConfig,
 };
 
 use super::WorkflowAudit;
 
 pub(crate) struct KnownVulnerableActions<'a> {
-    pub(crate) config: AuditConfig<'a>,
+    pub(crate) _config: AuditConfig<'a>,
     client: github_api::Client,
 }
 
 impl<'a> KnownVulnerableActions<'a> {
-    fn action_known_vulnerabilities(&self, uses: &str) -> Result<Vec<(Severity, String)>> {
-        // There's no point in asking OSV about repo-relative actions.
-        if uses.starts_with("./") {
-            return Ok(vec![]);
-        }
-
-        // There's no point in querying for an action without a version.
-        let Some((action, version)) = uses.split_once("@") else {
-            return Ok(vec![]);
+    fn action_known_vulnerabilities(&self, uses: &Uses<'_>) -> Result<Vec<(Severity, String)>> {
+        let version = match uses.git_ref {
+            // Easy case: `uses:` is pinned to a non-sha ref, which we'll
+            // treat as the version.
+            // TODO: Handle edge case here where the ref is symbolic but
+            // not version-y, e.g. `gh-action-pypi-publish@release/v1`
+            Some(version) if !uses.ref_is_commit() => version.to_string(),
+            // Annoying case: `uses:` is a sha-ref, so we need to find the
+            // tag matching that ref. In theory the action's repo could do
+            // something annoying like use branches for versions instead,
+            // which we should also probably support.
+            Some(commit_ref) => match self
+                .client
+                .tag_for_commit(uses.owner, uses.repo, commit_ref)?
+            {
+                Some(ref tag) => tag.name.clone(),
+                // No corresponding tag means the user is maybe doing something
+                // weird, like using a commit ref off of a branch that isn't
+                // also tagged. Probably not good, but also not something
+                // we can easily discover known vulns for.
+                None => return Ok(vec![]),
+            },
+            // No version means the action runs the latest default branch
+            // version. We could in theory query GHSA for this but it's
+            // unlikely to be meaningful.
+            // TODO: Maybe we need a separate (low-sev) audit for actions usage
+            // on @master/@main/etc?
+            None => return Ok(vec![]),
         };
 
-        let vulns = self.client.gha_advisories(action, version)?;
+        let vulns = self
+            .client
+            .gha_advisories(uses.owner, uses.repo, &version)?;
 
         let mut results = vec![];
 
         // No vulns means we need to try a bit harder.
         if vulns.is_empty() {
-            log::debug!("no vulnerabilities for {action}@{version}");
+            log::debug!(
+                "no vulnerabilities for {owner}/{repo}@{version:?}",
+                owner = uses.owner,
+                repo = uses.repo,
+                version = uses.git_ref,
+            );
         } else {
             for vuln in vulns {
                 let severity = match vuln.severity.as_str() {
@@ -88,7 +114,10 @@ impl<'a> WorkflowAudit<'a> for KnownVulnerableActions<'a> {
 
         let client = github_api::Client::new(gh_token);
 
-        Ok(Self { config, client })
+        Ok(Self {
+            _config: config,
+            client,
+        })
     }
 
     fn audit<'w>(
@@ -107,7 +136,11 @@ impl<'a> WorkflowAudit<'a> for KnownVulnerableActions<'a> {
                     continue;
                 };
 
-                for (severity, id) in self.action_known_vulnerabilities(uses)? {
+                let Some(uses) = Uses::from_step(uses) else {
+                    continue;
+                };
+
+                for (severity, id) in self.action_known_vulnerabilities(&uses)? {
                     findings.push(
                         Self::finding()
                             .confidence(Confidence::High)
