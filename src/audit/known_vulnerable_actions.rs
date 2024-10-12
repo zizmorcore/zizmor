@@ -140,7 +140,7 @@ impl WorkflowAudit for KnownVulnerableActions {
             return Err(anyhow!("can't audit without a GitHub API token"));
         };
 
-        let client = github_api::Client::new(gh_token);
+        let client = github_api::Client::new(gh_token, state.caches.clone());
 
         Ok(Self {
             _state: state,
