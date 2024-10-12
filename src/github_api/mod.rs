@@ -79,7 +79,44 @@ impl Client {
         Ok(tags)
     }
 
-    pub(crate) fn tag_for_commit(
+    pub(crate) fn commit_for_ref(
+        &self,
+        owner: &str,
+        repo: &str,
+        git_ref: &str,
+    ) -> Result<Option<String>> {
+        // GitHub Actions generally resolves branches before tags, so try
+        // the repo's branches first.
+        let url = format!(
+            "{api_base}/repos/{owner}/{repo}/git/ref/heads/{git_ref}",
+            api_base = self.api_base
+        );
+
+        let resp = self.http.get(url).send()?;
+        match resp.status() {
+            StatusCode::OK => Ok(Some(resp.json::<GitRef>()?.object.sha)),
+            StatusCode::NOT_FOUND => {
+                let url = format!(
+                    "{api_base}/repos/{owner}/{repo}/git/ref/tags/{git_ref}",
+                    api_base = self.api_base
+                );
+
+                let resp = self.http.get(url).send()?;
+                match resp.status() {
+                    StatusCode::OK => Ok(Some(resp.json::<GitRef>()?.object.sha)),
+                    StatusCode::NOT_FOUND => Ok(None),
+                    s => Err(anyhow!(
+                        "{owner}/{repo}: error from GitHub API while accessing ref {git_ref}: {s}"
+                    )),
+                }
+            }
+            s => Err(anyhow!(
+                "{owner}/{repo}: error from GitHub API while accessing ref {git_ref}: {s}"
+            )),
+        }
+    }
+
+    pub(crate) fn longest_tag_for_commit(
         &self,
         owner: &str,
         repo: &str,
@@ -92,7 +129,13 @@ impl Client {
         // is not pulling every tag eagerly before scanning them.
         let tags = self.list_tags(owner, repo)?;
 
-        Ok(tags.into_iter().find(|t| t.commit.sha == commit))
+        // Heuristic: there can be multiple tags for a commit, so we pick
+        // the longest one. This isn't super sound, but it gets us from
+        // `sha -> v1.2.3` instead of `sha -> v1`.
+        Ok(tags
+            .into_iter()
+            .filter(|t| t.commit.sha == commit)
+            .max_by_key(|t| t.name.len()))
     }
 
     pub(crate) fn compare_commits(
@@ -161,6 +204,16 @@ pub(crate) struct Tag {
 /// Represents the SHA ref bound to a tag.
 #[derive(Deserialize, Clone)]
 pub(crate) struct TagCommit {
+    pub(crate) sha: String,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct GitRef {
+    pub(crate) object: GitObj,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct GitObj {
     pub(crate) sha: String,
 }
 

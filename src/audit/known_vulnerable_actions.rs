@@ -25,20 +25,52 @@ pub(crate) struct KnownVulnerableActions<'a> {
 impl<'a> KnownVulnerableActions<'a> {
     fn action_known_vulnerabilities(&self, uses: &Uses<'_>) -> Result<Vec<(Severity, String)>> {
         let version = match uses.git_ref {
-            // Easy case: `uses:` is pinned to a non-sha ref, which we'll
-            // treat as the version.
-            // TODO: Handle edge case here where the ref is symbolic but
-            // not version-y, e.g. `gh-action-pypi-publish@release/v1`
-            Some(version) if !uses.ref_is_commit() => version.to_string(),
-            // Annoying case: `uses:` is a sha-ref, so we need to find the
+            // If `uses` is pinned to a symbolic ref, we need to perform
+            // feats of heroism to figure out what's going on.
+            // In the "happy" case the symbolic ref is an exact version tag,
+            // which we can then query directly for.
+            // Besides that, there are two unhappy cases:
+            // 1. The ref is a "version", but it's something like a "v3"
+            //    branch or tag. These are obnoxious to handle, but we
+            //    can do so with a heuristic: resolve the ref to a commit,
+            //    then find the longest tag name that also matches that commit.
+            //    For example, branch `v1` becomes tag `v1.2.3`.
+            // 2. The ref is something version-y but not itself a version,
+            //    like `gh-action-pypi-publish`'s `release/v1` branch.
+            //    We use the same heuristic for these.
+            //
+            // To handle all of the above, we convert the ref into a commit
+            // and then find the longest tag for that commit.
+            Some(version) if !uses.ref_is_commit() => {
+                let Some(commit_ref) =
+                    self.client.commit_for_ref(uses.owner, uses.repo, version)?
+                else {
+                    // No `ref -> commit` means that the action's version
+                    // is probably just outright invalid.
+                    return Ok(vec![]);
+                };
+
+                match self
+                    .client
+                    .longest_tag_for_commit(uses.owner, uses.repo, &commit_ref)?
+                {
+                    Some(tag) => tag.name,
+                    // Somehow we've round-tripped through a commit and ended
+                    // up without a tag, which suggests we went
+                    // `branch -> sha -> {no tag}`. In that case just use our
+                    // original ref, since it's the best we have.
+                    None => version.to_string(),
+                }
+            }
+            // If `uses` is pinned to a sha-ref, we need to find the
             // tag matching that ref. In theory the action's repo could do
             // something annoying like use branches for versions instead,
             // which we should also probably support.
             Some(commit_ref) => match self
                 .client
-                .tag_for_commit(uses.owner, uses.repo, commit_ref)?
+                .longest_tag_for_commit(uses.owner, uses.repo, commit_ref)?
             {
-                Some(ref tag) => tag.name.clone(),
+                Some(tag) => tag.name,
                 // No corresponding tag means the user is maybe doing something
                 // weird, like using a commit ref off of a branch that isn't
                 // also tagged. Probably not good, but also not something
@@ -59,26 +91,16 @@ impl<'a> KnownVulnerableActions<'a> {
 
         let mut results = vec![];
 
-        // No vulns means we need to try a bit harder.
-        if vulns.is_empty() {
-            log::debug!(
-                "no vulnerabilities for {owner}/{repo}@{version:?}",
-                owner = uses.owner,
-                repo = uses.repo,
-                version = uses.git_ref,
-            );
-        } else {
-            for vuln in vulns {
-                let severity = match vuln.severity.as_str() {
-                    "low" => Severity::Unknown,
-                    "medium" => Severity::Medium,
-                    "high" => Severity::High,
-                    "critical" => Severity::High,
-                    _ => Severity::Unknown,
-                };
+        for vuln in vulns {
+            let severity = match vuln.severity.as_str() {
+                "low" => Severity::Unknown,
+                "medium" => Severity::Medium,
+                "high" => Severity::High,
+                "critical" => Severity::High,
+                _ => Severity::Unknown,
+            };
 
-                results.push((severity, vuln.ghsa_id));
-            }
+            results.push((severity, vuln.ghsa_id));
         }
 
         Ok(results)
