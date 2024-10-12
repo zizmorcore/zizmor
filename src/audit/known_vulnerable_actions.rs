@@ -74,7 +74,7 @@ impl<'a> KnownVulnerableActions<'a> {
                     "medium" => Severity::Medium,
                     "high" => Severity::High,
                     "critical" => Severity::High,
-                    "unknown" | _ => Severity::Unknown,
+                    _ => Severity::Unknown,
                 };
 
                 results.push((severity, vuln.ghsa_id));
