@@ -5,7 +5,7 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use github_actions_models::workflow::{job::StepBody, Job};
 
 use crate::{
@@ -68,8 +68,14 @@ impl<'a> KnownVulnerableActions<'a> {
             // which we should also probably support.
             Some(commit_ref) => match self
                 .client
-                .longest_tag_for_commit(uses.owner, uses.repo, commit_ref)?
-            {
+                .longest_tag_for_commit(uses.owner, uses.repo, commit_ref)
+                .with_context(|| {
+                    format!(
+                        "couldn't retrieve tag for {owner}/{repo}@{commit_ref}",
+                        owner = uses.owner,
+                        repo = uses.repo
+                    )
+                })? {
                 Some(tag) => tag.name,
                 // No corresponding tag means the user is maybe doing something
                 // weird, like using a commit ref off of a branch that isn't
