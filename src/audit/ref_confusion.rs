@@ -79,7 +79,7 @@ impl WorkflowAudit for RefConfusion {
         };
 
         Ok(Self {
-            client: github_api::Client::new(&gh_token, state.caches.clone()),
+            client: github_api::Client::new(gh_token, state.caches.clone()),
             _state: state,
         })
     }
