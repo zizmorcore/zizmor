@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
@@ -142,6 +142,7 @@ fn main() -> Result<()> {
     register_audit!(audit::template_injection::TemplateInjection);
     register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
     register_audit!(audit::self_hosted_runner::SelfHostedRunner);
+    register_audit!(audit::known_vulnerable_actions::KnownVulnerableActions);
 
     let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
 
@@ -163,7 +164,12 @@ fn main() -> Result<()> {
             workflow = workflow.filename().cyan()
         ));
         for (name, audit) in audit_registry.iter_workflow_audits() {
-            results.extend(audit.audit(workflow)?);
+            results.extend(audit.audit(workflow).with_context(|| {
+                format!(
+                    "{name} failed on {workflow}",
+                    workflow = workflow.filename()
+                )
+            })?);
             bar.inc(1);
             bar.println(format!(
                 "🌈 completed {name} on {workflow}",
