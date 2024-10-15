@@ -113,11 +113,9 @@ impl WorkflowAudit for ImpostorCommit {
             return Err(anyhow!("offline audits only requested"));
         }
 
-        let Some(gh_token) = &state.config.gh_token else {
+        let Some(client) = state.github_client() else {
             return Err(anyhow!("can't audit without a GitHub API token"));
         };
-
-        let client = github_api::Client::new(gh_token, state.caches.clone());
 
         Ok(ImpostorCommit { client })
     }

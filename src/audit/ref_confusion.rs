@@ -24,7 +24,6 @@ const REF_CONFUSION_ANNOTATION: &str =
 
 pub(crate) struct RefConfusion {
     client: github_api::Client,
-    pub(crate) _state: AuditState,
 }
 
 impl RefConfusion {
@@ -74,14 +73,11 @@ impl WorkflowAudit for RefConfusion {
             return Err(anyhow!("offline audits only requested"));
         }
 
-        let Some(gh_token) = &state.config.gh_token else {
+        let Some(client) = state.github_client() else {
             return Err(anyhow!("can't audit without a GitHub API token"));
         };
 
-        Ok(Self {
-            client: github_api::Client::new(gh_token, state.caches.clone()),
-            _state: state,
-        })
+        Ok(Self { client })
     }
 
     fn audit<'w>(

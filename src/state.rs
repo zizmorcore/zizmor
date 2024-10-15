@@ -5,7 +5,7 @@
 use moka::sync::Cache;
 
 use crate::{
-    github_api::{Branch, ComparisonStatus, Tag},
+    github_api::{Branch, Client, ComparisonStatus, Tag},
     Args,
 };
 
@@ -39,6 +39,15 @@ impl AuditState {
             config,
             caches: Caches::new(),
         }
+    }
+
+    /// Return a cache-configured GitHub API client, if
+    /// a GitHub API token is present.
+    pub(crate) fn github_client(&self) -> Option<Client> {
+        self.config
+            .gh_token
+            .as_ref()
+            .map(|token| Client::new(token, self.caches.clone()))
     }
 }
 

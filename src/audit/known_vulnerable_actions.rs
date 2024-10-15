@@ -18,7 +18,6 @@ use crate::{
 use super::WorkflowAudit;
 
 pub(crate) struct KnownVulnerableActions {
-    pub(crate) _state: AuditState,
     client: github_api::Client,
 }
 
@@ -136,16 +135,11 @@ impl WorkflowAudit for KnownVulnerableActions {
             return Err(anyhow!("offline audits only requested"));
         }
 
-        let Some(gh_token) = &state.config.gh_token else {
+        let Some(client) = state.github_client() else {
             return Err(anyhow!("can't audit without a GitHub API token"));
         };
 
-        let client = github_api::Client::new(gh_token, state.caches.clone());
-
-        Ok(Self {
-            _state: state,
-            client,
-        })
+        Ok(Self { client })
     }
 
     fn audit<'w>(
