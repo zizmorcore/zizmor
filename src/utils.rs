@@ -1,6 +1,6 @@
 //! Helper routines.
 
-use github_actions_models::common::Expression;
+use github_actions_models::common::expr::ExplicitExpr;
 
 /// Splits the given `patterns` string into one or more patterns, using
 /// approximately the same rules as GitHub's `@actions/glob` package.
@@ -24,7 +24,7 @@ pub(crate) fn split_patterns(patterns: &str) -> impl Iterator<Item = &str> {
 ///
 /// Adapted roughly from GitHub's `parseScalar`:
 /// See: <https://github.com/actions/languageservices/blob/3a8c29c2d/workflow-parser/src/templates/template-reader.ts#L448>
-fn extract_expression(text: &str) -> Option<(Expression, usize)> {
+fn extract_expression(text: &str) -> Option<(ExplicitExpr, usize)> {
     let start = text.find("${{")?;
 
     let mut end = None;
@@ -41,14 +41,14 @@ fn extract_expression(text: &str) -> Option<(Expression, usize)> {
 
     end.map(|end| {
         (
-            Expression::from_curly(text[start..=end].to_string()).unwrap(),
+            ExplicitExpr::from_curly(&text[start..=end]).unwrap(),
             end + 1,
         )
     })
 }
 
 /// Extract zero or more expressions from the given free-form text.
-pub(crate) fn extract_expressions(text: &str) -> Vec<Expression> {
+pub(crate) fn extract_expressions(text: &str) -> Vec<ExplicitExpr> {
     let mut exprs = vec![];
     let mut view = text;
 

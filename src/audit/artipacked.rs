@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use anyhow::Result;
 use github_actions_models::{
-    common::{EnvValue, Expression},
+    common::{expr::ExplicitExpr, EnvValue},
     workflow::{job::StepBody, Job},
 };
 use itertools::Itertools;
@@ -25,7 +25,7 @@ impl Artipacked {
             match path {
                 // TODO: this could be even more generic.
                 "." | "./" | ".." | "../" => patterns.push(path),
-                path => match Expression::from_curly(path.into()) {
+                path => match ExplicitExpr::from_curly(path) {
                     Some(expr) if expr.as_bare().contains("github.workspace") => {
                         patterns.push(path)
                     }

@@ -13,7 +13,7 @@
 use std::ops::Deref;
 
 use github_actions_models::{
-    common::LoE,
+    common::expr::LoE,
     workflow::{
         job::{Matrix, NormalJob, StepBody, Strategy},
         Job,

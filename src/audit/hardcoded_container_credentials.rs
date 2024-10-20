@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use github_actions_models::{
-    common::Expression,
+    common::expr::ExplicitExpr,
     workflow::{
         job::{Container, DockerCredentials},
         Job,
@@ -62,7 +62,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
             }) = &normal.container
             {
                 // If the password doesn't parse as an expression, it's hardcoded.
-                if Expression::from_curly(password.into()).is_none() {
+                if ExplicitExpr::from_curly(password).is_none() {
                     findings.push(
                         Self::finding()
                             .severity(Severity::High)
@@ -88,7 +88,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
                     ..
                 } = &config
                 {
-                    if Expression::from_curly(password.into()).is_none() {
+                    if ExplicitExpr::from_curly(password).is_none() {
                         findings.push(
                             Self::finding()
                                 .severity(Severity::High)

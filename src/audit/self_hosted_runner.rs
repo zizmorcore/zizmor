@@ -12,7 +12,7 @@ use crate::{
 
 use anyhow::Result;
 use github_actions_models::{
-    common::Expression,
+    common::expr::ExplicitExpr,
     workflow::{job::RunsOn, Job},
 };
 
@@ -80,7 +80,7 @@ impl WorkflowAudit for SelfHostedRunner {
                                 )
                                 .build(workflow)?,
                         );
-                    } else if Expression::from_curly(label.to_string()).is_some() {
+                    } else if ExplicitExpr::from_curly(label).is_some() {
                         // The job might also have its runner expanded via an
                         // expression. Long-term we should perform this evaluation
                         // to increase our confidence, but for now we flag it as
