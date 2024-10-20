@@ -1,0 +1,40 @@
+//! Parser rules for Actions expressions.
+//!
+//! See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/evaluate-expressions-in-workflows-and-actions>
+
+/// A JSON number.
+number = @{
+    "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
+
+/// A JSON boolean, i.e. `true` or `false`.
+boolean = { "true" | "false" }
+
+/// A JSON `null`.
+null = { "null" }
+
+/// An expressions string literal. String literals are always single quoted and use `''` as
+/// a quote escape sequence.
+string = ${ "'" ~ inner ~ "'" }
+inner  = @{ char* }
+char   = _{
+    !("'") ~ ANY // match anything except a single quote
+
+  | "'" ~ "'" // handle quote escaping explicitly
+}
+
+/// A *context ref*, e.g. `secrets.FOO_BAR`.
+///
+/// See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs>
+context_ref = @{ context_key ~ ("." ~ context_key)? }
+
+/// A single key within a context ref, e.g. `secrets` within `secrets.FOO_BAR`.
+context_key = @{
+    ASCII_ALPHANUMERIC+ ~ ("-" | "_")* ~ ASCII_ALPHANUMERIC*
+}
+
+/// A single top-level value.
+value = _{ number | boolean | null | string | context_ref }
+
+/// An expression.
+expr = _{ SOI ~ (value) ~ EOI }

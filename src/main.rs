@@ -13,6 +13,7 @@ use registry::{AuditRegistry, WorkflowRegistry};
 use state::{AuditConfig, AuditState};
 
 mod audit;
+mod expr;
 mod finding;
 mod github_api;
 mod models;
