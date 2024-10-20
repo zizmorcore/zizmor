@@ -5,7 +5,7 @@ use anyhow::Result;
 use crate::{
     finding::{Finding, FindingBuilder},
     models::Workflow,
-    AuditConfig,
+    state::AuditState,
 };
 
 pub(crate) mod artipacked;
@@ -19,7 +19,7 @@ pub(crate) mod self_hosted_runner;
 pub(crate) mod template_injection;
 pub(crate) mod use_trusted_publishing;
 
-pub(crate) trait WorkflowAudit<'a> {
+pub(crate) trait WorkflowAudit {
     fn finding<'w>() -> FindingBuilder<'w>
     where
         Self: Sized,
@@ -35,9 +35,9 @@ pub(crate) trait WorkflowAudit<'a> {
     where
         Self: Sized;
 
-    fn new(config: AuditConfig<'a>) -> Result<Self>
+    fn new(state: AuditState) -> Result<Self>
     where
         Self: Sized;
 
-    fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>>;
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>>;
 }

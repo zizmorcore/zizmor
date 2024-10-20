@@ -10,6 +10,7 @@ use clap::{Parser, ValueEnum};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, WorkflowRegistry};
+use state::{AuditConfig, AuditState};
 
 mod audit;
 mod finding;
@@ -18,6 +19,7 @@ mod models;
 mod registry;
 mod render;
 mod sarif;
+mod state;
 mod utils;
 
 /// Finds security issues in GitHub Actions workflows.
@@ -59,23 +61,6 @@ pub(crate) enum OutputFormat {
     Sarif,
 }
 
-#[derive(Copy, Clone)]
-pub(crate) struct AuditConfig<'a> {
-    pub(crate) pedantic: bool,
-    pub(crate) offline: bool,
-    pub(crate) gh_token: Option<&'a str>,
-}
-
-impl<'a> From<&'a Args> for AuditConfig<'a> {
-    fn from(value: &'a Args) -> Self {
-        Self {
-            pedantic: value.pedantic,
-            offline: value.offline,
-            gh_token: value.gh_token.as_deref(),
-        }
-    }
-}
-
 fn main() -> Result<()> {
     human_panic::setup_panic!();
 
@@ -115,18 +100,19 @@ fn main() -> Result<()> {
         return Err(anyhow!("input must be a single workflow file or directory"));
     }
 
+    let audit_state = AuditState::new(config);
+
     let mut workflow_registry = WorkflowRegistry::new();
     for workflow_path in workflow_paths.iter() {
         workflow_registry.register_workflow(workflow_path)?;
     }
 
     let mut audit_registry = AuditRegistry::new();
-
     macro_rules! register_audit {
         ($rule:path) => {{
             // HACK: https://github.com/rust-lang/rust/issues/48067
             use $rule as base;
-            match base::new(config) {
+            match base::new(audit_state.clone()) {
                 Ok(audit) => audit_registry.register_workflow_audit(base::ident(), Box::new(audit)),
                 Err(e) => log::warn!("{audit} is being skipped: {e}", audit = base::ident()),
             }

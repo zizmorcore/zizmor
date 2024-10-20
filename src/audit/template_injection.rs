@@ -23,12 +23,12 @@ use github_actions_models::{
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
+    state::AuditState,
     utils::extract_expressions,
-    AuditConfig,
 };
 
-pub(crate) struct TemplateInjection<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct TemplateInjection {
+    pub(crate) _state: AuditState,
 }
 
 /// Context members that are believed to be always safe.
@@ -41,7 +41,7 @@ const SAFE_CONTEXTS: &[&str] = &[
     "runner.arch",
 ];
 
-impl<'a> TemplateInjection<'a> {
+impl TemplateInjection {
     /// Checks whether the given `expr` into `matrix` is static.
     fn matrix_is_static(&self, expr: &str, matrix: &Matrix) -> bool {
         // If the matrix's dimensions are an expression, then it's not static.
@@ -140,7 +140,7 @@ impl<'a> TemplateInjection<'a> {
     }
 }
 
-impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
+impl WorkflowAudit for TemplateInjection {
     fn ident() -> &'static str
     where
         Self: Sized,
@@ -155,15 +155,15 @@ impl<'a> WorkflowAudit<'a> for TemplateInjection<'a> {
         "code injection via template expansion"
     }
 
-    fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
+    fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self { _config: config })
+        Ok(Self { _state: state })
     }
 
     fn audit<'w>(
-        &mut self,
+        &self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];

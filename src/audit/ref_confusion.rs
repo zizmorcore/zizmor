@@ -16,18 +16,17 @@ use crate::{
     finding::{Confidence, Severity},
     github_api,
     models::Uses,
-    AuditConfig,
+    state::AuditState,
 };
 
 const REF_CONFUSION_ANNOTATION: &str =
     "uses a ref that's provided by both the branch and tag namespaces";
 
-pub(crate) struct RefConfusion<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct RefConfusion {
     client: github_api::Client,
 }
 
-impl<'a> RefConfusion<'a> {
+impl RefConfusion {
     fn confusable(&self, uses: &Uses) -> Result<bool> {
         let Some(sym_ref) = uses.symbolic_ref() else {
             return Ok(false);
@@ -51,7 +50,7 @@ impl<'a> RefConfusion<'a> {
     }
 }
 
-impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
+impl WorkflowAudit for RefConfusion {
     fn ident() -> &'static str
     where
         Self: Sized,
@@ -66,26 +65,23 @@ impl<'a> WorkflowAudit<'a> for RefConfusion<'a> {
         "git ref for action with ambiguous ref type"
     }
 
-    fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
+    fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        if config.offline {
+        if state.config.offline {
             return Err(anyhow!("offline audits only requested"));
         }
 
-        let Some(gh_token) = config.gh_token else {
+        let Some(client) = state.github_client() else {
             return Err(anyhow!("can't audit without a GitHub API token"));
         };
 
-        Ok(Self {
-            _config: config,
-            client: github_api::Client::new(gh_token),
-        })
+        Ok(Self { client })
     }
 
     fn audit<'w>(
-        &mut self,
+        &self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];

@@ -5,10 +5,7 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    ops::Deref,
-};
+use std::ops::Deref;
 
 use anyhow::{anyhow, Result};
 use github_actions_models::workflow::{job::StepBody, Job};
@@ -18,84 +15,49 @@ use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, Branch, ComparisonStatus, Tag},
     models::{Uses, Workflow},
-    AuditConfig,
+    state::AuditState,
 };
 
 pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
 
-pub(crate) struct ImpostorCommit<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct ImpostorCommit {
     pub(crate) client: github_api::Client,
-    pub(crate) ref_cache: HashMap<(String, String), (Vec<Branch>, Vec<Tag>)>,
-    /// A cache of `(base_ref, head_ref) => status`.
-    ///
-    /// We don't bother disambiguating this cache by org/repo, since `head_ref`
-    /// is a commit ref and we expect those to be globally unique.
-    /// This is not technically true of Git SHAs due to SHAttered, but is
-    /// effectively true for SHAs on GitHub due to GitHub's collision detection.
-    pub(crate) ref_comparison_cache: HashMap<(String, String), bool>,
 }
 
-impl<'a> ImpostorCommit<'a> {
-    fn named_refs(&mut self, uses: Uses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
-        let entry = match self
-            .ref_cache
-            .entry((uses.owner.to_string(), uses.repo.to_string()))
-        {
-            Entry::Occupied(o) => o.into_mut(),
-            Entry::Vacant(v) => {
-                let branches = self.client.list_branches(uses.owner, uses.repo)?;
-                let tags = self.client.list_tags(uses.owner, uses.repo)?;
-
-                v.insert((branches, tags))
-            }
-        };
-
-        // Dumb: we shold be able to borrow immutably here.
-        Ok((entry.0.clone(), entry.1.clone()))
+impl ImpostorCommit {
+    fn named_refs(&self, uses: Uses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
+        let branches = self.client.list_branches(uses.owner, uses.repo)?;
+        let tags = self.client.list_tags(uses.owner, uses.repo)?;
+        Ok((branches, tags))
     }
 
     fn named_ref_contains_commit(
-        &mut self,
+        &self,
         uses: &Uses<'_>,
         base_ref: &str,
         head_ref: &str,
     ) -> Result<bool> {
-        let presence = match self
-            .ref_comparison_cache
-            .entry((base_ref.to_string(), head_ref.to_string()))
-        {
-            Entry::Occupied(o) => {
-                log::debug!("cache hit: {base_ref}..{head_ref}");
-                o.into_mut()
-            }
-            Entry::Vacant(v) => {
-                let presence = match self
-                    .client
-                    .compare_commits(uses.owner, uses.repo, base_ref, head_ref)?
-                {
-                    // A base ref "contains" a commit if the base is either identical
-                    // to the head ("identical") or the target is behind the base ("behind").
-                    Some(comp) => matches!(
-                        comp.status,
-                        ComparisonStatus::Behind | ComparisonStatus::Identical
-                    ),
-                    // GitHub's API returns 404 when the refs under comparison
-                    // are completely divergent, i.e. no contains relationship is possible.
-                    None => false,
-                };
-
-                v.insert(presence)
-            }
-        };
-
-        Ok(*presence)
+        Ok(
+            match self
+                .client
+                .compare_commits(uses.owner, uses.repo, base_ref, head_ref)?
+            {
+                // A base ref "contains" a commit if the base is either identical
+                // to the head ("identical") or the target is behind the base ("behind").
+                Some(comp) => {
+                    matches!(comp, ComparisonStatus::Behind | ComparisonStatus::Identical)
+                }
+                // GitHub's API returns 404 when the refs under comparison
+                // are completely divergent, i.e. no contains relationship is possible.
+                None => false,
+            },
+        )
     }
 
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    fn impostor(&mut self, uses: Uses<'_>) -> Result<bool> {
+    fn impostor(&self, uses: Uses<'_>) -> Result<bool> {
         let (branches, tags) = self.named_refs(uses)?;
 
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
@@ -134,7 +96,7 @@ impl<'a> ImpostorCommit<'a> {
     }
 }
 
-impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
+impl WorkflowAudit for ImpostorCommit {
     fn ident() -> &'static str {
         "impostor-commit"
     }
@@ -146,26 +108,19 @@ impl<'a> WorkflowAudit<'a> for ImpostorCommit<'a> {
         "commit with no history in referenced repository"
     }
 
-    fn new(config: AuditConfig<'a>) -> Result<Self> {
-        if config.offline {
+    fn new(state: AuditState) -> Result<Self> {
+        if state.config.offline {
             return Err(anyhow!("offline audits only requested"));
         }
 
-        let Some(gh_token) = config.gh_token else {
+        let Some(client) = state.github_client() else {
             return Err(anyhow!("can't audit without a GitHub API token"));
         };
 
-        let client = github_api::Client::new(gh_token);
-
-        Ok(ImpostorCommit {
-            _config: config,
-            client,
-            ref_cache: Default::default(),
-            ref_comparison_cache: Default::default(),
-        })
+        Ok(ImpostorCommit { client })
     }
 
-    fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {

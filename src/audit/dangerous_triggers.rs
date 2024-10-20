@@ -5,13 +5,13 @@ use github_actions_models::workflow::Trigger;
 use super::WorkflowAudit;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Workflow;
-use crate::AuditConfig;
+use crate::state::AuditState;
 
-pub(crate) struct DangerousTriggers<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct DangerousTriggers {
+    pub(crate) _state: AuditState,
 }
 
-impl<'a> WorkflowAudit<'a> for DangerousTriggers<'a> {
+impl WorkflowAudit for DangerousTriggers {
     fn ident() -> &'static str {
         "dangerous-triggers"
     }
@@ -23,11 +23,11 @@ impl<'a> WorkflowAudit<'a> for DangerousTriggers<'a> {
         "use of fundamentally insecure workflow trigger"
     }
 
-    fn new(config: AuditConfig<'a>) -> Result<Self> {
-        Ok(Self { _config: config })
+    fn new(state: AuditState) -> Result<Self> {
+        Ok(Self { _state: state })
     }
 
-    fn audit<'w>(&mut self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let trigger = &workflow.on;
 
         let has_pull_request_target = match trigger {

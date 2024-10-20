@@ -7,7 +7,7 @@
 
 use crate::{
     finding::{Confidence, Severity},
-    AuditConfig,
+    AuditState,
 };
 
 use anyhow::Result;
@@ -18,11 +18,11 @@ use github_actions_models::{
 
 use super::WorkflowAudit;
 
-pub(crate) struct SelfHostedRunner<'a> {
-    pub(crate) _config: AuditConfig<'a>,
+pub(crate) struct SelfHostedRunner {
+    pub(crate) _state: AuditState,
 }
 
-impl<'a> WorkflowAudit<'a> for SelfHostedRunner<'a> {
+impl WorkflowAudit for SelfHostedRunner {
     fn ident() -> &'static str
     where
         Self: Sized,
@@ -37,20 +37,20 @@ impl<'a> WorkflowAudit<'a> for SelfHostedRunner<'a> {
         "runs on a self-hosted runner"
     }
 
-    fn new(config: AuditConfig<'a>) -> anyhow::Result<Self>
+    fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self { _config: config })
+        Ok(Self { _state: state })
     }
 
     fn audit<'w>(
-        &mut self,
+        &self,
         workflow: &'w crate::models::Workflow,
     ) -> Result<Vec<crate::finding::Finding<'w>>> {
         let mut results = vec![];
 
-        if !self._config.pedantic {
+        if !self._state.config.pedantic {
             log::info!("skipping self-hosted runner checks");
             return Ok(results);
         }

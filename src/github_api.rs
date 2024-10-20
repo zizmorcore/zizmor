@@ -11,13 +11,16 @@ use reqwest::{
 };
 use serde::{de::DeserializeOwned, Deserialize};
 
+use crate::state::Caches;
+
 pub(crate) struct Client {
     api_base: &'static str,
     http: blocking::Client,
+    caches: Caches,
 }
 
 impl Client {
-    pub(crate) fn new(token: &str) -> Self {
+    pub(crate) fn new(token: &str, caches: Caches) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
@@ -35,10 +38,12 @@ impl Client {
                 .default_headers(headers)
                 .build()
                 .expect("couldn't build GitHub client?"),
+            caches,
         }
     }
 
-    fn paginate_into<T: DeserializeOwned>(&self, endpoint: &str, dest: &mut Vec<T>) -> Result<()> {
+    fn paginate<T: DeserializeOwned>(&self, endpoint: &str) -> reqwest::Result<Vec<T>> {
+        let mut dest = vec![];
         let url = format!("{api_base}/{endpoint}", api_base = self.api_base);
 
         // If we were nice, we would parse GitHub's `links` header and extract
@@ -63,20 +68,25 @@ impl Client {
             pageno += 1;
         }
 
-        Ok(())
+        Ok(dest)
     }
 
     pub(crate) fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
-        let mut tags = vec![];
-        self.paginate_into(&format!("repos/{owner}/{repo}/branches"), &mut tags)?;
-        Ok(tags)
+        self.caches
+            .branch_cache
+            .try_get_with((owner.into(), repo.into()), || {
+                self.paginate(&format!("repos/{owner}/{repo}/branches"))
+            })
+            .map_err(Into::into)
     }
 
     pub(crate) fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>> {
-        let mut tags = vec![];
-        // This API is seemingly undocumented?
-        self.paginate_into(&format!("repos/{owner}/{repo}/tags"), &mut tags)?;
-        Ok(tags)
+        self.caches
+            .tag_cache
+            .try_get_with((owner.into(), repo.into()), || {
+                self.paginate(&format!("repos/{owner}/{repo}/tags"))
+            })
+            .map_err(Into::into)
     }
 
     pub(crate) fn commit_for_ref(
@@ -144,20 +154,26 @@ impl Client {
         repo: &str,
         base: &str,
         head: &str,
-    ) -> Result<Option<Comparison>> {
-        let url = format!(
-            "{api_base}/repos/{owner}/{repo}/compare/{base}...{head}",
-            api_base = self.api_base
-        );
+    ) -> Result<Option<ComparisonStatus>> {
+        self.caches
+            .ref_comparison_cache
+            .try_get_with((base.into(), head.into()), || {
+                let url = format!(
+                    "{api_base}/repos/{owner}/{repo}/compare/{base}...{head}",
+                    api_base = self.api_base
+                );
 
-        let resp = self.http.get(url).send()?;
-        match resp.status() {
-            StatusCode::OK => Ok(Some(resp.json()?)),
-            StatusCode::NOT_FOUND => Ok(None),
-            s => Err(anyhow!(
-                "{owner}/{repo}: error from GitHub API while comparing commits: {s}"
-            )),
-        }
+                let resp = self.http.get(url).send()?;
+
+                match resp.status() {
+                    StatusCode::OK => {
+                        Ok::<_, reqwest::Error>(Some(resp.json::<Comparison>()?.status))
+                    }
+                    StatusCode::NOT_FOUND => Ok(None),
+                    _ => Err(resp.error_for_status().unwrap_err()),
+                }
+            })
+            .map_err(Into::into)
     }
 
     pub(crate) fn gha_advisories(
@@ -217,7 +233,7 @@ pub(crate) struct GitObj {
     pub(crate) sha: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum ComparisonStatus {
     Ahead,
