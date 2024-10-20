@@ -33,6 +33,10 @@ impl Locator {
             }
 
             let query = builder.build();
+            log::trace!(
+                "querying {workflow}: {query:?}",
+                workflow = workflow.filename()
+            );
 
             let parent_feature = if let Some(parent) = query.parent() {
                 workflow.document.query(&parent)?
