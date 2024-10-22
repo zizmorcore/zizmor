@@ -2,6 +2,8 @@
 //!
 //! See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/evaluate-expressions-in-workflows-and-actions>
 
+WHITESPACE = _{ " " }
+
 /// A JSON number.
 number = @{
     "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
@@ -23,18 +25,35 @@ char   = _{
   | "'" ~ "'" // handle quote escaping explicitly
 }
 
+ident = @{ ASCII_ALPHA+ ~ (ASCII_ALPHANUMERIC | "-" | "_")* }
+
+/// A function call.
+call = @{ ident ~ "(" ~ WHITESPACE* ~ (expr ~ ("," ~ WHITESPACE* ~ expr)*)? ~ ")" }
+
 /// A *context ref*, e.g. `secrets.FOO_BAR`.
 ///
 /// See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs>
-context_ref = @{ context_key ~ ("." ~ context_key)? }
-
-/// A single key within a context ref, e.g. `secrets` within `secrets.FOO_BAR`.
-context_key = @{
-    ASCII_ALPHANUMERIC+ ~ ("-" | "_")* ~ ASCII_ALPHANUMERIC*
-}
+context_ref = @{ ident ~ ("." ~ ident)? }
 
 /// A single top-level value.
-value = _{ number | boolean | null | string | context_ref }
+value = _{ number | boolean | null | string | call | context_ref }
+
+/// Unary negation.
+negation = { "!" ~ expr }
+
+/// Binary comparison.
+comparison = { expr ~ (">" | ">=" | "<" | "<=") ~ expr }
+
+/// Binary equality.
+equality = { expr ~ "==" ~ expr }
+
+/// Binary logical and.
+and = { expr ~ "&&" ~ expr }
+
+/// Binary logical or.
+or = { expr ~ "||" ~ expr }
 
 /// An expression.
-expr = _{ SOI ~ (value) ~ EOI }
+expr = _{ value }
+
+top = _{ SOI ~ (expr) ~ EOI }

@@ -54,4 +54,29 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn test_parse_call() {
+        let cases = &[
+            "foo()",
+            "foo(bar)",
+            "foo(bar())",
+            "foo(1.23)",
+            "foo(1,2)",
+            "foo(1, 2)",
+            "foo(1, 2, secret.GH_TOKEN)",
+            "foo(   )",
+        ];
+
+        for case in cases {
+            assert_eq!(
+                ExprParser::parse(Rule::call, case)
+                    .unwrap()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+                *case
+            );
+        }
+    }
 }
