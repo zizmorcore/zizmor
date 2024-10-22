@@ -35,9 +35,6 @@ call = @{ ident ~ "(" ~ WHITESPACE* ~ (expr ~ ("," ~ WHITESPACE* ~ expr)*)? ~ ")
 /// See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs>
 context_ref = @{ ident ~ ("." ~ ident)? }
 
-/// A single top-level value.
-value = _{ number | boolean | null | string | call | context_ref }
-
 /// Unary negation.
 negation = { "!" ~ expr }
 
@@ -54,6 +51,6 @@ and = { expr ~ "&&" ~ expr }
 or = { expr ~ "||" ~ expr }
 
 /// An expression.
-expr = _{ value }
+expr = _{ number | boolean | null | string | call | context_ref }
 
 top = _{ SOI ~ (expr) ~ EOI }
