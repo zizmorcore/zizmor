@@ -2,34 +2,29 @@
 //!
 //! See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/evaluate-expressions-in-workflows-and-actions>
 
-// Whitespace handling
-WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
-COMMENT    = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+/// Whitespace handling
+WHITESPACE = _{ " " }
 
-/// Main expression rule
-expression = { SOI ~ logic_expr ~ EOI }
+expression = { SOI ~ or_expr ~ EOI }
 
-/// Logical expressions
-logic_expr = { comparison_expr ~ (logic_op ~ comparison_expr)* }
-logic_op   = { "&&" | "||" }
+/// Logical OR
+or_expr = { and_expr ~ ("||" ~ and_expr)* }
 
-/// Comparison expressions
-comparison_expr = { additive_expr ~ (comparison_op ~ additive_expr)* }
-comparison_op   = { "==" | "!=" | ">" | ">=" | "<" | "<=" }
+/// Logical AND
+and_expr = { eq_expr ~ ("&&" ~ eq_expr)* }
 
-/// Arithmetic expressions
-additive_expr = { multiplicative_expr ~ (additive_op ~ multiplicative_expr)* }
-additive_op   = { "+" | "-" }
+/// Structural equality/inequality
+eq_expr = { comp_expr ~ (eq_op ~ comp_expr)* }
+eq_op   = { "==" | "!=" }
 
-/// Multiplicative expressions
-multiplicative_expr = { unary_expr ~ (multiplicative_op ~ unary_expr)* }
-multiplicative_op   = { "*" | "/" }
+/// Structural comparison
+comp_expr = { unary_expr ~ (comp_op ~ unary_expr)* }
+comp_op   = { ">" | ">=" | "<" | "<=" }
 
-/// Unary expressions
+/// Unary operations, including the base case for expressions.
 unary_expr = { unary_op? ~ primary_expr }
-unary_op   = { "!" | "-" }
+unary_op   = { "!" }
 
-/// Primary expressions
 primary_expr = {
     number
   | string
@@ -37,27 +32,29 @@ primary_expr = {
   | null
   | function_call
   | context_reference
-  | array
   | "(" ~ primary_expr ~ ")"
 }
 
-/// Literal values
-number       = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT+)? }
+/// Numbers
+number = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT+)? }
+
+/// Strings
 string       = ${ "'" ~ string_inner ~ "'" }
 string_inner = @{ string_char* }
 string_char  = @{
     !("'") ~ ANY
   | "'" ~ "'"
 }
-boolean      =  { "true" | "false" }
-null         =  { "null" }
+
+/// Booleans
+boolean = { "true" | "false" }
+
+/// Null
+null = { "null" }
 
 /// Context references (e.g., github.event.issue.number)
 context_reference = @{ identifier ~ ("." ~ identifier)* }
 identifier        = @{ (ASCII_ALPHA | "_" | "-") ~ (ASCII_ALPHANUMERIC | "_" | "-")* }
-
-/// Arrays
-array = { "[" ~ (logic_expr ~ ("," ~ logic_expr)*)? ~ "]" }
 
 /// Function calls
 function_call = { identifier ~ "(" ~ (primary_expr ~ ("," ~ primary_expr)*)? ~ ")" }

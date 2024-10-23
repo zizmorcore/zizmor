@@ -1,11 +1,68 @@
 //! Expression parsing and analysis.
 
+use anyhow::Result;
+use pest::{
+    iterators::Pair,
+    pratt_parser::{Op, PrattParser},
+    Parser,
+};
 use pest_derive::Parser;
 
 /// A parser for GitHub Actions' expression language.
 #[derive(Parser)]
 #[grammar = "expr/expr.pest"]
 struct ExprParser;
+
+pub(crate) enum BinOp {
+    And,
+    Or,
+    Eq,
+    Neq,
+    Gt,
+    Ge,
+    Lt,
+    Le,
+    Add,
+    Sub,
+    Mul,
+    Div,
+}
+
+pub(crate) enum UnOp {
+    Not,
+    Neg,
+}
+
+pub(crate) enum Expr {
+    Number(f64),
+    String(String),
+    Boolean(bool),
+    Null,
+    Call {
+        func: String,
+        args: Vec<Box<Expr>>,
+    },
+    ContextRef(String),
+    BinOp {
+        lhs: Box<Expr>,
+        op: BinOp,
+        rhs: Box<Expr>,
+    },
+    UnOp {
+        op: UnOp,
+        expr: Box<Expr>,
+    },
+}
+
+fn parse(expr: &str) -> Result<()> {
+    let expr = ExprParser::parse(Rule::expression, expr)?.next().unwrap();
+
+    fn parse_inner(expr: Pair<'_, Rule>) -> Result<()> {
+        todo!()
+    }
+
+    parse_inner(expr)
+}
 
 #[cfg(test)]
 mod tests {
