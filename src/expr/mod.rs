@@ -1,11 +1,8 @@
 //! Expression parsing and analysis.
 
-use anyhow::Result;
-use pest::{
-    iterators::Pair,
-    pratt_parser::{Op, PrattParser},
-    Parser,
-};
+use anyhow::{Ok, Result};
+use itertools::Itertools;
+use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 
 /// A parser for GitHub Actions' expression language.
@@ -13,6 +10,7 @@ use pest_derive::Parser;
 #[grammar = "expr/expr.pest"]
 struct ExprParser;
 
+#[derive(Debug, PartialEq)]
 pub(crate) enum BinOp {
     And,
     Or,
@@ -28,11 +26,12 @@ pub(crate) enum BinOp {
     Div,
 }
 
+#[derive(Debug, PartialEq)]
 pub(crate) enum UnOp {
     Not,
-    Neg,
 }
 
+#[derive(Debug, PartialEq)]
 pub(crate) enum Expr {
     Number(f64),
     String(String),
@@ -54,24 +53,168 @@ pub(crate) enum Expr {
     },
 }
 
-fn parse(expr: &str) -> Result<()> {
-    let expr = ExprParser::parse(Rule::expression, expr)?.next().unwrap();
+impl Expr {
+    pub(crate) fn parse(expr: &str) -> Result<Expr> {
+        // Top level `expression` is a single `or_expr`.
+        let or_expr = ExprParser::parse(Rule::expression, expr)?
+            .next()
+            .unwrap()
+            .into_inner()
+            .next()
+            .unwrap();
 
-    fn parse_inner(expr: Pair<'_, Rule>) -> Result<()> {
-        todo!()
+        fn parse_inner(pair: Pair<'_, Rule>) -> Result<Expr> {
+            // We're parsing a pest grammar, which isn't left-recursive.
+            // As a result, we have constructions like
+            // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
+            // result in wonky ASTs like one or many (>2) headed ORs.
+            // We turn these into sane looking ASTs by punching the single
+            // pairs down to their primitive type and folding the
+            // many-headed pairs appropriately.
+            // For example, `or_expr` matches the `1` one but punches through
+            // to `Number(1)`, and also matches `true || true || true` which
+            // becomes `BinOp(BinOp(true, true), true)`.
+
+            match pair.as_rule() {
+                Rule::or_expr => {
+                    let mut pairs = pair.into_inner();
+                    let lhs = parse_inner(pairs.next().unwrap())?;
+                    pairs.try_fold(lhs, |expr, next| {
+                        Ok(Expr::BinOp {
+                            lhs: expr.into(),
+                            op: BinOp::Or,
+                            rhs: parse_inner(next)?.into(),
+                        })
+                    })
+                }
+                Rule::and_expr => {
+                    let mut pairs = pair.into_inner();
+                    let lhs = parse_inner(pairs.next().unwrap())?;
+                    pairs.try_fold(lhs, |expr, next| {
+                        Ok(Expr::BinOp {
+                            lhs: expr.into(),
+                            op: BinOp::And,
+                            rhs: parse_inner(next)?.into(),
+                        })
+                    })
+                }
+                Rule::eq_expr => {
+                    // eq_expr matches both `==` and `!=` and captures
+                    // them in the `eq_op` capture, so we fold with
+                    // two-tuples of (eq_op, comp_expr).
+                    let mut pairs = pair.into_inner();
+                    let lhs = parse_inner(pairs.next().unwrap())?;
+
+                    let pair_chunks = pairs.chunks(2);
+                    pair_chunks.into_iter().try_fold(lhs, |expr, mut next| {
+                        let eq_op = next.next().unwrap();
+                        let comp_expr = next.next().unwrap();
+
+                        let eq_op = match eq_op.as_str() {
+                            "==" => BinOp::Eq,
+                            "!=" => BinOp::Neq,
+                            _ => unreachable!(),
+                        };
+
+                        Ok(Expr::BinOp {
+                            lhs: expr.into(),
+                            op: eq_op,
+                            rhs: parse_inner(comp_expr)?.into(),
+                        })
+                    })
+                }
+                Rule::comp_expr => {
+                    // Same as eq_expr, but with comparison operators.
+                    let mut pairs = pair.into_inner();
+                    let lhs = parse_inner(pairs.next().unwrap())?;
+
+                    let pair_chunks = pairs.chunks(2);
+                    pair_chunks.into_iter().try_fold(lhs, |expr, mut next| {
+                        let comp_op = next.next().unwrap();
+                        let unary_expr = next.next().unwrap();
+
+                        let eq_op = match comp_op.as_str() {
+                            ">" => BinOp::Gt,
+                            ">=" => BinOp::Ge,
+                            "<" => BinOp::Lt,
+                            "<=" => BinOp::Le,
+                            _ => unreachable!(),
+                        };
+
+                        Ok(Expr::BinOp {
+                            lhs: expr.into(),
+                            op: eq_op,
+                            rhs: parse_inner(unary_expr)?.into(),
+                        })
+                    })
+                }
+                Rule::unary_expr => {
+                    let mut pairs = pair.into_inner();
+                    let pair = pairs.next().unwrap();
+
+                    match pair.as_rule() {
+                        Rule::unary_op => Ok(Expr::UnOp {
+                            op: UnOp::Not,
+                            expr: parse_inner(pairs.next().unwrap())?.into(),
+                        }),
+                        Rule::primary_expr => parse_inner(pair),
+                        _ => unreachable!(),
+                    }
+                }
+                Rule::primary_expr => {
+                    // TODO(ww): Unwrap and punt back to the top-level,
+                    // instead of matching the various primitives within
+                    // the `primary_expr` context?
+                    let pairs = pair.into_inner().next().unwrap();
+
+                    match pairs.as_rule() {
+                        Rule::number => Ok(Expr::Number(pairs.as_str().parse().unwrap())),
+                        Rule::string => Ok(Expr::String(
+                            // string -> string_inner
+                            pairs
+                                .into_inner()
+                                .next()
+                                .unwrap()
+                                .as_str()
+                                .replace("''", "'"),
+                        )),
+                        Rule::boolean => Ok(Expr::Boolean(pairs.as_str().parse().unwrap())),
+                        Rule::null => Ok(Expr::Null),
+                        Rule::function_call => {
+                            let mut pairs = pairs.into_inner();
+
+                            let identifier = pairs.next().unwrap();
+                            let args: Vec<Box<Expr>> = pairs
+                                .map(|pair| parse_inner(pair).map(Box::new))
+                                .collect::<Result<_, _>>()?;
+
+                            Ok(Expr::Call {
+                                func: identifier.as_str().into(),
+                                args: args.into(),
+                            })
+                        }
+                        Rule::context_reference => todo!(),
+                        // Trivial recursive case for `( primary_expr )`
+                        Rule::primary_expr => parse_inner(pairs),
+                        _ => unreachable!(),
+                    }
+                }
+                r => panic!("fuck: {r:?}"),
+            }
+        }
+
+        parse_inner(or_expr)
     }
-
-    parse_inner(expr)
 }
 
 #[cfg(test)]
 mod tests {
     use pest::Parser as _;
 
-    use super::{ExprParser, Rule};
+    use super::{BinOp, Expr, ExprParser, Rule, UnOp};
 
     #[test]
-    fn test_parse_string() {
+    fn test_parse_string_rule() {
         let cases = &[
             ("''", ""),
             ("' '", " "),
@@ -92,7 +235,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_ident() {
+    fn test_parse_ident_rule() {
         let cases = &[
             "foo.bar",
             "github.action_path",
@@ -116,11 +259,11 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_call() {
+    fn test_parse_call_rule() {
         let cases = &[
             "foo()",
             "foo(bar)",
-            // "foo(bar())",
+            "foo(bar())",
             "foo(1.23)",
             "foo(1,2)",
             "foo(1, 2)",
@@ -142,8 +285,12 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_expr() {
-        let cases = &["fromJSON(inputs.free-threading) && '--disable-gil' || ''"];
+    fn test_parse_expr_rule() {
+        let cases = &[
+            "fromJSON(inputs.free-threading) && '--disable-gil' || ''",
+            "foo || bar || baz",
+            "foo || bar && baz || foo && 1 && 2 && 3 || 4",
+        ];
 
         for case in cases {
             assert_eq!(
@@ -154,6 +301,47 @@ mod tests {
                     .as_str(),
                 *case
             );
+        }
+    }
+
+    #[test]
+    fn test_parse() {
+        let cases = &[
+            (
+                "!true || false || true",
+                Expr::BinOp {
+                    lhs: Expr::BinOp {
+                        lhs: Expr::UnOp {
+                            op: UnOp::Not,
+                            expr: Expr::Boolean(true).into(),
+                        }
+                        .into(),
+                        op: BinOp::Or,
+                        rhs: Expr::Boolean(false).into(),
+                    }
+                    .into(),
+                    op: BinOp::Or,
+                    rhs: Expr::Boolean(true).into(),
+                },
+            ),
+            ("'foo '' bar'", Expr::String("foo ' bar".into())),
+            ("('foo '' bar')", Expr::String("foo ' bar".into())),
+            ("((('foo '' bar')))", Expr::String("foo ' bar".into())),
+            (
+                "foo(1, 2, 3)",
+                Expr::Call {
+                    func: "foo".into(),
+                    args: vec![
+                        Expr::Number(1.0).into(),
+                        Expr::Number(2.0).into(),
+                        Expr::Number(3.0).into(),
+                    ],
+                },
+            ),
+        ];
+
+        for (case, expr) in cases {
+            assert_eq!(Expr::parse(&case).unwrap(), *expr);
         }
     }
 }
