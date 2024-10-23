@@ -42,16 +42,15 @@ primary_expr = {
 }
 
 /// Literal values
-number  = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT+)? }
-string  = ${ "'" ~ inner ~ "'" }
-inner   = @{ char* }
-char    = _{
-    !("'") ~ ANY // match anything except a single quote
-
-  | "'" ~ "'" // handle quote escaping explicitly
+number       = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT+)? }
+string       = ${ "'" ~ string_inner ~ "'" }
+string_inner = @{ string_char* }
+string_char  = @{
+    !("'") ~ ANY
+  | "'" ~ "'"
 }
-boolean =  { "true" | "false" }
-null    =  { "null" }
+boolean      =  { "true" | "false" }
+null         =  { "null" }
 
 /// Context references (e.g., github.event.issue.number)
 context_reference = @{ identifier ~ ("." ~ identifier)* }

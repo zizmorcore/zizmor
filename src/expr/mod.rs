@@ -16,6 +16,9 @@ mod tests {
     #[test]
     fn test_parse_string() {
         let cases = &[
+            ("''", ""),
+            ("' '", " "),
+            ("''''", "''"),
             ("'test'", "test"),
             ("'spaces are ok'", "spaces are ok"),
             ("'escaping '' works'", "escaping '' works"),
