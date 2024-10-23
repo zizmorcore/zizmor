@@ -30,6 +30,7 @@ primary_expr = {
   | string
   | boolean
   | null
+  | index
   | function_call
   | context_reference
   | "(" ~ primary_expr ~ ")"
@@ -57,4 +58,7 @@ context_reference = @{ identifier ~ ("." ~ identifier)* }
 identifier        = @{ (ASCII_ALPHA | "_" | "-") ~ (ASCII_ALPHANUMERIC | "_" | "-")* }
 
 /// Function calls
-function_call = { identifier ~ "(" ~ (primary_expr ~ ("," ~ primary_expr)*)? ~ ")" }
+function_call = { identifier ~ "(" ~ (or_expr ~ ("," ~ or_expr)*)? ~ ")" }
+
+/// Index operations
+index = { (context_reference | function_call | ("(" ~ primary_expr ~ ")")) ~ "[" ~ or_expr ~ "]" }

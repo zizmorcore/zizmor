@@ -31,26 +31,39 @@ pub(crate) enum UnOp {
     Not,
 }
 
+/// Represents a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
 pub(crate) enum Expr {
+    /// A number literal.
     Number(f64),
+    /// A string literal.
     String(String),
+    /// A boolean literal.
     Boolean(bool),
+    /// The `null` literal.
     Null,
-    Call {
-        func: String,
-        args: Vec<Box<Expr>>,
-    },
+    /// An index operation.
+    ///
+    /// Three different kinds of expressions can be indexed:
+    ///
+    /// ```
+    /// functionCall[expr]
+    /// context.reference[expr]
+    /// (<arbitrary expression>)[expr]
+    /// ```
+    Index { parent: Box<Expr>, index: Box<Expr> },
+    /// A function call.
+    Call { func: String, args: Vec<Box<Expr>> },
+    /// A context reference.
     ContextRef(String),
+    /// A binary operation, either logical or arithmetic.
     BinOp {
         lhs: Box<Expr>,
         op: BinOp,
         rhs: Box<Expr>,
     },
-    UnOp {
-        op: UnOp,
-        expr: Box<Expr>,
-    },
+    /// A unary operation. Negation (`!`) is currently the only `UnOp`.
+    UnOp { op: UnOp, expr: Box<Expr> },
 }
 
 impl Expr {
@@ -162,43 +175,43 @@ impl Expr {
                     }
                 }
                 Rule::primary_expr => {
-                    // TODO(ww): Unwrap and punt back to the top-level,
-                    // instead of matching the various primitives within
-                    // the `primary_expr` context?
-                    let pairs = pair.into_inner().next().unwrap();
-
-                    match pairs.as_rule() {
-                        Rule::number => Ok(Expr::Number(pairs.as_str().parse().unwrap())),
-                        Rule::string => Ok(Expr::String(
-                            // string -> string_inner
-                            pairs
-                                .into_inner()
-                                .next()
-                                .unwrap()
-                                .as_str()
-                                .replace("''", "'"),
-                        )),
-                        Rule::boolean => Ok(Expr::Boolean(pairs.as_str().parse().unwrap())),
-                        Rule::null => Ok(Expr::Null),
-                        Rule::function_call => {
-                            let mut pairs = pairs.into_inner();
-
-                            let identifier = pairs.next().unwrap();
-                            let args: Vec<Box<Expr>> = pairs
-                                .map(|pair| parse_inner(pair).map(Box::new))
-                                .collect::<Result<_, _>>()?;
-
-                            Ok(Expr::Call {
-                                func: identifier.as_str().into(),
-                                args: args.into(),
-                            })
-                        }
-                        Rule::context_reference => todo!(),
-                        // Trivial recursive case for `( primary_expr )`
-                        Rule::primary_expr => parse_inner(pairs),
-                        _ => unreachable!(),
-                    }
+                    // Punt back to the top level match to keep things simple.
+                    parse_inner(pair.into_inner().next().unwrap())
                 }
+                Rule::number => Ok(Expr::Number(pair.as_str().parse().unwrap())),
+                Rule::string => Ok(Expr::String(
+                    // string -> string_inner
+                    pair.into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .replace("''", "'"),
+                )),
+                Rule::boolean => Ok(Expr::Boolean(pair.as_str().parse().unwrap())),
+                Rule::null => Ok(Expr::Null),
+                Rule::index => {
+                    // (context | function (expr))[expr]
+                    let mut pairs = pair.into_inner();
+
+                    Ok(Expr::Index {
+                        parent: parse_inner(pairs.next().unwrap())?.into(),
+                        index: parse_inner(pairs.next().unwrap())?.into(),
+                    })
+                }
+                Rule::function_call => {
+                    let mut pairs = pair.into_inner();
+
+                    let identifier = pairs.next().unwrap();
+                    let args: Vec<Box<Expr>> = pairs
+                        .map(|pair| parse_inner(pair).map(Box::new))
+                        .collect::<Result<_, _>>()?;
+
+                    Ok(Expr::Call {
+                        func: identifier.as_str().into(),
+                        args: args.into(),
+                    })
+                }
+                Rule::context_reference => Ok(Expr::ContextRef(pair.as_str().into())),
                 r => panic!("fuck: {r:?}"),
             }
         }
@@ -336,6 +349,14 @@ mod tests {
                         Expr::Number(2.0).into(),
                         Expr::Number(3.0).into(),
                     ],
+                },
+            ),
+            ("foo.bar.baz", Expr::ContextRef("foo.bar.baz".into())),
+            (
+                "foo.bar.baz[1]",
+                Expr::Index {
+                    parent: Expr::ContextRef("foo.bar.baz".into()).into(),
+                    index: Expr::Number(1.0).into(),
                 },
             ),
         ];
