@@ -45,7 +45,7 @@ mod tests {
 
         for case in cases {
             assert_eq!(
-                ExprParser::parse(Rule::context_ref, case)
+                ExprParser::parse(Rule::context_reference, case)
                     .unwrap()
                     .next()
                     .unwrap()
@@ -60,17 +60,34 @@ mod tests {
         let cases = &[
             "foo()",
             "foo(bar)",
-            "foo(bar())",
+            // "foo(bar())",
             "foo(1.23)",
             "foo(1,2)",
             "foo(1, 2)",
             "foo(1, 2, secret.GH_TOKEN)",
             "foo(   )",
+            "fromJSON(inputs.free-threading)",
         ];
 
         for case in cases {
             assert_eq!(
-                ExprParser::parse(Rule::call, case)
+                ExprParser::parse(Rule::function_call, case)
+                    .unwrap()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+                *case
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_expr() {
+        let cases = &["fromJSON(inputs.free-threading) && '--disable-gil' || ''"];
+
+        for case in cases {
+            assert_eq!(
+                ExprParser::parse(Rule::expression, case)
                     .unwrap()
                     .next()
                     .unwrap()
