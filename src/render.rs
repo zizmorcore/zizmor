@@ -51,9 +51,14 @@ pub(crate) fn finding_snippet<'w>(
                 .line_start(1)
                 .origin(&workflow.path)
                 .annotations(locations.iter().map(|loc| {
+                    let annotation = match loc.symbolic.link {
+                        Some(ref link) => link,
+                        None => &loc.symbolic.annotation,
+                    };
+
                     Level::from(&finding.determinations.severity)
                         .span(loc.concrete.location.start_offset..loc.concrete.location.end_offset)
-                        .label(&loc.symbolic.annotation)
+                        .label(annotation)
                 })),
         );
     }

@@ -167,7 +167,12 @@ impl WorkflowAudit for KnownVulnerableActions {
                         Self::finding()
                             .confidence(Confidence::High)
                             .severity(severity)
-                            .add_location(step.location().with_keys(&["uses".into()]).annotated(id))
+                            .add_location(
+                                step.location()
+                                    .with_keys(&["uses".into()])
+                                    .annotated(&id)
+                                    .with_url(format!("https://github.com/advisories/{id}")),
+                            )
                             .build(workflow)?,
                     );
                 }

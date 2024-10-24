@@ -5,6 +5,7 @@ use std::borrow::Cow;
 use anyhow::Result;
 use locate::Locator;
 use serde::Serialize;
+use terminal_link::Link;
 
 use crate::models::{Job, Step, Workflow};
 
@@ -94,6 +95,12 @@ pub(crate) struct SymbolicLocation<'w> {
     /// An annotation for this location.
     pub(crate) annotation: String,
 
+    /// An OSC 8 rendered link for the location's annotation, if applicable.
+    ///
+    /// Not serialized, since it contains ANSI escape codes.
+    #[serde(skip_serializing)]
+    pub(crate) link: Option<String>,
+
     /// A symbolic route (of keys and indices) to the final location.
     pub(crate) route: Route<'w>,
 }
@@ -103,6 +110,7 @@ impl<'w> SymbolicLocation<'w> {
         SymbolicLocation {
             name: self.name,
             annotation: self.annotation.clone(),
+            link: None,
             route: self.route.with_keys(keys),
         }
     }
@@ -118,6 +126,12 @@ impl<'w> SymbolicLocation<'w> {
     /// Adds a human-readable annotation to the current `SymbolicLocation`.
     pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> SymbolicLocation<'w> {
         self.annotation = annotation.into();
+        self
+    }
+
+    /// Adds a URL to the current `SymbolicLocation`.
+    pub(crate) fn with_url(mut self, url: impl Into<String>) -> SymbolicLocation<'w> {
+        self.link = Some(Link::new(&self.annotation, &url.into()).to_string());
         self
     }
 

@@ -52,6 +52,7 @@ impl Workflow {
         SymbolicLocation {
             name: self.filename(),
             annotation: "this workflow".to_string(),
+            link: None,
             route: Route::new(),
         }
     }
