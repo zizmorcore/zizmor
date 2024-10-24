@@ -9,6 +9,7 @@ Quick links:
 * [Usage](#usage)
   * [Online and offline use](#online-and-offline-use)
   * [Output formats](#output-formats)
+  * [Audit documentation](./docs/audit/)
 * [Integration](#integration)
   * [Use in GitHub Actions](#use-in-github-actions)
 * [Technical details](#technical-details)
