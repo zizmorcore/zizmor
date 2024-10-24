@@ -20,10 +20,6 @@ pub(crate) enum BinOp {
     Ge,
     Lt,
     Le,
-    Add,
-    Sub,
-    Mul,
-    Div,
 }
 
 #[derive(Debug, PartialEq)]
