@@ -217,7 +217,7 @@ impl Expr {
 
                     Ok(Expr::Call {
                         func: identifier.as_str().into(),
-                        args: args.into(),
+                        args,
                     })
                 }
                 Rule::context_reference => Ok(Expr::ContextRef(pair.as_str().into())),
@@ -380,7 +380,7 @@ mod tests {
         ];
 
         for (case, expr) in cases {
-            assert_eq!(Expr::parse(&case).unwrap(), *expr);
+            assert_eq!(Expr::parse(case).unwrap(), *expr);
         }
     }
 }
