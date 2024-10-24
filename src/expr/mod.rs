@@ -54,10 +54,10 @@ pub(crate) enum Expr {
     /// e.g. `functionCall()[1][2][3]`.
     Index {
         parent: Box<Expr>,
-        indices: Vec<Box<Expr>>,
+        indices: Vec<Expr>,
     },
     /// A function call.
-    Call { func: String, args: Vec<Box<Expr>> },
+    Call { func: String, args: Vec<Expr> },
     /// A context reference.
     // TODO: This should probably be a vec of parts internally,
     // to expose the individual component/star parts.
@@ -233,7 +233,7 @@ impl Expr {
                     Ok(Expr::Index {
                         parent: parse_pair(pairs.next().unwrap())?.into(),
                         indices: pairs
-                            .map(|pair| parse_pair(pair).map(Box::new))
+                            .map(|pair| parse_pair(pair))
                             .collect::<Result<_, _>>()?,
                     })
                 }
@@ -241,8 +241,8 @@ impl Expr {
                     let mut pairs = pair.into_inner();
 
                     let identifier = pairs.next().unwrap();
-                    let args: Vec<Box<Expr>> = pairs
-                        .map(|pair| parse_pair(pair).map(Box::new))
+                    let args = pairs
+                        .map(|pair| parse_pair(pair))
                         .collect::<Result<_, _>>()?;
 
                     Ok(Expr::Call {
@@ -386,9 +386,9 @@ mod tests {
                 Expr::Call {
                     func: "foo".into(),
                     args: vec![
-                        Expr::Number(1.0).into(),
-                        Expr::Number(2.0).into(),
-                        Expr::Number(3.0).into(),
+                        Expr::Number(1.0),
+                        Expr::Number(2.0),
+                        Expr::Number(3.0),
                     ],
                 },
             ),
@@ -397,14 +397,14 @@ mod tests {
                 "foo.bar.baz[1][2]",
                 Expr::Index {
                     parent: Expr::Context("foo.bar.baz".into()).into(),
-                    indices: vec![Expr::Number(1.0).into(), Expr::Number(2.0).into()],
+                    indices: vec![Expr::Number(1.0), Expr::Number(2.0)],
                 },
             ),
             (
                 "foo.bar.baz[*]",
                 Expr::Index {
                     parent: Expr::Context("foo.bar.baz".into()).into(),
-                    indices: vec![Expr::Star.into()],
+                    indices: vec![Expr::Star],
                 },
             ),
         ];
