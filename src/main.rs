@@ -158,12 +158,11 @@ fn main() -> Result<()> {
                 )
             })?);
             bar.inc(1);
-            bar.println(format!(
-                "🌈 completed {name} on {workflow}",
-                name = name.green(),
-                workflow = &workflow.filename().cyan()
-            ));
         }
+        bar.println(format!(
+            "🌈 completed {workflow}",
+            workflow = &workflow.filename().cyan()
+        ));
     }
 
     bar.finish_and_clear();
