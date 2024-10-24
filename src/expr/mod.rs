@@ -1,6 +1,6 @@
 //! Expression parsing and analysis.
 
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use itertools::Itertools;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
