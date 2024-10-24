@@ -5,6 +5,7 @@ edition = "2021"
 repository = "https://github.com/woodruffw/zizmor"
 homepage = "https://github.com/woodruffw/zizmor"
 authors = ["William Woodruff <william@yossarian.net>"]
+rust-version = "1.80.1"
 
 [dependencies]
 annotate-snippets = "0.11.4"

@@ -166,7 +166,7 @@ fn main() -> Result<()> {
         }
     }
 
-    bar.finish();
+    bar.finish_and_clear();
 
     let format = match args.format {
         None => {
