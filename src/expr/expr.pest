@@ -61,4 +61,4 @@ identifier        = @{ (ASCII_ALPHA | "_" | "-") ~ (ASCII_ALPHANUMERIC | "_" | "
 function_call = { identifier ~ "(" ~ (or_expr ~ ("," ~ or_expr)*)? ~ ")" }
 
 /// Index operations
-index = { (context_reference | function_call | ("(" ~ primary_expr ~ ")")) ~ "[" ~ or_expr ~ "]" }
+index = { (context_reference | function_call | ("(" ~ primary_expr ~ ")")) ~ ("[" ~ or_expr ~ "]")+ }

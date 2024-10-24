@@ -47,7 +47,13 @@ pub(crate) enum Expr {
     /// context.reference[expr]
     /// (<arbitrary expression>)[expr]
     /// ```
-    Index { parent: Box<Expr>, index: Box<Expr> },
+    ///
+    /// Arbitrarily many nestings of indices are allowed,
+    /// e.g. `functionCall()[1][2][3]`.
+    Index {
+        parent: Box<Expr>,
+        indices: Vec<Box<Expr>>,
+    },
     /// A function call.
     Call { func: String, args: Vec<Box<Expr>> },
     /// A context reference.
@@ -186,12 +192,14 @@ impl Expr {
                 Rule::boolean => Ok(Expr::Boolean(pair.as_str().parse().unwrap())),
                 Rule::null => Ok(Expr::Null),
                 Rule::index => {
-                    // (context | function (expr))[expr]
+                    // (context | function (expr))[expr]+
                     let mut pairs = pair.into_inner();
 
                     Ok(Expr::Index {
                         parent: parse_inner(pairs.next().unwrap())?.into(),
-                        index: parse_inner(pairs.next().unwrap())?.into(),
+                        indices: pairs
+                            .map(|pair| parse_inner(pair).map(Box::new))
+                            .collect::<Result<_, _>>()?,
                     })
                 }
                 Rule::function_call => {
@@ -349,10 +357,10 @@ mod tests {
             ),
             ("foo.bar.baz", Expr::ContextRef("foo.bar.baz".into())),
             (
-                "foo.bar.baz[1]",
+                "foo.bar.baz[1][2]",
                 Expr::Index {
                     parent: Expr::ContextRef("foo.bar.baz".into()).into(),
-                    index: Expr::Number(1.0).into(),
+                    indices: vec![Expr::Number(1.0).into(), Expr::Number(2.0).into()],
                 },
             ),
         ];
