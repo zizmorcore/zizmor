@@ -54,11 +54,12 @@ boolean = { "true" | "false" }
 null = { "null" }
 
 /// Context references (e.g., github.event.issue.number)
-context_reference = @{ identifier ~ ("." ~ identifier)* }
+context_reference = ${ identifier ~ ("." ~ (identifier | star))* }
+star              =  { "*" }
 identifier        = @{ (ASCII_ALPHA | "_" | "-") ~ (ASCII_ALPHANUMERIC | "_" | "-")* }
 
 /// Function calls
 function_call = { identifier ~ "(" ~ (or_expr ~ ("," ~ or_expr)*)? ~ ")" }
 
 /// Index operations
-index = { (context_reference | function_call | ("(" ~ primary_expr ~ ")")) ~ ("[" ~ or_expr ~ "]")+ }
+index = { (context_reference | function_call | ("(" ~ primary_expr ~ ")")) ~ ("[" ~ (or_expr | star) ~ "]")+ }

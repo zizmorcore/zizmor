@@ -38,6 +38,8 @@ pub(crate) enum Expr {
     Boolean(bool),
     /// The `null` literal.
     Null,
+    /// The `*` literal within an index.
+    Star,
     /// An index operation.
     ///
     /// Three different kinds of expressions can be indexed:
@@ -57,6 +59,8 @@ pub(crate) enum Expr {
     /// A function call.
     Call { func: String, args: Vec<Box<Expr>> },
     /// A context reference.
+    // TODO: This should probably be a vec of parts internally,
+    // to expose the individual component/star parts.
     ContextRef(String),
     /// A binary operation, either logical or arithmetic.
     BinOp {
@@ -191,6 +195,7 @@ impl Expr {
                 )),
                 Rule::boolean => Ok(Expr::Boolean(pair.as_str().parse().unwrap())),
                 Rule::null => Ok(Expr::Null),
+                Rule::star => Ok(Expr::Star),
                 Rule::index => {
                     // (context | function (expr))[expr]+
                     let mut pairs = pair.into_inner();
@@ -261,6 +266,8 @@ mod tests {
             "inputs.this__too",
             "inputs.this__too",
             "secrets.GH_TOKEN",
+            "foo.*.bar",
+            "github.event.issue.labels.*.name",
         ];
 
         for case in cases {
@@ -361,6 +368,13 @@ mod tests {
                 Expr::Index {
                     parent: Expr::ContextRef("foo.bar.baz".into()).into(),
                     indices: vec![Expr::Number(1.0).into(), Expr::Number(2.0).into()],
+                },
+            ),
+            (
+                "foo.bar.baz[*]",
+                Expr::Index {
+                    parent: Expr::ContextRef("foo.bar.baz".into()).into(),
+                    indices: vec![Expr::Star.into()],
                 },
             ),
         ];
