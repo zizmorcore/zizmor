@@ -9,6 +9,7 @@ use crate::{
 use annotate_snippets::{Level, Renderer, Snippet};
 use anstream::println;
 use owo_colors::OwoColorize;
+use terminal_link::Link;
 
 impl From<&Severity> for Level {
     fn from(sev: &Severity) -> Self {
@@ -95,9 +96,11 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &[Finding])
 }
 
 fn render_finding(registry: &WorkflowRegistry, finding: &Finding) {
+    let link = Link::new(finding.ident, &finding.url()).to_string();
+
     let message = Level::from(&finding.determinations.severity)
         .title(finding.desc)
-        .id(finding.ident)
+        .id(&link)
         .snippets(finding_snippet(registry, finding));
 
     let renderer = Renderer::styled();

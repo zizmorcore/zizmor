@@ -209,6 +209,16 @@ pub(crate) struct Finding<'w> {
     pub(crate) locations: Vec<Location<'w>>,
 }
 
+impl<'w> Finding<'w> {
+    pub(crate) fn url(&self) -> String {
+        format!(
+            "{repo}/tree/main/docs/audit/{ident}.md",
+            repo = env!("CARGO_PKG_REPOSITORY"),
+            ident = self.ident
+        )
+    }
+}
+
 pub(crate) struct FindingBuilder<'w> {
     ident: &'static str,
     desc: &'static str,

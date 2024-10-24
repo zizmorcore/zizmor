@@ -20,13 +20,6 @@ pub(crate) mod template_injection;
 pub(crate) mod use_trusted_publishing;
 
 pub(crate) trait WorkflowAudit {
-    fn finding<'w>() -> FindingBuilder<'w>
-    where
-        Self: Sized,
-    {
-        FindingBuilder::new(Self::ident(), Self::desc())
-    }
-
     fn ident() -> &'static str
     where
         Self: Sized;
@@ -40,4 +33,11 @@ pub(crate) trait WorkflowAudit {
         Self: Sized;
 
     fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>>;
+
+    fn finding<'w>() -> FindingBuilder<'w>
+    where
+        Self: Sized,
+    {
+        FindingBuilder::new(Self::ident(), Self::desc())
+    }
 }
