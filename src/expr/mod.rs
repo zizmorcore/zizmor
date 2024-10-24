@@ -61,7 +61,7 @@ pub(crate) enum Expr {
     /// A context reference.
     // TODO: This should probably be a vec of parts internally,
     // to expose the individual component/star parts.
-    ContextRef(String),
+    Context(String),
     /// A binary operation, either logical or arithmetic.
     BinOp {
         lhs: Box<Expr>,
@@ -73,6 +73,36 @@ pub(crate) enum Expr {
 }
 
 impl Expr {
+    /// Returns all of the contexts used in this expression, regardless
+    /// of dataflow.
+    pub(crate) fn contexts(&self) -> Vec<&str> {
+        let mut contexts = vec![];
+
+        match self {
+            Expr::Index { parent, indices } => {
+                contexts.extend(parent.contexts());
+
+                for index in indices {
+                    contexts.extend(index.contexts());
+                }
+            }
+            Expr::Call { func: _, args } => {
+                for arg in args {
+                    contexts.extend(arg.contexts());
+                }
+            }
+            Expr::Context(ctx) => contexts.push(ctx.as_str()),
+            Expr::BinOp { lhs, op: _, rhs } => {
+                contexts.extend(lhs.contexts());
+                contexts.extend(rhs.contexts());
+            }
+            Expr::UnOp { op: _, expr } => contexts.extend(expr.contexts()),
+            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null | Expr::Star => (),
+        }
+
+        contexts
+    }
+
     pub(crate) fn parse(expr: &str) -> Result<Expr> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?
@@ -82,7 +112,7 @@ impl Expr {
             .next()
             .unwrap();
 
-        fn parse_inner(pair: Pair<'_, Rule>) -> Result<Expr> {
+        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Expr> {
             // We're parsing a pest grammar, which isn't left-recursive.
             // As a result, we have constructions like
             // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
@@ -97,23 +127,23 @@ impl Expr {
             match pair.as_rule() {
                 Rule::or_expr => {
                     let mut pairs = pair.into_inner();
-                    let lhs = parse_inner(pairs.next().unwrap())?;
+                    let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(Expr::BinOp {
                             lhs: expr.into(),
                             op: BinOp::Or,
-                            rhs: parse_inner(next)?.into(),
+                            rhs: parse_pair(next)?.into(),
                         })
                     })
                 }
                 Rule::and_expr => {
                     let mut pairs = pair.into_inner();
-                    let lhs = parse_inner(pairs.next().unwrap())?;
+                    let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(Expr::BinOp {
                             lhs: expr.into(),
                             op: BinOp::And,
-                            rhs: parse_inner(next)?.into(),
+                            rhs: parse_pair(next)?.into(),
                         })
                     })
                 }
@@ -122,7 +152,7 @@ impl Expr {
                     // them in the `eq_op` capture, so we fold with
                     // two-tuples of (eq_op, comp_expr).
                     let mut pairs = pair.into_inner();
-                    let lhs = parse_inner(pairs.next().unwrap())?;
+                    let lhs = parse_pair(pairs.next().unwrap())?;
 
                     let pair_chunks = pairs.chunks(2);
                     pair_chunks.into_iter().try_fold(lhs, |expr, mut next| {
@@ -138,14 +168,14 @@ impl Expr {
                         Ok(Expr::BinOp {
                             lhs: expr.into(),
                             op: eq_op,
-                            rhs: parse_inner(comp_expr)?.into(),
+                            rhs: parse_pair(comp_expr)?.into(),
                         })
                     })
                 }
                 Rule::comp_expr => {
                     // Same as eq_expr, but with comparison operators.
                     let mut pairs = pair.into_inner();
-                    let lhs = parse_inner(pairs.next().unwrap())?;
+                    let lhs = parse_pair(pairs.next().unwrap())?;
 
                     let pair_chunks = pairs.chunks(2);
                     pair_chunks.into_iter().try_fold(lhs, |expr, mut next| {
@@ -163,7 +193,7 @@ impl Expr {
                         Ok(Expr::BinOp {
                             lhs: expr.into(),
                             op: eq_op,
-                            rhs: parse_inner(unary_expr)?.into(),
+                            rhs: parse_pair(unary_expr)?.into(),
                         })
                     })
                 }
@@ -174,15 +204,15 @@ impl Expr {
                     match pair.as_rule() {
                         Rule::unary_op => Ok(Expr::UnOp {
                             op: UnOp::Not,
-                            expr: parse_inner(pairs.next().unwrap())?.into(),
+                            expr: parse_pair(pairs.next().unwrap())?.into(),
                         }),
-                        Rule::primary_expr => parse_inner(pair),
+                        Rule::primary_expr => parse_pair(pair),
                         _ => unreachable!(),
                     }
                 }
                 Rule::primary_expr => {
                     // Punt back to the top level match to keep things simple.
-                    parse_inner(pair.into_inner().next().unwrap())
+                    parse_pair(pair.into_inner().next().unwrap())
                 }
                 Rule::number => Ok(Expr::Number(pair.as_str().parse().unwrap())),
                 Rule::string => Ok(Expr::String(
@@ -201,9 +231,9 @@ impl Expr {
                     let mut pairs = pair.into_inner();
 
                     Ok(Expr::Index {
-                        parent: parse_inner(pairs.next().unwrap())?.into(),
+                        parent: parse_pair(pairs.next().unwrap())?.into(),
                         indices: pairs
-                            .map(|pair| parse_inner(pair).map(Box::new))
+                            .map(|pair| parse_pair(pair).map(Box::new))
                             .collect::<Result<_, _>>()?,
                     })
                 }
@@ -212,7 +242,7 @@ impl Expr {
 
                     let identifier = pairs.next().unwrap();
                     let args: Vec<Box<Expr>> = pairs
-                        .map(|pair| parse_inner(pair).map(Box::new))
+                        .map(|pair| parse_pair(pair).map(Box::new))
                         .collect::<Result<_, _>>()?;
 
                     Ok(Expr::Call {
@@ -220,12 +250,12 @@ impl Expr {
                         args,
                     })
                 }
-                Rule::context_reference => Ok(Expr::ContextRef(pair.as_str().into())),
+                Rule::context => Ok(Expr::Context(pair.as_str().into())),
                 r => panic!("fuck: {r:?}"),
             }
         }
 
-        parse_inner(or_expr)
+        parse_pair(or_expr)
     }
 }
 
@@ -272,7 +302,7 @@ mod tests {
 
         for case in cases {
             assert_eq!(
-                ExprParser::parse(Rule::context_reference, case)
+                ExprParser::parse(Rule::context, case)
                     .unwrap()
                     .next()
                     .unwrap()
@@ -362,18 +392,18 @@ mod tests {
                     ],
                 },
             ),
-            ("foo.bar.baz", Expr::ContextRef("foo.bar.baz".into())),
+            ("foo.bar.baz", Expr::Context("foo.bar.baz".into())),
             (
                 "foo.bar.baz[1][2]",
                 Expr::Index {
-                    parent: Expr::ContextRef("foo.bar.baz".into()).into(),
+                    parent: Expr::Context("foo.bar.baz".into()).into(),
                     indices: vec![Expr::Number(1.0).into(), Expr::Number(2.0).into()],
                 },
             ),
             (
                 "foo.bar.baz[*]",
                 Expr::Index {
-                    parent: Expr::ContextRef("foo.bar.baz".into()).into(),
+                    parent: Expr::Context("foo.bar.baz".into()).into(),
                     indices: vec![Expr::Star.into()],
                 },
             ),
@@ -382,5 +412,12 @@ mod tests {
         for (case, expr) in cases {
             assert_eq!(Expr::parse(case).unwrap(), *expr);
         }
+    }
+
+    #[test]
+    fn test_expr_contexts() {
+        let expr = Expr::parse("foo.bar && abc && d.e.f").unwrap();
+
+        assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f"]);
     }
 }
