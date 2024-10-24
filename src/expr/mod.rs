@@ -385,11 +385,7 @@ mod tests {
                 "foo(1, 2, 3)",
                 Expr::Call {
                     func: "foo".into(),
-                    args: vec![
-                        Expr::Number(1.0),
-                        Expr::Number(2.0),
-                        Expr::Number(3.0),
-                    ],
+                    args: vec![Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)],
                 },
             ),
             ("foo.bar.baz", Expr::Context("foo.bar.baz".into())),
