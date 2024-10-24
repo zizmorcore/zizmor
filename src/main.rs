@@ -13,6 +13,7 @@ use registry::{AuditRegistry, WorkflowRegistry};
 use state::{AuditConfig, AuditState};
 
 mod audit;
+mod expr;
 mod finding;
 mod github_api;
 mod models;
@@ -157,12 +158,11 @@ fn main() -> Result<()> {
                 )
             })?);
             bar.inc(1);
-            bar.println(format!(
-                "🌈 completed {name} on {workflow}",
-                name = name.green(),
-                workflow = &workflow.filename().cyan()
-            ));
         }
+        bar.println(format!(
+            "🌈 completed {workflow}",
+            workflow = &workflow.filename().cyan()
+        ));
     }
 
     bar.finish_and_clear();

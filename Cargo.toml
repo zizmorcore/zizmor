@@ -21,6 +21,8 @@ itertools = "0.13.0"
 log = "0.4.22"
 moka = { version = "0.12.8", features = ["sync"] }
 owo-colors = "4.1.0"
+pest = "2.7.14"
+pest_derive = "2.7.14"
 reqwest = { version = "0.12.7", features = ["blocking", "json"] }
 serde = { version = "1.0.208", features = ["derive"] }
 serde-sarif = "0.6.5"
