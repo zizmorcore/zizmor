@@ -145,8 +145,19 @@ impl<'w> Step<'w> {
         }
     }
 
+    /// Returns a symbolic location for this [`Step`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
         self.parent.with_step(self)
+    }
+
+    /// Like [`Step::location`], except with the step's `name`
+    /// key as the final path component if present.
+    pub(crate) fn location_with_name(&self) -> SymbolicLocation<'w> {
+        match self.inner.name {
+            Some(_) => self.location().with_keys(&["name".into()]),
+            None => self.location(),
+        }
+        .annotated("this step")
     }
 }
 

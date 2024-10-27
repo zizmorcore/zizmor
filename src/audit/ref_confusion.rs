@@ -104,7 +104,9 @@ impl WorkflowAudit for RefConfusion {
                                     .severity(Severity::Medium)
                                     .confidence(Confidence::High)
                                     .add_location(
-                                        step.location().annotated(REF_CONFUSION_ANNOTATION),
+                                        step.location()
+                                            .with_keys(&["uses".into()])
+                                            .annotated(REF_CONFUSION_ANNOTATION),
                                     )
                                     .build(workflow)?,
                             );
