@@ -217,7 +217,7 @@ impl WorkflowAudit for TemplateInjection {
                         Self::finding()
                             .severity(severity)
                             .confidence(confidence)
-                            .add_location(step.location().annotated("this step"))
+                            .add_location(step.location_with_name())
                             .add_location(script_loc.clone().annotated(format!(
                                 "{expr} may expand into attacker-controllable code"
                             )))
