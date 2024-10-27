@@ -14,9 +14,7 @@ use crate::{
     state::AuditState,
 };
 
-pub(crate) struct HardcodedContainerCredentials {
-    pub(crate) _state: AuditState,
-}
+pub(crate) struct HardcodedContainerCredentials {}
 
 impl WorkflowAudit for HardcodedContainerCredentials {
     fn ident() -> &'static str
@@ -33,11 +31,11 @@ impl WorkflowAudit for HardcodedContainerCredentials {
         "hardcoded credential in GitHub Actions container configurations"
     }
 
-    fn new(state: AuditState) -> anyhow::Result<Self>
+    fn new(_state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self { _state: state })
+        Ok(Self {})
     }
 
     fn audit<'w>(
