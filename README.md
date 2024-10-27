@@ -2,6 +2,9 @@
 
 A tool for finding security issues in GitHub Actions CI/CD setups.
 
+> [!IMPORTANT]
+> `zizmor` is currently in beta. You will encounter bugs; please file them!
+
 Quick links:
 
 * [Installation](#installation)
