@@ -23,7 +23,7 @@ mod sarif;
 mod state;
 mod utils;
 
-/// Finds security issues in GitHub Actions workflows.
+/// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
 struct Args {
     /// Emit findings even when the context suggests an explicit security decision made by the user.

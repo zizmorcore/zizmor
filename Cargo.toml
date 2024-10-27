@@ -1,10 +1,12 @@
 [package]
 name = "zizmor"
+description = "Finds security issues in GitHub Actions setups"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/woodruffw/zizmor"
 homepage = "https://github.com/woodruffw/zizmor"
 authors = ["William Woodruff <william@yossarian.net>"]
+license = "MIT"
 rust-version = "1.80.1"
 
 [dependencies]
