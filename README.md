@@ -118,6 +118,8 @@ integrate `zizmor`'s results directly into a repository's scanning setup.
 
 ## Technical details
 
+Forthcoming. See [DEVELOPMENT.md](./docs/DEVELOPMENT.md) in the mean time.
+
 ## Contributing
 
 See [our contributing guide!](./CONTRIBUTING.md)
