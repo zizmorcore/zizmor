@@ -34,11 +34,13 @@ pub(crate) struct TemplateInjection {
 
 /// Context members that are believed to be always safe.
 const SAFE_CONTEXTS: &[&str] = &[
-    // The GitHub event name (i.e. trigger) is itself self.
+    // The GitHub event name (i.e. trigger) is itself safe.
     "github.event_name",
     // Safe keys within the otherwise generally unsafe github.event context.
     "github.event.number",
     "github.event.workflow_run.id",
+    // Always a 40-char SHA-1 reference.
+    "github.sha",
     // Like `secrets.*`: not safe to expose, but safe to interpolate.
     "github.token",
     // GitHub Actions-controlled local directory.
