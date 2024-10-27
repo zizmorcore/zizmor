@@ -1,5 +1,8 @@
 # zizmor
 
+[![CI](https://github.com/woodruffw/zizmor/actions/workflows/ci.yml/badge.svg)](https://github.com/woodruffw/zizmor/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/zizmor)](https://crates.io/crates/zizmor)
+
 A tool for finding security issues in GitHub Actions CI/CD setups.
 
 > [!IMPORTANT]
