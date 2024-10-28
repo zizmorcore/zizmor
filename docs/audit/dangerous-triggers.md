@@ -10,7 +10,7 @@ Fundamentally dangerous GitHub Actions workflow triggers.
 
 ## Why
 
-Many of GitHub's workflow triggers are difficult to use security.
+Many of GitHub's workflow triggers are difficult to use securely.
 This audit checks for some of the biggest offenders:
 
 * `pull_request_target`
