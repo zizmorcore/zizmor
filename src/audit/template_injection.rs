@@ -121,7 +121,7 @@ impl TemplateInjection {
                 } else if context.starts_with("env.") {
                     // Almost never exploitable.
                     bad_expressions.push((context.into(), Severity::Low, Confidence::High));
-                } else if context.starts_with("github.event.") {
+                } else if context.starts_with("github.event.") || context == "github.ref_name" {
                     // TODO: Filter these more finely; not everything in the event
                     // context is actually attacker-controllable.
                     bad_expressions.push((context.into(), Severity::High, Confidence::High));
