@@ -33,6 +33,12 @@ You can install `zizmor` from <https://crates.io> via `cargo`:
 cargo install zizmor
 ```
 
+or via [Homebrew](https://brew.sh/):
+
+```bash
+brew install zizmor
+```
+
 ## Quickstart
 
 You can run `zizmor` on any file(s) you have locally:
