@@ -134,3 +134,18 @@ fn build_locations(locations: &[Location<'_>]) -> Vec<SarifLocation> {
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_sarif::sarif::ResultKind;
+
+    use crate::finding::Severity;
+
+    #[test]
+    fn test_resultkind_from_severity() {
+        assert_eq!(
+            serde_json::to_string(&ResultKind::from(Severity::High)).unwrap(),
+            "\"fail\""
+        );
+    }
+}
