@@ -108,13 +108,23 @@ See [Integration](#integration) for suggestions on when to use each format.
 `zizmor` is trivial to use within GitHub Actions; you can run it just like
 you would locally.
 
-`zizmor` supports [SARIF] as an output format, which GitHub's code scanning
-feature also supports. See [GitHub's documentation] for advice on how to
-integrate `zizmor`'s results directly into a repository's scanning setup.
+`zizmor --format sarif` specifies [SARIF] as the output format, which GitHub's
+code scanning feature also supports.
+
+See [GitHub's documentation] for advice on how to integrate `zizmor`'s results
+directly into a repository's scanning setup.
+
+For a specific example, see `zizmor`'s own [repository workflow scan].
+GitHub's example of [running ESLint] as a security workflow provides additional
+relevant links.
 
 [SARIF]: https://sarifweb.azurewebsites.net/
 
 [GitHub's documentation]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
+
+[repository workflow scan]: https://github.com/woodruffw/zizmor/blob/main/.github/workflows/zizmor.yml
+
+[running ESLint]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github#example-workflow-that-runs-the-eslint-analysis-tool
 
 ## Technical details
 
