@@ -114,12 +114,15 @@ code scanning feature also supports.
 See [GitHub's documentation] for advice on how to integrate `zizmor`'s results
 directly into a repository's scanning setup.
 
-In particular, running `zizmor` will be quite similar to the example
-given for [running ESLint].
+For a specific example, see `zizmor`'s own [repository workflow scan].
+GitHub's example of [running ESLint] as a security workflow provides additional
+relevant links.
 
 [SARIF]: https://sarifweb.azurewebsites.net/
 
 [GitHub's documentation]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
+
+[repository workflow scan]: https://github.com/woodruffw/zizmor/blob/main/.github/workflows/release.yml
 
 [running ESLint]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github#example-workflow-that-runs-the-eslint-analysis-tool
 
