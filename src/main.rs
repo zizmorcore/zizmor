@@ -181,7 +181,9 @@ fn main() -> Result<()> {
     match format {
         OutputFormat::Plain => render::render_findings(&workflow_registry, &results),
         OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results)?,
-        OutputFormat::Sarif => serde_json::to_writer_pretty(stdout(), &sarif::build(results))?,
+        OutputFormat::Sarif => {
+            serde_json::to_writer_pretty(stdout(), &sarif::build(&workflow_registry, results))?
+        }
     };
     Ok(())
 }
