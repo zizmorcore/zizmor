@@ -48,6 +48,27 @@ impl WorkflowRegistry {
             .get(name)
             .expect("API misuse: requested an un-registered workflow")
     }
+
+    /// Returns a subjective relative path for the given workflow.
+    ///
+    /// In general, this will be a relative path within the repository root,
+    /// e.g. if zizmor was told to scan `/tmp/src` then one of the discovered
+    /// workflows might be `.github/workflows/ci.yml` relative to `/tmp/src`.
+    ///
+    /// The exceptional case here is when zizmor is asked to scan a single
+    /// workflow at some arbitrary location on disk. In that case, just
+    /// the base workflow filename itself is returned.
+    pub(crate) fn get_workflow_relative_path(&self, name: &str) -> &str {
+        let workflow = self.get_workflow(name);
+        let workflow_path = Path::new(&workflow.path);
+
+        match workflow.path.rfind(".github/workflows") {
+            Some(start) => &workflow.path[start..],
+            // NOTE: Unwraps are safe since file component is always present and
+            // all paths are UTF-8 by construction.
+            None => workflow_path.file_name().unwrap().to_str().unwrap(),
+        }
+    }
 }
 
 pub(crate) struct AuditRegistry {
