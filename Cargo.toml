@@ -1,7 +1,7 @@
 [package]
 name = "zizmor"
 description = "Finds security issues in GitHub Actions setups"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 repository = "https://github.com/woodruffw/zizmor"
 homepage = "https://github.com/woodruffw/zizmor"
