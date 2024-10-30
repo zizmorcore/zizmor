@@ -1,8 +1,4 @@
-use std::{
-    io::{stdout, IsTerminal},
-    path::PathBuf,
-    time::Duration,
-};
+use std::{io::stdout, path::PathBuf, time::Duration};
 
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
@@ -47,7 +43,6 @@ struct Args {
     gh_token: Option<String>,
 
     /// The output format to emit. By default, plain text will be emitted
-    /// on an interactive terminal and JSON otherwise.
     #[arg(long, value_enum)]
     format: Option<OutputFormat>,
 
@@ -168,13 +163,7 @@ fn main() -> Result<()> {
     bar.finish_and_clear();
 
     let format = match args.format {
-        None => {
-            if stdout().is_terminal() {
-                OutputFormat::Plain
-            } else {
-                OutputFormat::Json
-            }
-        }
+        None => OutputFormat::Plain,
         Some(f) => f,
     };
 
