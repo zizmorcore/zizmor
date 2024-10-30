@@ -36,7 +36,7 @@ documentation!
 
 Here are some things we could use help with:
 
-* Improving the detail in our [audit documentation pages](./audits/).
+* Improving the detail in our [audit documentation pages](./audits.md).
 
 More generally, see [issues labeled with `documentation`] for a potential
 list of documentation efforts to contribute on.

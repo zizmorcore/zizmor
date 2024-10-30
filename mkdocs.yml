@@ -10,10 +10,10 @@ nav:
   - "installation.md"
   - "quickstart.md"
   - "usage.md"
-  - ...
+  - "audits.md"
   - "development.md"
   - External links:
-      - "GitHub 🔗": https://github.com/woodruff/zizmor
+      - "GitHub 🔗": https://github.com/woodruffw/zizmor
       - "crates.io 🔗": https://crates.io/crates/zizmor
 
 theme:
@@ -22,8 +22,6 @@ theme:
     scheme: slate
   features:
     - navigation.expand
-    - navigation.tabs
-    - navigation.tabs.sticky
     - navigation.sections
     - navigation.tracking
 
@@ -38,11 +36,7 @@ markdown_extensions:
   - toc:
       permalink: 🔗
 
-plugins:
-  - search
-  - awesome-pages
-
 validation:
   omitted_files: warn
-  # absolute_links: warn
+  absolute_links: warn
   unrecognized_links: warn
