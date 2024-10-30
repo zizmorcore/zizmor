@@ -30,8 +30,6 @@ jobs:
 
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
 
       - name: build site
         run: make site
