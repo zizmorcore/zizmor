@@ -1,0 +1,48 @@
+site_name: "🌈 zizmor"
+# site_description: zizmor
+site_url: https://woodruffw.github.io/zizmor
+docs_dir: docs
+site_dir: site_html
+dev_addr: "127.0.0.1:9999"
+
+nav:
+  - Welcome: "index.md"
+  - "installation.md"
+  - "quickstart.md"
+  - "usage.md"
+  - ...
+  - "development.md"
+  - External links:
+      - "GitHub 🔗": https://github.com/woodruff/zizmor
+      - "crates.io 🔗": https://crates.io/crates/zizmor
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+  features:
+    - navigation.expand
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.tracking
+
+markdown_extensions:
+  # Makes sure we render `<https://...>`-style links correctly.
+  - pymdownx.magiclink
+  - pymdownx.emoji
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - md_in_html
+  - toc:
+      permalink: 🔗
+
+plugins:
+  - search
+  - awesome-pages
+
+validation:
+  omitted_files: warn
+  # absolute_links: warn
+  unrecognized_links: warn

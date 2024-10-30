@@ -16,4 +16,4 @@ An attacker can exploit this ambiguity to publish a branch or tag ref that
 takes precedence over a legitimate one, delivering a malicious action to
 pre-existing consumers of that action without having to modify those consumers.
 
-[impostor commits]: ./impostor-commits.md
+[impostor commits]: ./impostor-commit.md
