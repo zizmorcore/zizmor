@@ -1,0 +1,10 @@
+changelog:
+  exclude:
+    labels:
+      - tests
+      - no-changelog
+    authors:
+      - dependabot
+
+  # TODO: consider adding categories here.
+  # See: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
