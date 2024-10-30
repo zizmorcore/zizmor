@@ -2,6 +2,7 @@ changelog:
   exclude:
     labels:
       - tests
+      - chore
       - no-changelog
     authors:
       - dependabot
