@@ -20,10 +20,6 @@ for [installation steps], as well as a [quickstart] and
 
 [detailed usage recipes]: https://woodruffw.github.io/zizmor/installation/
 
-## Technical details
-
-Forthcoming. See [DEVELOPMENT.md](./docs/DEVELOPMENT.md) in the mean time.
-
 ## Contributing
 
 See [our contributing guide!](./CONTRIBUTING.md)
