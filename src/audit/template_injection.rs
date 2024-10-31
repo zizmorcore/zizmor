@@ -39,6 +39,10 @@ const SAFE_CONTEXTS: &[&str] = &[
     // Safe keys within the otherwise generally unsafe github.event context.
     "github.event.number",
     "github.event.workflow_run.id",
+    // Unique numbers assigned by GitHub for workflow runs
+    "github.run_attempt",
+    "github.run_id",
+    "github.run_number",
     // Always a 40-char SHA-1 reference.
     "github.sha",
     // Like `secrets.*`: not safe to expose, but safe to interpolate.
