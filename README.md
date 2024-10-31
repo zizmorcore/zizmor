@@ -16,9 +16,9 @@ for [installation steps], as well as a [quickstart] and
 
 [installation steps]: https://woodruffw.github.io/zizmor/installation/
 
-[quickstart]: https://woodruffw.github.io/zizmor/installation/
+[quickstart]: https://woodruffw.github.io/zizmor/quickstart/
 
-[detailed usage recipes]: https://woodruffw.github.io/zizmor/installation/
+[detailed usage recipes]: https://woodruffw.github.io/zizmor/usage/
 
 ## Contributing
 
