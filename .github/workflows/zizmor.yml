@@ -7,14 +7,12 @@ on:
   pull_request:
     branches: ["*"]
 
-permissions:
-  contents: read
-
 jobs:
   zizmor:
     name: Zizmor latest via Cargo
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
     steps:
       - name: Checkout repository
