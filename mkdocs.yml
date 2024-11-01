@@ -20,10 +20,14 @@ theme:
   name: material
   palette:
     scheme: slate
+  icon:
+    annotation: material/arrow-right-circle
   features:
     - navigation.expand
     - navigation.sections
     - navigation.tracking
+    - content.code.copy
+    - content.code.annotate
 
 markdown_extensions:
   # Makes sure we render `<https://...>`-style links correctly.
@@ -33,6 +37,7 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.superfences
   - md_in_html
+  - attr_list
   - toc:
       permalink: 🔗
 
