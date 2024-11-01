@@ -53,7 +53,7 @@ easy way to do it is with a workflow that connects to
 The following is an example of such a workflow:
 
 ```yaml title="zizmor.yml"
-name: GitHub Actions Security Analysis with Zizmor
+name: GitHub Actions Security Analysis with zizmor 🌈
 
 on:
   push:
@@ -63,7 +63,7 @@ on:
 
 jobs:
   zizmor:
-    name: Zizmor latest via Cargo
+    name: zizmor latest via Cargo
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -77,7 +77,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Get zizmor
         run: cargo install zizmor
-      - name: Run zizmor
+      - name: Run zizmor 🌈
         run: zizmor --format sarif . > results.sarif
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
