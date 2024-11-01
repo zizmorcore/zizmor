@@ -7,7 +7,10 @@ use std::env::current_dir;
 // For now we don't cover tests that depends on Github API under the hood
 
 fn zizmor() -> Command {
-    Command::cargo_bin("zizmor").expect("Cannot create executable command")
+    let mut cmd = Command::cargo_bin("zizmor").expect("Cannot create executable command");
+    // All tests are currently offline, and we always need JSON output.
+    cmd.args(["--offline", "--format", "json"]);
+    cmd
 }
 
 fn workflow_under_test(name: &str) -> String {
@@ -35,7 +38,7 @@ fn assert_value_match(json: &Value, path_pattern: &str, value: &str) {
 #[test]
 fn audit_artipacked() -> anyhow::Result<()> {
     let auditable = workflow_under_test("artipacked.yml");
-    let cli_args = ["--format", "json", &auditable];
+    let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).unwrap();
 
@@ -56,7 +59,7 @@ fn audit_artipacked() -> anyhow::Result<()> {
 #[test]
 fn audit_excessive_permission() -> anyhow::Result<()> {
     let auditable = workflow_under_test("excessive-permissions.yml");
-    let cli_args = ["--format", "json", &auditable];
+    let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).unwrap();
 
@@ -77,7 +80,7 @@ fn audit_excessive_permission() -> anyhow::Result<()> {
 #[test]
 fn audit_hardcoded_credentials() -> anyhow::Result<()> {
     let auditable = workflow_under_test("hardcoded-credentials.yml");
-    let cli_args = ["--format", "json", &auditable];
+    let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).unwrap();
 
@@ -98,7 +101,7 @@ fn audit_hardcoded_credentials() -> anyhow::Result<()> {
 #[test]
 fn audit_template_injection() -> anyhow::Result<()> {
     let auditable = workflow_under_test("template-injection.yml");
-    let cli_args = ["--format", "json", &auditable];
+    let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).unwrap();
 
@@ -119,7 +122,7 @@ fn audit_template_injection() -> anyhow::Result<()> {
 #[test]
 fn audit_use_trusted_publishing() -> anyhow::Result<()> {
     let auditable = workflow_under_test("use-trusted-publishing.yml");
-    let cli_args = ["--format", "json", &auditable];
+    let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).unwrap();
 
@@ -142,7 +145,7 @@ fn audit_self_hosted() -> anyhow::Result<()> {
     let auditable = workflow_under_test("self-hosted.yml");
 
     // Note : self-hosted audit is pedantic
-    let cli_args = ["--pedantic", "--format", "json", &auditable];
+    let cli_args = ["--pedantic", &auditable];
 
     let execution = zizmor().args(cli_args).unwrap();
 
