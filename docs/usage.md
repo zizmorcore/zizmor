@@ -42,22 +42,60 @@ See [Integration](#integration) for suggestions on when to use each format.
 
 ### Use in GitHub Actions
 
-`zizmor` is trivial to use within GitHub Actions; you can run it just like
-you would locally.
-
+`zizmor` is designed to integrate with GitHub Actions. In particular,
 `zizmor --format sarif` specifies [SARIF] as the output format, which GitHub's
 code scanning feature also supports.
 
-See [GitHub's documentation] for advice on how to integrate `zizmor`'s results
-directly into a repository's scanning setup.
+You can integrate `zizmor` into your CI/CD however you please, but one
+easy way to do it is with a workflow that connects to
+[GitHub's code scanning functionality].
 
-For a specific example, see `zizmor`'s own [repository workflow scan].
-GitHub's example of [running ESLint] as a security workflow provides additional
-relevant links.
+The following is an example of such a workflow:
+
+```yaml title="zizmor.yml"
+name: GitHub Actions Security Analysis with Zizmor
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  zizmor:
+    name: Zizmor latest via Cargo
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Get zizmor
+        run: cargo install zizmor
+      - name: Run zizmor
+        run: zizmor --format sarif . > results.sarif
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+          category: zizmor
+```
+
+1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
+
+For more inspiration, see `zizmor`'s own [repository workflow scan], as well
+as  GitHub's example of [running ESLint] as a security workflow.
 
 [SARIF]: https://sarifweb.azurewebsites.net/
 
-[GitHub's documentation]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
+[GitHub's code scanning functionality]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
 
 [repository workflow scan]: https://github.com/woodruffw/zizmor/blob/main/.github/workflows/zizmor.yml
 
