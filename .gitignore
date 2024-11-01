@@ -2,3 +2,7 @@
 
 # website artifacts
 /site_html
+
+# IDEs / Editors
+.idea
+.DS_STORE
