@@ -8,7 +8,7 @@ A tool for finding security issues in GitHub Actions CI/CD setups.
 > [!IMPORTANT]
 > `zizmor` is currently in beta. You will encounter bugs; please file them!
 
-![](./docs/assets/zizmor-demo.gif)
+![zizmor demo](./docs/assets/zizmor-demo.gif)
 
 See [`zizmor`'s documentation](https://woodruffw.github.io/zizmor/)
 for [installation steps], as well as a [quickstart] and
@@ -20,6 +20,10 @@ for [installation steps], as well as a [quickstart] and
 
 [detailed usage recipes]: https://woodruffw.github.io/zizmor/usage/
 
+## License
+
+`zizmor` is licensed under the [MIT License](./LICENSE).
+
 ## Contributing
 
 See [our contributing guide!](./CONTRIBUTING.md)
@@ -30,4 +34,6 @@ See [our contributing guide!](./CONTRIBUTING.md)
 
 [Now you can have beautiful clean workflows!]: https://www.youtube.com/watch?v=ol7rxFCvpy8
 
-[roadmap]: https://github.com/woodruffw/zizmor/issues/1
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=woodruffw/zizmor&type=Date)](https://star-history.com/#woodruffw/zizmor&Date)
