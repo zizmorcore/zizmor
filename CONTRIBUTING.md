@@ -5,8 +5,7 @@ Thank you for your interest in contributing to `zizmor`!
 This is intended to be a "high-level" guide with some suggestions
 for ways to contribute. Once you've picked a contribution idea,
 please see our [development docs]
-for concrete guidance on specific development tasks (such as building `zizmor`
-itself or the documentation website).
+for concrete guidance on specific development tasks and style prescriptions.
 
 ## How to contribute
 

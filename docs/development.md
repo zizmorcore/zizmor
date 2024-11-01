@@ -22,6 +22,11 @@ Here are some guidelines to follow if you're working on `zizmor`:
   behavior.
 * *Test on real inputs*. If you're contributing to or adding a new audit,
   make sure your analysis is reliable and accurate on non-sample inputs.
+* *Use [conventional commits]*. These are not mandatory, but they make
+  it easier to quickly visually scan the contents of a change. Help us
+  out by using them!
+
+[conventional commits]: https://www.conventionalcommits.org/en/v1.0.0/
 
 ## Requirements
 
