@@ -66,8 +66,10 @@ jobs:
     name: zizmor latest via Cargo
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       security-events: write
+      # required for workflows in private repositories
+      contents: read
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
