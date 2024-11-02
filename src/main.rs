@@ -47,8 +47,8 @@ struct Args {
     #[arg(long, value_enum)]
     format: Option<OutputFormat>,
 
-    /// The workflow filename or directory to audit.
-    input: PathBuf,
+    /// The workflow filenames or directories to audit.
+    inputs: Vec<PathBuf>,
 }
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
@@ -70,32 +70,40 @@ fn main() -> Result<()> {
     let config = AuditConfig::from(&args);
 
     let mut workflow_paths = vec![];
-    if args.input.is_file() {
-        workflow_paths.push(args.input.clone());
-    } else if args.input.is_dir() {
-        let mut absolute = std::fs::canonicalize(&args.input)?;
-        if !absolute.ends_with(".github/workflows") {
-            absolute.push(".github/workflows")
-        }
-
-        log::debug!("collecting workflows from {absolute:?}");
-
-        for entry in std::fs::read_dir(absolute)? {
-            let workflow_path = entry?.path();
-            match workflow_path.extension() {
-                Some(ext) if ext == "yml" || ext == "yaml" => workflow_paths.push(workflow_path),
-                _ => continue,
+    for input in args.inputs {
+        if input.is_file() {
+            workflow_paths.push(input.clone());
+        } else if input.is_dir() {
+            let mut absolute = std::fs::canonicalize(&input)?;
+            if !absolute.ends_with(".github/workflows") {
+                absolute.push(".github/workflows")
             }
-        }
 
-        if workflow_paths.is_empty() {
-            return Err(anyhow!(
-                "no workflow files collected; empty or wrong directory?"
-            ));
+            log::debug!("collecting workflows from {absolute:?}");
+
+            for entry in std::fs::read_dir(absolute)? {
+                let workflow_path = entry?.path();
+                match workflow_path.extension() {
+                    Some(ext) if ext == "yml" || ext == "yaml" => {
+                        workflow_paths.push(workflow_path)
+                    }
+                    _ => continue,
+                }
+            }
+
+            if workflow_paths.is_empty() {
+                return Err(anyhow!(
+                    "no workflow files collected; empty or wrong directory?"
+                ));
+            }
+        } else {
+            return Err(anyhow!("input malformed, expected file or directory"));
         }
-    } else {
-        return Err(anyhow!("input must be a single workflow file or directory"));
     }
+    log::debug!(
+        "collected workflows: {workflows:?}",
+        workflows = workflow_paths
+    );
 
     let audit_state = AuditState::new(config);
 
