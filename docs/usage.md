@@ -102,3 +102,30 @@ as  GitHub's example of [running ESLint] as a security workflow.
 [repository workflow scan]: https://github.com/woodruffw/zizmor/blob/main/.github/workflows/zizmor.yml
 
 [running ESLint]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github#example-workflow-that-runs-the-eslint-analysis-tool
+
+### Use with `pre-commit`
+
+`zizmor` can be used with the [`pre-commit`] framework.
+To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
+
+```yaml
+-   repo: https://github.com/woodruffw/zizmor
+    rev: v0.1.6
+    hooks:
+    - id: zizmor
+```
+
+This will run `zizmor` on every commit. If you want to run `zizmor` only on
+specific files, you can use the `files` option:
+
+```yaml
+-   repo:
+    ...
+    hooks:
+    - id: zizmor
+      files: ^path/to/audit/.*\.yml$
+```
+
+See [`pre-commit`] documentation for more information on how to configure `pre-commit`.
+
+[`pre-commit`]: https://pre-commit.com/
