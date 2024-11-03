@@ -4,6 +4,7 @@ changelog:
       - tests
       - chore
       - no-changelog
+      - documentation
     authors:
       - dependabot
 
