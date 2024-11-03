@@ -105,7 +105,7 @@ as  GitHub's example of [running ESLint] as a security workflow.
 
 ### Use with `pre-commit`
 
-`zizmor` can be used with the [`pre-commit`] framework.
+`zizmor` can be used with the [`pre-commit`](https://pre-commit.com/) framework.
 To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
@@ -126,6 +126,5 @@ specific files, you can use the `files` option:
       files: ^path/to/audit/.*\.yml$
 ```
 
-See [`pre-commit`] documentation for more information on how to configure `pre-commit`.
-
-[`pre-commit`]: https://pre-commit.com/
+See [`pre-commit`](https://pre-commit.com/) documentation for more information on how to configure
+`pre-commit`.
