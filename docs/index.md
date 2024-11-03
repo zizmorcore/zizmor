@@ -7,7 +7,7 @@
 
     `zizmor` is currently in beta. You will encounter bugs; [please file them]!
 
-[please file them]: https://github.com/woodruffw/zizmor/issues/new
+[please file them]: https://github.com/woodruffw/zizmor/issues/new?assignees=&labels=bug%2Ctriage&projects=&template=bug-report.yml&title=%5BBUG%5D%3A+
 
 :rainbow: Hello, and welcome to `zizmor`'s documentation! :rainbow:
 

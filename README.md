@@ -6,13 +6,15 @@
 A tool for finding security issues in GitHub Actions CI/CD setups.
 
 > [!IMPORTANT]
-> `zizmor` is currently in beta. You will encounter bugs; please file them!
+> `zizmor` is currently in beta. You will encounter bugs; [please file them]!
 
 ![zizmor demo](./docs/assets/zizmor-demo.gif)
 
 See [`zizmor`'s documentation](https://woodruffw.github.io/zizmor/)
 for [installation steps], as well as a [quickstart] and
 [detailed usage recipes].
+
+[please file them]: https://github.com/woodruffw/zizmor/issues/new?assignees=&labels=bug%2Ctriage&projects=&template=bug-report.yml&title=%5BBUG%5D%3A+
 
 [installation steps]: https://woodruffw.github.io/zizmor/installation/
 
