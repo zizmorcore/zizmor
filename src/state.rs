@@ -1,5 +1,4 @@
-//! zizmor's runtime state, including application-level caching
-//! and configuration.
+//! zizmor's runtime state, including application-level caching.
 
 use moka::sync::Cache;
 
