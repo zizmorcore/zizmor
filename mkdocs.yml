@@ -37,6 +37,7 @@ markdown_extensions:
   # Makes sure we render `<https://...>`-style links correctly.
   - pymdownx.magiclink:
       repo_url_shorthand: true
+      normalize_issue_symbols: true
       provider: github
       user: woodruffw
       repo: zizmor
@@ -53,3 +54,6 @@ validation:
   omitted_files: warn
   absolute_links: warn
   unrecognized_links: warn
+
+extra_css:
+  - magiclink.css
