@@ -5,6 +5,7 @@ docs_dir: docs
 site_dir: site_html
 dev_addr: "127.0.0.1:9999"
 repo_url: https://github.com/woodruffw/zizmor
+edit_uri: edit/main/docs
 
 nav:
   - Welcome: "index.md"
@@ -27,6 +28,8 @@ theme:
     - navigation.expand
     - navigation.sections
     - navigation.tracking
+    - content.action.edit
+    - content.action.view
     - content.code.copy
     - content.code.annotate
 
