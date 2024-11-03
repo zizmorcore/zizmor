@@ -4,14 +4,15 @@ This page documents each of the audits currently implemented in `zizmor`.
 
 See each audit's section for its scope, behavior, and other information.
 
-Please note that:
+Legend:
 
-- _"Works offline"_ refers to audits that require a Github Token (`--gh-token <my-token>`)
-- _"Enable by default"_ refers to non-pedantic audits (`--pedantic`)
+| Type     | Examples         | Introduced in | Works offline  | Enabled by default |
+|----------|------------------|---------------|----------------|--------------------|
+| The kind of audit ("Workflow" or "Action") | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit needs to be explicitly enabled with `--pedantic` |
 
 ## `artipacked`
 
-| Type     | Examples         | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples         | Introduced in | Works offline  | Enabled by default |
 |----------|------------------|---------------|----------------|--------------------|
 | Workflow  | [artipacked.yml] | v0.1.0        | ✅             | ✅                 |
 
@@ -47,7 +48,7 @@ the job actually needs the persisted credential.
 
 ## `dangerous-triggers`
 
-| Type     | Examples                  | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples                  | Introduced in | Works offline  | Enabled by default |
 |----------|---------------------------|---------------|----------------|--------------------|
 | Workflow  | [pull-request-target.yml] | v0.1.0        | ✅             | ✅                 |
 
@@ -77,7 +78,7 @@ fork.
 
 ## `excessive-permissions`
 
-| Type     | Examples                    | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples                    | Introduced in | Works offline  | Enabled by default |
 |----------|-----------------------------|---------------|----------------|--------------------|
 | Workflow  | [excessive-permissions.yml] | v0.1.0        | ✅             | ✅                 |
 
@@ -96,7 +97,7 @@ all jobs inherit those permissions.
 
 ## `hardcoded-container-credentials`
 
-| Type     | Examples                    | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples                    | Introduced in | Works offline  | Enabled by default |
 |----------|-----------------------------|---------------|----------------|--------------------|
 | Workflow  | [hardcoded-credentials.yml] | v0.1.0        | ✅             | ✅                 |
 
@@ -113,7 +114,7 @@ Hardcoding credentials is bad.
 
 ## `impostor-commit`
 
-| Type     | Examples              | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples              | Introduced in | Works offline  | Enabled by default |
 |----------|-----------------------|---------------|----------------|--------------------|
 | Workflow  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 |
 
@@ -138,7 +139,7 @@ to surreptitiously introduce a backdoored action into a victim's workflows(s).
 
 ## `known-vulnerable-actions`
 
-| Type     | Examples                       | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples                       | Introduced in | Works offline  | Enabled by default |
 |----------|--------------------------------|---------------|----------------|--------------------|
 | Workflow  | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 |
 
@@ -163,7 +164,7 @@ You shouldn't use actions with known vulnerabilities.
 
 ## `ref-confusion`
 
-| Type     | Examples            | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples            | Introduced in | Works offline  | Enabled by default |
 |----------|---------------------|---------------|----------------|--------------------|
 | Workflow  | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 |
 
@@ -185,11 +186,16 @@ pre-existing consumers of that action without having to modify those consumers.
 
 ## `self-hosted-runner`
 
-| Type     | Examples            | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples            | Introduced in | Works offline  | Enabled by default |
 |----------|---------------------|---------------|----------------|--------------------|
 | Workflow  | [ref-confusion.yml] | v0.1.0        | ✅             | ❌                 |
 
 [self-hosted.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/self-hosted.yml
+
+!!! note
+
+    This is a `--pedantic` only audit, due to `zizmor`'s limited ability
+    to analyze runner configurations themselves. See #34 for more details.
 
 ### What
 
@@ -207,7 +213,7 @@ GitHub does not recommend their use in public repositories.
 
 ## `template-injection`
 
-| Type     | Examples                 | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples                 | Introduced in | Works offline  | Enabled by default |
 |----------|--------------------------|---------------|----------------|--------------------|
 | Workflow  | [template-injection.yml] | v0.1.0        | ✅             | ✅                 |
 
@@ -234,7 +240,7 @@ a new issue title).
 
 ## `use-trusted-publishing`
 
-| Type     | Examples                     | Introduced in | Works offline?  | Enabled by default |
+| Type     | Examples                     | Introduced in | Works offline  | Enabled by default |
 |----------|------------------------------|---------------|----------------|--------------------|
 | Workflow  | [pypi-manual-credential.yml] | v0.1.0        | ✅             | ✅                 |
 

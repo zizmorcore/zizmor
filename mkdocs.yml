@@ -4,6 +4,7 @@ site_url: https://woodruffw.github.io/zizmor
 docs_dir: docs
 site_dir: site_html
 dev_addr: "127.0.0.1:9999"
+repo_url: https://github.com/woodruffw/zizmor
 
 nav:
   - Welcome: "index.md"
@@ -13,7 +14,6 @@ nav:
   - "audits.md"
   - "development.md"
   - External links:
-      - "GitHub 🔗": https://github.com/woodruffw/zizmor
       - "crates.io 🔗": https://crates.io/crates/zizmor
 
 theme:
@@ -22,6 +22,7 @@ theme:
     scheme: slate
   icon:
     annotation: material/arrow-right-circle
+    repo: fontawesome/brands/github-alt
   features:
     - navigation.expand
     - navigation.sections
@@ -31,7 +32,11 @@ theme:
 
 markdown_extensions:
   # Makes sure we render `<https://...>`-style links correctly.
-  - pymdownx.magiclink
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      provider: github
+      user: woodruffw
+      repo: zizmor
   - pymdownx.emoji
   - admonition
   - pymdownx.details
