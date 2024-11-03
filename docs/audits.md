@@ -4,11 +4,17 @@ This page documents each of the audits currently implemented in `zizmor`.
 
 See each audit's section for its scope, behavior, and other information.
 
+Legend:
+
+| Type     | Examples         | Introduced in | Works offline  | Enabled by default |
+|----------|------------------|---------------|----------------|--------------------|
+| The kind of audit ("Workflow" or "Action") | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit needs to be explicitly enabled with `--pedantic` |
+
 ## `artipacked`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [artipacked.yml] | v0.1.0 |
+| Type     | Examples         | Introduced in | Works offline  | Enabled by default |
+|----------|------------------|---------------|----------------|--------------------|
+| Workflow  | [artipacked.yml] | v0.1.0        | ✅             | ✅                 |
 
 [artipacked.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/artipacked.yml
 
@@ -42,9 +48,9 @@ the job actually needs the persisted credential.
 
 ## `dangerous-triggers`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [pull-request-target.yml] | v0.1.0 |
+| Type     | Examples                  | Introduced in | Works offline  | Enabled by default |
+|----------|---------------------------|---------------|----------------|--------------------|
+| Workflow  | [pull-request-target.yml] | v0.1.0        | ✅             | ✅                 |
 
 [pull-request-target.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pull-request-target.yml
 
@@ -72,9 +78,9 @@ fork.
 
 ## `excessive-permissions`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [excessive-permissions.yml] | v0.1.0 |
+| Type     | Examples                    | Introduced in | Works offline  | Enabled by default |
+|----------|-----------------------------|---------------|----------------|--------------------|
+| Workflow  | [excessive-permissions.yml] | v0.1.0        | ✅             | ✅                 |
 
 [excessive-permissions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/excessive-permissions.yml
 
@@ -91,9 +97,9 @@ all jobs inherit those permissions.
 
 ## `hardcoded-container-credentials`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [hardcoded-credentials.yml] | v0.1.0 |
+| Type     | Examples                    | Introduced in | Works offline  | Enabled by default |
+|----------|-----------------------------|---------------|----------------|--------------------|
+| Workflow  | [hardcoded-credentials.yml] | v0.1.0        | ✅             | ✅                 |
 
 [hardcoded-credentials.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/hardcoded-credentials.yml
 
@@ -108,9 +114,9 @@ Hardcoding credentials is bad.
 
 ## `impostor-commit`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [impostor-commit.yml] | v0.1.0 |
+| Type     | Examples              | Introduced in | Works offline  | Enabled by default |
+|----------|-----------------------|---------------|----------------|--------------------|
+| Workflow  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 |
 
 [impostor-commit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/impostor-commit.yml
 
@@ -133,9 +139,9 @@ to surreptitiously introduce a backdoored action into a victim's workflows(s).
 
 ## `known-vulnerable-actions`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [known-vulnerable-actions.yml] | v0.1.0 |
+| Type     | Examples                       | Introduced in | Works offline  | Enabled by default |
+|----------|--------------------------------|---------------|----------------|--------------------|
+| Workflow  | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 |
 
 [known-vulnerable-actions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/known-vulnerable-actions.yml
 
@@ -158,9 +164,9 @@ You shouldn't use actions with known vulnerabilities.
 
 ## `ref-confusion`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [ref-confusion.yml] | v0.1.0 |
+| Type     | Examples            | Introduced in | Works offline  | Enabled by default |
+|----------|---------------------|---------------|----------------|--------------------|
+| Workflow  | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 |
 
 [ref-confusion.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/ref-confusion.yml
 
@@ -180,11 +186,16 @@ pre-existing consumers of that action without having to modify those consumers.
 
 ## `self-hosted-runner`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [self-hosted.yml] | v0.1.0 |
+| Type     | Examples            | Introduced in | Works offline  | Enabled by default |
+|----------|---------------------|---------------|----------------|--------------------|
+| Workflow  | [ref-confusion.yml] | v0.1.0        | ✅             | ❌                 |
 
 [self-hosted.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/self-hosted.yml
+
+!!! note
+
+    This is a `--pedantic` only audit, due to `zizmor`'s limited ability
+    to analyze runner configurations themselves. See #34 for more details.
 
 ### What
 
@@ -202,12 +213,11 @@ GitHub does not recommend their use in public repositories.
 
 ## `template-injection`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [template-injection.yml] | v0.1.0 |
+| Type     | Examples                 | Introduced in | Works offline  | Enabled by default |
+|----------|--------------------------|---------------|----------------|--------------------|
+| Workflow  | [template-injection.yml] | v0.1.0        | ✅             | ✅                 |
 
 [template-injection.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/template-injection.yml
-
 
 ### What
 
@@ -230,9 +240,9 @@ a new issue title).
 
 ## `use-trusted-publishing`
 
-| Type | Examples | Introduced in |
-| ---- | -------- | ------------- |
-| Workflow | [pypi-manual-credential.yml] | v0.1.0 |
+| Type     | Examples                     | Introduced in | Works offline  | Enabled by default |
+|----------|------------------------------|---------------|----------------|--------------------|
+| Workflow  | [pypi-manual-credential.yml] | v0.1.0        | ✅             | ✅                 |
 
 [pypi-manual-credential.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pypi-manual-credential.yml
 
