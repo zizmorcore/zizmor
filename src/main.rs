@@ -48,6 +48,7 @@ struct Args {
     format: Option<OutputFormat>,
 
     /// The workflow filenames or directories to audit.
+    #[arg(required = true)]
     inputs: Vec<PathBuf>,
 }
 
@@ -90,16 +91,17 @@ fn main() -> Result<()> {
                     _ => continue,
                 }
             }
-
-            if workflow_paths.is_empty() {
-                return Err(anyhow!(
-                    "no workflow files collected; empty or wrong directory?"
-                ));
-            }
         } else {
             return Err(anyhow!("input malformed, expected file or directory"));
         }
     }
+
+    if workflow_paths.is_empty() {
+        return Err(anyhow!(
+            "no workflow files collected; empty or wrong directory?"
+        ));
+    }
+
     log::debug!(
         "collected workflows: {workflows:?}",
         workflows = workflow_paths
