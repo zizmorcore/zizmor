@@ -1,6 +1,9 @@
 //! Helper routines.
 
-use github_actions_models::common::expr::ExplicitExpr;
+use github_actions_models::{
+    common::expr::{ExplicitExpr, LoE},
+    workflow::job::Matrix,
+};
 
 /// Splits the given `patterns` string into one or more patterns, using
 /// approximately the same rules as GitHub's `@actions/glob` package.
@@ -63,6 +66,50 @@ pub(crate) fn extract_expressions(text: &str) -> Vec<ExplicitExpr> {
     }
 
     exprs
+}
+
+/// Checks whether the given `expr` into `matrix` is static.
+pub(crate) fn matrix_is_static(expr: &str, matrix: &Matrix) -> bool {
+    // If the matrix's dimensions are an expression, then it's not static.
+    let LoE::Literal(dimensions) = &matrix.dimensions else {
+        return false;
+    };
+
+    // Our `expr` should be a literal path of `matrix.foo.bar.baz.etc`,
+    // so we descend through the matrix based on it.
+    let mut keys = expr.split('.').skip(1);
+
+    let Some(key) = keys.next() else {
+        // No path means that we're effectively expanding the entire matrix,
+        // meaning *any* non-static component makes the entire expansion
+        // non-static.
+
+        // HACK: The correct way to do this is to walk `matrix.dimensions`,
+        // but it could be arbitrarily deep. Instead, we YOLO the dimensions
+        // back into YAML and see if the serialized equivalent has
+        // any indicators of expansion (`${{ ... }}`) in it.
+        // NOTE: Safe unwrap since `dimensions` was loaded directly from YAML
+        let dimensions_yaml = serde_yaml::to_string(&dimensions).unwrap();
+        return !(dimensions_yaml.contains("${{") && dimensions_yaml.contains("}}"));
+    };
+
+    match dimensions.get(key) {
+        // This indicates a malformed matrix or matrix ref, which is
+        // static for our purposes.
+        None => true,
+        // If our key is an expression, it's definitely not static.
+        Some(LoE::Expr(_)) => false,
+        Some(LoE::Literal(dim)) => {
+            // TODO: This is imprecise: technically we should walk the
+            // entire set of keys to determine if a specific index is
+            // accessed + whether that index is an expression.
+            // But doing that is hard, so we do the same YOLO reserialize
+            // trick as above and consider this non-static
+            // if it has any hint of a template expansion in it.
+            let dim_yaml = serde_yaml::to_string(&dim).unwrap();
+            !(dim_yaml.contains("${{") && dim_yaml.contains("}}"))
+        }
+    }
 }
 
 #[cfg(test)]
