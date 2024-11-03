@@ -69,7 +69,7 @@ impl WorkflowAudit for RefConfusion {
     where
         Self: Sized,
     {
-        if state.config.offline {
+        if state.offline {
             return Err(anyhow!("offline audits only requested"));
         }
 

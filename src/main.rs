@@ -3,12 +3,14 @@ use std::{io::stdout, path::PathBuf, time::Duration};
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
+use config::Config;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, WorkflowRegistry};
-use state::{AuditConfig, AuditState};
+use state::AuditState;
 
 mod audit;
+mod config;
 mod expr;
 mod finding;
 mod github_api;
@@ -22,7 +24,7 @@ mod utils;
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
 #[command(about, version)]
-struct Args {
+struct App {
     /// Emit findings even when the context suggests an explicit security decision made by the user.
     #[arg(short, long)]
     pedantic: bool,
@@ -47,6 +49,11 @@ struct Args {
     #[arg(long, value_enum)]
     format: Option<OutputFormat>,
 
+    /// The configuration file to load. By default, any config will be
+    /// discovered relative to $CWD.
+    #[arg(short, long)]
+    config: Option<PathBuf>,
+
     /// The workflow filenames or directories to audit.
     #[arg(required = true)]
     inputs: Vec<PathBuf>,
@@ -62,16 +69,14 @@ pub(crate) enum OutputFormat {
 fn main() -> Result<()> {
     human_panic::setup_panic!();
 
-    let args = Args::parse();
+    let args = App::parse();
 
     env_logger::Builder::new()
         .filter_level(args.verbose.log_level_filter())
         .init();
 
-    let config = AuditConfig::from(&args);
-
     let mut workflow_paths = vec![];
-    for input in args.inputs {
+    for input in &args.inputs {
         if input.is_file() {
             workflow_paths.push(input.clone());
         } else if input.is_dir() {
@@ -107,7 +112,8 @@ fn main() -> Result<()> {
         workflows = workflow_paths
     );
 
-    let audit_state = AuditState::new(config);
+    let _ = Config::new(&args);
+    let audit_state = AuditState::new(&args);
 
     let mut workflow_registry = WorkflowRegistry::new();
     for workflow_path in workflow_paths.iter() {
