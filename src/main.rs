@@ -21,7 +21,7 @@ mod utils;
 
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
-#[command(version)]
+#[command(about, version)]
 struct Args {
     /// Emit findings even when the context suggests an explicit security decision made by the user.
     #[arg(short, long)]
