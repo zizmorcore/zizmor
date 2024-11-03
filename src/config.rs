@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context as _, Result};
 use serde::{de, Deserialize};
 use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
-use crate::App;
+use crate::{finding::Finding, App};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct WorkflowRule {
@@ -102,6 +102,53 @@ impl Config {
         log::debug!("loaded config: {config:?}");
 
         Ok(config)
+    }
+
+    /// Returns `true` if this [`Config`] has an ignore rule for the
+    /// given finding.
+    pub(crate) fn ignores(&self, finding: &Finding<'_>) -> bool {
+        let Some(rule_config) = self.rules.get(finding.ident) else {
+            return false;
+        };
+
+        let ignores = &rule_config.ignore;
+
+        // If *any* location in the finding matches an ignore rule,
+        // we consider the entire finding ignored.
+        // This will hopefully minimize confusion when a finding spans
+        // multiple files, as the first location is the one a user will
+        // typically ignore, suppressing the rest in the process.
+        for loc in &finding.locations {
+            for rule in ignores.iter().filter(|i| i.filename == loc.symbolic.name) {
+                match rule {
+                    // Rule has a line and (maybe) a column.
+                    WorkflowRule {
+                        line: Some(line),
+                        column,
+                        ..
+                    } => {
+                        if *line == loc.concrete.location.start_point.row + 1
+                            && column.map_or(true, |col| {
+                                col == loc.concrete.location.start_point.column + 1
+                            })
+                        {
+                            return true;
+                        } else {
+                            continue;
+                        }
+                    }
+                    // Rule has no line/col, so we match by virtue of the filename matching.
+                    WorkflowRule {
+                        line: None,
+                        column: None,
+                        ..
+                    } => return true,
+                    _ => unreachable!(),
+                }
+            }
+        }
+
+        false
     }
 }
 

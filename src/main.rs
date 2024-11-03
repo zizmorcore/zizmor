@@ -80,7 +80,7 @@ fn main() -> Result<()> {
         if input.is_file() {
             workflow_paths.push(input.clone());
         } else if input.is_dir() {
-            let mut absolute = std::fs::canonicalize(&input)?;
+            let mut absolute = std::fs::canonicalize(input)?;
             if !absolute.ends_with(".github/workflows") {
                 absolute.push(".github/workflows")
             }
@@ -112,7 +112,7 @@ fn main() -> Result<()> {
         workflows = workflow_paths
     );
 
-    let _ = Config::new(&args);
+    let config = Config::new(&args)?;
     let audit_state = AuditState::new(&args);
 
     let mut workflow_registry = WorkflowRegistry::new();
@@ -177,6 +177,10 @@ fn main() -> Result<()> {
         ));
     }
 
+    // TODO: Suboptimal; should probably use `extract_if` once stabilized.
+    // See: https://github.com/rust-lang/rust/issues/43244
+    let (ignored, results): (Vec<_>, Vec<_>) = results.into_iter().partition(|r| config.ignores(r));
+
     bar.finish_and_clear();
 
     let format = match args.format {
@@ -185,7 +189,7 @@ fn main() -> Result<()> {
     };
 
     match format {
-        OutputFormat::Plain => render::render_findings(&workflow_registry, &results),
+        OutputFormat::Plain => render::render_findings(&workflow_registry, &results, &ignored),
         OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results)?,
         OutputFormat::Sarif => {
             serde_json::to_writer_pretty(stdout(), &sarif::build(&workflow_registry, results))?
