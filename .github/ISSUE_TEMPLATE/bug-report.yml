@@ -1,0 +1,77 @@
+name: Bug Report
+description: File a bug report.
+title: "[BUG]: "
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to fill out this bug report!
+
+        Please read the following parts of this template carefully.
+        Invalid or incomplete submissions take longer to triage,
+        and may be given a lower priority or closed outright
+        if not actionable.
+
+  - type: checkboxes
+    attributes:
+      label: Pre-submission checks
+      description: |
+        By submitting this issue, you affirm that you've satisfied the
+        following conditions.
+      options:
+        - label: >-
+            I am **not** filing a feature request. These should be filed via
+            the feature request form instead.
+          required: true
+        - label: >-
+            I have looked through the
+            [open issues](https://github.com/woodruffw/zizmor/issues?q=is%3Aissue+is%3Aopen+)
+            for a duplicate report.
+          required: true
+
+  - type: textarea
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: |
+        I expected `zizmor ...` to do X, Y, and Z.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Actual behavior
+      description: A clear and concise description of what actually happened.
+      placeholder: |
+        Instead of doing X, Y, and Z, `zizmor ...` produced the following error: ...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Reproduction steps
+      description: A step-by-step list of actions that we can take to reproduce the actual behavior.
+      placeholder: |
+        1. Do this
+        2. Do that
+        3. Do another thing
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Logs
+      description: |
+        If applicable, please paste any logs or console errors here.
+
+        If you can re-run the command that produced the error, run it with
+        `--verbose` and paste the full verbose logs here.
+      render: plain text
+
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: Add any other additional context about the problem here.
