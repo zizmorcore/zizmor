@@ -77,7 +77,11 @@ pub(crate) fn render_findings(
     }
 
     if findings.is_empty() {
-        println!("{}", "No findings to report. Good job!".green());
+        println!(
+            "{no_findings} ({nignored} ignored)",
+            no_findings = "No findings to report. Good job!".green(),
+            nignored = ignored.len().bright_yellow()
+        );
     } else {
         let mut findings_by_severity = HashMap::new();
 
