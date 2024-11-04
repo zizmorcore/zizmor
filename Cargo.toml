@@ -12,7 +12,7 @@ rust-version = "1.80.1"
 [dependencies]
 annotate-snippets = "0.11.4"
 anstream = "0.6.15"
-anyhow = "1.0.86"
+anyhow = "1.0.92"
 clap = { version = "4.5.16", features = ["derive", "env"] }
 clap-verbosity-flag = "2.2.1"
 env_logger = "0.11.5"
@@ -25,8 +25,8 @@ moka = { version = "0.12.8", features = ["sync"] }
 owo-colors = "4.1.0"
 pest = "2.7.14"
 pest_derive = "2.7.14"
-reqwest = { version = "0.12.7", features = ["blocking", "json"] }
-serde = { version = "1.0.208", features = ["derive"] }
+reqwest = { version = "0.12.9", features = ["blocking", "json"] }
+serde = { version = "1.0.214", features = ["derive"] }
 serde-sarif = "0.6.5"
 serde_json = "1.0.125"
 serde_yaml = "0.9.34"
@@ -38,4 +38,4 @@ lto = true
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
-serde_json_path = "0.6.7"
+serde_json_path = "0.7.1"
