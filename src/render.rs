@@ -102,11 +102,17 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &[Finding])
 
 fn render_finding(registry: &WorkflowRegistry, finding: &Finding) {
     let link = Link::new(finding.ident, &finding.url()).to_string();
+    let confidence = format!(
+        "audit confidence → {:?}",
+        &finding.determinations.confidence
+    );
+    let confidence_footer = Level::Note.title(&confidence);
 
     let message = Level::from(&finding.determinations.severity)
         .title(finding.desc)
         .id(&link)
-        .snippets(finding_snippet(registry, finding));
+        .snippets(finding_snippet(registry, finding))
+        .footer(confidence_footer);
 
     let renderer = Renderer::styled();
     println!("{}", renderer.render(message));
