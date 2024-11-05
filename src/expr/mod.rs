@@ -73,6 +73,11 @@ pub(crate) enum Expr {
 }
 
 impl Expr {
+    /// Convenience API for making a boxed `Expr::String`.
+    pub(crate) fn string(s: impl Into<String>) -> Box<Self> {
+        Self::String(s.into()).into()
+    }
+
     /// Returns all of the contexts used in this expression, regardless
     /// of dataflow.
     pub(crate) fn contexts(&self) -> Vec<&str> {
@@ -112,7 +117,7 @@ impl Expr {
             .next()
             .unwrap();
 
-        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Expr> {
+        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<Expr>> {
             // We're parsing a pest grammar, which isn't left-recursive.
             // As a result, we have constructions like
             // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
@@ -130,10 +135,11 @@ impl Expr {
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(Expr::BinOp {
-                            lhs: expr.into(),
+                            lhs: expr,
                             op: BinOp::Or,
-                            rhs: parse_pair(next)?.into(),
-                        })
+                            rhs: parse_pair(next)?,
+                        }
+                        .into())
                     })
                 }
                 Rule::and_expr => {
@@ -141,10 +147,11 @@ impl Expr {
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(Expr::BinOp {
-                            lhs: expr.into(),
+                            lhs: expr,
                             op: BinOp::And,
-                            rhs: parse_pair(next)?.into(),
-                        })
+                            rhs: parse_pair(next)?,
+                        }
+                        .into())
                     })
                 }
                 Rule::eq_expr => {
@@ -166,10 +173,11 @@ impl Expr {
                         };
 
                         Ok(Expr::BinOp {
-                            lhs: expr.into(),
+                            lhs: expr,
                             op: eq_op,
-                            rhs: parse_pair(comp_expr)?.into(),
-                        })
+                            rhs: parse_pair(comp_expr)?,
+                        }
+                        .into())
                     })
                 }
                 Rule::comp_expr => {
@@ -191,10 +199,11 @@ impl Expr {
                         };
 
                         Ok(Expr::BinOp {
-                            lhs: expr.into(),
+                            lhs: expr,
                             op: eq_op,
-                            rhs: parse_pair(unary_expr)?.into(),
-                        })
+                            rhs: parse_pair(unary_expr)?,
+                        }
+                        .into())
                     })
                 }
                 Rule::unary_expr => {
@@ -204,8 +213,9 @@ impl Expr {
                     match pair.as_rule() {
                         Rule::unary_op => Ok(Expr::UnOp {
                             op: UnOp::Not,
-                            expr: parse_pair(pairs.next().unwrap())?.into(),
-                        }),
+                            expr: parse_pair(pairs.next().unwrap())?,
+                        }
+                        .into()),
                         Rule::primary_expr => parse_pair(pair),
                         _ => unreachable!(),
                     }
@@ -214,8 +224,8 @@ impl Expr {
                     // Punt back to the top level match to keep things simple.
                     parse_pair(pair.into_inner().next().unwrap())
                 }
-                Rule::number => Ok(Expr::Number(pair.as_str().parse().unwrap())),
-                Rule::string => Ok(Expr::String(
+                Rule::number => Ok(Expr::Number(pair.as_str().parse().unwrap()).into()),
+                Rule::string => Ok(Expr::string(
                     // string -> string_inner
                     pair.into_inner()
                         .next()
@@ -223,45 +233,48 @@ impl Expr {
                         .as_str()
                         .replace("''", "'"),
                 )),
-                Rule::boolean => Ok(Expr::Boolean(pair.as_str().parse().unwrap())),
-                Rule::null => Ok(Expr::Null),
-                Rule::star => Ok(Expr::Star),
+                Rule::boolean => Ok(Expr::Boolean(pair.as_str().parse().unwrap()).into()),
+                Rule::null => Ok(Expr::Null.into()),
+                Rule::star => Ok(Expr::Star.into()),
                 Rule::index => {
                     // (context | function (expr))[expr]+
                     let mut pairs = pair.into_inner();
 
                     Ok(Expr::Index {
-                        parent: parse_pair(pairs.next().unwrap())?.into(),
+                        parent: parse_pair(pairs.next().unwrap())?,
                         indices: pairs
-                            .map(|pair| parse_pair(pair))
+                            .map(|pair| parse_pair(pair).map(|e| *e))
                             .collect::<Result<_, _>>()?,
-                    })
+                    }
+                    .into())
                 }
                 Rule::function_call => {
                     let mut pairs = pair.into_inner();
 
                     let identifier = pairs.next().unwrap();
                     let args = pairs
-                        .map(|pair| parse_pair(pair))
+                        .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
                     Ok(Expr::Call {
                         func: identifier.as_str().into(),
                         args,
-                    })
+                    }
+                    .into())
                 }
-                Rule::context => Ok(Expr::Context(pair.as_str().into())),
+                Rule::context => Ok(Expr::Context(pair.as_str().into()).into()),
                 r => panic!("fuck: {r:?}"),
             }
         }
 
-        parse_pair(or_expr)
+        parse_pair(or_expr).map(|e| *e)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use pest::Parser as _;
+    use pretty_assertions::assert_eq;
 
     use super::{BinOp, Expr, ExprParser, Rule, UnOp};
 
@@ -287,7 +300,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_ident_rule() {
+    fn test_parse_context_rule() {
         let cases = &[
             "foo.bar",
             "github.action_path",
@@ -378,9 +391,9 @@ mod tests {
                     rhs: Expr::Boolean(true).into(),
                 },
             ),
-            ("'foo '' bar'", Expr::String("foo ' bar".into())),
-            ("('foo '' bar')", Expr::String("foo ' bar".into())),
-            ("((('foo '' bar')))", Expr::String("foo ' bar".into())),
+            ("'foo '' bar'", *Expr::string("foo ' bar")),
+            ("('foo '' bar')", *Expr::string("foo ' bar")),
+            ("((('foo '' bar')))", *Expr::string("foo ' bar")),
             (
                 "foo(1, 2, 3)",
                 Expr::Call {
@@ -403,6 +416,26 @@ mod tests {
                     indices: vec![Expr::Star],
                 },
             ),
+            (
+                // Sanity check for our associativity: the top level Expr here
+                // should be `BinOp::Or`.
+                "github.ref == 'refs/heads/main' && 'value_for_main_branch' || 'value_for_other_branches'",
+                Expr::BinOp {
+                    lhs: Expr::BinOp {
+                        lhs: Expr::BinOp {
+                            lhs: Expr::Context(
+                                "github.ref".into(),
+                            ).into(),
+                            op: BinOp::Eq,
+                            rhs: Expr::string("refs/heads/main"),
+                        }.into(),
+                        op: BinOp::And,
+                        rhs: Expr::string("value_for_main_branch"),
+                    }.into(),
+                    op: BinOp::Or,
+                    rhs: Expr::string("value_for_other_branches"),
+                }
+            )
         ];
 
         for (case, expr) in cases {
