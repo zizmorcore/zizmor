@@ -226,8 +226,7 @@ pub(crate) struct Finding<'w> {
 impl<'w> Finding<'w> {
     pub(crate) fn url(&self) -> String {
         format!(
-            "{repo}/blob/main/docs/audits.md#{ident}",
-            repo = env!("CARGO_PKG_REPOSITORY"),
+            "https://woodruffw.github.io/zizmor/audits#{ident}",
             ident = self.ident
         )
     }
