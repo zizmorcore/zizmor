@@ -1,11 +1,11 @@
 # Usage Recipes
 
-## Online and offline use
+## Operating Modes
 
-Some of `zizmor`'s audits require access to GitHub's API. `zizmor` will perform
-online audits by default *if* the user has a `GH_TOKEN` specified
-in their environment. If no `GH_TOKEN` is present, then `zizmor` will operate
-in offline mode by default.
+Some of `zizmor`'s audits require access to GitHub's API.
+`zizmor` will perform online audits by default *if* the user has a `GH_TOKEN`
+specified in their environment. If no `GH_TOKEN` is present, then `zizmor`
+will operate in offline mode by default.
 
 Both of these can be made explicit through their respective command-line flags:
 
@@ -44,13 +44,19 @@ See [Integration](#integration) for suggestions on when to use each format.
 
 `zizmor` is designed to integrate with GitHub Actions. In particular,
 `zizmor --format sarif` specifies [SARIF] as the output format, which GitHub's
-code scanning feature also supports.
+code scanning feature uses.
 
 You can integrate `zizmor` into your CI/CD however you please, but one
 easy way to do it is with a workflow that connects to
 [GitHub's code scanning functionality].
 
-The following is an example of such a workflow:
+!!! important
+
+    The workflow below performs a [SARIF] upload, which is available for public
+    repositories and for GitHub Enterprise Cloud organizations that have
+    [Advanced Security]. If neither of these apply to you, then you can
+    adapt the workflow to emit JSON or diagnostic output via `--format json`
+    or `--format plain` respectively.
 
 ```yaml title="zizmor.yml"
 name: GitHub Actions Security Analysis with zizmor 🌈
@@ -103,6 +109,8 @@ as  GitHub's example of [running ESLint] as a security workflow.
 
 [running ESLint]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github#example-workflow-that-runs-the-eslint-analysis-tool
 
+[Advanced Security]: https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security
+
 ### Use with `pre-commit`
 
 `zizmor` can be used with the [`pre-commit`](https://pre-commit.com/) framework.
@@ -110,10 +118,12 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 -   repo: https://github.com/woodruffw/zizmor
-    rev: v0.1.6
+    rev: v0.1.6 # (1)!
     hooks:
     - id: zizmor
 ```
+
+1. Don't forget to update this version to the latest `zizmor` release!
 
 This will run `zizmor` on every commit. If you want to run `zizmor` only on
 specific files, you can use the `files` option:
