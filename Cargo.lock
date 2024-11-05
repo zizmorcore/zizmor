@@ -2270,7 +2270,7 @@ checksum = "ced3678a2879b30306d323f4542626697a464a97c0a07c9aebf7ebca65cd4dde"
 
 [[package]]
 name = "zizmor"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "annotate-snippets",
  "anstream",
