@@ -109,7 +109,7 @@ impl WorkflowAudit for ImpostorCommit {
     }
 
     fn new(state: AuditState) -> Result<Self> {
-        if state.config.offline {
+        if state.offline {
             return Err(anyhow!("offline audits only requested"));
         }
 

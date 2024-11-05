@@ -66,14 +66,22 @@ pub(crate) fn finding_snippet<'w>(
     snippets
 }
 
-pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &[Finding]) {
+pub(crate) fn render_findings(
+    registry: &WorkflowRegistry,
+    findings: &[Finding],
+    ignored: &[Finding],
+) {
     for finding in findings {
         render_finding(registry, finding);
         println!();
     }
 
     if findings.is_empty() {
-        println!("{}", "No findings to report. Good job!".green());
+        println!(
+            "{no_findings} ({nignored} ignored)",
+            no_findings = "No findings to report. Good job!".green(),
+            nignored = ignored.len().bright_yellow()
+        );
     } else {
         let mut findings_by_severity = HashMap::new();
 
@@ -89,8 +97,9 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &[Finding])
         }
 
         println!(
-            "{nfindings} findings ({nunknown} unknown, {ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high)",
-            nfindings = findings.len().green(),
+            "{nfindings} findings ({nignored} ignored): {nunknown} unknown, {ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
+            nfindings = (findings.len() + ignored.len()).green(),
+            nignored = ignored.len().bright_yellow(),
             nunknown = findings_by_severity.get(&Severity::Unknown).unwrap_or(&0),
             ninformational = findings_by_severity.get(&Severity::Informational).unwrap_or(&0).purple(),
             nlow = findings_by_severity.get(&Severity::Low).unwrap_or(&0).cyan(),

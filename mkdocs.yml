@@ -12,6 +12,7 @@ nav:
   - "installation.md"
   - "quickstart.md"
   - "usage.md"
+  - "configuration.md"
   - "audits.md"
   - "development.md"
   - External links:

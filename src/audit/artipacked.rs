@@ -81,7 +81,7 @@ impl WorkflowAudit for Artipacked {
                         Some(EnvValue::Boolean(true)) => {
                             // If a user explicitly sets `persist-credentials: true`,
                             // they probably mean it. Only report if being pedantic.
-                            if self.state.config.pedantic {
+                            if self.state.pedantic {
                                 vulnerable_checkouts.push(step)
                             } else {
                                 continue;

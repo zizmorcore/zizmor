@@ -38,6 +38,49 @@ zizmor --format sarif
 
 See [Integration](#integration) for suggestions on when to use each format.
 
+## Ignoring results
+
+`zizmor`'s defaults are not always 100% right for every possible use case.
+
+If you find that `zizmor` produces findings that aren't right for you
+(and **aren't** false positives, which should be reported!), then you can
+choose to *selectively ignore* results via a `zizmor.yml` configuration file.
+
+Here's what a `zizmor.yml` file might look like:
+
+```yaml title="zizmor.yml"
+rules:
+  template-injection:
+    ignore:
+      - safe.yml
+      - somewhat-safe.yml:123
+      - one-exact-spot.yml:123:456
+```
+
+Concretely, this `zizmor.yml` configuration declares three ignore rules,
+all for the [`template-injection`](./audits.md#template-injection) audit:
+
+1. Ignore all findings in `safe.yml`, regardless of line/column location
+2. Ignore *any* findings in `somewhat-safe.yml` that occur on line 123
+3. Ignore *one* finding in `one-exact-spot.yml` that occurs on line 123, column 456
+
+More generally, the filename ignore syntax is `workflow.yml:line:col`, where
+`line` and `col` are both optional and 1-based (meaning `foo.yml:1:1`
+is the start of the file, not `foo.yml:0:0`).
+
+To pass a configuration to `zizmor`, you can either place `zizmor.yml`
+somewhere where `zizmor` [will discover it], or pass it explicitly via
+the `--config` argument. With `--config`, the file can be named anything:
+
+```bash
+zizmor --config my-zizmor-config.yml /dir/to/audit
+```
+
+[will discover it]: ./configuration.md#discovery
+
+See [Configuration: `rules.<id>.ignore`](./configuration.md#rulesidignore) for
+more details on writing ignore rules.
+
 ## Integration
 
 ### Use in GitHub Actions
