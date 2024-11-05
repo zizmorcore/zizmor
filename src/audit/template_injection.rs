@@ -61,7 +61,7 @@ impl TemplateInjection {
     /// can only ever return a literal node (i.e. bool, number, string, etc.).
     /// All branches/flows of the expression must uphold that invariant;
     /// no taint tracking is currently done.
-    fn expr_is_safe(&self, expr: &Expr) -> bool {
+    fn expr_is_safe(expr: &Expr) -> bool {
         match expr {
             Expr::Number(_) => true,
             Expr::String(_) => true,
@@ -89,7 +89,7 @@ impl TemplateInjection {
                     // regardless of the actual operation type. This could be
                     // refined to check only one side with taint information.
                     // TODO: Relax this for >/>=/</<=?
-                    _ => self.expr_is_safe(lhs) && self.expr_is_safe(rhs),
+                    _ => Self::expr_is_safe(lhs) && Self::expr_is_safe(rhs),
                 }
             }
             Expr::UnOp { op, .. } => match op {
@@ -158,7 +158,7 @@ impl TemplateInjection {
             // Filter "safe" expressions (ones that might expand to code,
             // but not arbitrary code) by default, unless we're operating
             // in pedantic mode.
-            if self.expr_is_safe(&expr) && !self.state.pedantic {
+            if Self::expr_is_safe(&expr) && !self.state.pedantic {
                 continue;
             }
 
