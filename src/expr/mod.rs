@@ -417,6 +417,10 @@ mod tests {
                 },
             ),
             (
+                "vegetables.*.ediblePortions",
+                Expr::Context("vegetables.*.ediblePortions".into()),
+            ),
+            (
                 // Sanity check for our associativity: the top level Expr here
                 // should be `BinOp::Or`.
                 "github.ref == 'refs/heads/main' && 'value_for_main_branch' || 'value_for_other_branches'",
