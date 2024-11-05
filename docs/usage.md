@@ -78,8 +78,8 @@ zizmor --config my-zizmor-config.yml /dir/to/audit
 
 [will discover it]: ./configuration.md#discovery
 
-See [Configuration](./configuration.md) for more details on `zizmor`'s
-configuration format.
+See [Configuration: `rules.<id>.ignore`](./configuration.md#rulesidignore) for
+more details on writing ignore rules.
 
 ## Integration
 
