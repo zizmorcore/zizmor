@@ -2,11 +2,10 @@
 
 ## Operating Modes
 
-`zizmor` supports both **online** and **offline** audits:
-
-Some of `zizmor`'s audits require access to GitHub's API. `zizmor` will perform online audits by default *if* the user has a `GH_TOKEN` specified
-in their environment. If no `GH_TOKEN` is present, then `zizmor` will operate
-in offline mode by default.
+Some of `zizmor`'s audits require access to GitHub's API.
+`zizmor` will perform online audits by default *if* the user has a `GH_TOKEN`
+specified in their environment. If no `GH_TOKEN` is present, then `zizmor`
+will operate in offline mode by default.
 
 Both of these can be made explicit through their respective command-line flags:
 
@@ -44,12 +43,20 @@ See [Integration](#integration) for suggestions on when to use each format.
 ### Use in GitHub Actions
 
 `zizmor` is designed to integrate with GitHub Actions. In particular,
-`zizmor --format sarif` specifies [SARIF] as the output format, which GitHub's code scanning feature also supports.
+`zizmor --format sarif` specifies [SARIF] as the output format, which GitHub's
+code scanning feature uses.
 
 You can integrate `zizmor` into your CI/CD however you please, but one
-easy way to do it is with a workflow that connects to [GitHub's code scanning functionality].
+easy way to do it is with a workflow that connects to
+[GitHub's code scanning functionality].
 
-The following is an example of such a workflow:
+!!! important
+
+    The workflow below performs a [SARIF] upload, which is available for public
+    repositories and for GitHub Enterprise Cloud organizations that have
+    [Advanced Security]. If neither of these apply to you, then you can
+    adapt the workflow to emit JSON or diagnostic output via `--format json`
+    or `--format plain` respectively.
 
 ```yaml title="zizmor.yml"
 name: GitHub Actions Security Analysis with zizmor 🌈
@@ -81,7 +88,7 @@ jobs:
       - name: Run zizmor 🌈
         run: zizmor --format sarif . > results.sarif
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
         with:
@@ -89,15 +96,7 @@ jobs:
           category: zizmor
 ```
 
-#### Configuration Options
-
-- **Offline Mode:** Remove `GH_TOKEN` environment variable to run offline-only audits.
-- **Alternative Output:** Change --format sarif to --format json or --format plain for repositories without code scanning.
-
-**Note:** SARIF upload requires [Code Scanning], available for:
-
-- Public repositories
-- Organization-owned private repositories with GitHub Enterprise Cloud and [Advanced Security]
+1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
 For more inspiration, see `zizmor`'s own [repository workflow scan], as well
 as  GitHub's example of [running ESLint] as a security workflow.
@@ -110,8 +109,6 @@ as  GitHub's example of [running ESLint] as a security workflow.
 
 [running ESLint]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github#example-workflow-that-runs-the-eslint-analysis-tool
 
-[Code Scanning]: https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning-with-codeql
-
 [Advanced Security]: https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security
 
 ### Use with `pre-commit`
@@ -121,10 +118,12 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 -   repo: https://github.com/woodruffw/zizmor
-    rev: v0.1.6
+    rev: v0.1.6 # (1)!
     hooks:
     - id: zizmor
 ```
+
+1. Don't forget to update this version to the latest `zizmor` release!
 
 This will run `zizmor` on every commit. If you want to run `zizmor` only on
 specific files, you can use the `files` option:
