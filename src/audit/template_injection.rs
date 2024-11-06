@@ -51,6 +51,10 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.workspace",
     // GitHub Actions-controller runner architecture.
     "runner.arch",
+    // Debug logging is (1) or is not (0) enabled on GitHub Actions runner.
+    "runner.debug",
+    // GitHub Actions runner operating system.
+    "runner.os",
 ];
 
 impl TemplateInjection {
