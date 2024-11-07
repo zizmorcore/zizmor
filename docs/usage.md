@@ -19,14 +19,20 @@ zizmor --gh-token ghp-... workflow.yml
 
 ## Output formats
 
-`zizmor` always produces output on `stdout`. If a terminal is detected,
-`zizmor` will default to a human-readable diagnostic output; if no terminal
-is detected, `zizmor` will emit JSON.
+`zizmor` always produces output on `stdout`.
+
+By default, `zizmor` produces `cargo`-style diagnostic output. This output
+will be colorized by default when sent to a supporting terminal and
+uncolorized by default when piped to another program. Users can also explicitly
+disable output colorization by setting `NO_COLOR=1` in their environment.
+
+Apart from the default, `zizmor` supports JSON and [SARIF] as machine-readable
+output modes. These can be selected via the `--format` option:
 
 Output formats can be controlled explicitly via the `--format` option:
 
 ```bash
-# force diagnostic output, even if not a terminal
+# use the default diagnostic output explicitly
 zizmor --format plain
 
 # emit zizmor's own JSON format
