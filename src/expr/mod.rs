@@ -273,6 +273,7 @@ impl Expr {
 
 #[cfg(test)]
 mod tests {
+    use anyhow::Result;
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
@@ -352,23 +353,31 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_expr_rule() {
+    fn test_parse_expr_rule() -> Result<()> {
         let cases = &[
             "fromJSON(inputs.free-threading) && '--disable-gil' || ''",
             "foo || bar || baz",
             "foo || bar && baz || foo && 1 && 2 && 3 || 4",
+            "(github.actor != 'github-actions[bot]' && github.actor) || 'BrewTestBot'",
+            "(true || false) == true",
+            "!(!true || false)",
+            "!(!true || false) == true",
+            "(true == false) == true",
+            "(true == (false || true && (true || false))) == true",
+            "(github.actor != 'github-actions[bot]' && github.actor) == 'BrewTestBot'",
         ];
 
         for case in cases {
             assert_eq!(
-                ExprParser::parse(Rule::expression, case)
-                    .unwrap()
+                ExprParser::parse(Rule::expression, case)?
                     .next()
                     .unwrap()
                     .as_str(),
                 *case
             );
         }
+
+        Ok(())
     }
 
     #[test]
@@ -438,6 +447,31 @@ mod tests {
                     }.into(),
                     op: BinOp::Or,
                     rhs: Expr::string("value_for_other_branches"),
+                }
+            ),
+            (
+                "(true || false) == true",
+                Expr::BinOp {
+                    lhs: Expr::BinOp {
+                        lhs: Expr::Boolean(true).into(),
+                        op: BinOp::Or,
+                        rhs: Expr::Boolean(false).into()
+                    }.into(),
+                    op: BinOp::Eq,
+                    rhs: Expr::Boolean(true).into()
+                }
+            ),
+            (
+                "!(!true || false)",
+                Expr::UnOp {
+                    op: UnOp::Not,
+                    expr: Expr::BinOp {
+                        lhs: Expr::UnOp {
+                            op: UnOp::Not,
+                            expr: Expr::Boolean(true).into()
+                        }.into(),
+                    op: BinOp::Or, rhs: Expr::Boolean(false).into()
+                    }.into()
                 }
             )
         ];

@@ -344,6 +344,10 @@ mod tests {
             ("some.condition && '--some-arg' || ''", true),
             ("some.condition && some.context || ''", false),
             ("some.condition && '--some-arg' || some.context", false),
+            (
+                "(github.actor != 'github-actions[bot]' && github.actor) || 'BrewTestBot'",
+                false,
+            ),
         ];
 
         for (case, safe) in cases {

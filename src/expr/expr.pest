@@ -5,24 +5,40 @@
 /// Whitespace handling
 WHITESPACE = _{ " " }
 
+// Misc notes:
+// I have pretty low confidence in this grammar -- it should parse the
+// overwhelming majority of normal looking Actions expressions, but
+// it makes up for a lack of left-recursion with some hacky rules that
+// probably aren't sufficient for capturing all possible grammar productions.
+// I've noted some of these with `HACK` below.
+// I've also noted some potentials TODOs with `TODO`.
+
 expression = { SOI ~ or_expr ~ EOI }
 
 /// Logical OR
-or_expr = { and_expr ~ ("||" ~ and_expr)* }
+or_expr = { (and_expr ~ ("||" ~ and_expr)*) }
 
 /// Logical AND
-and_expr = { eq_expr ~ ("&&" ~ eq_expr)* }
+and_expr = { (eq_expr ~ ("&&" ~ eq_expr)*) }
 
 /// Structural equality/inequality
-eq_expr = { comp_expr ~ (eq_op ~ comp_expr)* }
+eq_expr = { (comp_expr ~ (eq_op ~ comp_expr)*) }
 eq_op   = { "==" | "!=" }
 
 /// Structural comparison
-comp_expr = { unary_expr ~ (comp_op ~ unary_expr)* }
+// HACK: parenthetical production of or_expr here to
+// allow left-parenthetical productions like `(foo || bar) == baz`.
+// This works well, but I'm not convinced it's right.
+comp_expr = {
+    unary_expr ~ (comp_op ~ unary_expr)*
+  | ("(" ~ or_expr ~ ")")
+}
 comp_op   = { ">" | ">=" | "<" | "<=" }
 
 /// Unary operations, including the base case for expressions.
-unary_expr = { unary_op? ~ primary_expr }
+// HACK: `unary_op ~ or_expr` ensures that we handle non-trivial
+// negation productions, like `!(true || false)`.
+unary_expr = { (unary_op? ~ primary_expr) | unary_op ~ or_expr }
 unary_op   = { "!" }
 
 primary_expr = {
@@ -37,6 +53,8 @@ primary_expr = {
 }
 
 /// Numbers
+// TODO: Support hex numbers and exponent forms?
+// Unclear whether these are supported by Actions itself.
 number = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT+)? }
 
 /// Strings
