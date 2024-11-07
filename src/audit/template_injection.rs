@@ -89,6 +89,9 @@ impl TemplateInjection {
                     // `==` and `!=` are always safe, since they evaluate to
                     // boolean rather than to the truthy value.
                     BinOp::Eq | BinOp::Neq => true,
+                    // `&&` is safe if its RHS is safe, since && cannot
+                    // short-circuit.
+                    BinOp::And => Self::expr_is_safe(rhs),
                     // We consider all other binops safe if both sides are safe,
                     // regardless of the actual operation type. This could be
                     // refined to check only one side with taint information.
@@ -319,13 +322,15 @@ mod tests {
             ("'true' == true", true),
             ("some.context == true", true),
             ("contains(some.context, 'foo') != true", true),
-            // && / || are safe if both hands are safe.
-            ("true && true", true),
+            // || is safe if both hands are safe.
             ("true || true", true),
             ("some.context || true", false),
-            ("some.context && true", false),
-            ("some.context && other.context", false),
+            ("true || some.context", false),
+            // && is true if the RHS is safe.
+            ("true && true", true),
+            ("some.context && true", true),
             ("true && other.context", false),
+            ("some.context && other.context", false),
             // Index ops and function calls are unsafe.
             ("some.context[0]", false),
             ("some.context[*]", false),
@@ -335,11 +340,13 @@ mod tests {
             // Context accesses are unsafe.
             ("some.context", false),
             ("some.context.*.something", false),
+            // More complicated cases:
+            ("some.condition && '--some-arg' || ''", true),
         ];
 
         for (case, safe) in cases {
             let expr = Expr::parse(case).unwrap();
-            assert_eq!(TemplateInjection::expr_is_safe(&expr), *safe);
+            assert_eq!(TemplateInjection::expr_is_safe(&expr), *safe, "{expr:#?}");
         }
     }
 }
