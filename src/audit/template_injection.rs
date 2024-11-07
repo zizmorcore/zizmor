@@ -295,3 +295,51 @@ impl WorkflowAudit for TemplateInjection {
         Ok(findings)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::audit::template_injection::TemplateInjection;
+
+    use super::Expr;
+
+    #[test]
+    fn test_expr_is_safe() {
+        let cases = &[
+            // Literals are always safe.
+            ("true", true),
+            ("false", true),
+            ("1.0", true),
+            ("null", true),
+            ("'some string'", true),
+            // negation is always safe.
+            ("!true", true),
+            ("!some.context", true),
+            // == / != are always safe, even if their hands are not.
+            ("true == true", true),
+            ("'true' == true", true),
+            ("some.context == true", true),
+            ("contains(some.context, 'foo') != true", true),
+            // && / || are safe if both hands are safe.
+            ("true && true", true),
+            ("true || true", true),
+            ("some.context || true", false),
+            ("some.context && true", false),
+            ("some.context && other.context", false),
+            ("true && other.context", false),
+            // Index ops and function calls are unsafe.
+            ("some.context[0]", false),
+            ("some.context[*]", false),
+            ("someFunction()", false),
+            ("fromJSON(some.context)", false),
+            ("toJSON(fromJSON(some.context))", false),
+            // Context accesses are unsafe.
+            ("some.context", false),
+            ("some.context.*.something", false),
+        ];
+
+        for (case, safe) in cases {
+            let expr = Expr::parse(case).unwrap();
+            assert_eq!(TemplateInjection::expr_is_safe(&expr), *safe);
+        }
+    }
+}
