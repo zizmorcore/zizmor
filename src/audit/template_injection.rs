@@ -342,6 +342,8 @@ mod tests {
             ("some.context.*.something", false),
             // More complicated cases:
             ("some.condition && '--some-arg' || ''", true),
+            ("some.condition && some.context || ''", false),
+            ("some.condition && '--some-arg' || some.context", false),
         ];
 
         for (case, safe) in cases {
