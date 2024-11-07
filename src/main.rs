@@ -1,4 +1,4 @@
-use std::{io::stdout, path::PathBuf, time::Duration};
+use std::{io::stdout, path::PathBuf, process::ExitCode, time::Duration};
 
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
@@ -6,7 +6,7 @@ use clap::{Parser, ValueEnum};
 use config::Config;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use owo_colors::OwoColorize;
-use registry::{AuditRegistry, WorkflowRegistry};
+use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
 use state::AuditState;
 
 mod audit;
@@ -66,7 +66,7 @@ pub(crate) enum OutputFormat {
     Sarif,
 }
 
-fn main() -> Result<()> {
+fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
     let args = App::parse();
@@ -156,7 +156,7 @@ fn main() -> Result<()> {
         );
     }
 
-    let mut results = vec![];
+    let mut results = FindingRegistry::new(&config);
     for (_, workflow) in workflow_registry.iter_workflows() {
         bar.set_message(format!(
             "auditing {workflow}",
@@ -177,10 +177,6 @@ fn main() -> Result<()> {
         ));
     }
 
-    // TODO: Suboptimal; should probably use `extract_if` once stabilized.
-    // See: https://github.com/rust-lang/rust/issues/43244
-    let (ignored, results): (Vec<_>, Vec<_>) = results.into_iter().partition(|r| config.ignores(r));
-
     bar.finish_and_clear();
 
     let format = match args.format {
@@ -189,11 +185,22 @@ fn main() -> Result<()> {
     };
 
     match format {
-        OutputFormat::Plain => render::render_findings(&workflow_registry, &results, &ignored),
-        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results)?,
-        OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &sarif::build(&workflow_registry, results))?
-        }
+        OutputFormat::Plain => render::render_findings(&workflow_registry, &results),
+        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
+        OutputFormat::Sarif => serde_json::to_writer_pretty(
+            stdout(),
+            &sarif::build(&workflow_registry, results.findings()),
+        )?,
     };
-    Ok(())
+
+    Ok(results.into())
+}
+
+fn main() -> ExitCode {
+    // This is a little silly, but returning an ExitCode like this ensures
+    // we always exit cleanly, rather than performing a hard process exit.
+    match run() {
+        Ok(exit) => exit,
+        Err(_) => ExitCode::FAILURE,
+    }
 }

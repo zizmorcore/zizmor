@@ -4,7 +4,7 @@ use std::collections::{hash_map::Entry, HashMap};
 
 use crate::{
     finding::{Finding, Location, Severity},
-    registry::WorkflowRegistry,
+    registry::{FindingRegistry, WorkflowRegistry},
 };
 use annotate_snippets::{Level, Renderer, Snippet};
 use anstream::println;
@@ -66,26 +66,22 @@ pub(crate) fn finding_snippet<'w>(
     snippets
 }
 
-pub(crate) fn render_findings(
-    registry: &WorkflowRegistry,
-    findings: &[Finding],
-    ignored: &[Finding],
-) {
-    for finding in findings {
+pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingRegistry) {
+    for finding in findings.findings() {
         render_finding(registry, finding);
         println!();
     }
 
-    if findings.is_empty() {
+    if findings.findings().is_empty() {
         println!(
             "{no_findings} ({nignored} ignored)",
             no_findings = "No findings to report. Good job!".green(),
-            nignored = ignored.len().bright_yellow()
+            nignored = findings.ignored().len().bright_yellow()
         );
     } else {
         let mut findings_by_severity = HashMap::new();
 
-        for finding in findings {
+        for finding in findings.findings() {
             match findings_by_severity.entry(&finding.determinations.severity) {
                 Entry::Occupied(mut e) => {
                     *e.get_mut() += 1;
@@ -98,8 +94,8 @@ pub(crate) fn render_findings(
 
         println!(
             "{nfindings} findings ({nignored} ignored): {nunknown} unknown, {ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
-            nfindings = (findings.len() + ignored.len()).green(),
-            nignored = ignored.len().bright_yellow(),
+            nfindings = (findings.findings().len() + findings.ignored().len()).green(),
+            nignored = findings.ignored().len().bright_yellow(),
             nunknown = findings_by_severity.get(&Severity::Unknown).unwrap_or(&0),
             ninformational = findings_by_severity.get(&Severity::Informational).unwrap_or(&0).purple(),
             nlow = findings_by_severity.get(&Severity::Low).unwrap_or(&0).cyan(),

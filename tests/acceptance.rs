@@ -40,9 +40,9 @@ fn audit_artipacked() -> anyhow::Result<()> {
     let auditable = workflow_under_test("artipacked.yml");
     let cli_args = [&auditable];
 
-    let execution = zizmor().args(cli_args).unwrap();
+    let execution = zizmor().args(cli_args).output()?;
 
-    assert!(execution.status.success());
+    assert_eq!(execution.status.code(), Some(13));
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 
@@ -61,9 +61,9 @@ fn audit_excessive_permission() -> anyhow::Result<()> {
     let auditable = workflow_under_test("excessive-permissions.yml");
     let cli_args = [&auditable];
 
-    let execution = zizmor().args(cli_args).unwrap();
+    let execution = zizmor().args(cli_args).output()?;
 
-    assert!(execution.status.success());
+    assert_eq!(execution.status.code(), Some(14));
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 
@@ -82,9 +82,9 @@ fn audit_hardcoded_credentials() -> anyhow::Result<()> {
     let auditable = workflow_under_test("hardcoded-credentials.yml");
     let cli_args = [&auditable];
 
-    let execution = zizmor().args(cli_args).unwrap();
+    let execution = zizmor().args(cli_args).output()?;
 
-    assert!(execution.status.success());
+    assert_eq!(execution.status.code(), Some(14));
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 
@@ -103,9 +103,9 @@ fn audit_template_injection() -> anyhow::Result<()> {
     let auditable = workflow_under_test("template-injection.yml");
     let cli_args = [&auditable];
 
-    let execution = zizmor().args(cli_args).unwrap();
+    let execution = zizmor().args(cli_args).output()?;
 
-    assert!(execution.status.success());
+    assert_eq!(execution.status.code(), Some(14));
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 
@@ -124,9 +124,9 @@ fn audit_use_trusted_publishing() -> anyhow::Result<()> {
     let auditable = workflow_under_test("use-trusted-publishing.yml");
     let cli_args = [&auditable];
 
-    let execution = zizmor().args(cli_args).unwrap();
+    let execution = zizmor().args(cli_args).output()?;
 
-    assert!(execution.status.success());
+    assert_eq!(execution.status.code(), Some(11));
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 
@@ -147,9 +147,9 @@ fn audit_self_hosted() -> anyhow::Result<()> {
     // Note : self-hosted audit is pedantic
     let cli_args = ["--pedantic", &auditable];
 
-    let execution = zizmor().args(cli_args).unwrap();
+    let execution = zizmor().args(cli_args).output()?;
 
-    assert!(execution.status.success());
+    assert_eq!(execution.status.code(), Some(10));
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 

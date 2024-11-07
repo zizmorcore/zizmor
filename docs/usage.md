@@ -38,6 +38,22 @@ zizmor --format sarif
 
 See [Integration](#integration) for suggestions on when to use each format.
 
+## Exit codes
+
+`zizmor` uses various exit codes to summarize the results of a run:
+
+| Code | Meaning |
+| ---- | ------- |
+| 0    | Successful audit; no findings to report. |
+| 1    | Error during audit; consult output. |
+| 10   | One or more findings found; highest finding is "unknown" level. |
+| 11   | One or more findings found; highest finding is "informational" level. |
+| 12   | One or more findings found; highest finding is "low" level. |
+| 13   | One or more findings found; highest finding is "medium" level. |
+| 14   | One or more findings found; highest finding is "high" level. |
+
+All other exit codes are currently reserved.
+
 ## Ignoring results
 
 `zizmor`'s defaults are not always 100% right for every possible use case.
