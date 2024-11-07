@@ -22,7 +22,7 @@ pub(crate) enum Confidence {
     High,
 }
 
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize)]
 pub(crate) enum Severity {
     #[default]
     Unknown,
