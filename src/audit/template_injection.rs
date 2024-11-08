@@ -38,6 +38,7 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.event_name",
     // Safe keys within the otherwise generally unsafe github.event context.
     "github.event.number",
+    "github.event.merge_group.base_sha",
     "github.event.workflow_run.id",
     // Unique numbers assigned by GitHub for workflow runs
     "github.run_attempt",
