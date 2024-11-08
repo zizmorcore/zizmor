@@ -40,6 +40,13 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.event.number",
     "github.event.merge_group.base_sha",
     "github.event.workflow_run.id",
+    // Information about the GitHub repostory
+    "github.repository",
+    "github.repository_id",
+    "github.repostoryUrl",
+    // Information about the GitHub repository owner (account/org or ID)
+    "github.repository_owner",
+    "github.repository_owner_id",
     // Unique numbers assigned by GitHub for workflow runs
     "github.run_attempt",
     "github.run_id",
