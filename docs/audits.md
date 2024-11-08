@@ -188,7 +188,7 @@ pre-existing consumers of that action without having to modify those consumers.
 
 | Type     | Examples            | Introduced in | Works offline  | Enabled by default |
 |----------|---------------------|---------------|----------------|--------------------|
-| Workflow  | [ref-confusion.yml] | v0.1.0        | ✅             | ❌                 |
+| Workflow  | [self-hosted.yml] | v0.1.0        | ✅             | ❌                 |
 
 [self-hosted.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/self-hosted.yml
 
