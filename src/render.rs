@@ -7,7 +7,7 @@ use crate::{
     registry::{FindingRegistry, WorkflowRegistry},
 };
 use annotate_snippets::{Level, Renderer, Snippet};
-use anstream::println;
+use anstream::{print, println};
 use owo_colors::OwoColorize;
 use terminal_link::Link;
 
@@ -92,10 +92,21 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
             }
         }
 
+        if findings.ignored().is_empty() {
+            print!(
+                "{nfindings} findings: ",
+                nfindings = (findings.findings().len() + findings.ignored().len()).green(),
+            );
+        } else {
+            print!(
+                "{nfindings} findings ({nignored} ignored): ",
+                nfindings = (findings.findings().len() + findings.ignored().len()).green(),
+                nignored = findings.ignored().len().bright_yellow()
+            );
+        }
+
         println!(
-            "{nfindings} findings ({nignored} ignored): {nunknown} unknown, {ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
-            nfindings = (findings.findings().len() + findings.ignored().len()).green(),
-            nignored = findings.ignored().len().bright_yellow(),
+            "{nunknown} unknown, {ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
             nunknown = findings_by_severity.get(&Severity::Unknown).unwrap_or(&0),
             ninformational = findings_by_severity.get(&Severity::Informational).unwrap_or(&0).purple(),
             nlow = findings_by_severity.get(&Severity::Low).unwrap_or(&0).cyan(),
