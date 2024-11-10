@@ -25,14 +25,14 @@ typically via GitHub Actions artifact creation or action logs.
 
 ### Why
 
-The default checkout action is [`actions/checkout`].
+The default checkout action is @actions/checkout.
 
-By default, using `actions/checkout` causes a credential to be persisted
+By default, using @actions/checkout causes a credential to be persisted
 in the checked-out repo's `.git/config`, so that subsequent `git` operations
 can be authenticated.
 
 Subsequent steps may accidentally publicly persist `.git/config`, e.g. by
-including it in a publicly accessible artifact via [`actions/upload-artifact`].
+including it in a publicly accessible artifact via @actions/upload-artifact.
 
 However, even without this, persisting the credential in the `.git/config`
 is non-ideal and should be disabled with `persist-credentials: false` unless
@@ -41,10 +41,6 @@ the job actually needs the persisted credential.
 ### Other resources
 
 * <https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/>
-
-[`actions/checkout`]: https://github.com/actions/checkout
-
-[`actions/upload-artifact`]: https://github.com/actions/upload-artifact
 
 ## `dangerous-triggers`
 
