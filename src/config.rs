@@ -74,6 +74,10 @@ pub(crate) struct Config {
 
 impl Config {
     pub(crate) fn new(app: &App) -> Result<Self> {
+        if app.no_config {
+            return Ok(Self::default());
+        }
+
         let config = match &app.config {
             Some(path) => serde_yaml::from_str(&fs::read_to_string(path)?)?,
             None => {
