@@ -21,7 +21,7 @@ body:
         By submitting this issue, you affirm that you've satisfied the following conditions.
       options:
         - label: >-
-            I am **not** a bug (crash, false positive/negative, etc).
+            I am **not** reporting a bug (crash, false positive/negative, etc).
             These must be filed via the bug report template.
           required: true
         - label: >-
