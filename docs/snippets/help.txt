@@ -17,5 +17,3 @@ Options:
       --no-config            Disable all configuration loading
   -h, --help                 Print help
   -V, --version              Print version
-
-test
