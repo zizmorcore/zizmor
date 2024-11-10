@@ -16,3 +16,7 @@ site-live: $(VENV)
 $(VENV): site-requirements.txt
 	uv venv
 	uv pip install -r site-requirements.txt
+
+.PHONY: snippets
+snippets:
+	cargo run -- --help > docs/snippets/help.txt
