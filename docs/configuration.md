@@ -11,6 +11,11 @@ typically named `zizmor.yml`.
 
 ## Precedence
 
+!!! note
+
+    Configuration is *always* optional, and can always be disabled with
+    `--no-config`. If `--no-config` is passed, no configuration is ever loaded.
+
 `zizmor` will discover and load
 configuration files in the following order of precedence:
 

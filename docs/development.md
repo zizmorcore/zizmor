@@ -121,3 +121,18 @@ These docs could use help.
 For now, please run `cargo doc --open` and refer to our internal
 documentation!
 
+## Changing `zizmor`'s CLI
+
+`zizmor` uses [clap] and [clap-derive] for its command-line interface.
+
+`zizmor`'s documentation contains a copy of `zizmor --help`, which the CI
+checks to ensure that it remains updated. If you change `zizmor`'s CLI,
+you may need to regenerate the documentation snippets and check-in the results:
+
+```bash
+make snippets
+```
+
+[clap]: https://docs.rs/clap/latest/clap/index.html
+
+[clap-derive]: https://docs.rs/clap/latest/clap/_derive/index.html
