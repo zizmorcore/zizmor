@@ -1,5 +1,15 @@
 # Quickstart
 
+First, run `zizmor --help` to make sure your installation succeeded.
+
+You should see something like this:
+
+```console
+--8<-- "help.txt"
+```
+
+## Running `zizmor`
+
 You can run `zizmor` on any file(s) you have locally:
 
 ```bash

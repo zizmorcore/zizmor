@@ -46,6 +46,10 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path:
+        - "docs/snippets"
+      check_paths: true
   - md_in_html
   - attr_list
   - toc:
@@ -58,3 +62,6 @@ validation:
 
 extra_css:
   - magiclink.css
+
+exclude_docs: |
+  snippets/
