@@ -32,5 +32,5 @@ jobs:
 
     - name: Test snippets
       run: |
-        cargo run -- --help > docs/snippets/help.txt
+        make snippets
         git diff --exit-code
