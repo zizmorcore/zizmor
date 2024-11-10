@@ -51,8 +51,12 @@ struct App {
 
     /// The configuration file to load. By default, any config will be
     /// discovered relative to $CWD.
-    #[arg(short, long)]
+    #[arg(short, long, group = "conf")]
     config: Option<PathBuf>,
+
+    /// Disable all configuration loading.
+    #[arg(long, group = "conf")]
+    no_config: bool,
 
     /// The workflow filenames or directories to audit.
     #[arg(required = true)]
