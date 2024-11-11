@@ -11,8 +11,8 @@ rust-version = "1.80.1"
 
 [dependencies]
 annotate-snippets = "0.11.4"
-anstream = "0.6.15"
-anyhow = "1.0.92"
+anstream = "0.6.18"
+anyhow = "1.0.93"
 clap = { version = "4.5.16", features = ["derive", "env"] }
 clap-verbosity-flag = "2.2.1"
 env_logger = "0.11.5"
