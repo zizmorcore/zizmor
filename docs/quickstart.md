@@ -19,7 +19,7 @@ zizmor my-workflow.yml
 zizmor path/to/repo
 ```
 
-By default, `zizmor` will emit a Rust-style human-friendly findings, e.g.:
+By default, `zizmor` will emit Rust-style diagnostics, e.g.:
 
 ```console
 error[pull-request-target]: use of fundamentally insecure workflow trigger
