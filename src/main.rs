@@ -58,6 +58,10 @@ struct App {
     #[arg(long, group = "conf")]
     no_config: bool,
 
+    /// Disable all error codes besides success and tool failure.
+    #[arg(long)]
+    no_exit_codes: bool,
+
     /// The workflow filenames or directories to audit.
     #[arg(required = true)]
     inputs: Vec<PathBuf>,
@@ -197,7 +201,11 @@ fn run() -> Result<ExitCode> {
         )?,
     };
 
-    Ok(results.into())
+    if args.no_exit_codes || matches!(format, OutputFormat::Sarif) {
+        Ok(ExitCode::SUCCESS)
+    } else {
+        Ok(results.into())
+    }
 }
 
 fn main() -> ExitCode {
