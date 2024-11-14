@@ -46,11 +46,16 @@ See [Integration](#integration) for suggestions on when to use each format.
 
 ## Exit codes
 
+!!! note
+
+    Exit codes 10 and above are **not used** if `--no-exit-codes` or
+    `--format sarif` is passed.
+
 `zizmor` uses various exit codes to summarize the results of a run:
 
 | Code | Meaning |
 | ---- | ------- |
-| 0    | Successful audit; no findings to report. |
+| 0    | Successful audit; no findings to report (or SARIF mode enabled). |
 | 1    | Error during audit; consult output. |
 | 10   | One or more findings found; highest finding is "unknown" level. |
 | 11   | One or more findings found; highest finding is "informational" level. |
