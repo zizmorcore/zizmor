@@ -185,7 +185,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 -   repo: https://github.com/woodruffw/zizmor
-    rev: v0.1.6 # (1)!
+    rev: v0.3.0 # (1)!
     hooks:
     - id: zizmor
 ```
