@@ -151,9 +151,10 @@ jobs:
       - name: Get zizmor
         run: cargo install zizmor
       - name: Run zizmor 🌈
+        continue-on-error: true # (1)!
         run: zizmor --format sarif . > results.sarif
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (2)!
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
         with:
@@ -161,7 +162,8 @@ jobs:
           category: zizmor
 ```
 
-1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
+1. Prevents `zizmor`'s [exit codes](#exit-codes) from interfering with SARIF uploading.
+2. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
 For more inspiration, see `zizmor`'s own [repository workflow scan], as well
 as  GitHub's example of [running ESLint] as a security workflow.
