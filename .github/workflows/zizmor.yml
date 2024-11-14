@@ -25,9 +25,8 @@ jobs:
       - name: Run zizmor 🌈
         continue-on-error: true
         run: |
+          zizmor .
           zizmor --format sarif . > results.sarif || true
-          cat results.sarif
-          echo test
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload SARIF file
