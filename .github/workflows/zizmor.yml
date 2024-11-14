@@ -25,7 +25,7 @@ jobs:
       - name: Run zizmor 🌈
         continue-on-error: true
         run: |
-          zizmor --format sarif . > results.sarif
+          zizmor --format sarif . > results.sarif || true
           cat results.sarif
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
