@@ -16,8 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          persist-credentials: false
+        # with:
+        #   persist-credentials: false
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@11df97af8e8102fd60b60a77dfbf58d40cd843b8 # v1
       - name: Get zizmor
