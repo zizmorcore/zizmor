@@ -27,8 +27,8 @@ jobs:
         run: |
           zizmor -vv .
           zizmor --format sarif . > results.sarif || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # env:
+        #   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@4e7d89f9f0a59fd9d68561cfbfd15475eaf75298 # v3
         with:
