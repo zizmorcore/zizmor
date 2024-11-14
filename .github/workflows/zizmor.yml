@@ -24,7 +24,9 @@ jobs:
         run: cargo install zizmor
       - name: Run zizmor 🌈
         continue-on-error: true
-        run: zizmor --format sarif . > results.sarif
+        run: |
+          zizmor --format sarif . > results.sarif
+          cat results.sarif
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload SARIF file
