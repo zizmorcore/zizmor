@@ -58,14 +58,28 @@ impl ImpostorCommit {
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
     fn impostor(&self, uses: Uses<'_>) -> Result<bool> {
-        let (branches, tags) = self.named_refs(uses)?;
-
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
         let Some(head_ref) = uses.commit_ref() else {
             return Ok(false);
         };
 
-        for branch in branches {
+        let (branches, tags) = self.named_refs(uses)?;
+
+        // Fast path: almost all commit refs will be at the tip of
+        // the branch or tag's history, so check those first.
+        for branch in &branches {
+            if branch.commit.sha == head_ref {
+                return Ok(false);
+            }
+        }
+
+        for tag in &tags {
+            if tag.commit.sha == head_ref {
+                return Ok(false);
+            }
+        }
+
+        for branch in &branches {
             if self.named_ref_contains_commit(
                 &uses,
                 &format!("refs/heads/{}", &branch.name),
@@ -75,7 +89,7 @@ impl ImpostorCommit {
             }
         }
 
-        for tag in tags {
+        for tag in &tags {
             if self.named_ref_contains_commit(
                 &uses,
                 &format!("refs/tags/{}", &tag.name),

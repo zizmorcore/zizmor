@@ -206,6 +206,7 @@ impl Client {
 #[derive(Deserialize, Clone)]
 pub(crate) struct Branch {
     pub(crate) name: String,
+    pub(crate) commit: Object,
 }
 
 /// A single tag, as returned by GitHub's tags endpoints.
@@ -214,23 +215,18 @@ pub(crate) struct Branch {
 #[derive(Deserialize, Clone)]
 pub(crate) struct Tag {
     pub(crate) name: String,
-    pub(crate) commit: TagCommit,
+    pub(crate) commit: Object,
 }
 
-/// Represents the SHA ref bound to a tag.
+/// Represents a git object.
 #[derive(Deserialize, Clone)]
-pub(crate) struct TagCommit {
+pub(crate) struct Object {
     pub(crate) sha: String,
 }
 
 #[derive(Deserialize)]
 pub(crate) struct GitRef {
-    pub(crate) object: GitObj,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct GitObj {
-    pub(crate) sha: String,
+    pub(crate) object: Object,
 }
 
 #[derive(Clone, Deserialize)]
