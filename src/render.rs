@@ -73,11 +73,15 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
     }
 
     if findings.findings().is_empty() {
-        println!(
-            "{no_findings} ({nignored} ignored)",
-            no_findings = "No findings to report. Good job!".green(),
-            nignored = findings.ignored().len().bright_yellow()
-        );
+        if findings.ignored().is_empty() {
+            println!("{}", "No findings to report. Good job!".green());
+        } else {
+            println!(
+                "{no_findings} ({nignored} ignored)",
+                no_findings = "No findings to report. Good job!".green(),
+                nignored = findings.ignored().len().bright_yellow()
+            );
+        }
     } else {
         let mut findings_by_severity = HashMap::new();
 
