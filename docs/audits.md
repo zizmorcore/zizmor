@@ -18,14 +18,8 @@ Legend:
 
 [artipacked.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/artipacked.yml
 
-### What
-
-Unexpected credential use and potential credential persistence,
-typically via GitHub Actions artifact creation or action logs.
-
-### Why
-
-The default checkout action is @actions/checkout.
+Detected local `git` credential storage on GitHub Actions, as well as potential
+avenues for unintentional persistence of credentials in artifacts.
 
 By default, using @actions/checkout causes a credential to be persisted
 in the checked-out repo's `.git/config`, so that subsequent `git` operations
@@ -35,12 +29,45 @@ Subsequent steps may accidentally publicly persist `.git/config`, e.g. by
 including it in a publicly accessible artifact via @actions/upload-artifact.
 
 However, even without this, persisting the credential in the `.git/config`
-is non-ideal and should be disabled with `persist-credentials: false` unless
-the job actually needs the persisted credential.
+is non-ideal unless actually needed.
 
-### Other resources
+Other resources:
 
 * <https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/>
+
+### Remediation
+
+Unless needed for `git` operations, @actions/checkout should be used with
+`#!yaml persist-credentials: false`.
+
+If the persisted credential is needed, it should be made explicit
+with `#!yaml persist-credentials: true`.
+
+=== "Before"
+
+    ```yaml title="artipacked.yml" hl_lines="7"
+    on: push
+
+    jobs:
+      artipacked:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v4
+    ```
+
+=== "After"
+
+    ```yaml title="artipacked.yml" hl_lines="7-9"
+    on: push
+
+    jobs:
+      artipacked:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v4
+            with:
+              persist-credentials: false
+    ```
 
 ## `dangerous-triggers`
 
@@ -273,6 +300,9 @@ Detects "unpinned" `uses:` clauses.
 When a `uses:` clause is not pinned by branch, tag, or SHA reference,
 GitHub Actions will use the latest commit on the referenced repository
 (or, in the case of Docker actions, the `:latest` tag).
+
+This can represent a (small) security risk, as it leaves the calling workflow
+at the mercy of the callee action's default branch.
 
 ### Remediation
 
