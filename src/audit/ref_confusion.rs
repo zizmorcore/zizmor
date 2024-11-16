@@ -9,13 +9,13 @@
 use std::ops::Deref;
 
 use anyhow::{anyhow, Result};
-use github_actions_models::workflow::{job::StepBody, Job};
+use github_actions_models::workflow::Job;
 
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Severity},
     github_api,
-    models::Uses,
+    models::{RepositoryUses, Uses},
     state::AuditState,
 };
 
@@ -27,7 +27,7 @@ pub(crate) struct RefConfusion {
 }
 
 impl RefConfusion {
-    fn confusable(&self, uses: &Uses) -> Result<bool> {
+    fn confusable(&self, uses: &RepositoryUses) -> Result<bool> {
         let Some(sym_ref) = uses.symbolic_ref() else {
             return Ok(false);
         };
@@ -90,11 +90,7 @@ impl WorkflowAudit for RefConfusion {
             match job.deref() {
                 Job::NormalJob(_) => {
                     for step in job.steps() {
-                        let StepBody::Uses { uses, .. } = &step.deref().body else {
-                            continue;
-                        };
-
-                        let Some(uses) = Uses::from_step(uses) else {
+                        let Some(Uses::Repository(uses)) = step.uses() else {
                             continue;
                         };
 

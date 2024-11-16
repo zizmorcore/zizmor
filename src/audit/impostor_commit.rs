@@ -5,16 +5,14 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
-use std::ops::Deref;
-
 use anyhow::{anyhow, Result};
-use github_actions_models::workflow::{job::StepBody, Job};
+use github_actions_models::workflow::Job;
 
 use super::WorkflowAudit;
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, Branch, ComparisonStatus, Tag},
-    models::{Uses, Workflow},
+    models::{RepositoryUses, Uses, Workflow},
     state::AuditState,
 };
 
@@ -25,7 +23,7 @@ pub(crate) struct ImpostorCommit {
 }
 
 impl ImpostorCommit {
-    fn named_refs(&self, uses: Uses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
+    fn named_refs(&self, uses: RepositoryUses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
         let branches = self.client.list_branches(uses.owner, uses.repo)?;
         let tags = self.client.list_tags(uses.owner, uses.repo)?;
         Ok((branches, tags))
@@ -33,7 +31,7 @@ impl ImpostorCommit {
 
     fn named_ref_contains_commit(
         &self,
-        uses: &Uses<'_>,
+        uses: &RepositoryUses<'_>,
         base_ref: &str,
         head_ref: &str,
     ) -> Result<bool> {
@@ -57,7 +55,7 @@ impl ImpostorCommit {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    fn impostor(&self, uses: Uses<'_>) -> Result<bool> {
+    fn impostor(&self, uses: RepositoryUses<'_>) -> Result<bool> {
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
         let Some(head_ref) = uses.commit_ref() else {
             return Ok(false);
@@ -141,11 +139,7 @@ impl WorkflowAudit for ImpostorCommit {
             match *job {
                 Job::NormalJob(_) => {
                     for step in job.steps() {
-                        let StepBody::Uses { uses, .. } = &step.deref().body else {
-                            continue;
-                        };
-
-                        let Some(uses) = Uses::from_step(uses) else {
+                        let Some(Uses::Repository(uses)) = step.uses() else {
                             continue;
                         };
 

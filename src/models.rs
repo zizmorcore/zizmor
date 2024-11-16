@@ -4,7 +4,7 @@
 use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 
 use anyhow::{anyhow, Context, Result};
-use github_actions_models::workflow;
+use github_actions_models::workflow::{self, job::StepBody};
 
 use crate::finding::{Route, SymbolicLocation};
 
@@ -145,6 +145,15 @@ impl<'w> Step<'w> {
         }
     }
 
+    /// Returns a [`Uses`] for this [`Step`], if it has one.
+    pub(crate) fn uses(&self) -> Option<Uses<'w>> {
+        let StepBody::Uses { uses, .. } = &self.inner.body else {
+            return None;
+        };
+
+        Uses::from_step(uses)
+    }
+
     /// Returns a symbolic location for this [`Step`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
         self.parent.with_step(self)
@@ -194,79 +203,23 @@ impl<'w> Iterator for Steps<'w> {
     }
 }
 
-/// Represents the components of an "action ref", i.e. the value
-/// of a `uses:` clause in a normal job step or a reusable workflow job.
-/// Does not support `docker://` refs, or "local" (i.e. `./`) refs.
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub(crate) struct Uses<'a> {
+pub(crate) struct DockerUses<'a> {
+    pub(crate) registry: Option<&'a str>,
+    pub(crate) image: &'a str,
+    pub(crate) tag: Option<&'a str>,
+    pub(crate) hash: Option<&'a str>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub(crate) struct RepositoryUses<'a> {
     pub(crate) owner: &'a str,
     pub(crate) repo: &'a str,
     pub(crate) subpath: Option<&'a str>,
     pub(crate) git_ref: Option<&'a str>,
 }
 
-impl<'a> Uses<'a> {
-    /// Create a new `Uses` manually. No validation of the constituent
-    /// parts is performed.
-    fn new(
-        owner: &'a str,
-        repo: &'a str,
-        subpath: Option<&'a str>,
-        git_ref: Option<&'a str>,
-    ) -> Self {
-        Self {
-            owner,
-            repo,
-            subpath,
-            git_ref,
-        }
-    }
-
-    fn from_common(uses: &'a str) -> Option<Self> {
-        // We don't currently have enough context to resolve local actions.
-        if uses.starts_with("./") {
-            return None;
-        }
-
-        // NOTE: Technically both git refs and action paths can contain `@`,
-        // so this isn't guaranteed to be correct. In practice, however,
-        // splitting on the last `@` is mostly reliable.
-        let (path, git_ref) = match uses.rsplit_once('@') {
-            Some((path, git_ref)) => (path, Some(git_ref)),
-            None => (uses, None),
-        };
-
-        let components = path.splitn(3, '/').collect::<Vec<_>>();
-        if components.len() < 2 {
-            log::debug!("malformed `uses:` ref: {uses}");
-            return None;
-        }
-
-        Some(Self::new(
-            components[0],
-            components[1],
-            components.get(2).copied(),
-            git_ref,
-        ))
-    }
-
-    pub(crate) fn from_step(uses: &'a str) -> Option<Self> {
-        if uses.starts_with("docker://") {
-            return None;
-        }
-
-        Self::from_common(uses)
-    }
-
-    pub(crate) fn from_reusable(uses: &'a str) -> Option<Self> {
-        match Self::from_common(uses) {
-            // Reusable workflows require a git ref.
-            Some(uses) if uses.git_ref.is_none() => None,
-            Some(uses) => Some(uses),
-            None => None,
-        }
-    }
-
+impl<'a> RepositoryUses<'a> {
     pub(crate) fn ref_is_commit(&self) -> bool {
         match self.git_ref {
             Some(git_ref) => git_ref.len() == 40 && git_ref.chars().all(|c| c.is_ascii_hexdigit()),
@@ -287,15 +240,125 @@ impl<'a> Uses<'a> {
             _ => None,
         }
     }
+}
 
-    pub(crate) fn has_ref(&self) -> bool {
-        self.git_ref.is_some()
+/// Represents the components of an "action ref", i.e. the value
+/// of a `uses:` clause in a normal job step or a reusable workflow job.
+/// Supports Docker (`docker://`) and repository (`actions/checkout`)
+/// style references, but not local (`./foo`) references.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub(crate) enum Uses<'a> {
+    Docker(DockerUses<'a>),
+    Repository(RepositoryUses<'a>),
+}
+
+impl<'a> Uses<'a> {
+    fn is_registry(registry: &str) -> bool {
+        // https://stackoverflow.com/a/42116190
+        registry == "localhost" || registry.contains('.') || registry.contains(':')
+    }
+
+    fn from_image_ref(image: &'a str) -> Option<Self> {
+        let (registry, image_full) = match image.split_once('/') {
+            Some((registry, image)) if Self::is_registry(registry) => (Some(registry), image),
+            _ => (None, image),
+        };
+
+        if let Some(at_pos) = image_full.find('@') {
+            let (image, hash) = image_full.split_at(at_pos);
+
+            let hash = if hash.is_empty() {
+                None
+            } else {
+                Some(&hash[1..])
+            };
+
+            Some(Self::Docker(DockerUses {
+                registry,
+                image,
+                tag: None,
+                hash,
+            }))
+        } else {
+            let (image, tag) = match image_full.split_once(':') {
+                Some((image, "")) => (image, None),
+                Some((image, tag)) => (image, Some(tag)),
+                _ => (image_full, None),
+            };
+
+            Some(Self::Docker(DockerUses {
+                registry,
+                image,
+                tag,
+                hash: None,
+            }))
+        }
+    }
+
+    fn from_common(uses: &'a str) -> Option<Self> {
+        if uses.starts_with("./") {
+            None
+        } else if let Some(image) = uses.strip_prefix("docker://") {
+            Self::from_image_ref(image)
+        } else {
+            // NOTE: Technically both git refs and action paths can contain `@`,
+            // so this isn't guaranteed to be correct. In practice, however,
+            // splitting on the last `@` is mostly reliable.
+            let (path, git_ref) = match uses.rsplit_once('@') {
+                Some((path, git_ref)) => (path, Some(git_ref)),
+                None => (uses, None),
+            };
+
+            let components = path.splitn(3, '/').collect::<Vec<_>>();
+            if components.len() < 2 {
+                log::debug!("malformed `uses:` ref: {uses}");
+                return None;
+            }
+
+            Some(Self::Repository(RepositoryUses {
+                owner: components[0],
+                repo: components[1],
+                subpath: components.get(2).copied(),
+                git_ref,
+            }))
+        }
+    }
+
+    pub(crate) fn from_step(uses: &'a str) -> Option<Self> {
+        Self::from_common(uses)
+    }
+
+    /// Parse a [`Uses`] from a reusable workflow `uses:` clause.
+    ///
+    /// Returns only the [`RepositoryUses`] variant since Docker actions
+    /// can't be used in reusable workflows.
+    pub(crate) fn from_reusable(uses: &'a str) -> Option<RepositoryUses> {
+        match Self::from_common(uses) {
+            // Reusable workflows don't support Docker actions.
+            Some(Uses::Docker(DockerUses { .. })) => None,
+            // Reusable workflows require a git ref.
+            Some(Uses::Repository(RepositoryUses {
+                owner: _,
+                repo: _,
+                subpath: _,
+                git_ref,
+            })) if git_ref.is_none() => None,
+            Some(Uses::Repository(repo)) => Some(repo),
+            None => None,
+        }
+    }
+
+    pub(crate) fn unpinned(&self) -> bool {
+        match self {
+            Uses::Docker(docker) => docker.hash.is_none() && docker.tag.is_none(),
+            Uses::Repository(repo) => repo.git_ref.is_none(),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Uses;
+    use super::{DockerUses, RepositoryUses, Uses};
 
     #[test]
     fn uses_from_step() {
@@ -303,46 +366,141 @@ mod tests {
             (
                 // Valid: fully pinned.
                 "actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Some(Uses::new(
-                    "actions",
-                    "checkout",
-                    None,
-                    Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3"),
-                )),
+                Some(Uses::Repository(RepositoryUses {
+                    owner: "actions",
+                    repo: "checkout",
+                    subpath: None,
+                    git_ref: Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3"),
+                })),
             ),
             (
                 // Valid: fully pinned, subpath
                 "actions/aws/ec2@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Some(Uses::new(
-                    "actions",
-                    "aws",
-                    Some("ec2"),
-                    Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3"),
-                )),
+                Some(Uses::Repository(RepositoryUses {
+                    owner: "actions",
+                    repo: "aws",
+                    subpath: Some("ec2"),
+                    git_ref: Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3"),
+                })),
             ),
             (
                 // Valid: fully pinned, complex subpath
                 "example/foo/bar/baz/quux@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Some(Uses::new(
-                    "example",
-                    "foo",
-                    Some("bar/baz/quux"),
-                    Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3"),
-                )),
+                Some(Uses::Repository(RepositoryUses {
+                    owner: "example",
+                    repo: "foo",
+                    subpath: Some("bar/baz/quux"),
+                    git_ref: Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3"),
+                })),
             ),
             (
                 // Valid: pinned with branch/tag
                 "actions/checkout@v4",
-                Some(Uses::new("actions", "checkout", None, Some("v4"))),
+                Some(Uses::Repository(RepositoryUses {
+                    owner: "actions",
+                    repo: "checkout",
+                    subpath: None,
+                    git_ref: Some("v4"),
+                })),
             ),
             (
                 "actions/checkout@abcd",
-                Some(Uses::new("actions", "checkout", None, Some("abcd"))),
+                Some(Uses::Repository(RepositoryUses {
+                    owner: "actions",
+                    repo: "checkout",
+                    subpath: None,
+                    git_ref: Some("abcd"),
+                })),
             ),
             (
                 // Valid: unpinned
                 "actions/checkout",
-                Some(Uses::new("actions", "checkout", None, None)),
+                Some(Uses::Repository(RepositoryUses {
+                    owner: "actions",
+                    repo: "checkout",
+                    subpath: None,
+                    git_ref: None,
+                })),
+            ),
+            (
+                // Valid: Docker ref, implicit registry
+                "docker://alpine:3.8",
+                Some(Uses::Docker(DockerUses {
+                    registry: None,
+                    image: "alpine",
+                    tag: Some("3.8"),
+                    hash: None,
+                })),
+            ),
+            (
+                // Valid: Docker ref, localhost
+                "docker://localhost/alpine:3.8",
+                Some(Uses::Docker(DockerUses {
+                    registry: Some("localhost"),
+                    image: "alpine",
+                    tag: Some("3.8"),
+                    hash: None,
+                })),
+            ),
+            (
+                // Valid: Docker ref, localhost w/ port
+                "docker://localhost:1337/alpine:3.8",
+                Some(Uses::Docker(DockerUses {
+                    registry: Some("localhost:1337"),
+                    image: "alpine",
+                    tag: Some("3.8"),
+                    hash: None,
+                })),
+            ),
+            (
+                // Valid: Docker ref, custom registry
+                "docker://ghcr.io/foo/alpine:3.8",
+                Some(Uses::Docker(DockerUses {
+                    registry: Some("ghcr.io"),
+                    image: "foo/alpine",
+                    tag: Some("3.8"),
+                    hash: None,
+                })),
+            ),
+            (
+                // Valid: Docker ref, missing tag
+                "docker://ghcr.io/foo/alpine",
+                Some(Uses::Docker(DockerUses {
+                    registry: Some("ghcr.io"),
+                    image: "foo/alpine",
+                    tag: None,
+                    hash: None,
+                })),
+            ),
+            (
+                // Invalid, but allowed: Docker ref, empty tag
+                "docker://ghcr.io/foo/alpine:",
+                Some(Uses::Docker(DockerUses {
+                    registry: Some("ghcr.io"),
+                    image: "foo/alpine",
+                    tag: None,
+                    hash: None,
+                })),
+            ),
+            (
+                // Valid: Docker ref, bare
+                "docker://alpine",
+                Some(Uses::Docker(DockerUses {
+                    registry: None,
+                    image: "alpine",
+                    tag: None,
+                    hash: None,
+                })),
+            ),
+            (
+                // Valid: Docker ref, hash
+                "docker://alpine@hash",
+                Some(Uses::Docker(DockerUses {
+                    registry: None,
+                    image: "alpine",
+                    tag: None,
+                    hash: Some("hash"),
+                })),
             ),
             // Invalid: missing user/repo
             ("checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3", None),
@@ -351,8 +509,6 @@ mod tests {
                 "./.github/actions/hello-world-action@172239021f7ba04fe7327647b213799853a9eb89",
                 None,
             ),
-            // Invalid: Docker refs not supported
-            ("docker://alpine:3.8", None),
         ];
 
         for (input, expected) in vectors {
@@ -367,30 +523,30 @@ mod tests {
             (
                 "octo-org/this-repo/.github/workflows/workflow-1.yml@\
                  172239021f7ba04fe7327647b213799853a9eb89",
-                Some(Uses::new(
-                    "octo-org",
-                    "this-repo",
-                    Some(".github/workflows/workflow-1.yml"),
-                    Some("172239021f7ba04fe7327647b213799853a9eb89"),
-                )),
+                Some(RepositoryUses {
+                    owner: "octo-org",
+                    repo: "this-repo",
+                    subpath: Some(".github/workflows/workflow-1.yml"),
+                    git_ref: Some("172239021f7ba04fe7327647b213799853a9eb89"),
+                }),
             ),
             (
                 "octo-org/this-repo/.github/workflows/workflow-1.yml@notahash",
-                Some(Uses::new(
-                    "octo-org",
-                    "this-repo",
-                    Some(".github/workflows/workflow-1.yml"),
-                    Some("notahash"),
-                )),
+                Some(RepositoryUses {
+                    owner: "octo-org",
+                    repo: "this-repo",
+                    subpath: Some(".github/workflows/workflow-1.yml"),
+                    git_ref: Some("notahash"),
+                }),
             ),
             (
                 "octo-org/this-repo/.github/workflows/workflow-1.yml@abcd",
-                Some(Uses::new(
-                    "octo-org",
-                    "this-repo",
-                    Some(".github/workflows/workflow-1.yml"),
-                    Some("abcd"),
-                )),
+                Some(RepositoryUses {
+                    owner: "octo-org",
+                    repo: "this-repo",
+                    subpath: Some(".github/workflows/workflow-1.yml"),
+                    git_ref: Some("abcd"),
+                }),
             ),
             // Invalid: no ref at all
             ("octo-org/this-repo/.github/workflows/workflow-1.yml", None),
@@ -414,16 +570,16 @@ mod tests {
     #[test]
     fn uses_ref_is_commit() {
         assert!(
-            Uses::from_step("actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3")
+            Uses::from_reusable("actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3")
                 .unwrap()
                 .ref_is_commit()
         );
 
-        assert!(!Uses::from_step("actions/checkout@v4")
+        assert!(!Uses::from_reusable("actions/checkout@v4")
             .unwrap()
             .ref_is_commit());
 
-        assert!(!Uses::from_step("actions/checkout@abcd")
+        assert!(!Uses::from_reusable("actions/checkout@abcd")
             .unwrap()
             .ref_is_commit());
     }

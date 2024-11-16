@@ -1,11 +1,6 @@
-use std::ops::Deref;
+use github_actions_models::workflow::Job;
 
-use github_actions_models::workflow::{job::StepBody, Job};
-
-use crate::{
-    finding::{Confidence, Severity},
-    models::Uses,
-};
+use crate::finding::{Confidence, Severity};
 
 use super::{AuditState, Finding, Workflow, WorkflowAudit};
 
@@ -44,15 +39,11 @@ impl WorkflowAudit for UnpinnedUses {
             };
 
             for step in job.steps() {
-                let StepBody::Uses { uses, .. } = &step.deref().body else {
+                let Some(uses) = step.uses() else {
                     continue;
                 };
 
-                let Some(uses) = Uses::from_step(uses) else {
-                    continue;
-                };
-
-                if !uses.has_ref() {
+                if uses.unpinned() {
                     findings.push(
                         Self::finding()
                             .confidence(Confidence::High)
