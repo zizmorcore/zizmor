@@ -1,5 +1,6 @@
 use std::{io::stdout, path::PathBuf, process::ExitCode, time::Duration};
 
+use anstream::eprintln;
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
@@ -125,7 +126,9 @@ fn run() -> Result<ExitCode> {
 
     let mut workflow_registry = WorkflowRegistry::new();
     for workflow_path in workflow_paths.iter() {
-        workflow_registry.register_workflow(workflow_path)?;
+        workflow_registry
+            .register_workflow(workflow_path)
+            .with_context(|| "failed to register workflow")?;
     }
 
     let mut audit_registry = AuditRegistry::new();
@@ -213,6 +216,9 @@ fn main() -> ExitCode {
     // we always exit cleanly, rather than performing a hard process exit.
     match run() {
         Ok(exit) => exit,
-        Err(_) => ExitCode::FAILURE,
+        Err(err) => {
+            eprintln!("{err:?}");
+            ExitCode::FAILURE
+        }
     }
 }

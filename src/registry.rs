@@ -3,7 +3,7 @@
 
 use std::{collections::HashMap, path::Path, process::ExitCode};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 
 use crate::{
     audit::WorkflowAudit,
@@ -39,7 +39,10 @@ impl WorkflowRegistry {
             return Err(anyhow!("can't register {name} more than once"));
         }
 
-        self.workflows.insert(name, Workflow::from_file(path)?);
+        self.workflows.insert(
+            name,
+            Workflow::from_file(path).with_context(|| "couldn't load workflow from file")?,
+        );
 
         Ok(())
     }
