@@ -2,7 +2,7 @@
 //!
 //! This is similar to "impostor" commit detection, but with only named
 //! refs instead of fully pinned commits: a user may pin a ref such as
-//! `@foo` thinking that `foo` will alway refer to either a branch or a tag,
+//! `@foo` thinking that `foo` will always refer to either a branch or a tag,
 //! but the upstream repository may host *both* a branch and a tag named
 //! `foo`, making it unclear to the end user which is selected.
 
