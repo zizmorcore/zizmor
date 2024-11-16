@@ -258,14 +258,19 @@ impl<'a> Uses<'a> {
         registry == "localhost" || registry.contains('.') || registry.contains(':')
     }
 
+    /// Parses a Docker image reference.
+    /// See: <https://docs.docker.com/reference/cli/docker/image/tag/>
     fn from_image_ref(image: &'a str) -> Option<Self> {
-        let (registry, image_full) = match image.split_once('/') {
+        let (registry, image) = match image.split_once('/') {
             Some((registry, image)) if Self::is_registry(registry) => (Some(registry), image),
             _ => (None, image),
         };
 
-        if let Some(at_pos) = image_full.find('@') {
-            let (image, hash) = image_full.split_at(at_pos);
+        // NOTE(ww): hashes aren't mentioned anywhere in Docker's own docs,
+        // but appear to be an OCI thing. GitHub doesn't support them
+        // yet either, but we expect them to soon (with "immutable actions").
+        if let Some(at_pos) = image.find('@') {
+            let (image, hash) = image.split_at(at_pos);
 
             let hash = if hash.is_empty() {
                 None
@@ -280,10 +285,10 @@ impl<'a> Uses<'a> {
                 hash,
             }))
         } else {
-            let (image, tag) = match image_full.split_once(':') {
+            let (image, tag) = match image.split_once(':') {
                 Some((image, "")) => (image, None),
                 Some((image, tag)) => (image, Some(tag)),
-                _ => (image_full, None),
+                _ => (image, None),
             };
 
             Some(Self::Docker(DockerUses {
