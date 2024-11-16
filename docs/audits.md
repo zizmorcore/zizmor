@@ -279,7 +279,7 @@ GitHub Actions will use the latest commit on the referenced repository
 For repository actions (like @actions/checkout): add a branch, tag, or SHA
 reference.
 
-For Docker actions (like `docker://...`): add an appropriate
+For Docker actions (like `docker://ubuntu`): add an appropriate
 `:{version}` suffix.
 
 A before/after example is shown below.
@@ -314,7 +314,7 @@ A before/after example is shown below.
     unpinned-uses:
         runs-on: ubuntu-latest
         steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v4 # (1)!
           with:
           persist-credentials: false
 
@@ -323,3 +323,5 @@ A before/after example is shown below.
           entrypoint: /bin/echo
           args: hello!
     ```
+
+    1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
