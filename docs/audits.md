@@ -259,3 +259,69 @@ and possible.
 * <https://docs.pypi.org/trusted-publishers/>
 * <https://guides.rubygems.org/trusted-publishing/>
 * <https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/>
+
+## `unpinned-uses`
+
+| Type     | Examples                     | Introduced in | Works offline  | Enabled by default |
+|----------|------------------------------|---------------|----------------|--------------------|
+| Workflow  | [unpinned.yml]              | v0.4.0        | ✅             | ✅                 |
+
+[unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
+
+Detects "unpinned" `uses:` clauses.
+
+When a `uses:` clause is not pinned by branch, tag, or SHA reference,
+GitHub Actions will use the latest commit on the referenced repository
+(or, in the case of Docker actions, the `:latest` tag).
+
+### Remediation
+
+For repository actions (like @actions/checkout): add a branch, tag, or SHA
+reference.
+
+For Docker actions (like `docker://ubuntu`): add an appropriate
+`:{version}` suffix.
+
+A before/after example is shown below.
+
+=== "Before"
+
+    ```yaml title="unpinned-uses.yml" hl_lines="8 12"
+    name: unpinned-uses
+    on: [push]
+
+    jobs:
+    unpinned-uses:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout
+          with:
+          persist-credentials: false
+
+        - uses: docker://ubuntu
+          with:
+          entrypoint: /bin/echo
+          args: hello!
+    ```
+
+=== "After"
+
+    ```yaml title="unpinned-uses.yml" hl_lines="8 12"
+    name: unpinned-uses
+    on: [push]
+
+    jobs:
+    unpinned-uses:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v4 # (1)!
+          with:
+          persist-credentials: false
+
+        - uses: docker://ubuntu:24.04
+          with:
+          entrypoint: /bin/echo
+          args: hello!
+    ```
+
+    1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.

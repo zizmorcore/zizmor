@@ -162,3 +162,41 @@ fn audit_self_hosted() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn audit_unpinned_uses() -> anyhow::Result<()> {
+    let auditable = workflow_under_test("unpinned-uses.yml");
+
+    let cli_args = [&auditable];
+
+    let execution = zizmor().args(cli_args).output()?;
+
+    assert_eq!(execution.status.code(), Some(11));
+
+    let findings = serde_json::from_slice(&execution.stdout)?;
+
+    assert_value_match(&findings, "$[0].determinations.confidence", "High");
+    assert_value_match(&findings, "$[0].determinations.severity", "Informational");
+    assert_value_match(
+        &findings,
+        "$[0].locations[0].concrete.feature",
+        "uses: actions/checkout",
+    );
+    assert_value_match(
+        &findings,
+        "$[1].locations[0].concrete.feature",
+        "uses: github/codeql-action/upload-sarif",
+    );
+    assert_value_match(
+        &findings,
+        "$[2].locations[0].concrete.feature",
+        "uses: docker://ubuntu",
+    );
+    assert_value_match(
+        &findings,
+        "$[3].locations[0].concrete.feature",
+        "uses: docker://ghcr.io/pypa/gh-action-pypi-publish",
+    );
+
+    Ok(())
+}
