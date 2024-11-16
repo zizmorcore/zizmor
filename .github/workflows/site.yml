@@ -37,6 +37,7 @@ jobs:
         run: make site
 
       - name: Setup Pages
+        if: github.repository_owner == 'woodruffw'
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
@@ -45,5 +46,6 @@ jobs:
           path: site_html
 
       - name: Deploy to GitHub Pages
+        if: github.repository_owner == 'woodruffw'
         id: deployment
         uses: actions/deploy-pages@v4
