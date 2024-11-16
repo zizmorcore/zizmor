@@ -287,6 +287,10 @@ impl<'a> Uses<'a> {
             _ => None,
         }
     }
+
+    pub(crate) fn has_ref(&self) -> bool {
+        self.git_ref.is_some()
+    }
 }
 
 #[cfg(test)]
