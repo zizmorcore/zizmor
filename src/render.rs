@@ -97,9 +97,11 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
         }
 
         if findings.ignored().is_empty() {
+            let nfindings = findings.findings().len();
             print!(
-                "{nfindings} findings: ",
-                nfindings = (findings.findings().len() + findings.ignored().len()).green(),
+                "{nfindings} finding{s}: ",
+                nfindings = nfindings.green(),
+                s = if nfindings == 1 { "" } else { "s" },
             );
         } else {
             print!(
