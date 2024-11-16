@@ -67,6 +67,11 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.snippets:
       base_path:
         - "docs/snippets"
@@ -75,6 +80,10 @@ markdown_extensions:
   - attr_list
   - toc:
       permalink: 🔗
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
 
 validation:
   omitted_files: warn
