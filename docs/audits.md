@@ -18,8 +18,8 @@ Legend:
 
 [artipacked.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/artipacked.yml
 
-Detected local `git` credential storage on GitHub Actions, as well as potential
-avenues for unintentional persistence of credentials in artifacts.
+Detects local filesystem `git` credential storage on GitHub Actions, as well as
+potential avenues for unintentional persistence of credentials in artifacts.
 
 By default, using @actions/checkout causes a credential to be persisted
 in the checked-out repo's `.git/config`, so that subsequent `git` operations
@@ -77,11 +77,7 @@ with `#!yaml persist-credentials: true`.
 
 [pull-request-target.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pull-request-target.yml
 
-### What
-
-Fundamentally dangerous GitHub Actions workflow triggers.
-
-### Why
+Detects fundamentally dangerous GitHub Actions workflow triggers.
 
 Many of GitHub's workflow triggers are difficult to use securely.
 This audit checks for some of the biggest offenders:
@@ -95,9 +91,33 @@ typically triggerable by the latter. This can lead to attacker controlled
 code execution or unexpected action runs with context controlled by a malicious
 fork.
 
-### Other resources
+Other resources:
 
 * <https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/>
+
+### Remediation
+
+The use of dangerous triggers can be difficult to remediate, since they don't
+always have an immediate replacement.
+
+Replacing a dangerous trigger with a safer one (or keeping the dangerous
+trigger, but eliminating the risk of code execution) requires case-by-case
+consideration.
+
+Some general pointers:
+
+* Replace `workflow_run` triggers with `workflow_call`: this will require
+  re-tooling the workflow to be a [reusable workflow].
+* Replace `pull_request_target` with `pull_request`, unless you *absolutely*
+  need repository write permissions (e.g. to leave a comment or make
+  other changes to the upstream repo).
+* Never run PR-controlled code in the context of a
+  `pull_request_target`-triggered workflow.
+* Avoid attacker-controllable flows into `GITHUB_ENV` in both `workflow_run`
+  and `pull_request_target` workflows, since these can lead to arbitrary
+  code execution.
+
+[reusable workflow]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 
 ## `excessive-permissions`
 
@@ -107,16 +127,16 @@ fork.
 
 [excessive-permissions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/excessive-permissions.yml
 
-### What
-
-Looks for excessive permissions in workflows, both at
-the workflow level and individual job levels.
-
-### Why
+Detects excessive permissions in workflows, both at the workflow level and
+individual job levels.
 
 Users frequently over-scope their workflow and job permissions,
 or set broad workflow-level permissions without realizing that
 all jobs inherit those permissions.
+
+### Remediation
+
+TODO
 
 ## `hardcoded-container-credentials`
 
