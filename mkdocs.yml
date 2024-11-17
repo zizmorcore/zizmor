@@ -1,3 +1,4 @@
+strict: true
 site_name: "zizmor"
 # site_description: zizmor
 site_url: https://woodruffw.github.io/zizmor
@@ -84,6 +85,7 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
+  - pymdownx.inlinehilite
 
 validation:
   omitted_files: warn
