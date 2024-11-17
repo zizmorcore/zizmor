@@ -33,7 +33,7 @@ is non-ideal unless actually needed.
 
 Other resources:
 
-* <https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/>
+* [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]
 
 ### Remediation
 
@@ -93,7 +93,7 @@ fork.
 
 Other resources:
 
-* <https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/>
+* [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]
 
 ### Remediation
 
@@ -312,7 +312,7 @@ commit author).
 
 Other resources:
 
-* <https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd>
+* [What the fork? Imposter commits in GitHub Actions and CI/CD]
 
 ### Remediation
 
@@ -396,9 +396,9 @@ runners but use client-managed compute resources.
 Self-hosted runners are very hard to secure by default, which is why
 GitHub does not recommend their use in public repositories.
 
-Other resources
+Other resources:
 
-* <https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners#self-hosted-runner-security>
+* [Self-hosted runner security]
 
 ### Remediation
 
@@ -430,14 +430,12 @@ there are steps you can take to minimize their risk:
 
 [template-injection.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/template-injection.yml
 
-### What
+Detects potential sources of code injection via template expansion.
 
 GitHub Actions allows workflows to define *template expansions*, which
 occur within special `${{ ... }}` delimiters. These expansions happen
 before workflow and job execution, meaning the expansion
 of a given expression appears verbatim in whatever context it was performed in.
-
-### Why
 
 Template expansions aren't syntax-aware, meaning that they can result in
 unintended shell injection vectors. This is especially true when they're
@@ -445,9 +443,45 @@ used with attacker-controllable expression contexts, such as
 `github.event.issue.title` (which the attacker can fully control by supplying
 a new issue title).
 
-### Other resources
+Other resources:
 
-* <https://securitylab.github.com/resources/github-actions-untrusted-input/>
+* [Keeping your GitHub Actions and workflows secure Part 2: Untrusted input]
+
+### Remediation
+
+The most common forms of template injection are in `run:` and similar
+code-exeuction blocks. In these cases, an inline template expansion
+can typically be replaced by an environment variable whose value comes
+from the expanded template.
+
+This avoids the vulnerability, since variable expansion is subject to normal
+shell quoting/expansion rules.
+
+=== "Before"
+
+    ```yaml title="template-injection.yml" hl_lines="3"
+    - name: Check title
+      run: |
+        title="${{ github.event.issue.title }}"
+        if [[ ! $title =~ ^.*:\ .*$ ]]; then
+          echo "Bad issue title"
+          exit 1
+        fi
+    ```
+
+=== "After"
+
+    ```yaml title="template-injection.yml" hl_lines="3 8-9"
+    - name: Check title
+      run: |
+        title="${ISSUE_TITLE}"
+        if [[ ! $title =~ ^.*:\ .*$ ]]; then
+          echo "Bad issue title"
+          exit 1
+        fi
+      env:
+        ISSUE_TITLE: ${{ github.event.issue.title }}
+    ```
 
 ## `use-trusted-publishing`
 
@@ -457,23 +491,36 @@ a new issue title).
 
 [pypi-manual-credential.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pypi-manual-credential.yml
 
-### What
+Detects packaging workflows that could use [Trusted Publishing].
 
-Some packaging ecosystems/indices (like PyPI and RubyGems) support
+Some packaging ecosystems/indices (like [PyPI] and [RubyGems]) support
 "Trusted Publishing," which is an OIDC-based "tokenless" authentication
 mechanism for uploading to the index from within a CI/CD workflow.
-
-### Why
 
 This "tokenless" flow has significant security benefits over a traditional
 manually configured API token, and should be preferred wherever supported
 and possible.
 
-### Other resources
+[Trusted Publishing]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
 
-* <https://docs.pypi.org/trusted-publishers/>
-* <https://guides.rubygems.org/trusted-publishing/>
-* <https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/>
+[PyPI]: https://pypi.org
+
+[RubyGems]: https://rubygems.org
+
+Other resources:
+
+* [Trusted Publishers for All Package Repositories]
+* [Publishing to PyPI with a Trusted Publisher]
+* [Trusted Publishing - RubyGems Guides]
+* [Trusted publishing: a new benchmark for packaging security]
+
+### Remediation
+
+In general, enabling Trusted Publishing requires a one-time change to your
+package's configuration on its associated index (e.g. PyPI or RubyGems).
+
+Once your Trusted Publisher is registered, see @pypa/gh-action-pypi-publish
+or @rubygems/release-gem for canonical examples of using it.
 
 ## `unpinned-uses`
 
@@ -543,3 +590,14 @@ A before/after example is shown below.
     ```
 
     1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
+
+
+[ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
+[Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+[What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
+[Self-hosted runner security]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners#self-hosted-runner-security
+[Keeping your GitHub Actions and workflows secure Part 2: Untrusted input]: https://securitylab.github.com/resources/github-actions-untrusted-input/
+[Publishing to PyPI with a Trusted Publisher]: https://docs.pypi.org/trusted-publishers/
+[Trusted Publishing - RubyGems Guides]: https://guides.rubygems.org/trusted-publishing/
+[Trusted publishing: a new benchmark for packaging security]: https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/
+[Trusted Publishers for All Package Repositories]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
