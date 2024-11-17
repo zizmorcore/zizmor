@@ -136,7 +136,87 @@ all jobs inherit those permissions.
 
 ### Remediation
 
-TODO
+In general, permissions should be declared as minimally as possible, and
+as close to their usage site as possible.
+
+In practice, this means that workflows should almost always set
+`#!yaml permissions: {}` at the workflow level to disable all permissions
+by default, and then set specific job-level permissions as needed.
+
+For example:
+
+=== "Before"
+
+    ```yaml title="excessive-permissions.yml" hl_lines="8-9"
+    on:
+      release:
+        types:
+          - published
+
+    name: release
+
+    permissions:
+      id-token: write # trusted publishing + attestations
+
+    jobs:
+      build:
+        name: Build distributions 📦
+        runs-on: ubuntu-latest
+        steps:
+          - # omitted for brevity
+
+      publish:
+        name: Publish Python 🐍 distributions 📦 to PyPI
+        runs-on: ubuntu-latest
+        needs: [build]
+
+        steps:
+          - name: Download distributions
+            uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+            with:
+              name: distributions
+              path: dist/
+
+          - name: publish
+            uses: pypa/gh-action-pypi-publish@release/v1
+    ```
+
+=== "After"
+
+    ```yaml title="excessive-permissions.yml" hl_lines="8 21-22"
+    on:
+      release:
+        types:
+          - published
+
+    name: release
+
+    permissions: {}
+
+    jobs:
+      build:
+        name: Build distributions 📦
+        runs-on: ubuntu-latest
+        steps:
+          - # omitted for brevity
+
+      publish:
+        name: Publish Python 🐍 distributions 📦 to PyPI
+        runs-on: ubuntu-latest
+        needs: [build]
+        permissions:
+          id-token: write # trusted publishing + attestations
+
+        steps:
+          - name: Download distributions
+            uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+            with:
+              name: distributions
+              path: dist/
+
+          - name: publish
+            uses: pypa/gh-action-pypi-publish@release/v1
+    ```
 
 ## `hardcoded-container-credentials`
 
@@ -146,14 +226,65 @@ TODO
 
 [hardcoded-credentials.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/hardcoded-credentials.yml
 
-### What
+Detects Docker credentials (usernames and passwords) hardcoded in various places
+within workflows.
 
-GitHub Actions allows Docker credentials (usernames and passwords)
-to be hardcoded in various places within workflows.
+### Remediation
 
-### Why
+Use [encrypted secrets] instead of hardcoded credentials.
 
-Hardcoding credentials is bad.
+[encrypted secrets]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
+
+=== "Before"
+
+    ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
+    on:
+      push:
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        container:
+          image: fake.example.com/example
+          credentials:
+            username: user
+            password: hackme
+        services:
+          service-1:
+            image: fake.example.com/anotherexample
+            credentials:
+              username: user
+              password: hackme
+        steps:
+          - run: echo 'hello!'
+    ```
+
+=== "After"
+
+    ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
+    on:
+      push:
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        container:
+          image: fake.example.com/example
+          credentials:
+            username: user
+            password: ${{ secrets.REGISTRY_PASSWORD }}
+        services:
+          service-1:
+            image: fake.example.com/anotherexample
+            credentials:
+              username: user
+              password: ${{ secrets.REGISTRY_PASSWORD }} # (1)!
+        steps:
+          - run: echo 'hello!'
+    ```
+
+    1. This may or may not be the same credential as above, depending on your configuration.
+
 
 ## `impostor-commit`
 
@@ -163,22 +294,37 @@ Hardcoding credentials is bad.
 
 [impostor-commit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/impostor-commit.yml
 
-### What
+Detects commits within a repository action's network that are not present on
+the repository itself, also known as "impostor" commits.
 
 GitHub represents a repository and its forks as a "network" of commits.
 This results in ambiguity about where a commit comes from: a commit
 that exists only in a fork can be referenced via its parent's
 `owner/repo` slug, and vice versa.
 
-### Why
-
 GitHub's network-of-forks design can be used to obscure a commit's true origin
 in a fully-pinned `uses:` workflow reference. This can be used by an attacker
 to surreptitiously introduce a backdoored action into a victim's workflows(s).
 
-### Other resources
+A notable historical example of this is github/dmca@565ece486c7c1652754d7b6d2b5ed9cb4097f9d5,
+which appears to be on @github/dmca is but really on a fork (with an impersonated
+commit author).
+
+Other resources:
 
 * <https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd>
+
+### Remediation
+
+Impostor commits are **visually indistinguishable** from normal best-practice
+hash-pinned actions.
+
+Always **carefully review** external PRs that add or change
+hash-pinned actions by consulting the claimant repository and confirming that
+the commit actually exists within it.
+
+The only remediation, once discovered, is to replace the impostor commit
+within an authentic commit (or an authentic tag/branch reference).
 
 ## `known-vulnerable-actions`
 
@@ -188,22 +334,21 @@ to surreptitiously introduce a backdoored action into a victim's workflows(s).
 
 [known-vulnerable-actions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/known-vulnerable-actions.yml
 
-### What
-
-Actions with known, publicly disclosed vulnerabilities are tracked in the
-[GitHub Advisories database]. Examples of commonly disclosed vulnerabilities
-in GitHub Actions include [credential disclosure] and code injection
-via [template injection].
-
-### Why
-
-You shouldn't use actions with known vulnerabilities.
+Detects actions with known, publicly disclosed vulnerabilities that are tracked
+in the [GitHub Advisories database]. Examples of commonly disclosed
+vulnerabilities in GitHub Actions include [credential disclosure] and code
+injection via [template injection].
 
 [GitHub Advisories database]: https://github.com/advisories
 
 [credential disclosure]: #artipacked
 
 [template injection]: #template-injection
+
+### Remediation
+
+If the vulnerability is applicable to your use: upgrade to a fixed version of
+the action if one is available, or remove the action's usage entirely.
 
 ## `ref-confusion`
 
@@ -213,19 +358,22 @@ You shouldn't use actions with known vulnerabilities.
 
 [ref-confusion.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/ref-confusion.yml
 
-### What
+Detects actions that are pinned to confusable symbolic refs (i.e. branches
+or tags).
 
 Like with [impostor commits], actions that are used with a symbolic ref
 in their `uses:` are subject to a degree of ambiguity: a ref like
 `@v1` might refer to either a branch or tag ref.
-
-### Why
 
 An attacker can exploit this ambiguity to publish a branch or tag ref that
 takes precedence over a legitimate one, delivering a malicious action to
 pre-existing consumers of that action without having to modify those consumers.
 
 [impostor commits]: #impostor-commit
+
+### Remediation
+
+Switch to hash-pinned actions.
 
 ## `self-hosted-runner`
 
@@ -240,19 +388,39 @@ pre-existing consumers of that action without having to modify those consumers.
     This is a `--pedantic` only audit, due to `zizmor`'s limited ability
     to analyze runner configurations themselves. See #34 for more details.
 
-### What
+Detects self-hosted runner usage within workflows.
 
 GitHub supports self-hosted runners, which behave similarly to GitHub-hosted
 runners but use client-managed compute resources.
 
-### Why
-
 Self-hosted runners are very hard to secure by default, which is why
 GitHub does not recommend their use in public repositories.
 
-### Other resources
+Other resources
 
 * <https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners#self-hosted-runner-security>
+
+### Remediation
+
+In general, self-hosted runners should only be used on private repositories.
+Exposing self-hosted runners to potential public use is *always* a security
+risk.
+
+In practice, there are many cases (such as custom host configurations) where
+a self-hosted runner is needed on a public repository. In these cases,
+there are steps you can take to minimize their risk:
+
+1. Require manual approval on workflows for all external contributors.
+   This can be configured at repository, workflow, or enterprise-wide
+   levels. See [GitHub's docs] for more information.
+1. Use only [ephemeral ("just-in-time") runners]. These runners are
+   created just-in-time to perform one job and are destroyed immediately
+   afterwards, making it harder (but not impossible) for an attacker to
+   maintain persistence.
+
+[GitHub's docs]: https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/approving-workflow-runs-from-public-forks
+
+[ephemeral ("just-in-time") runners]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-just-in-time-runners
 
 ## `template-injection`
 
