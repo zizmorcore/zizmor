@@ -1,58 +1,41 @@
-//! Per-run cross-audit state types and routines.
-//!
-//! Primarily for maintaining caches between audits and audit runs.
+//! zizmor's runtime state, including application-level caching.
 
 use moka::sync::Cache;
 
 use crate::{
     github_api::{Branch, Client, ComparisonStatus, Tag},
-    Args,
+    App,
 };
 
 #[derive(Clone)]
-pub(crate) struct AuditConfig {
+pub(crate) struct AuditState {
     pub(crate) pedantic: bool,
     pub(crate) offline: bool,
     pub(crate) gh_token: Option<String>,
-}
-
-impl From<&Args> for AuditConfig {
-    fn from(value: &Args) -> Self {
-        Self {
-            pedantic: value.pedantic,
-            offline: value.offline,
-            gh_token: value.gh_token.clone(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct AuditState {
-    /// The current config.
-    pub(crate) config: AuditConfig,
     pub(crate) caches: Caches,
 }
 
 impl AuditState {
-    pub(crate) fn new(config: AuditConfig) -> Self {
+    pub(crate) fn new(app: &App) -> Self {
         Self {
-            config,
             caches: Caches::new(),
+            pedantic: app.pedantic,
+            offline: app.offline,
+            gh_token: app.gh_token.clone(),
         }
     }
 
     /// Return a cache-configured GitHub API client, if
     /// a GitHub API token is present.
     pub(crate) fn github_client(&self) -> Option<Client> {
-        self.config
-            .gh_token
+        self.gh_token
             .as_ref()
             .map(|token| Client::new(token, self.caches.clone()))
     }
 }
 
-#[derive(Clone)]
 /// Runtime caches.
+#[derive(Clone)]
 pub(crate) struct Caches {
     /// A cache of `(owner, repo) => branches`.
     pub(crate) branch_cache: Cache<(String, String), Vec<Branch>>,

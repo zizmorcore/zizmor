@@ -7,5 +7,23 @@ changelog:
     authors:
       - dependabot
 
-  # TODO: consider adding categories here.
-  # See: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+  categories:
+    - title: New Features 🌈
+      labels:
+        - enhancement
+        - new-audit
+        - cli
+
+    - title: Bug Fixes 🐛
+      labels:
+        - bugfix
+        - false-negative
+        - false-positive
+
+    - title: Performance Improvements 🚄
+      labels:
+        - performance
+
+    - title: Documentation Improvements 📖
+      labels:
+        - documentation

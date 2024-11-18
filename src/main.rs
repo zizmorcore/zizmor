@@ -1,14 +1,17 @@
-use std::{io::stdout, path::PathBuf, time::Duration};
+use std::{io::stdout, path::PathBuf, process::ExitCode, time::Duration};
 
+use anstream::eprintln;
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
+use config::Config;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use owo_colors::OwoColorize;
-use registry::{AuditRegistry, WorkflowRegistry};
-use state::{AuditConfig, AuditState};
+use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
+use state::AuditState;
 
 mod audit;
+mod config;
 mod expr;
 mod finding;
 mod github_api;
@@ -21,8 +24,8 @@ mod utils;
 
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
-#[command(version)]
-struct Args {
+#[command(about, version)]
+struct App {
     /// Emit findings even when the context suggests an explicit security decision made by the user.
     #[arg(short, long)]
     pedantic: bool,
@@ -47,8 +50,22 @@ struct Args {
     #[arg(long, value_enum)]
     format: Option<OutputFormat>,
 
-    /// The workflow filename or directory to audit.
-    input: PathBuf,
+    /// The configuration file to load. By default, any config will be
+    /// discovered relative to $CWD.
+    #[arg(short, long, group = "conf")]
+    config: Option<PathBuf>,
+
+    /// Disable all configuration loading.
+    #[arg(long, group = "conf")]
+    no_config: bool,
+
+    /// Disable all error codes besides success and tool failure.
+    #[arg(long)]
+    no_exit_codes: bool,
+
+    /// The workflow filenames or directories to audit.
+    #[arg(required = true)]
+    inputs: Vec<PathBuf>,
 }
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
@@ -58,50 +75,60 @@ pub(crate) enum OutputFormat {
     Sarif,
 }
 
-fn main() -> Result<()> {
+fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
-    let args = Args::parse();
+    let args = App::parse();
 
     env_logger::Builder::new()
         .filter_level(args.verbose.log_level_filter())
         .init();
 
-    let config = AuditConfig::from(&args);
-
     let mut workflow_paths = vec![];
-    if args.input.is_file() {
-        workflow_paths.push(args.input.clone());
-    } else if args.input.is_dir() {
-        let mut absolute = std::fs::canonicalize(&args.input)?;
-        if !absolute.ends_with(".github/workflows") {
-            absolute.push(".github/workflows")
-        }
-
-        log::debug!("collecting workflows from {absolute:?}");
-
-        for entry in std::fs::read_dir(absolute)? {
-            let workflow_path = entry?.path();
-            match workflow_path.extension() {
-                Some(ext) if ext == "yml" || ext == "yaml" => workflow_paths.push(workflow_path),
-                _ => continue,
+    for input in &args.inputs {
+        if input.is_file() {
+            workflow_paths.push(input.clone());
+        } else if input.is_dir() {
+            let mut absolute = std::fs::canonicalize(input)?;
+            if !absolute.ends_with(".github/workflows") {
+                absolute.push(".github/workflows")
             }
-        }
 
-        if workflow_paths.is_empty() {
-            return Err(anyhow!(
-                "no workflow files collected; empty or wrong directory?"
-            ));
+            log::debug!("collecting workflows from {absolute:?}");
+
+            for entry in std::fs::read_dir(absolute)? {
+                let workflow_path = entry?.path();
+                match workflow_path.extension() {
+                    Some(ext) if ext == "yml" || ext == "yaml" => {
+                        workflow_paths.push(workflow_path)
+                    }
+                    _ => continue,
+                }
+            }
+        } else {
+            return Err(anyhow!("input malformed, expected file or directory"));
         }
-    } else {
-        return Err(anyhow!("input must be a single workflow file or directory"));
     }
 
-    let audit_state = AuditState::new(config);
+    if workflow_paths.is_empty() {
+        return Err(anyhow!(
+            "no workflow files collected; empty or wrong directory?"
+        ));
+    }
+
+    log::debug!(
+        "collected workflows: {workflows:?}",
+        workflows = workflow_paths
+    );
+
+    let config = Config::new(&args)?;
+    let audit_state = AuditState::new(&args);
 
     let mut workflow_registry = WorkflowRegistry::new();
     for workflow_path in workflow_paths.iter() {
-        workflow_registry.register_workflow(workflow_path)?;
+        workflow_registry
+            .register_workflow(workflow_path)
+            .with_context(|| format!("failed to register workflow: {workflow_path:?}"))?;
     }
 
     let mut audit_registry = AuditRegistry::new();
@@ -126,6 +153,7 @@ fn main() -> Result<()> {
     register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
     register_audit!(audit::self_hosted_runner::SelfHostedRunner);
     register_audit!(audit::known_vulnerable_actions::KnownVulnerableActions);
+    register_audit!(audit::unpinned_uses::UnpinnedUses);
 
     let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
 
@@ -140,7 +168,7 @@ fn main() -> Result<()> {
         );
     }
 
-    let mut results = vec![];
+    let mut results = FindingRegistry::new(&config);
     for (_, workflow) in workflow_registry.iter_workflows() {
         bar.set_message(format!(
             "auditing {workflow}",
@@ -170,10 +198,28 @@ fn main() -> Result<()> {
 
     match format {
         OutputFormat::Plain => render::render_findings(&workflow_registry, &results),
-        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results)?,
-        OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &sarif::build(&workflow_registry, results))?
-        }
+        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
+        OutputFormat::Sarif => serde_json::to_writer_pretty(
+            stdout(),
+            &sarif::build(&workflow_registry, results.findings()),
+        )?,
     };
-    Ok(())
+
+    if args.no_exit_codes || matches!(format, OutputFormat::Sarif) {
+        Ok(ExitCode::SUCCESS)
+    } else {
+        Ok(results.into())
+    }
+}
+
+fn main() -> ExitCode {
+    // This is a little silly, but returning an ExitCode like this ensures
+    // we always exit cleanly, rather than performing a hard process exit.
+    match run() {
+        Ok(exit) => exit,
+        Err(err) => {
+            eprintln!("{err:?}");
+            ExitCode::FAILURE
+        }
+    }
 }

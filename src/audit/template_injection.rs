@@ -22,14 +22,14 @@ use github_actions_models::{
 
 use super::WorkflowAudit;
 use crate::{
-    expr::Expr,
+    expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Severity},
     state::AuditState,
     utils::extract_expressions,
 };
 
 pub(crate) struct TemplateInjection {
-    pub(crate) _state: AuditState,
+    pub(crate) state: AuditState,
 }
 
 /// Context members that are believed to be always safe.
@@ -38,7 +38,19 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.event_name",
     // Safe keys within the otherwise generally unsafe github.event context.
     "github.event.number",
+    "github.event.merge_group.base_sha",
     "github.event.workflow_run.id",
+    // Information about the GitHub repository
+    "github.repository",
+    "github.repository_id",
+    "github.repositoryUrl",
+    // Information about the GitHub repository owner (account/org or ID)
+    "github.repository_owner",
+    "github.repository_owner_id",
+    // Unique numbers assigned by GitHub for workflow runs
+    "github.run_attempt",
+    "github.run_id",
+    "github.run_number",
     // Always a 40-char SHA-1 reference.
     "github.sha",
     // Like `secrets.*`: not safe to expose, but safe to interpolate.
@@ -47,9 +59,61 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.workspace",
     // GitHub Actions-controller runner architecture.
     "runner.arch",
+    // Debug logging is (1) or is not (0) enabled on GitHub Actions runner.
+    "runner.debug",
+    // GitHub Actions runner operating system.
+    "runner.os",
 ];
 
 impl TemplateInjection {
+    /// Checks whether an expression is "safe" for the purposes of template
+    /// injection.
+    ///
+    /// In the context of template injection, a "safe" expression is one that
+    /// can only ever return a literal node (i.e. bool, number, string, etc.).
+    /// All branches/flows of the expression must uphold that invariant;
+    /// no taint tracking is currently done.
+    fn expr_is_safe(expr: &Expr) -> bool {
+        match expr {
+            Expr::Number(_) => true,
+            Expr::String(_) => true,
+            Expr::Boolean(_) => true,
+            Expr::Null => true,
+            // NOTE: Currently unreachable, since we churlishly consider
+            // indexing expressions unsafe and `Expr::Star` only occurs
+            // within indices at the moment.
+            Expr::Star => unreachable!(),
+            // NOTE: Some index operations may be safe, but for now
+            // we consider them all unsafe.
+            Expr::Index { .. } => false,
+            // NOTE: Some function calls may be safe, but for now
+            // we consider them all unsafe.
+            Expr::Call { .. } => false,
+            // We consider all context accesses unsafe. This isn't true,
+            // but our audit filters the safe ones later on.
+            Expr::Context(_) => false,
+            Expr::BinOp { lhs, op, rhs } => {
+                match op {
+                    // `==` and `!=` are always safe, since they evaluate to
+                    // boolean rather than to the truthy value.
+                    BinOp::Eq | BinOp::Neq => true,
+                    // `&&` is safe if its RHS is safe, since && cannot
+                    // short-circuit.
+                    BinOp::And => Self::expr_is_safe(rhs),
+                    // We consider all other binops safe if both sides are safe,
+                    // regardless of the actual operation type. This could be
+                    // refined to check only one side with taint information.
+                    // TODO: Relax this for >/>=/</<=?
+                    _ => Self::expr_is_safe(lhs) && Self::expr_is_safe(rhs),
+                }
+            }
+            Expr::UnOp { op, .. } => match op {
+                // !expr always produces a boolean.
+                UnOp::Not => true,
+            },
+        }
+    }
+
     /// Checks whether the given `expr` into `matrix` is static.
     fn matrix_is_static(&self, expr: &str, matrix: &Matrix) -> bool {
         // If the matrix's dimensions are an expression, then it's not static.
@@ -105,6 +169,13 @@ impl TemplateInjection {
                 log::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
+
+            // Filter "safe" expressions (ones that might expand to code,
+            // but not arbitrary code) by default, unless we're operating
+            // in pedantic mode.
+            if Self::expr_is_safe(&expr) && !self.state.pedantic {
+                continue;
+            }
 
             for context in expr.contexts() {
                 if context.starts_with("secrets.") {
@@ -183,7 +254,7 @@ impl WorkflowAudit for TemplateInjection {
     where
         Self: Sized,
     {
-        Ok(Self { _state: state })
+        Ok(Self { state })
     }
 
     fn audit<'w>(
@@ -233,5 +304,63 @@ impl WorkflowAudit for TemplateInjection {
         }
 
         Ok(findings)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::audit::template_injection::TemplateInjection;
+
+    use super::Expr;
+
+    #[test]
+    fn test_expr_is_safe() {
+        let cases = &[
+            // Literals are always safe.
+            ("true", true),
+            ("false", true),
+            ("1.0", true),
+            ("null", true),
+            ("'some string'", true),
+            // negation is always safe.
+            ("!true", true),
+            ("!some.context", true),
+            // == / != are always safe, even if their hands are not.
+            ("true == true", true),
+            ("'true' == true", true),
+            ("some.context == true", true),
+            ("contains(some.context, 'foo') != true", true),
+            // || is safe if both hands are safe.
+            ("true || true", true),
+            ("some.context || true", false),
+            ("true || some.context", false),
+            // && is true if the RHS is safe.
+            ("true && true", true),
+            ("some.context && true", true),
+            ("true && other.context", false),
+            ("some.context && other.context", false),
+            // Index ops and function calls are unsafe.
+            ("some.context[0]", false),
+            ("some.context[*]", false),
+            ("someFunction()", false),
+            ("fromJSON(some.context)", false),
+            ("toJSON(fromJSON(some.context))", false),
+            // Context accesses are unsafe.
+            ("some.context", false),
+            ("some.context.*.something", false),
+            // More complicated cases:
+            ("some.condition && '--some-arg' || ''", true),
+            ("some.condition && some.context || ''", false),
+            ("some.condition && '--some-arg' || some.context", false),
+            (
+                "(github.actor != 'github-actions[bot]' && github.actor) || 'BrewTestBot'",
+                false,
+            ),
+        ];
+
+        for (case, safe) in cases {
+            let expr = Expr::parse(case).unwrap();
+            assert_eq!(TemplateInjection::expr_is_safe(&expr), *safe, "{expr:#?}");
+        }
     }
 }

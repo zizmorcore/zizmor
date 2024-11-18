@@ -1,0 +1,107 @@
+/* add icons to pymdownx.magiclink references */
+
+:root {
+    --magiclink-email-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m-3 13H7v-2h10m0-2H7v-2h10m3-2h-3V6h3"/></svg>');
+    --magiclink-github-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>');
+    --magiclink-bitbucket-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M2.65 3C2.3 3 2 3.3 2 3.65v.12l2.73 16.5c.07.42.43.73.85.73h13.05c.31 0 .59-.22.64-.54L22 3.77a.643.643 0 0 0-.54-.73c-.03-.01-.07-.01-.11-.01L2.65 3M14.1 14.95H9.94L8.81 9.07h6.3l-1.01 5.88z"/></svg>');
+    --magiclink-gitlab-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="m21.94 13.11-1.05-3.22c0-.03-.01-.06-.02-.09l-2.11-6.48a.859.859 0 0 0-.8-.57c-.36 0-.68.25-.79.58l-2 6.17H8.84L6.83 3.33a.851.851 0 0 0-.79-.58c-.37 0-.69.25-.8.58L3.13 9.82v.01l-1.07 3.28c-.16.5.01 1.04.44 1.34l9.22 6.71c.17.12.39.12.56-.01l9.22-6.7c.43-.3.6-.84.44-1.34M8.15 10.45l2.57 7.91-6.17-7.91m8.73 7.92 2.47-7.59.1-.33h3.61l-5.59 7.16m4.1-13.67 1.81 5.56h-3.62m-1.3.95-1.79 5.51L12 19.24l-2.86-8.79M6.03 3.94 7.84 9.5H4.23m-1.18 4.19c-.09-.07-.13-.19-.09-.29l.79-2.43 5.82 7.45m11.38-4.73-6.51 4.73.02-.03 5.79-7.42.79 2.43c.04.1 0 .22-.09.29"/></svg>');
+    --magiclink-commit-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path fill-rule="evenodd" d="M15.5 11.75a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0zm1.444-.75a5.001 5.001 0 0 0-9.888 0H2.75a.75.75 0 1 0 0 1.5h4.306a5.001 5.001 0 0 0 9.888 0h4.306a.75.75 0 1 0 0-1.5h-4.306z"/></svg>');
+    --magiclink-compare-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M12.5 6.75a.75.75 0 0 0-1.5 0V9H8.75a.75.75 0 0 0 0 1.5H11v2.25a.75.75 0 0 0 1.5 0V10.5h2.25a.75.75 0 0 0 0-1.5H12.5V6.75zM8.75 16a.75.75 0 0 0 0 1.5h6a.75.75 0 0 0 0-1.5h-6z"/><path fill-rule="evenodd" d="M5 1a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7.018a2 2 0 0 0-.586-1.414l-4.018-4.018A2 2 0 0 0 14.982 1H5zm-.5 2a.5.5 0 0 1 .5-.5h9.982a.5.5 0 0 1 .354.146l4.018 4.018a.5.5 0 0 1 .146.354V21a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V3z"/></svg>');
+    --magiclink-pull-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path fill-rule="evenodd" d="M4.75 3a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5zM1.5 4.75a3.25 3.25 0 1 1 6.5 0 3.25 3.25 0 0 1-6.5 0zM4.75 17.5a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5zM1.5 19.25a3.25 3.25 0 1 1 6.5 0 3.25 3.25 0 0 1-6.5 0zm17.75-1.75a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5zM16 19.25a3.25 3.25 0 1 1 6.5 0 3.25 3.25 0 0 1-6.5 0z"/><path fill-rule="evenodd" d="M4.75 7.25A.75.75 0 0 1 5.5 8v8A.75.75 0 0 1 4 16V8a.75.75 0 0 1 .75-.75zm8.655-5.53a.75.75 0 0 1 0 1.06L12.185 4h4.065A3.75 3.75 0 0 1 20 7.75v8.75a.75.75 0 0 1-1.5 0V7.75a2.25 2.25 0 0 0-2.25-2.25h-4.064l1.22 1.22a.75.75 0 0 1-1.061 1.06l-2.5-2.5a.75.75 0 0 1 0-1.06l2.5-2.5a.75.75 0 0 1 1.06 0z"/></svg>');
+    --magiclink-issue-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path fill-rule="evenodd" d="M2.5 12a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0zM12 1C5.925 1 1 5.925 1 12s4.925 11 11 11 11-4.925 11-11S18.075 1 12 1zm0 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>');
+    --magiclink-discussion-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path fill-rule="evenodd" d="M1.75 1A1.75 1.75 0 0 0 0 2.75v9.5C0 13.216.784 14 1.75 14H3v1.543a1.457 1.457 0 0 0 2.487 1.03L8.061 14h6.189A1.75 1.75 0 0 0 16 12.25v-9.5A1.75 1.75 0 0 0 14.25 1H1.75zM1.5 2.75a.25.25 0 0 1 .25-.25h12.5a.25.25 0 0 1 .25.25v9.5a.25.25 0 0 1-.25.25h-6.5a.75.75 0 0 0-.53.22L4.5 15.44v-2.19a.75.75 0 0 0-.75-.75h-2a.25.25 0 0 1-.25-.25v-9.5z"/><path d="M22.5 8.75a.25.25 0 0 0-.25-.25h-3.5a.75.75 0 0 1 0-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0 1 22.25 20H21v1.543a1.457 1.457 0 0 1-2.487 1.03L15.939 20H10.75A1.75 1.75 0 0 1 9 18.25v-1.465a.75.75 0 0 1 1.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 0 1 .53.22l2.72 2.72v-2.19a.75.75 0 0 1 .75-.75h2a.25.25 0 0 0 .25-.25v-9.5z"/></svg>');
+    --magiclink-user-icon: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm89.6 32h-16.7c-22.2 10.2-46.9 16-72.9 16s-50.6-5.8-72.9-16h-16.7C60.2 288 0 348.2 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-74.2-60.2-134.4-134.4-134.4z"/></svg>');
+}
+
+.md-typeset a[href^="mailto:"]:not(.magiclink-ignore)::before {
+    -webkit-mask-image: var(--magiclink-email-icon);
+    mask-image: var(--magiclink-email-icon);
+}
+
+.md-typeset .magiclink-commit:not(.magiclink-ignore),
+.md-typeset .magiclink-compare:not(.magiclink-ignore),
+.md-typeset .magiclink-discussion:not(.magiclink-ignore),
+.md-typeset .magiclink-issue:not(.magiclink-ignore),
+.md-typeset .magiclink-pull:not(.magiclink-ignore),
+.md-typeset .magiclink-repository:not(.magiclink-ignore),
+/* .md-typeset .magiclink-mention:not(.magiclink-ignore), */
+.md-typeset a[href^="mailto:"]:not(.magiclink-ignore) {
+    position: relative;
+    padding-left: 1.375em;
+}
+
+.md-typeset .magiclink-commit:not(.magiclink-ignore)::before,
+.md-typeset .magiclink-compare:not(.magiclink-ignore)::before,
+.md-typeset .magiclink-discussion:not(.magiclink-ignore)::before,
+.md-typeset .magiclink-issue:not(.magiclink-ignore)::before,
+.md-typeset .magiclink-pull:not(.magiclink-ignore)::before,
+.md-typeset .magiclink-repository:not(.magiclink-ignore)::before,
+/* .md-typeset .magiclink-mention:not(.magiclink-ignore)::before, */
+.md-typeset a[href^="mailto:"]:not(.magiclink-ignore)::before {
+    position: absolute;
+    top: -0.025em;
+    left: 0;
+    display: block;
+    box-sizing: border-box;
+    width: 1.125em;
+    height: 1.125em;
+    background-color: var(--md-typeset-a-color);
+    background-size: 1.125em;
+    transition: background-color 125ms;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    content: "";
+}
+
+.md-typeset .magiclink-commit:not(.magiclink-ignore):hover::before,
+.md-typeset .magiclink-compare:not(.magiclink-ignore):hover::before,
+.md-typeset .magiclink-discussion:not(.magiclink-ignore):hover::before,
+.md-typeset .magiclink-issue:not(.magiclink-ignore):hover::before,
+.md-typeset .magiclink-pull:not(.magiclink-ignore):hover::before,
+.md-typeset .magiclink-repository:not(.magiclink-ignore):hover::before,
+.md-typeset a[href^="mailto:"]:not(.magiclink-ignore):hover::before {
+    background-color: var(--md-accent-fg-color);
+}
+
+.md-typeset .magiclink-commit:not(.magiclink-ignore)::before {
+    -webkit-mask-image: var(--magiclink-commit-icon);
+    mask-image: var(--magiclink-commit-icon);
+}
+
+.md-typeset .magiclink-compare:not(.magiclink-ignore)::before {
+    -webkit-mask-image: var(--magiclink-compare-icon);
+    mask-image: var(--magiclink-compare-icon);
+}
+
+.md-typeset .magiclink-pull:not(.magiclink-ignore)::before {
+    -webkit-mask-image: var(--magiclink-pull-icon);
+    mask-image: var(--magiclink-pull-icon);
+}
+
+.md-typeset .magiclink-issue:not(.magiclink-ignore)::before {
+    -webkit-mask-image: var(--magiclink-issue-icon);
+    mask-image: var(--magiclink-issue-icon);
+}
+
+.md-typeset .magiclink-discussion:not(.magiclink-ignore)::before {
+    -webkit-mask-image: var(--magiclink-discussion-icon);
+    mask-image: var(--magiclink-discussion-icon);
+}
+
+.md-typeset .magiclink-repository.magiclink-github:not(.magiclink-ignore)::before,
+.md-typeset .magiclink-mention.magiclink-github:not(.magiclink-ignore)::before {
+    -webkit-mask-image: var(--magiclink-github-icon);
+    mask-image: var(--magiclink-github-icon);
+}
+
+/* .md-typeset .magiclink-repository.magiclink-gitlab:not(.magiclink-ignore)::before,
+  .md-typeset .magiclink-mention.magiclink-gitlab:not(.magiclink-ignore)::before {
+    -webkit-mask-image: var(--magiclink-user-icon);
+    mask-image: var(--magiclink-user-icon);
+  } */
+.md-typeset .magiclink-repository.magiclink-bitbucket:not(.magiclink-ignore)::before {
+    -webkit-mask-image: var(--magiclink-bitbucket-icon);
+    mask-image: var(--magiclink-bitbucket-icon);
+}

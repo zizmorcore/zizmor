@@ -1,0 +1,11 @@
+# Adapted from
+# https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/self-hosted.yml
+on:
+  push:
+
+jobs:
+  whops:
+    runs-on: [self-hosted, my-ubuntu-box]
+
+    steps:
+      - run: echo "hello from a self-hosted runner"

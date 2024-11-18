@@ -1,5 +1,15 @@
 # Quickstart
 
+First, run `zizmor --help` to make sure your installation succeeded.
+
+You should see something like this:
+
+```console
+--8<-- "help.txt"
+```
+
+## Running `zizmor`
+
 You can run `zizmor` on any file(s) you have locally:
 
 ```bash
@@ -9,7 +19,7 @@ zizmor my-workflow.yml
 zizmor path/to/repo
 ```
 
-By default, `zizmor` will emit a Rust-style human-friendly findings, e.g.:
+By default, `zizmor` will emit Rust-style diagnostics, e.g.:
 
 ```console
 error[pull-request-target]: use of fundamentally insecure workflow trigger

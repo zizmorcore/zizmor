@@ -1,0 +1,6 @@
+- id: zizmor
+  name: zizmor
+  description: 'Find security issues in GitHub Actions CI/CD setups'
+  language: rust
+  files: \.github/workflows/.*\.yml$
+  entry: zizmor

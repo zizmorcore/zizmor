@@ -10,7 +10,7 @@ use crate::{
     registry::WorkflowRegistry,
 };
 
-pub(crate) fn build(registry: &WorkflowRegistry, findings: Vec<Finding<'_>>) -> Sarif {
+pub(crate) fn build(registry: &WorkflowRegistry, findings: &[Finding]) -> Sarif {
     Sarif::builder()
         .version("2.1.0")
         .schema("https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-external-property-file-schema-2.1.0.json")
@@ -18,7 +18,7 @@ pub(crate) fn build(registry: &WorkflowRegistry, findings: Vec<Finding<'_>>) -> 
         .build()
 }
 
-fn build_run(registry: &WorkflowRegistry, findings: Vec<Finding<'_>>) -> Run {
+fn build_run(registry: &WorkflowRegistry, findings: &[Finding]) -> Run {
     Run::builder()
         .tool(
             Tool::builder()
@@ -37,7 +37,7 @@ fn build_run(registry: &WorkflowRegistry, findings: Vec<Finding<'_>>) -> Run {
         .build()
 }
 
-fn build_results(registry: &WorkflowRegistry, findings: Vec<Finding<'_>>) -> Vec<SarifResult> {
+fn build_results(registry: &WorkflowRegistry, findings: &[Finding]) -> Vec<SarifResult> {
     findings.iter().map(|f| build_result(registry, f)).collect()
 }
 

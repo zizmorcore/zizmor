@@ -1,0 +1,13 @@
+# Adapted from
+# https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/artipacked.yml
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  artipacked:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4

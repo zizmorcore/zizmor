@@ -19,7 +19,7 @@ use github_actions_models::{
 use super::WorkflowAudit;
 
 pub(crate) struct SelfHostedRunner {
-    pub(crate) _state: AuditState,
+    pub(crate) state: AuditState,
 }
 
 impl WorkflowAudit for SelfHostedRunner {
@@ -41,7 +41,7 @@ impl WorkflowAudit for SelfHostedRunner {
     where
         Self: Sized,
     {
-        Ok(Self { _state: state })
+        Ok(Self { state })
     }
 
     fn audit<'w>(
@@ -50,7 +50,7 @@ impl WorkflowAudit for SelfHostedRunner {
     ) -> Result<Vec<crate::finding::Finding<'w>>> {
         let mut results = vec![];
 
-        if !self._state.config.pedantic {
+        if !self.state.pedantic {
             log::info!("skipping self-hosted runner checks");
             return Ok(results);
         }

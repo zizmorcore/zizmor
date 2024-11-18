@@ -1,5 +1,4 @@
-# https://github.com/woodruffw/zizmor
-name: GitHub Actions Security Analysis with Zizmor
+name: GitHub Actions Security Analysis with zizmor 🌈
 
 on:
   push:
@@ -7,14 +6,12 @@ on:
   pull_request:
     branches: ["*"]
 
-permissions:
-  contents: read
-
 jobs:
   zizmor:
-    name: Zizmor latest via Cargo
+    name: zizmor latest via Cargo
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
     steps:
       - name: Checkout repository
@@ -25,13 +22,12 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@11df97af8e8102fd60b60a77dfbf58d40cd843b8 # v1
       - name: Get zizmor
         run: cargo install zizmor
-      - name: Run zizmor
+      - name: Run zizmor 🌈
         run: zizmor --format sarif . > results.sarif
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@0c5cd989aab6751b7c828bd77d7ae4d824554792 # v3
         with:
-          # Path to SARIF file relative to the root of the repository
           sarif_file: results.sarif
-          # Optional category for the results
-          # Used to differentiate multiple results for one commit
           category: zizmor

@@ -6,12 +6,12 @@
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
 use anyhow::{anyhow, Context, Result};
-use github_actions_models::workflow::{job::StepBody, Job};
+use github_actions_models::workflow::Job;
 
 use crate::{
     finding::{Confidence, Severity},
     github_api,
-    models::Uses,
+    models::{RepositoryUses, Uses},
     state::AuditState,
 };
 
@@ -22,7 +22,10 @@ pub(crate) struct KnownVulnerableActions {
 }
 
 impl KnownVulnerableActions {
-    fn action_known_vulnerabilities(&self, uses: &Uses<'_>) -> Result<Vec<(Severity, String)>> {
+    fn action_known_vulnerabilities(
+        &self,
+        uses: &RepositoryUses<'_>,
+    ) -> Result<Vec<(Severity, String)>> {
         let version = match uses.git_ref {
             // If `uses` is pinned to a symbolic ref, we need to perform
             // feats of heroism to figure out what's going on.
@@ -131,7 +134,7 @@ impl WorkflowAudit for KnownVulnerableActions {
     where
         Self: Sized,
     {
-        if state.config.offline {
+        if state.offline {
             return Err(anyhow!("offline audits only requested"));
         }
 
@@ -154,11 +157,7 @@ impl WorkflowAudit for KnownVulnerableActions {
             };
 
             for step in job.steps() {
-                let StepBody::Uses { uses, .. } = &step.body else {
-                    continue;
-                };
-
-                let Some(uses) = Uses::from_step(uses) else {
+                let Some(Uses::Repository(uses)) = step.uses() else {
                     continue;
                 };
 
