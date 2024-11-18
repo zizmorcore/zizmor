@@ -19,6 +19,9 @@ nav:
   - External links:
       - "crates.io 🔗": https://crates.io/crates/zizmor
 
+plugins:
+  - social
+
 theme:
   name: material
   logo: assets/rainbow.svg
