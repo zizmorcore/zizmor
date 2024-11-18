@@ -128,7 +128,7 @@ fn run() -> Result<ExitCode> {
     for workflow_path in workflow_paths.iter() {
         workflow_registry
             .register_workflow(workflow_path)
-            .with_context(|| "failed to register workflow")?;
+            .with_context(|| format!("failed to register workflow: {workflow_path:?}"))?;
     }
 
     let mut audit_registry = AuditRegistry::new();
