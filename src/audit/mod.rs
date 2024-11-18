@@ -18,6 +18,7 @@ pub(crate) mod ref_confusion;
 pub(crate) mod self_hosted_runner;
 pub(crate) mod template_injection;
 pub(crate) mod unpinned_uses;
+pub(crate) mod unsecure_commands_allowed;
 pub(crate) mod use_trusted_publishing;
 
 pub(crate) trait WorkflowAudit {
