@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/woodruffw/zizmor/actions/workflows/ci.yml/badge.svg)](https://github.com/woodruffw/zizmor/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/zizmor)](https://crates.io/crates/zizmor)
+[![Packaging status](https://repology.org/badge/tiny-repos/zizmor.svg)](https://repology.org/project/zizmor/versions)
 
 !!! warning
 
