@@ -2,6 +2,7 @@
 
 # website artifacts
 /site_html
+.cache
 
 # IDEs / Editors
 .idea
