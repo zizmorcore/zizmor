@@ -1,9 +1,5 @@
 # Installation
 
-!!! info
-
-    Are you interested in packaging `zizmor` for another ecosystem!
-    Let us know by [filing an issue](https://github.com/woodruffw/zizmor/issues/new)!
 
 ## From crates.io
 
@@ -20,6 +16,15 @@ cargo install zizmor
 ```bash
 brew install zizmor
 ```
+
+## Other package managers
+
+!!! info
+
+    Are you interested in packaging `zizmor` for another ecosystem?
+    Let us know by [filing an issue](https://github.com/woodruffw/zizmor/issues/new)!
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/zizmor.svg)](https://repology.org/project/zizmor/versions)
 
 ## From source
 
