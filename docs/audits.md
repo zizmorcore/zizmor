@@ -592,6 +592,43 @@ A before/after example is shown below.
     1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
 
 
+## `insecure-commands`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅                 |
+
+[insecure-commands.yml]: https://semgrep.dev/r?q=yaml.github-actions.security.allowed-unsecure-commands.allowed-unsecure-commands
+
+Detects opt-in for executing insecure Workflow commands. 
+
+Workflow commands like [set-env and add-path commands got deprecated by Github] back in 2020 due 
+to security vulnerabilities, but can eventually be enabled by setting up the 
+`ACTIONS_ALLOW_UNSECURE_COMMANDS` environment variable.
+
+### Remediation
+
+In general, users should go for [Github Actions environment files] instead of sticking with 
+the aforementioned Workflow commands.
+
+=== "Before"
+
+    ```yaml title="insecure-commands" hl_lines="3"
+    - name: Setup my-bin
+      run: |
+        echo "::add-path::$HOME/.local/my-bin"
+      env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    ```
+
+=== "After"
+
+    ```yaml title="insecure-commands" hl_lines="3"
+    - name: Setup my-bin
+      run: |
+        echo "$HOME/.local/my-bin" >> "$GITHUB_PATH"
+    ```
+
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
@@ -601,3 +638,5 @@ A before/after example is shown below.
 [Trusted Publishing - RubyGems Guides]: https://guides.rubygems.org/trusted-publishing/
 [Trusted publishing: a new benchmark for packaging security]: https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/
 [Trusted Publishers for All Package Repositories]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
+[set-env and add-path commands got deprecated by Github]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
+[Github Actions environment files]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#environment-files
