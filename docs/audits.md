@@ -611,6 +611,10 @@ However, users can explicitly re-enable them by setting the
 `ACTIONS_ALLOW_UNSECURE_COMMANDS` environment variable at the workflow,
 job, or step level.
 
+Other resources:
+
+* [Semgrep audit]
+
 ### Remediation
 
 In general, users should use for [Github Actions environment files]
@@ -645,3 +649,4 @@ In general, users should use for [Github Actions environment files]
 [Trusted Publishers for All Package Repositories]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
 [were deprecated by Github]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 [Github Actions environment files]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#environment-files
+[Semgrep audit]: https://semgrep.dev/r?q=yaml.github-actions.security.allowed-unsecure-commands.allowed-unsecure-commands
