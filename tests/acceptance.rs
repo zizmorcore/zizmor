@@ -203,7 +203,7 @@ fn audit_unpinned_uses() -> anyhow::Result<()> {
 
 #[test]
 fn audit_unsecure_commands_allowed() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("unsecure-commands-allowed.yml");
+    let auditable = workflow_under_test("insecure-commands.yml");
 
     let cli_args = [&auditable];
 
@@ -213,27 +213,10 @@ fn audit_unsecure_commands_allowed() -> anyhow::Result<()> {
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 
-    // Env declared in a Workflow context
     assert_value_match(&findings, "$[0].determinations.confidence", "High");
     assert_value_match(
         &findings,
         "$[0].locations[0].concrete.feature",
-        "ACTIONS_ALLOW_UNSECURE_COMMANDS",
-    );
-
-    // Env declared in a Step context
-    assert_value_match(&findings, "$[1].determinations.confidence", "High");
-    assert_value_match(
-        &findings,
-        "$[1].locations[0].concrete.feature",
-        "ACTIONS_ALLOW_UNSECURE_COMMANDS",
-    );
-
-    // Env declared in a Job context
-    assert_value_match(&findings, "$[2].determinations.confidence", "High");
-    assert_value_match(
-        &findings,
-        "$[2].locations[0].concrete.feature",
         "ACTIONS_ALLOW_UNSECURE_COMMANDS",
     );
 

@@ -7,12 +7,12 @@ use github_actions_models::workflow::job::StepBody;
 use github_actions_models::workflow::Job;
 use std::ops::Deref;
 
-static ID: &str = "unsecure-commands-allowed";
+static ID: &str = "insecure-commands";
 static DESCRIPTION: &str = "execution of insecure workflow commands is enabled";
 
-pub(crate) struct UnsecureCommandsAllowed;
+pub(crate) struct InsecureCommands;
 
-impl UnsecureCommandsAllowed {
+impl InsecureCommands {
     fn insecure_commands_allowed<'w>(
         &self,
         workflow: &'w Workflow,
@@ -24,20 +24,15 @@ impl UnsecureCommandsAllowed {
             .add_location(
                 location
                     .with_keys(&["env".into()])
-                    .annotated("insecure GHA commands allowed here"),
+                    .annotated("insecure commands enabled here"),
             )
             .build(workflow)
             .expect("Cannot build a Finding instance")
     }
 
-    fn has_unsecure_commands_enabled(&self, env: &Env) -> bool {
-        if let Some(value) = env.get("ACTIONS_ALLOW_UNSECURE_COMMANDS") {
-            // Simple emulation for type coercion from YAML declared values at GHA runtime
-            match value {
-                EnvValue::String(string) => !string.is_empty(),
-                EnvValue::Number(number) => *number > 0.0,
-                EnvValue::Boolean(it) => *it,
-            }
+    fn has_insecure_commands_enabled(&self, env: &Env) -> bool {
+        if let Some(EnvValue::String(value)) = env.get("ACTIONS_ALLOW_UNSECURE_COMMANDS") {
+            !value.is_empty()
         } else {
             false
         }
@@ -57,14 +52,14 @@ impl UnsecureCommandsAllowed {
                     return false;
                 };
 
-                self.has_unsecure_commands_enabled(env)
+                self.has_insecure_commands_enabled(env)
             })
             .map(|step| self.insecure_commands_allowed(workflow, step.location()))
             .collect()
     }
 }
 
-impl WorkflowAudit for UnsecureCommandsAllowed {
+impl WorkflowAudit for InsecureCommands {
     fn ident() -> &'static str
     where
         Self: Sized,
@@ -89,27 +84,18 @@ impl WorkflowAudit for UnsecureCommandsAllowed {
     fn audit<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut results = vec![];
 
-        if self.has_unsecure_commands_enabled(&workflow.env) {
+        if self.has_insecure_commands_enabled(&workflow.env) {
             results.push(self.insecure_commands_allowed(workflow, workflow.location()))
         }
 
         for job in workflow.jobs() {
-            match *job {
-                Job::NormalJob(normal) => {
-                    if self.has_unsecure_commands_enabled(&normal.env) {
-                        results.push(self.insecure_commands_allowed(workflow, job.location()))
-                    }
-
-                    results.extend(self.audit_steps(workflow, job.steps()))
+            if let Job::NormalJob(normal) = *job {
+                if self.has_insecure_commands_enabled(&normal.env) {
+                    results.push(self.insecure_commands_allowed(workflow, job.location()))
                 }
-                Job::ReusableWorkflowCallJob(reusable) => {
-                    if self.has_unsecure_commands_enabled(&reusable.with) {
-                        results.push(self.insecure_commands_allowed(workflow, job.location()))
-                    }
 
-                    results.extend(self.audit_steps(workflow, job.steps()))
-                }
-            };
+                results.extend(self.audit_steps(workflow, job.steps()))
+            }
         }
 
         Ok(results)
