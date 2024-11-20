@@ -450,7 +450,7 @@ Other resources:
 ### Remediation
 
 The most common forms of template injection are in `run:` and similar
-code-exeuction blocks. In these cases, an inline template expansion
+code-execution blocks. In these cases, an inline template expansion
 can typically be replaced by an environment variable whose value comes
 from the expanded template.
 

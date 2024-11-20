@@ -116,10 +116,62 @@ Visit the listed URL to see your live changes.
 
 ## Adding or modifying an audit
 
-These docs could use help.
+### Before getting started
 
-For now, please run `cargo doc --open` and refer to our internal
-documentation!
+Before adding a new audit or changing an existing one, make it sure that you discussed required
+details in a proper GitHub issue. Most likely there is a chance to uncover some implementation
+details even before writing any code!
+
+Some things that can be useful to discuss beforehand:
+
+- Which criticality should we assign for this new finding?
+- Which confidence should we assign for this new finding?
+- Should this new audit be pedantic at all?
+- Does this new audit require using the Github API, or is it entirely off-line?
+- Etc
+
+When working with `zizmor` audits,  there are a couple of implementation details to be aware of.
+In particular:
+
+- all existing audits live in a Rust modules grouped under `src/audit` folder
+- the expected behaviour for all audits is defined by the `WorkflowAudit` trait at `src/audit/mod.rs`
+- the expected outcome of an executed audit is defined by the `Finding` struct at `src/finding/mod.rs`
+- any `WorkflowAudit` implementation can have access to an `AuditState` instance, as per `src/state.rs`
+- if an audit requires data from the GitHub API, there is a `Client` implementation at `src/github_api.rs`
+- all the audits must be registered at `src/main.rs` according to the `register_audit!` macro
+
+Last but not least, it's useful to run the following checks before raising a Pull Request
+
+```bash
+cargo fmt
+cargo clippy -- -D warnings
+cargo test
+```
+
+### Adding a new audit
+
+The general procedure for adding a new audit can be described as:
+
+- Define a new file at `src/audit/my_new_audit.rs`
+- Define a struct like `MyNewAudit` and implement the `WorkflowAudit` trait for it
+- You may want to use both the `AuditState` and `github_api::Client` to get the job done
+- Assign the proper YML `location` when creating a `Finding`, grabbing it from the proper `Workflow`, `Job` or `Step` instance
+- Register `MyNewAudit` in the known audits at `src/main.rs`
+- Add proper integration tests covering some scenarios at `tests/acceptance.rs`
+- Add proper docs for this new audit at `docs/audits`. Please add related public information about the underlying vulnerability
+- Raise your Pull Request!
+
+> Remember : when in doubt, you can always refer to existing implementations as well!
+
+### Changing an existing audit
+
+The general procedure for changing an existing audit is:
+
+- Locate the existing audit file at `src/audit`
+- Change the behaviour to match new requirements there (e.g. consuming a new CLI info exposed through `AuditState`)
+- Ensure that tests and samples at `tests/` reflect changed behaviour accordingly (e.g. the confidence for finding has changed)
+- Ensure that `docs/audits` reflect changed behaviour accordingly (e.g. an audit that is no longer pedantic)
+- Raise your Pull Request
 
 ## Changing `zizmor`'s CLI
 
