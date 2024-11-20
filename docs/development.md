@@ -128,19 +128,17 @@ Some things that can be useful to discuss beforehand:
 - Which confidence should we assign for this new finding?
 - Should this new audit be pedantic at all?
 - Does this new audit require using the Github API, or is it entirely off-line?
-- Etc
 
-When working with `zizmor` audits,  there are a couple of implementation details to be aware of.
-In particular:
+When developing a new `zizmor` audit, there are a couple of implementation details to be aware of:
 
-- all existing audits live in a Rust modules grouped under `src/audit` folder
-- the expected behaviour for all audits is defined by the `WorkflowAudit` trait at `src/audit/mod.rs`
-- the expected outcome of an executed audit is defined by the `Finding` struct at `src/finding/mod.rs`
-- any `WorkflowAudit` implementation can have access to an `AuditState` instance, as per `src/state.rs`
-- if an audit requires data from the GitHub API, there is a `Client` implementation at `src/github_api.rs`
-- all the audits must be registered at `src/main.rs` according to the `register_audit!` macro
+- All existing audits live in a Rust modules grouped under `src/audit` folder
+- The expected behaviour for all audits is defined by the `WorkflowAudit` trait at `src/audit/mod.rs`
+- The expected outcome of an executed audit is defined by the `Finding` struct at `src/finding/mod.rs`
+- Any `WorkflowAudit` implementation can have access to an `AuditState` instance, as per `src/state.rs`
+- If an audit requires data from the GitHub API, there is a `Client` implementation at `src/github_api.rs`
+- All the audits must be registered at `src/main.rs` according to the `register_audit!` macro
 
-Last but not least, it's useful to run the following checks before raising a Pull Request
+Last but not least, it's useful to run the following checks before opening a Pull Request:
 
 ```bash
 cargo fmt
@@ -161,7 +159,9 @@ The general procedure for adding a new audit can be described as:
 - Add proper docs for this new audit at `docs/audits`. Please add related public information about the underlying vulnerability
 - Raise your Pull Request!
 
-> Remember : when in doubt, you can always refer to existing implementations as well!
+!!! tip
+
+    When in doubt, you can always refer to existing audit implementations as well!
 
 ### Changing an existing audit
 
@@ -171,7 +171,7 @@ The general procedure for changing an existing audit is:
 - Change the behaviour to match new requirements there (e.g. consuming a new CLI info exposed through `AuditState`)
 - Ensure that tests and samples at `tests/` reflect changed behaviour accordingly (e.g. the confidence for finding has changed)
 - Ensure that `docs/audits` reflect changed behaviour accordingly (e.g. an audit that is no longer pedantic)
-- Raise your Pull Request
+- Open your Pull Request
 
 ## Changing `zizmor`'s CLI
 
