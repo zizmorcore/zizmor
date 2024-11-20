@@ -157,7 +157,7 @@ The general procedure for adding a new audit can be described as:
 - Register `MyNewAudit` in the known audits at `src/main.rs`
 - Add proper integration tests covering some scenarios at `tests/acceptance.rs`
 - Add proper docs for this new audit at `docs/audits`. Please add related public information about the underlying vulnerability
-- Raise your Pull Request!
+- Open your Pull Request!
 
 !!! tip
 
