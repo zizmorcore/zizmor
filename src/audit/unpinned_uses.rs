@@ -1,6 +1,6 @@
 use crate::finding::{Confidence, Severity};
 
-use super::{AuditState, Finding, Job, Step, Workflow, WorkflowAudit};
+use super::{AuditState, Finding, Step, WorkflowAudit};
 
 pub(crate) struct UnpinnedUses {}
 
@@ -26,12 +26,7 @@ impl WorkflowAudit for UnpinnedUses {
         Ok(Self {})
     }
 
-    fn audit_step<'w>(
-        &self,
-        workflow: &'w Workflow,
-        _job: &Job<'w>,
-        step: &Step<'w>,
-    ) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         let Some(uses) = step.uses() else {
@@ -48,7 +43,7 @@ impl WorkflowAudit for UnpinnedUses {
                             .with_keys(&["uses".into()])
                             .annotated("action is not pinned to a tag, branch, or hash ref"),
                     )
-                    .build(workflow)?,
+                    .build(step.workflow())?,
             );
         }
 

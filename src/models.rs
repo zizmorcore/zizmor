@@ -62,10 +62,12 @@ impl Workflow {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct Job<'w> {
     pub(crate) id: &'w str,
     inner: &'w workflow::Job,
-    parent: SymbolicLocation<'w>,
+    parent: &'w Workflow,
+    parent_loc: SymbolicLocation<'w>,
 }
 
 impl<'w> Deref for Job<'w> {
@@ -77,12 +79,27 @@ impl<'w> Deref for Job<'w> {
 }
 
 impl<'w> Job<'w> {
-    pub(crate) fn new(id: &'w str, inner: &'w workflow::Job, parent: SymbolicLocation<'w>) -> Self {
-        Self { id, inner, parent }
+    pub(crate) fn new(
+        id: &'w str,
+        inner: &'w workflow::Job,
+        parent: &'w Workflow,
+        parent_loc: SymbolicLocation<'w>,
+    ) -> Self {
+        Self {
+            id,
+            inner,
+            parent,
+            parent_loc,
+        }
+    }
+
+    /// Returns this job's parent [`Workflow`]
+    pub(crate) fn parent(&self) -> &'w Workflow {
+        &self.parent
     }
 
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
-        self.parent.with_job(self)
+        self.parent_loc.with_job(self)
     }
 
     pub(crate) fn steps(&self) -> Steps<'w> {
@@ -91,6 +108,7 @@ impl<'w> Job<'w> {
 }
 
 pub(crate) struct Jobs<'w> {
+    parent: &'w Workflow,
     inner: hash_map::Iter<'w, String, workflow::Job>,
     location: SymbolicLocation<'w>,
 }
@@ -98,6 +116,7 @@ pub(crate) struct Jobs<'w> {
 impl<'w> Jobs<'w> {
     pub(crate) fn new(workflow: &'w Workflow) -> Self {
         Self {
+            parent: workflow,
             inner: workflow.jobs.iter(),
             location: workflow.location(),
         }
@@ -111,7 +130,7 @@ impl<'w> Iterator for Jobs<'w> {
         let item = self.inner.next();
 
         match item {
-            Some((id, job)) => Some(Job::new(id, job, self.location.clone())),
+            Some((id, job)) => Some(Job::new(id, job, self.parent, self.location.clone())),
             None => None,
         }
     }
@@ -121,7 +140,8 @@ impl<'w> Iterator for Jobs<'w> {
 pub(crate) struct Step<'w> {
     pub(crate) index: usize,
     inner: &'w workflow::job::Step,
-    parent: SymbolicLocation<'w>,
+    parent: Job<'w>,
+    parent_loc: SymbolicLocation<'w>,
 }
 
 impl<'w> Deref for Step<'w> {
@@ -136,13 +156,25 @@ impl<'w> Step<'w> {
     pub(crate) fn new(
         index: usize,
         inner: &'w workflow::job::Step,
-        parent: SymbolicLocation<'w>,
+        parent: Job<'w>,
+        parent_loc: SymbolicLocation<'w>,
     ) -> Self {
         Self {
             index,
             inner,
             parent,
+            parent_loc,
         }
+    }
+
+    /// Returns this step's parent [`Job`].
+    pub(crate) fn parent(&self) -> &Job<'w> {
+        &self.parent
+    }
+
+    /// Returns this step's (grand)parent [`Workflow`].
+    pub(crate) fn workflow(&self) -> &'w Workflow {
+        &self.parent().parent()
     }
 
     /// Returns a [`Uses`] for this [`Step`], if it has one.
@@ -156,7 +188,7 @@ impl<'w> Step<'w> {
 
     /// Returns a symbolic location for this [`Step`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
-        self.parent.with_step(self)
+        self.parent_loc.with_step(self)
     }
 
     /// Like [`Step::location`], except with the step's `name`
@@ -172,6 +204,7 @@ impl<'w> Step<'w> {
 
 pub(crate) struct Steps<'w> {
     inner: Enumerate<std::slice::Iter<'w, github_actions_models::workflow::job::Step>>,
+    parent: Job<'w>,
     location: SymbolicLocation<'w>,
 }
 
@@ -184,6 +217,7 @@ impl<'w> Steps<'w> {
             }
             workflow::Job::NormalJob(ref n) => Self {
                 inner: n.steps.iter().enumerate(),
+                parent: job.clone(),
                 location: job.location(),
             },
         }
@@ -197,7 +231,12 @@ impl<'w> Iterator for Steps<'w> {
         let item = self.inner.next();
 
         match item {
-            Some((idx, step)) => Some(Step::new(idx, step, self.location.clone())),
+            Some((idx, step)) => Some(Step::new(
+                idx,
+                step,
+                self.parent.clone(),
+                self.location.clone(),
+            )),
             None => None,
         }
     }
