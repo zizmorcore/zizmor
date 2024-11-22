@@ -141,7 +141,6 @@ pub(crate) struct Step<'w> {
     pub(crate) index: usize,
     inner: &'w workflow::job::Step,
     parent: Job<'w>,
-    parent_loc: SymbolicLocation<'w>,
 }
 
 impl<'w> Deref for Step<'w> {
@@ -153,17 +152,11 @@ impl<'w> Deref for Step<'w> {
 }
 
 impl<'w> Step<'w> {
-    pub(crate) fn new(
-        index: usize,
-        inner: &'w workflow::job::Step,
-        parent: Job<'w>,
-        parent_loc: SymbolicLocation<'w>,
-    ) -> Self {
+    pub(crate) fn new(index: usize, inner: &'w workflow::job::Step, parent: Job<'w>) -> Self {
         Self {
             index,
             inner,
             parent,
-            parent_loc,
         }
     }
 
@@ -188,7 +181,7 @@ impl<'w> Step<'w> {
 
     /// Returns a symbolic location for this [`Step`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
-        self.parent_loc.with_step(self)
+        self.parent().location().with_step(self)
     }
 
     /// Like [`Step::location`], except with the step's `name`
@@ -205,7 +198,6 @@ impl<'w> Step<'w> {
 pub(crate) struct Steps<'w> {
     inner: Enumerate<std::slice::Iter<'w, github_actions_models::workflow::job::Step>>,
     parent: Job<'w>,
-    location: SymbolicLocation<'w>,
 }
 
 impl<'w> Steps<'w> {
@@ -218,7 +210,6 @@ impl<'w> Steps<'w> {
             workflow::Job::NormalJob(ref n) => Self {
                 inner: n.steps.iter().enumerate(),
                 parent: job.clone(),
-                location: job.location(),
             },
         }
     }
@@ -231,12 +222,7 @@ impl<'w> Iterator for Steps<'w> {
         let item = self.inner.next();
 
         match item {
-            Some((idx, step)) => Some(Step::new(
-                idx,
-                step,
-                self.parent.clone(),
-                self.location.clone(),
-            )),
+            Some((idx, step)) => Some(Step::new(idx, step, self.parent.clone())),
             None => None,
         }
     }
