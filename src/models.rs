@@ -183,7 +183,7 @@ impl<'w> Step<'w> {
     /// Note that this returns the [`NormalJob`], not the wrapper [`Job`].
     pub(crate) fn job(&self) -> &'w NormalJob {
         match *self.parent {
-            workflow::Job::NormalJob(job) => &job,
+            workflow::Job::NormalJob(job) => job,
             // NOTE(ww): Unreachable because steps are always parented by normal jobs.
             workflow::Job::ReusableWorkflowCallJob(_) => unreachable!(),
         }
