@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use crate::{
     finding::{Finding, FindingBuilder},
-    models::Workflow,
+    models::{Job, Step, Workflow},
     state::AuditState,
 };
 
@@ -34,7 +34,51 @@ pub(crate) trait WorkflowAudit {
     where
         Self: Sized;
 
-    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>>;
+    fn audit_step<'w>(
+        &self,
+        _workflow: &'w Workflow,
+        _job: &Job<'w>,
+        _step: &Step<'w>,
+    ) -> Result<Vec<Finding<'w>>> {
+        Ok(vec![])
+    }
+
+    fn audit_normal_job<'w>(
+        &self,
+        workflow: &'w Workflow,
+        job: &Job<'w>,
+    ) -> Result<Vec<Finding<'w>>> {
+        let mut results = vec![];
+        for step in job.steps() {
+            results.extend(self.audit_step(workflow, job, &step)?);
+        }
+        Ok(results)
+    }
+
+    fn audit_reusable_job<'w>(
+        &self,
+        _workflow: &'w Workflow,
+        _job: &Job<'w>,
+    ) -> Result<Vec<Finding<'w>>> {
+        Ok(vec![])
+    }
+
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+        let mut results = vec![];
+
+        for job in workflow.jobs() {
+            match *job {
+                github_actions_models::workflow::Job::NormalJob(_) => {
+                    results.extend(self.audit_normal_job(workflow, &job)?);
+                }
+                github_actions_models::workflow::Job::ReusableWorkflowCallJob(_) => {
+                    results.extend(self.audit_reusable_job(workflow, &job)?);
+                }
+            }
+        }
+
+        Ok(results)
+    }
 
     fn finding<'w>() -> FindingBuilder<'w>
     where

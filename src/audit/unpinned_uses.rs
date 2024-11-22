@@ -1,8 +1,6 @@
-use github_actions_models::workflow::Job;
-
 use crate::finding::{Confidence, Severity};
 
-use super::{AuditState, Finding, Workflow, WorkflowAudit};
+use super::{AuditState, Finding, Job, Step, Workflow, WorkflowAudit};
 
 pub(crate) struct UnpinnedUses {}
 
@@ -28,35 +26,30 @@ impl WorkflowAudit for UnpinnedUses {
         Ok(Self {})
     }
 
-    fn audit<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_step<'w>(
+        &self,
+        workflow: &'w Workflow,
+        _job: &Job<'w>,
+        step: &Step<'w>,
+    ) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
-        for job in workflow.jobs() {
-            // No point in checking reusable workflows, since they
-            // require a ref pin when used outside of the local repo.
-            let Job::NormalJob(_) = *job else {
-                continue;
-            };
+        let Some(uses) = step.uses() else {
+            return Ok(vec![]);
+        };
 
-            for step in job.steps() {
-                let Some(uses) = step.uses() else {
-                    continue;
-                };
-
-                if uses.unpinned() {
-                    findings.push(
-                        Self::finding()
-                            .confidence(Confidence::High)
-                            .severity(Severity::Informational)
-                            .add_location(
-                                step.location().with_keys(&["uses".into()]).annotated(
-                                    "action is not pinned to a tag, branch, or hash ref",
-                                ),
-                            )
-                            .build(workflow)?,
-                    );
-                }
-            }
+        if uses.unpinned() {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(Severity::Informational)
+                    .add_location(
+                        step.location()
+                            .with_keys(&["uses".into()])
+                            .annotated("action is not pinned to a tag, branch, or hash ref"),
+                    )
+                    .build(workflow)?,
+            );
         }
 
         Ok(findings)
