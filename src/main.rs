@@ -183,7 +183,7 @@ fn run() -> Result<ExitCode> {
                     workflow = workflow.filename()
                 )
             })?;
-            results.extend(workflow, findings);
+            results.extend(findings);
             bar.inc(1);
         }
         bar.println(format!(

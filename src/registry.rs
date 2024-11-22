@@ -128,13 +128,11 @@ impl<'a> FindingRegistry<'a> {
 
     /// Adds one or more findings to the current findings set,
     /// filtering with the configuration in the process.
-    pub(crate) fn extend(&mut self, workflow: &Workflow, results: Vec<Finding<'a>>) {
+    pub(crate) fn extend(&mut self, results: Vec<Finding<'a>>) {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
         for finding in results {
-            if self.config.ignores(&finding)
-                || self.ignored_from_inlined_comment(workflow, &finding)
-            {
+            if self.config.ignores(&finding) || finding.ignored_from_inlined_comment {
                 self.ignored.push(finding);
             } else {
                 if self
@@ -157,33 +155,6 @@ impl<'a> FindingRegistry<'a> {
     /// All filtered findings.
     pub(crate) fn ignored(&self) -> &[Finding<'a>] {
         &self.ignored
-    }
-
-    fn ignored_from_inlined_comment(&self, workflow: &Workflow, finding: &Finding) -> bool {
-        let document_lines = &workflow.contents.split("\n").collect::<Vec<_>>();
-        let line_ranges = finding
-            .locations
-            .iter()
-            .map(|l| {
-                (
-                    l.concrete.location.start_point.row,
-                    l.concrete.location.end_point.row,
-                )
-            })
-            .collect::<Vec<_>>();
-
-        let inlined_ignore = format!("zizmor: ignore[{}]", finding.ident);
-        for (start, end) in line_ranges {
-            for document_line in start..(end + 1) {
-                if let Some(line) = document_lines.get(document_line) {
-                    if line.contains(&inlined_ignore) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        false
     }
 }
 
