@@ -127,12 +127,12 @@ Some things that can be useful to discuss beforehand:
 - Which criticality should we assign for this new finding?
 - Which confidence should we assign for this new finding?
 - Should this new audit be pedantic at all?
-- Does this new audit require using the Github API, or is it entirely off-line?
+- Does this new audit require using the Github API, or is it entirely offline?
 
 When developing a new `zizmor` audit, there are a couple of implementation details to be aware of:
 
 - All existing audits live in a Rust modules grouped under `src/audit` folder
-- The expected behaviour for all audits is defined by the `WorkflowAudit` trait at `src/audit/mod.rs`
+- The expected behavior for all audits is defined by the `WorkflowAudit` trait at `src/audit/mod.rs`
 - The expected outcome of an executed audit is defined by the `Finding` struct at `src/finding/mod.rs`
 - Any `WorkflowAudit` implementation can have access to an `AuditState` instance, as per `src/state.rs`
 - If an audit requires data from the GitHub API, there is a `Client` implementation at `src/github_api.rs`
@@ -148,20 +148,31 @@ cargo test
 
 ### Adding a new audit
 
+!!! tip
+
+    `WorkflowAudit` has various default implementations that are useful if your
+    audit only needs to look at individual jobs, steps, etc.
+
+    For example, you may want to implement `WorkflowAudit::audit_step` to
+    audit each step individually rather than having to iterate from the workflow
+    downwards with `WorkflowAudit::audit`.
+
+!!! tip
+
+    When in doubt, refer to pre-existing audits for inspiration!
+
 The general procedure for adding a new audit can be described as:
 
 - Define a new file at `src/audit/my_new_audit.rs`
 - Define a struct like `MyNewAudit` and implement the `WorkflowAudit` trait for it
-- You may want to use both the `AuditState` and `github_api::Client` to get the job done
-- Assign the proper YML `location` when creating a `Finding`, grabbing it from the proper `Workflow`, `Job` or `Step` instance
+    - You may want to use both the `AuditState` and `github_api::Client` to get the job done
+- Assign the proper `location` when creating a `Finding`, grabbing it from the
+  proper `Workflow`, `Job` or `Step` instance
 - Register `MyNewAudit` in the known audits at `src/main.rs`
 - Add proper integration tests covering some scenarios at `tests/acceptance.rs`
-- Add proper docs for this new audit at `docs/audits`. Please add related public information about the underlying vulnerability
+- Add proper docs for this new audit at `docs/audits`. Please add related public
+  information about the underlying vulnerability
 - Open your Pull Request!
-
-!!! tip
-
-    When in doubt, you can always refer to existing audit implementations as well!
 
 ### Changing an existing audit
 
@@ -171,7 +182,7 @@ The general procedure for changing an existing audit is:
 - Change the behaviour to match new requirements there (e.g. consuming a new CLI info exposed through `AuditState`)
 - Ensure that tests and samples at `tests/` reflect changed behaviour accordingly (e.g. the confidence for finding has changed)
 - Ensure that `docs/audits` reflect changed behaviour accordingly (e.g. an audit that is no longer pedantic)
-- Open your Pull Request
+- Open your Pull Request!
 
 ## Changing `zizmor`'s CLI
 
