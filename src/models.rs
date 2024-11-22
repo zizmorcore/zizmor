@@ -8,6 +8,10 @@ use github_actions_models::workflow::{self, job::StepBody};
 
 use crate::finding::{Route, SymbolicLocation};
 
+/// Represents an entire GitHub Actions workflow.
+///
+/// This type implements [`Deref`] for [`workflow::Workflow`],
+/// providing access to the underlying data model.
 pub(crate) struct Workflow {
     pub(crate) path: String,
     pub(crate) document: yamlpath::Document,
@@ -23,6 +27,7 @@ impl Deref for Workflow {
 }
 
 impl Workflow {
+    /// Load a workflow from the given file on disk.
     pub(crate) fn from_file<P: AsRef<Path>>(p: P) -> Result<Self> {
         let raw = std::fs::read_to_string(p.as_ref())?;
 
@@ -42,12 +47,17 @@ impl Workflow {
         })
     }
 
+    /// Returns the filename (i.e. base component) of the loaded workflow.
+    ///
+    /// For example, if the workflow was loaded from `/foo/bar/baz.yml`,
+    /// [`Self::filename()`] returns `baz.yml`.
     pub(crate) fn filename(&self) -> &str {
         // NOTE: Unwraps are safe here since we enforce UTF-8 paths
         // and require a filename as an invariant.
         Path::new(&self.path).file_name().unwrap().to_str().unwrap()
     }
 
+    /// This workflow's [`SymbolicLocation`].
     pub(crate) fn location(&self) -> SymbolicLocation {
         SymbolicLocation {
             name: self.filename(),
@@ -57,17 +67,24 @@ impl Workflow {
         }
     }
 
+    /// A [`Jobs`] iterator over this workflow's constituent [`Job`]s.
     pub(crate) fn jobs(&self) -> Jobs<'_> {
         Jobs::new(self)
     }
 }
 
+/// Represents a single GitHub Actions job.
+///
+/// This type implements [`Deref`] for [`workflow::Job`], providing
+/// access to the underlying data model.
 #[derive(Clone)]
 pub(crate) struct Job<'w> {
+    /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
     pub(crate) id: &'w str,
+    /// The underlying job.
     inner: &'w workflow::Job,
+    /// The job's parent [`Workflow`].
     parent: &'w Workflow,
-    parent_loc: SymbolicLocation<'w>,
 }
 
 impl<'w> Deref for Job<'w> {
@@ -79,46 +96,37 @@ impl<'w> Deref for Job<'w> {
 }
 
 impl<'w> Job<'w> {
-    pub(crate) fn new(
-        id: &'w str,
-        inner: &'w workflow::Job,
-        parent: &'w Workflow,
-        parent_loc: SymbolicLocation<'w>,
-    ) -> Self {
-        Self {
-            id,
-            inner,
-            parent,
-            parent_loc,
-        }
+    fn new(id: &'w str, inner: &'w workflow::Job, parent: &'w Workflow) -> Self {
+        Self { id, inner, parent }
     }
 
-    /// Returns this job's parent [`Workflow`]
+    /// This job's parent [`Workflow`]
     pub(crate) fn parent(&self) -> &'w Workflow {
         self.parent
     }
 
+    /// This job's [`SymbolicLocation`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
-        self.parent_loc.with_job(self)
+        self.parent().location().with_job(self)
     }
 
+    /// An iterator of this job's constituent [`Step`]s.
     pub(crate) fn steps(&self) -> Steps<'w> {
         Steps::new(self)
     }
 }
 
+/// An iterable container for jobs within a [`Workflow`].
 pub(crate) struct Jobs<'w> {
     parent: &'w Workflow,
     inner: hash_map::Iter<'w, String, workflow::Job>,
-    location: SymbolicLocation<'w>,
 }
 
 impl<'w> Jobs<'w> {
-    pub(crate) fn new(workflow: &'w Workflow) -> Self {
+    fn new(workflow: &'w Workflow) -> Self {
         Self {
             parent: workflow,
             inner: workflow.jobs.iter(),
-            location: workflow.location(),
         }
     }
 }
@@ -130,16 +138,23 @@ impl<'w> Iterator for Jobs<'w> {
         let item = self.inner.next();
 
         match item {
-            Some((id, job)) => Some(Job::new(id, job, self.parent, self.location.clone())),
+            Some((id, job)) => Some(Job::new(id, job, self.parent)),
             None => None,
         }
     }
 }
 
+/// Represents a single step in a normal workflow job.
+///
+/// This type implements [`Deref`] for [`workflow::job::Step`], which
+/// provides access to the step's actual fields.
 #[derive(Clone)]
 pub(crate) struct Step<'w> {
+    /// The step's index within its parent job.
     pub(crate) index: usize,
+    /// The inner step model.
     inner: &'w workflow::job::Step,
+    /// The parent [`Job`].
     parent: Job<'w>,
 }
 
@@ -152,7 +167,7 @@ impl<'w> Deref for Step<'w> {
 }
 
 impl<'w> Step<'w> {
-    pub(crate) fn new(index: usize, inner: &'w workflow::job::Step, parent: Job<'w>) -> Self {
+    fn new(index: usize, inner: &'w workflow::job::Step, parent: Job<'w>) -> Self {
         Self {
             index,
             inner,
@@ -195,13 +210,17 @@ impl<'w> Step<'w> {
     }
 }
 
+/// An iterable container for steps within a [`Job`].
 pub(crate) struct Steps<'w> {
     inner: Enumerate<std::slice::Iter<'w, github_actions_models::workflow::job::Step>>,
     parent: Job<'w>,
 }
 
 impl<'w> Steps<'w> {
-    pub(crate) fn new(job: &Job<'w>) -> Self {
+    /// Create a new [`Steps`].
+    ///
+    /// Panics if the given [`Job`] is a reusable job, rather than a "normal" job.
+    fn new(job: &Job<'w>) -> Self {
         // TODO: do something less silly here.
         match &job.inner {
             workflow::Job::ReusableWorkflowCallJob(_) => {
@@ -228,6 +247,7 @@ impl<'w> Iterator for Steps<'w> {
     }
 }
 
+/// The contents of a `uses: docker://` step stanza.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) struct DockerUses<'a> {
     pub(crate) registry: Option<&'a str>,
@@ -236,6 +256,7 @@ pub(crate) struct DockerUses<'a> {
     pub(crate) hash: Option<&'a str>,
 }
 
+/// The contents of a `uses: some/repo` step stanza.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) struct RepositoryUses<'a> {
     pub(crate) owner: &'a str,
