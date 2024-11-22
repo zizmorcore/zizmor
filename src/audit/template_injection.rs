@@ -14,10 +14,7 @@ use std::ops::Deref;
 
 use github_actions_models::{
     common::expr::LoE,
-    workflow::{
-        job::{Matrix, NormalJob, StepBody, Strategy},
-        Job,
-    },
+    workflow::job::{Matrix, NormalJob, StepBody, Strategy},
 };
 
 use super::WorkflowAudit;
@@ -257,50 +254,40 @@ impl WorkflowAudit for TemplateInjection {
         Ok(Self { state })
     }
 
-    fn audit<'w>(
-        &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
 
-        for job in workflow.jobs() {
-            let Job::NormalJob(normal) = job.deref() else {
-                continue;
-            };
-
-            for step in job.steps() {
-                let (script, script_loc) = match &step.deref().body {
-                    StepBody::Uses { uses, with } => {
-                        if uses.starts_with("actions/github-script") {
-                            match with.get("script") {
-                                Some(script) => (
-                                    &script.to_string(),
-                                    step.location().with_keys(&["with".into(), "script".into()]),
-                                ),
-                                None => continue,
-                            }
-                        } else {
-                            continue;
-                        }
+        let (script, script_loc) = match &step.deref().body {
+            StepBody::Uses { uses, with } => {
+                if uses.starts_with("actions/github-script") {
+                    match with.get("script") {
+                        Some(script) => (
+                            &script.to_string(),
+                            step.location().with_keys(&["with".into(), "script".into()]),
+                        ),
+                        None => return Ok(findings),
                     }
-                    StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
-                };
-
-                for (expr, severity, confidence) in
-                    self.injectable_template_expressions(script, normal)
-                {
-                    findings.push(
-                        Self::finding()
-                            .severity(severity)
-                            .confidence(confidence)
-                            .add_location(step.location_with_name())
-                            .add_location(script_loc.clone().annotated(format!(
-                                "{expr} may expand into attacker-controllable code"
-                            )))
-                            .build(workflow)?,
-                    )
+                } else {
+                    return Ok(findings);
                 }
             }
+            StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
+        };
+
+        for (expr, severity, confidence) in self.injectable_template_expressions(script, step.job())
+        {
+            findings.push(
+                Self::finding()
+                    .severity(severity)
+                    .confidence(confidence)
+                    .add_location(step.location_with_name())
+                    .add_location(
+                        script_loc.clone().annotated(format!(
+                            "{expr} may expand into attacker-controllable code"
+                        )),
+                    )
+                    .build(step.workflow())?,
+            )
         }
 
         Ok(findings)

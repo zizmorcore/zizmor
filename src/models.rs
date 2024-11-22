@@ -4,7 +4,10 @@
 use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 
 use anyhow::{anyhow, Context, Result};
-use github_actions_models::workflow::{self, job::StepBody};
+use github_actions_models::workflow::{
+    self,
+    job::{NormalJob, StepBody},
+};
 
 use crate::finding::{Route, SymbolicLocation};
 
@@ -175,14 +178,20 @@ impl<'w> Step<'w> {
         }
     }
 
-    /// Returns this step's parent [`Job`].
-    pub(crate) fn parent(&self) -> &Job<'w> {
-        &self.parent
+    /// Returns this step's parent [`NormalJob`].
+    ///
+    /// Note that this returns the [`NormalJob`], not the wrapper [`Job`].
+    pub(crate) fn job(&self) -> &'w NormalJob {
+        match *self.parent {
+            workflow::Job::NormalJob(job) => &job,
+            // NOTE(ww): Unreachable because steps are always parented by normal jobs.
+            workflow::Job::ReusableWorkflowCallJob(_) => unreachable!(),
+        }
     }
 
     /// Returns this step's (grand)parent [`Workflow`].
     pub(crate) fn workflow(&self) -> &'w Workflow {
-        self.parent().parent()
+        self.parent.parent()
     }
 
     /// Returns a [`Uses`] for this [`Step`], if it has one.
@@ -196,7 +205,7 @@ impl<'w> Step<'w> {
 
     /// Returns a symbolic location for this [`Step`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
-        self.parent().location().with_step(self)
+        self.parent.location().with_step(self)
     }
 
     /// Like [`Step::location`], except with the step's `name`
