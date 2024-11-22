@@ -17,6 +17,7 @@ use crate::finding::{Route, SymbolicLocation};
 /// providing access to the underlying data model.
 pub(crate) struct Workflow {
     pub(crate) path: String,
+    pub(crate) contents: String,
     pub(crate) document: yamlpath::Document,
     inner: workflow::Workflow,
 }
@@ -32,12 +33,12 @@ impl Deref for Workflow {
 impl Workflow {
     /// Load a workflow from the given file on disk.
     pub(crate) fn from_file<P: AsRef<Path>>(p: P) -> Result<Self> {
-        let raw = std::fs::read_to_string(p.as_ref())?;
+        let contents = std::fs::read_to_string(p.as_ref())?;
 
-        let inner = serde_yaml::from_str(&raw)
+        let inner = serde_yaml::from_str(&contents)
             .with_context(|| format!("invalid GitHub Actions workflow: {:?}", p.as_ref()))?;
 
-        let document = yamlpath::Document::new(raw)?;
+        let document = yamlpath::Document::new(&contents)?;
 
         Ok(Self {
             path: p
@@ -45,6 +46,7 @@ impl Workflow {
                 .to_str()
                 .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
                 .to_string(),
+            contents,
             document,
             inner,
         })

@@ -177,12 +177,13 @@ fn run() -> Result<ExitCode> {
             workflow = workflow.filename().cyan()
         ));
         for (name, audit) in audit_registry.iter_workflow_audits() {
-            results.extend(audit.audit(workflow).with_context(|| {
+            let findings = audit.audit(workflow).with_context(|| {
                 format!(
                     "{name} failed on {workflow}",
                     workflow = workflow.filename()
                 )
-            })?);
+            })?;
+            results.extend(workflow, findings);
             bar.inc(1);
         }
         bar.println(format!(
