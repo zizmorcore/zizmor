@@ -6,7 +6,6 @@
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
 use anyhow::{anyhow, Context, Result};
-use github_actions_models::workflow::Job;
 
 use crate::{
     finding::{Confidence, Severity},
@@ -145,37 +144,26 @@ impl WorkflowAudit for KnownVulnerableActions {
         Ok(Self { client })
     }
 
-    fn audit<'w>(
-        &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+    fn audit_step<'w>(&self, step: &super::Step<'w>) -> Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
 
-        for job in workflow.jobs() {
-            let Job::NormalJob(_) = *job else {
-                continue;
-            };
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
 
-            for step in job.steps() {
-                let Some(Uses::Repository(uses)) = step.uses() else {
-                    continue;
-                };
-
-                for (severity, id) in self.action_known_vulnerabilities(&uses)? {
-                    findings.push(
-                        Self::finding()
-                            .confidence(Confidence::High)
-                            .severity(severity)
-                            .add_location(
-                                step.location()
-                                    .with_keys(&["uses".into()])
-                                    .annotated(&id)
-                                    .with_url(format!("https://github.com/advisories/{id}")),
-                            )
-                            .build(workflow)?,
-                    );
-                }
-            }
+        for (severity, id) in self.action_known_vulnerabilities(&uses)? {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(severity)
+                    .add_location(
+                        step.location()
+                            .with_keys(&["uses".into()])
+                            .annotated(&id)
+                            .with_url(format!("https://github.com/advisories/{id}")),
+                    )
+                    .build(step.workflow())?,
+            );
         }
 
         Ok(findings)

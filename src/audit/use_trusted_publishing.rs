@@ -1,9 +1,7 @@
 use std::{collections::HashMap, ops::Deref};
 
-use github_actions_models::{
-    common::EnvValue,
-    workflow::{job::StepBody, Job},
-};
+use anyhow::Ok;
+use github_actions_models::{common::EnvValue, workflow::job::StepBody};
 
 use super::WorkflowAudit;
 use crate::{
@@ -76,73 +74,62 @@ impl WorkflowAudit for UseTrustedPublishing {
         Ok(Self { _state: state })
     }
 
-    fn audit<'w>(
-        &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
 
-        for job in workflow.jobs() {
-            if !matches!(job.deref(), Job::NormalJob(_)) {
-                continue;
-            }
+        let StepBody::Uses { uses, with } = &step.deref().body else {
+            return Ok(findings);
+        };
 
-            for step in job.steps() {
-                let StepBody::Uses { uses, with } = &step.deref().body else {
-                    continue;
-                };
-
-                if uses.starts_with("pypa/gh-action-pypi-publish") {
-                    if self.pypi_publish_uses_manual_credentials(with) {
-                        findings.push(
-                            Self::finding()
-                                .severity(Severity::Informational)
-                                .confidence(Confidence::High)
-                                .add_location(
-                                    step.location()
-                                        .with_keys(&["uses".into()])
-                                        .annotated("this step"),
-                                )
-                                .add_location(
-                                    step.location()
-                                        .with_keys(&["with".into(), "password".into()])
-                                        .annotated(USES_MANUAL_CREDENTIAL),
-                                )
-                                .build(workflow)?,
-                        );
-                    }
-                } else if uses.starts_with("rubygems/release-gem") {
-                    if self.release_gem_uses_manual_credentials(with) {
-                        findings.push(
-                            Self::finding()
-                                .severity(Severity::Informational)
-                                .confidence(Confidence::High)
-                                .add_location(
-                                    step.location()
-                                        .with_keys(&["uses".into()])
-                                        .annotated("this step"),
-                                )
-                                .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
-                                .build(workflow)?,
-                        );
-                    }
-                } else if uses.starts_with("rubygems/configure-rubygems-credential")
-                    && self.rubygems_credential_uses_manual_credentials(with)
-                {
-                    findings.push(
-                        Self::finding()
-                            .severity(Severity::Informational)
-                            .confidence(Confidence::High)
-                            .add_location(
-                                step.location()
-                                    .with_keys(&["uses".into()])
-                                    .annotated("this step"),
-                            )
-                            .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
-                            .build(workflow)?,
-                    );
-                }
+        if uses.starts_with("pypa/gh-action-pypi-publish") {
+            if self.pypi_publish_uses_manual_credentials(with) {
+                findings.push(
+                    Self::finding()
+                        .severity(Severity::Informational)
+                        .confidence(Confidence::High)
+                        .add_location(
+                            step.location()
+                                .with_keys(&["uses".into()])
+                                .annotated("this step"),
+                        )
+                        .add_location(
+                            step.location()
+                                .with_keys(&["with".into(), "password".into()])
+                                .annotated(USES_MANUAL_CREDENTIAL),
+                        )
+                        .build(step.workflow())?,
+                );
             }
+        } else if uses.starts_with("rubygems/release-gem") {
+            if self.release_gem_uses_manual_credentials(with) {
+                findings.push(
+                    Self::finding()
+                        .severity(Severity::Informational)
+                        .confidence(Confidence::High)
+                        .add_location(
+                            step.location()
+                                .with_keys(&["uses".into()])
+                                .annotated("this step"),
+                        )
+                        .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
+                        .build(step.workflow())?,
+                );
+            }
+        } else if uses.starts_with("rubygems/configure-rubygems-credential")
+            && self.rubygems_credential_uses_manual_credentials(with)
+        {
+            findings.push(
+                Self::finding()
+                    .severity(Severity::Informational)
+                    .confidence(Confidence::High)
+                    .add_location(
+                        step.location()
+                            .with_keys(&["uses".into()])
+                            .annotated("this step"),
+                    )
+                    .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
+                    .build(step.workflow())?,
+            );
         }
 
         Ok(findings)
