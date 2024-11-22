@@ -95,7 +95,7 @@ impl<'w> Job<'w> {
 
     /// Returns this job's parent [`Workflow`]
     pub(crate) fn parent(&self) -> &'w Workflow {
-        &self.parent
+        self.parent
     }
 
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
@@ -174,7 +174,7 @@ impl<'w> Step<'w> {
 
     /// Returns this step's (grand)parent [`Workflow`].
     pub(crate) fn workflow(&self) -> &'w Workflow {
-        &self.parent().parent()
+        self.parent().parent()
     }
 
     /// Returns a [`Uses`] for this [`Step`], if it has one.
