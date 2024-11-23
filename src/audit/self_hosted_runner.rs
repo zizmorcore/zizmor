@@ -16,27 +16,19 @@ use github_actions_models::{
     workflow::{job::RunsOn, Job},
 };
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 
 pub(crate) struct SelfHostedRunner {
     pub(crate) state: AuditState,
 }
 
+audit_meta!(
+    SelfHostedRunner,
+    "self-hosted-runner",
+    "runs on a self-hosted runner"
+);
+
 impl WorkflowAudit for SelfHostedRunner {
-    fn ident() -> &'static str
-    where
-        Self: Sized,
-    {
-        "self-hosted-runner"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "runs on a self-hosted runner"
-    }
-
     fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,

@@ -21,7 +21,12 @@ pub(crate) mod template_injection;
 pub(crate) mod unpinned_uses;
 pub(crate) mod use_trusted_publishing;
 
-pub(crate) trait WorkflowAudit {
+/// A supertrait for all audits.
+///
+/// Workflow audits, action audits, and all future audit types
+/// must derive this trait, either manually or via the [`audit_meta`]
+/// macro.
+pub(crate) trait Audit {
     fn ident() -> &'static str
     where
         Self: Sized;
@@ -30,6 +35,67 @@ pub(crate) trait WorkflowAudit {
     where
         Self: Sized;
 
+    fn url() -> &'static str
+    where
+        Self: Sized;
+
+    fn finding<'w>() -> FindingBuilder<'w>
+    where
+        Self: Sized,
+    {
+        FindingBuilder::new(Self::ident(), Self::desc(), Self::url())
+    }
+}
+
+/// A convenience macro for implementing [`Audit`] on a type.
+///
+/// Example use:
+///
+/// ```no_run
+/// struct SomeAudit;
+///
+/// audit_meta!(SomeAudit, "some-audit", "brief description");
+/// ```
+macro_rules! audit_meta {
+    ($t:ty, $id:literal, $desc:expr) => {
+        use crate::audit::Audit;
+
+        impl Audit for $t {
+            fn ident() -> &'static str {
+                $id
+            }
+
+            fn desc() -> &'static str
+            where
+                Self: Sized,
+            {
+                $desc
+            }
+
+            fn url() -> &'static str {
+                concat!("https://woodruffw.github.io/zizmor/audits#", $id)
+            }
+        }
+    };
+}
+
+pub(crate) use audit_meta;
+
+/// Workflow auditing trait.
+///
+/// Implementors of this trait can choose the level of specificity/context
+/// they need:
+///
+/// 1. [`WorkflowAudit::audit`]: runs at the top of the workflow (most general)
+/// 1. [`WorkflowAudit::audit_normal_job`] and/or [`WorkflowAudit::audit_reusable_job`]:
+///    runs on each normal/reusable job definition
+/// 1. [`WorkflowAudit::audit_step`]: runs on each step within each normal job (most specific)
+///
+/// Picking a higher specificity means that the lower methods are shadowed.
+/// In other words, if an audit chooses to implement [`WorkflowAudit::audit`], it should implement
+/// **only** [`WorkflowAudit::audit`] and not [`WorkflowAudit::audit_normal_job`] or
+/// [`WorkflowAudit::audit_step`].
+pub(crate) trait WorkflowAudit: Audit {
     fn new(state: AuditState) -> Result<Self>
     where
         Self: Sized;
@@ -65,12 +131,5 @@ pub(crate) trait WorkflowAudit {
         }
 
         Ok(results)
-    }
-
-    fn finding<'w>() -> FindingBuilder<'w>
-    where
-        Self: Sized,
-    {
-        FindingBuilder::new(Self::ident(), Self::desc())
     }
 }

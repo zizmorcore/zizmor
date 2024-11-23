@@ -2,7 +2,7 @@ use anyhow::Result;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::Trigger;
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Workflow;
 use crate::state::AuditState;
@@ -11,18 +11,13 @@ pub(crate) struct DangerousTriggers {
     pub(crate) _state: AuditState,
 }
 
+audit_meta!(
+    DangerousTriggers,
+    "dangerous-triggers",
+    "use of fundamentally insecure workflow trigger"
+);
+
 impl WorkflowAudit for DangerousTriggers {
-    fn ident() -> &'static str {
-        "dangerous-triggers"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "use of fundamentally insecure workflow trigger"
-    }
-
     fn new(state: AuditState) -> Result<Self> {
         Ok(Self { _state: state })
     }

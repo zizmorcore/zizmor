@@ -17,7 +17,7 @@ use github_actions_models::{
     workflow::job::{Matrix, NormalJob, StepBody, Strategy},
 };
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 use crate::{
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Severity},
@@ -28,6 +28,12 @@ use crate::{
 pub(crate) struct TemplateInjection {
     pub(crate) state: AuditState,
 }
+
+audit_meta!(
+    TemplateInjection,
+    "template-injection",
+    "code injection via template expansion"
+);
 
 /// Context members that are believed to be always safe.
 const SAFE_CONTEXTS: &[&str] = &[
@@ -233,20 +239,6 @@ impl TemplateInjection {
 }
 
 impl WorkflowAudit for TemplateInjection {
-    fn ident() -> &'static str
-    where
-        Self: Sized,
-    {
-        "template-injection"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "code injection via template expansion"
-    }
-
     fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,

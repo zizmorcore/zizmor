@@ -5,7 +5,7 @@ use github_actions_models::{
     workflow::Job,
 };
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 use crate::{
     finding::{Confidence, Severity},
     AuditState,
@@ -33,25 +33,17 @@ static KNOWN_PERMISSIONS: LazyLock<HashMap<&str, Severity>> = LazyLock::new(|| {
     .into()
 });
 
+audit_meta!(
+    ExcessivePermissions,
+    "excessive-permissions",
+    "overly broad workflow or job-level permissions"
+);
+
 pub(crate) struct ExcessivePermissions {
     pub(crate) _config: AuditState,
 }
 
 impl WorkflowAudit for ExcessivePermissions {
-    fn ident() -> &'static str
-    where
-        Self: Sized,
-    {
-        "excessive-permissions"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "overly broad workflow or job-level permissions"
-    }
-
     fn new(config: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,

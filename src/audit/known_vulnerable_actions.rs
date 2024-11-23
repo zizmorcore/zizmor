@@ -14,11 +14,17 @@ use crate::{
     state::AuditState,
 };
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 
 pub(crate) struct KnownVulnerableActions {
     client: github_api::Client,
 }
+
+audit_meta!(
+    KnownVulnerableActions,
+    "known-vulnerable-actions",
+    "action has a known vulnerability"
+);
 
 impl KnownVulnerableActions {
     fn action_known_vulnerabilities(
@@ -115,20 +121,6 @@ impl KnownVulnerableActions {
 }
 
 impl WorkflowAudit for KnownVulnerableActions {
-    fn ident() -> &'static str
-    where
-        Self: Sized,
-    {
-        "known-vulnerable-actions"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "action has a known vulnerability"
-    }
-
     fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
