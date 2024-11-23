@@ -123,7 +123,7 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
 }
 
 fn render_finding(registry: &WorkflowRegistry, finding: &Finding) {
-    let link = Link::new(finding.ident, &finding.url()).to_string();
+    let link = Link::new(finding.ident, finding.url).to_string();
     let confidence = format!(
         "audit confidence → {:?}",
         &finding.determinations.confidence

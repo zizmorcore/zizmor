@@ -8,7 +8,7 @@
 use anyhow::{anyhow, Result};
 use github_actions_models::workflow::Job;
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, Branch, ComparisonStatus, Tag},
@@ -21,6 +21,12 @@ pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the 
 pub(crate) struct ImpostorCommit {
     pub(crate) client: github_api::Client,
 }
+
+audit_meta!(
+    ImpostorCommit,
+    "impostor-commit",
+    "commit with no history in referenced repository"
+);
 
 impl ImpostorCommit {
     fn named_refs(&self, uses: RepositoryUses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
@@ -109,17 +115,6 @@ impl ImpostorCommit {
 }
 
 impl WorkflowAudit for ImpostorCommit {
-    fn ident() -> &'static str {
-        "impostor-commit"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "commit with no history in referenced repository"
-    }
-
     fn new(state: AuditState) -> Result<Self> {
         if state.offline {
             return Err(anyhow!("offline audits only requested"));

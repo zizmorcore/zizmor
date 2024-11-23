@@ -11,7 +11,7 @@ use std::ops::Deref;
 use anyhow::{anyhow, Result};
 use github_actions_models::workflow::Job;
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 use crate::{
     finding::{Confidence, Severity},
     github_api,
@@ -25,6 +25,12 @@ const REF_CONFUSION_ANNOTATION: &str =
 pub(crate) struct RefConfusion {
     client: github_api::Client,
 }
+
+audit_meta!(
+    RefConfusion,
+    "ref-confusion",
+    "git ref for action with ambiguous ref type"
+);
 
 impl RefConfusion {
     fn confusable(&self, uses: &RepositoryUses) -> Result<bool> {
@@ -51,20 +57,6 @@ impl RefConfusion {
 }
 
 impl WorkflowAudit for RefConfusion {
-    fn ident() -> &'static str
-    where
-        Self: Sized,
-    {
-        "ref-confusion"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "git ref for action with ambiguous ref type"
-    }
-
     fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,

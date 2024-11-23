@@ -1,5 +1,5 @@
 use crate::audit::WorkflowAudit;
-use crate::finding::{Confidence, Finding, FindingBuilder, Severity, SymbolicLocation};
+use crate::finding::{Confidence, Finding, Severity, SymbolicLocation};
 use crate::models::{Steps, Workflow};
 use crate::state::AuditState;
 use github_actions_models::common::{Env, EnvValue};
@@ -7,10 +7,15 @@ use github_actions_models::workflow::job::StepBody;
 use github_actions_models::workflow::Job;
 use std::ops::Deref;
 
-static ID: &str = "insecure-commands";
-static DESCRIPTION: &str = "execution of insecure workflow commands is enabled";
+use super::audit_meta;
 
 pub(crate) struct InsecureCommands;
+
+audit_meta!(
+    InsecureCommands,
+    "insecure-commands",
+    "execution of insecure workflow commands is enabled"
+);
 
 impl InsecureCommands {
     fn insecure_commands_allowed<'w>(
@@ -18,7 +23,7 @@ impl InsecureCommands {
         workflow: &'w Workflow,
         location: SymbolicLocation<'w>,
     ) -> Finding<'w> {
-        FindingBuilder::new(ID, DESCRIPTION)
+        Self::finding()
             .confidence(Confidence::High)
             .severity(Severity::High)
             .add_location(
@@ -60,20 +65,6 @@ impl InsecureCommands {
 }
 
 impl WorkflowAudit for InsecureCommands {
-    fn ident() -> &'static str
-    where
-        Self: Sized,
-    {
-        ID
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        DESCRIPTION
-    }
-
     fn new(_: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,

@@ -7,7 +7,7 @@ use github_actions_models::{
 };
 use itertools::Itertools;
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 use crate::{
     finding::{Confidence, Finding, Severity},
     state::AuditState,
@@ -17,6 +17,12 @@ use crate::{models::Workflow, utils::split_patterns};
 pub(crate) struct Artipacked {
     pub(crate) state: AuditState,
 }
+
+audit_meta!(
+    Artipacked,
+    "artipacked",
+    "credential persistence through GitHub Actions artifacts"
+);
 
 impl Artipacked {
     fn dangerous_artifact_patterns<'b>(&self, path: &'b str) -> Vec<&'b str> {
@@ -41,17 +47,6 @@ impl Artipacked {
 }
 
 impl WorkflowAudit for Artipacked {
-    fn ident() -> &'static str {
-        "artipacked"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "credential persistence through GitHub Actions artifacts"
-    }
-
     fn new(state: AuditState) -> Result<Self> {
         Ok(Self { state })
     }

@@ -1,29 +1,17 @@
 use crate::finding::{Confidence, Severity};
 
-use super::{AuditState, Finding, Step, WorkflowAudit};
+use super::{audit_meta, AuditState, Finding, Step, WorkflowAudit};
 
-pub(crate) struct UnpinnedUses {}
+pub(crate) struct UnpinnedUses;
+
+audit_meta!(UnpinnedUses, "unpinned-uses", "unpinned action reference");
 
 impl WorkflowAudit for UnpinnedUses {
-    fn ident() -> &'static str
-    where
-        Self: Sized,
-    {
-        "unpinned-uses"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "unpinned action reference"
-    }
-
     fn new(_state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self {})
+        Ok(Self)
     }
 
     fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {

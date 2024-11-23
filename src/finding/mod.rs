@@ -219,32 +219,26 @@ pub(crate) struct Determinations {
 pub(crate) struct Finding<'w> {
     pub(crate) ident: &'static str,
     pub(crate) desc: &'static str,
+    pub(crate) url: &'static str,
     pub(crate) determinations: Determinations,
     pub(crate) locations: Vec<Location<'w>>,
-}
-
-impl<'w> Finding<'w> {
-    pub(crate) fn url(&self) -> String {
-        format!(
-            "https://woodruffw.github.io/zizmor/audits#{ident}",
-            ident = self.ident
-        )
-    }
 }
 
 pub(crate) struct FindingBuilder<'w> {
     ident: &'static str,
     desc: &'static str,
+    url: &'static str,
     severity: Severity,
     confidence: Confidence,
     locations: Vec<SymbolicLocation<'w>>,
 }
 
 impl<'w> FindingBuilder<'w> {
-    pub(crate) fn new(ident: &'static str, desc: &'static str) -> Self {
+    pub(crate) fn new(ident: &'static str, desc: &'static str, url: &'static str) -> Self {
         Self {
             ident,
             desc,
+            url,
             severity: Default::default(),
             confidence: Default::default(),
             locations: vec![],
@@ -270,6 +264,7 @@ impl<'w> FindingBuilder<'w> {
         Ok(Finding {
             ident: self.ident,
             desc: self.desc,
+            url: self.url,
             determinations: Determinations {
                 confidence: self.confidence,
                 severity: self.severity,

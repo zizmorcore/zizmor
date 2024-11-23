@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::Deref};
 use anyhow::Ok;
 use github_actions_models::{common::EnvValue, workflow::job::StepBody};
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 use crate::{
     finding::{Confidence, Severity},
     state::AuditState,
@@ -20,6 +20,12 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
 pub(crate) struct UseTrustedPublishing {
     pub(crate) _state: AuditState,
 }
+
+audit_meta!(
+    UseTrustedPublishing,
+    "use-trusted-publishing",
+    "prefer trusted publishing for authentication"
+);
 
 impl UseTrustedPublishing {
     fn pypi_publish_uses_manual_credentials(&self, with: &HashMap<String, EnvValue>) -> bool {
@@ -59,17 +65,6 @@ impl UseTrustedPublishing {
 }
 
 impl WorkflowAudit for UseTrustedPublishing {
-    fn ident() -> &'static str {
-        "use-trusted-publishing"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "prefer trusted publishing for authentication"
-    }
-
     fn new(state: AuditState) -> anyhow::Result<Self> {
         Ok(Self { _state: state })
     }
