@@ -304,7 +304,7 @@ impl<'w> FindingBuilder<'w> {
         for (start, end) in line_ranges {
             for document_line in start..(end + 1) {
                 if let Some(line) = document_lines.get(document_line) {
-                    if line.contains(&inlined_ignore) {
+                    if line.rfind(&inlined_ignore).is_some() {
                         return true;
                     }
                 }
