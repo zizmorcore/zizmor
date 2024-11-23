@@ -300,7 +300,7 @@ impl<'w> FindingBuilder<'w> {
             })
             .collect::<Vec<_>>();
 
-        let inlined_ignore = format!("zizmor: ignore[{}]", id);
+        let inlined_ignore = format!("# zizmor: ignore[{}]", id);
         for (start, end) in line_ranges {
             for document_line in start..(end + 1) {
                 if let Some(line) = document_lines.get(document_line) {
