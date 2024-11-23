@@ -11,6 +11,7 @@ use crate::{
 pub(crate) mod artipacked;
 pub(crate) mod dangerous_triggers;
 pub(crate) mod excessive_permissions;
+pub(crate) mod github_env;
 pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod insecure_commands;

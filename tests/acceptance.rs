@@ -239,3 +239,27 @@ fn audit_unsecure_commands_allowed() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn audit_github_env_injection() -> anyhow::Result<()> {
+    let auditable = workflow_under_test("github_env.yml");
+
+    let cli_args = [&auditable];
+
+    let execution = zizmor().args(cli_args).output()?;
+
+    assert_eq!(execution.status.code(), Some(14));
+
+    let findings = serde_json::from_slice(&execution.stdout)?;
+
+    println!("{:#?}", findings);
+
+    assert_value_match(&findings, "$[0].determinations.confidence", "High");
+    assert_value_match(
+        &findings,
+        "$[0].locations[0].concrete.feature",
+        "GITHUB_ENV",
+    );
+
+    Ok(())
+}

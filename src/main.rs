@@ -161,6 +161,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::known_vulnerable_actions::KnownVulnerableActions);
     register_audit!(audit::unpinned_uses::UnpinnedUses);
     register_audit!(audit::insecure_commands::InsecureCommands);
+    register_audit!(audit::github_env::GitHubEnv);
 
     let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
 
