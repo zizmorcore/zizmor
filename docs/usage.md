@@ -76,6 +76,10 @@ choose to *selectively ignore* results via either special ignore comments
 
 ### With comments
 
+!!! note
+
+    Ignore comment support was added in `v0.6.0`.
+
 !!! tip
 
     Ignore comments are currently limited to a single rule at a time.
