@@ -71,7 +71,38 @@ All other exit codes are currently reserved.
 
 If you find that `zizmor` produces findings that aren't right for you
 (and **aren't** false positives, which should be reported!), then you can
-choose to *selectively ignore* results via a `zizmor.yml` configuration file.
+choose to *selectively ignore* results via either special ignore comments
+*or* a `zizmor.yml` configuration file.
+
+### With comments
+
+!!! tip
+
+    Ignore comments are currently limited to a single rule at a time.
+
+    This means that you **can't currently** write something like
+    `zizmor: ignore[*]` or `zizmor: ignore[foo,bar]` to ignore more than
+    one thing per line.
+
+    If support for more generalized ignore comments is important to you,
+    see #189 for ongoing discussion about design.
+
+Findings can be ignored inline with `# zizmor: ignore[rulename]` comments.
+This is ideal for one-off ignores, where a whole `zizmor.yml` configuration
+file would be too heavyweight.
+
+These comments can be placed anywhere in any span identified by a finding.
+
+For example, to ignore a single `artipacked` finding:
+
+```yaml title="example.yml"
+uses: actions/checkout@v3 # zizmor: ignore[artipacked]
+```
+
+### With `zizmor.yml`
+
+When ignoring multiple findings (or entire files), a `zizmor.yml` configuration
+file is easier to maintain than one-off comments.
 
 Here's what a `zizmor.yml` file might look like:
 
