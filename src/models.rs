@@ -17,7 +17,6 @@ use crate::finding::{Route, SymbolicLocation};
 /// providing access to the underlying data model.
 pub(crate) struct Workflow {
     pub(crate) path: String,
-    pub(crate) contents: String,
     pub(crate) document: yamlpath::Document,
     inner: workflow::Workflow,
 }
@@ -46,7 +45,6 @@ impl Workflow {
                 .to_str()
                 .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
                 .to_string(),
-            contents,
             document,
             inner,
         })

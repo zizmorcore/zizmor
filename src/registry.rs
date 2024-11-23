@@ -132,7 +132,7 @@ impl<'a> FindingRegistry<'a> {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
         for finding in results {
-            if self.config.ignores(&finding) || finding.ignored_from_inlined_comment {
+            if self.config.ignores(&finding) || finding.ignored {
                 self.ignored.push(finding);
             } else {
                 if self

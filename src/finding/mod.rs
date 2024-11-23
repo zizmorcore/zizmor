@@ -222,7 +222,7 @@ pub(crate) struct Finding<'w> {
     pub(crate) url: &'static str,
     pub(crate) determinations: Determinations,
     pub(crate) locations: Vec<Location<'w>>,
-    pub(crate) ignored_from_inlined_comment: bool,
+    pub(crate) ignored: bool,
 }
 
 pub(crate) struct FindingBuilder<'w> {
@@ -279,7 +279,7 @@ impl<'w> FindingBuilder<'w> {
                 severity: self.severity,
             },
             locations,
-            ignored_from_inlined_comment: should_ignore,
+            ignored: should_ignore,
         })
     }
 
@@ -289,7 +289,7 @@ impl<'w> FindingBuilder<'w> {
         locations: &[Location],
         id: &str,
     ) -> bool {
-        let document_lines = &workflow.contents.lines().collect::<Vec<_>>();
+        let document_lines = &workflow.document.source().lines().collect::<Vec<_>>();
         let line_ranges = locations
             .iter()
             .map(|l| {
