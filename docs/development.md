@@ -164,7 +164,9 @@ cargo test
 The general procedure for adding a new audit can be described as:
 
 - Define a new file at `src/audit/my_new_audit.rs`
-- Define a struct like `MyNewAudit` and implement the `WorkflowAudit` trait for it
+- Define a struct like `MyNewAudit`
+- Use the `audit_meta!` macro to implement `Audit` for `MyNewAudit`
+- Implement the `WorkflowAudit` trait for `MyNewAudit`
     - You may want to use both the `AuditState` and `github_api::Client` to get the job done
 - Assign the proper `location` when creating a `Finding`, grabbing it from the
   proper `Workflow`, `Job` or `Step` instance
