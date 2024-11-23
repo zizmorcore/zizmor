@@ -32,12 +32,12 @@ impl Deref for Workflow {
 impl Workflow {
     /// Load a workflow from the given file on disk.
     pub(crate) fn from_file<P: AsRef<Path>>(p: P) -> Result<Self> {
-        let raw = std::fs::read_to_string(p.as_ref())?;
+        let contents = std::fs::read_to_string(p.as_ref())?;
 
-        let inner = serde_yaml::from_str(&raw)
+        let inner = serde_yaml::from_str(&contents)
             .with_context(|| format!("invalid GitHub Actions workflow: {:?}", p.as_ref()))?;
 
-        let document = yamlpath::Document::new(raw)?;
+        let document = yamlpath::Document::new(&contents)?;
 
         Ok(Self {
             path: p

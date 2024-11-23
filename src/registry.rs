@@ -3,14 +3,13 @@
 
 use std::{collections::HashMap, path::Path, process::ExitCode};
 
-use anyhow::{anyhow, Context, Result};
-
 use crate::{
     audit::WorkflowAudit,
     config::Config,
     finding::{Finding, Severity},
     models::Workflow,
 };
+use anyhow::{anyhow, Context, Result};
 
 pub(crate) struct WorkflowRegistry {
     pub(crate) workflows: HashMap<String, Workflow>,
@@ -132,18 +131,18 @@ impl<'a> FindingRegistry<'a> {
     pub(crate) fn extend(&mut self, results: Vec<Finding<'a>>) {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
-        for result in results {
-            if self.config.ignores(&result) {
-                self.ignored.push(result);
+        for finding in results {
+            if self.config.ignores(&finding) || finding.ignored {
+                self.ignored.push(finding);
             } else {
                 if self
                     .highest_severity
-                    .map_or(true, |s| result.determinations.severity > s)
+                    .map_or(true, |s| finding.determinations.severity > s)
                 {
-                    self.highest_severity = Some(result.determinations.severity);
+                    self.highest_severity = Some(finding.determinations.severity);
                 }
 
-                self.findings.push(result);
+                self.findings.push(finding);
             }
         }
     }

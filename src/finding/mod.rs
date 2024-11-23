@@ -222,6 +222,7 @@ pub(crate) struct Finding<'w> {
     pub(crate) url: &'static str,
     pub(crate) determinations: Determinations,
     pub(crate) locations: Vec<Location<'w>>,
+    pub(crate) ignored: bool,
 }
 
 pub(crate) struct FindingBuilder<'w> {
@@ -261,6 +262,14 @@ impl<'w> FindingBuilder<'w> {
     }
 
     pub(crate) fn build(self, workflow: &'w Workflow) -> Result<Finding<'w>> {
+        let locations = self
+            .locations
+            .iter()
+            .map(|l| l.clone().concretize(workflow))
+            .collect::<Result<Vec<_>>>()?;
+
+        let should_ignore = self.ignored_from_inlined_comment(workflow, &locations, self.ident);
+
         Ok(Finding {
             ident: self.ident,
             desc: self.desc,
@@ -269,11 +278,39 @@ impl<'w> FindingBuilder<'w> {
                 confidence: self.confidence,
                 severity: self.severity,
             },
-            locations: self
-                .locations
-                .into_iter()
-                .map(|l| l.concretize(workflow))
-                .collect::<Result<Vec<_>>>()?,
+            locations,
+            ignored: should_ignore,
         })
+    }
+
+    fn ignored_from_inlined_comment(
+        &self,
+        workflow: &Workflow,
+        locations: &[Location],
+        id: &str,
+    ) -> bool {
+        let document_lines = &workflow.document.source().lines().collect::<Vec<_>>();
+        let line_ranges = locations
+            .iter()
+            .map(|l| {
+                (
+                    l.concrete.location.start_point.row,
+                    l.concrete.location.end_point.row,
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let inlined_ignore = format!("# zizmor: ignore[{}]", id);
+        for (start, end) in line_ranges {
+            for document_line in start..(end + 1) {
+                if let Some(line) = document_lines.get(document_line) {
+                    if line.rfind(&inlined_ignore).is_some() {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
     }
 }

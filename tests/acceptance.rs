@@ -36,6 +36,23 @@ fn assert_value_match(json: &Value, path_pattern: &str, value: &str) {
 }
 
 #[test]
+fn catches_inlined_ignore() -> anyhow::Result<()> {
+    let auditable = workflow_under_test("inlined-ignores.yml");
+
+    let cli_args = [&auditable];
+
+    let execution = zizmor().args(cli_args).output()?;
+
+    assert_eq!(execution.status.code(), Some(0));
+
+    let findings = String::from_utf8(execution.stdout)?;
+
+    assert_eq!(&findings, "[]");
+
+    Ok(())
+}
+
+#[test]
 fn audit_artipacked() -> anyhow::Result<()> {
     let auditable = workflow_under_test("artipacked.yml");
     let cli_args = [&auditable];
