@@ -3,6 +3,7 @@
 use std::borrow::Cow;
 
 use anyhow::Result;
+use clap::ValueEnum;
 use locate::Locator;
 use serde::Serialize;
 use terminal_link::Link;
@@ -13,7 +14,7 @@ pub(crate) mod locate;
 
 // TODO: Traits + more flexible models here.
 
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, Serialize, ValueEnum)]
 pub(crate) enum Confidence {
     #[default]
     Unknown,
@@ -22,7 +23,9 @@ pub(crate) enum Confidence {
     High,
 }
 
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize)]
+#[derive(
+    Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, ValueEnum,
+)]
 pub(crate) enum Severity {
     #[default]
     Unknown,

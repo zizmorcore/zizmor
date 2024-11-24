@@ -65,6 +65,33 @@ See [Integration](#integration) for suggestions on when to use each format.
 
 All other exit codes are currently reserved.
 
+## Filtering results
+
+There are two straightforward ways to filter `zizmor`'s results:
+
+1. If all you need is severity filtering (e.g. "I want only medium-severity
+   and above results"), then you can use the `--min-severity` flag:
+
+    !!! tip
+
+        `--min-severity` is available in `v0.6.0` and later.
+
+     ```bash
+     # filter unknown, informational, and low findings
+     zizmor --min-severity=medium ...
+     ```
+
+2. If you need more advanced filtering (with nontrivial conditions or
+   state considerations), then consider using `--format=json` and using
+   `jq` (or a script) to perform your filtering.
+
+     As a starting point, here's how you can use `jq` to filter `zizmor`'s
+     JSON output to only results that are marked as "high confidence":
+
+     ```bash
+     zizmor --format=json ... | jq 'map(select(.determinations.confidence == "High"))'
+     ```
+
 ## Ignoring results
 
 `zizmor`'s defaults are not always 100% right for every possible use case.
