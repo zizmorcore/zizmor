@@ -650,10 +650,12 @@ In general, users should use for [Github Actions environment files]
 
 [github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
 
-Detects dangerous usages of `$GITHUB_ENV` environment variable.
+Detects dangerous usages of the `GITHUB_ENV` environment variable.
 
-This audit compounds over `dangerous-triggers`: given the proper circumstances, an attacker
-may achieve code execution by controlling this environment variable.
+When used in workflows with dangerous triggers (such as `pull_request_target` and `workflow_run`), 
+`GITHUB_ENV` can be an arbitrary code execution risk. In particular, if the attacker is able to set
+arbitrary variables or variable contents via `GITHUB_ENV`, they made be able to set `LD_PRELOAD`
+or otherwise induce code execution implicitly within subsequent steps.
 
 Other resources:
 
@@ -662,9 +664,10 @@ Other resources:
 
 ### Remediation
 
-In general, you should avoid using `$GITHUB_ENV` when relying on dangerous Workflow triggers,
-especially for use cases like caching state or passing state around. For those, `$GITHUB_OUTPUT`
-may be an alternative.
+In general, you should avoid setting `GITHUB_ENV` within workflows that are attacker-triggered, 
+like `pull_request_target`.
+
+If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
