@@ -6,7 +6,7 @@ use std::{collections::HashMap, path::Path, process::ExitCode};
 use crate::{
     audit::WorkflowAudit,
     config::Config,
-    finding::{Finding, Severity},
+    finding::{Confidence, Finding, Severity},
     models::Workflow,
     App,
 };
@@ -113,6 +113,7 @@ impl AuditRegistry {
 pub(crate) struct FindingRegistry<'a> {
     config: &'a Config,
     minimum_severity: Option<Severity>,
+    minimum_confidence: Option<Confidence>,
     ignored: Vec<Finding<'a>>,
     findings: Vec<Finding<'a>>,
     highest_seen_severity: Option<Severity>,
@@ -123,6 +124,7 @@ impl<'a> FindingRegistry<'a> {
         Self {
             config,
             minimum_severity: app.min_severity,
+            minimum_confidence: app.min_confidence,
             ignored: Default::default(),
             findings: Default::default(),
             highest_seen_severity: None,
@@ -139,6 +141,9 @@ impl<'a> FindingRegistry<'a> {
                 || self
                     .minimum_severity
                     .map_or(false, |min| min > finding.determinations.severity)
+                || self
+                    .minimum_confidence
+                    .map_or(false, |min| min > finding.determinations.confidence)
                 || self.config.ignores(&finding)
             {
                 self.ignored.push(finding);
