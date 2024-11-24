@@ -1,3 +1,7 @@
+---
+description: zizmor's configuration file and configurable behaviors.
+---
+
 # Configuration
 
 !!! note

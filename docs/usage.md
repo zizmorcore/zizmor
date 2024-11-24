@@ -1,3 +1,7 @@
+---
+description: Usage recipes for running zizmor locally and in CI/CD.
+---
+
 # Usage Recipes
 
 ## Operating Modes
