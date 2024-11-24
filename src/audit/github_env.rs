@@ -35,19 +35,21 @@ impl WorkflowAudit for GitHubEnv {
         let has_dangerous_triggers =
             workflow.has_workflow_run() || workflow.has_pull_request_target();
 
-        if has_dangerous_triggers {
-            if let StepBody::Run { run, .. } = &step.deref().body {
-                if self.uses_github_environment(run) {
-                    findings.push(
-                        Self::finding()
-                            .severity(Severity::High)
-                            .confidence(Confidence::Low)
-                            .add_location(step.location().with_keys(&["run".into()]).annotated(
-                                "GITHUB_ENV used in the context of a dangerous Workflow trigger",
-                            ))
-                            .build(step.workflow())?,
-                    )
-                }
+        if !has_dangerous_triggers {
+            return Ok(findings);
+        }
+
+        if let StepBody::Run { run, .. } = &step.deref().body {
+            if self.uses_github_environment(run) {
+                findings.push(
+                    Self::finding()
+                        .severity(Severity::High)
+                        .confidence(Confidence::Low)
+                        .add_location(step.location().with_keys(&["run".into()]).annotated(
+                            "GITHUB_ENV used in the context of a dangerous Workflow trigger",
+                        ))
+                        .build(step.workflow())?,
+                )
             }
         }
 

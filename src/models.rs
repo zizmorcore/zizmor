@@ -76,6 +76,7 @@ impl Workflow {
         Jobs::new(self)
     }
 
+    /// Whether this workflow's is triggered by pull_request_target.
     pub(crate) fn has_pull_request_target(&self) -> bool {
         match &self.on {
             Trigger::BareEvent(event) => *event == BareEvent::PullRequestTarget,
@@ -84,6 +85,7 @@ impl Workflow {
         }
     }
 
+    /// Whether this workflow's is triggered by workflow_run.
     pub(crate) fn has_workflow_run(&self) -> bool {
         match &self.on {
             Trigger::BareEvent(event) => *event == BareEvent::WorkflowRun,
