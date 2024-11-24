@@ -1,3 +1,7 @@
+---
+description: Development tasks and processes.
+---
+
 # Hacking on `zizmor`
 
 !!! important

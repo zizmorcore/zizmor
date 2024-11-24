@@ -1,6 +1,6 @@
 strict: true
 site_name: "zizmor"
-# site_description: zizmor
+site_description: Static analysis for GitHub Actions
 site_url: https://woodruffw.github.io/zizmor
 docs_dir: docs
 site_dir: site_html

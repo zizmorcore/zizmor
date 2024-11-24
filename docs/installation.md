@@ -1,5 +1,8 @@
-# Installation
+---
+description: Installation instructions for zizmor.
+---
 
+# Installation
 
 ## From crates.io
 

@@ -1,3 +1,7 @@
+---
+description: Audit rules, examples, and remediations.
+---
+
 # Audit Rules
 
 This page documents each of the audits currently implemented in `zizmor`.
