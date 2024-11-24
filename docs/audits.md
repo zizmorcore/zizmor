@@ -642,6 +642,34 @@ In general, users should use for [Github Actions environment files]
         echo "$HOME/.local/my-bin" >> "$GITHUB_PATH"
     ```
 
+## `github-env`
+
+| Type     | Examples           | Introduced in | Works offline  | Enabled by default |
+|----------|--------------------|---------------|----------------|--------------------|
+| Workflow  | [github-env.yml]   | v0.6.0        | ✅             | ✅                 |
+
+[github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
+
+Detects dangerous usages of the `GITHUB_ENV` environment variable.
+
+When used in workflows with dangerous triggers (such as `pull_request_target` and `workflow_run`), 
+`GITHUB_ENV` can be an arbitrary code execution risk. In particular, if the attacker is able to set
+arbitrary variables or variable contents via `GITHUB_ENV`, they made be able to set `LD_PRELOAD`
+or otherwise induce code execution implicitly within subsequent steps.
+
+Other resources:
+
+* [GitHub Actions exploitation: environment manipulation]
+* [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]
+
+### Remediation
+
+In general, you should avoid setting `GITHUB_ENV` within workflows that are attacker-triggered, 
+like `pull_request_target`.
+
+If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
+
+
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
@@ -654,3 +682,5 @@ In general, users should use for [Github Actions environment files]
 [were deprecated by Github]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 [Github Actions environment files]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#environment-files
 [Semgrep audit]: https://semgrep.dev/r?q=yaml.github-actions.security.allowed-unsecure-commands.allowed-unsecure-commands
+[GitHub Actions exploitation: environment manipulation]: https://www.synacktiv.com/en/publications/github-actions-exploitation-repo-jacking-and-environment-manipulation
+[GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]: https://securitylab.github.com/advisories/GHSL-2024-177_Litestar/

@@ -3,13 +3,14 @@
 
 use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 
+use crate::finding::{Route, SymbolicLocation};
 use anyhow::{anyhow, Context, Result};
+use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::{
     self,
     job::{NormalJob, StepBody},
+    Trigger,
 };
-
-use crate::finding::{Route, SymbolicLocation};
 
 /// Represents an entire GitHub Actions workflow.
 ///
@@ -73,6 +74,24 @@ impl Workflow {
     /// A [`Jobs`] iterator over this workflow's constituent [`Job`]s.
     pub(crate) fn jobs(&self) -> Jobs<'_> {
         Jobs::new(self)
+    }
+
+    /// Whether this workflow's is triggered by pull_request_target.
+    pub(crate) fn has_pull_request_target(&self) -> bool {
+        match &self.on {
+            Trigger::BareEvent(event) => *event == BareEvent::PullRequestTarget,
+            Trigger::BareEvents(events) => events.contains(&BareEvent::PullRequestTarget),
+            Trigger::Events(events) => !matches!(events.pull_request_target, OptionalBody::Missing),
+        }
+    }
+
+    /// Whether this workflow's is triggered by workflow_run.
+    pub(crate) fn has_workflow_run(&self) -> bool {
+        match &self.on {
+            Trigger::BareEvent(event) => *event == BareEvent::WorkflowRun,
+            Trigger::BareEvents(events) => events.contains(&BareEvent::WorkflowRun),
+            Trigger::Events(events) => !matches!(events.workflow_run, OptionalBody::Missing),
+        }
     }
 }
 
