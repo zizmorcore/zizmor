@@ -73,16 +73,17 @@ All other exit codes are currently reserved.
 
 There are two straightforward ways to filter `zizmor`'s results:
 
-1. If all you need is severity filtering (e.g. "I want only medium-severity
-   and above results"), then you can use the `--min-severity` flag:
+1. If all you need is severity or confidence filtering (e.g. "I want only
+   medium-severity and/or medium-confidence and above results"), then you can use
+   the `--min-severity` and `--min-confidence` flags:
 
     !!! tip
 
-        `--min-severity` is available in `v0.6.0` and later.
+        `--min-severity` and `--min-confidence` are available in `v0.6.0` and later.
 
      ```bash
-     # filter unknown, informational, and low findings
-     zizmor --min-severity=medium ...
+     # filter unknown, informational, and low findings with unknown, low confidence
+     zizmor --min-severity=medium --min-confidence=medium ...
      ```
 
 2. If you need more advanced filtering (with nontrivial conditions or
