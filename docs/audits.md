@@ -98,6 +98,7 @@ fork.
 Other resources:
 
 * [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]
+* [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]
 
 ### Remediation
 
@@ -652,7 +653,7 @@ In general, users should use for [Github Actions environment files]
 
 Detects dangerous usages of the `GITHUB_ENV` environment variable.
 
-When used in workflows with dangerous triggers (such as `pull_request_target` and `workflow_run`), 
+When used in workflows with dangerous triggers (such as `pull_request_target` and `workflow_run`),
 `GITHUB_ENV` can be an arbitrary code execution risk. In particular, if the attacker is able to set
 arbitrary variables or variable contents via `GITHUB_ENV`, they made be able to set `LD_PRELOAD`
 or otherwise induce code execution implicitly within subsequent steps.
@@ -661,10 +662,11 @@ Other resources:
 
 * [GitHub Actions exploitation: environment manipulation]
 * [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]
+* [Google & Apache Found Vulnerable to GitHub Environment Injection]
 
 ### Remediation
 
-In general, you should avoid setting `GITHUB_ENV` within workflows that are attacker-triggered, 
+In general, you should avoid setting `GITHUB_ENV` within workflows that are attacker-triggered,
 like `pull_request_target`.
 
 If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
@@ -684,3 +686,5 @@ If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 [Semgrep audit]: https://semgrep.dev/r?q=yaml.github-actions.security.allowed-unsecure-commands.allowed-unsecure-commands
 [GitHub Actions exploitation: environment manipulation]: https://www.synacktiv.com/en/publications/github-actions-exploitation-repo-jacking-and-environment-manipulation
 [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]: https://securitylab.github.com/advisories/GHSL-2024-177_Litestar/
+[Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability
+[Google & Apache Found Vulnerable to GitHub Environment Injection]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability-0
