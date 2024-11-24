@@ -6,15 +6,16 @@ Arguments:
   <INPUTS>...  The workflow filenames or directories to audit
 
 Options:
-  -p, --pedantic             Emit findings even when the context suggests an explicit security decision made by the user
-  -o, --offline              Only perform audits that don't require network access
-  -v, --verbose...           Increase logging verbosity
-  -q, --quiet...             Decrease logging verbosity
-  -n, --no-progress          Disable the progress bar. This is useful primarily when running with a high verbosity level, as the two will fight for stderr
-      --gh-token <GH_TOKEN>  The GitHub API token to use [env: GH_TOKEN=]
-      --format <FORMAT>      The output format to emit. By default, plain text will be emitted [possible values: plain, json, sarif]
-  -c, --config <CONFIG>      The configuration file to load. By default, any config will be discovered relative to $CWD
-      --no-config            Disable all configuration loading
-      --no-exit-codes        Disable all error codes besides success and tool failure
-  -h, --help                 Print help
-  -V, --version              Print version
+  -p, --pedantic                     Emit findings even when the context suggests an explicit security decision made by the user
+  -o, --offline                      Only perform audits that don't require network access
+  -v, --verbose...                   Increase logging verbosity
+  -q, --quiet...                     Decrease logging verbosity
+  -n, --no-progress                  Disable the progress bar. This is useful primarily when running with a high verbosity level, as the two will fight for stderr
+      --gh-token <GH_TOKEN>          The GitHub API token to use [env: GH_TOKEN=]
+      --format <FORMAT>              The output format to emit. By default, plain text will be emitted [possible values: plain, json, sarif]
+  -c, --config <CONFIG>              The configuration file to load. By default, any config will be discovered relative to $CWD
+      --no-config                    Disable all configuration loading
+      --no-exit-codes                Disable all error codes besides success and tool failure
+      --min-severity <MIN_SEVERITY>  Filter all results below this severity [possible values: unknown, informational, low, medium, high]
+  -h, --help                         Print help
+  -V, --version                      Print version
