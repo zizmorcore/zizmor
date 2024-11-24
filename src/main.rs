@@ -5,7 +5,7 @@ use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
 use config::Config;
-use finding::Severity;
+use finding::{Confidence, Severity};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
@@ -67,6 +67,10 @@ struct App {
     /// Filter all results below this severity.
     #[arg(long)]
     min_severity: Option<Severity>,
+
+    /// Filter all results below this confidence.
+    #[arg(long)]
+    min_confidence: Option<Confidence>,
 
     /// The workflow filenames or directories to audit.
     #[arg(required = true)]
