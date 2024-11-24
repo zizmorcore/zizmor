@@ -252,9 +252,7 @@ fn audit_github_env_injection() -> anyhow::Result<()> {
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 
-    println!("{:#?}", findings);
-
-    assert_value_match(&findings, "$[0].determinations.confidence", "High");
+    assert_value_match(&findings, "$[0].determinations.confidence", "Low");
     assert_value_match(
         &findings,
         "$[0].locations[0].concrete.feature",

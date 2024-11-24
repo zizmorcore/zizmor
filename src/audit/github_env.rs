@@ -1,5 +1,4 @@
 use super::{audit_meta, WorkflowAudit};
-use crate::audit::dangerous_triggers::DangerousTriggers;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Step;
 use crate::state::AuditState;
@@ -9,6 +8,16 @@ use std::ops::Deref;
 pub(crate) struct GitHubEnv;
 
 audit_meta!(GitHubEnv, "github-env", "dangerous use of $GITHUB_ENV");
+
+impl GitHubEnv {
+    fn uses_github_environment(&self, run_step_body: &str) -> bool {
+        // In the future we can improve over this implementation,
+        // eventually detecting how $GITHUB_ENV has being used
+        // and returning an Option<Confidence> instead
+
+        run_step_body.contains("$GITHUB_ENV") || run_step_body.contains("${GITHUB_ENV}")
+    }
+}
 
 impl WorkflowAudit for GitHubEnv {
     fn new(_: AuditState) -> anyhow::Result<Self>
@@ -23,18 +32,16 @@ impl WorkflowAudit for GitHubEnv {
 
         let workflow = step.workflow();
 
-        let dangerous_triggers_detector = DangerousTriggers {};
-
-        let has_dangerous_triggers = dangerous_triggers_detector.has_workflow_run(workflow)
-            || dangerous_triggers_detector.has_pull_request_target(workflow);
+        let has_dangerous_triggers =
+            workflow.has_workflow_run() || workflow.has_pull_request_target();
 
         if has_dangerous_triggers {
             if let StepBody::Run { run, .. } = &step.deref().body {
-                if run.contains("$GITHUB_ENV") {
+                if self.uses_github_environment(run) {
                     findings.push(
                         Self::finding()
                             .severity(Severity::High)
-                            .confidence(Confidence::High)
+                            .confidence(Confidence::Low)
                             .add_location(step.location().with_keys(&["run".into()]).annotated(
                                 "GITHUB_ENV used in the context of a dangerous Workflow trigger",
                             ))
