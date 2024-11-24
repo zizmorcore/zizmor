@@ -15,7 +15,7 @@ audit_meta!(
 
 impl WorkflowAudit for DangerousTriggers {
     fn new(_: AuditState) -> Result<Self> {
-        Ok(Self {})
+        Ok(Self)
     }
 
     fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
