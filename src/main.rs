@@ -5,6 +5,7 @@ use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
 use config::Config;
+use finding::Severity;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
@@ -63,6 +64,10 @@ struct App {
     #[arg(long)]
     no_exit_codes: bool,
 
+    /// Filter all results below this severity.
+    #[arg(long)]
+    min_severity: Option<Severity>,
+
     /// The workflow filenames or directories to audit.
     #[arg(required = true)]
     inputs: Vec<PathBuf>,
@@ -78,14 +83,14 @@ pub(crate) enum OutputFormat {
 fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
-    let args = App::parse();
+    let app = App::parse();
 
     env_logger::Builder::new()
-        .filter_level(args.verbose.log_level_filter())
+        .filter_level(app.verbose.log_level_filter())
         .init();
 
     let mut workflow_paths = vec![];
-    for input in &args.inputs {
+    for input in &app.inputs {
         if input.is_file() {
             workflow_paths.push(input.clone());
         } else if input.is_dir() {
@@ -121,8 +126,8 @@ fn run() -> Result<ExitCode> {
         workflows = workflow_paths
     );
 
-    let config = Config::new(&args)?;
-    let audit_state = AuditState::new(&args);
+    let config = Config::new(&app)?;
+    let audit_state = AuditState::new(&app);
 
     let mut workflow_registry = WorkflowRegistry::new();
     for workflow_path in workflow_paths.iter() {
@@ -161,7 +166,7 @@ fn run() -> Result<ExitCode> {
 
     // Hide the bar if the user has explicitly asked for quiet output
     // or to disable just the progress bar.
-    if args.verbose.is_silent() || args.no_progress {
+    if app.verbose.is_silent() || app.no_progress {
         bar.set_draw_target(ProgressDrawTarget::hidden());
     } else {
         bar.enable_steady_tick(Duration::from_millis(100));
@@ -170,7 +175,7 @@ fn run() -> Result<ExitCode> {
         );
     }
 
-    let mut results = FindingRegistry::new(&config);
+    let mut results = FindingRegistry::new(&app, &config);
     for (_, workflow) in workflow_registry.iter_workflows() {
         bar.set_message(format!(
             "auditing {workflow}",
@@ -193,7 +198,7 @@ fn run() -> Result<ExitCode> {
 
     bar.finish_and_clear();
 
-    let format = match args.format {
+    let format = match app.format {
         None => OutputFormat::Plain,
         Some(f) => f,
     };
@@ -207,7 +212,7 @@ fn run() -> Result<ExitCode> {
         )?,
     };
 
-    if args.no_exit_codes || matches!(format, OutputFormat::Sarif) {
+    if app.no_exit_codes || matches!(format, OutputFormat::Sarif) {
         Ok(ExitCode::SUCCESS)
     } else {
         Ok(results.into())

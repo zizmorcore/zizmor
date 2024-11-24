@@ -8,6 +8,7 @@ use crate::{
     config::Config,
     finding::{Finding, Severity},
     models::Workflow,
+    App,
 };
 use anyhow::{anyhow, Context, Result};
 
@@ -111,18 +112,20 @@ impl AuditRegistry {
 /// A registry of all findings discovered during a `zizmor` run.
 pub(crate) struct FindingRegistry<'a> {
     config: &'a Config,
+    minimum_severity: Option<Severity>,
     ignored: Vec<Finding<'a>>,
     findings: Vec<Finding<'a>>,
-    highest_severity: Option<Severity>,
+    highest_seen_severity: Option<Severity>,
 }
 
 impl<'a> FindingRegistry<'a> {
-    pub(crate) fn new(config: &'a Config) -> Self {
+    pub(crate) fn new(app: &App, config: &'a Config) -> Self {
         Self {
             config,
+            minimum_severity: app.min_severity,
             ignored: Default::default(),
             findings: Default::default(),
-            highest_severity: None,
+            highest_seen_severity: None,
         }
     }
 
@@ -132,14 +135,19 @@ impl<'a> FindingRegistry<'a> {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
         for finding in results {
-            if self.config.ignores(&finding) || finding.ignored {
+            if finding.ignored
+                || self
+                    .minimum_severity
+                    .map_or(false, |min| min > finding.determinations.severity)
+                || self.config.ignores(&finding)
+            {
                 self.ignored.push(finding);
             } else {
                 if self
-                    .highest_severity
+                    .highest_seen_severity
                     .map_or(true, |s| finding.determinations.severity > s)
                 {
-                    self.highest_severity = Some(finding.determinations.severity);
+                    self.highest_seen_severity = Some(finding.determinations.severity);
                 }
 
                 self.findings.push(finding);
@@ -160,7 +168,7 @@ impl<'a> FindingRegistry<'a> {
 
 impl From<FindingRegistry<'_>> for ExitCode {
     fn from(value: FindingRegistry<'_>) -> Self {
-        match value.highest_severity {
+        match value.highest_seen_severity {
             Some(sev) => match sev {
                 Severity::Unknown => ExitCode::from(10),
                 Severity::Informational => ExitCode::from(11),
