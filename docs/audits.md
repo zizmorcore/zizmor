@@ -642,6 +642,31 @@ In general, users should use for [Github Actions environment files]
         echo "$HOME/.local/my-bin" >> "$GITHUB_PATH"
     ```
 
+## `github-env`
+
+| Type     | Examples           | Introduced in | Works offline  | Enabled by default |
+|----------|--------------------|---------------|----------------|--------------------|
+| Workflow  | [github-env.yml]   | v0.6.0        | ✅             | ✅                 |
+
+[github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
+
+Detects dangerous usages of `$GITHUB_ENV` environment variable.
+
+This audit compounds over `dangerous-triggers`: given the proper circumstances, an attacker
+may achieve code execution by controlling this environment variable.
+
+Other resources:
+
+* [GitHub Actions exploitation: environment manipulation]
+* [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]
+
+### Remediation
+
+In general, you should avoid using `$GITHUB_ENV` when relying on dangerous Workflow triggers,
+especially for use cases like caching state or passing state around. For those, `$GITHUB_OUTPUT`
+may be an alternative.
+
+
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
@@ -654,3 +679,5 @@ In general, users should use for [Github Actions environment files]
 [were deprecated by Github]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 [Github Actions environment files]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#environment-files
 [Semgrep audit]: https://semgrep.dev/r?q=yaml.github-actions.security.allowed-unsecure-commands.allowed-unsecure-commands
+[GitHub Actions exploitation: environment manipulation]: https://www.synacktiv.com/en/publications/github-actions-exploitation-repo-jacking-and-environment-manipulation
+[GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]: https://securitylab.github.com/advisories/GHSL-2024-177_Litestar/

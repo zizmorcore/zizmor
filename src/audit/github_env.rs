@@ -12,7 +12,7 @@ audit_meta!(GitHubEnv, "github-env", "dangerous use of $GITHUB_ENV");
 impl GitHubEnv {
     fn uses_github_environment(&self, run_step_body: &str) -> bool {
         // In the future we can improve over this implementation,
-        // eventually detecting how $GITHUB_ENV has being used
+        // eventually detecting how $GITHUB_ENV is being used
         // and returning an Option<Confidence> instead
 
         run_step_body.contains("$GITHUB_ENV") || run_step_body.contains("${GITHUB_ENV}")
