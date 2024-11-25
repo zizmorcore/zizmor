@@ -296,8 +296,7 @@ impl<'w> FindingBuilder<'w> {
 
         locations
             .iter()
-            .map(|l| &l.concrete.comments)
-            .flatten()
+            .flat_map(|l| &l.concrete.comments)
             .any(|c| c.contains(&inlined_ignore))
     }
 }
