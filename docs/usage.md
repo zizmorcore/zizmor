@@ -112,20 +112,13 @@ choose to *selectively ignore* results via either special ignore comments
 
     Ignore comment support was added in `v0.6.0`.
 
-!!! tip
-
-    Ignore comments are currently limited to a single rule at a time.
-
-    This means that you **can't currently** write something like
-    `zizmor: ignore[*]` or `zizmor: ignore[foo,bar]` to ignore more than
-    one thing per line.
-
-    If support for more generalized ignore comments is important to you,
-    see #189 for ongoing discussion about design.
-
 Findings can be ignored inline with `# zizmor: ignore[rulename]` comments.
 This is ideal for one-off ignores, where a whole `zizmor.yml` configuration
 file would be too heavyweight.
+
+Multiple different audits can be ignored with a single comment by
+separating each rule with a comma, e.g.
+`# zizmor: ignore[artipacked,ref-confusion]`.
 
 These comments can be placed anywhere in any span identified by a finding.
 
