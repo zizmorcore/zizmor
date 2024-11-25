@@ -25,6 +25,7 @@ moka = { version = "0.12.8", features = ["sync"] }
 owo-colors = "4.1.0"
 pest = "2.7.14"
 pest_derive = "2.7.14"
+regex = "1.11.1"
 reqwest = { version = "0.12.9", features = ["blocking", "json"] }
 serde = { version = "1.0.215", features = ["derive"] }
 serde-sarif = "0.6.5"

@@ -2318,6 +2318,7 @@ dependencies = [
  "pest",
  "pest_derive",
  "pretty_assertions",
+ "regex",
  "reqwest",
  "serde",
  "serde-sarif",
