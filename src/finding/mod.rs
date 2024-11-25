@@ -200,6 +200,9 @@ pub(crate) struct Feature<'w> {
     /// The feature's textual content.
     pub(crate) feature: &'w str,
 
+    /// Any comments within the feature's span.
+    pub(crate) comments: Vec<&'w str>,
+
     /// The feature's parent's textual content.
     pub(crate) parent_feature: &'w str,
 }
@@ -273,7 +276,7 @@ impl<'w> FindingBuilder<'w> {
             .map(|l| l.clone().concretize(workflow))
             .collect::<Result<Vec<_>>>()?;
 
-        let should_ignore = self.ignored_from_inlined_comment(workflow, &locations, self.ident);
+        let should_ignore = self.ignored_from_inlined_comment(&locations, self.ident);
 
         Ok(Finding {
             ident: self.ident,
@@ -288,31 +291,17 @@ impl<'w> FindingBuilder<'w> {
         })
     }
 
-    fn ignored_from_inlined_comment(
-        &self,
-        workflow: &Workflow,
-        locations: &[Location],
-        id: &str,
-    ) -> bool {
-        let document_lines = &workflow.document.source().lines().collect::<Vec<_>>();
-        let line_ranges = locations
-            .iter()
-            .map(|l| {
-                (
-                    l.concrete.location.start_point.row,
-                    l.concrete.location.end_point.row,
-                )
-            })
-            .collect::<Vec<_>>();
+    fn ignored_from_inlined_comment(&self, locations: &[Location], id: &str) -> bool {
+        let inlined_ignore = format!("zizmor: ignore[{}]", id);
 
-        let inlined_ignore = format!("# zizmor: ignore[{}]", id);
-        for (start, end) in line_ranges {
-            for document_line in start..(end + 1) {
-                if let Some(line) = document_lines.get(document_line) {
-                    if line.rfind(&inlined_ignore).is_some() {
-                        return true;
-                    }
-                }
+        for loc in locations {
+            if loc
+                .concrete
+                .comments
+                .iter()
+                .any(|c| c.contains(&inlined_ignore))
+            {
+                return true;
             }
         }
 

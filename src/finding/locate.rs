@@ -51,6 +51,7 @@ impl Locator {
             location: ConcreteLocation::from(&feature.location),
             parent_location: ConcreteLocation::from(&parent_feature.location),
             feature: workflow.document.extract_with_leading_whitespace(&feature),
+            comments: workflow.document.feature_comments(&feature),
             parent_feature: workflow
                 .document
                 .extract_with_leading_whitespace(&parent_feature),
