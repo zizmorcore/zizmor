@@ -294,17 +294,10 @@ impl<'w> FindingBuilder<'w> {
     fn ignored_from_inlined_comment(&self, locations: &[Location], id: &str) -> bool {
         let inlined_ignore = format!("zizmor: ignore[{}]", id);
 
-        for loc in locations {
-            if loc
-                .concrete
-                .comments
-                .iter()
-                .any(|c| c.contains(&inlined_ignore))
-            {
-                return true;
-            }
-        }
-
-        false
+        locations
+            .iter()
+            .map(|l| &l.concrete.comments)
+            .flatten()
+            .any(|c| c.contains(&inlined_ignore))
     }
 }
