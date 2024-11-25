@@ -3,19 +3,20 @@ use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Step;
 use crate::state::AuditState;
 use github_actions_models::workflow::job::StepBody;
+use regex::Regex;
 use std::ops::Deref;
+use std::sync::LazyLock;
+
+static GITHUB_ENV_WRITE_SHELL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?m)^.+\s*>>?\s*"?\$\{?GITHUB_ENV\}?"?.*$"#).unwrap());
 
 pub(crate) struct GitHubEnv;
 
-audit_meta!(GitHubEnv, "github-env", "dangerous use of $GITHUB_ENV");
+audit_meta!(GitHubEnv, "github-env", "dangerous use of GITHUB_ENV");
 
 impl GitHubEnv {
-    fn uses_github_environment(&self, run_step_body: &str) -> bool {
-        // In the future we can improve over this implementation,
-        // eventually detecting how $GITHUB_ENV is being used
-        // and returning an Option<Confidence> instead
-
-        run_step_body.contains("$GITHUB_ENV") || run_step_body.contains("${GITHUB_ENV}")
+    fn uses_github_environment(run_step_body: &str) -> bool {
+        GITHUB_ENV_WRITE_SHELL.is_match(run_step_body)
     }
 }
 
@@ -40,19 +41,49 @@ impl WorkflowAudit for GitHubEnv {
         }
 
         if let StepBody::Run { run, .. } = &step.deref().body {
-            if self.uses_github_environment(run) {
+            if Self::uses_github_environment(run) {
                 findings.push(
                     Self::finding()
                         .severity(Severity::High)
                         .confidence(Confidence::Low)
-                        .add_location(step.location().with_keys(&["run".into()]).annotated(
-                            "GITHUB_ENV used in the context of a dangerous Workflow trigger",
-                        ))
+                        .add_location(
+                            step.location()
+                                .with_keys(&["run".into()])
+                                .annotated("GITHUB_ENV write may allow code execution"),
+                        )
                         .build(step.workflow())?,
                 )
             }
         }
 
         Ok(findings)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::audit::github_env::GitHubEnv;
+
+    #[test]
+    fn test_shell_patterns() {
+        for case in &[
+            // Common cases
+            "echo foo >> $GITHUB_ENV",
+            "echo foo >> \"$GITHUB_ENV\"",
+            "echo foo >> ${GITHUB_ENV}",
+            "echo foo >> \"${GITHUB_ENV}\"",
+            // Single > is buggy most of the time, but still exploitable
+            "echo foo > $GITHUB_ENV",
+            "echo foo > \"$GITHUB_ENV\"",
+            "echo foo > ${GITHUB_ENV}",
+            "echo foo > \"${GITHUB_ENV}\"",
+            // No spaces
+            "echo foo>>$GITHUB_ENV",
+            "echo foo>>\"$GITHUB_ENV\"",
+            "echo foo>>${GITHUB_ENV}",
+            "echo foo>>\"${GITHUB_ENV}\"",
+        ] {
+            assert!(GitHubEnv::uses_github_environment(case));
+        }
     }
 }
