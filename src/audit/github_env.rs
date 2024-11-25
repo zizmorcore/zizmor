@@ -3,12 +3,19 @@ use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Step;
 use crate::state::AuditState;
 use github_actions_models::workflow::job::StepBody;
-use regex::Regex;
+use regex::RegexSet;
 use std::ops::Deref;
 use std::sync::LazyLock;
 
-static GITHUB_ENV_WRITE_SHELL: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"(?m)^.+\s*>>?\s*"?\$\{?GITHUB_ENV\}?"?.*$"#).unwrap());
+static GITHUB_ENV_WRITE_SHELL: LazyLock<RegexSet> = LazyLock::new(|| {
+    RegexSet::new(&[
+        // matches the `... >> $GITHUB_ENV` pattern
+        r#"(?m)^.+\s*>>?\s*"?\$\{?GITHUB_ENV\}?"?.*$"#,
+        // matches the `... | tee $GITHUB_ENV` pattern
+        r#"(?m)^.*\|\s*tee\s+"?\$\{?GITHUB_ENV\}?"?.*$"#,
+    ])
+    .unwrap()
+});
 
 pub(crate) struct GitHubEnv;
 
@@ -82,6 +89,14 @@ mod tests {
             "echo foo>>\"$GITHUB_ENV\"",
             "echo foo>>${GITHUB_ENV}",
             "echo foo>>\"${GITHUB_ENV}\"",
+            // tee cases
+            "something | tee $GITHUB_ENV",
+            "something | tee \"$GITHUB_ENV\"",
+            "something | tee ${GITHUB_ENV}",
+            "something | tee \"${GITHUB_ENV}\"",
+            "something|tee $GITHUB_ENV",
+            "something |tee $GITHUB_ENV",
+            "something| tee $GITHUB_ENV",
         ] {
             assert!(GitHubEnv::uses_github_environment(case));
         }
