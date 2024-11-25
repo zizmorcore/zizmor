@@ -8,7 +8,7 @@ use std::ops::Deref;
 use std::sync::LazyLock;
 
 static GITHUB_ENV_WRITE_SHELL: LazyLock<RegexSet> = LazyLock::new(|| {
-    RegexSet::new(&[
+    RegexSet::new([
         // matches the `... >> $GITHUB_ENV` pattern
         r#"(?m)^.+\s*>>?\s*"?\$\{?GITHUB_ENV\}?"?.*$"#,
         // matches the `... | tee $GITHUB_ENV` pattern
