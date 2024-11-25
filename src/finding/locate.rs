@@ -55,7 +55,7 @@ impl Locator {
                 .document
                 .feature_comments(&feature)
                 .into_iter()
-                .map(|c| Comment(c))
+                .map(Comment)
                 .collect(),
             parent_feature: workflow
                 .document
