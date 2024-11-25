@@ -32,7 +32,7 @@ serde-sarif = "0.6.5"
 serde_json = "1.0.133"
 serde_yaml = "0.9.34"
 terminal-link = "0.1.0"
-yamlpath = "0.11.1"
+yamlpath = "0.12.0"
 
 [profile.release]
 lto = true
