@@ -1,10 +1,11 @@
 //! Models and APIs for handling findings and their locations.
 
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::LazyLock};
 
 use anyhow::Result;
 use clap::ValueEnum;
 use locate::Locator;
+use regex::Regex;
 use serde::Serialize;
 use terminal_link::Link;
 
@@ -186,6 +187,29 @@ impl From<&yamlpath::Location> for ConcreteLocation {
     }
 }
 
+static IGNORE_EXPR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^# zizmor: ignore\[(.+)\]\s*$").unwrap());
+
+/// Represents a single source comment.
+#[derive(Serialize)]
+#[serde(transparent)]
+pub(crate) struct Comment<'w>(&'w str);
+
+impl<'w> Comment<'w> {
+    fn ignores(&self, rule_id: &str) -> bool {
+        // Extracts foo,bar from `# zizmor: ignore[foo,bar]`
+        let Some(caps) = IGNORE_EXPR.captures(self.0) else {
+            return false;
+        };
+
+        caps.get(1)
+            .unwrap()
+            .as_str()
+            .split(",")
+            .any(|r| r.trim() == rule_id)
+    }
+}
+
 /// An extracted feature, along with its concrete location.
 #[derive(Serialize)]
 pub(crate) struct Feature<'w> {
@@ -201,7 +225,7 @@ pub(crate) struct Feature<'w> {
     pub(crate) feature: &'w str,
 
     /// Any comments within the feature's span.
-    pub(crate) comments: Vec<&'w str>,
+    pub(crate) comments: Vec<Comment<'w>>,
 
     /// The feature's parent's textual content.
     pub(crate) parent_feature: &'w str,
@@ -292,11 +316,53 @@ impl<'w> FindingBuilder<'w> {
     }
 
     fn ignored_from_inlined_comment(&self, locations: &[Location], id: &str) -> bool {
-        let inlined_ignore = format!("zizmor: ignore[{}]", id);
-
         locations
             .iter()
             .flat_map(|l| &l.concrete.comments)
-            .any(|c| c.contains(&inlined_ignore))
+            .any(|c| c.ignores(id))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::finding::Comment;
+
+    #[test]
+    fn test_comment_ignores() {
+        let cases = &[
+            // Trivial cases.
+            ("# zizmor: ignore[foo]", "foo", true),
+            ("# zizmor: ignore[foo,bar]", "foo", true),
+            // Dashes are OK.
+            ("# zizmor: ignore[foo,bar,foo-bar]", "foo-bar", true),
+            // Spaces are OK.
+            ("# zizmor: ignore[foo, bar,   foo-bar]", "foo-bar", true),
+            // Extra commas and duplicates are nonsense but OK.
+            ("# zizmor: ignore[foo,foo,,foo,,,,foo,]", "foo", true),
+            // Valid ignore, but not a match.
+            ("# zizmor: ignore[foo,bar]", "baz", false),
+            // Invalid ignore: empty rule list.
+            ("# zizmor: ignore[]", "", false),
+            ("# zizmor: ignore[]", "foo", false),
+            // Invalid ignore: no commas.
+            ("# zizmor: ignore[foo bar]", "foo", false),
+            // Invalid ignore: missing opening and/or closing [].
+            ("# zizmor: ignore[foo", "foo", false),
+            ("# zizmor: ignore foo", "foo", false),
+            ("# zizmor: ignore foo]", "foo", false),
+            // Invalid ignore: space after # and : is mandatory and fixed.
+            ("# zizmor:ignore[foo]", "foo", false),
+            ("#zizmor: ignore[foo]", "foo", false),
+            ("#  zizmor: ignore[foo]", "foo", false),
+            ("#  zizmor:  ignore[foo]", "foo", false),
+        ];
+
+        for (comment, rule, ignores) in cases {
+            assert_eq!(
+                Comment(comment).ignores(rule),
+                *ignores,
+                "{comment} does not ignore {rule}"
+            )
+        }
     }
 }
