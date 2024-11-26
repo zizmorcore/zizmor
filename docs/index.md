@@ -12,7 +12,8 @@
 
 :rainbow: Hello, and welcome to `zizmor`'s documentation! :rainbow:
 
-`zizmor` is a tool for finding security issues in GitHub Actions setups.
+`zizmor` is a static analysis tool for GitHub Actions. It can find
+many common security issues in typical GitHub Actions CI/CD setups.
 
 Go right to our [Installation Steps](./installation.md), and then to
 [Quickstart](./quickstart.md) or [Usage Recipes](./usage.md) to
