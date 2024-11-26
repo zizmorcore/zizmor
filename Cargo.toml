@@ -1,6 +1,6 @@
 [package]
 name = "zizmor"
-description = "A static analysis tool for GitHub Actions"
+description = "Static analysis for GitHub Actions"
 version = "0.6.0"
 edition = "2021"
 repository = "https://github.com/woodruffw/zizmor"
