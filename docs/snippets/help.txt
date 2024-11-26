@@ -1,4 +1,4 @@
-Finds security issues in GitHub Actions setups
+Static analysis for GitHub Actions
 
 Usage: zizmor [OPTIONS] <INPUTS>...
 

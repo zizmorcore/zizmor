@@ -4,7 +4,8 @@
 [![Crates.io](https://img.shields.io/crates/v/zizmor)](https://crates.io/crates/zizmor)
 [![Packaging status](https://repology.org/badge/tiny-repos/zizmor.svg)](https://repology.org/project/zizmor/versions)
 
-A tool for finding security issues in GitHub Actions CI/CD setups.
+`zizmor` is a static analysis tool for GitHub Actions. It can find
+many common security issues in typical GitHub Actions CI/CD setups.
 
 > [!IMPORTANT]
 > `zizmor` is currently in beta. You will encounter bugs; [please file them]!
