@@ -222,6 +222,48 @@ impl<'w> Step<'w> {
         Uses::from_step(uses)
     }
 
+    /// Returns the name of the shell used by this step, or `None`
+    /// if the shell can't be statically inferred.
+    ///
+    /// Invariant: panics if the step is not a `run:` step.
+    pub(crate) fn shell(&self) -> Option<&str> {
+        let StepBody::Run {
+            run: _,
+            working_directory: _,
+            shell,
+            env: _,
+        } = &self.inner.body
+        else {
+            panic!("API misuse: can't call shell() on a uses: step")
+        };
+
+        // The steps's own `shell:` takes precedence, followed by the
+        // job's default, followed by the entire workflow's default,
+        // followed by the runner's default.
+        let shell = shell
+            .as_deref()
+            .or_else(|| {
+                self.job()
+                    .defaults
+                    .as_ref()
+                    .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_deref()))
+            })
+            .or_else(|| {
+                self.workflow()
+                    .defaults
+                    .as_ref()
+                    .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_deref()))
+            })
+            .or_else(|| {
+                // If the step/job/workflow state doesn't yield a default, then
+                // the step's shell is dictated by the runner itself.
+                todo!()
+                // self.job().default_shell()
+            });
+
+        shell
+    }
+
     /// Returns a symbolic location for this [`Step`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
         self.parent.location().with_step(self)
@@ -247,7 +289,7 @@ pub(crate) struct Steps<'w> {
 impl<'w> Steps<'w> {
     /// Create a new [`Steps`].
     ///
-    /// Panics if the given [`Job`] is a reusable job, rather than a "normal" job.
+    /// Invariant: panics if the given [`Job`] is a reusable job, rather than a "normal" job.
     fn new(job: &Job<'w>) -> Self {
         // TODO: do something less silly here.
         match &job.inner {
