@@ -16,7 +16,7 @@ anyhow = "1.0.93"
 clap = { version = "4.5.21", features = ["derive", "env"] }
 clap-verbosity-flag = "3.0.0"
 env_logger = "0.11.5"
-github-actions-models = "0.10.0"
+github-actions-models = "0.11.0"
 human-panic = "2.0.1"
 indicatif = "0.17.9"
 itertools = "0.13.0"
