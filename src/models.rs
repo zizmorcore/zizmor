@@ -5,7 +5,9 @@ use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 
 use crate::finding::{Route, SymbolicLocation};
 use anyhow::{anyhow, Context, Result};
+use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
+use github_actions_models::workflow::job::RunsOn;
 use github_actions_models::workflow::{
     self,
     job::{NormalJob, StepBody},
@@ -135,6 +137,40 @@ impl<'w> Job<'w> {
     /// An iterator of this job's constituent [`Step`]s.
     pub(crate) fn steps(&self) -> Steps<'w> {
         Steps::new(self)
+    }
+
+    /// Perform feats of heroism to figure of what this job's runner's
+    /// default shell is.
+    ///
+    /// Returns `None` if the job is not a normal job, or if the runner
+    /// environment is indeterminate (e.g. controlled by an expression).
+    pub(crate) fn runner_default_shell(&self) -> Option<&'static str> {
+        let workflow::Job::NormalJob(normal) = self.inner else {
+            return None;
+        };
+
+        match &normal.runs_on {
+            // The entire runs-on is an expression, so there's nothing we can do.
+            LoE::Expr(_) => None,
+            LoE::Literal(RunsOn::Group { group: _, labels })
+            | LoE::Literal(RunsOn::Target(labels)) => {
+                for label in labels {
+                    match label.as_str() {
+                        // Default self-hosted routing labels.
+                        "linux" | "macOS" => return Some("bash"),
+                        "windows" => return Some("pwsh"),
+                        // Standard GitHub-hosted runners, e.g. `ubuntu-latest`.
+                        // We check only the prefix here so that we don't have to keep track
+                        // of every possible variation of these runners.
+                        l if l.contains("ubuntu-") || l.contains("macos") => return Some("bash"),
+                        l if l.contains("windows-") => return Some("pwsh"),
+                        _ => continue,
+                    }
+                }
+
+                None
+            }
+        }
     }
 }
 
