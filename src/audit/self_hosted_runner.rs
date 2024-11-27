@@ -12,7 +12,7 @@ use crate::{
 
 use anyhow::Result;
 use github_actions_models::{
-    common::expr::ExplicitExpr,
+    common::expr::{ExplicitExpr, LoE},
     workflow::{job::RunsOn, Job},
 };
 
@@ -53,41 +53,43 @@ impl WorkflowAudit for SelfHostedRunner {
             };
 
             match &normal.runs_on {
-                RunsOn::Target(labels) => {
-                    let Some(label) = labels.first() else {
-                        continue;
-                    };
+                LoE::Literal(RunsOn::Target(labels)) => {
+                    {
+                        let Some(label) = labels.first() else {
+                            continue;
+                        };
 
-                    if label == "self-hosted" {
-                        // All self-hosted runners start with the 'self-hosted'
-                        // label followed by any specifiers.
-                        results.push(
-                            Self::finding()
-                                .confidence(Confidence::High)
-                                .severity(Severity::Unknown)
-                                .add_location(
-                                    job.location()
-                                        .with_keys(&["runs-on".into()])
-                                        .annotated("self-hosted runner used here"),
-                                )
-                                .build(workflow)?,
-                        );
-                    } else if ExplicitExpr::from_curly(label).is_some() {
-                        // The job might also have its runner expanded via an
-                        // expression. Long-term we should perform this evaluation
-                        // to increase our confidence, but for now we flag it as
-                        // potentially expanding to self-hosted.
-                        results.push(
-                            Self::finding()
-                                .confidence(Confidence::Low)
-                                .severity(Severity::Unknown)
-                                .add_location(
-                                    job.location().with_keys(&["runs-on".into()]).annotated(
-                                        "expression may expand into a self-hosted runner",
-                                    ),
-                                )
-                                .build(workflow)?,
-                        );
+                        if label == "self-hosted" {
+                            // All self-hosted runners start with the 'self-hosted'
+                            // label followed by any specifiers.
+                            results.push(
+                                Self::finding()
+                                    .confidence(Confidence::High)
+                                    .severity(Severity::Unknown)
+                                    .add_location(
+                                        job.location()
+                                            .with_keys(&["runs-on".into()])
+                                            .annotated("self-hosted runner used here"),
+                                    )
+                                    .build(workflow)?,
+                            );
+                        } else if ExplicitExpr::from_curly(label).is_some() {
+                            // The job might also have its runner expanded via an
+                            // expression. Long-term we should perform this evaluation
+                            // to increase our confidence, but for now we flag it as
+                            // potentially expanding to self-hosted.
+                            results.push(
+                                Self::finding()
+                                    .confidence(Confidence::Low)
+                                    .severity(Severity::Unknown)
+                                    .add_location(
+                                        job.location().with_keys(&["runs-on".into()]).annotated(
+                                            "expression may expand into a self-hosted runner",
+                                        ),
+                                    )
+                                    .build(workflow)?,
+                            );
+                        }
                     }
                 }
                 // NOTE: GHA docs are unclear on whether runner groups always
@@ -95,10 +97,7 @@ impl WorkflowAudit for SelfHostedRunner {
                 // do, but I'm not sure.
                 // See: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/managing-access-to-self-hosted-runners-using-groups
                 // See: https://docs.github.com/en/actions/writing-workflows/choosing-where-your-workflow-runs/choosing-the-runner-for-a-job
-                RunsOn::Group {
-                    group: _,
-                    labels: _,
-                } => results.push(
+                LoE::Literal(RunsOn::Group { .. }) => results.push(
                     Self::finding()
                         .confidence(Confidence::Low)
                         .severity(Severity::Unknown)
@@ -106,6 +105,19 @@ impl WorkflowAudit for SelfHostedRunner {
                             job.location()
                                 .with_keys(&["runs-on".into()])
                                 .annotated("runner group implies self-hosted runner"),
+                        )
+                        .build(workflow)?,
+                ),
+                // The entire `runs-on:` is an expression, which may or may
+                // not be a self-hosted runner when expanded, like above.
+                LoE::Expr(_) => results.push(
+                    Self::finding()
+                        .confidence(Confidence::Low)
+                        .severity(Severity::Unknown)
+                        .add_location(
+                            job.location()
+                                .with_keys(&["runs-on".into()])
+                                .annotated("expression may expand into a self-hosted runner"),
                         )
                         .build(workflow)?,
                 ),
