@@ -9,19 +9,16 @@ use std::ops::Deref;
 use tree_sitter::Parser;
 
 pub(crate) struct GitHubEnv {
-    // Note : interior mutability adopted since Parser::parse requires &mut self
-    bash_script_paster: RefCell<Parser>,
+    // NOTE: interior mutability used since Parser::parse requires &mut self
+    bash_parser: RefCell<Parser>,
 }
 
 audit_meta!(GitHubEnv, "github-env", "dangerous use of GITHUB_ENV");
 
 impl GitHubEnv {
-    fn evaluate_github_environment_within_bash_script(
-        &self,
-        script_body: &str,
-    ) -> anyhow::Result<bool> {
+    fn bash_runs_has_github_env_write(&self, script_body: &str) -> anyhow::Result<bool> {
         let tree = &self
-            .bash_script_paster
+            .bash_parser
             .borrow_mut()
             .parse(script_body, None)
             .context("failed to parse bash script body")?;
@@ -53,11 +50,9 @@ impl GitHubEnv {
     }
 
     fn uses_github_environment(&self, run_step_body: &str, shell: &str) -> anyhow::Result<bool> {
-        // Note : as an upcoming refinement, we should evaluate shell interpreters
-        // other than Bash
-
+        // TODO: handle `run:` bodies other than bash.
         match shell {
-            "bash" => self.evaluate_github_environment_within_bash_script(run_step_body),
+            "bash" => self.bash_runs_has_github_env_write(run_step_body),
             &_ => {
                 log::warn!(
                     "'{}' shell not supported when evaluating usage of GITHUB_ENV",
@@ -80,7 +75,7 @@ impl WorkflowAudit for GitHubEnv {
             .set_language(&bash.into())
             .context("failed to load bash parser")?;
         Ok(Self {
-            bash_script_paster: RefCell::new(parser),
+            bash_parser: RefCell::new(parser),
         })
     }
 
@@ -149,6 +144,7 @@ mod tests {
             ("something|tee $GITHUB_ENV", true),
             ("something |tee $GITHUB_ENV", true),
             ("something| tee $GITHUB_ENV", true),
+            // negative cases (comments should not be detected)
             ("echo foo >> $OTHER_ENV # not $GITHUB_ENV", false),
             ("something | tee \"${$OTHER_ENV}\" # not $GITHUB_ENV", false),
         ] {
