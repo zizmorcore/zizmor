@@ -2,28 +2,65 @@ use super::{audit_meta, WorkflowAudit};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Step;
 use crate::state::AuditState;
+use anyhow::Context;
 use github_actions_models::workflow::job::StepBody;
-use regex::RegexSet;
+use std::cell::RefCell;
 use std::ops::Deref;
-use std::sync::LazyLock;
+use tree_sitter::Parser;
 
-static GITHUB_ENV_WRITE_SHELL: LazyLock<RegexSet> = LazyLock::new(|| {
-    RegexSet::new([
-        // matches the `... >> $GITHUB_ENV` pattern
-        r#"(?m)^.+\s*>>?\s*"?\$\{?GITHUB_ENV\}?"?.*$"#,
-        // matches the `... | tee $GITHUB_ENV` pattern
-        r#"(?m)^.*\|\s*tee\s+"?\$\{?GITHUB_ENV\}?"?.*$"#,
-    ])
-    .unwrap()
-});
-
-pub(crate) struct GitHubEnv;
+pub(crate) struct GitHubEnv {
+    // NOTE: interior mutability used since Parser::parse requires &mut self
+    bash_parser: RefCell<Parser>,
+}
 
 audit_meta!(GitHubEnv, "github-env", "dangerous use of GITHUB_ENV");
 
 impl GitHubEnv {
-    fn uses_github_environment(run_step_body: &str) -> bool {
-        GITHUB_ENV_WRITE_SHELL.is_match(run_step_body)
+    fn bash_uses_github_env(&self, script_body: &str) -> anyhow::Result<bool> {
+        let tree = &self
+            .bash_parser
+            .borrow_mut()
+            .parse(script_body, None)
+            .context("failed to parse bash script body")?;
+
+        let mut stack = vec![tree.root_node()];
+
+        while let Some(node) = stack.pop() {
+            if node.is_named() && (node.kind() == "file_redirect" || node.kind() == "pipeline") {
+                let tree_expansion = &script_body[node.start_byte()..node.end_byte()];
+                let targets_github_env = tree_expansion.contains("GITHUB_ENV");
+                let exploitable_redirects =
+                    tree_expansion.contains(">>") || tree_expansion.contains(">");
+
+                // Eventually we can detect specific commands within the expansion,
+                // like tee and others
+                let piped = tree_expansion.contains("|");
+
+                if (piped || exploitable_redirects) && targets_github_env {
+                    return Ok(true);
+                }
+            }
+
+            for child in node.named_children(&mut node.walk()) {
+                stack.push(child);
+            }
+        }
+
+        Ok(false)
+    }
+
+    fn uses_github_env(&self, run_step_body: &str, shell: &str) -> anyhow::Result<bool> {
+        // TODO: handle `run:` bodies other than bash.
+        match shell {
+            "bash" => self.bash_uses_github_env(run_step_body),
+            &_ => {
+                log::warn!(
+                    "'{}' shell not supported when evaluating usage of GITHUB_ENV",
+                    shell
+                );
+                Ok(false)
+            }
+        }
     }
 }
 
@@ -32,7 +69,14 @@ impl WorkflowAudit for GitHubEnv {
     where
         Self: Sized,
     {
-        Ok(Self)
+        let bash = tree_sitter_bash::LANGUAGE;
+        let mut parser = Parser::new();
+        parser
+            .set_language(&bash.into())
+            .context("failed to load bash parser")?;
+        Ok(Self {
+            bash_parser: RefCell::new(parser),
+        })
     }
 
     fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
@@ -47,8 +91,9 @@ impl WorkflowAudit for GitHubEnv {
             return Ok(findings);
         }
 
-        if let StepBody::Run { run, .. } = &step.deref().body {
-            if Self::uses_github_environment(run) {
+        if let StepBody::Run { run, shell, .. } = &step.deref().body {
+            let interpreter = shell.clone().unwrap_or("bash".into());
+            if self.uses_github_env(run, &interpreter)? {
                 findings.push(
                     Self::finding()
                         .severity(Severity::High)
@@ -70,35 +115,52 @@ impl WorkflowAudit for GitHubEnv {
 #[cfg(test)]
 mod tests {
     use crate::audit::github_env::GitHubEnv;
+    use crate::audit::WorkflowAudit;
+    use crate::state::{AuditState, Caches};
 
     #[test]
-    fn test_shell_patterns() {
-        for case in &[
+    fn test_exploitable_bash_patterns() {
+        for (case, expected) in &[
             // Common cases
-            "echo foo >> $GITHUB_ENV",
-            "echo foo >> \"$GITHUB_ENV\"",
-            "echo foo >> ${GITHUB_ENV}",
-            "echo foo >> \"${GITHUB_ENV}\"",
+            ("echo foo >> $GITHUB_ENV", true),
+            ("echo foo >> \"$GITHUB_ENV\"", true),
+            ("echo foo >> ${GITHUB_ENV}", true),
+            ("echo foo >> \"${GITHUB_ENV}\"", true),
             // Single > is buggy most of the time, but still exploitable
-            "echo foo > $GITHUB_ENV",
-            "echo foo > \"$GITHUB_ENV\"",
-            "echo foo > ${GITHUB_ENV}",
-            "echo foo > \"${GITHUB_ENV}\"",
+            ("echo foo > $GITHUB_ENV", true),
+            ("echo foo > \"$GITHUB_ENV\"", true),
+            ("echo foo > ${GITHUB_ENV}", true),
+            ("echo foo > \"${GITHUB_ENV}\"", true),
             // No spaces
-            "echo foo>>$GITHUB_ENV",
-            "echo foo>>\"$GITHUB_ENV\"",
-            "echo foo>>${GITHUB_ENV}",
-            "echo foo>>\"${GITHUB_ENV}\"",
+            ("echo foo>>$GITHUB_ENV", true),
+            ("echo foo>>\"$GITHUB_ENV\"", true),
+            ("echo foo>>${GITHUB_ENV}", true),
+            ("echo foo>>\"${GITHUB_ENV}\"", true),
             // tee cases
-            "something | tee $GITHUB_ENV",
-            "something | tee \"$GITHUB_ENV\"",
-            "something | tee ${GITHUB_ENV}",
-            "something | tee \"${GITHUB_ENV}\"",
-            "something|tee $GITHUB_ENV",
-            "something |tee $GITHUB_ENV",
-            "something| tee $GITHUB_ENV",
+            ("something | tee $GITHUB_ENV", true),
+            ("something | tee \"$GITHUB_ENV\"", true),
+            ("something | tee ${GITHUB_ENV}", true),
+            ("something | tee \"${GITHUB_ENV}\"", true),
+            ("something|tee $GITHUB_ENV", true),
+            ("something |tee $GITHUB_ENV", true),
+            ("something| tee $GITHUB_ENV", true),
+            // negative cases (comments should not be detected)
+            ("echo foo >> $OTHER_ENV # not $GITHUB_ENV", false),
+            ("something | tee \"${$OTHER_ENV}\" # not $GITHUB_ENV", false),
         ] {
-            assert!(GitHubEnv::uses_github_environment(case));
+            let audit_state = AuditState {
+                pedantic: false,
+                offline: false,
+                gh_token: None,
+                caches: Caches::new(),
+            };
+
+            let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
+
+            let uses_github_env = sut
+                .uses_github_env(case, "bash")
+                .expect("test case is not valid Bash");
+            assert_eq!(uses_github_env, *expected);
         }
     }
 }
