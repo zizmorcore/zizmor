@@ -21,19 +21,28 @@ impl WorkflowAudit for UnpinnedUses {
             return Ok(vec![]);
         };
 
-        if uses.unpinned() {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(Severity::Informational)
-                    .add_location(
-                        step.location()
-                            .with_keys(&["uses".into()])
-                            .annotated("action is not pinned to a tag, branch, or hash ref"),
-                    )
-                    .build(step.workflow())?,
-            );
-        }
+        let (annotation, severity) = if uses.unpinned() {
+            (
+                "action is not pinned to a tag, branch, or hash ref",
+                Severity::Medium,
+            )
+        } else if uses.unhashed() {
+            ("action is not pinned to a hash ref", Severity::Low)
+        } else {
+            return Ok(vec![]);
+        };
+
+        findings.push(
+            Self::finding()
+                .confidence(Confidence::High)
+                .severity(severity)
+                .add_location(
+                    step.location()
+                        .with_keys(&["uses".into()])
+                        .annotated(annotation),
+                )
+                .build(step.workflow())?,
+        );
 
         Ok(findings)
     }

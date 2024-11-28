@@ -8,7 +8,7 @@ jobs:
   artipacked-ignored:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4 # zizmor: ignore[artipacked]
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # zizmor: ignore[artipacked]
 
   insecure-commands-ignored:
     runs-on: ubuntu-latest
@@ -26,3 +26,8 @@ jobs:
         password: hackme # zizmor: ignore[hardcoded-container-credentials]
     steps:
       - run: echo 'This is a honeypot actually!'
+
+  unpinned-uses-ignored:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: github/codeql-action/upload-sarif # zizmor: ignore[unpinned-uses]
