@@ -67,7 +67,7 @@ fn audit_artipacked() -> anyhow::Result<()> {
     assert_value_match(
         &findings,
         "$[0].locations[0].concrete.feature",
-        "uses: actions/checkout@v4",
+        "uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
     );
 
     Ok(())
@@ -188,12 +188,12 @@ fn audit_unpinned_uses() -> anyhow::Result<()> {
 
     let execution = zizmor().args(cli_args).output()?;
 
-    assert_eq!(execution.status.code(), Some(11));
+    assert_eq!(execution.status.code(), Some(13));
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 
     assert_value_match(&findings, "$[0].determinations.confidence", "High");
-    assert_value_match(&findings, "$[0].determinations.severity", "Informational");
+    assert_value_match(&findings, "$[0].determinations.severity", "Medium");
     assert_value_match(
         &findings,
         "$[0].locations[0].concrete.feature",

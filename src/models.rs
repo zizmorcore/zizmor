@@ -511,6 +511,13 @@ impl<'a> Uses<'a> {
             Uses::Repository(repo) => repo.git_ref.is_none(),
         }
     }
+
+    pub(crate) fn unhashed(&self) -> bool {
+        match self {
+            Uses::Docker(docker) => docker.hash.is_some(),
+            Uses::Repository(repo) => !repo.ref_is_commit(),
+        }
+    }
 }
 
 #[cfg(test)]

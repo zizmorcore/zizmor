@@ -10,6 +10,6 @@ jobs:
       id-token: write
     steps:
       - name: vulnerable-2
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
         with:
           password: ${{ secrets.PYPI_TOKEN }}
