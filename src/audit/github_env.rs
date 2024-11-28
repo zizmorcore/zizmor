@@ -16,7 +16,7 @@ pub(crate) struct GitHubEnv {
 audit_meta!(GitHubEnv, "github-env", "dangerous use of GITHUB_ENV");
 
 impl GitHubEnv {
-    fn bash_runs_has_github_env_write(&self, script_body: &str) -> anyhow::Result<bool> {
+    fn bash_uses_github_env(&self, script_body: &str) -> anyhow::Result<bool> {
         let tree = &self
             .bash_parser
             .borrow_mut()
@@ -49,10 +49,10 @@ impl GitHubEnv {
         Ok(false)
     }
 
-    fn uses_github_environment(&self, run_step_body: &str, shell: &str) -> anyhow::Result<bool> {
+    fn uses_github_env(&self, run_step_body: &str, shell: &str) -> anyhow::Result<bool> {
         // TODO: handle `run:` bodies other than bash.
         match shell {
-            "bash" => self.bash_runs_has_github_env_write(run_step_body),
+            "bash" => self.bash_uses_github_env(run_step_body),
             &_ => {
                 log::warn!(
                     "'{}' shell not supported when evaluating usage of GITHUB_ENV",
@@ -93,7 +93,7 @@ impl WorkflowAudit for GitHubEnv {
 
         if let StepBody::Run { run, shell, .. } = &step.deref().body {
             let interpreter = shell.clone().unwrap_or("bash".into());
-            if self.uses_github_environment(run, &interpreter)? {
+            if self.uses_github_env(run, &interpreter)? {
                 findings.push(
                     Self::finding()
                         .severity(Severity::High)
@@ -158,7 +158,7 @@ mod tests {
             let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
 
             let uses_github_env = sut
-                .uses_github_environment(case, "bash")
+                .uses_github_env(case, "bash")
                 .expect("test case is not valid Bash");
             assert_eq!(uses_github_env, *expected);
         }
