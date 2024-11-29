@@ -21,7 +21,7 @@ impl GitHubEnv {
             .bash_parser
             .borrow_mut()
             .parse(script_body, None)
-            .context("failed to parse bash script body")?;
+            .context("failed to parse `run:` body as bash")?;
 
         let mut stack = vec![tree.root_node()];
 
@@ -52,9 +52,9 @@ impl GitHubEnv {
     }
 
     fn uses_github_env(&self, run_step_body: &str, shell: &str) -> anyhow::Result<bool> {
-        // TODO: handle `run:` bodies other than bash.
+        // TODO: handle `run:` bodies other than bash/sh.
         match shell {
-            "bash" => self.bash_uses_github_env(run_step_body),
+            "bash" | "sh" => self.bash_uses_github_env(run_step_body),
             &_ => {
                 log::warn!(
                     "'{}' shell not supported when evaluating usage of GITHUB_ENV",
@@ -101,6 +101,11 @@ impl WorkflowAudit for GitHubEnv {
                     job = step.parent.id,
                     stepno = step.index
                 );
+
+                // If we can't infer a shell for this `run:`, assume that it's
+                // bash. This won't be correct on self-hosted Windows runners
+                // that don't use the default routing labels, but there's
+                // nothing we can do about that.
                 "bash"
             });
             if self.uses_github_env(run, shell)? {
