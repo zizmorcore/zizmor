@@ -26,6 +26,8 @@ impl GitHubEnv {
         let mut stack = vec![tree.root_node()];
 
         while let Some(node) = stack.pop() {
+            // TODO: This can be refined by checking the interior nodes to ensure
+            // that the GITHUB_ENV is on the RHS.
             if node.is_named() && (node.kind() == "file_redirect" || node.kind() == "pipeline") {
                 let tree_expansion = &script_body[node.start_byte()..node.end_byte()];
                 let targets_github_env = tree_expansion.contains("GITHUB_ENV");
