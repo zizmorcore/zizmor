@@ -144,6 +144,8 @@ mod tests {
             ("echo foo>>\"$GITHUB_ENV\"", true),
             ("echo foo>>${GITHUB_ENV}", true),
             ("echo foo>>\"${GITHUB_ENV}\"", true),
+            // Continuations over newlines are OK
+            ("echo foo >> \\\n $GITHUB_ENV", true),
             // tee cases
             ("something | tee $GITHUB_ENV", true),
             ("something | tee \"$GITHUB_ENV\"", true),
