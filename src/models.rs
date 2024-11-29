@@ -213,7 +213,7 @@ pub(crate) struct Step<'w> {
     /// The inner step model.
     inner: &'w workflow::job::Step,
     /// The parent [`Job`].
-    parent: Job<'w>,
+    pub(crate) parent: Job<'w>,
 }
 
 impl<'w> Deref for Step<'w> {
@@ -290,12 +290,7 @@ impl<'w> Step<'w> {
                     .as_ref()
                     .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_deref()))
             })
-            .or_else(|| {
-                // If the step/job/workflow state doesn't yield a default, then
-                // the step's shell is dictated by the runner itself.
-                todo!()
-                // self.job().default_shell()
-            });
+            .or_else(|| self.parent.runner_default_shell());
 
         shell
     }

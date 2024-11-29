@@ -91,9 +91,17 @@ impl WorkflowAudit for GitHubEnv {
             return Ok(findings);
         }
 
-        if let StepBody::Run { run, shell, .. } = &step.deref().body {
-            let interpreter = shell.clone().unwrap_or("bash".into());
-            if self.uses_github_env(run, &interpreter)? {
+        if let StepBody::Run { run, .. } = &step.deref().body {
+            let shell = step.shell().unwrap_or_else(|| {
+                log::warn!(
+                    "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}",
+                    workflow = step.workflow().filename(),
+                    job = step.parent.id,
+                    stepno = step.index
+                );
+                "bash"
+            });
+            if self.uses_github_env(run, &shell)? {
                 findings.push(
                     Self::finding()
                         .severity(Severity::High)
