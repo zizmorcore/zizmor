@@ -5,7 +5,9 @@ use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
 
 use crate::finding::{Route, SymbolicLocation};
 use anyhow::{anyhow, Context, Result};
+use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
+use github_actions_models::workflow::job::RunsOn;
 use github_actions_models::workflow::{
     self,
     job::{NormalJob, StepBody},
@@ -136,6 +138,40 @@ impl<'w> Job<'w> {
     pub(crate) fn steps(&self) -> Steps<'w> {
         Steps::new(self)
     }
+
+    /// Perform feats of heroism to figure of what this job's runner's
+    /// default shell is.
+    ///
+    /// Returns `None` if the job is not a normal job, or if the runner
+    /// environment is indeterminate (e.g. controlled by an expression).
+    pub(crate) fn runner_default_shell(&self) -> Option<&'static str> {
+        let workflow::Job::NormalJob(normal) = self.inner else {
+            return None;
+        };
+
+        match &normal.runs_on {
+            // The entire runs-on is an expression, so there's nothing we can do.
+            LoE::Expr(_) => None,
+            LoE::Literal(RunsOn::Group { group: _, labels })
+            | LoE::Literal(RunsOn::Target(labels)) => {
+                for label in labels {
+                    match label.as_str() {
+                        // Default self-hosted routing labels.
+                        "linux" | "macOS" => return Some("bash"),
+                        "windows" => return Some("pwsh"),
+                        // Standard GitHub-hosted runners, e.g. `ubuntu-latest`.
+                        // We check only the prefix here so that we don't have to keep track
+                        // of every possible variation of these runners.
+                        l if l.contains("ubuntu-") || l.contains("macos") => return Some("bash"),
+                        l if l.contains("windows-") => return Some("pwsh"),
+                        _ => continue,
+                    }
+                }
+
+                None
+            }
+        }
+    }
 }
 
 /// An iterable container for jobs within a [`Workflow`].
@@ -177,7 +213,7 @@ pub(crate) struct Step<'w> {
     /// The inner step model.
     inner: &'w workflow::job::Step,
     /// The parent [`Job`].
-    parent: Job<'w>,
+    pub(crate) parent: Job<'w>,
 }
 
 impl<'w> Deref for Step<'w> {
@@ -222,6 +258,43 @@ impl<'w> Step<'w> {
         Uses::from_step(uses)
     }
 
+    /// Returns the name of the shell used by this step, or `None`
+    /// if the shell can't be statically inferred.
+    ///
+    /// Invariant: panics if the step is not a `run:` step.
+    pub(crate) fn shell(&self) -> Option<&str> {
+        let StepBody::Run {
+            run: _,
+            working_directory: _,
+            shell,
+            env: _,
+        } = &self.inner.body
+        else {
+            panic!("API misuse: can't call shell() on a uses: step")
+        };
+
+        // The steps's own `shell:` takes precedence, followed by the
+        // job's default, followed by the entire workflow's default,
+        // followed by the runner's default.
+        let shell = shell
+            .as_deref()
+            .or_else(|| {
+                self.job()
+                    .defaults
+                    .as_ref()
+                    .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_deref()))
+            })
+            .or_else(|| {
+                self.workflow()
+                    .defaults
+                    .as_ref()
+                    .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_deref()))
+            })
+            .or_else(|| self.parent.runner_default_shell());
+
+        shell
+    }
+
     /// Returns a symbolic location for this [`Step`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
         self.parent.location().with_step(self)
@@ -247,7 +320,7 @@ pub(crate) struct Steps<'w> {
 impl<'w> Steps<'w> {
     /// Create a new [`Steps`].
     ///
-    /// Panics if the given [`Job`] is a reusable job, rather than a "normal" job.
+    /// Invariant: panics if the given [`Job`] is a reusable job, rather than a "normal" job.
     fn new(job: &Job<'w>) -> Self {
         // TODO: do something less silly here.
         match &job.inner {

@@ -26,6 +26,8 @@ impl GitHubEnv {
         let mut stack = vec![tree.root_node()];
 
         while let Some(node) = stack.pop() {
+            // TODO: This can be refined by checking the interior nodes to ensure
+            // that the GITHUB_ENV is on the RHS.
             if node.is_named() && (node.kind() == "file_redirect" || node.kind() == "pipeline") {
                 let tree_expansion = &script_body[node.start_byte()..node.end_byte()];
                 let targets_github_env = tree_expansion.contains("GITHUB_ENV");
@@ -91,9 +93,17 @@ impl WorkflowAudit for GitHubEnv {
             return Ok(findings);
         }
 
-        if let StepBody::Run { run, shell, .. } = &step.deref().body {
-            let interpreter = shell.clone().unwrap_or("bash".into());
-            if self.uses_github_env(run, &interpreter)? {
+        if let StepBody::Run { run, .. } = &step.deref().body {
+            let shell = step.shell().unwrap_or_else(|| {
+                log::warn!(
+                    "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}",
+                    workflow = step.workflow().filename(),
+                    job = step.parent.id,
+                    stepno = step.index
+                );
+                "bash"
+            });
+            if self.uses_github_env(run, shell)? {
                 findings.push(
                     Self::finding()
                         .severity(Severity::High)
@@ -136,6 +146,8 @@ mod tests {
             ("echo foo>>\"$GITHUB_ENV\"", true),
             ("echo foo>>${GITHUB_ENV}", true),
             ("echo foo>>\"${GITHUB_ENV}\"", true),
+            // Continuations over newlines are OK
+            ("echo foo >> \\\n $GITHUB_ENV", true),
             // tee cases
             ("something | tee $GITHUB_ENV", true),
             ("something | tee \"$GITHUB_ENV\"", true),
