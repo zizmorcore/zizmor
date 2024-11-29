@@ -4,9 +4,14 @@ use crate::models::Step;
 use crate::state::AuditState;
 use anyhow::Context;
 use github_actions_models::workflow::job::StepBody;
+use regex::Regex;
 use std::cell::RefCell;
 use std::ops::Deref;
+use std::sync::LazyLock;
 use tree_sitter::Parser;
+
+static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?mi)^.+\s*>>?\s*"?%GITHUB_ENV%"?.*$"#).unwrap());
 
 pub(crate) struct GitHubEnv {
     // NOTE: interior mutability used since Parser::parse requires &mut self
@@ -52,9 +57,10 @@ impl GitHubEnv {
     }
 
     fn uses_github_env(&self, run_step_body: &str, shell: &str) -> anyhow::Result<bool> {
-        // TODO: handle `run:` bodies other than bash/sh.
         match shell {
             "bash" | "sh" => self.bash_uses_github_env(run_step_body),
+            "cmd" => Ok(GITHUB_ENV_WRITE_CMD.is_match(run_step_body)),
+            // TODO: handle pwsh/powershell/python.
             &_ => {
                 log::warn!(
                     "'{}' shell not supported when evaluating usage of GITHUB_ENV",
@@ -129,7 +135,7 @@ impl WorkflowAudit for GitHubEnv {
 
 #[cfg(test)]
 mod tests {
-    use crate::audit::github_env::GitHubEnv;
+    use crate::audit::github_env::{GitHubEnv, GITHUB_ENV_WRITE_CMD};
     use crate::audit::WorkflowAudit;
     use crate::state::{AuditState, Caches};
 
@@ -178,6 +184,24 @@ mod tests {
                 .uses_github_env(case, "bash")
                 .expect("test case is not valid Bash");
             assert_eq!(uses_github_env, *expected);
+        }
+    }
+
+    #[test]
+    fn test_exploitable_cmd_patterns() {
+        for (case, expected) in &[
+            // Common cases
+            ("echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%", true),
+            ("echo LIBRARY=%LIBRARY%>> %GITHUB_ENV%", true),
+            ("echo LIBRARY=%LIBRARY% >> %GITHUB_ENV%", true),
+            ("echo LIBRARY=%LIBRARY% >> \"%GITHUB_ENV%\"", true),
+            ("echo>>\"%GITHUB_ENV%\" %%a=%%b", true),
+            (
+                "echo SERVER=${{ secrets.SQL19SERVER }}>> %GITHUB_ENV%",
+                true,
+            ),
+        ] {
+            assert_eq!(GITHUB_ENV_WRITE_CMD.is_match(case), *expected);
         }
     }
 }
