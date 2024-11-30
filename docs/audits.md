@@ -544,8 +544,9 @@ GitHub Actions will use the latest commit on the referenced repository
 This can represent a (small) security risk, as it leaves the calling workflow
 at the mercy of the callee action's default branch.
 
-`uses:` clauses with no pin are flagged as *Medium* severity. `uses:` clauses
-with a branch or tag pin are flagged as *Low* severity.
+When used with `--pedantic`, this audit will also flag pinned-but-unhashed
+`uses:`. For example, `actions/checkout@v4` will not be flagged by default,
+but would be flagged with `--pedantic`.
 
 ### Remediation
 
