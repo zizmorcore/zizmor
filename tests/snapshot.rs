@@ -4,58 +4,96 @@ use common::workflow_under_test;
 
 mod common;
 
-fn zizmor(workflow: Option<&str>, args: &[&str], stderr: bool) -> Result<String> {
-    let mut cmd = Command::cargo_bin("zizmor")?;
-    // All tests are currently offline.
-    cmd.args(["--offline"]);
-    cmd.args(args);
+#[allow(dead_code)]
+pub(crate) enum OutputMode {
+    Stdout,
+    Stderr,
+    Both,
+}
 
-    if let Some(workflow) = workflow {
-        cmd.arg(workflow);
+pub(crate) struct Zizmor {
+    workflow: Option<String>,
+    args: Vec<String>,
+    output: OutputMode,
+}
+
+impl Zizmor {
+    fn new() -> Self {
+        Self {
+            workflow: None,
+            args: vec!["--offline".into()],
+            output: OutputMode::Stdout,
+        }
     }
 
-    let output = cmd.output()?;
-    let mut raw = if stderr {
-        String::from_utf8(output.stderr)?
-    } else {
-        String::from_utf8(output.stdout)?
-    };
+    fn args<'a>(mut self, args: impl IntoIterator<Item = &'a str>) -> Self {
+        self.args.extend(args.into_iter().map(Into::into));
 
-    // Normalize/replace any workflow paths to make them
-    // reproducible across different machines.
-    if let Some(workflow) = workflow {
-        raw = raw.replace(workflow, "@@INPUT@@");
+        self
     }
 
-    Ok(raw)
+    fn workflow(mut self, workflow: impl Into<String>) -> Self {
+        let workflow = workflow.into();
+        self.args.push(workflow.clone());
+        self.workflow = Some(workflow);
+
+        self
+    }
+
+    #[allow(dead_code)]
+    fn output(mut self, output: OutputMode) -> Self {
+        self.output = output;
+        self
+    }
+
+    fn run(self) -> Result<String> {
+        let mut cmd = Command::cargo_bin("zizmor")?;
+        cmd.args(self.args);
+
+        let output = cmd.output()?;
+
+        let mut raw = String::from_utf8(match self.output {
+            OutputMode::Stdout => output.stdout,
+            OutputMode::Stderr => output.stderr,
+            OutputMode::Both => vec![output.stdout, output.stderr].concat(),
+        })?;
+
+        if let Some(workflow) = self.workflow {
+            raw = raw.replace(&workflow, "@@INPUT@@");
+        }
+
+        Ok(raw)
+    }
+}
+
+pub(crate) fn zizmor() -> Zizmor {
+    Zizmor::new()
 }
 
 #[test]
 fn self_hosted() -> Result<()> {
-    insta::assert_snapshot!(zizmor(
-        Some(&workflow_under_test("self-hosted.yml")),
-        &["--pedantic"],
-        false
-    )?);
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("self-hosted.yml"))
+        .args(["--pedantic"])
+        .run()?);
 
-    Ok(insta::assert_snapshot!(zizmor(
-        Some(&workflow_under_test("self-hosted.yml")),
-        &[],
-        false
-    )?))
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("self-hosted.yml"))
+        .run()?);
+
+    Ok(())
 }
 
 #[test]
 fn unpinned_uses() -> Result<()> {
-    insta::assert_snapshot!(zizmor(
-        Some(&workflow_under_test("unpinned-uses.yml")),
-        &["--pedantic"],
-        false
-    )?);
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("unpinned-uses.yml"))
+        .args(["--pedantic"])
+        .run()?);
 
-    Ok(insta::assert_snapshot!(zizmor(
-        Some(&workflow_under_test("unpinned-uses.yml")),
-        &[],
-        false
-    )?))
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("unpinned-uses.yml"))
+        .run()?);
+
+    Ok(())
 }
