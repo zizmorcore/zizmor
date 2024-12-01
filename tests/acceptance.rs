@@ -1,7 +1,9 @@
 use assert_cmd::Command;
+use common::workflow_under_test;
 use serde_json::Value;
 use serde_json_path::JsonPath;
-use std::env::current_dir;
+
+mod common;
 
 // Acceptance tests for zizmor, on top of Json output
 // For now we don't cover tests that depends on Github API under the hood
@@ -11,17 +13,6 @@ fn zizmor() -> Command {
     // All tests are currently offline, and we always need JSON output.
     cmd.args(["--offline", "--format", "json"]);
     cmd
-}
-
-fn workflow_under_test(name: &str) -> String {
-    let current_dir = current_dir().expect("Cannot figure out current directory");
-
-    let file_path = current_dir.join("tests").join("test-data").join(name);
-
-    file_path
-        .to_str()
-        .expect("Cannot create string reference for file path")
-        .to_string()
 }
 
 fn assert_value_match(json: &Value, path_pattern: &str, value: &str) {
