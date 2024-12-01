@@ -62,7 +62,7 @@ cargo doc
 cargo doc --open
 ```
 
-### Linting
+## Formatting and linting
 
 `zizmor` is linted with `cargo clippy` and auto-formatted with `cargo fmt`.
 Our CI enforces both, but you should also run them locally to minimize
@@ -73,20 +73,69 @@ cargo fmt
 cargo clippy --fix
 ```
 
-### Testing
+## Testing
 
-`zizmor` uses `cargo test`:
+`zizmor` has both unit and integration tests, and uses `cargo test` to
+orchestrate both of them.
 
 ```bash
+# run only unit tests
+cargo test --bins
+
+# run specific integration tests
+cargo test --test acceptance
+cargo test --test snapshot
+
+# run all of the tests
 cargo test
 ```
+
+### Writing snapshot tests
+
+`zizmor` uses @mitsuhiko/insta for snapshot testing.
+
+The easiest way to use `insta` is to install `cargo-insta`:
+
+```bash
+cargo install --locked cargo-insta
+```
+
+Snapshot tests are useful for a handful of scenarios:
+
+1. For cases when normal acceptance integration tests are too tedious to write;
+1. For regression detection with specific user-submitted workflows;
+1. For testing `zizmor`'s exact output/behavior on error scenarios.
+
+To add a new snapshot test, edit `tests/snapshot.rs` and add (or modify)
+an appropriate test function. You can use the existing ones for reference.
+
+When a new snapshot test is added, `cargo test` will run it and then fail,
+since the new snapshot has not yet been *accepted*. The easiest way to
+accept the new snapshot (or accept changes to other snapshot tests)
+is to use `cargo insta`, as installed above:
+
+```bash
+# run all the tests, generating new snapshots as necessary
+cargo insta test
+
+# review the new snapshots generated above
+cargo insta review
+```
+
+or, as a shortcut:
+
+```bash
+cargo insta test --review
+```
+
+See [insta's documentation] for more details.
 
 ## Building the website
 
 `zizmor`'s website is built with [MkDocs](https://www.mkdocs.org/), which
 means you'll need a Python runtime to develop against it locally.
 
-The easiest way to do this is to use [`uv`](https://github.com/astral-sh/uv),
+The easiest way to do this is to use @astral-sh/uv,
 which is what `zizmor`'s own CI uses. See
 [the `uv` docs](https://docs.astral.sh/uv/getting-started/installation/) for
 installation instructions.
@@ -205,3 +254,5 @@ make snippets
 [clap]: https://docs.rs/clap/latest/clap/index.html
 
 [clap-derive]: https://docs.rs/clap/latest/clap/_derive/index.html
+
+[insta's documentation]: https://insta.rs/docs/

@@ -44,3 +44,18 @@ fn self_hosted() -> Result<()> {
         false
     )?))
 }
+
+#[test]
+fn unpinned_uses() -> Result<()> {
+    insta::assert_snapshot!(zizmor(
+        Some(&workflow_under_test("unpinned-uses.yml")),
+        &["--pedantic"],
+        false
+    )?);
+
+    Ok(insta::assert_snapshot!(zizmor(
+        Some(&workflow_under_test("unpinned-uses.yml")),
+        &[],
+        false
+    )?))
+}

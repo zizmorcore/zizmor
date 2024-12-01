@@ -1,0 +1,46 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor(Some(&workflow_under_test(\"unpinned-uses.yml\")), &[\"--pedantic\"],\nfalse)?"
+snapshot_kind: text
+---
+warning[unpinned-uses]: unpinned action reference
+ --> @@INPUT@@:9:9
+  |
+9 |       - uses: actions/checkout
+  |         ---------------------- action is not pinned to a tag, branch, or hash ref
+  |
+  = note: audit confidence → High
+
+help[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:14:9
+   |
+14 |       - uses: actions/checkout@v3
+   |         ------------------------- help: action is not pinned to a hash ref
+   |
+   = note: audit confidence → High
+
+warning[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:19:9
+   |
+19 |       - uses: github/codeql-action/upload-sarif
+   |         --------------------------------------- action is not pinned to a tag, branch, or hash ref
+   |
+   = note: audit confidence → High
+
+warning[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:22:9
+   |
+22 |       - uses: docker://ubuntu
+   |         --------------------- action is not pinned to a tag, branch, or hash ref
+   |
+   = note: audit confidence → High
+
+warning[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:28:9
+   |
+28 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
+   |         -------------------------------------------------- action is not pinned to a tag, branch, or hash ref
+   |
+   = note: audit confidence → High
+
+5 findings: 0 unknown, 0 informational, 1 low, 4 medium, 0 high
