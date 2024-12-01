@@ -1,0 +1,6 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor(&workflow_under_test(\"self-hosted.yml\"), &[], false)?"
+snapshot_kind: text
+---
+No findings to report. Good job!
