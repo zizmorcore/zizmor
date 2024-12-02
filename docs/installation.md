@@ -4,30 +4,52 @@ description: Installation instructions for zizmor.
 
 # Installation
 
-## From crates.io
+## From package managers
 
-You can install `zizmor` from <https://crates.io> with `cargo`:
+`zizmor` is available within several packaging ecosystems.
 
-```bash
-cargo install zizmor
-```
+=== "crates.io"
 
-## From Homebrew
+    You can install `zizmor` from <https://crates.io> with `cargo`:
 
-`zizmor` is provided by [Homebrew](https://brew.sh/) as well:
+    ```bash
+    cargo install zizmor
+    ```
 
-```bash
-brew install zizmor
-```
+=== "Homebrew"
 
-## Other package managers
+    `zizmor` is provided by [Homebrew](https://brew.sh/):
 
-!!! info
+    ```bash
+    brew install zizmor
+    ```
 
-    Are you interested in packaging `zizmor` for another ecosystem?
-    Let us know by [filing an issue](https://github.com/woodruffw/zizmor/issues/new)!
+=== "Nix"
 
-[![Packaging status](https://repology.org/badge/vertical-allrepos/zizmor.svg)](https://repology.org/project/zizmor/versions)
+    !!! note
+
+        This is a community-maintained package.
+
+    ```bash
+    # without flakes
+    nix-env -iA nixos.zizmor
+
+    # with flakes
+    nix profile install nixpkgs#zizmor
+    ```
+
+=== "Other ecosystems"
+
+    !!! info
+
+        Are you interested in packaging `zizmor` for another ecosystem?
+        Let us know by [filing an issue](https://github.com/woodruffw/zizmor/issues/new)!
+
+    The badge below tracks `zizmor`'s overall packaging status.
+
+    [![Packaging status](https://repology.org/badge/vertical-allrepos/zizmor.svg)](https://repology.org/project/zizmor/versions)
+
+
 
 ## From source
 
