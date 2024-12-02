@@ -366,7 +366,7 @@ pub(crate) struct RepositoryUses<'a> {
     pub(crate) git_ref: Option<&'a str>,
 }
 
-impl<'a> RepositoryUses<'a> {
+impl RepositoryUses<'_> {
     pub(crate) fn ref_is_commit(&self) -> bool {
         match self.git_ref {
             Some(git_ref) => git_ref.len() == 40 && git_ref.chars().all(|c| c.is_ascii_hexdigit()),
@@ -484,7 +484,7 @@ impl<'a> Uses<'a> {
     ///
     /// Returns only the [`RepositoryUses`] variant since Docker actions
     /// can't be used in reusable workflows.
-    pub(crate) fn from_reusable(uses: &'a str) -> Option<RepositoryUses> {
+    pub(crate) fn from_reusable(uses: &'a str) -> Option<RepositoryUses<'a>> {
         match Self::from_common(uses) {
             // Reusable workflows don't support Docker actions.
             Some(Uses::Docker(DockerUses { .. })) => None,

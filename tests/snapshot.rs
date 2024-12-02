@@ -55,7 +55,7 @@ impl Zizmor {
         let mut raw = String::from_utf8(match self.output {
             OutputMode::Stdout => output.stdout,
             OutputMode::Stderr => output.stderr,
-            OutputMode::Both => vec![output.stdout, output.stderr].concat(),
+            OutputMode::Both => [output.stdout, output.stderr].concat(),
         })?;
 
         if let Some(workflow) = self.workflow {

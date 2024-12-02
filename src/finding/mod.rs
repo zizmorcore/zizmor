@@ -61,7 +61,7 @@ pub(crate) enum RouteComponent<'w> {
     Index(usize),
 }
 
-impl<'w> From<usize> for RouteComponent<'w> {
+impl From<usize> for RouteComponent<'_> {
     fn from(value: usize) -> Self {
         Self::Index(value)
     }
@@ -195,7 +195,7 @@ static IGNORE_EXPR: LazyLock<Regex> =
 #[serde(transparent)]
 pub(crate) struct Comment<'w>(&'w str);
 
-impl<'w> Comment<'w> {
+impl Comment<'_> {
     fn ignores(&self, rule_id: &str) -> bool {
         // Extracts foo,bar from `# zizmor: ignore[foo,bar]`
         let Some(caps) = IGNORE_EXPR.captures(self.0) else {
