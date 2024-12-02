@@ -5,8 +5,11 @@ version = "0.6.0"
 edition = "2021"
 repository = "https://github.com/woodruffw/zizmor"
 homepage = "https://github.com/woodruffw/zizmor"
+documentation = "https://woodruffw.github.io/zizmor/"
 authors = ["William Woodruff <william@yossarian.net>"]
 license = "MIT"
+keywords = ["cli", "github-actions", "static-analysis", "security"]
+categories = ["command-line-utilities"]
 rust-version = "1.80.1"
 
 [dependencies]
