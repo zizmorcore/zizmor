@@ -20,19 +20,19 @@ pub(crate) mod locate;
     Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, ValueEnum,
 )]
 pub(crate) enum Persona {
-    /// The "auditor" persona.
+    /// The "auditor" persona (false positives OK).
     ///
     /// This persona wants all results, including results that are likely
     /// to be false positives.
     Auditor,
 
-    /// The "pedantic" persona.
+    /// The "pedantic" persona (code smells OK).
     ///
     /// This persona wants findings that may or may not be problems,
     /// but are potential "code smells".
     Pedantic,
 
-    /// The "regular" persona.
+    /// The "regular" persona (minimal false positives).
     ///
     /// This persona wants actionable findings, and is sensitive to
     /// false positives.

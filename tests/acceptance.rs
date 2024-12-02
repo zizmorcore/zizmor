@@ -152,8 +152,8 @@ fn audit_use_trusted_publishing() -> anyhow::Result<()> {
 fn audit_self_hosted() -> anyhow::Result<()> {
     let auditable = workflow_under_test("self-hosted.yml");
 
-    // Note : self-hosted audit is pedantic
-    let cli_args = ["--pedantic", &auditable];
+    // Note: self-hosted audit is auditor-only
+    let cli_args = ["--persona=auditor", &auditable];
 
     let execution = zizmor().args(cli_args).output()?;
 

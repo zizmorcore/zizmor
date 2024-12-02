@@ -9,14 +9,12 @@ use itertools::Itertools;
 
 use super::{audit_meta, WorkflowAudit};
 use crate::{
-    finding::{Confidence, Finding, Severity},
+    finding::{Confidence, Finding, Persona, Severity},
     state::AuditState,
 };
 use crate::{models::Workflow, utils::split_patterns};
 
-pub(crate) struct Artipacked {
-    pub(crate) state: AuditState,
-}
+pub(crate) struct Artipacked;
 
 audit_meta!(
     Artipacked,
@@ -47,8 +45,8 @@ impl Artipacked {
 }
 
 impl WorkflowAudit for Artipacked {
-    fn new(state: AuditState) -> Result<Self> {
-        Ok(Self { state })
+    fn new(_state: AuditState) -> Result<Self> {
+        Ok(Self)
     }
 
     fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
@@ -76,15 +74,11 @@ impl WorkflowAudit for Artipacked {
                         Some(EnvValue::Boolean(true)) => {
                             // If a user explicitly sets `persist-credentials: true`,
                             // they probably mean it. Only report if being pedantic.
-                            if self.state.pedantic {
-                                vulnerable_checkouts.push(step)
-                            } else {
-                                continue;
-                            }
+                            vulnerable_checkouts.push((step, Persona::Pedantic))
                         }
                         // TODO: handle expressions and literal strings here.
                         // persist-credentials is true by default.
-                        _ => vulnerable_checkouts.push(step),
+                        _ => vulnerable_checkouts.push((step, Persona::default())),
                     }
                 } else if uses.starts_with("actions/upload-artifact") {
                     let Some(EnvValue::String(path)) = with.get("path") else {
@@ -102,11 +96,12 @@ impl WorkflowAudit for Artipacked {
             if vulnerable_uploads.is_empty() {
                 // If we have no vulnerable uploads, then emit lower-confidence
                 // findings for just the checkout steps.
-                for checkout in vulnerable_checkouts {
+                for (checkout, persona) in vulnerable_checkouts {
                     findings.push(
                         Self::finding()
                             .severity(Severity::Medium)
                             .confidence(Confidence::Low)
+                            .persona(persona)
                             .add_location(
                                 checkout
                                     .location()
@@ -119,7 +114,7 @@ impl WorkflowAudit for Artipacked {
                 // Select only pairs where the vulnerable checkout precedes the
                 // vulnerable upload. There are more efficient ways to do this than
                 // a cartesian product, but this way is simple.
-                for (checkout, upload) in vulnerable_checkouts
+                for ((checkout, persona), upload) in vulnerable_checkouts
                     .into_iter()
                     .cartesian_product(vulnerable_uploads.into_iter())
                 {
@@ -128,6 +123,7 @@ impl WorkflowAudit for Artipacked {
                             Self::finding()
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
+                                .persona(persona)
                                 .add_location(
                                     checkout
                                         .location()

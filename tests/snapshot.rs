@@ -74,7 +74,7 @@ pub(crate) fn zizmor() -> Zizmor {
 fn self_hosted() -> Result<()> {
     insta::assert_snapshot!(zizmor()
         .workflow(workflow_under_test("self-hosted.yml"))
-        .args(["--pedantic"])
+        .args(["--persona=auditor"])
         .run()?);
 
     insta::assert_snapshot!(zizmor()

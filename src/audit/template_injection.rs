@@ -20,14 +20,12 @@ use github_actions_models::{
 use super::{audit_meta, WorkflowAudit};
 use crate::{
     expr::{BinOp, Expr, UnOp},
-    finding::{Confidence, Severity},
+    finding::{Confidence, Persona, Severity},
     state::AuditState,
     utils::extract_expressions,
 };
 
-pub(crate) struct TemplateInjection {
-    pub(crate) state: AuditState,
-}
+pub(crate) struct TemplateInjection;
 
 audit_meta!(
     TemplateInjection,
@@ -165,22 +163,27 @@ impl TemplateInjection {
         &self,
         run: &str,
         job: &NormalJob,
-    ) -> Vec<(String, Severity, Confidence)> {
+    ) -> Vec<(String, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
         for expr in extract_expressions(run) {
-            let Ok(expr) = Expr::parse(expr.as_bare()) else {
+            let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 log::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
 
-            // Filter "safe" expressions (ones that might expand to code,
-            // but not arbitrary code) by default, unless we're operating
-            // in pedantic mode.
-            if Self::expr_is_safe(&expr) && !self.state.pedantic {
+            if Self::expr_is_safe(&parsed) {
+                // Emit a pedantic finding for all expressions, since
+                // all template injections are code smells, even if unexploitable.
+                bad_expressions.push((
+                    expr.as_raw().into(),
+                    Severity::Unknown,
+                    Confidence::Unknown,
+                    Persona::Pedantic,
+                ));
                 continue;
             }
 
-            for context in expr.contexts() {
+            for context in parsed.contexts() {
                 if context.starts_with("secrets.") {
                     // While not ideal, secret expansion is typically not exploitable.
                     continue;
@@ -191,14 +194,29 @@ impl TemplateInjection {
                     // input's type. In the future, we should index back into
                     // the workflow's triggers and exclude input expansions
                     // from innocuous types, e.g. booleans.
-                    bad_expressions.push((context.into(), Severity::High, Confidence::Low));
+                    bad_expressions.push((
+                        context.into(),
+                        Severity::High,
+                        Confidence::Low,
+                        Persona::default(),
+                    ));
                 } else if context.starts_with("env.") {
                     // Almost never exploitable.
-                    bad_expressions.push((context.into(), Severity::Low, Confidence::High));
+                    bad_expressions.push((
+                        context.into(),
+                        Severity::Low,
+                        Confidence::High,
+                        Persona::default(),
+                    ));
                 } else if context.starts_with("github.event.") || context == "github.ref_name" {
                     // TODO: Filter these more finely; not everything in the event
                     // context is actually attacker-controllable.
-                    bad_expressions.push((context.into(), Severity::High, Confidence::High));
+                    bad_expressions.push((
+                        context.into(),
+                        Severity::High,
+                        Confidence::High,
+                        Persona::default(),
+                    ));
                 } else if context.starts_with("matrix.") || context == "matrix" {
                     if let Some(Strategy { matrix, .. }) = &job.strategy {
                         let matrix_is_static = match matrix {
@@ -218,6 +236,7 @@ impl TemplateInjection {
                                 context.into(),
                                 Severity::Medium,
                                 Confidence::Medium,
+                                Persona::default(),
                             ));
                         }
                     }
@@ -229,6 +248,7 @@ impl TemplateInjection {
                         context.into(),
                         Severity::Informational,
                         Confidence::Low,
+                        Persona::default(),
                     ));
                 }
             }
@@ -239,11 +259,11 @@ impl TemplateInjection {
 }
 
 impl WorkflowAudit for TemplateInjection {
-    fn new(state: AuditState) -> anyhow::Result<Self>
+    fn new(_state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self { state })
+        Ok(Self)
     }
 
     fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
@@ -266,12 +286,14 @@ impl WorkflowAudit for TemplateInjection {
             StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
         };
 
-        for (expr, severity, confidence) in self.injectable_template_expressions(script, step.job())
+        for (expr, severity, confidence, persona) in
+            self.injectable_template_expressions(script, step.job())
         {
             findings.push(
                 Self::finding()
                     .severity(severity)
                     .confidence(confidence)
+                    .persona(persona)
                     .add_location(step.location_with_name())
                     .add_location(
                         script_loc.clone().annotated(format!(

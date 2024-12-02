@@ -172,7 +172,6 @@ mod tests {
             ("something | tee \"${$OTHER_ENV}\" # not $GITHUB_ENV", false),
         ] {
             let audit_state = AuditState {
-                pedantic: false,
                 offline: false,
                 gh_token: None,
                 caches: Caches::new(),

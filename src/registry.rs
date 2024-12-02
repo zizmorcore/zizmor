@@ -6,7 +6,7 @@ use std::{collections::HashMap, path::Path, process::ExitCode};
 use crate::{
     audit::WorkflowAudit,
     config::Config,
-    finding::{Confidence, Finding, Severity},
+    finding::{Confidence, Finding, Persona, Severity},
     models::Workflow,
     App,
 };
@@ -114,6 +114,7 @@ pub(crate) struct FindingRegistry<'a> {
     config: &'a Config,
     minimum_severity: Option<Severity>,
     minimum_confidence: Option<Confidence>,
+    persona: Persona,
     ignored: Vec<Finding<'a>>,
     findings: Vec<Finding<'a>>,
     highest_seen_severity: Option<Severity>,
@@ -125,6 +126,7 @@ impl<'a> FindingRegistry<'a> {
             config,
             minimum_severity: app.min_severity,
             minimum_confidence: app.min_confidence,
+            persona: app.persona,
             ignored: Default::default(),
             findings: Default::default(),
             highest_seen_severity: None,
@@ -138,6 +140,7 @@ impl<'a> FindingRegistry<'a> {
         // and then `extend`?
         for finding in results {
             if finding.ignored
+                || self.persona > finding.determinations.persona
                 || self
                     .minimum_severity
                     .map_or(false, |min| min > finding.determinations.severity)
