@@ -13,7 +13,32 @@ use crate::models::{Job, Step, Workflow};
 
 pub(crate) mod locate;
 
-// TODO: Traits + more flexible models here.
+/// Represents the expected "persona" that would be interested in a given
+/// finding. This is used to model the sensitivity of different use-cases
+/// to false positives.
+#[derive(
+    Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, ValueEnum,
+)]
+pub(crate) enum Persona {
+    /// The "auditor" persona (false positives OK).
+    ///
+    /// This persona wants all results, including results that are likely
+    /// to be false positives.
+    Auditor,
+
+    /// The "pedantic" persona (code smells OK).
+    ///
+    /// This persona wants findings that may or may not be problems,
+    /// but are potential "code smells".
+    Pedantic,
+
+    /// The "regular" persona (minimal false positives).
+    ///
+    /// This persona wants actionable findings, and is sensitive to
+    /// false positives.
+    #[default]
+    Regular,
+}
 
 #[derive(
     Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, ValueEnum,
@@ -240,11 +265,12 @@ pub(crate) struct Location<'w> {
     pub(crate) concrete: Feature<'w>,
 }
 
-/// A finding's "determination," i.e. its confidence and severity classifications.
+/// A finding's "determination," i.e. its various classifications.
 #[derive(Serialize)]
 pub(crate) struct Determinations {
     pub(crate) confidence: Confidence,
     pub(crate) severity: Severity,
+    pub(super) persona: Persona,
 }
 
 #[derive(Serialize)]
@@ -263,6 +289,7 @@ pub(crate) struct FindingBuilder<'w> {
     url: &'static str,
     severity: Severity,
     confidence: Confidence,
+    persona: Persona,
     locations: Vec<SymbolicLocation<'w>>,
 }
 
@@ -274,6 +301,7 @@ impl<'w> FindingBuilder<'w> {
             url,
             severity: Default::default(),
             confidence: Default::default(),
+            persona: Default::default(),
             locations: vec![],
         }
     }
@@ -285,6 +313,11 @@ impl<'w> FindingBuilder<'w> {
 
     pub(crate) fn confidence(mut self, confidence: Confidence) -> Self {
         self.confidence = confidence;
+        self
+    }
+
+    pub(crate) fn persona(mut self, persona: Persona) -> Self {
+        self.persona = persona;
         self
     }
 
@@ -309,6 +342,7 @@ impl<'w> FindingBuilder<'w> {
             determinations: Determinations {
                 confidence: self.confidence,
                 severity: self.severity,
+                persona: self.persona,
             },
             locations,
             ignored: should_ignore,

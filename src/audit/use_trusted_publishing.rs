@@ -1,7 +1,8 @@
-use std::{collections::HashMap, ops::Deref};
+use std::ops::Deref;
 
 use anyhow::Ok;
 use github_actions_models::{common::EnvValue, workflow::job::StepBody};
+use indexmap::IndexMap;
 
 use super::{audit_meta, WorkflowAudit};
 use crate::{
@@ -28,7 +29,7 @@ audit_meta!(
 );
 
 impl UseTrustedPublishing {
-    fn pypi_publish_uses_manual_credentials(&self, with: &HashMap<String, EnvValue>) -> bool {
+    fn pypi_publish_uses_manual_credentials(&self, with: &IndexMap<String, EnvValue>) -> bool {
         // `password` implies the step isn't using Trusted Publishing,
         // but we also need to check `repository-url` to prevent false-positives
         // on third-party indices.
@@ -46,7 +47,7 @@ impl UseTrustedPublishing {
         }
     }
 
-    fn release_gem_uses_manual_credentials(&self, with: &HashMap<String, EnvValue>) -> bool {
+    fn release_gem_uses_manual_credentials(&self, with: &IndexMap<String, EnvValue>) -> bool {
         match with.get("setup-trusted-publisher") {
             Some(v) if v.to_string() == "true" => false,
             // Anything besides `true` means to *not* use trusted publishing.
@@ -58,7 +59,7 @@ impl UseTrustedPublishing {
 
     fn rubygems_credential_uses_manual_credentials(
         &self,
-        with: &HashMap<String, EnvValue>,
+        with: &IndexMap<String, EnvValue>,
     ) -> bool {
         with.contains_key("api-token")
     }

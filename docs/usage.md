@@ -69,6 +69,94 @@ See [Integration](#integration) for suggestions on when to use each format.
 
 All other exit codes are currently reserved.
 
+## Using personas
+
+!!! tip
+
+    `--persona=...` is available in `v0.7.0` and later.
+
+`zizmor` comes with three pre-defined "personas," which dictate how
+sensitive `zizmor`'s analyses are:
+
+* The _regular persona_: the user wants high-signal, low-noise, actionable
+  security findings. This persona is best for ordinary local use as well as use
+  in most CI/CD setups, which is why it's the default.
+
+    !!! note
+
+        This persona can be made explicit with `--persona=regular`,
+        although this is not required.
+
+
+* The _pedantic persona_, enabled by `--persona=pedantic`: the user wants
+  *code smells* in addition to regular, actionable security findings.
+
+    This persona is ideal for finding things that are a good idea
+    to clean up or resolve, but are likely not immediately actionable
+    security findings (or are actionable, but indicate a intentional
+    security decision by the workflow author).
+
+    For example, using the pedantic persona will flag the following
+    with an `unpinned-uses` finding, since it uses a symbolic reference
+    as its pin instead of a hashed pin:
+
+    ```yaml
+    uses: actions/checkout@v3
+    ```
+
+    produces:
+
+    ```console
+    $ zizmor --pedantic tests/test-data/unpinned-uses.yml
+    help[unpinned-uses]: unpinned action reference
+      --> tests/test-data/unpinned-uses.yml:14:9
+       |
+    14 |       - uses: actions/checkout@v3
+       |         ------------------------- help: action is not pinned to a hash ref
+       |
+       = note: audit confidence → High
+    ```
+
+    !!! tip
+
+        This persona can also be enabled with `--pedantic`, which is
+        an alias for `--persona=pedantic`.
+
+* The _auditor persona_, enabled by `--persona=auditor`: the user wants
+  *everything* flagged by `zizmor`, including findings that are likely
+  to be false positives.
+
+    This persona is ideal for security auditors and code reviewers, who
+    want to go through `zizmor`'s findings manually with a fine-toothed comb.
+
+    Some audits, notably `self-hosted-runner`, *only* produce auditor-level
+    results. This is because these audits require runtime context that `zizmor`
+    lacks access to by design, meaning that their results are always
+    subject to false positives.
+
+    For example, with the default persona:
+
+    ```console
+    $ zizmor tests/test-data/self-hosted.yml
+    🌈 completed self-hosted.yml
+    No findings to report. Good job! (1 suppressed)
+    ```
+
+    and with `--persona=auditor`:
+
+    ```console
+    $ zizmor --persona=auditor tests/test-data/self-hosted.yml
+    note[self-hosted-runner]: runs on a self-hosted runner
+      --> tests/test-data/self-hosted.yml:8:5
+        |
+      8 |     runs-on: [self-hosted, my-ubuntu-box]
+        |     ------------------------------------- note: self-hosted runner used here
+        |
+        = note: audit confidence → High
+
+      1 finding: 1 unknown, 0 informational, 0 low, 0 medium, 0 high
+    ```
+
 ## Filtering results
 
 There are two straightforward ways to filter `zizmor`'s results:

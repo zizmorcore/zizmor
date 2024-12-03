@@ -2,11 +2,11 @@
 //! which are frequently unsafe to use in public repositories
 //! due to the potential for persistence between workflow runs.
 //!
-//! This audit is "pedantic" only, since zizmor can't detect
+//! This audit is "auditor" only, since zizmor can't detect
 //! whether self-hosted runners are ephemeral or not.
 
 use crate::{
-    finding::{Confidence, Severity},
+    finding::{Confidence, Persona, Severity},
     AuditState,
 };
 
@@ -18,9 +18,7 @@ use github_actions_models::{
 
 use super::{audit_meta, WorkflowAudit};
 
-pub(crate) struct SelfHostedRunner {
-    pub(crate) state: AuditState,
-}
+pub(crate) struct SelfHostedRunner;
 
 audit_meta!(
     SelfHostedRunner,
@@ -29,11 +27,11 @@ audit_meta!(
 );
 
 impl WorkflowAudit for SelfHostedRunner {
-    fn new(state: AuditState) -> anyhow::Result<Self>
+    fn new(_state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self { state })
+        Ok(Self)
     }
 
     fn audit<'w>(
@@ -41,11 +39,6 @@ impl WorkflowAudit for SelfHostedRunner {
         workflow: &'w crate::models::Workflow,
     ) -> Result<Vec<crate::finding::Finding<'w>>> {
         let mut results = vec![];
-
-        if !self.state.pedantic {
-            log::info!("skipping self-hosted runner checks");
-            return Ok(results);
-        }
 
         for job in workflow.jobs() {
             let Job::NormalJob(normal) = *job else {
@@ -66,6 +59,7 @@ impl WorkflowAudit for SelfHostedRunner {
                                 Self::finding()
                                     .confidence(Confidence::High)
                                     .severity(Severity::Unknown)
+                                    .persona(Persona::Auditor)
                                     .add_location(
                                         job.location()
                                             .with_keys(&["runs-on".into()])
@@ -82,6 +76,7 @@ impl WorkflowAudit for SelfHostedRunner {
                                 Self::finding()
                                     .confidence(Confidence::Low)
                                     .severity(Severity::Unknown)
+                                    .persona(Persona::Auditor)
                                     .add_location(
                                         job.location().with_keys(&["runs-on".into()]).annotated(
                                             "expression may expand into a self-hosted runner",
@@ -101,6 +96,7 @@ impl WorkflowAudit for SelfHostedRunner {
                     Self::finding()
                         .confidence(Confidence::Low)
                         .severity(Severity::Unknown)
+                        .persona(Persona::Auditor)
                         .add_location(
                             job.location()
                                 .with_keys(&["runs-on".into()])
@@ -114,6 +110,7 @@ impl WorkflowAudit for SelfHostedRunner {
                     Self::finding()
                         .confidence(Confidence::Low)
                         .severity(Severity::Unknown)
+                        .persona(Persona::Auditor)
                         .add_location(
                             job.location()
                                 .with_keys(&["runs-on".into()])

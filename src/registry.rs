@@ -6,7 +6,7 @@ use std::{collections::HashMap, path::Path, process::ExitCode};
 use crate::{
     audit::WorkflowAudit,
     config::Config,
-    finding::{Confidence, Finding, Severity},
+    finding::{Confidence, Finding, Persona, Severity},
     models::Workflow,
     App,
 };
@@ -114,6 +114,8 @@ pub(crate) struct FindingRegistry<'a> {
     config: &'a Config,
     minimum_severity: Option<Severity>,
     minimum_confidence: Option<Confidence>,
+    persona: Persona,
+    suppressed: Vec<Finding<'a>>,
     ignored: Vec<Finding<'a>>,
     findings: Vec<Finding<'a>>,
     highest_seen_severity: Option<Severity>,
@@ -125,6 +127,8 @@ impl<'a> FindingRegistry<'a> {
             config,
             minimum_severity: app.min_severity,
             minimum_confidence: app.min_confidence,
+            persona: app.persona,
+            suppressed: Default::default(),
             ignored: Default::default(),
             findings: Default::default(),
             highest_seen_severity: None,
@@ -137,7 +141,9 @@ impl<'a> FindingRegistry<'a> {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
         for finding in results {
-            if finding.ignored
+            if self.persona > finding.determinations.persona {
+                self.suppressed.push(finding);
+            } else if finding.ignored
                 || self
                     .minimum_severity
                     .map_or(false, |min| min > finding.determinations.severity)
@@ -160,14 +166,24 @@ impl<'a> FindingRegistry<'a> {
         }
     }
 
-    /// All non-filtered findings.
+    /// The total count of all findings, regardless of status.
+    pub(crate) fn count(&self) -> usize {
+        self.findings.len() + self.ignored.len() + self.suppressed.len()
+    }
+
+    /// All non-ignored and non-suppressed findings.
     pub(crate) fn findings(&self) -> &[Finding<'a>] {
         &self.findings
     }
 
-    /// All filtered findings.
+    /// All ignored findings.
     pub(crate) fn ignored(&self) -> &[Finding<'a>] {
         &self.ignored
+    }
+
+    /// All persona-suppressed findings.
+    pub(crate) fn suppressed(&self) -> &[Finding<'a>] {
+        &self.suppressed
     }
 }
 

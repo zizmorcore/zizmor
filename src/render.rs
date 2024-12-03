@@ -72,14 +72,28 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
         println!();
     }
 
+    let mut qualifiers = vec![];
+    if !findings.ignored().is_empty() {
+        qualifiers.push(format!(
+            "{nignored} ignored",
+            nignored = findings.ignored().len().bright_yellow()
+        ));
+    }
+    if !findings.suppressed().is_empty() {
+        qualifiers.push(format!(
+            "{nsuppressed} suppressed",
+            nsuppressed = findings.suppressed().len().bright_yellow()
+        ));
+    }
+
     if findings.findings().is_empty() {
-        if findings.ignored().is_empty() {
+        if qualifiers.is_empty() {
             println!("{}", "No findings to report. Good job!".green());
         } else {
             println!(
-                "{no_findings} ({nignored} ignored)",
+                "{no_findings} ({qualifiers})",
                 no_findings = "No findings to report. Good job!".green(),
-                nignored = findings.ignored().len().bright_yellow()
+                qualifiers = qualifiers.join(", ").bold(),
             );
         }
     } else {
@@ -96,8 +110,8 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
             }
         }
 
-        if findings.ignored().is_empty() {
-            let nfindings = findings.findings().len();
+        if qualifiers.is_empty() {
+            let nfindings = findings.count();
             print!(
                 "{nfindings} finding{s}: ",
                 nfindings = nfindings.green(),
@@ -105,9 +119,9 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
             );
         } else {
             print!(
-                "{nfindings} findings ({nignored} ignored): ",
-                nfindings = (findings.findings().len() + findings.ignored().len()).green(),
-                nignored = findings.ignored().len().bright_yellow()
+                "{nfindings} findings ({qualifiers}): ",
+                nfindings = findings.count().green(),
+                qualifiers = qualifiers.join(", ").bold(),
             );
         }
 

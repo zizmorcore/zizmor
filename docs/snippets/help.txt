@@ -3,34 +3,69 @@ Static analysis for GitHub Actions
 Usage: zizmor [OPTIONS] <INPUTS>...
 
 Arguments:
-  <INPUTS>...  The workflow filenames or directories to audit
+  <INPUTS>...
+          The workflow filenames or directories to audit
 
 Options:
   -p, --pedantic
-          Emit findings even when the context suggests an explicit security decision made by the user
+          Emit 'pedantic' findings.
+          
+          This is an alias for --persona=pedantic.
+
+      --persona <PERSONA>
+          The persona to use while auditing
+          
+          [default: regular]
+
+          Possible values:
+          - auditor:  The "auditor" persona (false positives OK)
+          - pedantic: The "pedantic" persona (code smells OK)
+          - regular:  The "regular" persona (minimal false positives)
+
   -o, --offline
           Only perform audits that don't require network access
+
   -v, --verbose...
           Increase logging verbosity
+
   -q, --quiet...
           Decrease logging verbosity
+
   -n, --no-progress
           Disable the progress bar. This is useful primarily when running with a high verbosity level, as the two will fight for stderr
+
       --gh-token <GH_TOKEN>
-          The GitHub API token to use [env: GH_TOKEN=]
+          The GitHub API token to use
+          
+          [env: GH_TOKEN=]
+
       --format <FORMAT>
-          The output format to emit. By default, plain text will be emitted [possible values: plain, json, sarif]
+          The output format to emit. By default, plain text will be emitted
+          
+          [default: plain]
+          [possible values: plain, json, sarif]
+
   -c, --config <CONFIG>
           The configuration file to load. By default, any config will be discovered relative to $CWD
+
       --no-config
           Disable all configuration loading
+
       --no-exit-codes
           Disable all error codes besides success and tool failure
+
       --min-severity <MIN_SEVERITY>
-          Filter all results below this severity [possible values: unknown, informational, low, medium, high]
+          Filter all results below this severity
+          
+          [possible values: unknown, informational, low, medium, high]
+
       --min-confidence <MIN_CONFIDENCE>
-          Filter all results below this confidence [possible values: unknown, low, medium, high]
+          Filter all results below this confidence
+          
+          [possible values: unknown, low, medium, high]
+
   -h, --help
-          Print help
+          Print help (see a summary with '-h')
+
   -V, --version
           Print version

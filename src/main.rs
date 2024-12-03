@@ -5,7 +5,7 @@ use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use clap::{Parser, ValueEnum};
 use config::Config;
-use finding::{Confidence, Severity};
+use finding::{Confidence, Persona, Severity};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
@@ -27,9 +27,15 @@ mod utils;
 #[derive(Parser)]
 #[command(about, version)]
 struct App {
-    /// Emit findings even when the context suggests an explicit security decision made by the user.
-    #[arg(short, long)]
+    /// Emit 'pedantic' findings.
+    ///
+    /// This is an alias for --persona=pedantic.
+    #[arg(short, long, group = "_persona")]
     pedantic: bool,
+
+    /// The persona to use while auditing.
+    #[arg(long, group = "_persona", value_enum, default_value_t)]
+    persona: Persona,
 
     /// Only perform audits that don't require network access.
     #[arg(short, long)]
@@ -48,8 +54,8 @@ struct App {
     gh_token: Option<String>,
 
     /// The output format to emit. By default, plain text will be emitted
-    #[arg(long, value_enum)]
-    format: Option<OutputFormat>,
+    #[arg(long, value_enum, default_value_t)]
+    format: OutputFormat,
 
     /// The configuration file to load. By default, any config will be
     /// discovered relative to $CWD.
@@ -77,8 +83,9 @@ struct App {
     inputs: Vec<PathBuf>,
 }
 
-#[derive(Debug, Copy, Clone, ValueEnum)]
+#[derive(Debug, Default, Copy, Clone, ValueEnum)]
 pub(crate) enum OutputFormat {
+    #[default]
     Plain,
     Json,
     Sarif,
@@ -87,7 +94,12 @@ pub(crate) enum OutputFormat {
 fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
-    let app = App::parse();
+    let mut app = App::parse();
+
+    // `--pedantic` is a shortcut for `--persona=pedantic`.
+    if app.pedantic {
+        app.persona = Persona::Pedantic;
+    }
 
     env_logger::Builder::new()
         .filter_level(app.verbose.log_level_filter())
@@ -203,12 +215,7 @@ fn run() -> Result<ExitCode> {
 
     bar.finish_and_clear();
 
-    let format = match app.format {
-        None => OutputFormat::Plain,
-        Some(f) => f,
-    };
-
-    match format {
+    match app.format {
         OutputFormat::Plain => render::render_findings(&workflow_registry, &results),
         OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
         OutputFormat::Sarif => serde_json::to_writer_pretty(
@@ -217,7 +224,7 @@ fn run() -> Result<ExitCode> {
         )?,
     };
 
-    if app.no_exit_codes || matches!(format, OutputFormat::Sarif) {
+    if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
         Ok(ExitCode::SUCCESS)
     } else {
         Ok(results.into())

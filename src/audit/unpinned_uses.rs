@@ -1,19 +1,17 @@
-use crate::finding::{Confidence, Severity};
+use crate::finding::{Confidence, Persona, Severity};
 
 use super::{audit_meta, AuditState, Finding, Step, WorkflowAudit};
 
-pub(crate) struct UnpinnedUses {
-    state: AuditState,
-}
+pub(crate) struct UnpinnedUses;
 
 audit_meta!(UnpinnedUses, "unpinned-uses", "unpinned action reference");
 
 impl WorkflowAudit for UnpinnedUses {
-    fn new(state: AuditState) -> anyhow::Result<Self>
+    fn new(_state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self { state })
+        Ok(Self)
     }
 
     fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
@@ -23,13 +21,18 @@ impl WorkflowAudit for UnpinnedUses {
             return Ok(vec![]);
         };
 
-        let (annotation, severity) = if uses.unpinned() {
+        let (annotation, severity, persona) = if uses.unpinned() {
             (
                 "action is not pinned to a tag, branch, or hash ref",
                 Severity::Medium,
+                Persona::default(),
             )
-        } else if uses.unhashed() && self.state.pedantic {
-            ("action is not pinned to a hash ref", Severity::Low)
+        } else if uses.unhashed() {
+            (
+                "action is not pinned to a hash ref",
+                Severity::Low,
+                Persona::Pedantic,
+            )
         } else {
             return Ok(vec![]);
         };
@@ -38,6 +41,7 @@ impl WorkflowAudit for UnpinnedUses {
             Self::finding()
                 .confidence(Confidence::High)
                 .severity(severity)
+                .persona(persona)
                 .add_location(
                     step.location()
                         .with_keys(&["uses".into()])
