@@ -134,10 +134,10 @@ impl WorkflowAudit for GitHubEnv {
             .set_language(&bash.into())
             .context("failed to load bash parser")?;
 
-        let pwsh = tree_sitter_powershell::language();
+        let pwsh = tree_sitter_powershell::LANGUAGE;
         let mut pwsh_parser = Parser::new();
         pwsh_parser
-            .set_language(&pwsh)
+            .set_language(&pwsh.into())
             .context("failed to load powershell parser")?;
         Ok(Self {
             bash_parser: RefCell::new(bash_parser),

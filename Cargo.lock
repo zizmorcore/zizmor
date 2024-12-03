@@ -2078,11 +2078,11 @@ checksum = "e8ddffe35a0e5eeeadf13ff7350af564c6e73993a24db62caee1822b185c2600"
 
 [[package]]
 name = "tree-sitter-powershell"
-version = "0.0.1"
-source = "git+https://github.com/woodruffw-forks/tree-sitter-powershell?branch=ww/update#e57a56a452718c871609ec56c2f911deb82e9885"
+version = "1.2.0"
+source = "git+https://github.com/woodruffw-forks/tree-sitter-powershell?branch=main#f815a5edbe5062323fe28bebd930b1b359dc87fe"
 dependencies = [
  "cc",
- "tree-sitter",
+ "tree-sitter-language",
 ]
 
 [[package]]
