@@ -111,7 +111,7 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
         }
 
         if qualifiers.is_empty() {
-            let nfindings = findings.findings().len();
+            let nfindings = findings.count();
             print!(
                 "{nfindings} finding{s}: ",
                 nfindings = nfindings.green(),
@@ -120,7 +120,7 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
         } else {
             print!(
                 "{nfindings} findings ({qualifiers}): ",
-                nfindings = (findings.findings().len() + findings.ignored().len()).green(),
+                nfindings = findings.count().green(),
                 qualifiers = qualifiers.join(", ").bold(),
             );
         }

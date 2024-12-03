@@ -166,6 +166,11 @@ impl<'a> FindingRegistry<'a> {
         }
     }
 
+    /// The total count of all findings, regardless of status.
+    pub(crate) fn count(&self) -> usize {
+        self.findings.len() + self.ignored.len() + self.suppressed.len()
+    }
+
     /// All non-ignored and non-suppressed findings.
     pub(crate) fn findings(&self) -> &[Finding<'a>] {
         &self.findings
