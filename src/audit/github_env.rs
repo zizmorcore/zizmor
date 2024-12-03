@@ -79,7 +79,11 @@ impl GitHubEnv {
 
                         // TODO: We can be more precise here by checking
                         // `command_parameter` and `variable`.
-                        if command.contains("out-file") && command.contains("github_env") {
+                        if (command.contains("out-file")
+                            || command.contains("add-content")
+                            || command.contains("set-content"))
+                            && command.contains("github_env")
+                        {
                             return Ok(true);
                         }
                     }
@@ -276,6 +280,12 @@ mod tests {
             ("echo \"CUDA_PATH=$env:CUDA_PATH\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append", true),
             ("\"PYTHON_BIN=$PYTHON_BIN\" | Out-File -FilePath $env:GITHUB_ENV -Append", true),
             ("echo \"SOLUTION_PATH=${slnPath}\" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append", true),
+            // Add-Content cases
+            ("Add-Content -Path $env:GITHUB_ENV -Value \"RELEASE_VERSION=$releaseVersion\"", true),
+            ("Add-Content $env:GITHUB_ENV \"DOTNET_ROOT=$Env:USERPROFILE\\.dotnet\"", true),
+            // Set-Content cases
+            ("Set-Content -Path $env:GITHUB_ENV -Value \"tag=$tag\"", true),
+            ("[System.Text.Encoding]::UTF8.GetBytes(\"RELEASE_NOTES<<EOF`n$releaseNotes`nEOF\") |\nSet-Content -Path $Env:GITHUB_ENV -NoNewline -Encoding Byte", true),
             // Case insensitivity
             ("echo \"foo\" | out-file $Env:GitHub_Env -Append", true),
             ("echo \"foo\" | out-File $Env:GitHub_Env -Append", true),
