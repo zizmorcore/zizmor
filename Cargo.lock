@@ -545,10 +545,11 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "github-actions-models"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1106863433991623eb597aea98e60623ce119dbc190c9c2b3166cdb75c751b1f"
+checksum = "0102922a92566de8ff25ff79144d6b30516efe941bc34ff849f01b4979add8e2"
 dependencies = [
+ "indexmap",
  "serde",
  "serde_yaml",
 ]
@@ -865,12 +866,13 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.6.0"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "707907fe3c25f5424cce2cb7e1cbcafee6bdbe735ca90ef77c29e84591e5b9da"
+checksum = "62f822373a4fe84d4bb149bf54e584a7f4abec90e072ed49cda0edea5b95471f"
 dependencies = [
  "equivalent",
  "hashbrown",
+ "serde",
 ]
 
 [[package]]
@@ -2578,6 +2580,7 @@ dependencies = [
  "env_logger",
  "github-actions-models",
  "human-panic",
+ "indexmap",
  "indicatif",
  "insta",
  "itertools",

@@ -1,7 +1,7 @@
 //! Enriching/context-bearing wrappers over GitHub Actions models
 //! from the `github-actions-models` crate.
 
-use std::{collections::hash_map, iter::Enumerate, ops::Deref, path::Path};
+use std::{iter::Enumerate, ops::Deref, path::Path};
 
 use crate::finding::{Route, SymbolicLocation};
 use anyhow::{anyhow, Context, Result};
@@ -177,7 +177,7 @@ impl<'w> Job<'w> {
 /// An iterable container for jobs within a [`Workflow`].
 pub(crate) struct Jobs<'w> {
     parent: &'w Workflow,
-    inner: hash_map::Iter<'w, String, workflow::Job>,
+    inner: indexmap::map::Iter<'w, String, workflow::Job>,
 }
 
 impl<'w> Jobs<'w> {

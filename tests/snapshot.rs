@@ -71,6 +71,20 @@ pub(crate) fn zizmor() -> Zizmor {
 }
 
 #[test]
+fn artipacked() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("artipacked.yml"))
+        .args(["--persona=pedantic"])
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("artipacked.yml"))
+        .run()?);
+
+    Ok(())
+}
+
+#[test]
 fn self_hosted() -> Result<()> {
     insta::assert_snapshot!(zizmor()
         .workflow(workflow_under_test("self-hosted.yml"))
