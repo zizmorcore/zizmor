@@ -115,6 +115,7 @@ pub(crate) struct FindingRegistry<'a> {
     minimum_severity: Option<Severity>,
     minimum_confidence: Option<Confidence>,
     persona: Persona,
+    suppressed: Vec<Finding<'a>>,
     ignored: Vec<Finding<'a>>,
     findings: Vec<Finding<'a>>,
     highest_seen_severity: Option<Severity>,
@@ -127,6 +128,7 @@ impl<'a> FindingRegistry<'a> {
             minimum_severity: app.min_severity,
             minimum_confidence: app.min_confidence,
             persona: app.persona,
+            suppressed: Default::default(),
             ignored: Default::default(),
             findings: Default::default(),
             highest_seen_severity: None,
@@ -139,8 +141,9 @@ impl<'a> FindingRegistry<'a> {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
         for finding in results {
-            if finding.ignored
-                || self.persona > finding.determinations.persona
+            if self.persona > finding.determinations.persona {
+                self.suppressed.push(finding);
+            } else if finding.ignored
                 || self
                     .minimum_severity
                     .map_or(false, |min| min > finding.determinations.severity)
@@ -163,14 +166,19 @@ impl<'a> FindingRegistry<'a> {
         }
     }
 
-    /// All non-filtered findings.
+    /// All non-ignored and non-suppressed findings.
     pub(crate) fn findings(&self) -> &[Finding<'a>] {
         &self.findings
     }
 
-    /// All filtered findings.
+    /// All ignored findings.
     pub(crate) fn ignored(&self) -> &[Finding<'a>] {
         &self.ignored
+    }
+
+    /// All persona-suppressed findings.
+    pub(crate) fn suppressed(&self) -> &[Finding<'a>] {
+        &self.suppressed
     }
 }
 
