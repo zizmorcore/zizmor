@@ -31,7 +31,7 @@ pub(crate) fn finding_snippet<'w>(
     // by their enclosing workflow to generate each snippet correctly.
     let mut locations_by_workflow: HashMap<&WorkflowKey, Vec<&Location<'w>>> = HashMap::new();
     for location in &finding.locations {
-        match locations_by_workflow.entry(&location.symbolic.key) {
+        match locations_by_workflow.entry(location.symbolic.key) {
             Entry::Occupied(mut e) => {
                 e.get_mut().push(location);
             }
@@ -49,7 +49,7 @@ pub(crate) fn finding_snippet<'w>(
             Snippet::source(workflow.document.source())
                 .fold(true)
                 .line_start(1)
-                .origin(&workflow.link.as_deref().unwrap_or(workflow_key.path()))
+                .origin(workflow.link.as_deref().unwrap_or(workflow_key.path()))
                 .annotations(locations.iter().map(|loc| {
                     let annotation = match loc.symbolic.link {
                         Some(ref link) => link,

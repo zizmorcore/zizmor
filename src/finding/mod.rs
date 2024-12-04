@@ -142,7 +142,7 @@ pub(crate) struct SymbolicLocation<'w> {
 impl<'w> SymbolicLocation<'w> {
     pub(crate) fn with_keys(&self, keys: &[RouteComponent<'w>]) -> SymbolicLocation<'w> {
         SymbolicLocation {
-            key: &self.key,
+            key: self.key,
             annotation: self.annotation.clone(),
             link: None,
             route: self.route.with_keys(keys),

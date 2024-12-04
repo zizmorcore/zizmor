@@ -148,7 +148,7 @@ fn run() -> Result<ExitCode> {
                 match workflow_path.extension() {
                     Some(ext) if ext == "yml" || ext == "yaml" => {
                         workflow_registry
-                            .register_by_path(&workflow_path)
+                            .register_by_path(workflow_path)
                             .with_context(|| {
                                 format!("failed to register workflow: {workflow_path}")
                             })?;
