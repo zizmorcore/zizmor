@@ -25,9 +25,23 @@ Options:
           - regular:  The "regular" persona (minimal false positives)
 
   -o, --offline
+          Perform only offline operations.
+          
+          This disables all online audit rules, and prevents zizmor from auditing remote repositories.
+          
+          [env: ZIZMOR_OFFLINE=]
+
+      --gh-token <GH_TOKEN>
+          The GitHub API token to use
+          
+          [env: GH_TOKEN=]
+
+      --no-online-audits
           Perform only offline audits.
           
-          This flag affects only audits, and not other potentially online operations (like auditing from a GitHub user/repo slug).
+          This is a weaker version of `--offline`: instead of completely forbidding all online operations, it only disables audits that require connectivity.
+          
+          [env: ZIZMOR_NO_ONLINE_AUDITS=]
 
   -v, --verbose...
           Increase logging verbosity
@@ -37,11 +51,6 @@ Options:
 
   -n, --no-progress
           Disable the progress bar. This is useful primarily when running with a high verbosity level, as the two will fight for stderr
-
-      --gh-token <GH_TOKEN>
-          The GitHub API token to use
-          
-          [env: GH_TOKEN=]
 
       --format <FORMAT>
           The output format to emit. By default, plain text will be emitted

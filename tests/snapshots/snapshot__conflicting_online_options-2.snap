@@ -1,0 +1,10 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().output(OutputMode::Stderr).offline(true).args([\"--gh-token=phony\"]).run()?"
+snapshot_kind: text
+---
+error: the argument '--gh-token <GH_TOKEN>' cannot be used with '--offline'
+
+Usage: zizmor --gh-token <GH_TOKEN> <INPUTS>...
+
+For more information, try '--help'.

@@ -40,12 +40,24 @@ struct App {
     #[arg(long, group = "_persona", value_enum, default_value_t)]
     persona: Persona,
 
+    /// Perform only offline operations.
+    ///
+    /// This disables all online audit rules, and prevents zizmor from
+    /// auditing remote repositories.
+    #[arg(short, long, env = "ZIZMOR_OFFLINE", group = "_offline")]
+    offline: bool,
+
+    /// The GitHub API token to use.
+    #[arg(long, env, group = "_offline")]
+    gh_token: Option<String>,
+
     /// Perform only offline audits.
     ///
-    /// This flag affects only audits, and not other potentially
-    /// online operations (like auditing from a GitHub user/repo slug).
-    #[arg(short, long)]
-    offline: bool,
+    /// This is a weaker version of `--offline`: instead of completely
+    /// forbidding all online operations, it only disables audits that
+    /// require connectivity.
+    #[arg(long, env = "ZIZMOR_NO_ONLINE_AUDITS")]
+    no_online_audits: bool,
 
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
@@ -54,10 +66,6 @@ struct App {
     /// with a high verbosity level, as the two will fight for stderr.
     #[arg(short, long)]
     no_progress: bool,
-
-    /// The GitHub API token to use.
-    #[arg(long, env)]
-    gh_token: Option<String>,
 
     /// The output format to emit. By default, plain text will be emitted
     #[arg(long, value_enum, default_value_t)]
@@ -187,7 +195,7 @@ fn run() -> Result<ExitCode> {
                     format!(
                         "try removing {offline} or passing {gh_token}",
                         offline = "--offline".yellow(),
-                        gh_token = "--gh-token <TOKEN>".yellow()
+                        gh_token = "--gh-token <TOKEN>".yellow(),
                     )
                 ))
             })?;

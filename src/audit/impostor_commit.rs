@@ -116,7 +116,7 @@ impl ImpostorCommit {
 
 impl WorkflowAudit for ImpostorCommit {
     fn new(state: AuditState) -> Result<Self> {
-        if state.offline {
+        if state.no_online_audits {
             return Err(anyhow!("offline audits only requested"));
         }
 

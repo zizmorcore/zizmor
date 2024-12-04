@@ -125,7 +125,7 @@ impl WorkflowAudit for KnownVulnerableActions {
     where
         Self: Sized,
     {
-        if state.offline {
+        if state.no_online_audits {
             return Err(anyhow!("offline audits only requested"));
         }
 
