@@ -206,11 +206,14 @@ impl Client {
     ) -> Result<Vec<Workflow>> {
         log::debug!("fetching workflows for {owner}/{repo}");
 
+        // It'd be nice if the GitHub contents API allowed us to retrieve
+        // all file contents with a directory listing, but it doesn't.
+        // Instead, we make `N+1` API calls: one to list the workflows
+        // directory, and `N` for the constituent workflow files.
         let url = format!(
             "{api_base}/repos/{owner}/{repo}/contents/.github/workflows",
             api_base = self.api_base
         );
-
         let resp: Vec<File> = self
             .http
             .get(&url)
