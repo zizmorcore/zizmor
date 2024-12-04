@@ -3,17 +3,15 @@
 //! Build on synchronous reqwest to avoid octocrab's need to taint
 //! the whole codebase with async.
 
-use std::{fmt::format, path::PathBuf};
-
 use anyhow::{anyhow, Result};
 use reqwest::{
-    blocking,
+    blocking::{self},
     header::{HeaderMap, ACCEPT, AUTHORIZATION, USER_AGENT},
     StatusCode,
 };
 use serde::{de::DeserializeOwned, Deserialize};
 
-use crate::{models::Workflow, state::Caches};
+use crate::{models::Workflow, state::Caches, utils::PipeSelf};
 
 pub(crate) struct Client {
     api_base: &'static str,
@@ -200,7 +198,12 @@ impl Client {
     }
 
     /// Return temporary files for all workflows listed in the repo.
-    pub(crate) fn fetch_workflows(&self, owner: &str, repo: &str) -> Result<Vec<Workflow>> {
+    pub(crate) fn fetch_workflows(
+        &self,
+        owner: &str,
+        repo: &str,
+        git_ref: Option<&str>,
+    ) -> Result<Vec<Workflow>> {
         log::debug!("fetching workflows for {owner}/{repo}");
 
         let url = format!(
@@ -208,7 +211,17 @@ impl Client {
             api_base = self.api_base
         );
 
-        let resp: Vec<File> = self.http.get(&url).send()?.error_for_status()?.json()?;
+        let resp: Vec<File> = self
+            .http
+            .get(&url)
+            .pipe(|req| match git_ref {
+                Some(g) => req.query(&[("ref", g)]),
+                None => req,
+            })
+            .send()?
+            .error_for_status()?
+            .json()?;
+
         let mut workflows = vec![];
         for file in resp {
             let file_url = format!("{url}/{file}", file = file.name);
@@ -218,6 +231,10 @@ impl Client {
                 .http
                 .get(file_url)
                 .header(ACCEPT, "application/vnd.github.raw+json")
+                .pipe(|req| match git_ref {
+                    Some(g) => req.query(&[("ref", g)]),
+                    None => req,
+                })
                 .send()?
                 .error_for_status()?
                 .text()?;

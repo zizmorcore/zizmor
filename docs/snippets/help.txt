@@ -23,7 +23,9 @@ Options:
           - regular:  The "regular" persona (minimal false positives)
 
   -o, --offline
-          Only perform audits that don't require network access
+          Perform only offline audits.
+          
+          This flag affects only audits, and not other potentially online operations (like auditing from a GitHub user/repo slug).
 
   -v, --verbose...
           Increase logging verbosity

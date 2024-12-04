@@ -44,7 +44,10 @@ struct App {
     #[arg(long, group = "_persona", value_enum, default_value_t)]
     persona: Persona,
 
-    /// Only perform audits that don't require network access.
+    /// Perform only offline audits.
+    ///
+    /// This flag affects only audits, and not other potentially
+    /// online operations (like auditing from a GitHub user/repo slug).
     #[arg(short, long)]
     offline: bool,
 
@@ -85,7 +88,12 @@ struct App {
     #[arg(long)]
     min_confidence: Option<Confidence>,
 
-    /// The workflow filenames or directories to audit.
+    /// The inputs to audit.
+    ///
+    /// These can be individual workflow filenames, entire directories,
+    /// or a `user/repo` slug for a GitHub repository. In the latter case,
+    /// a `@ref` can be appended to audit the repository at a particular
+    /// git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
 }
@@ -122,12 +130,14 @@ fn run() -> Result<ExitCode> {
         .init();
 
     let audit_state = AuditState::new(&app);
+    let mut workflow_registry = WorkflowRegistry::new();
 
-    let mut workflow_paths = vec![];
     for input in &app.inputs {
         let input_path = Path::new(input);
         if input_path.is_file() {
-            workflow_paths.push(input_path.to_path_buf());
+            workflow_registry
+                .register_by_path(input_path)
+                .with_context(|| format!("failed to register workflow: {input_path:?}"))?;
         } else if input_path.is_dir() {
             let mut absolute = std::fs::canonicalize(input)?;
             if !absolute.ends_with(".github/workflows") {
@@ -140,7 +150,11 @@ fn run() -> Result<ExitCode> {
                 let workflow_path = entry?.path();
                 match workflow_path.extension() {
                     Some(ext) if ext == "yml" || ext == "yaml" => {
-                        workflow_paths.push(workflow_path)
+                        workflow_registry
+                            .register_by_path(&workflow_path)
+                            .with_context(|| {
+                                format!("failed to register workflow: {workflow_path:?}")
+                            })?;
                     }
                     _ => continue,
                 }
@@ -150,7 +164,7 @@ fn run() -> Result<ExitCode> {
             // `owner/repo(@ref)?` slug.
 
             // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
-            let Some(slug) = Uses::from_reusable(input) else {
+            let Some(Uses::Repository(slug)) = Uses::from_step(input) else {
                 return Err(anyhow!(tip(
                     format!("malformed input: {input}"),
                     format!(
@@ -181,31 +195,17 @@ fn run() -> Result<ExitCode> {
                 ))
             })?;
 
-            let workflows = client.fetch_workflows(slug.owner, slug.repo)?;
-
-            return Err(anyhow!("input malformed, expected file or directory"));
+            for workflow in client.fetch_workflows(slug.owner, slug.repo, slug.git_ref)? {
+                workflow_registry.register(workflow)?;
+            }
         }
     }
 
-    if workflow_paths.is_empty() {
-        return Err(anyhow!(
-            "no workflow files collected; empty or wrong directory?"
-        ));
+    if workflow_registry.len() == 0 {
+        return Err(anyhow!("no workflow files collected"));
     }
-
-    log::debug!(
-        "collected workflows: {workflows:?}",
-        workflows = workflow_paths
-    );
 
     let config = Config::new(&app)?;
-
-    let mut workflow_registry = WorkflowRegistry::new();
-    for workflow_path in workflow_paths.iter() {
-        workflow_registry
-            .register_workflow(workflow_path)
-            .with_context(|| format!("failed to register workflow: {workflow_path:?}"))?;
-    }
 
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {

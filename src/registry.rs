@@ -27,7 +27,21 @@ impl WorkflowRegistry {
         self.workflows.len()
     }
 
-    pub(crate) fn register_workflow(&mut self, path: &Path) -> Result<()> {
+    pub(crate) fn register(&mut self, workflow: Workflow) -> Result<()> {
+        let Some((_, name)) = workflow.path.rsplit_once("/") else {
+            return Err(anyhow!("invalid workflow: no filename component"));
+        };
+
+        if self.workflows.contains_key(name) {
+            return Err(anyhow!("can't register {name} more than once"));
+        }
+
+        self.workflows.insert(name.into(), workflow);
+
+        Ok(())
+    }
+
+    pub(crate) fn register_by_path(&mut self, path: &Path) -> Result<()> {
         let name = path
             .file_name()
             .ok_or_else(|| anyhow!("invalid workflow: no filename component"))?
