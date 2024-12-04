@@ -3,6 +3,8 @@
 //! Build on synchronous reqwest to avoid octocrab's need to taint
 //! the whole codebase with async.
 
+use std::{fmt::format, path::PathBuf};
+
 use anyhow::{anyhow, Result};
 use reqwest::{
     blocking,
@@ -11,7 +13,7 @@ use reqwest::{
 };
 use serde::{de::DeserializeOwned, Deserialize};
 
-use crate::state::Caches;
+use crate::{models::Workflow, state::Caches};
 
 pub(crate) struct Client {
     api_base: &'static str,
@@ -196,6 +198,35 @@ impl Client {
             .json()
             .map_err(Into::into)
     }
+
+    /// Return temporary files for all workflows listed in the repo.
+    pub(crate) fn fetch_workflows(&self, owner: &str, repo: &str) -> Result<Vec<Workflow>> {
+        log::debug!("fetching workflows for {owner}/{repo}");
+
+        let url = format!(
+            "{api_base}/repos/{owner}/{repo}/contents/.github/workflows",
+            api_base = self.api_base
+        );
+
+        let resp: Vec<File> = self.http.get(&url).send()?.error_for_status()?.json()?;
+        let mut workflows = vec![];
+        for file in resp {
+            let file_url = format!("{url}/{file}", file = file.name);
+            log::debug!("fetching {file_url}");
+
+            let contents = self
+                .http
+                .get(file_url)
+                .header(ACCEPT, "application/vnd.github.raw+json")
+                .send()?
+                .error_for_status()?
+                .text()?;
+
+            workflows.push(Workflow::from_string(contents, file.path)?);
+        }
+
+        Ok(workflows)
+    }
 }
 
 /// A single branch, as returned by GitHub's branches endpoints.
@@ -251,4 +282,11 @@ pub(crate) struct Comparison {
 pub(crate) struct Advisory {
     pub(crate) ghsa_id: String,
     pub(crate) severity: String,
+}
+
+/// Represents a file listing from GitHub's contents API.
+#[derive(Deserialize)]
+pub(crate) struct File {
+    name: String,
+    path: String,
 }

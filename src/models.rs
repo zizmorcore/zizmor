@@ -33,24 +33,32 @@ impl Deref for Workflow {
 }
 
 impl Workflow {
-    /// Load a workflow from the given file on disk.
-    pub(crate) fn from_file<P: AsRef<Path>>(p: P) -> Result<Self> {
-        let contents = std::fs::read_to_string(p.as_ref())?;
+    /// Load a workflow from a buffer, with an assigned name.
+    pub(crate) fn from_string(contents: String, path: impl Into<String>) -> Result<Self> {
+        let path = path.into();
 
         let inner = serde_yaml::from_str(&contents)
-            .with_context(|| format!("invalid GitHub Actions workflow: {:?}", p.as_ref()))?;
+            .with_context(|| format!("invalid GitHub Actions workflow: {path}"))?;
 
         let document = yamlpath::Document::new(&contents)?;
 
         Ok(Self {
-            path: p
-                .as_ref()
-                .to_str()
-                .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
-                .to_string(),
+            path,
             document,
             inner,
         })
+    }
+
+    /// Load a workflow from the given file on disk.
+    pub(crate) fn from_file<P: AsRef<Path>>(p: P) -> Result<Self> {
+        let contents = std::fs::read_to_string(p.as_ref())?;
+        let path = p
+            .as_ref()
+            .to_str()
+            .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
+            .to_string();
+
+        Self::from_string(contents, path)
     }
 
     /// Returns the filename (i.e. base component) of the loaded workflow.

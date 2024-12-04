@@ -26,6 +26,11 @@ impl AuditState {
     /// Return a cache-configured GitHub API client, if
     /// a GitHub API token is present.
     pub(crate) fn github_client(&self) -> Option<Client> {
+        // Respect the user's offline setting above everything else.
+        if self.offline {
+            return None;
+        }
+
         self.gh_token
             .as_ref()
             .map(|token| Client::new(token, self.caches.clone()))

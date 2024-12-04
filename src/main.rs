@@ -1,5 +1,11 @@
-use std::{io::stdout, path::PathBuf, process::ExitCode, time::Duration};
+use std::{
+    io::stdout,
+    path::{Path, PathBuf},
+    process::ExitCode,
+    time::Duration,
+};
 
+use annotate_snippets::{Level, Renderer};
 use anstream::eprintln;
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
@@ -80,7 +86,7 @@ struct App {
 
     /// The workflow filenames or directories to audit.
     #[arg(required = true)]
-    inputs: Vec<PathBuf>,
+    inputs: Vec<String>,
 }
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
@@ -89,6 +95,15 @@ pub(crate) enum OutputFormat {
     Plain,
     Json,
     Sarif,
+}
+
+fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
+    let message = Level::Error
+        .title(err.as_ref())
+        .footer(Level::Note.title(tip.as_ref()));
+
+    let renderer = Renderer::styled();
+    format!("{}", renderer.render(message))
 }
 
 fn run() -> Result<ExitCode> {
@@ -105,11 +120,38 @@ fn run() -> Result<ExitCode> {
         .filter_level(app.verbose.log_level_filter())
         .init();
 
+    let audit_state = AuditState::new(&app);
+
     let mut workflow_paths = vec![];
     for input in &app.inputs {
-        if input.is_file() {
-            workflow_paths.push(input.clone());
-        } else if input.is_dir() {
+        let input_path = Path::new(input);
+        // Inputs that look like @foo/bar are treated as GitHub repositories,
+        // which need to be fetched.
+        if input.starts_with("@") {
+            let client = audit_state.github_client().ok_or_else(|| {
+                anyhow!(tip(
+                    format!("can't retrieve repository: {input}", input = input.green()),
+                    format!(
+                        "try removing {offline} or passing {gh_token}",
+                        offline = "--offline".yellow(),
+                        gh_token = "--gh-token <TOKEN>".yellow()
+                    )
+                ))
+            })?;
+
+            let Some((owner, repo)) = input.split_once('/') else {
+                return Err(anyhow!(tip(
+                    "invalid repository: expected @foo/bar format",
+                    "make sure to separate the username and repo with a slash (/)"
+                )));
+            };
+
+            let workflows = client.fetch_workflows(&owner[1..], repo)?;
+
+            todo!()
+        } else if input_path.is_file() {
+            workflow_paths.push(input_path.to_path_buf());
+        } else if input_path.is_dir() {
             let mut absolute = std::fs::canonicalize(input)?;
             if !absolute.ends_with(".github/workflows") {
                 absolute.push(".github/workflows")
@@ -143,7 +185,6 @@ fn run() -> Result<ExitCode> {
     );
 
     let config = Config::new(&app)?;
-    let audit_state = AuditState::new(&app);
 
     let mut workflow_registry = WorkflowRegistry::new();
     for workflow_path in workflow_paths.iter() {
