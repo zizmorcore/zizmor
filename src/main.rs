@@ -13,6 +13,7 @@ use clap::{Parser, ValueEnum};
 use config::Config;
 use finding::{Confidence, Persona, Severity};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use models::Uses;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
 use state::AuditState;
@@ -125,31 +126,7 @@ fn run() -> Result<ExitCode> {
     let mut workflow_paths = vec![];
     for input in &app.inputs {
         let input_path = Path::new(input);
-        // Inputs that look like @foo/bar are treated as GitHub repositories,
-        // which need to be fetched.
-        if input.starts_with("@") {
-            let client = audit_state.github_client().ok_or_else(|| {
-                anyhow!(tip(
-                    format!("can't retrieve repository: {input}", input = input.green()),
-                    format!(
-                        "try removing {offline} or passing {gh_token}",
-                        offline = "--offline".yellow(),
-                        gh_token = "--gh-token <TOKEN>".yellow()
-                    )
-                ))
-            })?;
-
-            let Some((owner, repo)) = input.split_once('/') else {
-                return Err(anyhow!(tip(
-                    "invalid repository: expected @foo/bar format",
-                    "make sure to separate the username and repo with a slash (/)"
-                )));
-            };
-
-            let workflows = client.fetch_workflows(&owner[1..], repo)?;
-
-            todo!()
-        } else if input_path.is_file() {
+        if input_path.is_file() {
             workflow_paths.push(input_path.to_path_buf());
         } else if input_path.is_dir() {
             let mut absolute = std::fs::canonicalize(input)?;
@@ -169,6 +146,43 @@ fn run() -> Result<ExitCode> {
                 }
             }
         } else {
+            // If this input isn't a file or directory, it's probably an
+            // `owner/repo(@ref)?` slug.
+
+            // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
+            let Some(slug) = Uses::from_reusable(input) else {
+                return Err(anyhow!(tip(
+                    format!("malformed input: {input}"),
+                    format!(
+                        "pass a single {file}, {directory}, or entire repo by {slug} slug",
+                        file = "file".green(),
+                        directory = "directory".green(),
+                        slug = "owner/repo".green()
+                    )
+                )));
+            };
+
+            // We don't expect subpaths here.
+            if slug.subpath.is_some() {
+                return Err(anyhow!(tip(
+                    "invalid GitHub repository reference",
+                    "pass owner/repo or owner/repo@ref"
+                )));
+            }
+
+            let client = audit_state.github_client().ok_or_else(|| {
+                anyhow!(tip(
+                    format!("can't retrieve repository: {input}", input = input.green()),
+                    format!(
+                        "try removing {offline} or passing {gh_token}",
+                        offline = "--offline".yellow(),
+                        gh_token = "--gh-token <TOKEN>".yellow()
+                    )
+                ))
+            })?;
+
+            let workflows = client.fetch_workflows(slug.owner, slug.repo)?;
+
             return Err(anyhow!("input malformed, expected file or directory"));
         }
     }
