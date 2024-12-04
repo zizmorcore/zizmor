@@ -1,10 +1,12 @@
 //! Enriching/context-bearing wrappers over GitHub Actions models
 //! from the `github-actions-models` crate.
 
-use std::{iter::Enumerate, ops::Deref, path::Path};
+use std::{iter::Enumerate, ops::Deref};
 
 use crate::finding::{Route, SymbolicLocation};
-use anyhow::{anyhow, Context, Result};
+use crate::registry::WorkflowKey;
+use anyhow::{Context, Result};
+use camino::Utf8Path;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::job::RunsOn;
@@ -13,13 +15,17 @@ use github_actions_models::workflow::{
     job::{NormalJob, StepBody},
     Trigger,
 };
+use terminal_link::Link;
 
 /// Represents an entire GitHub Actions workflow.
 ///
 /// This type implements [`Deref`] for [`workflow::Workflow`],
 /// providing access to the underlying data model.
 pub(crate) struct Workflow {
-    pub(crate) path: String,
+    /// This workflow's unique key into zizmor's runtime workflow registry.
+    pub(crate) key: WorkflowKey,
+    /// A clickable (OSC 8) link to this workflow, if remote.
+    pub(crate) link: Option<String>,
     pub(crate) document: yamlpath::Document,
     inner: workflow::Workflow,
 }
@@ -34,31 +40,34 @@ impl Deref for Workflow {
 
 impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
-    pub(crate) fn from_string(contents: String, path: impl Into<String>) -> Result<Self> {
-        let path = path.into();
-
+    pub(crate) fn from_string(contents: String, key: WorkflowKey) -> Result<Self> {
         let inner = serde_yaml::from_str(&contents)
-            .with_context(|| format!("invalid GitHub Actions workflow: {path}"))?;
+            .with_context(|| format!("invalid GitHub Actions workflow: {key}"))?;
 
         let document = yamlpath::Document::new(&contents)?;
 
+        let link = match key {
+            WorkflowKey::Local(_) => None,
+            WorkflowKey::Remote(_) => {
+                // NOTE: WorkflowKey's Display produces a URL, hence `key.to_string()`.
+                Some(Link::new(key.path(), &key.to_string()).to_string())
+            }
+        };
+
         Ok(Self {
-            path,
+            link,
+            key,
             document,
             inner,
         })
     }
 
     /// Load a workflow from the given file on disk.
-    pub(crate) fn from_file<P: AsRef<Path>>(p: P) -> Result<Self> {
+    pub(crate) fn from_file<P: AsRef<Utf8Path>>(p: P) -> Result<Self> {
         let contents = std::fs::read_to_string(p.as_ref())?;
-        let path = p
-            .as_ref()
-            .to_str()
-            .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
-            .to_string();
+        let path = p.as_ref().canonicalize_utf8()?;
 
-        Self::from_string(contents, path)
+        Self::from_string(contents, WorkflowKey::local(path)?)
     }
 
     /// Returns the filename (i.e. base component) of the loaded workflow.
@@ -66,15 +75,13 @@ impl Workflow {
     /// For example, if the workflow was loaded from `/foo/bar/baz.yml`,
     /// [`Self::filename()`] returns `baz.yml`.
     pub(crate) fn filename(&self) -> &str {
-        // NOTE: Unwraps are safe here since we enforce UTF-8 paths
-        // and require a filename as an invariant.
-        Path::new(&self.path).file_name().unwrap().to_str().unwrap()
+        self.key.filename()
     }
 
     /// This workflow's [`SymbolicLocation`].
     pub(crate) fn location(&self) -> SymbolicLocation {
         SymbolicLocation {
-            name: self.filename(),
+            key: &self.key,
             annotation: "this workflow".to_string(),
             link: None,
             route: Route::new(),

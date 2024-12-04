@@ -11,7 +11,12 @@ use reqwest::{
 };
 use serde::{de::DeserializeOwned, Deserialize};
 
-use crate::{models::Workflow, state::Caches, utils::PipeSelf};
+use crate::{
+    models::{RepositoryUses, Workflow},
+    registry::WorkflowKey,
+    state::Caches,
+    utils::PipeSelf,
+};
 
 pub(crate) struct Client {
     api_base: &'static str,
@@ -198,12 +203,11 @@ impl Client {
     }
 
     /// Return temporary files for all workflows listed in the repo.
-    pub(crate) fn fetch_workflows(
-        &self,
-        owner: &str,
-        repo: &str,
-        git_ref: Option<&str>,
-    ) -> Result<Vec<Workflow>> {
+    pub(crate) fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
+        let owner = slug.owner;
+        let repo = slug.repo;
+        let git_ref = slug.git_ref;
+
         log::debug!("fetching workflows for {owner}/{repo}");
 
         // It'd be nice if the GitHub contents API allowed us to retrieve
@@ -226,7 +230,7 @@ impl Client {
             .json()?;
 
         let mut workflows = vec![];
-        for file in resp {
+        for file in resp.into_iter().filter(|file| file.name.ends_with(".yml")) {
             let file_url = format!("{url}/{file}", file = file.name);
             log::debug!("fetching {file_url}");
 
@@ -242,7 +246,10 @@ impl Client {
                 .error_for_status()?
                 .text()?;
 
-            workflows.push(Workflow::from_string(contents, file.path)?);
+            workflows.push(Workflow::from_string(
+                contents,
+                WorkflowKey::remote(slug, file.path)?,
+            )?);
         }
 
         Ok(workflows)

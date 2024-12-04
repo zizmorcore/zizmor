@@ -1,14 +1,10 @@
-use std::{
-    io::stdout,
-    path::{Path, PathBuf},
-    process::ExitCode,
-    time::Duration,
-};
+use std::{io::stdout, process::ExitCode, time::Duration};
 
 use annotate_snippets::{Level, Renderer};
 use anstream::eprintln;
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
 use config::Config;
 use finding::{Confidence, Persona, Severity};
@@ -70,7 +66,7 @@ struct App {
     /// The configuration file to load. By default, any config will be
     /// discovered relative to $CWD.
     #[arg(short, long, group = "conf")]
-    config: Option<PathBuf>,
+    config: Option<Utf8PathBuf>,
 
     /// Disable all configuration loading.
     #[arg(long, group = "conf")]
@@ -133,27 +129,28 @@ fn run() -> Result<ExitCode> {
     let mut workflow_registry = WorkflowRegistry::new();
 
     for input in &app.inputs {
-        let input_path = Path::new(input);
+        let input_path = Utf8Path::new(input);
         if input_path.is_file() {
             workflow_registry
                 .register_by_path(input_path)
-                .with_context(|| format!("failed to register workflow: {input_path:?}"))?;
+                .with_context(|| format!("failed to register workflow: {input_path}"))?;
         } else if input_path.is_dir() {
-            let mut absolute = std::fs::canonicalize(input)?;
+            let mut absolute = input_path.canonicalize_utf8()?;
             if !absolute.ends_with(".github/workflows") {
                 absolute.push(".github/workflows")
             }
 
             log::debug!("collecting workflows from {absolute:?}");
 
-            for entry in std::fs::read_dir(absolute)? {
-                let workflow_path = entry?.path();
+            for entry in absolute.read_dir_utf8()? {
+                let entry = entry?;
+                let workflow_path = entry.path();
                 match workflow_path.extension() {
                     Some(ext) if ext == "yml" || ext == "yaml" => {
                         workflow_registry
                             .register_by_path(&workflow_path)
                             .with_context(|| {
-                                format!("failed to register workflow: {workflow_path:?}")
+                                format!("failed to register workflow: {workflow_path}")
                             })?;
                     }
                     _ => continue,
@@ -195,7 +192,7 @@ fn run() -> Result<ExitCode> {
                 ))
             })?;
 
-            for workflow in client.fetch_workflows(slug.owner, slug.repo, slug.git_ref)? {
+            for workflow in client.fetch_workflows(&slug)? {
                 workflow_registry.register(workflow)?;
             }
         }

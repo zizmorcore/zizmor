@@ -9,7 +9,10 @@ use regex::Regex;
 use serde::Serialize;
 use terminal_link::Link;
 
-use crate::models::{Job, Step, Workflow};
+use crate::{
+    models::{Job, Step, Workflow},
+    registry::WorkflowKey,
+};
 
 pub(crate) mod locate;
 
@@ -120,8 +123,8 @@ impl<'w> Route<'w> {
 /// Represents a symbolic workflow location.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct SymbolicLocation<'w> {
-    /// The name of the workflow, as it appears in the workflow registry.
-    pub(crate) name: &'w str,
+    /// The unique ID of the workflow, as it appears in the workflow registry.
+    pub(crate) key: &'w WorkflowKey,
 
     /// An annotation for this location.
     pub(crate) annotation: String,
@@ -139,7 +142,7 @@ pub(crate) struct SymbolicLocation<'w> {
 impl<'w> SymbolicLocation<'w> {
     pub(crate) fn with_keys(&self, keys: &[RouteComponent<'w>]) -> SymbolicLocation<'w> {
         SymbolicLocation {
-            name: self.name,
+            key: &self.key,
             annotation: self.annotation.clone(),
             link: None,
             route: self.route.with_keys(keys),
