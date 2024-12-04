@@ -163,7 +163,7 @@ fn run() -> Result<ExitCode> {
             // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
             let Some(Uses::Repository(slug)) = Uses::from_step(input) else {
                 return Err(anyhow!(tip(
-                    format!("malformed input: {input}"),
+                    format!("invalid input: {input}"),
                     format!(
                         "pass a single {file}, {directory}, or entire repo by {slug} slug",
                         file = "file".green(),
