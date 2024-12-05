@@ -15,10 +15,15 @@ Both of these can be made explicit through their respective command-line flags:
 
 ```bash
 # force offline, even if a GH_TOKEN is present
+# this disables all online actions, including repository fetches
 zizmor --offline workflow.yml
 
-# passing a token explicitly will forcefully enable online mode
+# passing a token explicitly will enable online mode
 zizmor --gh-token ghp-... workflow.yml
+
+# online for the purpose of fetching the input (example/example),
+# but all audits themselves are offline
+zizmor --no-online-audits --gh-token ghp-... example/example
 ```
 
 ## Output formats
