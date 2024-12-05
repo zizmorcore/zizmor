@@ -322,7 +322,7 @@ jobs:
 1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
 For more inspiration, see `zizmor`'s own [repository workflow scan], as well
-as  GitHub's example of [running ESLint] as a security workflow.
+as GitHub's example of [running ESLint] as a security workflow.
 
 [SARIF]: https://sarifweb.azurewebsites.net/
 
@@ -341,7 +341,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 -   repo: https://github.com/woodruffw/zizmor
-    rev: v0.3.0 # (1)!
+    rev: v0.7.0 # (1)!
     hooks:
     - id: zizmor
 ```
