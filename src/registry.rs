@@ -1,7 +1,7 @@
 //! Functionality for registering and managing the lifecycles of
 //! audits.
 
-use std::{collections::HashMap, fmt::Display, process::ExitCode};
+use std::{fmt::Display, process::ExitCode};
 
 use crate::{
     audit::WorkflowAudit,
@@ -12,6 +12,7 @@ use crate::{
 };
 use anyhow::{anyhow, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use indexmap::IndexMap;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
@@ -103,7 +104,7 @@ impl WorkflowKey {
 }
 
 pub(crate) struct WorkflowRegistry {
-    pub(crate) workflows: HashMap<WorkflowKey, Workflow>,
+    pub(crate) workflows: IndexMap<WorkflowKey, Workflow>,
 }
 
 impl WorkflowRegistry {
@@ -137,9 +138,7 @@ impl WorkflowRegistry {
         self.register(workflow)
     }
 
-    pub(crate) fn iter_workflows(
-        &self,
-    ) -> std::collections::hash_map::Iter<'_, WorkflowKey, Workflow> {
+    pub(crate) fn iter_workflows(&self) -> indexmap::map::Iter<'_, WorkflowKey, Workflow> {
         self.workflows.iter()
     }
 
@@ -171,7 +170,7 @@ impl WorkflowRegistry {
 }
 
 pub(crate) struct AuditRegistry {
-    pub(crate) workflow_audits: HashMap<&'static str, Box<dyn WorkflowAudit>>,
+    pub(crate) workflow_audits: IndexMap<&'static str, Box<dyn WorkflowAudit>>,
 }
 
 impl AuditRegistry {
@@ -193,10 +192,8 @@ impl AuditRegistry {
         self.workflow_audits.insert(ident, audit);
     }
 
-    pub(crate) fn iter_workflow_audits(
-        &mut self,
-    ) -> std::collections::hash_map::IterMut<'_, &str, Box<dyn WorkflowAudit>> {
-        self.workflow_audits.iter_mut()
+    pub(crate) fn iter_workflow_audits(&self) -> indexmap::map::Iter<&str, Box<dyn WorkflowAudit>> {
+        self.workflow_audits.iter()
     }
 }
 
