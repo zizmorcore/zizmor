@@ -1,4 +1,4 @@
-use std::{io::stdout, process::ExitCode, time::Duration};
+use std::{io::stdout, process::ExitCode};
 
 use annotate_snippets::{Level, Renderer};
 use anstream::eprintln;
@@ -8,11 +8,14 @@ use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
 use config::Config;
 use finding::{Confidence, Persona, Severity};
-use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use indicatif::ProgressStyle;
 use models::Uses;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
 use state::AuditState;
+use tracing::{info_span, level_filters::LevelFilter, Span};
+use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
+use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
 mod audit;
 mod config;
@@ -129,8 +132,16 @@ fn run() -> Result<ExitCode> {
         app.persona = Persona::Pedantic;
     }
 
-    env_logger::Builder::new()
-        .filter_level(app.verbose.log_level_filter())
+    let indicatif_layer = IndicatifLayer::new();
+
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env()?;
+
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().with_writer(indicatif_layer.get_stderr_writer()))
+        .with(filter)
+        .with(indicatif_layer)
         .init();
 
     let audit_state = AuditState::new(&app);
@@ -147,8 +158,6 @@ fn run() -> Result<ExitCode> {
             if !absolute.ends_with(".github/workflows") {
                 absolute.push(".github/workflows")
             }
-
-            log::debug!("collecting workflows from {absolute:?}");
 
             for entry in absolute.read_dir_utf8()? {
                 let entry = entry?;
@@ -239,41 +248,30 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::insecure_commands::InsecureCommands);
     register_audit!(audit::github_env::GitHubEnv);
 
-    let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
-
-    // Hide the bar if the user has explicitly asked for quiet output
-    // or to disable just the progress bar.
-    if app.verbose.is_silent() || app.no_progress {
-        bar.set_draw_target(ProgressDrawTarget::hidden());
-    } else {
-        bar.enable_steady_tick(Duration::from_millis(100));
-        bar.set_style(
-            ProgressStyle::with_template("[{elapsed_precise}] {msg} {bar:!30.cyan/blue}").unwrap(),
-        );
-    }
-
     let mut results = FindingRegistry::new(&app, &config);
-    for (_, workflow) in workflow_registry.iter_workflows() {
-        bar.set_message(format!(
-            "auditing {workflow}",
-            workflow = workflow.filename().cyan()
-        ));
-        for (name, audit) in audit_registry.iter_workflow_audits() {
-            results.extend(audit.audit(workflow).with_context(|| {
-                format!(
-                    "{name} failed on {workflow}",
-                    workflow = workflow.filename()
-                )
-            })?);
-            bar.inc(1);
-        }
-        bar.println(format!(
-            "🌈 completed {workflow}",
-            workflow = &workflow.filename().cyan()
-        ));
-    }
+    {
+        // Note: block here so that we drop the span here at the right time.
+        let span = info_span!("auditing");
+        span.pb_set_length((workflow_registry.len() * audit_registry.len()) as u64);
+        span.pb_set_style(
+            &ProgressStyle::with_template("[{elapsed_precise}] {bar:!30.cyan/blue} {msg}").unwrap(),
+        );
 
-    bar.finish_and_clear();
+        let _guard = span.enter();
+
+        for (_, workflow) in workflow_registry.iter_workflows() {
+            Span::current().pb_set_message(workflow.key.filename());
+            for (name, audit) in audit_registry.iter_workflow_audits() {
+                results.extend(audit.audit(workflow).with_context(|| {
+                    format!(
+                        "{name} failed on {workflow}",
+                        workflow = workflow.filename()
+                    )
+                })?);
+                Span::current().pb_inc(1);
+            }
+        }
+    }
 
     match app.format {
         OutputFormat::Plain => render::render_findings(&workflow_registry, &results),

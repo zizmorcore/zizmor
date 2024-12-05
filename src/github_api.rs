@@ -10,6 +10,7 @@ use reqwest::{
     StatusCode,
 };
 use serde::{de::DeserializeOwned, Deserialize};
+use tracing::instrument;
 
 use crate::{
     models::{RepositoryUses, Workflow},
@@ -22,6 +23,14 @@ pub(crate) struct Client {
     api_base: &'static str,
     http: blocking::Client,
     caches: Caches,
+}
+
+impl std::fmt::Debug for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Client")
+            .field("api_base", &self.api_base)
+            .finish()
+    }
 }
 
 impl Client {
@@ -76,6 +85,7 @@ impl Client {
         Ok(dest)
     }
 
+    #[instrument]
     pub(crate) fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
         self.caches
             .branch_cache
@@ -85,6 +95,7 @@ impl Client {
             .map_err(Into::into)
     }
 
+    #[instrument]
     pub(crate) fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>> {
         self.caches
             .tag_cache
@@ -94,6 +105,7 @@ impl Client {
             .map_err(Into::into)
     }
 
+    #[instrument]
     pub(crate) fn commit_for_ref(
         &self,
         owner: &str,
@@ -131,6 +143,7 @@ impl Client {
         }
     }
 
+    #[instrument]
     pub(crate) fn longest_tag_for_commit(
         &self,
         owner: &str,
@@ -153,6 +166,7 @@ impl Client {
             .max_by_key(|t| t.name.len()))
     }
 
+    #[instrument]
     pub(crate) fn compare_commits(
         &self,
         owner: &str,
@@ -181,6 +195,7 @@ impl Client {
             .map_err(Into::into)
     }
 
+    #[instrument]
     pub(crate) fn gha_advisories(
         &self,
         owner: &str,
@@ -203,6 +218,7 @@ impl Client {
     }
 
     /// Return temporary files for all workflows listed in the repo.
+    #[instrument]
     pub(crate) fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
         let owner = slug.owner;
         let repo = slug.repo;

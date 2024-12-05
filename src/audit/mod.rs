@@ -1,6 +1,8 @@
 //! Core namespace for zizmor's audits.
 
 use anyhow::Result;
+use std::fmt::Debug;
+use tracing::instrument;
 
 use crate::{
     finding::{Finding, FindingBuilder},
@@ -77,6 +79,12 @@ macro_rules! audit_meta {
                 concat!("https://woodruffw.github.io/zizmor/audits#", $id)
             }
         }
+
+        impl std::fmt::Debug for $t {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "audit:{}", $id)
+            }
+        }
     };
 }
 
@@ -96,7 +104,7 @@ pub(crate) use audit_meta;
 /// In other words, if an audit chooses to implement [`WorkflowAudit::audit`], it should implement
 /// **only** [`WorkflowAudit::audit`] and not [`WorkflowAudit::audit_normal_job`] or
 /// [`WorkflowAudit::audit_step`].
-pub(crate) trait WorkflowAudit: Audit {
+pub(crate) trait WorkflowAudit: Audit + Debug {
     fn new(state: AuditState) -> Result<Self>
     where
         Self: Sized;
@@ -117,6 +125,7 @@ pub(crate) trait WorkflowAudit: Audit {
         Ok(vec![])
     }
 
+    #[instrument]
     fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let mut results = vec![];
 

@@ -1,6 +1,7 @@
 //! Enriching/context-bearing wrappers over GitHub Actions models
 //! from the `github-actions-models` crate.
 
+use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 
 use crate::finding::{Route, SymbolicLocation};
@@ -28,6 +29,12 @@ pub(crate) struct Workflow {
     pub(crate) link: Option<String>,
     pub(crate) document: yamlpath::Document,
     inner: workflow::Workflow,
+}
+
+impl Debug for Workflow {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{key}", key = self.key.to_string())
+    }
 }
 
 impl Deref for Workflow {
