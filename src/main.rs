@@ -1,12 +1,15 @@
-use std::{io::stdout, path::PathBuf, process::ExitCode, time::Duration};
+use std::{io::stdout, process::ExitCode, time::Duration};
 
+use annotate_snippets::{Level, Renderer};
 use anstream::eprintln;
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
 use config::Config;
 use finding::{Confidence, Persona, Severity};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use models::Uses;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
 use state::AuditState;
@@ -37,9 +40,24 @@ struct App {
     #[arg(long, group = "_persona", value_enum, default_value_t)]
     persona: Persona,
 
-    /// Only perform audits that don't require network access.
-    #[arg(short, long)]
+    /// Perform only offline operations.
+    ///
+    /// This disables all online audit rules, and prevents zizmor from
+    /// auditing remote repositories.
+    #[arg(short, long, env = "ZIZMOR_OFFLINE", group = "_offline")]
     offline: bool,
+
+    /// The GitHub API token to use.
+    #[arg(long, env, group = "_offline")]
+    gh_token: Option<String>,
+
+    /// Perform only offline audits.
+    ///
+    /// This is a weaker version of `--offline`: instead of completely
+    /// forbidding all online operations, it only disables audits that
+    /// require connectivity.
+    #[arg(long, env = "ZIZMOR_NO_ONLINE_AUDITS")]
+    no_online_audits: bool,
 
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
@@ -49,10 +67,6 @@ struct App {
     #[arg(short, long)]
     no_progress: bool,
 
-    /// The GitHub API token to use.
-    #[arg(long, env)]
-    gh_token: Option<String>,
-
     /// The output format to emit. By default, plain text will be emitted
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
@@ -60,7 +74,7 @@ struct App {
     /// The configuration file to load. By default, any config will be
     /// discovered relative to $CWD.
     #[arg(short, long, group = "conf")]
-    config: Option<PathBuf>,
+    config: Option<Utf8PathBuf>,
 
     /// Disable all configuration loading.
     #[arg(long, group = "conf")]
@@ -78,9 +92,14 @@ struct App {
     #[arg(long)]
     min_confidence: Option<Confidence>,
 
-    /// The workflow filenames or directories to audit.
+    /// The inputs to audit.
+    ///
+    /// These can be individual workflow filenames, entire directories,
+    /// or a `user/repo` slug for a GitHub repository. In the latter case,
+    /// a `@ref` can be appended to audit the repository at a particular
+    /// git reference state.
     #[arg(required = true)]
-    inputs: Vec<PathBuf>,
+    inputs: Vec<String>,
 }
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
@@ -89,6 +108,15 @@ pub(crate) enum OutputFormat {
     Plain,
     Json,
     Sarif,
+}
+
+fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
+    let message = Level::Error
+        .title(err.as_ref())
+        .footer(Level::Note.title(tip.as_ref()));
+
+    let renderer = Renderer::styled();
+    format!("{}", renderer.render(message))
 }
 
 fn run() -> Result<ExitCode> {
@@ -105,52 +133,84 @@ fn run() -> Result<ExitCode> {
         .filter_level(app.verbose.log_level_filter())
         .init();
 
-    let mut workflow_paths = vec![];
+    let audit_state = AuditState::new(&app);
+    let mut workflow_registry = WorkflowRegistry::new();
+
     for input in &app.inputs {
-        if input.is_file() {
-            workflow_paths.push(input.clone());
-        } else if input.is_dir() {
-            let mut absolute = std::fs::canonicalize(input)?;
+        let input_path = Utf8Path::new(input);
+        if input_path.is_file() {
+            workflow_registry
+                .register_by_path(input_path)
+                .with_context(|| format!("failed to register workflow: {input_path}"))?;
+        } else if input_path.is_dir() {
+            let mut absolute = input_path.canonicalize_utf8()?;
             if !absolute.ends_with(".github/workflows") {
                 absolute.push(".github/workflows")
             }
 
             log::debug!("collecting workflows from {absolute:?}");
 
-            for entry in std::fs::read_dir(absolute)? {
-                let workflow_path = entry?.path();
+            for entry in absolute.read_dir_utf8()? {
+                let entry = entry?;
+                let workflow_path = entry.path();
                 match workflow_path.extension() {
                     Some(ext) if ext == "yml" || ext == "yaml" => {
-                        workflow_paths.push(workflow_path)
+                        workflow_registry
+                            .register_by_path(workflow_path)
+                            .with_context(|| {
+                                format!("failed to register workflow: {workflow_path}")
+                            })?;
                     }
                     _ => continue,
                 }
             }
         } else {
-            return Err(anyhow!("input malformed, expected file or directory"));
+            // If this input isn't a file or directory, it's probably an
+            // `owner/repo(@ref)?` slug.
+
+            // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
+            let Some(Uses::Repository(slug)) = Uses::from_step(input) else {
+                return Err(anyhow!(tip(
+                    format!("invalid input: {input}"),
+                    format!(
+                        "pass a single {file}, {directory}, or entire repo by {slug} slug",
+                        file = "file".green(),
+                        directory = "directory".green(),
+                        slug = "owner/repo".green()
+                    )
+                )));
+            };
+
+            // We don't expect subpaths here.
+            if slug.subpath.is_some() {
+                return Err(anyhow!(tip(
+                    "invalid GitHub repository reference",
+                    "pass owner/repo or owner/repo@ref"
+                )));
+            }
+
+            let client = audit_state.github_client().ok_or_else(|| {
+                anyhow!(tip(
+                    format!("can't retrieve repository: {input}", input = input.green()),
+                    format!(
+                        "try removing {offline} or passing {gh_token}",
+                        offline = "--offline".yellow(),
+                        gh_token = "--gh-token <TOKEN>".yellow(),
+                    )
+                ))
+            })?;
+
+            for workflow in client.fetch_workflows(&slug)? {
+                workflow_registry.register(workflow)?;
+            }
         }
     }
 
-    if workflow_paths.is_empty() {
-        return Err(anyhow!(
-            "no workflow files collected; empty or wrong directory?"
-        ));
+    if workflow_registry.len() == 0 {
+        return Err(anyhow!("no workflow files collected"));
     }
-
-    log::debug!(
-        "collected workflows: {workflows:?}",
-        workflows = workflow_paths
-    );
 
     let config = Config::new(&app)?;
-    let audit_state = AuditState::new(&app);
-
-    let mut workflow_registry = WorkflowRegistry::new();
-    for workflow_path in workflow_paths.iter() {
-        workflow_registry
-            .register_workflow(workflow_path)
-            .with_context(|| format!("failed to register workflow: {workflow_path:?}"))?;
-    }
 
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {

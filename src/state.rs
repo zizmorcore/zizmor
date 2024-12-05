@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Clone)]
 pub(crate) struct AuditState {
-    pub(crate) offline: bool,
+    pub(crate) no_online_audits: bool,
     pub(crate) gh_token: Option<String>,
     pub(crate) caches: Caches,
 }
@@ -18,7 +18,7 @@ impl AuditState {
     pub(crate) fn new(app: &App) -> Self {
         Self {
             caches: Caches::new(),
-            offline: app.offline,
+            no_online_audits: app.no_online_audits,
             gh_token: app.gh_token.clone(),
         }
     }

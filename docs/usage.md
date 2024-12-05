@@ -15,10 +15,15 @@ Both of these can be made explicit through their respective command-line flags:
 
 ```bash
 # force offline, even if a GH_TOKEN is present
+# this disables all online actions, including repository fetches
 zizmor --offline workflow.yml
 
-# passing a token explicitly will forcefully enable online mode
+# passing a token explicitly will enable online mode
 zizmor --gh-token ghp-... workflow.yml
+
+# online for the purpose of fetching the input (example/example),
+# but all audits themselves are offline
+zizmor --no-online-audits --gh-token ghp-... example/example
 ```
 
 ## Output formats
@@ -317,7 +322,7 @@ jobs:
 1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
 For more inspiration, see `zizmor`'s own [repository workflow scan], as well
-as  GitHub's example of [running ESLint] as a security workflow.
+as GitHub's example of [running ESLint] as a security workflow.
 
 [SARIF]: https://sarifweb.azurewebsites.net/
 
@@ -336,7 +341,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 -   repo: https://github.com/woodruffw/zizmor
-    rev: v0.3.0 # (1)!
+    rev: v0.7.0 # (1)!
     hooks:
     - id: zizmor
 ```

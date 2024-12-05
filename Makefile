@@ -19,4 +19,4 @@ $(VENV): site-requirements.txt
 
 .PHONY: snippets
 snippets:
-	cargo run -- --help > docs/snippets/help.txt
+	cargo run -- -h > docs/snippets/help.txt

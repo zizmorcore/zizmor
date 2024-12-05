@@ -123,7 +123,10 @@ impl Config {
         // multiple files, as the first location is the one a user will
         // typically ignore, suppressing the rest in the process.
         for loc in &finding.locations {
-            for rule in ignores.iter().filter(|i| i.filename == loc.symbolic.name) {
+            for rule in ignores
+                .iter()
+                .filter(|i| i.filename == loc.symbolic.key.filename())
+            {
                 match rule {
                     // Rule has a line and (maybe) a column.
                     WorkflowRule {
