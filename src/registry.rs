@@ -292,3 +292,36 @@ impl From<FindingRegistry<'_>> for ExitCode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::models::Uses;
+
+    use super::WorkflowKey;
+
+    #[test]
+    fn test_workflow_key_display() {
+        let local = WorkflowKey::local("/foo/bar/baz.yml".into()).unwrap();
+        assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
+
+        // No ref
+        let Uses::Repository(slug) = Uses::from_step("foo/bar").unwrap() else {
+            panic!()
+        };
+        let remote = WorkflowKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
+        assert_eq!(
+            remote.to_string(),
+            "https://github.com/foo/bar/blob/HEAD/.github/workflows/baz.yml"
+        );
+
+        // With a git ref
+        let Uses::Repository(slug) = Uses::from_step("foo/bar@v1").unwrap() else {
+            panic!()
+        };
+        let remote = WorkflowKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
+        assert_eq!(
+            remote.to_string(),
+            "https://github.com/foo/bar/blob/v1/.github/workflows/baz.yml"
+        );
+    }
+}
