@@ -16,6 +16,7 @@ nav:
   - "configuration.md"
   - "audits.md"
   - "development.md"
+  - "trophy-case.md"
   - External links:
       - "crates.io 🔗": https://crates.io/crates/zizmor
 
