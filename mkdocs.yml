@@ -20,6 +20,7 @@ nav:
       - "crates.io 🔗": https://crates.io/crates/zizmor
 
 plugins:
+  - search
   - social
 
 theme:
