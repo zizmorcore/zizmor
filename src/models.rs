@@ -33,7 +33,7 @@ pub(crate) struct Workflow {
 
 impl Debug for Workflow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{key}", key = self.key.to_string())
+        write!(f, "{key}", key = self.key)
     }
 }
 
