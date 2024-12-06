@@ -38,8 +38,10 @@ const SAFE_CONTEXTS: &[&str] = &[
     // The GitHub event name (i.e. trigger) is itself safe.
     "github.event_name",
     // Safe keys within the otherwise generally unsafe github.event context.
-    "github.event.number",
+    "github.event.issue.number",
     "github.event.merge_group.base_sha",
+    "github.event.number",
+    "github.event.pull_request.number",
     "github.event.workflow_run.id",
     // Information about the GitHub repository
     "github.repository",
