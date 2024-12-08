@@ -340,8 +340,8 @@ as GitHub's example of [running ESLint] as a security workflow.
 To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
--   repo: https://github.com/woodruffw/zizmor
-    rev: v0.7.0 # (1)!
+-   repo: https://github.com/woodruffw/zizmor-pre-commit
+    rev: v0.8.0 # (1)!
     hooks:
     - id: zizmor
 ```
