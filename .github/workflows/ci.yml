@@ -35,7 +35,7 @@ jobs:
 
       - name: Configure Rust
         run:
-          rustup toolchain install "${TOOLCHAIN}"
+          rustup install "${TOOLCHAIN}"
           rustup default "${TOOLCHAIN}"
         env:
           TOOLCHAIN: ${{ matrix.rust }}
