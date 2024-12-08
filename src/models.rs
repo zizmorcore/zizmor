@@ -301,9 +301,12 @@ impl<'w> Matrix<'w> {
 
     /// Checks whether some expanded path leads to an expression
     pub(crate) fn is_static(&self) -> bool {
-        self.expand_values()
+        let expands_to_expression = self
+            .expand_values()
             .iter()
-            .any(|(_, expansion)| expansion.starts_with("${{") && expansion.ends_with("}}"))
+            .any(|(_, expansion)| expansion.starts_with("${{") && expansion.ends_with("}}"));
+
+        !expands_to_expression
     }
 
     fn expand_inclusions(include: &IndexMap<String, serde_yaml::Value>) -> Vec<(String, String)> {

@@ -210,3 +210,22 @@ fn insecure_commands() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn template_injection() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "template-injection/template-injection-static-matrix.yml"
+        ))
+        .args(["--persona=auditor"])
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "template-injection/template-injection-dynamic-matrix.yml"
+        ))
+        .args(["--persona=auditor"])
+        .run()?);
+
+    Ok(())
+}
