@@ -66,11 +66,6 @@ struct App {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
 
-    /// Disable the progress bar. This is useful primarily when running
-    /// with a high verbosity level, as the two will fight for stderr.
-    #[arg(short, long)]
-    no_progress: bool,
-
     /// The output format to emit. By default, plain text will be emitted
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
