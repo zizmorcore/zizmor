@@ -20,8 +20,6 @@ Options:
           Increase logging verbosity
   -q, --quiet...
           Decrease logging verbosity
-  -n, --no-progress
-          Disable the progress bar. This is useful primarily when running with a high verbosity level, as the two will fight for stderr
       --format <FORMAT>
           The output format to emit. By default, plain text will be emitted [default: plain] [possible values: plain, json, sarif]
   -c, --config <CONFIG>
