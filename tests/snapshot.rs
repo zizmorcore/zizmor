@@ -168,3 +168,17 @@ fn unpinned_uses() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn insecure_commands() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("insecure-commands.yml"))
+        .args(["--persona=auditor"])
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("insecure-commands.yml"))
+        .run()?);
+
+    Ok(())
+}
