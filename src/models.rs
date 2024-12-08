@@ -485,7 +485,7 @@ impl<'a> Uses<'a> {
 
             let components = path.splitn(3, '/').collect::<Vec<_>>();
             if components.len() < 2 {
-                log::debug!("malformed `uses:` ref: {uses}");
+                tracing::debug!("malformed `uses:` ref: {uses}");
                 return None;
             }
 

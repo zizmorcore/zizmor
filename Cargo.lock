@@ -235,7 +235,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "54381ae56ad222eea3f529c692879e9c65e07945ae48d3dc4d1cb18dbec8cf44"
 dependencies = [
  "clap",
- "log",
+ "tracing-core",
 ]
 
 [[package]]
@@ -2589,7 +2589,6 @@ dependencies = [
  "indicatif",
  "insta",
  "itertools",
- "log",
  "moka",
  "owo-colors",
  "pest",

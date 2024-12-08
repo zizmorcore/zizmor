@@ -143,7 +143,7 @@ impl ExcessivePermissions {
                                 format!("{name}: write is overly broad at the workflow level"),
                             )),
                             None => {
-                                log::debug!("unknown permission: {name}");
+                                tracing::debug!("unknown permission: {name}");
 
                                 results.push((
                                     Severity::Unknown,

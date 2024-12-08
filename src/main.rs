@@ -6,6 +6,7 @@ use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
+use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
 use indicatif::ProgressStyle;
@@ -13,7 +14,7 @@ use models::Uses;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
 use state::AuditState;
-use tracing::{info_span, instrument, level_filters::LevelFilter, Span};
+use tracing::{info_span, instrument, Span};
 use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
@@ -63,7 +64,7 @@ struct App {
     no_online_audits: bool,
 
     #[command(flatten)]
-    verbose: clap_verbosity_flag::Verbosity,
+    verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
 
     /// Disable the progress bar. This is useful primarily when running
     /// with a high verbosity level, as the two will fight for stderr.
@@ -214,7 +215,7 @@ fn run() -> Result<ExitCode> {
     let indicatif_layer = IndicatifLayer::new();
 
     let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
+        .with_default_directive(app.verbose.tracing_level_filter().into())
         .from_env()?;
 
     tracing_subscriber::registry()
@@ -236,7 +237,7 @@ fn run() -> Result<ExitCode> {
             use $rule as base;
             match base::new(audit_state.clone()) {
                 Ok(audit) => audit_registry.register_workflow_audit(base::ident(), Box::new(audit)),
-                Err(e) => log::warn!("{audit} is being skipped: {e}", audit = base::ident()),
+                Err(e) => tracing::warn!("{audit} is being skipped: {e}", audit = base::ident()),
             }
         }};
     }
@@ -277,6 +278,8 @@ fn run() -> Result<ExitCode> {
                 })?);
                 Span::current().pb_inc(1);
             }
+
+            tracing::info!("🌈 completed {workflow}", workflow = workflow.filename());
         }
     }
 

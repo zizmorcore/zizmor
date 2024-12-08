@@ -216,7 +216,7 @@ impl Client {
         let repo = slug.repo;
         let git_ref = slug.git_ref;
 
-        log::debug!("fetching workflows for {owner}/{repo}");
+        tracing::debug!("fetching workflows for {owner}/{repo}");
 
         // It'd be nice if the GitHub contents API allowed us to retrieve
         // all file contents with a directory listing, but it doesn't.
@@ -240,7 +240,7 @@ impl Client {
         let mut workflows = vec![];
         for file in resp.into_iter().filter(|file| file.name.ends_with(".yml")) {
             let file_url = format!("{url}/{file}", file = file.name);
-            log::debug!("fetching {file_url}");
+            tracing::debug!("fetching {file_url}");
 
             let contents = self
                 .http

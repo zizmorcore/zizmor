@@ -62,7 +62,7 @@ impl GitHubEnv {
             "cmd" => Ok(GITHUB_ENV_WRITE_CMD.is_match(run_step_body)),
             // TODO: handle pwsh/powershell/python.
             &_ => {
-                log::warn!(
+                tracing::warn!(
                     "'{}' shell not supported when evaluating usage of GITHUB_ENV",
                     shell
                 );
@@ -101,7 +101,7 @@ impl WorkflowAudit for GitHubEnv {
 
         if let StepBody::Run { run, .. } = &step.deref().body {
             let shell = step.shell().unwrap_or_else(|| {
-                log::warn!(
+                tracing::warn!(
                     "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}",
                     workflow = step.workflow().filename(),
                     job = step.parent.id,
