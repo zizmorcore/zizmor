@@ -1,7 +1,7 @@
 use std::{io::stdout, process::ExitCode};
 
 use annotate_snippets::{Level, Renderer};
-use anstream::eprintln;
+use anstream::{eprintln, stream::IsTerminal};
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -219,7 +219,11 @@ fn run() -> Result<ExitCode> {
         .from_env()?;
 
     tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_writer(indicatif_layer.get_stderr_writer()))
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(std::io::stderr().is_terminal())
+                .with_writer(indicatif_layer.get_stderr_writer()),
+        )
         .with(filter)
         .with(indicatif_layer)
         .init();
@@ -237,7 +241,7 @@ fn run() -> Result<ExitCode> {
             use $rule as base;
             match base::new(audit_state.clone()) {
                 Ok(audit) => audit_registry.register_workflow_audit(base::ident(), Box::new(audit)),
-                Err(e) => tracing::warn!("{audit} is being skipped: {e}", audit = base::ident()),
+                Err(e) => tracing::warn!("skipping {audit}: {e}", audit = base::ident()),
             }
         }};
     }
@@ -259,7 +263,7 @@ fn run() -> Result<ExitCode> {
     let mut results = FindingRegistry::new(&app, &config);
     {
         // Note: block here so that we drop the span here at the right time.
-        let span = info_span!("auditing");
+        let span = info_span!("audit");
         span.pb_set_length((workflow_registry.len() * audit_registry.len()) as u64);
         span.pb_set_style(
             &ProgressStyle::with_template("[{elapsed_precise}] {bar:!30.cyan/blue} {msg}").unwrap(),
@@ -279,7 +283,7 @@ fn run() -> Result<ExitCode> {
                 Span::current().pb_inc(1);
             }
 
-            tracing::info!("🌈 completed {workflow}", workflow = workflow.filename());
+            tracing::info!("🌈 completed {workflow}", workflow = workflow.key.path());
         }
     }
 

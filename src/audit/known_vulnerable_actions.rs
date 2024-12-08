@@ -130,7 +130,7 @@ impl WorkflowAudit for KnownVulnerableActions {
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't audit without a GitHub API token"));
+            return Err(anyhow!("can't run without a GitHub API token"));
         };
 
         Ok(Self { client })
