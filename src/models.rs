@@ -7,7 +7,7 @@ use anyhow::{bail, Context, Result};
 use camino::Utf8Path;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
-use github_actions_models::workflow::job::RunsOn;
+use github_actions_models::workflow::job::{RunsOn, Strategy};
 use github_actions_models::workflow::{
     self, job,
     job::{NormalJob, StepBody},
@@ -251,15 +251,15 @@ impl<'w> TryFrom<&'w Job<'w>> for Matrix<'w> {
             bail!("job is not a normal job")
         };
 
-        let Some(strategy) = &job.strategy else {
-            bail!("job does not define a strategy")
+        let Some(Strategy {
+            matrix: Some(matrix),
+            ..
+        }) = &job.strategy
+        else {
+            bail!("job does not define a strategy or interior matrix")
         };
 
-        let Some(inner) = &strategy.matrix else {
-            bail!("job does not define a matrix")
-        };
-
-        Ok(Matrix { inner })
+        Ok(Matrix { inner: matrix })
     }
 }
 
