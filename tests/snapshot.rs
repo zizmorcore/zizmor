@@ -152,6 +152,34 @@ fn self_hosted() -> Result<()> {
         .workflow(workflow_under_test("self-hosted.yml"))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "self-hosted/self-hosted-runner-label.yml"
+        ))
+        .args(["--persona=auditor"])
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "self-hosted/self-hosted-runner-group.yml"
+        ))
+        .args(["--persona=auditor"])
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "self-hosted/self-hosted-matrix-dimension.yml"
+        ))
+        .args(["--persona=auditor"])
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "self-hosted/self-hosted-matrix-inclusion.yml"
+        ))
+        .args(["--persona=auditor"])
+        .run()?);
+
     Ok(())
 }
 

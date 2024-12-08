@@ -785,12 +785,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indoc"
-version = "2.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b248f5224d1d606005e02c97f5aa4e88eeb230488bcc03bc9ca4d7991399f2b5"
-
-[[package]]
 name = "insta"
 version = "1.41.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1792,12 +1786,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b2093cf4c8eb1e67749a6762251bc9cd836b6fc171623bd0a9d324d37af2417"
 
 [[package]]
-name = "temp-dir"
-version = "0.1.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc1ee6eef34f12f765cb94725905c6312b6610ab2b0940889cfe58dae7bc3c72"
-
-[[package]]
 name = "terminal-link"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2599,7 +2587,6 @@ dependencies = [
  "human-panic",
  "indexmap",
  "indicatif",
- "indoc",
  "insta",
  "itertools",
  "moka",
@@ -2614,13 +2601,11 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "serde_yaml",
- "temp-dir",
  "terminal-link",
  "tracing",
  "tracing-indicatif",
  "tracing-subscriber",
  "tree-sitter",
  "tree-sitter-bash",
- "uuid",
  "yamlpath",
 ]
