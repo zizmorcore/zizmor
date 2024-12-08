@@ -1,9 +1,6 @@
 //! Enriching/context-bearing wrappers over GitHub Actions models
 //! from the `github-actions-models` crate.
 
-use std::fmt::Debug;
-use std::{iter::Enumerate, ops::Deref};
-
 use crate::finding::{Route, SymbolicLocation};
 use crate::registry::WorkflowKey;
 use anyhow::{bail, Context, Result};
@@ -19,6 +16,7 @@ use github_actions_models::workflow::{
 use indexmap::IndexMap;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 use terminal_link::Link;
 
@@ -305,7 +303,7 @@ impl<'w> Matrix<'w> {
     pub(crate) fn is_static(&self) -> bool {
         self.expand_values()
             .iter()
-            .any(|(_, expansion)| expansion.starts_with("${{") && expansion.starts_with("}}"))
+            .any(|(_, expansion)| expansion.starts_with("${{") && expansion.ends_with("}}"))
     }
 
     fn expand_inclusions(include: &IndexMap<String, serde_yaml::Value>) -> Vec<(String, String)> {
