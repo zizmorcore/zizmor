@@ -34,7 +34,7 @@ jobs:
           persist-credentials: false
 
       - name: Configure Rust
-        run:
+        run: |
           rustup install "${TOOLCHAIN}"
           rustup default "${TOOLCHAIN}"
         env:
