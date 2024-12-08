@@ -14,6 +14,7 @@ use anyhow::{anyhow, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use serde::Serialize;
+use tracing::instrument;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
 pub(crate) struct LocalWorkflowKey {
@@ -118,6 +119,7 @@ impl WorkflowRegistry {
         self.workflows.len()
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn register(&mut self, workflow: Workflow) -> Result<()> {
         if self.workflows.contains_key(&workflow.key) {
             return Err(anyhow!(
@@ -131,6 +133,7 @@ impl WorkflowRegistry {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn register_by_path(&mut self, path: &Utf8Path) -> Result<()> {
         let workflow =
             Workflow::from_file(path).with_context(|| "couldn't load workflow from file")?;

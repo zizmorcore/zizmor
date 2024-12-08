@@ -30,7 +30,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
         Ok(Self {})
     }
 
-    fn audit<'w>(
+    fn audit_workflow<'w>(
         &self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {

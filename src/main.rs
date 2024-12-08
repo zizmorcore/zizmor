@@ -1,18 +1,22 @@
-use std::{io::stdout, process::ExitCode, time::Duration};
+use std::{io::stdout, process::ExitCode};
 
 use annotate_snippets::{Level, Renderer};
-use anstream::eprintln;
+use anstream::{eprintln, stream::IsTerminal};
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
+use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
-use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use indicatif::ProgressStyle;
 use models::Uses;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
 use state::AuditState;
+use tracing::{info_span, instrument, Span};
+use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
+use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
 mod audit;
 mod config;
@@ -60,7 +64,7 @@ struct App {
     no_online_audits: bool,
 
     #[command(flatten)]
-    verbose: clap_verbosity_flag::Verbosity,
+    verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
 
     /// Disable the progress bar. This is useful primarily when running
     /// with a high verbosity level, as the two will fight for stderr.
@@ -119,24 +123,11 @@ fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
     format!("{}", renderer.render(message))
 }
 
-fn run() -> Result<ExitCode> {
-    human_panic::setup_panic!();
-
-    let mut app = App::parse();
-
-    // `--pedantic` is a shortcut for `--persona=pedantic`.
-    if app.pedantic {
-        app.persona = Persona::Pedantic;
-    }
-
-    env_logger::Builder::new()
-        .filter_level(app.verbose.log_level_filter())
-        .init();
-
-    let audit_state = AuditState::new(&app);
+#[instrument(skip_all)]
+fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<WorkflowRegistry> {
     let mut workflow_registry = WorkflowRegistry::new();
 
-    for input in &app.inputs {
+    for input in inputs {
         let input_path = Utf8Path::new(input);
         if input_path.is_file() {
             workflow_registry
@@ -147,8 +138,6 @@ fn run() -> Result<ExitCode> {
             if !absolute.ends_with(".github/workflows") {
                 absolute.push(".github/workflows")
             }
-
-            log::debug!("collecting workflows from {absolute:?}");
 
             for entry in absolute.read_dir_utf8()? {
                 let entry = entry?;
@@ -189,7 +178,7 @@ fn run() -> Result<ExitCode> {
                 )));
             }
 
-            let client = audit_state.github_client().ok_or_else(|| {
+            let client = state.github_client().ok_or_else(|| {
                 anyhow!(tip(
                     format!("can't retrieve repository: {input}", input = input.green()),
                     format!(
@@ -210,6 +199,38 @@ fn run() -> Result<ExitCode> {
         return Err(anyhow!("no workflow files collected"));
     }
 
+    Ok(workflow_registry)
+}
+
+fn run() -> Result<ExitCode> {
+    human_panic::setup_panic!();
+
+    let mut app = App::parse();
+
+    // `--pedantic` is a shortcut for `--persona=pedantic`.
+    if app.pedantic {
+        app.persona = Persona::Pedantic;
+    }
+
+    let indicatif_layer = IndicatifLayer::new();
+
+    let filter = EnvFilter::builder()
+        .with_default_directive(app.verbose.tracing_level_filter().into())
+        .from_env()?;
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(std::io::stderr().is_terminal())
+                .with_writer(indicatif_layer.get_stderr_writer()),
+        )
+        .with(filter)
+        .with(indicatif_layer)
+        .init();
+
+    let audit_state = AuditState::new(&app);
+    let workflow_registry = collect_inputs(&app.inputs, &audit_state)?;
+
     let config = Config::new(&app)?;
 
     let mut audit_registry = AuditRegistry::new();
@@ -220,7 +241,7 @@ fn run() -> Result<ExitCode> {
             use $rule as base;
             match base::new(audit_state.clone()) {
                 Ok(audit) => audit_registry.register_workflow_audit(base::ident(), Box::new(audit)),
-                Err(e) => log::warn!("{audit} is being skipped: {e}", audit = base::ident()),
+                Err(e) => tracing::warn!("skipping {audit}: {e}", audit = base::ident()),
             }
         }};
     }
@@ -239,41 +260,32 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::insecure_commands::InsecureCommands);
     register_audit!(audit::github_env::GitHubEnv);
 
-    let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
-
-    // Hide the bar if the user has explicitly asked for quiet output
-    // or to disable just the progress bar.
-    if app.verbose.is_silent() || app.no_progress {
-        bar.set_draw_target(ProgressDrawTarget::hidden());
-    } else {
-        bar.enable_steady_tick(Duration::from_millis(100));
-        bar.set_style(
-            ProgressStyle::with_template("[{elapsed_precise}] {msg} {bar:!30.cyan/blue}").unwrap(),
-        );
-    }
-
     let mut results = FindingRegistry::new(&app, &config);
-    for (_, workflow) in workflow_registry.iter_workflows() {
-        bar.set_message(format!(
-            "auditing {workflow}",
-            workflow = workflow.filename().cyan()
-        ));
-        for (name, audit) in audit_registry.iter_workflow_audits() {
-            results.extend(audit.audit(workflow).with_context(|| {
-                format!(
-                    "{name} failed on {workflow}",
-                    workflow = workflow.filename()
-                )
-            })?);
-            bar.inc(1);
-        }
-        bar.println(format!(
-            "🌈 completed {workflow}",
-            workflow = &workflow.filename().cyan()
-        ));
-    }
+    {
+        // Note: block here so that we drop the span here at the right time.
+        let span = info_span!("audit");
+        span.pb_set_length((workflow_registry.len() * audit_registry.len()) as u64);
+        span.pb_set_style(
+            &ProgressStyle::with_template("[{elapsed_precise}] {bar:!30.cyan/blue} {msg}").unwrap(),
+        );
 
-    bar.finish_and_clear();
+        let _guard = span.enter();
+
+        for (_, workflow) in workflow_registry.iter_workflows() {
+            Span::current().pb_set_message(workflow.key.filename());
+            for (name, audit) in audit_registry.iter_workflow_audits() {
+                results.extend(audit.audit(workflow).with_context(|| {
+                    format!(
+                        "{name} failed on {workflow}",
+                        workflow = workflow.filename()
+                    )
+                })?);
+                Span::current().pb_inc(1);
+            }
+
+            tracing::info!("🌈 completed {workflow}", workflow = workflow.key.path());
+        }
+    }
 
     match app.format {
         OutputFormat::Plain => render::render_findings(&workflow_registry, &results),

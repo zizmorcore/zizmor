@@ -105,7 +105,7 @@ impl ImpostorCommit {
 
         // If we've made it here, the commit isn't present in any commit or tag's history,
         // strongly suggesting that it's an impostor.
-        log::warn!(
+        tracing::warn!(
             "strong impostor candidate: {head_ref} for {org}/{repo}",
             org = uses.owner,
             repo = uses.repo
@@ -121,13 +121,13 @@ impl WorkflowAudit for ImpostorCommit {
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't audit without a GitHub API token"));
+            return Err(anyhow!("can't run without a GitHub API token"));
         };
 
         Ok(ImpostorCommit { client })
     }
 
-    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {

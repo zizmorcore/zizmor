@@ -33,7 +33,7 @@ impl Locator {
             }
 
             let query = builder.build();
-            log::trace!(
+            tracing::trace!(
                 "querying {workflow}: {query:?}",
                 workflow = workflow.filename()
             );

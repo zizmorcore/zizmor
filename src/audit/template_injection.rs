@@ -169,7 +169,7 @@ impl TemplateInjection {
         let mut bad_expressions = vec![];
         for expr in extract_expressions(run) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
-                log::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
+                tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
 

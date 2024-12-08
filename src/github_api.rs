@@ -10,6 +10,7 @@ use reqwest::{
     StatusCode,
 };
 use serde::{de::DeserializeOwned, Deserialize};
+use tracing::instrument;
 
 use crate::{
     models::{RepositoryUses, Workflow},
@@ -76,6 +77,7 @@ impl Client {
         Ok(dest)
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
         self.caches
             .branch_cache
@@ -85,6 +87,7 @@ impl Client {
             .map_err(Into::into)
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>> {
         self.caches
             .tag_cache
@@ -94,6 +97,7 @@ impl Client {
             .map_err(Into::into)
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn commit_for_ref(
         &self,
         owner: &str,
@@ -131,6 +135,7 @@ impl Client {
         }
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn longest_tag_for_commit(
         &self,
         owner: &str,
@@ -153,6 +158,7 @@ impl Client {
             .max_by_key(|t| t.name.len()))
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn compare_commits(
         &self,
         owner: &str,
@@ -181,6 +187,7 @@ impl Client {
             .map_err(Into::into)
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn gha_advisories(
         &self,
         owner: &str,
@@ -203,12 +210,13 @@ impl Client {
     }
 
     /// Return temporary files for all workflows listed in the repo.
+    #[instrument(skip(self))]
     pub(crate) fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
         let owner = slug.owner;
         let repo = slug.repo;
         let git_ref = slug.git_ref;
 
-        log::debug!("fetching workflows for {owner}/{repo}");
+        tracing::debug!("fetching workflows for {owner}/{repo}");
 
         // It'd be nice if the GitHub contents API allowed us to retrieve
         // all file contents with a directory listing, but it doesn't.
@@ -232,7 +240,7 @@ impl Client {
         let mut workflows = vec![];
         for file in resp.into_iter().filter(|file| file.name.ends_with(".yml")) {
             let file_url = format!("{url}/{file}", file = file.name);
-            log::debug!("fetching {file_url}");
+            tracing::debug!("fetching {file_url}");
 
             let contents = self
                 .http

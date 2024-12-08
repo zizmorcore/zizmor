@@ -96,14 +96,14 @@ impl Config {
                     if path.is_file() {
                         serde_yaml::from_str(&fs::read_to_string(path)?)?
                     } else {
-                        log::debug!("no config discovered; loading default");
+                        tracing::debug!("no config discovered; loading default");
                         Config::default()
                     }
                 }
             }
         };
 
-        log::debug!("loaded config: {config:?}");
+        tracing::debug!("loaded config: {config:?}");
 
         Ok(config)
     }
