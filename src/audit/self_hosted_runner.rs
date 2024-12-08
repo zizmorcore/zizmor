@@ -34,7 +34,7 @@ impl WorkflowAudit for SelfHostedRunner {
         Ok(Self)
     }
 
-    fn audit<'w>(
+    fn audit_workflow<'w>(
         &self,
         workflow: &'w crate::models::Workflow,
     ) -> Result<Vec<crate::finding::Finding<'w>>> {

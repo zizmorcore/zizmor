@@ -96,7 +96,7 @@ impl WorkflowAudit for InsecureCommands {
         Ok(Self {})
     }
 
-    fn audit<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut results = vec![];
 
         if self.has_insecure_commands_enabled(&workflow.env) {

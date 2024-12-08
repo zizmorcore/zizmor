@@ -127,7 +127,7 @@ impl WorkflowAudit for ImpostorCommit {
         Ok(ImpostorCommit { client })
     }
 
-    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {

@@ -95,7 +95,7 @@ pub(crate) use audit_meta;
 /// Implementors of this trait can choose the level of specificity/context
 /// they need:
 ///
-/// 1. [`WorkflowAudit::audit`]: runs at the top of the workflow (most general)
+/// 1. [`WorkflowAudit::audit_workflow`]: runs at the top of the workflow (most general)
 /// 1. [`WorkflowAudit::audit_normal_job`] and/or [`WorkflowAudit::audit_reusable_job`]:
 ///    runs on each normal/reusable job definition
 /// 1. [`WorkflowAudit::audit_step`]: runs on each step within each normal job (most specific)
@@ -125,8 +125,7 @@ pub(crate) trait WorkflowAudit: Audit + Debug {
         Ok(vec![])
     }
 
-    #[instrument]
-    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
@@ -141,5 +140,14 @@ pub(crate) trait WorkflowAudit: Audit + Debug {
         }
 
         Ok(results)
+    }
+
+    /// The top-level workflow auditing function.
+    ///
+    /// Implementors **should not** override this blanket implementation,
+    /// since it's marked with tracing instrumentation.
+    #[instrument]
+    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+        self.audit_workflow(workflow)
     }
 }

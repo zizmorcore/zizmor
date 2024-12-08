@@ -13,7 +13,7 @@ use models::Uses;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
 use state::AuditState;
-use tracing::{info_span, level_filters::LevelFilter, Span};
+use tracing::{info_span, instrument, level_filters::LevelFilter, Span};
 use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
@@ -122,32 +122,11 @@ fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
     format!("{}", renderer.render(message))
 }
 
-fn run() -> Result<ExitCode> {
-    human_panic::setup_panic!();
-
-    let mut app = App::parse();
-
-    // `--pedantic` is a shortcut for `--persona=pedantic`.
-    if app.pedantic {
-        app.persona = Persona::Pedantic;
-    }
-
-    let indicatif_layer = IndicatifLayer::new();
-
-    let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
-        .from_env()?;
-
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_writer(indicatif_layer.get_stderr_writer()))
-        .with(filter)
-        .with(indicatif_layer)
-        .init();
-
-    let audit_state = AuditState::new(&app);
+#[instrument(skip_all)]
+fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<WorkflowRegistry> {
     let mut workflow_registry = WorkflowRegistry::new();
 
-    for input in &app.inputs {
+    for input in inputs {
         let input_path = Utf8Path::new(input);
         if input_path.is_file() {
             workflow_registry
@@ -198,7 +177,7 @@ fn run() -> Result<ExitCode> {
                 )));
             }
 
-            let client = audit_state.github_client().ok_or_else(|| {
+            let client = state.github_client().ok_or_else(|| {
                 anyhow!(tip(
                     format!("can't retrieve repository: {input}", input = input.green()),
                     format!(
@@ -218,6 +197,34 @@ fn run() -> Result<ExitCode> {
     if workflow_registry.len() == 0 {
         return Err(anyhow!("no workflow files collected"));
     }
+
+    Ok(workflow_registry)
+}
+
+fn run() -> Result<ExitCode> {
+    human_panic::setup_panic!();
+
+    let mut app = App::parse();
+
+    // `--pedantic` is a shortcut for `--persona=pedantic`.
+    if app.pedantic {
+        app.persona = Persona::Pedantic;
+    }
+
+    let indicatif_layer = IndicatifLayer::new();
+
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env()?;
+
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().with_writer(indicatif_layer.get_stderr_writer()))
+        .with(filter)
+        .with(indicatif_layer)
+        .init();
+
+    let audit_state = AuditState::new(&app);
+    let workflow_registry = collect_inputs(&app.inputs, &audit_state)?;
 
     let config = Config::new(&app)?;
 

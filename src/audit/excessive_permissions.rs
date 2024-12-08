@@ -51,7 +51,7 @@ impl WorkflowAudit for ExcessivePermissions {
         Ok(Self { _config: config })
     }
 
-    fn audit<'w>(
+    fn audit_workflow<'w>(
         &self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
