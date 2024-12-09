@@ -21,7 +21,7 @@ clap = { version = "4.5.23", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.0", features = [
     "tracing",
 ], default-features = false }
-github-actions-models = "0.13.0"
+github-actions-models = "0.14.0"
 human-panic = "2.0.1"
 indexmap = "2.7.0"
 indicatif = "0.17.9"
