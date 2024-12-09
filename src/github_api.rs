@@ -238,7 +238,10 @@ impl Client {
             .json()?;
 
         let mut workflows = vec![];
-        for file in resp.into_iter().filter(|file| file.name.ends_with(".yml")) {
+        for file in resp
+            .into_iter()
+            .filter(|file| file.name.ends_with(".yml") || file.name.ends_with(".yaml"))
+        {
             let file_url = format!("{url}/{file}", file = file.name);
             tracing::debug!("fetching {file_url}");
 
