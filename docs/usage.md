@@ -292,7 +292,7 @@ on:
 
 jobs:
   zizmor:
-    name: zizmor latest via Cargo
+    name: zizmor latest via PyPI
     runs-on: ubuntu-latest
     permissions:
       security-events: write
