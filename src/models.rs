@@ -287,14 +287,25 @@ impl<'w> Matrix<'w> {
                 if let LoE::Literal(includes) = &matrix.include {
                     let additional_expansions = includes
                         .iter()
-                        .flat_map(Matrix::expand_inclusions)
+                        .flat_map(Matrix::expand_inclusions_or_exclusions)
                         .collect::<Vec<_>>();
 
                     expansions.extend(additional_expansions);
                 };
 
-                // Todo : exclude from expansions
+                let LoE::Literal(excludes) = &matrix.exclude else {
+                    return expansions;
+                };
+
+                let to_exclude = excludes
+                    .iter()
+                    .flat_map(Matrix::expand_inclusions_or_exclusions)
+                    .collect::<Vec<_>>();
+
                 expansions
+                    .into_iter()
+                    .filter(|expanded| !to_exclude.contains(expanded))
+                    .collect()
             }
         }
     }
@@ -309,7 +320,9 @@ impl<'w> Matrix<'w> {
         !expands_to_expression
     }
 
-    fn expand_inclusions(include: &IndexMap<String, serde_yaml::Value>) -> Vec<(String, String)> {
+    fn expand_inclusions_or_exclusions(
+        include: &IndexMap<String, serde_yaml::Value>,
+    ) -> Vec<(String, String)> {
         let normalized = include
             .iter()
             .map(|(k, v)| (k.to_owned(), json!(v)))

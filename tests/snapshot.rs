@@ -180,6 +180,13 @@ fn self_hosted() -> Result<()> {
         .args(["--persona=auditor"])
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "self-hosted/self-hosted-matrix-exclusion.yml"
+        ))
+        .args(["--persona=auditor"])
+        .run()?);
+
     Ok(())
 }
 
