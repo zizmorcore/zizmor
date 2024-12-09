@@ -304,14 +304,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: Get zizmor
-        run: cargo install zizmor
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v4
+
       - name: Run zizmor 🌈
-        run: zizmor --format sarif . > results.sarif
+        run: uvx zizmor --format sarif . > results.sarif # (2)!
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
+
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
         with:
@@ -321,8 +322,14 @@ jobs:
 
 1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
+2. This installs the [zizmor package from PyPI], since it's pre-compiled
+   and therefore completes much faster. You could instead compile `zizmor`
+   within CI/CD with `cargo install zizmor`.
+
 For more inspiration, see `zizmor`'s own [repository workflow scan], as well
 as GitHub's example of [running ESLint] as a security workflow.
+
+[zizmor package from PyPI]: https://pypi.org/p/zizmor
 
 [SARIF]: https://sarifweb.azurewebsites.net/
 
