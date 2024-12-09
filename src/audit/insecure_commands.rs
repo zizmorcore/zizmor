@@ -115,7 +115,7 @@ impl WorkflowAudit for InsecureCommands {
                     LoE::Expr(_) => results
                         .push(self.insecure_commands_maybe_present(workflow, job.location())?),
                     LoE::Literal(env) => {
-                        if self.has_insecure_commands_enabled(&env) {
+                        if self.has_insecure_commands_enabled(env) {
                             results.push(self.insecure_commands_allowed(workflow, job.location())?);
                         }
                     }
