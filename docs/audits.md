@@ -684,6 +684,7 @@ Other resources:
 * [GitHub Actions exploitation: environment manipulation]
 * [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]
 * [Google & Apache Found Vulnerable to GitHub Environment Injection]
+* [Hacking with Environment Variables]
 
 ### Remediation
 
@@ -709,3 +710,4 @@ If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]: https://securitylab.github.com/advisories/GHSL-2024-177_Litestar/
 [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability
 [Google & Apache Found Vulnerable to GitHub Environment Injection]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability-0
+[Hacking with Environment Variables]: https://www.elttam.com/blog/env/
