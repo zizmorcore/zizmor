@@ -462,6 +462,23 @@ from the expanded template.
 This avoids the vulnerability, since variable expansion is subject to normal
 shell quoting/expansion rules.
 
+!!! tip
+
+    To fully remediate the vulnerability, you **should not** use
+    `${{ env.VARNAME }}`, since that is still a template expansion.
+    Instead, you should use `${VARNAME}` to ensure that the shell *itself*
+    performs the variable expansion.
+
+
+!!! tip
+
+    When switching to `${VARNAME}`, keep in mind that different shells have
+    different environment variable syntaxes. In particular, Powershell (the
+    default shell on Windows runners) uses `${env:VARNAME}`.
+
+    To avoid having to specialize your handling for different runners,
+    you can set `shell: sh` or `shell: bash`.
+
 === "Before"
 
     ```yaml title="template-injection.yml" hl_lines="3"
