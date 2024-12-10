@@ -210,7 +210,7 @@ fn audit_unpinned_uses() -> anyhow::Result<()> {
 }
 
 #[test]
-fn audit_unsecure_commands_allowed() -> anyhow::Result<()> {
+fn audit_insecure_commands_allowed() -> anyhow::Result<()> {
     let auditable = workflow_under_test("insecure-commands.yml");
 
     let cli_args = [&auditable];
@@ -225,7 +225,7 @@ fn audit_unsecure_commands_allowed() -> anyhow::Result<()> {
     assert_value_match(
         &findings,
         "$[0].locations[0].concrete.feature",
-        "ACTIONS_ALLOW_UNSECURE_COMMANDS",
+        "ACTIONS_ALLOW_INSECURE_COMMANDS",
     );
 
     Ok(())

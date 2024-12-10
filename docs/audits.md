@@ -634,7 +634,7 @@ Workflow commands (like `::set-env` and `::add-path`)
 to inject environment variables and therefore obtain code execution).
 
 However, users can explicitly re-enable them by setting the
-`ACTIONS_ALLOW_UNSECURE_COMMANDS` environment variable at the workflow,
+`ACTIONS_ALLOW_INSECURE_COMMANDS` environment variable at the workflow,
 job, or step level.
 
 Other resources:
@@ -653,7 +653,7 @@ In general, users should use for [Github Actions environment files]
       run: |
         echo "::add-path::$HOME/.local/my-bin"
       env:
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        ACTIONS_ALLOW_INSECURE_COMMANDS: true
     ```
 
 === "After"

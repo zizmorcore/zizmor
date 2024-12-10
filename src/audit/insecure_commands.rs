@@ -31,7 +31,7 @@ impl InsecureCommands {
             .persona(Persona::Auditor)
             .add_location(
                 location.with_keys(&["env".into()]).annotated(
-                    "non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS",
+                    "non-static environment may contain ACTIONS_ALLOW_INSECURE_COMMANDS",
                 ),
             )
             .build(workflow)
@@ -54,7 +54,7 @@ impl InsecureCommands {
     }
 
     fn has_insecure_commands_enabled(&self, env: &Env) -> bool {
-        if let Some(EnvValue::String(value)) = env.get("ACTIONS_ALLOW_UNSECURE_COMMANDS") {
+        if let Some(EnvValue::String(value)) = env.get("ACTIONS_ALLOW_INSECURE_COMMANDS") {
             !value.is_empty()
         } else {
             false

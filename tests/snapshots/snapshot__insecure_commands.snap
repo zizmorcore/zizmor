@@ -8,7 +8,7 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
   |
 8 |       env:
   |  _____^
-9 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+9 | |       ACTIONS_ALLOW_INSECURE_COMMANDS: yes
   | |__________________________________________^ insecure commands enabled here
   |
   = note: audit confidence → High
@@ -17,7 +17,7 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
   --> @@INPUT@@:22:9
    |
 22 |         env: ${{ matrix.env }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^ non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS
+   |         ^^^^^^^^^^^^^^^^^^^^^^ non-static environment may contain ACTIONS_ALLOW_INSECURE_COMMANDS
    |
    = note: audit confidence → Low
 
