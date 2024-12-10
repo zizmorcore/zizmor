@@ -12,6 +12,7 @@ secure!
     Actions security improved by `zizmor`? Open a PR to add it to our list!
 
 * adafruit/circuitpython#9785
+* astral-sh/ruff#14844
 * astropy/astropy#17315
 * danmar/cppcheck#7044
 * DataDog/datadog-agent#30871
@@ -28,6 +29,7 @@ secure!
 * hynek/prometheus-async#70
 * hynek/stamina#81
 * hynek/structlog#663
+* matplotlib/matplotlib#29251
 * marcusvolz/strava_py#53
 * NetApp/harvest#3247
 * praetorian-inc/noseyparker#228
@@ -42,6 +44,7 @@ secure!
 * python-humanize/humanize#221
 * python-pillow/Pillow#8526
 * PyO3/pyo3#4774
+* rust-lang/crates.io#10176
 * rustls/rustls#2261
 * rustls/tokio-rustls#96
 * termcolor/termcolor#89
