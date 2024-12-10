@@ -6,7 +6,7 @@ use serde_json_path::JsonPath;
 mod common;
 
 // Acceptance tests for zizmor, on top of Json output
-// For now we don't cover tests that depends on Github API under the hood
+// For now we don't cover tests that depends on GitHub API under the hood
 
 fn zizmor() -> Command {
     let mut cmd = Command::cargo_bin("zizmor").expect("Cannot create executable command");
@@ -210,7 +210,7 @@ fn audit_unpinned_uses() -> anyhow::Result<()> {
 }
 
 #[test]
-fn audit_unsecure_commands_allowed() -> anyhow::Result<()> {
+fn audit_insecure_commands_allowed() -> anyhow::Result<()> {
     let auditable = workflow_under_test("insecure-commands.yml");
 
     let cli_args = [&auditable];
