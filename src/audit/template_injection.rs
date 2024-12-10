@@ -42,7 +42,8 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.event.issue.number",
     "github.event.merge_group.base_sha",
     "github.event.number",
-    "github.event.pull_request.number",
+    "github.event.pull_request.commits", // number of commits in PR
+    "github.event.pull_request.number",  // the PR's own number
     "github.event.workflow_run.id",
     // Information about the GitHub repository
     "github.repository",

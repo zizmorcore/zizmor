@@ -8,7 +8,7 @@ secure!
 
 !!! important
 
-    Do you contribute or maintain a big (>100 star) project that had its GitHub
+    Do you contribute to or maintain a big (>100 star) project that had its GitHub
     Actions security improved by `zizmor`? Open a PR to add it to our list!
 
 * adafruit/circuitpython#9785
@@ -17,6 +17,9 @@ secure!
 * DataDog/datadog-agent#30871
 * Diaoul/subliminal#1190
 * Homebrew/brew#18662
+* hugovk/em-keyboard#148
+* hugovk/norwegianblue#233
+* hugovk/pypistats#460
 * hynek/argon2-cffi#185
 * hynek/doc2dash#225
 * hynek/environ-config#88
@@ -25,15 +28,22 @@ secure!
 * hynek/prometheus-async#70
 * hynek/stamina#81
 * hynek/structlog#663
+* marcusvolz/strava_py#53
 * NetApp/harvest#3247
 * praetorian-inc/noseyparker#228
+* prettytable/prettytable#339
 * pyca/service-identity#75
+* pylast/pylast#465
 * pypa/pip-audit#851
+* python/cpython#127749
+* python/miss-islington#705
 * python-attrs/attrs#1368
 * python-attrs/cattrs#605
+* python-humanize/humanize#221
 * python-pillow/Pillow#8526
 * PyO3/pyo3#4774
 * rustls/rustls#2261
 * rustls/tokio-rustls#96
+* termcolor/termcolor#89
 * tornadoweb/tornado#3438
 * vlang/v#22681
