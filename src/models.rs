@@ -233,6 +233,7 @@ impl<'w> Iterator for Jobs<'w> {
 #[derive(Clone)]
 pub(crate) struct Matrix<'w> {
     inner: &'w LoE<job::Matrix>,
+    pub(crate) expanded_values: Vec<(String, String)>,
 }
 
 impl<'w> Deref for Matrix<'w> {
@@ -252,30 +253,43 @@ impl<'w> TryFrom<&'w Job<'w>> for Matrix<'w> {
         };
 
         let Some(Strategy {
-            matrix: Some(matrix),
+            matrix: Some(inner),
             ..
         }) = &job.strategy
         else {
             bail!("job does not define a strategy or interior matrix")
         };
 
-        Ok(Matrix { inner: matrix })
+        Ok(Matrix::new(inner))
     }
 }
 
 impl<'w> Matrix<'w> {
     pub(crate) fn new(inner: &'w LoE<job::Matrix>) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            expanded_values: Matrix::expand_values(inner),
+        }
+    }
+
+    /// Checks whether some expanded path leads to an expression
+    pub(crate) fn is_static(&self) -> bool {
+        let expands_to_expression = self
+            .expanded_values
+            .iter()
+            .any(|(_, expansion)| expansion.starts_with("${{") && expansion.ends_with("}}"));
+
+        !expands_to_expression
     }
 
     /// Expands the current Matrix into all possible values
     /// By default, the return is a pair (String, String), in which
     /// the first component is the expanded path (e.g. 'matrix.os') and
     /// the second component is the string representation for the expanded value
-    /// (eg ubuntu-latest)
+    /// (e.g. ubuntu-latest)
     ///
-    pub(crate) fn expand_values(&self) -> Vec<(String, String)> {
-        match &self.inner {
+    fn expand_values(inner: &LoE<job::Matrix>) -> Vec<(String, String)> {
+        match inner {
             LoE::Expr(_) => vec![],
             LoE::Literal(matrix) => {
                 let LoE::Literal(dimensions) = &matrix.dimensions else {
@@ -308,16 +322,6 @@ impl<'w> Matrix<'w> {
                     .collect()
             }
         }
-    }
-
-    /// Checks whether some expanded path leads to an expression
-    pub(crate) fn is_static(&self) -> bool {
-        let expands_to_expression = self
-            .expand_values()
-            .iter()
-            .any(|(_, expansion)| expansion.starts_with("${{") && expansion.ends_with("}}"));
-
-        !expands_to_expression
     }
 
     fn expand_explicit_rows(
