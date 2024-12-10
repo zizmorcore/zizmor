@@ -4,7 +4,7 @@ use std::collections::{hash_map::Entry, HashMap};
 
 use crate::{
     finding::{Finding, Location, Severity},
-    registry::{FindingRegistry, WorkflowRegistry},
+    registry::{FindingRegistry, WorkflowKey, WorkflowRegistry},
 };
 use annotate_snippets::{Level, Renderer, Snippet};
 use anstream::{print, println};
@@ -29,9 +29,9 @@ pub(crate) fn finding_snippet<'w>(
 ) -> Vec<Snippet<'w>> {
     // Our finding might span multiple workflows, so we need to group locations
     // by their enclosing workflow to generate each snippet correctly.
-    let mut locations_by_workflow: HashMap<&str, Vec<&Location<'w>>> = HashMap::new();
+    let mut locations_by_workflow: HashMap<&WorkflowKey, Vec<&Location<'w>>> = HashMap::new();
     for location in &finding.locations {
-        match locations_by_workflow.entry(location.symbolic.name) {
+        match locations_by_workflow.entry(location.symbolic.key) {
             Entry::Occupied(mut e) => {
                 e.get_mut().push(location);
             }
@@ -42,14 +42,14 @@ pub(crate) fn finding_snippet<'w>(
     }
 
     let mut snippets = vec![];
-    for (workflow_name, locations) in locations_by_workflow {
-        let workflow = registry.get_workflow(workflow_name);
+    for (workflow_key, locations) in locations_by_workflow {
+        let workflow = registry.get_workflow(workflow_key);
 
         snippets.push(
             Snippet::source(workflow.document.source())
                 .fold(true)
                 .line_start(1)
-                .origin(&workflow.path)
+                .origin(workflow.link.as_deref().unwrap_or(workflow_key.path()))
                 .annotations(locations.iter().map(|loc| {
                     let annotation = match loc.symbolic.link {
                         Some(ref link) => link,

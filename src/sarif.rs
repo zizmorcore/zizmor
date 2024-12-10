@@ -69,7 +69,7 @@ fn build_locations(registry: &WorkflowRegistry, locations: &[Location<'_>]) -> V
                         .artifact_location(
                             ArtifactLocation::builder()
                                 .uri_base_id("%SRCROOT%")
-                                .uri(registry.get_workflow_relative_path(location.symbolic.name))
+                                .uri(registry.get_workflow_relative_path(location.symbolic.key))
                                 .build(),
                         )
                         .region(

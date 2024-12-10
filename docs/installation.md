@@ -24,6 +24,31 @@ description: Installation instructions for zizmor.
     brew install zizmor
     ```
 
+=== "PyPI"
+
+    !!! tip
+
+        Despite being available on PyPI, `zizmor` is a compiled binary
+        and has no Python or Python package dependencies.
+
+
+    `zizmor` is available on [PyPI](https://pypi.org) and can be installed
+    with any Python package installer:
+
+    ```bash
+    # with pip
+    pip install zizmor
+
+    # with pipx
+    pipx install zizmor
+
+    # with uv
+    uv tool install zizmor
+
+    # or, shortcut:
+    uvx zizmor --help
+    ```
+
 === "Nix"
 
     !!! note

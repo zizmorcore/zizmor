@@ -125,12 +125,12 @@ impl WorkflowAudit for KnownVulnerableActions {
     where
         Self: Sized,
     {
-        if state.offline {
+        if state.no_online_audits {
             return Err(anyhow!("offline audits only requested"));
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't audit without a GitHub API token"));
+            return Err(anyhow!("can't run without a GitHub API token"));
         };
 
         Ok(Self { client })

@@ -462,6 +462,23 @@ from the expanded template.
 This avoids the vulnerability, since variable expansion is subject to normal
 shell quoting/expansion rules.
 
+!!! tip
+
+    To fully remediate the vulnerability, you **should not** use
+    `${{ env.VARNAME }}`, since that is still a template expansion.
+    Instead, you should use `${VARNAME}` to ensure that the shell *itself*
+    performs the variable expansion.
+
+
+!!! tip
+
+    When switching to `${VARNAME}`, keep in mind that different shells have
+    different environment variable syntaxes. In particular, Powershell (the
+    default shell on Windows runners) uses `${env:VARNAME}`.
+
+    To avoid having to specialize your handling for different runners,
+    you can set `shell: sh` or `shell: bash`.
+
 === "Before"
 
     ```yaml title="template-injection.yml" hl_lines="3"
@@ -667,6 +684,7 @@ Other resources:
 * [GitHub Actions exploitation: environment manipulation]
 * [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]
 * [Google & Apache Found Vulnerable to GitHub Environment Injection]
+* [Hacking with Environment Variables]
 
 ### Remediation
 
@@ -692,3 +710,4 @@ If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]: https://securitylab.github.com/advisories/GHSL-2024-177_Litestar/
 [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability
 [Google & Apache Found Vulnerable to GitHub Environment Injection]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability-0
+[Hacking with Environment Variables]: https://www.elttam.com/blog/env/

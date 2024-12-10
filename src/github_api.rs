@@ -5,13 +5,19 @@
 
 use anyhow::{anyhow, Result};
 use reqwest::{
-    blocking,
+    blocking::{self},
     header::{HeaderMap, ACCEPT, AUTHORIZATION, USER_AGENT},
     StatusCode,
 };
 use serde::{de::DeserializeOwned, Deserialize};
+use tracing::instrument;
 
-use crate::state::Caches;
+use crate::{
+    models::{RepositoryUses, Workflow},
+    registry::WorkflowKey,
+    state::Caches,
+    utils::PipeSelf,
+};
 
 pub(crate) struct Client {
     api_base: &'static str,
@@ -71,6 +77,7 @@ impl Client {
         Ok(dest)
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
         self.caches
             .branch_cache
@@ -80,6 +87,7 @@ impl Client {
             .map_err(Into::into)
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>> {
         self.caches
             .tag_cache
@@ -89,6 +97,7 @@ impl Client {
             .map_err(Into::into)
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn commit_for_ref(
         &self,
         owner: &str,
@@ -126,6 +135,7 @@ impl Client {
         }
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn longest_tag_for_commit(
         &self,
         owner: &str,
@@ -148,6 +158,7 @@ impl Client {
             .max_by_key(|t| t.name.len()))
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn compare_commits(
         &self,
         owner: &str,
@@ -176,6 +187,7 @@ impl Client {
             .map_err(Into::into)
     }
 
+    #[instrument(skip(self))]
     pub(crate) fn gha_advisories(
         &self,
         owner: &str,
@@ -195,6 +207,63 @@ impl Client {
             .error_for_status()?
             .json()
             .map_err(Into::into)
+    }
+
+    /// Return temporary files for all workflows listed in the repo.
+    #[instrument(skip(self))]
+    pub(crate) fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
+        let owner = slug.owner;
+        let repo = slug.repo;
+        let git_ref = slug.git_ref;
+
+        tracing::debug!("fetching workflows for {owner}/{repo}");
+
+        // It'd be nice if the GitHub contents API allowed us to retrieve
+        // all file contents with a directory listing, but it doesn't.
+        // Instead, we make `N+1` API calls: one to list the workflows
+        // directory, and `N` for the constituent workflow files.
+        let url = format!(
+            "{api_base}/repos/{owner}/{repo}/contents/.github/workflows",
+            api_base = self.api_base
+        );
+        let resp: Vec<File> = self
+            .http
+            .get(&url)
+            .pipe(|req| match git_ref {
+                Some(g) => req.query(&[("ref", g)]),
+                None => req,
+            })
+            .send()?
+            .error_for_status()?
+            .json()?;
+
+        let mut workflows = vec![];
+        for file in resp
+            .into_iter()
+            .filter(|file| file.name.ends_with(".yml") || file.name.ends_with(".yaml"))
+        {
+            let file_url = format!("{url}/{file}", file = file.name);
+            tracing::debug!("fetching {file_url}");
+
+            let contents = self
+                .http
+                .get(file_url)
+                .header(ACCEPT, "application/vnd.github.raw+json")
+                .pipe(|req| match git_ref {
+                    Some(g) => req.query(&[("ref", g)]),
+                    None => req,
+                })
+                .send()?
+                .error_for_status()?
+                .text()?;
+
+            workflows.push(Workflow::from_string(
+                contents,
+                WorkflowKey::remote(slug, file.path)?,
+            )?);
+        }
+
+        Ok(workflows)
     }
 }
 
@@ -251,4 +320,11 @@ pub(crate) struct Comparison {
 pub(crate) struct Advisory {
     pub(crate) ghsa_id: String,
     pub(crate) severity: String,
+}
+
+/// Represents a file listing from GitHub's contents API.
+#[derive(Deserialize)]
+pub(crate) struct File {
+    name: String,
+    path: String,
 }

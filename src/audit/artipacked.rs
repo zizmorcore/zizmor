@@ -49,7 +49,7 @@ impl WorkflowAudit for Artipacked {
         Ok(Self)
     }
 
-    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
@@ -73,8 +73,8 @@ impl WorkflowAudit for Artipacked {
                         Some(EnvValue::Boolean(false)) => continue,
                         Some(EnvValue::Boolean(true)) => {
                             // If a user explicitly sets `persist-credentials: true`,
-                            // they probably mean it. Only report if being pedantic.
-                            vulnerable_checkouts.push((step, Persona::Pedantic))
+                            // they probably mean it. Only report if in auditor mode.
+                            vulnerable_checkouts.push((step, Persona::Auditor))
                         }
                         // TODO: handle expressions and literal strings here.
                         // persist-credentials is true by default.

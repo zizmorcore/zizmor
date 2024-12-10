@@ -51,7 +51,7 @@ impl WorkflowAudit for ExcessivePermissions {
         Ok(Self { _config: config })
     }
 
-    fn audit<'w>(
+    fn audit_workflow<'w>(
         &self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
@@ -143,7 +143,7 @@ impl ExcessivePermissions {
                                 format!("{name}: write is overly broad at the workflow level"),
                             )),
                             None => {
-                                log::debug!("unknown permission: {name}");
+                                tracing::debug!("unknown permission: {name}");
 
                                 results.push((
                                     Severity::Unknown,

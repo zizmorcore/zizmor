@@ -1,27 +1,42 @@
 //! Enriching/context-bearing wrappers over GitHub Actions models
 //! from the `github-actions-models` crate.
 
-use std::{iter::Enumerate, ops::Deref, path::Path};
-
 use crate::finding::{Route, SymbolicLocation};
-use anyhow::{anyhow, Context, Result};
+use crate::registry::WorkflowKey;
+use anyhow::{bail, Context, Result};
+use camino::Utf8Path;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
-use github_actions_models::workflow::job::RunsOn;
+use github_actions_models::workflow::job::{RunsOn, Strategy};
 use github_actions_models::workflow::{
-    self,
+    self, job,
     job::{NormalJob, StepBody},
     Trigger,
 };
+use indexmap::IndexMap;
+use serde_json::{json, Value};
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::{iter::Enumerate, ops::Deref};
+use terminal_link::Link;
 
 /// Represents an entire GitHub Actions workflow.
 ///
 /// This type implements [`Deref`] for [`workflow::Workflow`],
 /// providing access to the underlying data model.
 pub(crate) struct Workflow {
-    pub(crate) path: String,
+    /// This workflow's unique key into zizmor's runtime workflow registry.
+    pub(crate) key: WorkflowKey,
+    /// A clickable (OSC 8) link to this workflow, if remote.
+    pub(crate) link: Option<String>,
     pub(crate) document: yamlpath::Document,
     inner: workflow::Workflow,
+}
+
+impl Debug for Workflow {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{key}", key = self.key)
+    }
 }
 
 impl Deref for Workflow {
@@ -33,24 +48,35 @@ impl Deref for Workflow {
 }
 
 impl Workflow {
-    /// Load a workflow from the given file on disk.
-    pub(crate) fn from_file<P: AsRef<Path>>(p: P) -> Result<Self> {
-        let contents = std::fs::read_to_string(p.as_ref())?;
-
+    /// Load a workflow from a buffer, with an assigned name.
+    pub(crate) fn from_string(contents: String, key: WorkflowKey) -> Result<Self> {
         let inner = serde_yaml::from_str(&contents)
-            .with_context(|| format!("invalid GitHub Actions workflow: {:?}", p.as_ref()))?;
+            .with_context(|| format!("invalid GitHub Actions workflow: {key}"))?;
 
         let document = yamlpath::Document::new(&contents)?;
 
+        let link = match key {
+            WorkflowKey::Local(_) => None,
+            WorkflowKey::Remote(_) => {
+                // NOTE: WorkflowKey's Display produces a URL, hence `key.to_string()`.
+                Some(Link::new(key.path(), &key.to_string()).to_string())
+            }
+        };
+
         Ok(Self {
-            path: p
-                .as_ref()
-                .to_str()
-                .ok_or_else(|| anyhow!("invalid workflow: path is not UTF-8"))?
-                .to_string(),
+            link,
+            key,
             document,
             inner,
         })
+    }
+
+    /// Load a workflow from the given file on disk.
+    pub(crate) fn from_file<P: AsRef<Utf8Path>>(p: P) -> Result<Self> {
+        let contents = std::fs::read_to_string(p.as_ref())?;
+        let path = p.as_ref().canonicalize_utf8()?;
+
+        Self::from_string(contents, WorkflowKey::local(path)?)
     }
 
     /// Returns the filename (i.e. base component) of the loaded workflow.
@@ -58,15 +84,13 @@ impl Workflow {
     /// For example, if the workflow was loaded from `/foo/bar/baz.yml`,
     /// [`Self::filename()`] returns `baz.yml`.
     pub(crate) fn filename(&self) -> &str {
-        // NOTE: Unwraps are safe here since we enforce UTF-8 paths
-        // and require a filename as an invariant.
-        Path::new(&self.path).file_name().unwrap().to_str().unwrap()
+        self.key.filename()
     }
 
     /// This workflow's [`SymbolicLocation`].
     pub(crate) fn location(&self) -> SymbolicLocation {
         SymbolicLocation {
-            name: self.filename(),
+            key: &self.key,
             annotation: "this workflow".to_string(),
             link: None,
             route: Route::new(),
@@ -198,6 +222,162 @@ impl<'w> Iterator for Jobs<'w> {
         match item {
             Some((id, job)) => Some(Job::new(id, job, self.parent)),
             None => None,
+        }
+    }
+}
+
+/// Represents an execution Matrix within a Job.
+///
+/// This type implements [`Deref`] for [job::NormalJob::Strategy`], providing
+/// access to the underlying data model.
+#[derive(Clone)]
+pub(crate) struct Matrix<'w> {
+    inner: &'w LoE<job::Matrix>,
+}
+
+impl<'w> Deref for Matrix<'w> {
+    type Target = &'w LoE<job::Matrix>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<'w> TryFrom<&'w Job<'w>> for Matrix<'w> {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &'w Job<'w>) -> std::result::Result<Self, Self::Error> {
+        let workflow::Job::NormalJob(job) = value.deref() else {
+            bail!("job is not a normal job")
+        };
+
+        let Some(Strategy {
+            matrix: Some(matrix),
+            ..
+        }) = &job.strategy
+        else {
+            bail!("job does not define a strategy or interior matrix")
+        };
+
+        Ok(Matrix { inner: matrix })
+    }
+}
+
+impl<'w> Matrix<'w> {
+    pub(crate) fn new(inner: &'w LoE<job::Matrix>) -> Self {
+        Self { inner }
+    }
+
+    /// Expands the current Matrix into all possible values
+    /// By default, the return is a pair (String, String), in which
+    /// the first component is the expanded path (e.g. 'matrix.os') and
+    /// the second component is the string representation for the expanded value
+    /// (eg ubuntu-latest)
+    ///
+    pub(crate) fn expand_values(&self) -> Vec<(String, String)> {
+        match &self.inner {
+            LoE::Expr(_) => vec![],
+            LoE::Literal(matrix) => {
+                let LoE::Literal(dimensions) = &matrix.dimensions else {
+                    return vec![];
+                };
+
+                let mut expansions = Matrix::expand_dimensions(dimensions);
+
+                if let LoE::Literal(includes) = &matrix.include {
+                    let additional_expansions = includes
+                        .iter()
+                        .flat_map(Matrix::expand_explicit_rows)
+                        .collect::<Vec<_>>();
+
+                    expansions.extend(additional_expansions);
+                };
+
+                let LoE::Literal(excludes) = &matrix.exclude else {
+                    return expansions;
+                };
+
+                let to_exclude = excludes
+                    .iter()
+                    .flat_map(Matrix::expand_explicit_rows)
+                    .collect::<Vec<_>>();
+
+                expansions
+                    .into_iter()
+                    .filter(|expanded| !to_exclude.contains(expanded))
+                    .collect()
+            }
+        }
+    }
+
+    /// Checks whether some expanded path leads to an expression
+    pub(crate) fn is_static(&self) -> bool {
+        let expands_to_expression = self
+            .expand_values()
+            .iter()
+            .any(|(_, expansion)| expansion.starts_with("${{") && expansion.ends_with("}}"));
+
+        !expands_to_expression
+    }
+
+    fn expand_explicit_rows(
+        include: &IndexMap<String, serde_yaml::Value>,
+    ) -> Vec<(String, String)> {
+        let normalized = include
+            .iter()
+            .map(|(k, v)| (k.to_owned(), json!(v)))
+            .collect::<HashMap<_, _>>();
+
+        Matrix::expand(normalized)
+    }
+
+    fn expand_dimensions(
+        dimensions: &IndexMap<String, LoE<Vec<serde_yaml::Value>>>,
+    ) -> Vec<(String, String)> {
+        let normalized = dimensions
+            .iter()
+            .map(|(k, v)| (k.to_owned(), json!(v)))
+            .collect::<HashMap<_, _>>();
+
+        Matrix::expand(normalized)
+    }
+
+    fn expand(values: HashMap<String, serde_json::Value>) -> Vec<(String, String)> {
+        values
+            .iter()
+            .flat_map(|(key, value)| Matrix::walk_path(value, format!("matrix.{}", key)))
+            .collect()
+    }
+
+    // Walks recursively a serde_json::Value tree, expanding it into a Vec<(String, String)>
+    // according to the inner value of each node
+    fn walk_path(tree: &serde_json::Value, current_path: String) -> Vec<(String, String)> {
+        match tree {
+            Value::Null => vec![],
+
+            // In the case of scalars, we just convert the value to a string
+            Value::Bool(inner) => vec![(current_path, inner.to_string())],
+            Value::Number(inner) => vec![(current_path, inner.to_string())],
+            Value::String(inner) => vec![(current_path, inner.to_string())],
+
+            // In the case of an array, we recursively create on expansion pair for each item
+            Value::Array(inner) => inner
+                .iter()
+                .flat_map(|value| Matrix::walk_path(value, current_path.clone()))
+                .collect(),
+
+            // In the case of an object, we recursively create on expansion pair for each
+            // value in the key/value set, using the key to form the expanded path using
+            // the dot notation
+            Value::Object(inner) => inner
+                .iter()
+                .flat_map(|(key, value)| {
+                    let mut new_path = current_path.clone();
+                    new_path.push('.');
+                    new_path.push_str(key);
+                    Matrix::walk_path(value, new_path)
+                })
+                .collect(),
         }
     }
 }
@@ -463,7 +643,7 @@ impl<'a> Uses<'a> {
 
             let components = path.splitn(3, '/').collect::<Vec<_>>();
             if components.len() < 2 {
-                log::debug!("malformed `uses:` ref: {uses}");
+                tracing::debug!("malformed `uses:` ref: {uses}");
                 return None;
             }
 

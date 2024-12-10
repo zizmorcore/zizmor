@@ -96,14 +96,14 @@ impl Config {
                     if path.is_file() {
                         serde_yaml::from_str(&fs::read_to_string(path)?)?
                     } else {
-                        log::debug!("no config discovered; loading default");
+                        tracing::debug!("no config discovered; loading default");
                         Config::default()
                     }
                 }
             }
         };
 
-        log::debug!("loaded config: {config:?}");
+        tracing::debug!("loaded config: {config:?}");
 
         Ok(config)
     }
@@ -123,7 +123,10 @@ impl Config {
         // multiple files, as the first location is the one a user will
         // typically ignore, suppressing the rest in the process.
         for loc in &finding.locations {
-            for rule in ignores.iter().filter(|i| i.filename == loc.symbolic.name) {
+            for rule in ignores
+                .iter()
+                .filter(|i| i.filename == loc.symbolic.key.filename())
+            {
                 match rule {
                     // Rule has a line and (maybe) a column.
                     WorkflowRule {
