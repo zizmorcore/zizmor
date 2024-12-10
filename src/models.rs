@@ -287,7 +287,7 @@ impl<'w> Matrix<'w> {
                 if let LoE::Literal(includes) = &matrix.include {
                     let additional_expansions = includes
                         .iter()
-                        .flat_map(Matrix::expand_inclusions_or_exclusions)
+                        .flat_map(Matrix::expand_explicit_rows)
                         .collect::<Vec<_>>();
 
                     expansions.extend(additional_expansions);
@@ -299,7 +299,7 @@ impl<'w> Matrix<'w> {
 
                 let to_exclude = excludes
                     .iter()
-                    .flat_map(Matrix::expand_inclusions_or_exclusions)
+                    .flat_map(Matrix::expand_explicit_rows)
                     .collect::<Vec<_>>();
 
                 expansions
@@ -320,7 +320,7 @@ impl<'w> Matrix<'w> {
         !expands_to_expression
     }
 
-    fn expand_inclusions_or_exclusions(
+    fn expand_explicit_rows(
         include: &IndexMap<String, serde_yaml::Value>,
     ) -> Vec<(String, String)> {
         let normalized = include
