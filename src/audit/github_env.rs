@@ -138,7 +138,7 @@ impl WorkflowAudit for GitHubEnv {
             .set_language(&bash.into())
             .context("failed to load bash parser")?;
 
-        let pwsh = tree_sitter_powershell::LANGUAGE;
+        let pwsh = tree_sitter_powershell::language();
         let mut pwsh_parser = Parser::new();
         pwsh_parser
             .set_language(&pwsh.into())
@@ -296,7 +296,7 @@ mod tests {
             ("echo \"foo\" | out-file bar -Append # not $env:GITHUB_ENV", false),
         ] {
             let audit_state = AuditState {
-                offline: false,
+                no_online_audits: false,
                 gh_token: None,
                 caches: Caches::new(),
             };
