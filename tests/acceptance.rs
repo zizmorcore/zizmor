@@ -6,7 +6,7 @@ use serde_json_path::JsonPath;
 mod common;
 
 // Acceptance tests for zizmor, on top of Json output
-// For now we don't cover tests that depends on Github API under the hood
+// For now we don't cover tests that depends on GitHub API under the hood
 
 fn zizmor() -> Command {
     let mut cmd = Command::cargo_bin("zizmor").expect("Cannot create executable command");
@@ -225,7 +225,7 @@ fn audit_insecure_commands_allowed() -> anyhow::Result<()> {
     assert_value_match(
         &findings,
         "$[0].locations[0].concrete.feature",
-        "ACTIONS_ALLOW_INSECURE_COMMANDS",
+        "ACTIONS_ALLOW_UNSECURE_COMMANDS",
     );
 
     Ok(())

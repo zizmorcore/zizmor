@@ -8,7 +8,7 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
   |
 8 |       env:
   |  _____^
-9 | |       ACTIONS_ALLOW_INSECURE_COMMANDS: yes
+9 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
   | |__________________________________________^ insecure commands enabled here
   |
   = note: audit confidence → High

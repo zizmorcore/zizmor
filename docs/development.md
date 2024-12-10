@@ -180,7 +180,7 @@ Some things that can be useful to discuss beforehand:
 - Which criticality should we assign for this new finding?
 - Which confidence should we assign for this new finding?
 - Should this new audit be pedantic at all?
-- Does this new audit require using the Github API, or is it entirely offline?
+- Does this new audit require using the GitHub API, or is it entirely offline?
 
 When developing a new `zizmor` audit, there are a couple of implementation details to be aware of:
 

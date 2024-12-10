@@ -13,7 +13,7 @@ jobs:
   insecure-commands-ignored:
     runs-on: ubuntu-latest
     env:
-      ACTIONS_ALLOW_INSECURE_COMMANDS: yes # zizmor: ignore[insecure-commands]
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: yes # zizmor: ignore[insecure-commands]
     steps:
       - run: echo "I shall pass!"
 
