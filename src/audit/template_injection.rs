@@ -68,6 +68,8 @@ const SAFE_CONTEXTS: &[&str] = &[
     "runner.debug",
     // GitHub Actions runner operating system.
     "runner.os",
+    // GitHub Actions temporary directory, value controlled by the runner itself.
+    "runner.temp",
 ];
 
 impl TemplateInjection {
