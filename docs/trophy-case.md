@@ -47,6 +47,8 @@ secure!
 * rust-lang/crates.io#10176
 * rustls/rustls#2261
 * rustls/tokio-rustls#96
+* sigstore/cosign#3959
+* sigstore/gitsign#602
 * termcolor/termcolor#89
 * tornadoweb/tornado#3438
 * vlang/v#22681
