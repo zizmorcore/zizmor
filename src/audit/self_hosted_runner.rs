@@ -109,7 +109,7 @@ impl WorkflowAudit for SelfHostedRunner {
                 LoE::Expr(exp) => {
                     let matrix = Matrix::try_from(&job)?;
 
-                    let expansions = matrix.expand_values();
+                    let expansions = matrix.expanded_values;
 
                     let self_hosted = expansions.iter().any(|(path, expansion)| {
                         exp.as_bare() == path && expansion.contains("self-hosted")
