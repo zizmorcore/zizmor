@@ -107,7 +107,9 @@ impl WorkflowAudit for SelfHostedRunner {
                 // The entire `runs-on:` is an expression, which may or may
                 // not be a self-hosted runner when expanded, like above.
                 LoE::Expr(exp) => {
-                    let matrix = Matrix::try_from(&job)?;
+                    let Ok(matrix) = Matrix::try_from(&job) else {
+                        continue;
+                    };
 
                     let expansions = matrix.expanded_values;
 
