@@ -47,11 +47,23 @@
 
     astropy/astropy#17315
 
+-   ![](https://github.com/cakephp.png?size=40){ width="40" loading=lazy align=left } cakephp/cakephp
+
+    ---
+
+    cakephp/cakephp#18081
+
 -   ![](https://github.com/danmar.png?size=40){ width="40" loading=lazy align=left } danmar/cppcheck
 
     ---
 
     danmar/cppcheck#7044
+
+-   ![](https://github.com/ethereum.png?size=40){ width="40" loading=lazy align=left } ethereum/hevm
+
+    ---
+
+    ethereum/hevm#615
 
 -   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk/em-keyboard
 

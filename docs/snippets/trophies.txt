@@ -6,9 +6,11 @@
 adafruit/circuitpython#9785
 astral-sh/ruff#14844
 astropy/astropy#17315
+cakephp/cakephp#18081
 danmar/cppcheck#7044
 DataDog/datadog-agent#30871
 Diaoul/subliminal#1190
+ethereum/hevm#615
 Homebrew/brew#18662
 hugovk/em-keyboard#148
 hugovk/norwegianblue#233
