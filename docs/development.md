@@ -167,6 +167,36 @@ INFO    -  [22:18:40] Browser connected: http://127.0.0.1:9999/zizmor/developmen
 
 Visit the listed URL to see your live changes.
 
+### Updating the snippets
+
+`zizmor`'s website contains various static snippets. To update these:
+
+```
+make snippets
+```
+
+Most of the time, this should result in no changes, since the snippets
+will already be up-to-date.
+
+### Updating the trophy case
+
+!!! tip
+
+    Additions to the trophy case are welcome, but we currently limit them
+    to repositories with 100 or more "stars" to keep things tractable.
+
+The [Trophy Case](./trophy-case.md) is kept up-to-date through the data in
+the `docs/snippets/trophies.txt` file.
+
+To add a new trophy to the trophy case, add it to that file *in the same
+format* as the other entries.
+
+Then, regenerate the trophy case:
+
+```
+make trophies
+```
+
 ## Adding or modifying an audit
 
 ### Before getting started
@@ -245,11 +275,7 @@ The general procedure for changing an existing audit is:
 
 `zizmor`'s documentation contains a copy of `zizmor --help`, which the CI
 checks to ensure that it remains updated. If you change `zizmor`'s CLI,
-you may need to regenerate the documentation snippets and check-in the results:
-
-```bash
-make snippets
-```
+you may need to [update the snippets](#updating-the-snippets).
 
 [clap]: https://docs.rs/clap/latest/clap/index.html
 
