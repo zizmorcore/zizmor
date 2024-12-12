@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank for for making a `zizmor` feature request!
+        Thanks for making a `zizmor` feature request!
 
         Please read the following parts of this form carefully.
         Invalid or incomplete submissions take longer to triage,
