@@ -6,10 +6,11 @@ the software we all rely on.
 This page documents key examples where `zizmor` helped make big projects more
 secure!
 
-!!! important
+!!! tip "Give yourself a trophy!"
 
     Do you contribute to or maintain a big (>100 star) project that had its GitHub
-    Actions security improved by `zizmor`? Open a PR to add it to our list!
+    Actions security improved by `zizmor`?
+    [Add it to our list](./development.md#updating-the-trophy-case)!
 
 <div class="grid cards" markdown>
 --8<-- "trophies.md"
