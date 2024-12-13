@@ -26,6 +26,8 @@ hynek/structlog#663
 matplotlib/matplotlib#29251
 marcusvolz/strava_py#53
 NetApp/harvest#3247
+NLnetLabs/unbound#1204
+oxc-project/oxc#7844
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 pyca/service-identity#75
