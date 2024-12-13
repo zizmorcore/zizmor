@@ -103,16 +103,10 @@ impl WorkflowAudit for UseTrustedPublishing {
                     )
                     .build(step.workflow())?,
             );
-        } else if uses.matches("rubygems/release-gem")
-            && self.release_gem_uses_manual_credentials(with)
-        {
-            findings.push(
-                candidate
-                    .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
-                    .build(step.workflow())?,
-            );
-        } else if uses.matches("rubygems/configure-rubygems-credential")
-            && self.rubygems_credential_uses_manual_credentials(with)
+        } else if ((uses.matches("rubygems/release-gem"))
+            && self.release_gem_uses_manual_credentials(with))
+            || (uses.matches("rubygems/configure-rubygems-credential")
+                && self.rubygems_credential_uses_manual_credentials(with))
         {
             findings.push(
                 candidate
