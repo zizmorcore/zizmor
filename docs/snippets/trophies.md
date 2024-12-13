@@ -209,6 +209,12 @@
 
     python-pillow/Pillow#8526
 
+-   ![](https://github.com/python-telegram-bot.png?size=40){ width="40" loading=lazy align=left } python-telegram-bot/python-telegram-bot
+
+    ---
+
+    python-telegram-bot/python-telegram-bot#4606
+
 -   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python/cpython
 
     ---
