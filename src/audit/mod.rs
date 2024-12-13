@@ -10,6 +10,7 @@ use crate::{
 };
 
 pub(crate) mod artipacked;
+pub(crate) mod cache_poisoning;
 pub(crate) mod dangerous_triggers;
 pub(crate) mod excessive_permissions;
 pub(crate) mod github_env;

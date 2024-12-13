@@ -253,3 +253,54 @@ fn template_injection() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn cache_poisoning() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "cache-poisoning/caching-disabled-by-default.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "cache-poisoning/caching-enabled-by-default.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "cache-poisoning/caching-opt-in-boolean-toggle.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "cache-poisoning/caching-opt-in-expression.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "cache-poisoning/caching-opt-in-multi-value-toggle.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("cache-poisoning/caching-opt-out.yml"))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "cache-poisoning/no-cache-aware-steps.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "cache-poisoning/workflow-tag-trigger.yml"
+        ))
+        .run()?);
+
+    Ok(())
+}

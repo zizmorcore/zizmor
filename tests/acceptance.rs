@@ -252,3 +252,21 @@ fn audit_github_env_injection() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn audit_cache_poisoning() -> anyhow::Result<()> {
+    let auditable = workflow_under_test("cache-poisoning.yml");
+
+    let cli_args = [&auditable];
+
+    let execution = zizmor().args(cli_args).output()?;
+
+    assert_eq!(execution.status.code(), Some(14));
+
+    let findings = serde_json::from_slice(&execution.stdout)?;
+
+    assert_value_match(&findings, "$[0].determinations.confidence", "Low");
+    assert_value_match(&findings, "$[0].locations[0].concrete.feature", "release");
+
+    Ok(())
+}
