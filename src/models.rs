@@ -551,6 +551,24 @@ pub(crate) struct RepositoryUses<'a> {
 }
 
 impl RepositoryUses<'_> {
+    /// Returns whether this `uses:` clause "matches" the given template.
+    /// The template is itself formatted like a normal `uses:` clause.
+    ///
+    /// This is an asymmetrical match: `actions/checkout@v3` "matches"
+    /// the `actions/checkout` template but not vice versa.
+    pub(crate) fn matches(&self, template: &str) -> bool {
+        let Some(Uses::Repository(other)) = Uses::from_step(template) else {
+            return false;
+        };
+
+        self.owner == other.owner
+            && self.repo == other.repo
+            && self.subpath == other.subpath
+            && other
+                .git_ref
+                .map_or(true, |git_ref| Some(git_ref) == self.git_ref)
+    }
+
     pub(crate) fn ref_is_commit(&self) -> bool {
         match self.git_ref {
             Some(git_ref) => git_ref.len() == 40 && git_ref.chars().all(|c| c.is_ascii_hexdigit()),
@@ -925,5 +943,34 @@ mod tests {
         assert!(!Uses::from_reusable("actions/checkout@abcd")
             .unwrap()
             .ref_is_commit());
+    }
+
+    #[test]
+    fn test_repositoryuses_matches() {
+        for (uses, template, matches) in [
+            // OK: `uses:` is more specific than template
+            ("actions/checkout@v3", "actions/checkout", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo", true),
+            // OK: equally specific
+            ("actions/checkout@v3", "actions/checkout@v3", true),
+            ("actions/checkout", "actions/checkout", true),
+            ("actions/checkout/foo", "actions/checkout/foo", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
+            // NOT OK: owner/repo do not match
+            ("actions/checkout@v3", "foo/checkout", false),
+            ("actions/checkout@v3", "actions/bar", false),
+            // NOT OK: subpath does not match
+            ("actions/checkout/foo", "actions/checkout", false),
+            ("actions/checkout/foo@v3", "actions/checkout@v3", false),
+            // NOT OK: template is more specific than `uses:`
+            ("actions/checkout", "actions/checkout@v3", false),
+            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
+        ] {
+            let Some(Uses::Repository(uses)) = Uses::from_common(uses) else {
+                panic!();
+            };
+
+            assert_eq!(uses.matches(template), matches)
+        }
     }
 }
