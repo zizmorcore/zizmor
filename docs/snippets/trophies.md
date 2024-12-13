@@ -17,6 +17,12 @@
 
     Homebrew/brew#18662
 
+-   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs/unbound
+
+    ---
+
+    NLnetLabs/unbound#1204
+
 -   ![](https://github.com/NetApp.png?size=40){ width="40" loading=lazy align=left } NetApp/harvest
 
     ---
@@ -142,6 +148,12 @@
     ---
 
     matplotlib/matplotlib#29251
+
+-   ![](https://github.com/oxc-project.png?size=40){ width="40" loading=lazy align=left } oxc-project/oxc
+
+    ---
+
+    oxc-project/oxc#7844
 
 -   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc/noseyparker
 
