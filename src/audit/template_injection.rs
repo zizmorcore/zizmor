@@ -70,6 +70,8 @@ const SAFE_CONTEXTS: &[&str] = &[
     "runner.os",
     // GitHub Actions temporary directory, value controlled by the runner itself.
     "runner.temp",
+    // GitHub Actions cached tool directory, value controlled by the runner itself.
+    "runner.tool_cache",
 ];
 
 impl TemplateInjection {
