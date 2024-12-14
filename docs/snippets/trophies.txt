@@ -25,6 +25,7 @@ hynek/stamina#81
 hynek/structlog#663
 matplotlib/matplotlib#29251
 marcusvolz/strava_py#53
+mne-tools/mne-python#13011
 NetApp/harvest#3247
 NLnetLabs/unbound#1204
 oxc-project/oxc#7844
@@ -39,6 +40,10 @@ python-attrs/attrs#1368
 python-attrs/cattrs#605
 python-humanize/humanize#221
 python-pillow/Pillow#8526
+python-poetry/cleo#462
+python-poetry/poetry-core#799
+python-poetry/poetry-plugin-export#308
+python-poetry/poetry-plugin-bundle#125
 python-telegram-bot/python-telegram-bot#4606
 PyO3/pyo3#4774
 rust-lang/crates.io#10176

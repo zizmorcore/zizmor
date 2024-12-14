@@ -149,6 +149,12 @@
 
     matplotlib/matplotlib#29251
 
+-   ![](https://github.com/mne-tools.png?size=40){ width="40" loading=lazy align=left } mne-tools/mne-python
+
+    ---
+
+    mne-tools/mne-python#13011
+
 -   ![](https://github.com/oxc-project.png?size=40){ width="40" loading=lazy align=left } oxc-project/oxc
 
     ---
@@ -208,6 +214,30 @@
     ---
 
     python-pillow/Pillow#8526
+
+-   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/cleo
+
+    ---
+
+    python-poetry/cleo#462
+
+-   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/poetry-core
+
+    ---
+
+    python-poetry/poetry-core#799
+
+-   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/poetry-plugin-bundle
+
+    ---
+
+    python-poetry/poetry-plugin-bundle#125
+
+-   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/poetry-plugin-export
+
+    ---
+
+    python-poetry/poetry-plugin-export#308
 
 -   ![](https://github.com/python-telegram-bot.png?size=40){ width="40" loading=lazy align=left } python-telegram-bot/python-telegram-bot
 
