@@ -197,6 +197,10 @@ fn self_hosted() -> Result<()> {
         .workflow(workflow_under_test("self-hosted/issue-283-repro.yml"))
         .args(["--persona=auditor"])
         .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("self-hosted/issue-22-repro.yml"))
+        .run()?);
     Ok(())
 }
 

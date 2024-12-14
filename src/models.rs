@@ -273,11 +273,11 @@ impl<'w> Matrix<'w> {
     }
 
     /// Checks whether some expanded path leads to an expression
-    pub(crate) fn is_static(&self) -> bool {
-        let expands_to_expression = self
-            .expanded_values
-            .iter()
-            .any(|(_, expansion)| expansion.starts_with("${{") && expansion.ends_with("}}"));
+    pub(crate) fn expands_to_static_values(&self, context: &str) -> bool {
+        let expands_to_expression = self.expanded_values.iter().any(|(path, expansion)| {
+            let expanded_to_expression = expansion.starts_with("${{") && expansion.ends_with("}}");
+            context == path && expanded_to_expression
+        });
 
         !expands_to_expression
     }
