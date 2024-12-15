@@ -119,6 +119,42 @@ impl Client {
 
     #[instrument(skip(self))]
     #[tokio::main]
+    pub(crate) async fn has_branch(&self, owner: &str, repo: &str, branch: &str) -> Result<bool> {
+        let url = format!(
+            "{api_base}/repos/{owner}/{repo}/branches/{branch}",
+            api_base = self.api_base
+        );
+
+        let resp = self.http.get(&url).send().await?;
+        match resp.status() {
+            StatusCode::OK => Ok(true),
+            StatusCode::NOT_FOUND => Ok(false),
+            s => Err(anyhow!(
+                "{owner}/{repo}: error from GitHub API while checking branch {branch}: {s}"
+            )),
+        }
+    }
+
+    #[instrument(skip(self))]
+    #[tokio::main]
+    pub(crate) async fn has_tag(&self, owner: &str, repo: &str, tag: &str) -> Result<bool> {
+        let url = format!(
+            "{api_base}/repos/{owner}/{repo}/git/refs/tags/{tag}",
+            api_base = self.api_base
+        );
+
+        let resp = self.http.get(&url).send().await?;
+        match resp.status() {
+            StatusCode::OK => Ok(true),
+            StatusCode::NOT_FOUND => Ok(false),
+            s => Err(anyhow!(
+                "{owner}/{repo}: error from GitHub API while checking tag {tag}: {s}"
+            )),
+        }
+    }
+
+    #[instrument(skip(self))]
+    #[tokio::main]
     pub(crate) async fn commit_for_ref(
         &self,
         owner: &str,
