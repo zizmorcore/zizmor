@@ -198,9 +198,6 @@ fn self_hosted() -> Result<()> {
         .args(["--persona=auditor"])
         .run()?);
 
-    insta::assert_snapshot!(zizmor()
-        .workflow(workflow_under_test("self-hosted/issue-22-repro.yml"))
-        .run()?);
     Ok(())
 }
 
@@ -246,6 +243,12 @@ fn template_injection() -> Result<()> {
             "template-injection/template-injection-dynamic-matrix.yml"
         ))
         .args(["--persona=auditor"])
+        .run()?);
+
+    // Fixed regressions
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("template-injection/issue-22-repro.yml"))
         .run()?);
 
     Ok(())
