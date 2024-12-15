@@ -7,7 +7,7 @@ use serde_sarif::sarif::{
 };
 
 use crate::{
-    finding::{Finding, Location},
+    finding::{Finding, Location, Severity},
     registry::WorkflowRegistry,
 };
 
