@@ -137,7 +137,7 @@ impl WorkflowAudit for GitHubEnv {
 mod tests {
     use crate::audit::github_env::{GitHubEnv, GITHUB_ENV_WRITE_CMD};
     use crate::audit::WorkflowAudit;
-    use crate::state::{AuditState, Caches};
+    use crate::state::AuditState;
 
     #[test]
     fn test_exploitable_bash_patterns() {
@@ -174,7 +174,6 @@ mod tests {
             let audit_state = AuditState {
                 no_online_audits: false,
                 gh_token: None,
-                caches: Caches::new(),
             };
 
             let sut = GitHubEnv::new(audit_state).expect("failed to create audit");

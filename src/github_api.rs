@@ -4,29 +4,30 @@
 //! the whole codebase with async.
 
 use anyhow::{anyhow, Result};
+use http_cache_reqwest::{
+    CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
+};
 use reqwest::{
-    blocking::{self},
     header::{HeaderMap, ACCEPT, AUTHORIZATION, USER_AGENT},
     StatusCode,
 };
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{de::DeserializeOwned, Deserialize};
 use tracing::instrument;
 
 use crate::{
     models::{RepositoryUses, Workflow},
     registry::WorkflowKey,
-    state::Caches,
     utils::PipeSelf,
 };
 
 pub(crate) struct Client {
     api_base: &'static str,
-    http: blocking::Client,
-    caches: Caches,
+    http: ClientWithMiddleware,
 }
 
 impl Client {
-    pub(crate) fn new(token: &str, caches: Caches) -> Self {
+    pub(crate) fn new(token: &str) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
@@ -38,17 +39,37 @@ impl Client {
         headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
         headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
 
-        Self {
-            api_base: "https://api.github.com",
-            http: blocking::Client::builder()
+        let mut cache_options = HttpCacheOptions::default();
+        cache_options.cache_options = Some(CacheOptions {
+            shared: false,
+            ..Default::default()
+        });
+
+        let http = ClientBuilder::new(
+            reqwest::Client::builder()
                 .default_headers(headers)
                 .build()
                 .expect("couldn't build GitHub client?"),
-            caches,
+        )
+        .with(Cache(HttpCache {
+            mode: CacheMode::ForceCache,
+            manager: CACacheManager {
+                path: "/tmp/http-cache".into(),
+            },
+            options: HttpCacheOptions::default(),
+        }))
+        .build();
+
+        Self {
+            api_base: "https://api.github.com",
+            http,
         }
     }
 
-    fn paginate<T: DeserializeOwned>(&self, endpoint: &str) -> reqwest::Result<Vec<T>> {
+    async fn paginate<T: DeserializeOwned>(
+        &self,
+        endpoint: &str,
+    ) -> reqwest_middleware::Result<Vec<T>> {
         let mut dest = vec![];
         let url = format!("{api_base}/{endpoint}", api_base = self.api_base);
 
@@ -62,10 +83,11 @@ impl Client {
                 .http
                 .get(&url)
                 .query(&[("page", pageno), ("per_page", 100)])
-                .send()?
+                .send()
+                .await?
                 .error_for_status()?;
 
-            let page = resp.json::<Vec<T>>()?;
+            let page = resp.json::<Vec<T>>().await?;
             if page.is_empty() {
                 break;
             }
@@ -78,27 +100,24 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
-        self.caches
-            .branch_cache
-            .try_get_with((owner.into(), repo.into()), || {
-                self.paginate(&format!("repos/{owner}/{repo}/branches"))
-            })
+    #[tokio::main(flavor = "current_thread")]
+    pub(crate) async fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
+        self.paginate(&format!("repos/{owner}/{repo}/branches"))
+            .await
             .map_err(Into::into)
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>> {
-        self.caches
-            .tag_cache
-            .try_get_with((owner.into(), repo.into()), || {
-                self.paginate(&format!("repos/{owner}/{repo}/tags"))
-            })
+    #[tokio::main(flavor = "current_thread")]
+    pub(crate) async fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>> {
+        self.paginate(&format!("repos/{owner}/{repo}/tags"))
+            .await
             .map_err(Into::into)
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn commit_for_ref(
+    #[tokio::main(flavor = "current_thread")]
+    pub(crate) async fn commit_for_ref(
         &self,
         owner: &str,
         repo: &str,
@@ -111,18 +130,18 @@ impl Client {
             api_base = self.api_base
         );
 
-        let resp = self.http.get(url).send()?;
+        let resp = self.http.get(url).send().await?;
         match resp.status() {
-            StatusCode::OK => Ok(Some(resp.json::<GitRef>()?.object.sha)),
+            StatusCode::OK => Ok(Some(resp.json::<GitRef>().await?.object.sha)),
             StatusCode::NOT_FOUND => {
                 let url = format!(
                     "{api_base}/repos/{owner}/{repo}/git/ref/tags/{git_ref}",
                     api_base = self.api_base
                 );
 
-                let resp = self.http.get(url).send()?;
+                let resp = self.http.get(url).send().await?;
                 match resp.status() {
-                    StatusCode::OK => Ok(Some(resp.json::<GitRef>()?.object.sha)),
+                    StatusCode::OK => Ok(Some(resp.json::<GitRef>().await?.object.sha)),
                     StatusCode::NOT_FOUND => Ok(None),
                     s => Err(anyhow!(
                         "{owner}/{repo}: error from GitHub API while accessing ref {git_ref}: {s}"
@@ -159,36 +178,34 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn compare_commits(
+    #[tokio::main(flavor = "current_thread")]
+    pub(crate) async fn compare_commits(
         &self,
         owner: &str,
         repo: &str,
         base: &str,
         head: &str,
     ) -> Result<Option<ComparisonStatus>> {
-        self.caches
-            .ref_comparison_cache
-            .try_get_with((base.into(), head.into()), || {
-                let url = format!(
-                    "{api_base}/repos/{owner}/{repo}/compare/{base}...{head}",
-                    api_base = self.api_base
-                );
+        let url = format!(
+            "{api_base}/repos/{owner}/{repo}/compare/{base}...{head}",
+            api_base = self.api_base
+        );
 
-                let resp = self.http.get(url).send()?;
+        let resp = self.http.get(url).send().await?;
 
-                match resp.status() {
-                    StatusCode::OK => {
-                        Ok::<_, reqwest::Error>(Some(resp.json::<Comparison>()?.status))
-                    }
-                    StatusCode::NOT_FOUND => Ok(None),
-                    _ => Err(resp.error_for_status().unwrap_err()),
-                }
-            })
-            .map_err(Into::into)
+        match resp.status() {
+            StatusCode::OK => {
+                Ok::<_, reqwest::Error>(Some(resp.json::<Comparison>().await?.status))
+            }
+            StatusCode::NOT_FOUND => Ok(None),
+            _ => Err(resp.error_for_status().unwrap_err()),
+        }
+        .map_err(Into::into)
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn gha_advisories(
+    #[tokio::main(flavor = "current_thread")]
+    pub(crate) async fn gha_advisories(
         &self,
         owner: &str,
         repo: &str,
@@ -203,15 +220,18 @@ impl Client {
                 ("ecosystem", "actions"),
                 ("affects", &format!("{owner}/{repo}@{version}")),
             ])
-            .send()?
+            .send()
+            .await?
             .error_for_status()?
             .json()
+            .await
             .map_err(Into::into)
     }
 
     /// Return temporary files for all workflows listed in the repo.
     #[instrument(skip(self))]
-    pub(crate) fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
+    #[tokio::main(flavor = "current_thread")]
+    pub(crate) async fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
         let owner = slug.owner;
         let repo = slug.repo;
         let git_ref = slug.git_ref;
@@ -233,9 +253,11 @@ impl Client {
                 Some(g) => req.query(&[("ref", g)]),
                 None => req,
             })
-            .send()?
+            .send()
+            .await?
             .error_for_status()?
-            .json()?;
+            .json()
+            .await?;
 
         let mut workflows = vec![];
         for file in resp
@@ -253,9 +275,11 @@ impl Client {
                     Some(g) => req.query(&[("ref", g)]),
                     None => req,
                 })
-                .send()?
+                .send()
+                .await?
                 .error_for_status()?
-                .text()?;
+                .text()
+                .await?;
 
             workflows.push(Workflow::from_string(
                 contents,
