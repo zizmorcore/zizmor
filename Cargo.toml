@@ -22,7 +22,9 @@ clap-verbosity-flag = { version = "3.0.0", features = [
     "tracing",
 ], default-features = false }
 github-actions-models = "0.14.0"
-http-cache = { version = "0.20.0", default-features = false, features = ["manager-cacache", "cacache-tokio"] }
+http-cache = { version = "0.20.0", default-features = false, features = [
+    "cacache-tokio",
+] }
 http-cache-reqwest = "0.15.0"
 human-panic = "2.0.1"
 indexmap = "2.7.0"

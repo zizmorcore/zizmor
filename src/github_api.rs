@@ -39,12 +39,6 @@ impl Client {
         headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
         headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
 
-        let mut cache_options = HttpCacheOptions::default();
-        cache_options.cache_options = Some(CacheOptions {
-            shared: false,
-            ..Default::default()
-        });
-
         let http = ClientBuilder::new(
             reqwest::Client::builder()
                 .default_headers(headers)
@@ -52,11 +46,19 @@ impl Client {
                 .expect("couldn't build GitHub client?"),
         )
         .with(Cache(HttpCache {
-            mode: CacheMode::ForceCache,
-            manager: CACacheManager {
-                path: "/tmp/http-cache".into(),
+            mode: CacheMode::Default,
+            manager: CACacheManager::default(),
+            options: HttpCacheOptions {
+                cache_options: Some(CacheOptions {
+                    // GitHub API requests made with an API token seem to
+                    // always have `Cache-Control: private`, so we need to
+                    // explicitly tell http-cache that our cache is not shared
+                    // in order for things to cache correctly.
+                    shared: false,
+                    ..Default::default()
+                }),
+                ..Default::default()
             },
-            options: HttpCacheOptions::default(),
         }))
         .build();
 
