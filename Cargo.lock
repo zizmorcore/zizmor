@@ -2920,7 +2920,6 @@ dependencies = [
  "clap",
  "clap-verbosity-flag",
  "github-actions-models",
- "http-cache",
  "http-cache-reqwest",
  "human-panic",
  "indexmap",

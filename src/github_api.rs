@@ -102,7 +102,7 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main(flavor = "current_thread")]
+    #[tokio::main]
     pub(crate) async fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
         self.paginate(&format!("repos/{owner}/{repo}/branches"))
             .await
@@ -110,7 +110,7 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main(flavor = "current_thread")]
+    #[tokio::main]
     pub(crate) async fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>> {
         self.paginate(&format!("repos/{owner}/{repo}/tags"))
             .await
@@ -118,7 +118,7 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main(flavor = "current_thread")]
+    #[tokio::main]
     pub(crate) async fn commit_for_ref(
         &self,
         owner: &str,
@@ -180,7 +180,7 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main(flavor = "current_thread")]
+    #[tokio::main]
     pub(crate) async fn compare_commits(
         &self,
         owner: &str,
@@ -206,7 +206,7 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main(flavor = "current_thread")]
+    #[tokio::main]
     pub(crate) async fn gha_advisories(
         &self,
         owner: &str,
@@ -232,7 +232,7 @@ impl Client {
 
     /// Return temporary files for all workflows listed in the repo.
     #[instrument(skip(self))]
-    #[tokio::main(flavor = "current_thread")]
+    #[tokio::main]
     pub(crate) async fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
         let owner = slug.owner;
         let repo = slug.repo;

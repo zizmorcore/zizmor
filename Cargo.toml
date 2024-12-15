@@ -22,9 +22,6 @@ clap-verbosity-flag = { version = "3.0.0", features = [
     "tracing",
 ], default-features = false }
 github-actions-models = "0.14.0"
-http-cache = { version = "0.20.0", default-features = false, features = [
-    "cacache-tokio",
-] }
 http-cache-reqwest = "0.15.0"
 human-panic = "2.0.1"
 indexmap = "2.7.0"
@@ -45,7 +42,7 @@ serde-sarif = "0.6.5"
 serde_json = "1.0.133"
 serde_yaml = "0.9.34"
 terminal-link = "0.1.0"
-tokio = "1.42.0"
+tokio = { version = "1.42.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-indicatif = "0.3.8"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
