@@ -5,7 +5,6 @@
 
 from pathlib import Path
 
-
 _TROPHIES = Path(__file__).parent / "trophies.txt"
 
 _TEMPLATE = """
@@ -21,7 +20,11 @@ for trophy in sorted(_TROPHIES.open().readlines()):
         continue
 
     org, rest = trophy.split("/")
-    repo, _ = rest.split("#")
+    if "#" in rest:
+        repo, _ = rest.split("#")
+    else:
+        repo, _ = rest.split("@")
+
     # NOTE: We request 40x40 from GitHub, but sometimes it gives us a bigger one.
     # Consequently, we also style with `width` to keep things consistent.
     print(_TEMPLATE.format(org=org, repo=repo, trophy=trophy))
