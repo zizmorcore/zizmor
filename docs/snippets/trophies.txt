@@ -41,6 +41,7 @@ python-attrs/cattrs#605
 python-humanize/humanize#221
 python-pillow/Pillow#8526
 python-poetry/cleo#462
+python-poetry/poetry#9895
 python-poetry/poetry-core#799
 python-poetry/poetry-plugin-export#308
 python-poetry/poetry-plugin-bundle#125
@@ -53,4 +54,5 @@ sigstore/cosign#3959
 sigstore/gitsign#602
 termcolor/termcolor#89
 tornadoweb/tornado#3438
+ultrajson/ultrajson#650
 vlang/v#22681

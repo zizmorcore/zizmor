@@ -221,6 +221,12 @@
 
     python-poetry/cleo#462
 
+-   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/poetry
+
+    ---
+
+    python-poetry/poetry#9895
+
 -   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/poetry-core
 
     ---
@@ -298,6 +304,12 @@
     ---
 
     tornadoweb/tornado#3438
+
+-   ![](https://github.com/ultrajson.png?size=40){ width="40" loading=lazy align=left } ultrajson/ultrajson
+
+    ---
+
+    ultrajson/ultrajson#650
 
 -   ![](https://github.com/vlang.png?size=40){ width="40" loading=lazy align=left } vlang/v
 
