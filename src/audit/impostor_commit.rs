@@ -5,16 +5,14 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
-use std::ops::Deref;
-
 use anyhow::{anyhow, Result};
-use github_actions_models::workflow::{job::StepBody, Job};
+use github_actions_models::workflow::Job;
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, Branch, ComparisonStatus, Tag},
-    models::{Uses, Workflow},
+    models::{RepositoryUses, Uses, Workflow},
     state::AuditState,
 };
 
@@ -24,8 +22,14 @@ pub(crate) struct ImpostorCommit {
     pub(crate) client: github_api::Client,
 }
 
+audit_meta!(
+    ImpostorCommit,
+    "impostor-commit",
+    "commit with no history in referenced repository"
+);
+
 impl ImpostorCommit {
-    fn named_refs(&self, uses: Uses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
+    fn named_refs(&self, uses: RepositoryUses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
         let branches = self.client.list_branches(uses.owner, uses.repo)?;
         let tags = self.client.list_tags(uses.owner, uses.repo)?;
         Ok((branches, tags))
@@ -33,7 +37,7 @@ impl ImpostorCommit {
 
     fn named_ref_contains_commit(
         &self,
-        uses: &Uses<'_>,
+        uses: &RepositoryUses<'_>,
         base_ref: &str,
         head_ref: &str,
     ) -> Result<bool> {
@@ -57,15 +61,29 @@ impl ImpostorCommit {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    fn impostor(&self, uses: Uses<'_>) -> Result<bool> {
-        let (branches, tags) = self.named_refs(uses)?;
-
+    fn impostor(&self, uses: RepositoryUses<'_>) -> Result<bool> {
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
         let Some(head_ref) = uses.commit_ref() else {
             return Ok(false);
         };
 
-        for branch in branches {
+        let (branches, tags) = self.named_refs(uses)?;
+
+        // Fast path: almost all commit refs will be at the tip of
+        // the branch or tag's history, so check those first.
+        for branch in &branches {
+            if branch.commit.sha == head_ref {
+                return Ok(false);
+            }
+        }
+
+        for tag in &tags {
+            if tag.commit.sha == head_ref {
+                return Ok(false);
+            }
+        }
+
+        for branch in &branches {
             if self.named_ref_contains_commit(
                 &uses,
                 &format!("refs/heads/{}", &branch.name),
@@ -75,7 +93,7 @@ impl ImpostorCommit {
             }
         }
 
-        for tag in tags {
+        for tag in &tags {
             if self.named_ref_contains_commit(
                 &uses,
                 &format!("refs/tags/{}", &tag.name),
@@ -87,7 +105,7 @@ impl ImpostorCommit {
 
         // If we've made it here, the commit isn't present in any commit or tag's history,
         // strongly suggesting that it's an impostor.
-        log::warn!(
+        tracing::warn!(
             "strong impostor candidate: {head_ref} for {org}/{repo}",
             org = uses.owner,
             repo = uses.repo
@@ -97,41 +115,26 @@ impl ImpostorCommit {
 }
 
 impl WorkflowAudit for ImpostorCommit {
-    fn ident() -> &'static str {
-        "impostor-commit"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "commit with no history in referenced repository"
-    }
-
     fn new(state: AuditState) -> Result<Self> {
-        if state.config.offline {
+        if state.no_online_audits {
             return Err(anyhow!("offline audits only requested"));
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't audit without a GitHub API token"));
+            return Err(anyhow!("can't run without a GitHub API token"));
         };
 
         Ok(ImpostorCommit { client })
     }
 
-    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
             match *job {
                 Job::NormalJob(_) => {
                     for step in job.steps() {
-                        let StepBody::Uses { uses, .. } = &step.deref().body else {
-                            continue;
-                        };
-
-                        let Some(uses) = Uses::from_step(uses) else {
+                        let Some(Uses::Repository(uses)) = step.uses() else {
                             continue;
                         };
 

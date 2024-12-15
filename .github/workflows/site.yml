@@ -1,0 +1,51 @@
+name: Deploy zizmor site
+
+on:
+  push:
+    branches:
+      - main
+      - site-staging
+
+  workflow_dispatch:
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  deploy:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v3
+
+      - name: build site
+        run: make site
+
+      - name: Setup Pages
+        if: github.repository_owner == 'woodruffw'
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: site_html
+
+      - name: Deploy to GitHub Pages
+        if: github.repository_owner == 'woodruffw'
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

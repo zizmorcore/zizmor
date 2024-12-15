@@ -1,0 +1,29 @@
+changelog:
+  exclude:
+    labels:
+      - tests
+      - chore
+      - no-changelog
+    authors:
+      - dependabot
+
+  categories:
+    - title: New Features 🌈
+      labels:
+        - enhancement
+        - new-audit
+        - cli
+
+    - title: Bug Fixes 🐛
+      labels:
+        - bugfix
+        - false-negative
+        - false-positive
+
+    - title: Performance Improvements 🚄
+      labels:
+        - performance
+
+    - title: Documentation Improvements 📖
+      labels:
+        - documentation

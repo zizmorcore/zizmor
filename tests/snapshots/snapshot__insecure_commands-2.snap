@@ -1,0 +1,15 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"insecure-commands.yml\")).run()?"
+snapshot_kind: text
+---
+error[insecure-commands]: execution of insecure workflow commands is enabled
+ --> @@INPUT@@:8:5
+  |
+8 | /     env:
+9 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+  | |__________________________________________^ insecure commands enabled here
+  |
+  = note: audit confidence → High
+
+2 findings (1 suppressed): 0 unknown, 0 informational, 0 low, 0 medium, 1 high

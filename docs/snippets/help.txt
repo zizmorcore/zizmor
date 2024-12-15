@@ -1,0 +1,38 @@
+Static analysis for GitHub Actions
+
+Usage: zizmor [OPTIONS] <INPUTS>...
+
+Arguments:
+  <INPUTS>...  The inputs to audit
+
+Options:
+  -p, --pedantic
+          Emit 'pedantic' findings
+      --persona <PERSONA>
+          The persona to use while auditing [default: regular] [possible values: auditor, pedantic, regular]
+  -o, --offline
+          Perform only offline operations [env: ZIZMOR_OFFLINE=]
+      --gh-token <GH_TOKEN>
+          The GitHub API token to use [env: GH_TOKEN=]
+      --no-online-audits
+          Perform only offline audits [env: ZIZMOR_NO_ONLINE_AUDITS=]
+  -v, --verbose...
+          Increase logging verbosity
+  -q, --quiet...
+          Decrease logging verbosity
+      --format <FORMAT>
+          The output format to emit. By default, plain text will be emitted [default: plain] [possible values: plain, json, sarif]
+  -c, --config <CONFIG>
+          The configuration file to load. By default, any config will be discovered relative to $CWD
+      --no-config
+          Disable all configuration loading
+      --no-exit-codes
+          Disable all error codes besides success and tool failure
+      --min-severity <MIN_SEVERITY>
+          Filter all results below this severity [possible values: unknown, informational, low, medium, high]
+      --min-confidence <MIN_CONFIDENCE>
+          Filter all results below this confidence [possible values: unknown, low, medium, high]
+  -h, --help
+          Print help (see more with '--help')
+  -V, --version
+          Print version

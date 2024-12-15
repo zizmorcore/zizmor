@@ -1,34 +1,62 @@
 [package]
 name = "zizmor"
-description = "Finds security issues in GitHub Actions setups"
-version = "0.1.1"
+description = "Static analysis for GitHub Actions"
+version = "0.9.2"
 edition = "2021"
 repository = "https://github.com/woodruffw/zizmor"
 homepage = "https://github.com/woodruffw/zizmor"
+documentation = "https://woodruffw.github.io/zizmor/"
 authors = ["William Woodruff <william@yossarian.net>"]
 license = "MIT"
+keywords = ["cli", "github-actions", "static-analysis", "security"]
+categories = ["command-line-utilities"]
 rust-version = "1.80.1"
 
 [dependencies]
-annotate-snippets = "0.11.4"
-anstream = "0.6.15"
-anyhow = "1.0.86"
-clap = { version = "4.5.16", features = ["derive", "env"] }
-clap-verbosity-flag = "2.2.1"
-env_logger = "0.11.5"
-github-actions-models = "0.8.0"
+annotate-snippets = "0.11.5"
+anstream = "0.6.18"
+anyhow = "1.0.94"
+camino = { version = "1.1.9", features = ["serde1"] }
+clap = { version = "4.5.23", features = ["derive", "env"] }
+clap-verbosity-flag = { version = "3.0.0", features = [
+    "tracing",
+], default-features = false }
+github-actions-models = "0.14.0"
 human-panic = "2.0.1"
-indicatif = "0.17.8"
+indexmap = "2.7.0"
+indicatif = "0.17.9"
 itertools = "0.13.0"
-log = "0.4.22"
 moka = { version = "0.12.8", features = ["sync"] }
 owo-colors = "4.1.0"
-pest = "2.7.14"
-pest_derive = "2.7.14"
-reqwest = { version = "0.12.7", features = ["blocking", "json"] }
-serde = { version = "1.0.208", features = ["derive"] }
+pest = "2.7.15"
+pest_derive = "2.7.15"
+regex = "1.11.1"
+reqwest = { version = "0.12.9", features = [
+    "blocking",
+    "json",
+    "rustls-tls",
+], default-features = false }
+serde = { version = "1.0.215", features = ["derive"] }
 serde-sarif = "0.6.6"
-serde_json = "1.0.125"
+serde_json = "1.0.133"
 serde_yaml = "0.9.34"
 terminal-link = "0.1.0"
-yamlpath = "0.11.1"
+tracing = "0.1.41"
+tracing-indicatif = "0.3.8"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tree-sitter = "0.23.2"
+tree-sitter-bash = "0.23.3"
+yamlpath = "0.12.0"
+
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3
+
+[profile.release]
+lto = true
+
+[dev-dependencies]
+assert_cmd = "2.0.16"
+insta = { version = "1.41.1" }
+pretty_assertions = "1.4.1"
+serde_json_path = "0.7.1"

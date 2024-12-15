@@ -6,23 +6,31 @@
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
 use anyhow::{anyhow, Context, Result};
-use github_actions_models::workflow::{job::StepBody, Job};
 
 use crate::{
     finding::{Confidence, Severity},
     github_api,
-    models::Uses,
+    models::{RepositoryUses, Uses},
     state::AuditState,
 };
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 
 pub(crate) struct KnownVulnerableActions {
     client: github_api::Client,
 }
 
+audit_meta!(
+    KnownVulnerableActions,
+    "known-vulnerable-actions",
+    "action has a known vulnerability"
+);
+
 impl KnownVulnerableActions {
-    fn action_known_vulnerabilities(&self, uses: &Uses<'_>) -> Result<Vec<(Severity, String)>> {
+    fn action_known_vulnerabilities(
+        &self,
+        uses: &RepositoryUses<'_>,
+    ) -> Result<Vec<(Severity, String)>> {
         let version = match uses.git_ref {
             // If `uses` is pinned to a symbolic ref, we need to perform
             // feats of heroism to figure out what's going on.
@@ -113,70 +121,41 @@ impl KnownVulnerableActions {
 }
 
 impl WorkflowAudit for KnownVulnerableActions {
-    fn ident() -> &'static str
-    where
-        Self: Sized,
-    {
-        "known-vulnerable-actions"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "action has a known vulnerability"
-    }
-
     fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        if state.config.offline {
+        if state.no_online_audits {
             return Err(anyhow!("offline audits only requested"));
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't audit without a GitHub API token"));
+            return Err(anyhow!("can't run without a GitHub API token"));
         };
 
         Ok(Self { client })
     }
 
-    fn audit<'w>(
-        &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+    fn audit_step<'w>(&self, step: &super::Step<'w>) -> Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
 
-        for job in workflow.jobs() {
-            let Job::NormalJob(_) = *job else {
-                continue;
-            };
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
 
-            for step in job.steps() {
-                let StepBody::Uses { uses, .. } = &step.body else {
-                    continue;
-                };
-
-                let Some(uses) = Uses::from_step(uses) else {
-                    continue;
-                };
-
-                for (severity, id) in self.action_known_vulnerabilities(&uses)? {
-                    findings.push(
-                        Self::finding()
-                            .confidence(Confidence::High)
-                            .severity(severity)
-                            .add_location(
-                                step.location()
-                                    .with_keys(&["uses".into()])
-                                    .annotated(&id)
-                                    .with_url(format!("https://github.com/advisories/{id}")),
-                            )
-                            .build(workflow)?,
-                    );
-                }
-            }
+        for (severity, id) in self.action_known_vulnerabilities(&uses)? {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(severity)
+                    .add_location(
+                        step.location()
+                            .with_keys(&["uses".into()])
+                            .annotated(&id)
+                            .with_url(format!("https://github.com/advisories/{id}")),
+                    )
+                    .build(step.workflow())?,
+            );
         }
 
         Ok(findings)

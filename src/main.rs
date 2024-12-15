@@ -1,18 +1,25 @@
-use std::{
-    io::{stdout, IsTerminal},
-    path::PathBuf,
-    time::Duration,
-};
+use std::{io::stdout, process::ExitCode};
 
+use annotate_snippets::{Level, Renderer};
+use anstream::{eprintln, stream::IsTerminal};
 use anyhow::{anyhow, Context, Result};
 use audit::WorkflowAudit;
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
-use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use clap_verbosity_flag::InfoLevel;
+use config::Config;
+use finding::{Confidence, Persona, Severity};
+use indicatif::ProgressStyle;
+use models::Uses;
 use owo_colors::OwoColorize;
-use registry::{AuditRegistry, WorkflowRegistry};
-use state::{AuditConfig, AuditState};
+use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
+use state::AuditState;
+use tracing::{info_span, instrument, Span};
+use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
+use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
 mod audit;
+mod config;
 mod expr;
 mod finding;
 mod github_api;
@@ -25,97 +32,211 @@ mod utils;
 
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
-struct Args {
-    /// Emit findings even when the context suggests an explicit security decision made by the user.
-    #[arg(short, long)]
+#[command(about, version)]
+struct App {
+    /// Emit 'pedantic' findings.
+    ///
+    /// This is an alias for --persona=pedantic.
+    #[arg(short, long, group = "_persona")]
     pedantic: bool,
 
-    /// Only perform audits that don't require network access.
-    #[arg(short, long)]
+    /// The persona to use while auditing.
+    #[arg(long, group = "_persona", value_enum, default_value_t)]
+    persona: Persona,
+
+    /// Perform only offline operations.
+    ///
+    /// This disables all online audit rules, and prevents zizmor from
+    /// auditing remote repositories.
+    #[arg(short, long, env = "ZIZMOR_OFFLINE", group = "_offline")]
     offline: bool,
 
-    #[command(flatten)]
-    verbose: clap_verbosity_flag::Verbosity,
-
-    /// Disable the progress bar. This is useful primarily when running
-    /// with a high verbosity level, as the two will fight for stderr.
-    #[arg(short, long)]
-    no_progress: bool,
-
     /// The GitHub API token to use.
-    #[arg(long, env)]
+    #[arg(long, env, group = "_offline")]
     gh_token: Option<String>,
 
-    /// The output format to emit. By default, plain text will be emitted
-    /// on an interactive terminal and JSON otherwise.
-    #[arg(long, value_enum)]
-    format: Option<OutputFormat>,
+    /// Perform only offline audits.
+    ///
+    /// This is a weaker version of `--offline`: instead of completely
+    /// forbidding all online operations, it only disables audits that
+    /// require connectivity.
+    #[arg(long, env = "ZIZMOR_NO_ONLINE_AUDITS")]
+    no_online_audits: bool,
 
-    /// The workflow filename or directory to audit.
-    input: PathBuf,
+    #[command(flatten)]
+    verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
+
+    /// The output format to emit. By default, plain text will be emitted
+    #[arg(long, value_enum, default_value_t)]
+    format: OutputFormat,
+
+    /// The configuration file to load. By default, any config will be
+    /// discovered relative to $CWD.
+    #[arg(short, long, group = "conf")]
+    config: Option<Utf8PathBuf>,
+
+    /// Disable all configuration loading.
+    #[arg(long, group = "conf")]
+    no_config: bool,
+
+    /// Disable all error codes besides success and tool failure.
+    #[arg(long)]
+    no_exit_codes: bool,
+
+    /// Filter all results below this severity.
+    #[arg(long)]
+    min_severity: Option<Severity>,
+
+    /// Filter all results below this confidence.
+    #[arg(long)]
+    min_confidence: Option<Confidence>,
+
+    /// The inputs to audit.
+    ///
+    /// These can be individual workflow filenames, entire directories,
+    /// or a `user/repo` slug for a GitHub repository. In the latter case,
+    /// a `@ref` can be appended to audit the repository at a particular
+    /// git reference state.
+    #[arg(required = true)]
+    inputs: Vec<String>,
 }
 
-#[derive(Debug, Copy, Clone, ValueEnum)]
+#[derive(Debug, Default, Copy, Clone, ValueEnum)]
 pub(crate) enum OutputFormat {
+    #[default]
     Plain,
     Json,
     Sarif,
 }
 
-fn main() -> Result<()> {
-    human_panic::setup_panic!();
+fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
+    let message = Level::Error
+        .title(err.as_ref())
+        .footer(Level::Note.title(tip.as_ref()));
 
-    let args = Args::parse();
+    let renderer = Renderer::styled();
+    format!("{}", renderer.render(message))
+}
 
-    env_logger::Builder::new()
-        .filter_level(args.verbose.log_level_filter())
-        .init();
+#[instrument(skip_all)]
+fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<WorkflowRegistry> {
+    let mut workflow_registry = WorkflowRegistry::new();
 
-    let config = AuditConfig::from(&args);
+    for input in inputs {
+        let input_path = Utf8Path::new(input);
+        if input_path.is_file() {
+            workflow_registry
+                .register_by_path(input_path)
+                .with_context(|| format!("failed to register workflow: {input_path}"))?;
+        } else if input_path.is_dir() {
+            let mut absolute = input_path.canonicalize_utf8()?;
+            if !absolute.ends_with(".github/workflows") {
+                absolute.push(".github/workflows")
+            }
 
-    let mut workflow_paths = vec![];
-    if args.input.is_file() {
-        workflow_paths.push(args.input.clone());
-    } else if args.input.is_dir() {
-        let mut absolute = std::fs::canonicalize(&args.input)?;
-        if !absolute.ends_with(".github/workflows") {
-            absolute.push(".github/workflows")
-        }
+            for entry in absolute.read_dir_utf8()? {
+                let entry = entry?;
+                let workflow_path = entry.path();
+                match workflow_path.extension() {
+                    Some(ext) if ext == "yml" || ext == "yaml" => {
+                        workflow_registry
+                            .register_by_path(workflow_path)
+                            .with_context(|| {
+                                format!("failed to register workflow: {workflow_path}")
+                            })?;
+                    }
+                    _ => continue,
+                }
+            }
+        } else {
+            // If this input isn't a file or directory, it's probably an
+            // `owner/repo(@ref)?` slug.
 
-        log::debug!("collecting workflows from {absolute:?}");
+            // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
+            let Some(Uses::Repository(slug)) = Uses::from_step(input) else {
+                return Err(anyhow!(tip(
+                    format!("invalid input: {input}"),
+                    format!(
+                        "pass a single {file}, {directory}, or entire repo by {slug} slug",
+                        file = "file".green(),
+                        directory = "directory".green(),
+                        slug = "owner/repo".green()
+                    )
+                )));
+            };
 
-        for entry in std::fs::read_dir(absolute)? {
-            let workflow_path = entry?.path();
-            match workflow_path.extension() {
-                Some(ext) if ext == "yml" || ext == "yaml" => workflow_paths.push(workflow_path),
-                _ => continue,
+            // We don't expect subpaths here.
+            if slug.subpath.is_some() {
+                return Err(anyhow!(tip(
+                    "invalid GitHub repository reference",
+                    "pass owner/repo or owner/repo@ref"
+                )));
+            }
+
+            let client = state.github_client().ok_or_else(|| {
+                anyhow!(tip(
+                    format!("can't retrieve repository: {input}", input = input.green()),
+                    format!(
+                        "try removing {offline} or passing {gh_token}",
+                        offline = "--offline".yellow(),
+                        gh_token = "--gh-token <TOKEN>".yellow(),
+                    )
+                ))
+            })?;
+
+            for workflow in client.fetch_workflows(&slug)? {
+                workflow_registry.register(workflow)?;
             }
         }
-
-        if workflow_paths.is_empty() {
-            return Err(anyhow!(
-                "no workflow files collected; empty or wrong directory?"
-            ));
-        }
-    } else {
-        return Err(anyhow!("input must be a single workflow file or directory"));
     }
 
-    let audit_state = AuditState::new(config);
-
-    let mut workflow_registry = WorkflowRegistry::new();
-    for workflow_path in workflow_paths.iter() {
-        workflow_registry.register_workflow(workflow_path)?;
+    if workflow_registry.len() == 0 {
+        return Err(anyhow!("no workflow files collected"));
     }
+
+    Ok(workflow_registry)
+}
+
+fn run() -> Result<ExitCode> {
+    human_panic::setup_panic!();
+
+    let mut app = App::parse();
+
+    // `--pedantic` is a shortcut for `--persona=pedantic`.
+    if app.pedantic {
+        app.persona = Persona::Pedantic;
+    }
+
+    let indicatif_layer = IndicatifLayer::new();
+
+    let filter = EnvFilter::builder()
+        .with_default_directive(app.verbose.tracing_level_filter().into())
+        .from_env()?;
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(std::io::stderr().is_terminal())
+                .with_writer(indicatif_layer.get_stderr_writer()),
+        )
+        .with(filter)
+        .with(indicatif_layer)
+        .init();
+
+    let audit_state = AuditState::new(&app);
+    let workflow_registry = collect_inputs(&app.inputs, &audit_state)?;
+
+    let config = Config::new(&app)?;
 
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {
         ($rule:path) => {{
+            use crate::audit::Audit as _;
             // HACK: https://github.com/rust-lang/rust/issues/48067
             use $rule as base;
             match base::new(audit_state.clone()) {
                 Ok(audit) => audit_registry.register_workflow_audit(base::ident(), Box::new(audit)),
-                Err(e) => log::warn!("{audit} is being skipped: {e}", audit = base::ident()),
+                Err(e) => tracing::warn!("skipping {audit}: {e}", audit = base::ident()),
             }
         }};
     }
@@ -130,58 +251,61 @@ fn main() -> Result<()> {
     register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
     register_audit!(audit::self_hosted_runner::SelfHostedRunner);
     register_audit!(audit::known_vulnerable_actions::KnownVulnerableActions);
+    register_audit!(audit::unpinned_uses::UnpinnedUses);
+    register_audit!(audit::insecure_commands::InsecureCommands);
+    register_audit!(audit::github_env::GitHubEnv);
 
-    let bar = ProgressBar::new((workflow_registry.len() * audit_registry.len()) as u64);
-
-    // Hide the bar if the user has explicitly asked for quiet output
-    // or to disable just the progress bar.
-    if args.verbose.is_silent() || args.no_progress {
-        bar.set_draw_target(ProgressDrawTarget::hidden());
-    } else {
-        bar.enable_steady_tick(Duration::from_millis(100));
-        bar.set_style(
-            ProgressStyle::with_template("[{elapsed_precise}] {msg} {bar:!30.cyan/blue}").unwrap(),
+    let mut results = FindingRegistry::new(&app, &config);
+    {
+        // Note: block here so that we drop the span here at the right time.
+        let span = info_span!("audit");
+        span.pb_set_length((workflow_registry.len() * audit_registry.len()) as u64);
+        span.pb_set_style(
+            &ProgressStyle::with_template("[{elapsed_precise}] {bar:!30.cyan/blue} {msg}").unwrap(),
         );
-    }
 
-    let mut results = vec![];
-    for (_, workflow) in workflow_registry.iter_workflows() {
-        bar.set_message(format!(
-            "auditing {workflow}",
-            workflow = workflow.filename().cyan()
-        ));
-        for (name, audit) in audit_registry.iter_workflow_audits() {
-            results.extend(audit.audit(workflow).with_context(|| {
-                format!(
-                    "{name} failed on {workflow}",
-                    workflow = workflow.filename()
-                )
-            })?);
-            bar.inc(1);
-        }
-        bar.println(format!(
-            "🌈 completed {workflow}",
-            workflow = &workflow.filename().cyan()
-        ));
-    }
+        let _guard = span.enter();
 
-    bar.finish_and_clear();
-
-    let format = match args.format {
-        None => {
-            if stdout().is_terminal() {
-                OutputFormat::Plain
-            } else {
-                OutputFormat::Json
+        for (_, workflow) in workflow_registry.iter_workflows() {
+            Span::current().pb_set_message(workflow.key.filename());
+            for (name, audit) in audit_registry.iter_workflow_audits() {
+                results.extend(audit.audit(workflow).with_context(|| {
+                    format!(
+                        "{name} failed on {workflow}",
+                        workflow = workflow.filename()
+                    )
+                })?);
+                Span::current().pb_inc(1);
             }
+
+            tracing::info!("🌈 completed {workflow}", workflow = workflow.key.path());
         }
-        Some(f) => f,
+    }
+
+    match app.format {
+        OutputFormat::Plain => render::render_findings(&workflow_registry, &results),
+        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
+        OutputFormat::Sarif => serde_json::to_writer_pretty(
+            stdout(),
+            &sarif::build(&workflow_registry, results.findings()),
+        )?,
     };
 
-    match format {
-        OutputFormat::Plain => render::render_findings(&workflow_registry, &results),
-        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results)?,
-        OutputFormat::Sarif => serde_json::to_writer_pretty(stdout(), &sarif::build(results))?,
-    };
-    Ok(())
+    if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
+        Ok(ExitCode::SUCCESS)
+    } else {
+        Ok(results.into())
+    }
+}
+
+fn main() -> ExitCode {
+    // This is a little silly, but returning an ExitCode like this ensures
+    // we always exit cleanly, rather than performing a hard process exit.
+    match run() {
+        Ok(exit) => exit,
+        Err(err) => {
+            eprintln!("{err:?}");
+            ExitCode::FAILURE
+        }
+    }
 }

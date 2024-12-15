@@ -1,0 +1,16 @@
+# Adapted from
+# https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/template-injection.yml
+
+name: example
+on:
+  issues:
+
+jobs:
+  inject-me:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # tag=v7.0.1
+        with:
+          script: |
+            return "doing a thing: ${{ github.event.issue.title }}"

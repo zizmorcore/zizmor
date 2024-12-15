@@ -1,0 +1,22 @@
+on: pull_request
+
+name: insecure-commands
+
+jobs:
+  some-dangerous-job:
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+    steps:
+      - run: echo "don't do this"
+
+  env-via-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env:
+          - ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+
+    steps:
+      - run: echo "don't do this"
+        env: ${{ matrix.env }}

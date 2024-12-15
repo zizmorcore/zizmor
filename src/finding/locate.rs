@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 
-use super::{ConcreteLocation, Feature, SymbolicLocation};
+use super::{Comment, ConcreteLocation, Feature, SymbolicLocation};
 use crate::models::Workflow;
 
 pub(crate) struct Locator {}
@@ -33,7 +33,7 @@ impl Locator {
             }
 
             let query = builder.build();
-            log::trace!(
+            tracing::trace!(
                 "querying {workflow}: {query:?}",
                 workflow = workflow.filename()
             );
@@ -51,6 +51,12 @@ impl Locator {
             location: ConcreteLocation::from(&feature.location),
             parent_location: ConcreteLocation::from(&parent_feature.location),
             feature: workflow.document.extract_with_leading_whitespace(&feature),
+            comments: workflow
+                .document
+                .feature_comments(&feature)
+                .into_iter()
+                .map(Comment)
+                .collect(),
             parent_feature: workflow
                 .document
                 .extract_with_leading_whitespace(&parent_feature),

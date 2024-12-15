@@ -1,0 +1,106 @@
+strict: true
+site_name: "zizmor"
+site_description: Static analysis for GitHub Actions
+site_url: https://woodruffw.github.io/zizmor
+docs_dir: docs
+site_dir: site_html
+dev_addr: "127.0.0.1:9999"
+repo_url: https://github.com/woodruffw/zizmor
+edit_uri: edit/main/docs
+
+nav:
+  - Welcome: "index.md"
+  - "installation.md"
+  - "quickstart.md"
+  - "usage.md"
+  - "configuration.md"
+  - "audits.md"
+  - "development.md"
+  - "trophy-case.md"
+  - External links:
+      - "crates.io 🔗": https://crates.io/crates/zizmor
+
+plugins:
+  - search
+  - social
+
+theme:
+  name: material
+  logo: assets/rainbow.svg
+  favicon: assets/favicon48x48.png
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  icon:
+    annotation: material/arrow-right-circle
+    repo: fontawesome/brands/github-alt
+  features:
+    - navigation.expand
+    - navigation.sections
+    - navigation.tracking
+    - content.action.edit
+    - content.action.view
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  # Makes sure we render `<https://...>`-style links correctly.
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      normalize_issue_symbols: true
+      provider: github
+      user: woodruffw
+      repo: zizmor
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.snippets:
+      base_path:
+        - "docs/snippets"
+      check_paths: true
+  - md_in_html
+  - attr_list
+  - toc:
+      permalink: 🔗
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+
+extra_css:
+  - magiclink.css
+
+exclude_docs: |
+  snippets/

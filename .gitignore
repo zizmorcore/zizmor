@@ -1,1 +1,9 @@
 /target
+
+# website artifacts
+/site_html
+.cache
+
+# IDEs / Editors
+.idea
+.DS_STORE

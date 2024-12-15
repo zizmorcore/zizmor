@@ -1,0 +1,7 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().output(OutputMode::Stderr).args([\"pypa/sampleproject\"]).run()?"
+snapshot_kind: text
+---
+error: can't retrieve repository: pypa/sampleproject
+ = note: try removing --offline or passing --gh-token <TOKEN>

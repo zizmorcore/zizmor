@@ -1,0 +1,20 @@
+# Adapted from
+# https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/artipacked.yml
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  artipacked:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+
+  pedantic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+        with:
+          persist-credentials: true

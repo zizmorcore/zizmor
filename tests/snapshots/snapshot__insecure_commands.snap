@@ -1,0 +1,23 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"insecure-commands.yml\")).args([\"--persona=auditor\"]).run()?"
+snapshot_kind: text
+---
+error[insecure-commands]: execution of insecure workflow commands is enabled
+ --> @@INPUT@@:8:5
+  |
+8 | /     env:
+9 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+  | |__________________________________________^ insecure commands enabled here
+  |
+  = note: audit confidence → High
+
+error[insecure-commands]: execution of insecure workflow commands is enabled
+  --> @@INPUT@@:22:9
+   |
+22 |         env: ${{ matrix.env }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^ non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS
+   |
+   = note: audit confidence → Low
+
+2 findings: 0 unknown, 0 informational, 0 low, 0 medium, 2 high

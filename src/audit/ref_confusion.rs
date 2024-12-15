@@ -2,20 +2,20 @@
 //!
 //! This is similar to "impostor" commit detection, but with only named
 //! refs instead of fully pinned commits: a user may pin a ref such as
-//! `@foo` thinking that `foo` will alway refer to either a branch or a tag,
+//! `@foo` thinking that `foo` will always refer to either a branch or a tag,
 //! but the upstream repository may host *both* a branch and a tag named
 //! `foo`, making it unclear to the end user which is selected.
 
 use std::ops::Deref;
 
 use anyhow::{anyhow, Result};
-use github_actions_models::workflow::{job::StepBody, Job};
+use github_actions_models::workflow::Job;
 
-use super::WorkflowAudit;
+use super::{audit_meta, WorkflowAudit};
 use crate::{
     finding::{Confidence, Severity},
     github_api,
-    models::Uses,
+    models::{RepositoryUses, Uses},
     state::AuditState,
 };
 
@@ -26,8 +26,14 @@ pub(crate) struct RefConfusion {
     client: github_api::Client,
 }
 
+audit_meta!(
+    RefConfusion,
+    "ref-confusion",
+    "git ref for action with ambiguous ref type"
+);
+
 impl RefConfusion {
-    fn confusable(&self, uses: &Uses) -> Result<bool> {
+    fn confusable(&self, uses: &RepositoryUses) -> Result<bool> {
         let Some(sym_ref) = uses.symbolic_ref() else {
             return Ok(false);
         };
@@ -51,36 +57,22 @@ impl RefConfusion {
 }
 
 impl WorkflowAudit for RefConfusion {
-    fn ident() -> &'static str
-    where
-        Self: Sized,
-    {
-        "ref-confusion"
-    }
-
-    fn desc() -> &'static str
-    where
-        Self: Sized,
-    {
-        "git ref for action with ambiguous ref type"
-    }
-
     fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        if state.config.offline {
+        if state.no_online_audits {
             return Err(anyhow!("offline audits only requested"));
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't audit without a GitHub API token"));
+            return Err(anyhow!("can't run without a GitHub API token"));
         };
 
         Ok(Self { client })
     }
 
-    fn audit<'w>(
+    fn audit_workflow<'w>(
         &self,
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
@@ -90,11 +82,7 @@ impl WorkflowAudit for RefConfusion {
             match job.deref() {
                 Job::NormalJob(_) => {
                     for step in job.steps() {
-                        let StepBody::Uses { uses, .. } = &step.deref().body else {
-                            continue;
-                        };
-
-                        let Some(uses) = Uses::from_step(uses) else {
+                        let Some(Uses::Repository(uses)) = step.uses() else {
                             continue;
                         };
 

@@ -1,19 +1,51 @@
 //! Models and APIs for handling findings and their locations.
 
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::LazyLock};
 
 use anyhow::Result;
+use clap::ValueEnum;
 use locate::Locator;
+use regex::Regex;
 use serde::Serialize;
 use terminal_link::Link;
 
-use crate::models::{Job, Step, Workflow};
+use crate::{
+    models::{Job, Step, Workflow},
+    registry::WorkflowKey,
+};
 
 pub(crate) mod locate;
 
-// TODO: Traits + more flexible models here.
+/// Represents the expected "persona" that would be interested in a given
+/// finding. This is used to model the sensitivity of different use-cases
+/// to false positives.
+#[derive(
+    Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, ValueEnum,
+)]
+pub(crate) enum Persona {
+    /// The "auditor" persona (false positives OK).
+    ///
+    /// This persona wants all results, including results that are likely
+    /// to be false positives.
+    Auditor,
 
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, Serialize)]
+    /// The "pedantic" persona (code smells OK).
+    ///
+    /// This persona wants findings that may or may not be problems,
+    /// but are potential "code smells".
+    Pedantic,
+
+    /// The "regular" persona (minimal false positives).
+    ///
+    /// This persona wants actionable findings, and is sensitive to
+    /// false positives.
+    #[default]
+    Regular,
+}
+
+#[derive(
+    Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, ValueEnum,
+)]
 pub(crate) enum Confidence {
     #[default]
     Unknown,
@@ -22,7 +54,9 @@ pub(crate) enum Confidence {
     High,
 }
 
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, Serialize)]
+#[derive(
+    Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, ValueEnum,
+)]
 pub(crate) enum Severity {
     #[default]
     Unknown,
@@ -55,7 +89,7 @@ pub(crate) enum RouteComponent<'w> {
     Index(usize),
 }
 
-impl<'w> From<usize> for RouteComponent<'w> {
+impl From<usize> for RouteComponent<'_> {
     fn from(value: usize) -> Self {
         Self::Index(value)
     }
@@ -89,8 +123,8 @@ impl<'w> Route<'w> {
 /// Represents a symbolic workflow location.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct SymbolicLocation<'w> {
-    /// The name of the workflow, as it appears in the workflow registry.
-    pub(crate) name: &'w str,
+    /// The unique ID of the workflow, as it appears in the workflow registry.
+    pub(crate) key: &'w WorkflowKey,
 
     /// An annotation for this location.
     pub(crate) annotation: String,
@@ -108,7 +142,7 @@ pub(crate) struct SymbolicLocation<'w> {
 impl<'w> SymbolicLocation<'w> {
     pub(crate) fn with_keys(&self, keys: &[RouteComponent<'w>]) -> SymbolicLocation<'w> {
         SymbolicLocation {
-            name: self.name,
+            key: self.key,
             annotation: self.annotation.clone(),
             link: None,
             route: self.route.with_keys(keys),
@@ -181,6 +215,29 @@ impl From<&yamlpath::Location> for ConcreteLocation {
     }
 }
 
+static IGNORE_EXPR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^# zizmor: ignore\[(.+)\]\s*$").unwrap());
+
+/// Represents a single source comment.
+#[derive(Serialize)]
+#[serde(transparent)]
+pub(crate) struct Comment<'w>(&'w str);
+
+impl Comment<'_> {
+    fn ignores(&self, rule_id: &str) -> bool {
+        // Extracts foo,bar from `# zizmor: ignore[foo,bar]`
+        let Some(caps) = IGNORE_EXPR.captures(self.0) else {
+            return false;
+        };
+
+        caps.get(1)
+            .unwrap()
+            .as_str()
+            .split(",")
+            .any(|r| r.trim() == rule_id)
+    }
+}
+
 /// An extracted feature, along with its concrete location.
 #[derive(Serialize)]
 pub(crate) struct Feature<'w> {
@@ -195,6 +252,9 @@ pub(crate) struct Feature<'w> {
     /// The feature's textual content.
     pub(crate) feature: &'w str,
 
+    /// Any comments within the feature's span.
+    pub(crate) comments: Vec<Comment<'w>>,
+
     /// The feature's parent's textual content.
     pub(crate) parent_feature: &'w str,
 }
@@ -208,46 +268,43 @@ pub(crate) struct Location<'w> {
     pub(crate) concrete: Feature<'w>,
 }
 
-/// A finding's "determination," i.e. its confidence and severity classifications.
+/// A finding's "determination," i.e. its various classifications.
 #[derive(Serialize)]
 pub(crate) struct Determinations {
     pub(crate) confidence: Confidence,
     pub(crate) severity: Severity,
+    pub(super) persona: Persona,
 }
 
 #[derive(Serialize)]
 pub(crate) struct Finding<'w> {
     pub(crate) ident: &'static str,
     pub(crate) desc: &'static str,
+    pub(crate) url: &'static str,
     pub(crate) determinations: Determinations,
     pub(crate) locations: Vec<Location<'w>>,
-}
-
-impl<'w> Finding<'w> {
-    pub(crate) fn url(&self) -> String {
-        format!(
-            "{repo}/tree/main/docs/audit/{ident}.md",
-            repo = env!("CARGO_PKG_REPOSITORY"),
-            ident = self.ident
-        )
-    }
+    pub(crate) ignored: bool,
 }
 
 pub(crate) struct FindingBuilder<'w> {
     ident: &'static str,
     desc: &'static str,
+    url: &'static str,
     severity: Severity,
     confidence: Confidence,
+    persona: Persona,
     locations: Vec<SymbolicLocation<'w>>,
 }
 
 impl<'w> FindingBuilder<'w> {
-    pub(crate) fn new(ident: &'static str, desc: &'static str) -> Self {
+    pub(crate) fn new(ident: &'static str, desc: &'static str, url: &'static str) -> Self {
         Self {
             ident,
             desc,
+            url,
             severity: Default::default(),
             confidence: Default::default(),
+            persona: Default::default(),
             locations: vec![],
         }
     }
@@ -262,24 +319,87 @@ impl<'w> FindingBuilder<'w> {
         self
     }
 
+    pub(crate) fn persona(mut self, persona: Persona) -> Self {
+        self.persona = persona;
+        self
+    }
+
     pub(crate) fn add_location(mut self, location: SymbolicLocation<'w>) -> Self {
         self.locations.push(location);
         self
     }
 
     pub(crate) fn build(self, workflow: &'w Workflow) -> Result<Finding<'w>> {
+        let locations = self
+            .locations
+            .iter()
+            .map(|l| l.clone().concretize(workflow))
+            .collect::<Result<Vec<_>>>()?;
+
+        let should_ignore = self.ignored_from_inlined_comment(&locations, self.ident);
+
         Ok(Finding {
             ident: self.ident,
             desc: self.desc,
+            url: self.url,
             determinations: Determinations {
                 confidence: self.confidence,
                 severity: self.severity,
+                persona: self.persona,
             },
-            locations: self
-                .locations
-                .into_iter()
-                .map(|l| l.concretize(workflow))
-                .collect::<Result<Vec<_>>>()?,
+            locations,
+            ignored: should_ignore,
         })
+    }
+
+    fn ignored_from_inlined_comment(&self, locations: &[Location], id: &str) -> bool {
+        locations
+            .iter()
+            .flat_map(|l| &l.concrete.comments)
+            .any(|c| c.ignores(id))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::finding::Comment;
+
+    #[test]
+    fn test_comment_ignores() {
+        let cases = &[
+            // Trivial cases.
+            ("# zizmor: ignore[foo]", "foo", true),
+            ("# zizmor: ignore[foo,bar]", "foo", true),
+            // Dashes are OK.
+            ("# zizmor: ignore[foo,bar,foo-bar]", "foo-bar", true),
+            // Spaces are OK.
+            ("# zizmor: ignore[foo, bar,   foo-bar]", "foo-bar", true),
+            // Extra commas and duplicates are nonsense but OK.
+            ("# zizmor: ignore[foo,foo,,foo,,,,foo,]", "foo", true),
+            // Valid ignore, but not a match.
+            ("# zizmor: ignore[foo,bar]", "baz", false),
+            // Invalid ignore: empty rule list.
+            ("# zizmor: ignore[]", "", false),
+            ("# zizmor: ignore[]", "foo", false),
+            // Invalid ignore: no commas.
+            ("# zizmor: ignore[foo bar]", "foo", false),
+            // Invalid ignore: missing opening and/or closing [].
+            ("# zizmor: ignore[foo", "foo", false),
+            ("# zizmor: ignore foo", "foo", false),
+            ("# zizmor: ignore foo]", "foo", false),
+            // Invalid ignore: space after # and : is mandatory and fixed.
+            ("# zizmor:ignore[foo]", "foo", false),
+            ("#zizmor: ignore[foo]", "foo", false),
+            ("#  zizmor: ignore[foo]", "foo", false),
+            ("#  zizmor:  ignore[foo]", "foo", false),
+        ];
+
+        for (comment, rule, ignores) in cases {
+            assert_eq!(
+                Comment(comment).ignores(rule),
+                *ignores,
+                "{comment} does not ignore {rule}"
+            )
+        }
     }
 }

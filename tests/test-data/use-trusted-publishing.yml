@@ -1,0 +1,15 @@
+# Adapted from
+# https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pypi-manual-credential.yml
+
+on: [push]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: vulnerable-2
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}

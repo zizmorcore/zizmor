@@ -10,7 +10,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           persist-credentials: false
 
@@ -23,9 +23,25 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
         persist-credentials: false
 
     - name: Test
       run: cargo test
+
+    - name: Test snippets
+      run: |
+        make snippets
+        git diff --exit-code
+
+  all-tests-pass:
+    if: always()
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: check test jobs
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}

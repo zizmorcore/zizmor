@@ -1,0 +1,31 @@
+name: example
+on: [push]
+
+jobs:
+  unpinned-0:
+    runs-on: ubuntu-latest
+    steps:
+      # NOT OK: unpinned
+      - uses: actions/checkout
+        with:
+          persist-credentials: false
+
+      # PEDANTIC: pinned but unhashed
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      # NOT OK: unpinned
+      - uses: github/codeql-action/upload-sarif
+
+      # NOT OK: unpinned
+      - uses: docker://ubuntu
+        with:
+          entrypoint: /bin/echo
+          args: hello!
+
+      # NOT OK: unpinned
+      - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
+        with:
+          entrypoint: /bin/echo
+          args: hello!
