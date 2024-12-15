@@ -1,12 +1,14 @@
 # one per line, order is not important
-# trophies MUST be formatted as owner/repo#number,
-# where owner/repo is the GitHub repo slug and
-# number is the issue/PR that introduces or uses zizmor
+
+# two formats are supported:
+# owner/repo#number for PRs
+# owner/repo@commit for individual commits
 
 adafruit/circuitpython#9785
 astral-sh/ruff#14844
 astropy/astropy#17315
 cakephp/cakephp#18081
+girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 danmar/cppcheck#7044
 DataDog/datadog-agent#30871
 Diaoul/subliminal#1190
