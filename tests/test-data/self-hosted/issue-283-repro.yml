@@ -1,0 +1,13 @@
+name: Workflow
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ${{inputs.os}}
+    steps:
+      - run: echo "Hello world"

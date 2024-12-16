@@ -38,17 +38,8 @@ impl RefConfusion {
             return Ok(false);
         };
 
-        let branches_match = self
-            .client
-            .list_branches(uses.owner, uses.repo)?
-            .iter()
-            .any(|b| b.name == sym_ref);
-
-        let tags_match = self
-            .client
-            .list_tags(uses.owner, uses.repo)?
-            .iter()
-            .any(|t| t.name == sym_ref);
+        let branches_match = self.client.has_branch(uses.owner, uses.repo, sym_ref)?;
+        let tags_match = self.client.has_tag(uses.owner, uses.repo, sym_ref)?;
 
         // If both the branch and tag namespaces have a match, we have a
         // confusable ref.

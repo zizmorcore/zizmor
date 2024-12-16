@@ -8,7 +8,7 @@ description: Installation instructions for zizmor.
 
 `zizmor` is available within several packaging ecosystems.
 
-=== "crates.io"
+=== ":simple-rust: crates.io"
 
     You can install `zizmor` from <https://crates.io> with `cargo`:
 
@@ -16,7 +16,7 @@ description: Installation instructions for zizmor.
     cargo install zizmor
     ```
 
-=== "Homebrew"
+=== ":simple-homebrew: Homebrew"
 
     `zizmor` is provided by [Homebrew](https://brew.sh/):
 
@@ -24,7 +24,7 @@ description: Installation instructions for zizmor.
     brew install zizmor
     ```
 
-=== "PyPI"
+=== ":simple-pypi: PyPI"
 
     !!! tip
 
@@ -49,7 +49,23 @@ description: Installation instructions for zizmor.
     uvx zizmor --help
     ```
 
-=== "Nix"
+=== ":simple-anaconda: Conda"
+
+    !!! note
+
+        This is a community-maintained package.
+
+    `zizmor` is available on Anaconda's conda-forge:
+
+    ```bash
+    conda install conda-forge::zizmor
+    ```
+
+    See [conda-forge/zizmor](https://anaconda.org/conda-forge/zizmor)
+    for additional information.
+
+
+=== ":material-nix: Nix"
 
     !!! note
 

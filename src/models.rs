@@ -233,6 +233,7 @@ impl<'w> Iterator for Jobs<'w> {
 #[derive(Clone)]
 pub(crate) struct Matrix<'w> {
     inner: &'w LoE<job::Matrix>,
+    pub(crate) expanded_values: Vec<(String, String)>,
 }
 
 impl<'w> Deref for Matrix<'w> {
@@ -252,30 +253,43 @@ impl<'w> TryFrom<&'w Job<'w>> for Matrix<'w> {
         };
 
         let Some(Strategy {
-            matrix: Some(matrix),
+            matrix: Some(inner),
             ..
         }) = &job.strategy
         else {
             bail!("job does not define a strategy or interior matrix")
         };
 
-        Ok(Matrix { inner: matrix })
+        Ok(Matrix::new(inner))
     }
 }
 
 impl<'w> Matrix<'w> {
     pub(crate) fn new(inner: &'w LoE<job::Matrix>) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            expanded_values: Matrix::expand_values(inner),
+        }
+    }
+
+    /// Checks whether some expanded path leads to an expression
+    pub(crate) fn expands_to_static_values(&self, context: &str) -> bool {
+        let expands_to_expression = self.expanded_values.iter().any(|(path, expansion)| {
+            let expanded_to_expression = expansion.starts_with("${{") && expansion.ends_with("}}");
+            context == path && expanded_to_expression
+        });
+
+        !expands_to_expression
     }
 
     /// Expands the current Matrix into all possible values
     /// By default, the return is a pair (String, String), in which
     /// the first component is the expanded path (e.g. 'matrix.os') and
     /// the second component is the string representation for the expanded value
-    /// (eg ubuntu-latest)
+    /// (e.g. ubuntu-latest)
     ///
-    pub(crate) fn expand_values(&self) -> Vec<(String, String)> {
-        match &self.inner {
+    fn expand_values(inner: &LoE<job::Matrix>) -> Vec<(String, String)> {
+        match inner {
             LoE::Expr(_) => vec![],
             LoE::Literal(matrix) => {
                 let LoE::Literal(dimensions) = &matrix.dimensions else {
@@ -308,16 +322,6 @@ impl<'w> Matrix<'w> {
                     .collect()
             }
         }
-    }
-
-    /// Checks whether some expanded path leads to an expression
-    pub(crate) fn is_static(&self) -> bool {
-        let expands_to_expression = self
-            .expand_values()
-            .iter()
-            .any(|(_, expansion)| expansion.starts_with("${{") && expansion.ends_with("}}"));
-
-        !expands_to_expression
     }
 
     fn expand_explicit_rows(
@@ -547,6 +551,24 @@ pub(crate) struct RepositoryUses<'a> {
 }
 
 impl RepositoryUses<'_> {
+    /// Returns whether this `uses:` clause "matches" the given template.
+    /// The template is itself formatted like a normal `uses:` clause.
+    ///
+    /// This is an asymmetrical match: `actions/checkout@v3` "matches"
+    /// the `actions/checkout` template but not vice versa.
+    pub(crate) fn matches(&self, template: &str) -> bool {
+        let Some(Uses::Repository(other)) = Uses::from_step(template) else {
+            return false;
+        };
+
+        self.owner == other.owner
+            && self.repo == other.repo
+            && self.subpath == other.subpath
+            && other
+                .git_ref
+                .map_or(true, |git_ref| Some(git_ref) == self.git_ref)
+    }
+
     pub(crate) fn ref_is_commit(&self) -> bool {
         match self.git_ref {
             Some(git_ref) => git_ref.len() == 40 && git_ref.chars().all(|c| c.is_ascii_hexdigit()),
@@ -921,5 +943,34 @@ mod tests {
         assert!(!Uses::from_reusable("actions/checkout@abcd")
             .unwrap()
             .ref_is_commit());
+    }
+
+    #[test]
+    fn test_repositoryuses_matches() {
+        for (uses, template, matches) in [
+            // OK: `uses:` is more specific than template
+            ("actions/checkout@v3", "actions/checkout", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo", true),
+            // OK: equally specific
+            ("actions/checkout@v3", "actions/checkout@v3", true),
+            ("actions/checkout", "actions/checkout", true),
+            ("actions/checkout/foo", "actions/checkout/foo", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
+            // NOT OK: owner/repo do not match
+            ("actions/checkout@v3", "foo/checkout", false),
+            ("actions/checkout@v3", "actions/bar", false),
+            // NOT OK: subpath does not match
+            ("actions/checkout/foo", "actions/checkout", false),
+            ("actions/checkout/foo@v3", "actions/checkout@v3", false),
+            // NOT OK: template is more specific than `uses:`
+            ("actions/checkout", "actions/checkout@v3", false),
+            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
+        ] {
+            let Some(Uses::Repository(uses)) = Uses::from_common(uses) else {
+                panic!();
+            };
+
+            assert_eq!(uses.matches(template), matches)
+        }
     }
 }

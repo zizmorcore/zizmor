@@ -91,6 +91,11 @@ struct App {
     #[arg(long)]
     min_confidence: Option<Confidence>,
 
+    /// The directory to use for HTTP caching. By default, a
+    /// host-appropriate user-caching directory will be used.
+    #[arg(long)]
+    cache_dir: Option<Utf8PathBuf>,
+
     /// The inputs to audit.
     ///
     /// These can be individual workflow filenames, entire directories,

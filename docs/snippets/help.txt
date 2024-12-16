@@ -32,6 +32,8 @@ Options:
           Filter all results below this severity [possible values: unknown, informational, low, medium, high]
       --min-confidence <MIN_CONFIDENCE>
           Filter all results below this confidence [possible values: unknown, low, medium, high]
+      --cache-dir <CACHE_DIR>
+          The directory to use for HTTP caching. By default, a host-appropriate user-caching directory will be used
   -h, --help
           Print help (see more with '--help')
   -V, --version

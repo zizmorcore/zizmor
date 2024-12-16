@@ -1,0 +1,64 @@
+# Adapted from :
+# https://github.com/python/cpython/blob/e2325c9db0650fc06d909eb2b5930c0573f24f71/.github/workflows/jit.yml
+# See also https://github.com/woodruffw/zizmor/issues/22#issuecomment-2543128489
+
+name: JIT
+on:
+  pull_request:
+
+jobs:
+  jit:
+    name: ${{ matrix.target }} (${{ matrix.debug && 'Debug' || 'Release' }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-apple-darwin/clang
+          - aarch64-apple-darwin/clang
+          - x86_64-unknown-linux-gnu/gcc
+          - aarch64-unknown-linux-gnu/gcc
+        debug:
+          - true
+          - false
+        llvm:
+          - 19
+        include:
+          - target: aarch64-apple-darwin/clang
+            architecture: aarch64
+            runner: macos-14
+          - target: x86_64-unknown-linux-gnu/gcc
+            architecture: x86_64
+            runner: ubuntu-24.04
+          - target: aarch64-unknown-linux-gnu/gcc
+            architecture: aarch64
+            # Should not be flagged in the template injection audit
+            runner: ${{ github.repository_owner == 'python' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Native macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
+          brew install llvm@${{ matrix.llvm }}
+          export SDKROOT="$(xcrun --show-sdk-path)"
+          ./configure --enable-experimental-jit ${{ matrix.debug && '--with-pydebug' || '' }}
+          make all --jobs 4
+          ./python.exe -m test --multiprocess 0 --timeout 4500 --verbose2 --verbose3
+
+      - name: Native Linux
+        if: runner.os == 'Linux' && (matrix.architecture == 'x86_64' || github.repository_owner == 'python')
+        run: |
+          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" ./llvm.sh ${{ matrix.llvm }}
+          export PATH="$(llvm-config-${{ matrix.llvm }} --bindir):$PATH"
+          ./configure --enable-experimental-jit ${{ matrix.debug && '--with-pydebug' || '' }}
+          make all --jobs 4
+          ./python -m test --multiprocess 0 --timeout 4500 --verbose2 --verbose3
