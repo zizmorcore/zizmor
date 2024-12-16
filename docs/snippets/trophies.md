@@ -17,6 +17,12 @@
 
     Homebrew/brew#18662
 
+-   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram/LibCST
+
+    ---
+
+    Instagram/LibCST#1262
+
 -   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs/unbound
 
     ---
@@ -58,6 +64,12 @@
     ---
 
     cakephp/cakephp#18081
+
+-   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl/curl
+
+    ---
+
+    curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 
 -   ![](https://github.com/danmar.png?size=40){ width="40" loading=lazy align=left } danmar/cppcheck
 
@@ -196,6 +208,12 @@
     ---
 
     pypa/pip-audit#851
+
+-   ![](https://github.com/pytest-dev.png?size=40){ width="40" loading=lazy align=left } pytest-dev/pytest
+
+    ---
+
+    pytest-dev/pytest#13062
 
 -   ![](https://github.com/python-attrs.png?size=40){ width="40" loading=lazy align=left } python-attrs/attrs
 
