@@ -3,6 +3,8 @@
 //! Build on synchronous reqwest to avoid octocrab's need to taint
 //! the whole codebase with async.
 
+use std::path::Path;
+
 use anyhow::{anyhow, Result};
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
@@ -27,7 +29,7 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    pub(crate) fn new(token: &str) -> Self {
+    pub(crate) fn new(token: &str, cache_dir: &Path) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
@@ -47,7 +49,9 @@ impl Client {
         )
         .with(Cache(HttpCache {
             mode: CacheMode::Default,
-            manager: CACacheManager::default(),
+            manager: CACacheManager {
+                path: cache_dir.into(),
+            },
             options: HttpCacheOptions {
                 cache_options: Some(CacheOptions {
                     // GitHub API requests made with an API token seem to
