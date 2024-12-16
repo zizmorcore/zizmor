@@ -1,6 +1,6 @@
 use crate::audit::{audit_meta, WorkflowAudit};
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::Step;
+use crate::models::{Step, Uses};
 use crate::state::AuditState;
 use github_actions_models::common::expr::ExplicitExpr;
 use github_actions_models::common::{Env, EnvValue};
@@ -10,26 +10,25 @@ use github_actions_models::workflow::Trigger;
 use std::ops::Deref;
 use std::sync::LazyLock;
 
-/// The possible toggle types for cache-aware Actions.
-/// A boolean toggle means only one possible literal value (true)
-/// to opt into the cache behavior, whereas a multi-value toggle means
-/// two or more values defining opt in for caching
 #[derive(PartialEq)]
-enum CacheControlToggle {
+enum ControlValue {
     Boolean,
-    MultiValue,
+    String,
+}
+
+enum CacheControl {
+    OptIn(&'static str),
+    OptOut(&'static str),
 }
 
 /// The general schema for a cache-aware actions
-struct CacheAwareAction {
+struct CacheAwareAction<'w> {
     /// The owner/repo part within the Action full coordinate
-    reference: &'static str,
+    uses: Uses<'w>,
     /// The name of the input the toggle caching behavior
-    cache_control_input_name: &'static str,
-    /// Whether this input defines opt-in behavior
-    cache_control_input_defines_opt_in: bool,
+    cache_control: CacheControl,
     /// The type of this toggle (Boolean, MultiValue)
-    cache_control_input_toggle: CacheControlToggle,
+    control_value: ControlValue,
     /// Whether this Action adopts caching as the default behavior
     caching_by_default: bool,
 }
@@ -41,82 +40,64 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
     vec![
         // https://github.com/actions/cache/blob/main/action.yml
         CacheAwareAction {
-            reference: "actions/cache",
-            cache_control_input_name: "lookup-only",
-            cache_control_input_defines_opt_in: false,
-            cache_control_input_toggle: CacheControlToggle::Boolean,
+            uses: Uses::from_step("actions/cache").unwrap(),
+            cache_control: CacheControl::OptOut("lookup-only"),
+            control_value: ControlValue::Boolean,
             caching_by_default: true,
         },
-        // https://github.com/actions/cache/blob/main/restore/action.yml
         CacheAwareAction {
-            reference: "actions/cache/restore",
-            cache_control_input_name: "lookup-only",
-            cache_control_input_defines_opt_in: false,
-            cache_control_input_toggle: CacheControlToggle::Boolean,
-            caching_by_default: true,
-        },
-        // https://github.com/actions/setup-java/blob/main/action.yml
-        CacheAwareAction {
-            reference: "actions/setup-java",
-            cache_control_input_name: "cache",
-            cache_control_input_defines_opt_in: true,
-            cache_control_input_toggle: CacheControlToggle::MultiValue,
+            uses: Uses::from_step("actions/setup-java").unwrap(),
+            cache_control: CacheControl::OptIn("cache"),
+            control_value: ControlValue::String,
             caching_by_default: false,
         },
         // https://github.com/actions/setup-go/blob/main/action.yml
         CacheAwareAction {
-            reference: "actions/setup-go",
-            cache_control_input_name: "cache",
-            cache_control_input_defines_opt_in: true,
-            cache_control_input_toggle: CacheControlToggle::MultiValue,
+            uses: Uses::from_step("actions/setup-go").unwrap(),
+            cache_control: CacheControl::OptIn("cache"),
+            control_value: ControlValue::String,
             caching_by_default: true,
         },
         // https://github.com/actions/setup-node/blob/main/action.yml
         CacheAwareAction {
-            reference: "actions/setup-node",
-            cache_control_input_name: "cache",
-            cache_control_input_defines_opt_in: true,
-            cache_control_input_toggle: CacheControlToggle::MultiValue,
+            uses: Uses::from_step("actions/setup-node").unwrap(),
+            cache_control: CacheControl::OptIn("cache"),
+            control_value: ControlValue::String,
             caching_by_default: false,
         },
         // https://github.com/actions/setup-python/blob/main/action.yml
         CacheAwareAction {
-            reference: "actions/setup-python",
-            cache_control_input_name: "cache",
-            cache_control_input_defines_opt_in: true,
-            cache_control_input_toggle: CacheControlToggle::MultiValue,
+            uses: Uses::from_step("actions/setup-python").unwrap(),
+            cache_control: CacheControl::OptIn("cache"),
+            control_value: ControlValue::String,
             caching_by_default: false,
         },
         // https://github.com/actions/setup-dotnet/blob/main/action.yml
         CacheAwareAction {
-            reference: "actions/setup-dotnet",
-            cache_control_input_name: "cache",
-            cache_control_input_defines_opt_in: true,
-            cache_control_input_toggle: CacheControlToggle::Boolean,
+            uses: Uses::from_step("actions/setup-dotnet").unwrap(),
+            cache_control: CacheControl::OptIn("cache"),
+            control_value: ControlValue::Boolean,
             caching_by_default: false,
         },
         // https://github.com/astral-sh/setup-uv/blob/main/action.yml
         CacheAwareAction {
-            reference: "astral-sh/setup-uv",
-            cache_control_input_name: "enable-cache",
-            cache_control_input_defines_opt_in: true,
-            cache_control_input_toggle: CacheControlToggle::MultiValue,
+            uses: Uses::from_step("astral-sh/setup-uv").unwrap(),
+            cache_control: CacheControl::OptOut("enable-cache"),
+            control_value: ControlValue::String,
             caching_by_default: true,
         },
         // https://github.com/Swatinem/rust-cache/blob/master/action.yml
         CacheAwareAction {
-            reference: "Swatinem/rust-cache",
-            cache_control_input_name: "lookup-only",
-            cache_control_input_defines_opt_in: false,
-            cache_control_input_toggle: CacheControlToggle::Boolean,
+            uses: Uses::from_step("Swatinem/rust-cache").unwrap(),
+            cache_control: CacheControl::OptOut("lookup-only"),
+            control_value: ControlValue::Boolean,
             caching_by_default: true,
         },
         // https://github.com/ruby/setup-ruby/blob/master/action.yml
         CacheAwareAction {
-            reference: "ruby/setup-ruby",
-            cache_control_input_name: "bundler-cache",
-            cache_control_input_defines_opt_in: true,
-            cache_control_input_toggle: CacheControlToggle::Boolean,
+            uses: Uses::from_step("ruby/setup-ruby").unwrap(),
+            cache_control: CacheControl::OptIn("bundler-cache"),
+            control_value: ControlValue::Boolean,
             caching_by_default: false,
         },
     ]
@@ -165,7 +146,7 @@ impl CachePoisoning {
         match env.get(cache_control_input) {
             None => None,
             Some(EnvValue::Boolean(value)) => {
-                if action.cache_control_input_toggle == CacheControlToggle::Boolean {
+                if action.control_value == ControlValue::Boolean {
                     if *value {
                         Some(CacheUsage::DirectOptIn)
                     } else {
@@ -182,7 +163,7 @@ impl CachePoisoning {
             }
             Some(EnvValue::String(value)) => match ExplicitExpr::from_curly(value) {
                 None => {
-                    if action.cache_control_input_toggle == CacheControlToggle::MultiValue {
+                    if action.control_value == ControlValue::String {
                         Some(CacheUsage::DirectOptIn)
                     } else {
                         None
@@ -196,13 +177,18 @@ impl CachePoisoning {
     fn evaluate_cache_usage(&self, uses: &str, env: &Env) -> Option<CacheUsage> {
         let (reference, _) = uses.split_once("@")?;
 
-        let known_action = KNOWN_CACHE_AWARE_ACTIONS
-            .iter()
-            .find(|action| action.reference == reference)?;
+        let known_action = KNOWN_CACHE_AWARE_ACTIONS.iter().find(|action| {
+            let Uses::Repository(uses) = action.uses else {
+                return false;
+            };
 
-        let cache_control_input = env
-            .keys()
-            .find(|k| *k == known_action.cache_control_input_name);
+            uses.matches(reference)
+        })?;
+
+        let cache_control_input = env.keys().find(|k| match known_action.cache_control {
+            CacheControl::OptIn(inner) => *k == inner,
+            CacheControl::OptOut(inner) => *k == inner,
+        });
 
         match cache_control_input {
             // when not using the specific Action input to control caching behaviour,
@@ -218,12 +204,11 @@ impl CachePoisoning {
                 // we now evaluate the extracted value against the opt-in semantics
                 match &declared_usage {
                     Some(CacheUsage::DirectOptIn) => {
-                        if known_action.cache_control_input_defines_opt_in {
-                            declared_usage
-                        } else {
+                        match known_action.cache_control {
+                            CacheControl::OptIn(_) => declared_usage,
                             // in this case, the user opted for disabling the cache
                             // hence we don't return a CacheUsage
-                            None
+                            CacheControl::OptOut(_) => None,
                         }
                     }
                     // CachePoisoning::evaluate_user_defined_opt_in returns only
