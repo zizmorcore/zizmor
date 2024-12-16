@@ -25,9 +25,9 @@ enum CacheControl {
 struct CacheAwareAction<'w> {
     /// The owner/repo part within the Action full coordinate
     uses: Uses<'w>,
-    /// The name of the input the toggle caching behavior
+    /// The input that controls caching behavior
     cache_control: CacheControl,
-    /// The type of this toggle (Boolean, MultiValue)
+    /// The type of value used to opt-in/opt-out (Boolean, String)
     control_value: ControlValue,
     /// Whether this Action adopts caching as the default behavior
     caching_by_default: bool,
@@ -97,6 +97,13 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
         CacheAwareAction {
             uses: Uses::from_step("ruby/setup-ruby").unwrap(),
             cache_control: CacheControl::OptIn("bundler-cache"),
+            control_value: ControlValue::Boolean,
+            caching_by_default: false,
+        },
+        // https://github.com/PyO3/maturin-action/blob/main/action.yml
+        CacheAwareAction {
+            uses: Uses::from_step("PyO3/maturin-action").unwrap(),
+            cache_control: CacheControl::OptIn("sccache"),
             control_value: ControlValue::Boolean,
             caching_by_default: false,
         },
@@ -205,15 +212,13 @@ impl CachePoisoning {
                 match &declared_usage {
                     Some(CacheUsage::DirectOptIn) => {
                         match known_action.cache_control {
+                            // in this case, we just follow the opt-in
                             CacheControl::OptIn(_) => declared_usage,
-                            // in this case, the user opted for disabling the cache
+                            // otherwise, the user opted for disabling the cache
                             // hence we don't return a CacheUsage
                             CacheControl::OptOut(_) => None,
                         }
                     }
-                    // CachePoisoning::evaluate_user_defined_opt_in returns only
-                    // CacheUsage::DirectOptIn and CacheUsage::ConditionalOptIn variants
-                    //
                     // Because we can't evaluate expressions, there is nothing to do
                     // regarding CacheUsage::ConditionalOptIn
                     _ => declared_usage,
