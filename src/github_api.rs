@@ -125,7 +125,7 @@ impl Client {
     #[tokio::main]
     pub(crate) async fn has_branch(&self, owner: &str, repo: &str, branch: &str) -> Result<bool> {
         let url = format!(
-            "{api_base}/repos/{owner}/{repo}/branches/{branch}",
+            "{api_base}/repos/{owner}/{repo}/git/ref/heads/{branch}",
             api_base = self.api_base
         );
 
