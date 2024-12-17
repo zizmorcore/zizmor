@@ -83,6 +83,12 @@
 
     danmar/cppcheck#7044
 
+-   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl/MongooseIM
+
+    ---
+
+    esl/MongooseIM#4435
+
 -   ![](https://github.com/ethereum.png?size=40){ width="40" loading=lazy align=left } ethereum/hevm
 
     ---
@@ -220,6 +226,12 @@
     ---
 
     pypa/pip-audit#851
+
+-   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi/stdlib-list
+
+    ---
+
+    pypi/stdlib-list#138
 
 -   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi/warehouse
 

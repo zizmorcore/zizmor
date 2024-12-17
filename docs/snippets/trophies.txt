@@ -13,6 +13,7 @@ curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 danmar/cppcheck#7044
 DataDog/datadog-agent#30871
 Diaoul/subliminal#1190
+esl/MongooseIM#4435
 ethereum/hevm#615
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 Homebrew/brew#18662
@@ -40,6 +41,7 @@ psf/cachecontrol#345
 pyca/service-identity#75
 pylast/pylast#465
 pypa/pip-audit#851
+pypi/stdlib-list#138
 pypi/warehouse#16996
 pytest-dev/pytest#13062
 python/cpython#127749
