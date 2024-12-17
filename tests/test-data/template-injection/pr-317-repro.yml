@@ -1,0 +1,26 @@
+# reproduction case for https://github.com/woodruffw/zizmor/pull/317
+
+name: PR-317-REPRO
+on:
+  pull_request:
+
+jobs:
+  PR-317-REPRO:
+    name: PR-317-REPRO
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - foo: 123
+            bar: abc
+
+          - foo: 456
+            # BUG: this should be detected as a matrix expansion
+            # candidate containing an expression, but was not
+            # before #317.
+            bar: prefix-${{ github.repository_owner }}
+
+    steps:
+      - run: |
+          echo ${{ matrix.bar }}
