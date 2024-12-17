@@ -105,8 +105,15 @@ impl WorkflowAudit for InsecureCommands {
     fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut results = vec![];
 
-        if self.has_insecure_commands_enabled(&workflow.env) {
-            results.push(self.insecure_commands_allowed(workflow, workflow.location())?)
+        match &workflow.env {
+            LoE::Expr(_) => {
+                results.push(self.insecure_commands_maybe_present(workflow, workflow.location())?)
+            }
+            LoE::Literal(env) => {
+                if self.has_insecure_commands_enabled(env) {
+                    results.push(self.insecure_commands_allowed(workflow, workflow.location())?)
+                }
+            }
         }
 
         for job in workflow.jobs() {

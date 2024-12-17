@@ -1,0 +1,39 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"template-injection/static-env.yml\")).run()?"
+snapshot_kind: text
+---
+help[template-injection]: code injection via template expansion
+  --> @@INPUT@@:39:9
+   |
+39 |         - name: step-level-non-static
+   |           --------------------------- help: this step
+40 | /         run: |
+41 | |           echo ${{ env.bar }}
+   | |_____________________________- help: env.bar may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> @@INPUT@@:46:9
+   |
+46 |         - name: job-level-non-static
+   |           -------------------------- help: this step
+47 | /         run: |
+48 | |           echo ${{ env.foo }}
+   | |_____________________________- help: env.foo may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> @@INPUT@@:51:9
+   |
+51 |         - name: workflow-level-non-static
+   |           ------------------------------- help: this step
+52 | /         run: |
+53 | |           echo ${{ env.quux }}
+   | |_______________________________- help: env.quux may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+3 findings: 0 unknown, 0 informational, 3 low, 0 medium, 0 high

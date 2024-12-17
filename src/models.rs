@@ -422,6 +422,49 @@ impl<'w> Step<'w> {
         }
     }
 
+    /// Returns whether the given `env.name` environment access is "static,"
+    /// i.e. is not influenced by another expression.
+    pub(crate) fn env_is_static(&self, name: &str) -> bool {
+        // Collect each of the step, job, and workflow-level `env` blocks
+        // and check each.
+        let mut envs = vec![];
+
+        match &self.body {
+            StepBody::Uses { .. } => panic!("API misuse: can't call env_is_static on a uses: step"),
+            StepBody::Run {
+                run: _,
+                working_directory: _,
+                shell: _,
+                env,
+            } => envs.push(env),
+        };
+
+        envs.push(&self.job().env);
+        envs.push(&self.workflow().env);
+
+        for env in envs {
+            match env {
+                // Any `env:` that is wholly an expression cannot be static.
+                LoE::Expr(_) => return false,
+                LoE::Literal(env) => {
+                    let Some(value) = env.get(name) else {
+                        continue;
+                    };
+
+                    // A present `env:` value is static if it has no interior expressions.
+                    // TODO: We could instead return the interior expressions here
+                    // for further analysis, to further eliminate false positives
+                    // e.g. `env.foo: ${{ something-safe }}`.
+                    return extract_expressions(&value.to_string()).is_empty();
+                }
+            }
+        }
+
+        // No `env:` blocks explicitly contain this name, so it's trivially static.
+        // In practice this is probably an invalid workflow.
+        true
+    }
+
     /// Returns this step's parent [`NormalJob`].
     ///
     /// Note that this returns the [`NormalJob`], not the wrapper [`Job`].
