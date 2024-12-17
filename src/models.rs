@@ -280,7 +280,7 @@ impl<'w> Matrix<'w> {
             // one or more expressions (e.g. `foo-${{ bar }}-${{ baz }}`). So we
             // need to check for *any* expression in the expanded value,
             // not just that it starts and ends with the expression delimiters.
-            let expansion_contains_expression = !extract_expressions(&expansion).is_empty();
+            let expansion_contains_expression = !extract_expressions(expansion).is_empty();
             context == path && expansion_contains_expression
         });
 
