@@ -695,9 +695,9 @@ If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 
 ## `cache-poisoning`
 
-| Type     | Examples                | Introduced in  | Works offline  | Enabled by default |
-|----------|-------------------------|----------------|----------------|--------------------|
-| Workflow  | [cache-poisoning.yml]   | v1.0.0         | ✅             | ✅                 |
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ✅                 |
 
 [cache-poisoning.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/cache-poisoning.yml
 

@@ -589,6 +589,10 @@ impl RepositoryUses<'_> {
             _ => None,
         }
     }
+
+    pub(crate) fn as_template(&self) -> String {
+        format!("{}/{}", self.owner, self.repo)
+    }
 }
 
 /// Represents the components of an "action ref", i.e. the value

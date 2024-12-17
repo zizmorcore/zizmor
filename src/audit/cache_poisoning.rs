@@ -181,15 +181,17 @@ impl CachePoisoning {
         }
     }
 
-    fn evaluate_cache_usage(&self, uses: &str, env: &Env) -> Option<CacheUsage> {
-        let (reference, _) = uses.split_once("@")?;
-
+    fn evaluate_cache_usage(&self, target_step: &str, env: &Env) -> Option<CacheUsage> {
         let known_action = KNOWN_CACHE_AWARE_ACTIONS.iter().find(|action| {
-            let Uses::Repository(uses) = action.uses else {
+            let Uses::Repository(well_known_uses) = action.uses else {
                 return false;
             };
 
-            uses.matches(reference)
+            let Some(Uses::Repository(target_uses)) = Uses::from_step(target_step) else {
+                return false;
+            };
+
+            target_uses.matches(well_known_uses.as_template().as_str())
         })?;
 
         let cache_control_input = env.keys().find(|k| match known_action.cache_control {
