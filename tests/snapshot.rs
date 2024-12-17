@@ -251,5 +251,9 @@ fn template_injection() -> Result<()> {
         .workflow(workflow_under_test("template-injection/issue-22-repro.yml"))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("template-injection/pr-317-repro.yml"))
+        .run()?);
+
     Ok(())
 }
