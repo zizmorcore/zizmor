@@ -3,6 +3,7 @@
 
 use crate::finding::{Route, SymbolicLocation};
 use crate::registry::WorkflowKey;
+use crate::utils::extract_expressions;
 use anyhow::{bail, Context, Result};
 use camino::Utf8Path;
 use github_actions_models::common::expr::LoE;
@@ -275,8 +276,12 @@ impl<'w> Matrix<'w> {
     /// Checks whether some expanded path leads to an expression
     pub(crate) fn expands_to_static_values(&self, context: &str) -> bool {
         let expands_to_expression = self.expanded_values.iter().any(|(path, expansion)| {
-            let expanded_to_expression = expansion.starts_with("${{") && expansion.ends_with("}}");
-            context == path && expanded_to_expression
+            // Each expanded value in the matrix might be an expression, or contain
+            // one or more expressions (e.g. `foo-${{ bar }}-${{ baz }}`). So we
+            // need to check for *any* expression in the expanded value,
+            // not just that it starts and ends with the expression delimiters.
+            let expansion_contains_expression = !extract_expressions(&expansion).is_empty();
+            context == path && expansion_contains_expression
         });
 
         !expands_to_expression
