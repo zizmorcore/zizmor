@@ -2,13 +2,40 @@
 
 use serde_sarif::sarif::{
     ArtifactContent, ArtifactLocation, Location as SarifLocation, LogicalLocation, Message,
-    PhysicalLocation, PropertyBag, Region, Result as SarifResult, Run, Sarif, Tool, ToolComponent,
+    PhysicalLocation, PropertyBag, Region, Result as SarifResult, ResultKind, ResultLevel, Run,
+    Sarif, Tool, ToolComponent,
 };
 
 use crate::{
-    finding::{Finding, Location},
+    finding::{Finding, Location, Severity},
     registry::WorkflowRegistry,
 };
+
+impl From<Severity> for ResultKind {
+    fn from(value: Severity) -> Self {
+        // TODO: Does this mapping make sense?
+        match value {
+            Severity::Unknown => ResultKind::Review,
+            Severity::Informational => ResultKind::Review,
+            Severity::Low => ResultKind::Fail,
+            Severity::Medium => ResultKind::Fail,
+            Severity::High => ResultKind::Fail,
+        }
+    }
+}
+
+impl From<Severity> for ResultLevel {
+    fn from(value: Severity) -> Self {
+        // TODO: Does this mapping make sense?
+        match value {
+            Severity::Unknown => ResultLevel::None,
+            Severity::Informational => ResultLevel::Note,
+            Severity::Low => ResultLevel::Warning,
+            Severity::Medium => ResultLevel::Warning,
+            Severity::High => ResultLevel::Error,
+        }
+    }
+}
 
 pub(crate) fn build(registry: &WorkflowRegistry, findings: &[Finding]) -> Sarif {
     Sarif::builder()
@@ -46,6 +73,14 @@ fn build_result(registry: &WorkflowRegistry, finding: &Finding<'_>) -> SarifResu
         .message(finding.ident)
         .rule_id(finding.ident)
         .locations(build_locations(registry, &finding.locations))
+        .level(
+            serde_json::to_value(ResultLevel::from(finding.determinations.severity))
+                .expect("failed to serialize SARIF result level"),
+        )
+        .kind(
+            serde_json::to_value(ResultLevel::from(finding.determinations.severity))
+                .expect("failed to serialize SARIF result level"),
+        )
         .build()
 }
 
@@ -101,4 +136,19 @@ fn build_locations(registry: &WorkflowRegistry, locations: &[Location<'_>]) -> V
                 .build()
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_sarif::sarif::ResultKind;
+
+    use crate::finding::Severity;
+
+    #[test]
+    fn test_resultkind_from_severity() {
+        assert_eq!(
+            serde_json::to_string(&ResultKind::from(Severity::High)).unwrap(),
+            "\"fail\""
+        );
+    }
 }
