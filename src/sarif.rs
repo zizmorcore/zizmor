@@ -78,8 +78,8 @@ fn build_result(registry: &WorkflowRegistry, finding: &Finding<'_>) -> SarifResu
                 .expect("failed to serialize SARIF result level"),
         )
         .kind(
-            serde_json::to_value(ResultLevel::from(finding.determinations.severity))
-                .expect("failed to serialize SARIF result level"),
+            serde_json::to_value(ResultKind::from(finding.determinations.severity))
+                .expect("failed to serialize SARIF result kind"),
         )
         .build()
 }
