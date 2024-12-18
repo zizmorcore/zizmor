@@ -3,6 +3,7 @@
 
 use crate::finding::{Route, SymbolicLocation};
 use crate::registry::WorkflowKey;
+use crate::utils::extract_expressions;
 use anyhow::{bail, Context, Result};
 use camino::Utf8Path;
 use github_actions_models::common::expr::LoE;
@@ -275,8 +276,12 @@ impl<'w> Matrix<'w> {
     /// Checks whether some expanded path leads to an expression
     pub(crate) fn expands_to_static_values(&self, context: &str) -> bool {
         let expands_to_expression = self.expanded_values.iter().any(|(path, expansion)| {
-            let expanded_to_expression = expansion.starts_with("${{") && expansion.ends_with("}}");
-            context == path && expanded_to_expression
+            // Each expanded value in the matrix might be an expression, or contain
+            // one or more expressions (e.g. `foo-${{ bar }}-${{ baz }}`). So we
+            // need to check for *any* expression in the expanded value,
+            // not just that it starts and ends with the expression delimiters.
+            let expansion_contains_expression = !extract_expressions(expansion).is_empty();
+            context == path && expansion_contains_expression
         });
 
         !expands_to_expression
@@ -415,6 +420,49 @@ impl<'w> Step<'w> {
             inner,
             parent,
         }
+    }
+
+    /// Returns whether the given `env.name` environment access is "static,"
+    /// i.e. is not influenced by another expression.
+    pub(crate) fn env_is_static(&self, name: &str) -> bool {
+        // Collect each of the step, job, and workflow-level `env` blocks
+        // and check each.
+        let mut envs = vec![];
+
+        match &self.body {
+            StepBody::Uses { .. } => panic!("API misuse: can't call env_is_static on a uses: step"),
+            StepBody::Run {
+                run: _,
+                working_directory: _,
+                shell: _,
+                env,
+            } => envs.push(env),
+        };
+
+        envs.push(&self.job().env);
+        envs.push(&self.workflow().env);
+
+        for env in envs {
+            match env {
+                // Any `env:` that is wholly an expression cannot be static.
+                LoE::Expr(_) => return false,
+                LoE::Literal(env) => {
+                    let Some(value) = env.get(name) else {
+                        continue;
+                    };
+
+                    // A present `env:` value is static if it has no interior expressions.
+                    // TODO: We could instead return the interior expressions here
+                    // for further analysis, to further eliminate false positives
+                    // e.g. `env.foo: ${{ something-safe }}`.
+                    return extract_expressions(&value.to_string()).is_empty();
+                }
+            }
+        }
+
+        // No `env:` blocks explicitly contain this name, so it's trivially static.
+        // In practice this is probably an invalid workflow.
+        true
     }
 
     /// Returns this step's parent [`NormalJob`].

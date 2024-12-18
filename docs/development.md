@@ -34,7 +34,7 @@ Here are some guidelines to follow if you're working on `zizmor`:
 
 ## Requirements
 
-`zizmor`'s only development requirement the Rust compiler.
+`zizmor`'s only development requirement is the Rust compiler.
 
 You can install Rust by following the steps on [Rust's official website].
 

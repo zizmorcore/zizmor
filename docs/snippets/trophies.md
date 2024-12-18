@@ -17,6 +17,12 @@
 
     Homebrew/brew#18662
 
+-   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram/LibCST
+
+    ---
+
+    Instagram/LibCST#1262
+
 -   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs/unbound
 
     ---
@@ -59,17 +65,41 @@
 
     cakephp/cakephp#18081
 
+-   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl/curl-for-win
+
+    ---
+
+    curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
+
+-   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl/curl
+
+    ---
+
+    curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
+
 -   ![](https://github.com/danmar.png?size=40){ width="40" loading=lazy align=left } danmar/cppcheck
 
     ---
 
     danmar/cppcheck#7044
 
+-   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl/MongooseIM
+
+    ---
+
+    esl/MongooseIM#4435
+
 -   ![](https://github.com/ethereum.png?size=40){ width="40" loading=lazy align=left } ethereum/hevm
 
     ---
 
     ethereum/hevm#615
+
+-   ![](https://github.com/girlbossceo.png?size=40){ width="40" loading=lazy align=left } girlbossceo/conduwuit
+
+    ---
+
+    girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 
 -   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk/em-keyboard
 
@@ -173,6 +203,12 @@
 
     prettytable/prettytable#339
 
+-   ![](https://github.com/psf.png?size=40){ width="40" loading=lazy align=left } psf/cachecontrol
+
+    ---
+
+    psf/cachecontrol#345
+
 -   ![](https://github.com/pyca.png?size=40){ width="40" loading=lazy align=left } pyca/service-identity
 
     ---
@@ -190,6 +226,24 @@
     ---
 
     pypa/pip-audit#851
+
+-   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi/stdlib-list
+
+    ---
+
+    pypi/stdlib-list#138
+
+-   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi/warehouse
+
+    ---
+
+    pypi/warehouse#16996
+
+-   ![](https://github.com/pytest-dev.png?size=40){ width="40" loading=lazy align=left } pytest-dev/pytest
+
+    ---
+
+    pytest-dev/pytest#13062
 
 -   ![](https://github.com/python-attrs.png?size=40){ width="40" loading=lazy align=left } python-attrs/attrs
 

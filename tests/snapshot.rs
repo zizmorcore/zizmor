@@ -245,10 +245,16 @@ fn template_injection() -> Result<()> {
         .args(["--persona=auditor"])
         .run()?);
 
-    // Fixed regressions
-
     insta::assert_snapshot!(zizmor()
         .workflow(workflow_under_test("template-injection/issue-22-repro.yml"))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("template-injection/pr-317-repro.yml"))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("template-injection/static-env.yml"))
         .run()?);
 
     Ok(())

@@ -261,6 +261,33 @@ zizmor --config my-zizmor-config.yml /dir/to/audit
 See [Configuration: `rules.<id>.ignore`](./configuration.md#rulesidignore) for
 more details on writing ignore rules.
 
+## Caching between runs
+
+!!! tip
+
+    Persistent caching (between runs of `zizmor`) is available in `v0.10.0` and later.
+
+!!! warning
+
+    Caches can contain sensitive metadata, especially when auditing private
+    repositories! Think twice before sharing your cache or reusing
+    it across machine/visibility boundaries.
+
+`zizmor` caches HTTP responses from GitHub's REST APIs to speed up individual
+audits. This HTTP cache is persisted and re-used between runs as well.
+
+By default `zizmor` will cache to an appropriate user-level caching directory:
+
+* Linux and macOS: `$XDG_CACHE_DIR` (`~/.cache/zizmor` by default)
+* Windows: `~\AppData\Roaming\woodruffw\zizmor`.
+
+To override the default caching directory, pass `--cache-dir`:
+
+```bash
+# cache in /tmp instead
+zizmor --cache-dir /tmp/zizmor ...
+```
+
 ## Integration
 
 ### Use in GitHub Actions

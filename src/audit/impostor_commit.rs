@@ -11,7 +11,7 @@ use github_actions_models::workflow::Job;
 use super::{audit_meta, WorkflowAudit};
 use crate::{
     finding::{Confidence, Finding, Severity},
-    github_api::{self, Branch, ComparisonStatus, Tag},
+    github_api::{self, ComparisonStatus},
     models::{RepositoryUses, Uses, Workflow},
     state::AuditState,
 };
@@ -29,12 +29,6 @@ audit_meta!(
 );
 
 impl ImpostorCommit {
-    fn named_refs(&self, uses: RepositoryUses<'_>) -> Result<(Vec<Branch>, Vec<Tag>)> {
-        let branches = self.client.list_branches(uses.owner, uses.repo)?;
-        let tags = self.client.list_tags(uses.owner, uses.repo)?;
-        Ok((branches, tags))
-    }
-
     fn named_ref_contains_commit(
         &self,
         uses: &RepositoryUses<'_>,
@@ -67,18 +61,22 @@ impl ImpostorCommit {
             return Ok(false);
         };
 
-        let (branches, tags) = self.named_refs(uses)?;
-
         // Fast path: almost all commit refs will be at the tip of
         // the branch or tag's history, so check those first.
-        for branch in &branches {
-            if branch.commit.sha == head_ref {
+        // Check tags before branches, since in practice version tags
+        // are more commonly pinned.
+        let tags = self.client.list_tags(uses.owner, uses.repo)?;
+
+        for tag in &tags {
+            if tag.commit.sha == head_ref {
                 return Ok(false);
             }
         }
 
-        for tag in &tags {
-            if tag.commit.sha == head_ref {
+        let branches = self.client.list_branches(uses.owner, uses.repo)?;
+
+        for branch in &branches {
+            if branch.commit.sha == head_ref {
                 return Ok(false);
             }
         }
