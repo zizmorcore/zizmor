@@ -4,7 +4,7 @@
 use crate::finding::{Route, SymbolicLocation};
 use crate::registry::WorkflowKey;
 use crate::utils::extract_expressions;
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8Path;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
@@ -599,14 +599,26 @@ pub(crate) struct RepositoryUses<'a> {
     pub(crate) git_ref: Option<&'a str>,
 }
 
+impl<'a> TryFrom<&'a str> for RepositoryUses<'a> {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &'a str) -> std::result::Result<Self, Self::Error> {
+        let Some(Uses::Repository(uses)) = Uses::from_common(&value) else {
+            return Err(anyhow!("invalid repository uses: {value}"));
+        };
+
+        Ok(uses)
+    }
+}
+
 impl RepositoryUses<'_> {
     /// Returns whether this `uses:` clause "matches" the given template.
     /// The template is itself formatted like a normal `uses:` clause.
     ///
     /// This is an asymmetrical match: `actions/checkout@v3` "matches"
     /// the `actions/checkout` template but not vice versa.
-    pub(crate) fn matches(&self, template: &str) -> bool {
-        let Some(Uses::Repository(other)) = Uses::from_step(template) else {
+    pub(crate) fn matches<'a>(&self, template: impl TryInto<RepositoryUses<'a>>) -> bool {
+        let Ok(other) = template.try_into() else {
             return false;
         };
 
@@ -637,10 +649,6 @@ impl RepositoryUses<'_> {
             Some(git_ref) if !self.ref_is_commit() => Some(git_ref),
             _ => None,
         }
-    }
-
-    pub(crate) fn as_template(&self) -> String {
-        format!("{}/{}", self.owner, self.repo)
     }
 }
 

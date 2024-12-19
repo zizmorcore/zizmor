@@ -191,7 +191,7 @@ impl CachePoisoning {
                 return false;
             };
 
-            target_uses.matches(well_known_uses.as_template().as_str())
+            target_uses.matches(well_known_uses)
         })?;
 
         let cache_control_input = env.keys().find(|k| match known_action.cache_control {
