@@ -17,7 +17,7 @@ use github_actions_models::{
     workflow::job::{StepBody, Strategy},
 };
 
-use super::{audit_meta, Step, WorkflowAudit};
+use super::{audit_meta, Audit, Step};
 use crate::{
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Persona, Severity},
@@ -228,7 +228,7 @@ impl TemplateInjection {
     }
 }
 
-impl WorkflowAudit for TemplateInjection {
+impl Audit for TemplateInjection {
     fn new(_state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,

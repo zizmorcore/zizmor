@@ -1,4 +1,4 @@
-use crate::audit::{audit_meta, WorkflowAudit};
+use crate::audit::{audit_meta, Audit};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{Step, Uses};
 use crate::state::AuditState;
@@ -220,7 +220,7 @@ impl CachePoisoning {
     }
 }
 
-impl WorkflowAudit for CachePoisoning {
+impl Audit for CachePoisoning {
     fn new(_: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,

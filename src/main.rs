@@ -3,7 +3,7 @@ use std::{io::stdout, process::ExitCode};
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, stream::IsTerminal};
 use anyhow::{anyhow, Context, Result};
-use audit::WorkflowAudit;
+use audit::{Audit, AuditInput};
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
@@ -236,7 +236,7 @@ fn run() -> Result<ExitCode> {
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {
         ($rule:path) => {{
-            use crate::audit::Audit as _;
+            use crate::audit::AuditCore as _;
             // HACK: https://github.com/rust-lang/rust/issues/48067
             use $rule as base;
             match base::new(audit_state.clone()) {
@@ -275,12 +275,16 @@ fn run() -> Result<ExitCode> {
         for (_, workflow) in workflow_registry.iter_workflows() {
             Span::current().pb_set_message(workflow.key.filename());
             for (name, audit) in audit_registry.iter_workflow_audits() {
-                results.extend(audit.audit(workflow).with_context(|| {
-                    format!(
-                        "{name} failed on {workflow}",
-                        workflow = workflow.filename()
-                    )
-                })?);
+                results.extend(
+                    audit
+                        .audit(AuditInput::Workflow(workflow))
+                        .with_context(|| {
+                            format!(
+                                "{name} failed on {workflow}",
+                                workflow = workflow.filename()
+                            )
+                        })?,
+                );
                 Span::current().pb_inc(1);
             }
 

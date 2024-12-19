@@ -4,7 +4,7 @@
 use std::{fmt::Display, process::ExitCode};
 
 use crate::{
-    audit::WorkflowAudit,
+    audit::Audit,
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{RepositoryUses, Workflow},
@@ -173,7 +173,7 @@ impl WorkflowRegistry {
 }
 
 pub(crate) struct AuditRegistry {
-    pub(crate) workflow_audits: IndexMap<&'static str, Box<dyn WorkflowAudit>>,
+    pub(crate) workflow_audits: IndexMap<&'static str, Box<dyn Audit>>,
 }
 
 impl AuditRegistry {
@@ -190,12 +190,12 @@ impl AuditRegistry {
     pub(crate) fn register_workflow_audit(
         &mut self,
         ident: &'static str,
-        audit: Box<dyn WorkflowAudit>,
+        audit: Box<dyn Audit>,
     ) {
         self.workflow_audits.insert(ident, audit);
     }
 
-    pub(crate) fn iter_workflow_audits(&self) -> indexmap::map::Iter<&str, Box<dyn WorkflowAudit>> {
+    pub(crate) fn iter_workflow_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit>> {
         self.workflow_audits.iter()
     }
 }

@@ -231,7 +231,7 @@ impl<'w> Iterator for Jobs<'w> {
 
 /// Represents an execution Matrix within a Job.
 ///
-/// This type implements [`Deref`] for [job::NormalJob::Strategy`], providing
+/// This type implements [`Deref`] for [`job::NormalJob::strategy`], providing
 /// access to the underlying data model.
 #[derive(Clone)]
 pub(crate) struct Matrix<'w> {
@@ -790,6 +790,20 @@ pub(crate) struct Action {
     inner: action::Composite,
 }
 
+impl Deref for Action {
+    type Target = action::Composite;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl Debug for Action {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{key}", key = self.key)
+    }
+}
+
 impl Action {
     /// This actions's [`SymbolicLocation`].
     pub(crate) fn location(&self) -> SymbolicLocation {
@@ -800,6 +814,81 @@ impl Action {
             route: Route::new(),
             primary: false,
         }
+    }
+
+    /// A [`CompositeSteps`] iterator over this workflow's constituent [`CompositeStep`]s.
+    pub(crate) fn steps(&self) -> CompositeSteps<'_> {
+        CompositeSteps::new(self)
+    }
+}
+
+/// An iterable container for steps within a [`Job`].
+pub(crate) struct CompositeSteps<'w> {
+    inner: Enumerate<std::slice::Iter<'w, github_actions_models::action::Step>>,
+    parent: &'w Action,
+}
+
+impl<'w> CompositeSteps<'w> {
+    /// Create a new [`CompositeSteps`].
+    ///
+    /// Invariant: panics if the given [`Job`] is a reusable job, rather than a "normal" job.
+    fn new(action: &'w Action) -> Self {
+        Self {
+            inner: action.inner.steps.iter().enumerate(),
+            parent: action,
+        }
+    }
+}
+
+impl<'w> Iterator for CompositeSteps<'w> {
+    type Item = CompositeStep<'w>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = self.inner.next();
+
+        match item {
+            Some((idx, step)) => Some(CompositeStep::new(idx, step, self.parent)),
+            None => None,
+        }
+    }
+}
+
+pub(crate) struct CompositeStep<'w> {
+    /// The step's index within its parent job.
+    pub(crate) index: usize,
+    /// The inner step model.
+    inner: &'w action::Step,
+    /// The parent [`Action`].
+    pub(crate) parent: &'w Action,
+}
+
+impl<'w> CompositeStep<'w> {
+    pub(crate) fn new(index: usize, inner: &'w action::Step, parent: &'w Action) -> Self {
+        Self {
+            index,
+            inner,
+            parent,
+        }
+    }
+
+    /// Returns a symbolic location for this [`Step`].
+    pub(crate) fn location(&'w self) -> SymbolicLocation<'w> {
+        self.parent.location().with_composite_step(self)
+    }
+
+    /// Like [`CompositeStep::location`], except with the step's `name`
+    /// key as the final path component if present.
+    pub(crate) fn location_with_name(&'w self) -> SymbolicLocation<'w> {
+        match self.inner {
+            action::Step::RunShell(_) => self.location().with_keys(&["name".into()]),
+            _ => self.location(),
+        }
+        .annotated("this step")
+    }
+
+    /// Returns this composite step's parent [`Action`].
+    pub(crate) fn action(&self) -> &Action {
+        self.parent
     }
 }
 

@@ -10,7 +10,7 @@ use serde::Serialize;
 use terminal_link::Link;
 
 use crate::{
-    models::{Job, Step, Workflow},
+    models::{CompositeStep, Job, Step, Workflow},
     registry::InputKey,
 };
 
@@ -162,6 +162,10 @@ impl<'w> SymbolicLocation<'w> {
     }
 
     pub(crate) fn with_step(&self, step: &Step<'w>) -> SymbolicLocation<'w> {
+        self.with_keys(&["steps".into(), step.index.into()])
+    }
+
+    pub(crate) fn with_composite_step(&self, step: &'w CompositeStep) -> SymbolicLocation<'w> {
         self.with_keys(&["steps".into(), step.index.into()])
     }
 
