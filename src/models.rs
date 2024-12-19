@@ -603,7 +603,7 @@ impl<'a> TryFrom<&'a str> for RepositoryUses<'a> {
     type Error = anyhow::Error;
 
     fn try_from(value: &'a str) -> std::result::Result<Self, Self::Error> {
-        let Some(Uses::Repository(uses)) = Uses::from_common(&value) else {
+        let Some(Uses::Repository(uses)) = Uses::from_common(value) else {
             return Err(anyhow!("invalid repository uses: {value}"));
         };
 
