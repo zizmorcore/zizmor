@@ -15,6 +15,7 @@ DataDog/datadog-agent#30871
 Diaoul/subliminal#1190
 esl/MongooseIM#4435
 ethereum/hevm#615
+guacsec/guac#2276
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 Homebrew/brew#18662
 hugovk/em-keyboard#148
