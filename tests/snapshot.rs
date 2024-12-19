@@ -316,3 +316,21 @@ fn cache_poisoning() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn excessive_permissions() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "excessive-permissions/issue-336-repro.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "excessive-permissions/issue-336-repro.yml"
+        ))
+        .args(["--pedantic"])
+        .run()?);
+
+    Ok(())
+}
