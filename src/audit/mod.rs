@@ -5,7 +5,7 @@ use tracing::instrument;
 
 use crate::{
     finding::{Finding, FindingBuilder},
-    models::{Action, Job, Step, Workflow},
+    models::{Action, CompositeStep, Job, Step, Workflow},
     state::AuditState,
 };
 
@@ -162,12 +162,18 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_composite_step<'a>(&self) -> Result<Vec<Finding<'a>>> {
+    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
         Ok(vec![])
     }
 
     fn audit_action<'a>(&self, action: &'a Action) -> Result<Vec<Finding<'a>>> {
-        Ok(vec![])
+        let mut results = vec![];
+
+        for step in action.steps() {
+            results.extend(self.audit_composite_step(&step)?);
+        }
+
+        Ok(results)
     }
 
     /// The top-level auditing function for both workflows and actions.

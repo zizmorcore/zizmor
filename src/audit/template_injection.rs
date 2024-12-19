@@ -236,6 +236,15 @@ impl Audit for TemplateInjection {
         Ok(Self)
     }
 
+    fn audit_composite_step<'a>(
+        &self,
+        step: &super::CompositeStep<'a>,
+    ) -> anyhow::Result<Vec<super::Finding<'a>>> {
+        let mut findings = vec![];
+
+        Ok(findings)
+    }
+
     fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
 
