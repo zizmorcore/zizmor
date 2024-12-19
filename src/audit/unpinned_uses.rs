@@ -44,6 +44,7 @@ impl WorkflowAudit for UnpinnedUses {
                 .persona(persona)
                 .add_location(
                     step.location()
+                        .primary()
                         .with_keys(&["uses".into()])
                         .annotated(annotation),
                 )

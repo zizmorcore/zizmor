@@ -1,0 +1,19 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"template-injection/pr-317-repro.yml\")).run()?"
+snapshot_kind: text
+---
+warning[template-injection]: code injection via template expansion
+  --> @@INPUT@@:25:9
+   |
+25 |         - run: |
+   |  _________-
+26 | |           echo ${{ matrix.bar }}
+   | |                                 -
+   | |_________________________________|
+   |                                   this step
+   |                                   matrix.bar may expand into attacker-controllable code
+   |
+   = note: audit confidence → Medium
+
+1 finding: 0 unknown, 0 informational, 0 low, 1 medium, 0 high

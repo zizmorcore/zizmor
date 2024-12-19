@@ -62,6 +62,7 @@ impl WorkflowAudit for SelfHostedRunner {
                                     .persona(Persona::Auditor)
                                     .add_location(
                                         job.location()
+                                            .primary()
                                             .with_keys(&["runs-on".into()])
                                             .annotated("self-hosted runner used here"),
                                     )
@@ -78,9 +79,12 @@ impl WorkflowAudit for SelfHostedRunner {
                                     .severity(Severity::Unknown)
                                     .persona(Persona::Auditor)
                                     .add_location(
-                                        job.location().with_keys(&["runs-on".into()]).annotated(
-                                            "expression may expand into a self-hosted runner",
-                                        ),
+                                        job.location()
+                                            .primary()
+                                            .with_keys(&["runs-on".into()])
+                                            .annotated(
+                                                "expression may expand into a self-hosted runner",
+                                            ),
                                     )
                                     .build(workflow)?,
                             );
@@ -99,6 +103,7 @@ impl WorkflowAudit for SelfHostedRunner {
                         .persona(Persona::Auditor)
                         .add_location(
                             job.location()
+                                .primary()
                                 .with_keys(&["runs-on".into()])
                                 .annotated("runner group implies self-hosted runner"),
                         )
@@ -129,9 +134,12 @@ impl WorkflowAudit for SelfHostedRunner {
                                         .annotated("matrix declares self-hosted runner"),
                                 )
                                 .add_location(
-                                    job.location().with_keys(&["runs-on".into()]).annotated(
-                                        "expression may expand into a self-hosted runner",
-                                    ),
+                                    job.location()
+                                        .primary()
+                                        .with_keys(&["runs-on".into()])
+                                        .annotated(
+                                            "expression may expand into a self-hosted runner",
+                                        ),
                                 )
                                 .build(workflow)?,
                         )

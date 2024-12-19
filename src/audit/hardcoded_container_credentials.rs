@@ -59,6 +59,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
                             .confidence(Confidence::High)
                             .add_location(
                                 job.location()
+                                    .primary()
                                     .with_keys(&["container".into(), "credentials".into()])
                                     .annotated("container registry password is hard-coded"),
                             )
@@ -85,6 +86,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
                                 .confidence(Confidence::High)
                                 .add_location(
                                     job.location()
+                                        .primary()
                                         .with_keys(&[
                                             "services".into(),
                                             service.as_str().into(),

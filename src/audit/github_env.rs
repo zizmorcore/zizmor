@@ -183,6 +183,7 @@ impl WorkflowAudit for GitHubEnv {
                         .confidence(Confidence::Low)
                         .add_location(
                             step.location()
+                                .primary()
                                 .with_keys(&["run".into()])
                                 .annotated("GITHUB_ENV write may allow code execution"),
                         )

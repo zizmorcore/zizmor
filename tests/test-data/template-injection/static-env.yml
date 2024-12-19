@@ -1,0 +1,53 @@
+name: static-env
+on:
+  pull_request:
+
+env:
+  foo: foo
+  bar: ${{ github.event.issue.title }}
+  baz: baz
+  quux: ${{ github.event.issue.title }}
+
+jobs:
+  static-env-1:
+    name: static-env
+    runs-on: ubuntu-latest
+
+    env:
+      foo: ${{ github.event.issue.title }}
+      bar: bar
+
+    steps:
+      # OK: foo is static (step-level)
+      - name: step-level-static
+        run: |
+          echo ${{ env.foo }}
+        env:
+          foo: foo
+
+      # OK: bar is static (job-level)
+      - name: job-level-static
+        run: |
+          echo ${{ env.bar }}
+
+      # OK: baz is static (workflow-level)
+      - name: workflow-level-static
+        run: |
+          echo ${{ env.baz }}
+
+      # NOT OK: bar is not static (step-level)
+      - name: step-level-non-static
+        run: |
+          echo ${{ env.bar }}
+        env:
+          bar: ${{ github.event.issue.title }}
+
+      # NOT OK: foo is not static (job-level)
+      - name: job-level-non-static
+        run: |
+          echo ${{ env.foo }}
+
+      # NOT OK: quux is not static (workflow-level)
+      - name: workflow-level-non-static
+        run: |
+          echo ${{ env.quux }}

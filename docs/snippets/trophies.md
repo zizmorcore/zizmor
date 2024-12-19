@@ -65,6 +65,12 @@
 
     cakephp/cakephp#18081
 
+-   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl/curl-for-win
+
+    ---
+
+    curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
+
 -   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl/curl
 
     ---
@@ -76,6 +82,12 @@
     ---
 
     danmar/cppcheck#7044
+
+-   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl/MongooseIM
+
+    ---
+
+    esl/MongooseIM#4435
 
 -   ![](https://github.com/ethereum.png?size=40){ width="40" loading=lazy align=left } ethereum/hevm
 
@@ -191,6 +203,12 @@
 
     prettytable/prettytable#339
 
+-   ![](https://github.com/psf.png?size=40){ width="40" loading=lazy align=left } psf/cachecontrol
+
+    ---
+
+    psf/cachecontrol#345
+
 -   ![](https://github.com/pyca.png?size=40){ width="40" loading=lazy align=left } pyca/service-identity
 
     ---
@@ -208,6 +226,18 @@
     ---
 
     pypa/pip-audit#851
+
+-   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi/stdlib-list
+
+    ---
+
+    pypi/stdlib-list#138
+
+-   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi/warehouse
+
+    ---
+
+    pypi/warehouse#16996
 
 -   ![](https://github.com/pytest-dev.png?size=40){ width="40" loading=lazy align=left } pytest-dev/pytest
 

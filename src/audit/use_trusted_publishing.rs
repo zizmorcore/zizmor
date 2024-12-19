@@ -87,6 +87,7 @@ impl WorkflowAudit for UseTrustedPublishing {
             .confidence(Confidence::High)
             .add_location(
                 step.location()
+                    .primary()
                     .with_keys(&["uses".into()])
                     .annotated("this step"),
             );
@@ -98,6 +99,7 @@ impl WorkflowAudit for UseTrustedPublishing {
                 candidate
                     .add_location(
                         step.location()
+                            .primary()
                             .with_keys(&["with".into(), "password".into()])
                             .annotated(USES_MANUAL_CREDENTIAL),
                     )
@@ -110,7 +112,7 @@ impl WorkflowAudit for UseTrustedPublishing {
         {
             findings.push(
                 candidate
-                    .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
+                    .add_location(step.location().primary().annotated(USES_MANUAL_CREDENTIAL))
                     .build(step.workflow())?,
             );
         }

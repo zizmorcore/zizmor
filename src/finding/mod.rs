@@ -2,7 +2,7 @@
 
 use std::{borrow::Cow, sync::LazyLock};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::ValueEnum;
 use locate::Locator;
 use regex::Regex;
@@ -137,6 +137,13 @@ pub(crate) struct SymbolicLocation<'w> {
 
     /// A symbolic route (of keys and indices) to the final location.
     pub(crate) route: Route<'w>,
+
+    /// Whether this location is subjectively "primary" to a finding,
+    /// or merely a "supporting" location.
+    ///
+    /// This distinction only matters in output formats like SARIF,
+    /// where locations are split between locations and "related" locations.
+    pub(crate) primary: bool,
 }
 
 impl<'w> SymbolicLocation<'w> {
@@ -146,6 +153,7 @@ impl<'w> SymbolicLocation<'w> {
             annotation: self.annotation.clone(),
             link: None,
             route: self.route.with_keys(keys),
+            primary: self.primary,
         }
     }
 
@@ -166,6 +174,12 @@ impl<'w> SymbolicLocation<'w> {
     /// Adds a URL to the current `SymbolicLocation`.
     pub(crate) fn with_url(mut self, url: impl Into<String>) -> SymbolicLocation<'w> {
         self.link = Some(Link::new(&self.annotation, &url.into()).to_string());
+        self
+    }
+
+    /// Mark the current `SymbolicLocation` as a "primary" location.
+    pub(crate) fn primary(mut self) -> SymbolicLocation<'w> {
+        self.primary = true;
         self
     }
 
@@ -335,6 +349,12 @@ impl<'w> FindingBuilder<'w> {
             .iter()
             .map(|l| l.clone().concretize(workflow))
             .collect::<Result<Vec<_>>>()?;
+
+        if !locations.iter().any(|l| l.symbolic.primary) {
+            return Err(anyhow!(
+                "API misuse: at least one location must be marked with primary()"
+            ));
+        }
 
         let should_ignore = self.ignored_from_inlined_comment(&locations, self.ident);
 

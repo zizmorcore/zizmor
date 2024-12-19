@@ -30,7 +30,7 @@ impl InsecureCommands {
             .severity(Severity::High)
             .persona(Persona::Auditor)
             .add_location(
-                location.with_keys(&["env".into()]).annotated(
+                location.primary().with_keys(&["env".into()]).annotated(
                     "non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS",
                 ),
             )
@@ -47,6 +47,7 @@ impl InsecureCommands {
             .severity(Severity::High)
             .add_location(
                 location
+                    .primary()
                     .with_keys(&["env".into()])
                     .annotated("insecure commands enabled here"),
             )
@@ -105,8 +106,15 @@ impl WorkflowAudit for InsecureCommands {
     fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut results = vec![];
 
-        if self.has_insecure_commands_enabled(&workflow.env) {
-            results.push(self.insecure_commands_allowed(workflow, workflow.location())?)
+        match &workflow.env {
+            LoE::Expr(_) => {
+                results.push(self.insecure_commands_maybe_present(workflow, workflow.location())?)
+            }
+            LoE::Literal(env) => {
+                if self.has_insecure_commands_enabled(env) {
+                    results.push(self.insecure_commands_allowed(workflow, workflow.location())?)
+                }
+            }
         }
 
         for job in workflow.jobs() {

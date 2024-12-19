@@ -84,6 +84,7 @@ impl WorkflowAudit for RefConfusion {
                                     .confidence(Confidence::High)
                                     .add_location(
                                         step.location()
+                                            .primary()
                                             .with_keys(&["uses".into()])
                                             .annotated(REF_CONFUSION_ANNOTATION),
                                     )
@@ -102,7 +103,9 @@ impl WorkflowAudit for RefConfusion {
                             Self::finding()
                                 .severity(Severity::Medium)
                                 .confidence(Confidence::High)
-                                .add_location(job.location().annotated(REF_CONFUSION_ANNOTATION))
+                                .add_location(
+                                    job.location().primary().annotated(REF_CONFUSION_ANNOTATION),
+                                )
                                 .build(workflow)?,
                         )
                     }
