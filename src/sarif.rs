@@ -70,7 +70,7 @@ fn build_results(registry: &WorkflowRegistry, findings: &[Finding]) -> Vec<Sarif
 
 fn build_result(registry: &WorkflowRegistry, finding: &Finding<'_>) -> SarifResult {
     SarifResult::builder()
-        .message(finding.ident)
+        .message(finding.desc)
         .rule_id(finding.ident)
         .locations(build_locations(
             registry,
