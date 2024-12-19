@@ -266,7 +266,7 @@ impl WorkflowAudit for TemplateInjection {
                     .persona(persona)
                     .add_location(step.location_with_name())
                     .add_location(
-                        script_loc.clone().annotated(format!(
+                        script_loc.clone().primary().annotated(format!(
                             "{expr} may expand into attacker-controllable code"
                         )),
                     )
