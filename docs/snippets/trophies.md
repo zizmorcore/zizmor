@@ -101,6 +101,12 @@
 
     girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 
+-   ![](https://github.com/guacsec.png?size=40){ width="40" loading=lazy align=left } guacsec/guac
+
+    ---
+
+    guacsec/guac#2276
+
 -   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk/em-keyboard
 
     ---
