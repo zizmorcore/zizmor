@@ -40,7 +40,7 @@ impl From<Severity> for ResultLevel {
 pub(crate) fn build(registry: &WorkflowRegistry, findings: &[Finding]) -> Sarif {
     Sarif::builder()
         .version("2.1.0")
-        .schema("https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-external-property-file-schema-2.1.0.json")
+        .schema("https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json")
         .runs([build_run(registry, findings)])
         .build()
 }
