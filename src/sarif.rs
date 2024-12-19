@@ -1,9 +1,11 @@
 //! APIs for rendering SARIF outputs.
 
+use std::collections::HashSet;
+
 use serde_sarif::sarif::{
     ArtifactContent, ArtifactLocation, Location as SarifLocation, LogicalLocation, Message,
-    PhysicalLocation, PropertyBag, Region, Result as SarifResult, ResultKind, ResultLevel, Run,
-    Sarif, Tool, ToolComponent,
+    PhysicalLocation, PropertyBag, Region, ReportingDescriptor, Result as SarifResult, ResultKind,
+    ResultLevel, Run, Sarif, Tool, ToolComponent,
 };
 
 use crate::{
@@ -56,11 +58,29 @@ fn build_run(registry: &WorkflowRegistry, findings: &[Finding]) -> Run {
                         .semantic_version(env!("CARGO_PKG_VERSION"))
                         .download_uri(env!("CARGO_PKG_REPOSITORY"))
                         .information_uri(env!("CARGO_PKG_HOMEPAGE"))
+                        .rules(build_rules(findings))
                         .build(),
                 )
                 .build(),
         )
         .results(build_results(registry, findings))
+        .build()
+}
+
+fn build_rules(findings: &[Finding]) -> Vec<ReportingDescriptor> {
+    // use the set to filter out duplicate rules
+    let mut unique_rules = HashSet::new();
+    findings
+        .iter()
+        .filter(|finding| unique_rules.insert(finding.ident))
+        .map(|finding| build_rule(finding))
+        .collect()
+}
+
+fn build_rule(finding: &Finding) -> ReportingDescriptor {
+    ReportingDescriptor::builder()
+        .id(finding.ident)
+        .help_uri(finding.url)
         .build()
 }
 
