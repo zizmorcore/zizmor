@@ -308,5 +308,11 @@ fn cache_poisoning() -> Result<()> {
         ))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "cache-poisoning/caching-opt-in-boolish-toggle.yml"
+        ))
+        .run()?);
+
     Ok(())
 }
