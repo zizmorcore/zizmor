@@ -105,6 +105,7 @@ impl WorkflowAudit for Artipacked {
                             .add_location(
                                 checkout
                                     .location()
+                                    .primary()
                                     .annotated("does not set persist-credentials: false"),
                             )
                             .build(workflow)?,
@@ -127,6 +128,7 @@ impl WorkflowAudit for Artipacked {
                                 .add_location(
                                     checkout
                                         .location()
+                                        .primary()
                                         .annotated("does not set persist-credentials: false"),
                                 )
                                 .add_location(

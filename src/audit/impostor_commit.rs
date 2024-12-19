@@ -141,7 +141,9 @@ impl WorkflowAudit for ImpostorCommit {
                                 Self::finding()
                                     .severity(Severity::High)
                                     .confidence(Confidence::High)
-                                    .add_location(step.location().annotated(IMPOSTOR_ANNOTATION))
+                                    .add_location(
+                                        step.location().primary().annotated(IMPOSTOR_ANNOTATION),
+                                    )
                                     .build(workflow)?,
                             );
                         }
@@ -159,7 +161,9 @@ impl WorkflowAudit for ImpostorCommit {
                             Self::finding()
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
-                                .add_location(job.location().annotated(IMPOSTOR_ANNOTATION))
+                                .add_location(
+                                    job.location().primary().annotated(IMPOSTOR_ANNOTATION),
+                                )
                                 .build(workflow)?,
                         );
                     }

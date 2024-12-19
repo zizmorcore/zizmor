@@ -72,7 +72,14 @@ fn build_result(registry: &WorkflowRegistry, finding: &Finding<'_>) -> SarifResu
     SarifResult::builder()
         .message(finding.ident)
         .rule_id(finding.ident)
-        .locations(build_locations(registry, &finding.locations))
+        .locations(build_locations(
+            registry,
+            finding.locations.iter().filter(|l| l.symbolic.primary),
+        ))
+        .related_locations(build_locations(
+            registry,
+            finding.locations.iter().filter(|l| !l.symbolic.primary),
+        ))
         .level(
             serde_json::to_value(ResultLevel::from(finding.determinations.severity))
                 .expect("failed to serialize SARIF result level"),
@@ -84,9 +91,11 @@ fn build_result(registry: &WorkflowRegistry, finding: &Finding<'_>) -> SarifResu
         .build()
 }
 
-fn build_locations(registry: &WorkflowRegistry, locations: &[Location<'_>]) -> Vec<SarifLocation> {
+fn build_locations<'a>(
+    registry: &WorkflowRegistry,
+    locations: impl Iterator<Item = &'a Location<'a>>,
+) -> Vec<SarifLocation> {
     locations
-        .iter()
         .map(|location| {
             SarifLocation::builder()
                 .logical_locations([LogicalLocation::builder()

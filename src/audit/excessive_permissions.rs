@@ -65,6 +65,7 @@ impl WorkflowAudit for ExcessivePermissions {
                     .add_location(
                         workflow
                             .location()
+                            .primary()
                             .with_keys(&["permissions".into()])
                             .annotated(note),
                     )
@@ -86,6 +87,7 @@ impl WorkflowAudit for ExcessivePermissions {
                         .confidence(confidence)
                         .add_location(
                             job.location()
+                                .primary()
                                 .with_keys(&["permissions".into()])
                                 .annotated(note),
                         )
