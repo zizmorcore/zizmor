@@ -3,7 +3,7 @@ use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{Step, Uses};
 use crate::state::AuditState;
 use github_actions_models::common::expr::ExplicitExpr;
-use github_actions_models::common::{Env, EnvValue};
+use github_actions_models::common::Env;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::job::StepBody;
 use github_actions_models::workflow::Trigger;
@@ -152,31 +152,21 @@ impl CachePoisoning {
     ) -> Option<CacheUsage> {
         match env.get(cache_control_input) {
             None => None,
-            Some(EnvValue::Boolean(value)) => {
-                if action.control_value == ControlValue::Boolean {
-                    if *value {
-                        Some(CacheUsage::DirectOptIn)
-                    } else {
-                        // Explicitly opts out from caching
-                        None
-                    }
-                } else {
+            Some(value) => match value.to_string().as_str() {
+                "true" if matches!(action.control_value, ControlValue::Boolean) => {
+                    Some(CacheUsage::DirectOptIn)
+                }
+                "false" if matches!(action.control_value, ControlValue::Boolean) => {
+                    // Explicitly opts out from caching
                     None
                 }
-            }
-            Some(EnvValue::Number(_)) => {
-                // Not sure about what to do here!
-                None
-            }
-            Some(EnvValue::String(value)) => match ExplicitExpr::from_curly(value) {
-                None => {
-                    if action.control_value == ControlValue::String {
+                other => match ExplicitExpr::from_curly(other) {
+                    None if matches!(action.control_value, ControlValue::String) => {
                         Some(CacheUsage::DirectOptIn)
-                    } else {
-                        None
                     }
-                }
-                Some(_) => Some(CacheUsage::ConditionalOptIn),
+                    None => None,
+                    Some(_) => Some(CacheUsage::ConditionalOptIn),
+                },
             },
         }
     }
