@@ -7,7 +7,7 @@ use github_actions_models::{
 
 use super::{audit_meta, WorkflowAudit};
 use crate::{
-    finding::{Confidence, Severity},
+    finding::{Confidence, Persona, Severity},
     AuditState,
 };
 
@@ -56,12 +56,24 @@ impl WorkflowAudit for ExcessivePermissions {
         workflow: &'w crate::models::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];
+
+        // Top-level permissions are a minor issue if there's only one
+        // job in the workflow, since they're equivalent to job-level
+        // permissions in that case. Emit only pedantic findings in
+        // that case.
+        let persona = if workflow.jobs.len() == 1 {
+            Persona::Pedantic
+        } else {
+            Persona::Regular
+        };
+
         // Top-level permissions.
         for (severity, confidence, note) in self.check_permissions(&workflow.permissions, None) {
             findings.push(
                 Self::finding()
                     .severity(severity)
                     .confidence(confidence)
+                    .persona(persona)
                     .add_location(
                         workflow
                             .location()
