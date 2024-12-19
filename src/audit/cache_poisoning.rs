@@ -273,6 +273,7 @@ impl WorkflowAudit for CachePoisoning {
                 )
                 .add_location(
                     step.location()
+                        .primary()
                         .with_keys(&[yaml_key.into()])
                         .annotated(annotation),
                 )
