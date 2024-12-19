@@ -100,6 +100,7 @@ fn build_result(registry: &WorkflowRegistry, finding: &Finding<'_>) -> SarifResu
             registry,
             finding.locations.iter().filter(|l| !l.symbolic.primary),
         ))
+        // TODO: https://github.com/psastras/sarif-rs/pull/770
         .level(
             serde_json::to_value(ResultLevel::from(finding.determinations.severity))
                 .expect("failed to serialize SARIF result level"),
