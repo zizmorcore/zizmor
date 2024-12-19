@@ -701,28 +701,29 @@ If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 
 [cache-poisoning.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/cache-poisoning.yml
 
-Detects potential scenarios vulnerable to a cache-poisoning attack.
+Detects potential cache-poisoning scenarios in release workflows.
 
-Caching and restoring build state is a process eased by utilities provided 
-by Github, in particular `actions/cache`, `actions/cache/save` and 
-`actions/cache/restore`. In addition, many of the setup-like Actions provided
-by Github come with built-in caching functionality, like `actions/setup-node`, 
-`actions/setup-java` and others.
+Caching and restoring build state is a process eased by utilities provided
+by GitHub, in particular @actions/cache and its "save" and "restore"
+sub-actions. In addition, many of the setup-like actions provided
+by GitHub come with built-in caching functionality, like @actions/setup-node,
+@actions/setup-java and others.
 
 Furthermore, there are many examples of community-driven Actions with built-in
-caching functionality, like `ruby/setup-ruby`, `astral-sh/setup-uv`,
-`Swatinem/rust-cache`. In general, most of them build on top of `actions/tookit` 
-for the sake of easily integrate with Github cache server at Workflow runtime.
+caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
+@Swatinem/rust-cache. In general, most of them build on top of @actions/tookit
+for the sake of easily integrate with GitHub cache server at Workflow runtime.
 
-This vulnerability happens when CD-like Workflows leverage build state cached 
-from previous Workflow executions, in general on top of aforementioned Actions or 
-similar ones. The publication of artifacts usually happens driven by trigger events 
-like `release` or events with path filters like `push` (e.g. for tags).
+This vulnerability happens when release workflows leverage build state cached
+from previous workflow executions, in general on top of the aforementioned
+actions or  similar ones. The publication of artifacts usually happens driven
+by trigger events like `release` or events with path filters like `push`
+(e.g. for tags).
 
-In such scenarios, an attacker with access to a valid `GITHUB_TOKEN` can use it 
-override cache entries in the Github cache server. That compounds with the default 
-behaviour of `actions/tookit` during cache restorations, allowing an attacker to 
-retrieve payloads from poisoned cache entries, hence achieving code execution at 
+In such scenarios, an attacker with access to a valid `GITHUB_TOKEN` can use it
+poison the repository's GitHub Actions caches. That compounds with the default
+behavior of @actions/tookit during cache restorations, allowing an attacker to
+retrieve payloads from poisoned cache entries, hence achieving code execution at
 Workflow runtime, potentially compromising ready-to-publish artifacts.
 
 Other resources:
@@ -731,14 +732,15 @@ Other resources:
 
 ### Remediation
 
-In general, you should avoid using previously cached CI state within Workflows 
-intended to publish build artifacts. 
+In general, you should avoid using previously cached CI state within workflows
+intended to publish build artifacts:
 
-This means building from scratch as a recommendation, either removing cache-aware 
-Actions like `actions/cache` from those Workflows; or disabling a caching-aware action
-with an `if` condition at step level; or evaluating whether there is an input to opt-out 
-from cache restoration for that particular Action and setting a proper value to this 
-input (e.g. like in `Swatinem/rust-cache` with `lookup-only`).
+* Remove cache-aware actions like @actions/cache from workflows that produce
+  releases, *or*
+* Disable cache-aware actions with an `if:` condition based on the trigger at
+  the step level, *or*
+* Set an action-specific input to disable cache restoration when appropriate,
+  such as `lookup-only` in @Swatinem/rust-cache.
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
