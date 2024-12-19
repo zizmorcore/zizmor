@@ -1,0 +1,23 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"cache-poisoning/caching-opt-in-multi-value-toggle.yml\")).run()?"
+snapshot_kind: text
+---
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:1:1
+   |
+ 1 | / on:
+ 2 | |   release
+   | |_________^ generally used when publishing artifacts generated at runtime
+ 3 |
+...
+14 |           uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
+15 | /         with:
+16 | |           distribution: 'zulu'
+17 | |           cache: 'gradle'
+18 | |           java-version: '17'
+   | |____________________________^ opt-in for caching here
+   |
+   = note: audit confidence → Low
+
+1 finding: 0 unknown, 0 informational, 0 low, 0 medium, 1 high

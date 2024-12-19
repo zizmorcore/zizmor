@@ -693,6 +693,54 @@ like `pull_request_target`.
 
 If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 
+## `cache-poisoning`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ✅                 |
+
+[cache-poisoning.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/cache-poisoning.yml
+
+Detects potential cache-poisoning scenarios in release workflows.
+
+Caching and restoring build state is a process eased by utilities provided
+by GitHub, in particular @actions/cache and its "save" and "restore"
+sub-actions. In addition, many of the setup-like actions provided
+by GitHub come with built-in caching functionality, like @actions/setup-node,
+@actions/setup-java and others.
+
+Furthermore, there are many examples of community-driven Actions with built-in
+caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
+@Swatinem/rust-cache. In general, most of them build on top of @actions/tookit
+for the sake of easily integrate with GitHub cache server at Workflow runtime.
+
+This vulnerability happens when release workflows leverage build state cached
+from previous workflow executions, in general on top of the aforementioned
+actions or  similar ones. The publication of artifacts usually happens driven
+by trigger events like `release` or events with path filters like `push`
+(e.g. for tags).
+
+In such scenarios, an attacker with access to a valid `GITHUB_TOKEN` can use it
+poison the repository's GitHub Actions caches. That compounds with the default
+behavior of @actions/tookit during cache restorations, allowing an attacker to
+retrieve payloads from poisoned cache entries, hence achieving code execution at
+Workflow runtime, potentially compromising ready-to-publish artifacts.
+
+Other resources:
+
+* [The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]
+
+### Remediation
+
+In general, you should avoid using previously cached CI state within workflows
+intended to publish build artifacts:
+
+* Remove cache-aware actions like @actions/cache from workflows that produce
+  releases, *or*
+* Disable cache-aware actions with an `if:` condition based on the trigger at
+  the step level, *or*
+* Set an action-specific input to disable cache restoration when appropriate,
+  such as `lookup-only` in @Swatinem/rust-cache.
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
@@ -711,3 +759,4 @@ If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability
 [Google & Apache Found Vulnerable to GitHub Environment Injection]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability-0
 [Hacking with Environment Variables]: https://www.elttam.com/blog/env/
+[The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]: https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/

@@ -1,0 +1,22 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"cache-poisoning/caching-opt-in-expression.yml\")).run()?"
+snapshot_kind: text
+---
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:1:1
+   |
+ 1 | / on:
+ 2 | |   release
+   | |_________^ generally used when publishing artifacts generated at runtime
+ 3 |
+...
+14 |           uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a
+15 | /         with:
+16 | |           python-version: "3.12"
+17 | |           enable-cache: ${{ github.ref == 'refs/heads/main' }}
+   | |______________________________________________________________^ opt-in for caching might happen here
+   |
+   = note: audit confidence → Low
+
+1 finding: 0 unknown, 0 informational, 0 low, 0 medium, 1 high

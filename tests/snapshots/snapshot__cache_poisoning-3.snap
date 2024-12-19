@@ -1,0 +1,22 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"cache-poisoning/caching-opt-in-boolean-toggle.yml\")).run()?"
+snapshot_kind: text
+---
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:1:1
+   |
+ 1 | / on:
+ 2 | |   release
+   | |_________^ generally used when publishing artifacts generated at runtime
+ 3 |
+...
+14 |           uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25
+15 | /         with:
+16 | |           dotnet-version: '5.0.x'
+17 | |           cache: true
+   | |_____________________^ opt-in for caching here
+   |
+   = note: audit confidence → Low
+
+1 finding: 0 unknown, 0 informational, 0 low, 0 medium, 1 high
