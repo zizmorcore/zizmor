@@ -187,11 +187,7 @@ impl AuditRegistry {
         self.workflow_audits.len()
     }
 
-    pub(crate) fn register_workflow_audit(
-        &mut self,
-        ident: &'static str,
-        audit: Box<dyn Audit>,
-    ) {
+    pub(crate) fn register_workflow_audit(&mut self, ident: &'static str, audit: Box<dyn Audit>) {
         self.workflow_audits.insert(ident, audit);
     }
 

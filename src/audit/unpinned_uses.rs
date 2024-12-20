@@ -1,6 +1,6 @@
 use crate::finding::{Confidence, Persona, Severity};
 
-use super::{audit_meta, AuditState, Finding, Step, Audit};
+use super::{audit_meta, Audit, AuditState, Finding, Step};
 
 pub(crate) struct UnpinnedUses;
 
