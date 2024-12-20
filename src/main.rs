@@ -12,7 +12,7 @@ use finding::{Confidence, Persona, Severity};
 use indicatif::ProgressStyle;
 use models::Uses;
 use owo_colors::OwoColorize;
-use registry::{AuditRegistry, FindingRegistry, WorkflowRegistry};
+use registry::{AuditRegistry, FindingRegistry, InputRegistry};
 use state::AuditState;
 use tracing::{info_span, instrument, Span};
 use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
@@ -124,8 +124,8 @@ fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
 }
 
 #[instrument(skip_all)]
-fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<WorkflowRegistry> {
-    let mut workflow_registry = WorkflowRegistry::new();
+fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry> {
+    let mut workflow_registry = InputRegistry::new();
 
     for input in inputs {
         let input_path = Utf8Path::new(input);
@@ -190,7 +190,7 @@ fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<WorkflowRegis
             })?;
 
             for workflow in client.fetch_workflows(&slug)? {
-                workflow_registry.register(workflow)?;
+                workflow_registry.register_workflow(workflow)?;
             }
         }
     }

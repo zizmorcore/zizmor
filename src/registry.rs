@@ -7,7 +7,7 @@ use crate::{
     audit::Audit,
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
-    models::{RepositoryUses, Workflow},
+    models::{Action, RepositoryUses, Workflow},
     App,
 };
 use anyhow::{anyhow, Context, Result};
@@ -104,13 +104,15 @@ impl InputKey {
     }
 }
 
-pub(crate) struct WorkflowRegistry {
+pub(crate) struct InputRegistry {
+    pub(crate) actions: IndexMap<InputKey, Action>,
     pub(crate) workflows: IndexMap<InputKey, Workflow>,
 }
 
-impl WorkflowRegistry {
+impl InputRegistry {
     pub(crate) fn new() -> Self {
         Self {
+            actions: Default::default(),
             workflows: Default::default(),
         }
     }
@@ -119,8 +121,21 @@ impl WorkflowRegistry {
         self.workflows.len()
     }
 
+    pub(crate) fn register_action(&mut self, action: Action) -> Result<()> {
+        if self.workflows.contains_key(&action.key) {
+            return Err(anyhow!(
+                "can't register {key} more than once",
+                key = action.key
+            ));
+        }
+
+        self.actions.insert(action.key.clone(), action);
+
+        Ok(())
+    }
+
     #[instrument(skip(self))]
-    pub(crate) fn register(&mut self, workflow: Workflow) -> Result<()> {
+    pub(crate) fn register_workflow(&mut self, workflow: Workflow) -> Result<()> {
         if self.workflows.contains_key(&workflow.key) {
             return Err(anyhow!(
                 "can't register {key} more than once",
@@ -135,10 +150,15 @@ impl WorkflowRegistry {
 
     #[instrument(skip(self))]
     pub(crate) fn register_by_path(&mut self, path: &Utf8Path) -> Result<()> {
-        let workflow =
-            Workflow::from_file(path).with_context(|| "couldn't load workflow from file")?;
-
-        self.register(workflow)
+        match Workflow::from_file(path) {
+            Ok(workflow) => self.register_workflow(workflow),
+            Err(we) => match Action::from_file(path) {
+                Ok(action) => self.register_action(action),
+                Err(ae) => Err(anyhow!("failed to register input as workflow or action"))
+                    .with_context(|| we)
+                    .with_context(|| ae),
+            },
+        }
     }
 
     pub(crate) fn iter_workflows(&self) -> indexmap::map::Iter<'_, InputKey, Workflow> {

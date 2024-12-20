@@ -791,7 +791,7 @@ pub(crate) struct Action {
     /// This action's unique key into zizmor's runtime registry.
     pub(crate) key: InputKey,
     pub(crate) document: yamlpath::Document,
-    inner: action::Composite,
+    inner: action::Action,
 }
 
 impl AsRef<yamlpath::Document> for Action {
@@ -801,7 +801,7 @@ impl AsRef<yamlpath::Document> for Action {
 }
 
 impl Deref for Action {
-    type Target = action::Composite;
+    type Target = action::Action;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -815,6 +815,29 @@ impl Debug for Action {
 }
 
 impl Action {
+    /// Load an action from the given file on disk.
+    pub(crate) fn from_file<P: AsRef<Utf8Path>>(p: P) -> Result<Self> {
+        let contents =
+            std::fs::read_to_string(p.as_ref()).with_context(|| "couldn't read action file")?;
+        let path = p.as_ref().canonicalize_utf8()?;
+
+        Self::from_string(contents, InputKey::local(path)?)
+    }
+
+    /// Load a workflow from a buffer, with an assigned name.
+    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self> {
+        let inner = serde_yaml::from_str(&contents)
+            .with_context(|| format!("invalid GitHub Actions definition: {key}"))?;
+
+        let document = yamlpath::Document::new(&contents)?;
+
+        Ok(Self {
+            key,
+            document,
+            inner,
+        })
+    }
+
     /// This actions's [`SymbolicLocation`].
     pub(crate) fn location(&self) -> SymbolicLocation {
         SymbolicLocation {
@@ -841,11 +864,14 @@ pub(crate) struct CompositeSteps<'a> {
 impl<'a> CompositeSteps<'a> {
     /// Create a new [`CompositeSteps`].
     ///
-    /// Invariant: panics if the given [`Job`] is a reusable job, rather than a "normal" job.
+    /// Invariant: panics if the given [`Action`] is not a composite action.
     fn new(action: &'a Action) -> Self {
-        Self {
-            inner: action.inner.steps.iter().enumerate(),
-            parent: action,
+        match &action.inner.runs {
+            action::Runs::Composite(composite) => Self {
+                inner: composite.steps.iter().enumerate(),
+                parent: action,
+            },
+            _ => panic!("API misuse: can't call steps() on a non-composite action"),
         }
     }
 }
