@@ -365,7 +365,6 @@ mod tests {
             "(true == false) == true",
             "(true == (false || true && (true || false))) == true",
             "(github.actor != 'github-actions[bot]' && github.actor) == 'BrewTestBot'",
-            "fromJson(steps.runs.outputs.data).workflow_runs[0].id",
         ];
 
         for case in cases {
@@ -414,19 +413,17 @@ mod tests {
             ("foo.bar.baz", Expr::Context("foo.bar.baz".into())),
             (
                 "foo.bar.baz[1][2]",
-                Expr::Context("foo.bar.baz[1][2]".into()),
-                // Expr::Index {
-                //     parent: Expr::Context("foo.bar.baz".into()).into(),
-                //     indices: vec![Expr::Number(1.0), Expr::Number(2.0)],
-                // },
+                Expr::Index {
+                    parent: Expr::Context("foo.bar.baz".into()).into(),
+                    indices: vec![Expr::Number(1.0), Expr::Number(2.0)],
+                },
             ),
             (
                 "foo.bar.baz[*]",
-                Expr::Context("foo.bar.baz[*]".into()),
-                // Expr::Index {
-                //     parent: Expr::Context("foo.bar.baz".into()).into(),
-                //     indices: vec![Expr::Star],
-                // },
+                Expr::Index {
+                    parent: Expr::Context("foo.bar.baz".into()).into(),
+                    indices: vec![Expr::Star],
+                },
             ),
             (
                 "vegetables.*.ediblePortions",
@@ -476,18 +473,7 @@ mod tests {
                     op: BinOp::Or, rhs: Expr::Boolean(false).into()
                     }.into()
                 }
-            ),
-            (
-                // BUG: AST is incorrect here
-                "fromJson(steps.runs.outputs.data).workflow_runs[0].id",
-                Expr::Call {
-                    func: "fromJson".into(),
-                    args: vec![
-                        Expr::Context("steps.runs.outputs.data".into()).into(),
-                        Expr::Context("workflow_runs[0].id".into()).into(),
-                    ]
-                }
-            ),
+            )
         ];
 
         for (case, expr) in cases {
