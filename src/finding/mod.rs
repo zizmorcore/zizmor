@@ -188,8 +188,11 @@ impl<'w> SymbolicLocation<'w> {
     }
 
     /// Concretize this `SymbolicLocation`, consuming it in the process.
-    pub(crate) fn concretize(self, workflow: &'w Workflow) -> Result<Location<'w>> {
-        let feature = Locator::new().concretize(workflow, &self)?;
+    pub(crate) fn concretize(
+        self,
+        document: &'w impl AsRef<yamlpath::Document>,
+    ) -> Result<Location<'w>> {
+        let feature = Locator::new().concretize(document, &self)?;
 
         Ok(Location {
             symbolic: self,
@@ -347,11 +350,11 @@ impl<'w> FindingBuilder<'w> {
         self
     }
 
-    pub(crate) fn build(self, workflow: &'w Workflow) -> Result<Finding<'w>> {
+    pub(crate) fn build(self, document: &'w impl AsRef<yamlpath::Document>) -> Result<Finding<'w>> {
         let locations = self
             .locations
             .iter()
-            .map(|l| l.clone().concretize(workflow))
+            .map(|l| l.clone().concretize(document))
             .collect::<Result<Vec<_>>>()?;
 
         if !locations.iter().any(|l| l.symbolic.primary) {

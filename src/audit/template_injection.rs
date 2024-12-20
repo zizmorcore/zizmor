@@ -12,10 +12,7 @@
 
 use std::ops::Deref;
 
-use github_actions_models::{
-    common::expr::LoE,
-    workflow::job::{StepBody, Strategy},
-};
+use github_actions_models::{action, common::expr::LoE, workflow::job, workflow::job::Strategy};
 
 use super::{audit_meta, Audit, Step};
 use crate::{
@@ -242,14 +239,8 @@ impl Audit for TemplateInjection {
     ) -> anyhow::Result<Vec<super::Finding<'a>>> {
         let mut findings = vec![];
 
-        Ok(findings)
-    }
-
-    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
-        let mut findings = vec![];
-
         let (script, script_loc) = match &step.deref().body {
-            StepBody::Uses { uses, with } => {
+            action::StepBody::Uses { uses, with } => {
                 if uses.starts_with("actions/github-script") {
                     match with.get("script") {
                         Some(script) => (
@@ -262,7 +253,48 @@ impl Audit for TemplateInjection {
                     return Ok(findings);
                 }
             }
-            StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
+            action::StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
+        };
+
+        for (expr, severity, confidence, persona) in
+            self.injectable_template_expressions(script, step)
+        {
+            findings.push(
+                Self::finding()
+                    .severity(severity)
+                    .confidence(confidence)
+                    .persona(persona)
+                    .add_location(step.location_with_name())
+                    .add_location(
+                        script_loc.clone().primary().annotated(format!(
+                            "{expr} may expand into attacker-controllable code"
+                        )),
+                    )
+                    .build(step.action())?,
+            )
+        }
+
+        Ok(findings)
+    }
+
+    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
+        let mut findings = vec![];
+
+        let (script, script_loc) = match &step.deref().body {
+            job::StepBody::Uses { uses, with } => {
+                if uses.starts_with("actions/github-script") {
+                    match with.get("script") {
+                        Some(script) => (
+                            &script.to_string(),
+                            step.location().with_keys(&["with".into(), "script".into()]),
+                        ),
+                        None => return Ok(findings),
+                    }
+                } else {
+                    return Ok(findings);
+                }
+            }
+            job::StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
         };
 
         for (expr, severity, confidence, persona) in
