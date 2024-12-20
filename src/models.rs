@@ -879,8 +879,8 @@ impl<'w> CompositeStep<'w> {
     /// Like [`CompositeStep::location`], except with the step's `name`
     /// key as the final path component if present.
     pub(crate) fn location_with_name(&'w self) -> SymbolicLocation<'w> {
-        match self.inner {
-            action::Step::RunShell(_) => self.location().with_keys(&["name".into()]),
+        match self.inner.body {
+            action::StepBody::Run { .. } => self.location().with_keys(&["name".into()]),
             _ => self.location(),
         }
         .annotated("this step")
