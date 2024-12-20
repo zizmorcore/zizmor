@@ -10,7 +10,7 @@ use serde::Serialize;
 use terminal_link::Link;
 
 use crate::{
-    models::{CompositeStep, Job, Step, Workflow},
+    models::{CompositeStep, Job, Step},
     registry::InputKey,
 };
 

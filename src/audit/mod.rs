@@ -162,7 +162,7 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+    fn audit_composite_step<'a>(&self, _step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
         Ok(vec![])
     }
 

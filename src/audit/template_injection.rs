@@ -14,7 +14,7 @@ use std::ops::Deref;
 
 use github_actions_models::{action, common::expr::LoE, workflow::job, workflow::job::Strategy};
 
-use super::{audit_meta, Audit, Step};
+use super::{audit_meta, Audit};
 use crate::{
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Persona, Severity},
@@ -191,7 +191,7 @@ impl TemplateInjection {
                             Some(LoE::Expr(_)) => false,
                             // The matrix may expand to static values according to the context
                             Some(inner) => {
-                                models::Matrix::new(&inner).expands_to_static_values(context)
+                                models::Matrix::new(inner).expands_to_static_values(context)
                             }
                             // Context specifies a matrix, but there is no matrix defined.
                             // This is an invalid workflow so there's no point in flagging it.
