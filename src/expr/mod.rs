@@ -38,13 +38,13 @@ pub(crate) enum Expr {
     Boolean(bool),
     /// The `null` literal.
     Null,
-    /// The `*` literal within an index.
+    /// The `*` literal within an index or context.
     Star,
     /// A function call.
     Call { func: String, args: Vec<Expr> },
     /// A context identifier component, e.g. `github` in `github.actor`.
     Identifier(String),
-    /// A context index component, e.g. `[0]` in `foo[0]`
+    /// A context index component, e.g. `[0]` in `foo[0]`.
     Index(Box<Expr>),
     /// A full context reference.
     Context { raw: String, components: Vec<Expr> },
