@@ -1,7 +1,8 @@
 use crate::audit::{audit_meta, WorkflowAudit};
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::{Step, Uses};
+use crate::models::{Job, Step, Steps, Uses};
 use crate::state::AuditState;
+use anyhow::{anyhow, bail};
 use github_actions_models::common::expr::ExplicitExpr;
 use github_actions_models::common::Env;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
@@ -110,11 +111,25 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
     ]
 });
 
+/// A list of well-know publisher actions
+/// In the future we can retrieve this list from the static API
+static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<Uses>> = LazyLock::new(|| {
+    vec![
+        Uses::from_step("pypa/gh-action-pypi-publish").unwrap(),
+        Uses::from_step("softprops/action-gh-release").unwrap(),
+    ]
+});
+
 #[derive(PartialEq)]
 enum CacheUsage {
     ConditionalOptIn,
     DirectOptIn,
     DefaultActionBehaviour,
+}
+
+enum PublishingArtifactsScenario<'w> {
+    UsingTypicalWorkflowTrigger,
+    UsingWellKnowPublisherAction(Step<'w>),
 }
 
 pub(crate) struct CachePoisoning;
@@ -135,6 +150,38 @@ impl CachePoisoning {
                 _ => false,
             },
         }
+    }
+
+    fn detected_well_known_publisher_step(steps: Steps) -> Option<Step> {
+        steps.into_iter().find(|step| {
+            let Some(Uses::Repository(target_uses)) = step.uses() else {
+                return false;
+            };
+
+            KNOWN_PUBLISHER_ACTIONS.iter().any(|publisher| {
+                let Uses::Repository(well_known_uses) = publisher else {
+                    return false;
+                };
+
+                target_uses.matches(*well_known_uses)
+            })
+        })
+    }
+
+    fn is_job_publishing_artifacts<'w>(
+        &self,
+        trigger: &Trigger,
+        steps: Steps<'w>,
+    ) -> Option<PublishingArtifactsScenario<'w>> {
+        if self.trigger_used_when_publishing_artifacts(trigger) {
+            return Some(PublishingArtifactsScenario::UsingTypicalWorkflowTrigger);
+        };
+
+        let well_know_publisher = CachePoisoning::detected_well_known_publisher_step(steps)?;
+
+        Some(PublishingArtifactsScenario::UsingWellKnowPublisherAction(
+            well_know_publisher,
+        ))
     }
 
     fn evaluate_default_action_behaviour(action: &CacheAwareAction) -> Option<CacheUsage> {
@@ -218,31 +265,18 @@ impl CachePoisoning {
             }
         }
     }
-}
 
-impl WorkflowAudit for CachePoisoning {
-    fn new(_: AuditState) -> anyhow::Result<Self>
-    where
-        Self: Sized,
-    {
-        Ok(Self)
-    }
-
-    fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
-        let mut findings = vec![];
-
-        let trigger = &step.workflow().on;
-
-        if !self.trigger_used_when_publishing_artifacts(trigger) {
-            return Ok(findings);
-        }
-
+    fn uses_cache_aware_step<'w>(
+        &self,
+        step: &Step<'w>,
+        scenario: &PublishingArtifactsScenario<'w>,
+    ) -> anyhow::Result<Finding<'w>> {
         let StepBody::Uses { ref uses, ref with } = &step.deref().body else {
-            return Ok(findings);
+            bail!(anyhow!("Not a uses step"))
         };
 
         let Some(cache_usage) = self.evaluate_cache_usage(uses, with) else {
-            return Ok(findings);
+            bail!(anyhow!("Not using a cache step"))
         };
 
         let (yaml_key, annotation) = match cache_usage {
@@ -251,8 +285,8 @@ impl WorkflowAudit for CachePoisoning {
             CacheUsage::ConditionalOptIn => ("with", "opt-in for caching might happen here"),
         };
 
-        findings.push(
-            Self::finding()
+        match scenario {
+            PublishingArtifactsScenario::UsingTypicalWorkflowTrigger => Self::finding()
                 .confidence(Confidence::Low)
                 .severity(Severity::High)
                 .add_location(
@@ -267,8 +301,49 @@ impl WorkflowAudit for CachePoisoning {
                         .with_keys(&[yaml_key.into()])
                         .annotated(annotation),
                 )
-                .build(step.workflow())?,
-        );
+                .build(step.workflow()),
+            PublishingArtifactsScenario::UsingWellKnowPublisherAction(publisher) => Self::finding()
+                .confidence(Confidence::Low)
+                .severity(Severity::High)
+                .add_location(
+                    publisher
+                        .location()
+                        .with_keys(&["uses".into()])
+                        .annotated("runtime artifacts usually published here"),
+                )
+                .add_location(
+                    step.location()
+                        .primary()
+                        .with_keys(&[yaml_key.into()])
+                        .annotated(annotation),
+                )
+                .build(step.workflow()),
+        }
+    }
+}
+
+impl WorkflowAudit for CachePoisoning {
+    fn new(_: AuditState) -> anyhow::Result<Self>
+    where
+        Self: Sized,
+    {
+        Ok(Self)
+    }
+
+    fn audit_normal_job<'w>(&self, job: &Job<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+        let mut findings = vec![];
+        let steps = job.steps();
+        let trigger = &job.parent().on;
+
+        let Some(scenario) = self.is_job_publishing_artifacts(trigger, steps) else {
+            return Ok(findings);
+        };
+
+        for step in job.steps() {
+            if let Ok(finding) = self.uses_cache_aware_step(&step, &scenario) {
+                findings.push(finding);
+            }
+        }
 
         Ok(findings)
     }

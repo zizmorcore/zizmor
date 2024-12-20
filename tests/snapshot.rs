@@ -314,5 +314,9 @@ fn cache_poisoning() -> Result<()> {
         ))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("cache-poisoning/publisher-step.yml"))
+        .run()?);
+
     Ok(())
 }

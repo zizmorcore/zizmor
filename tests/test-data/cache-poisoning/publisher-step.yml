@@ -1,0 +1,32 @@
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: macos-latest
+    steps:
+      - name: Project Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Setup CI caching
+        uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+
+      - name: Build snapshot version of artifacts
+        id: build
+        run: cargo xtasks darwin-build
+
+      - name: Publish draft release on Github
+        uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974
+        with:
+          name: ${{ steps.build.outputs.version }}
+          tag_name: ${{ steps.build.outputs.version }}
+          token: ${{ secrets.GITHUB_RELEASES_TOKEN }}
+          generate_release_notes: false
+          draft: false
+          files: |
+            target/aarch64-apple-darwin/release/my-app
+            target/x86_64-apple-darwin/release/my-app
