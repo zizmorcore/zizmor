@@ -47,7 +47,6 @@ primary_expr = {
   | boolean
   | null
   | context
-  | function_call
   | "(" ~ primary_expr ~ ")"
 }
 
