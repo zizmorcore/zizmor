@@ -46,8 +46,8 @@ primary_expr = {
   | string
   | boolean
   | null
-  | function_call
   | context
+  | function_call
   | "(" ~ primary_expr ~ ")"
 }
 
@@ -71,10 +71,10 @@ boolean = { "true" | "false" }
 null = { "null" }
 
 /// Context references (e.g., github.event.issue.number)
-context    = ${ identifier ~ (("." ~ (identifier | star)) | index)* }
+context    = ${ (function_call | identifier) ~ (("." ~ (identifier | star)) | index)* }
 star       =  { "*" }
 identifier = @{ (ASCII_ALPHA | "_" | "-") ~ (ASCII_ALPHANUMERIC | "_" | "-")* }
 index      =  { ("[" ~ (or_expr | star) ~ "]") }
 
 /// Function calls
-function_call = { identifier ~ "(" ~ (or_expr ~ ("," ~ or_expr)*)? ~ ")" }
+function_call = !{ identifier ~ "(" ~ (or_expr ~ ("," ~ or_expr)*)? ~ ")" }

@@ -330,6 +330,8 @@ mod tests {
             "(true == false) == true",
             "(true == (false || true && (true || false))) == true",
             "(github.actor != 'github-actions[bot]' && github.actor) == 'BrewTestBot'",
+            "foo()[0]",
+            "fromJson(steps.runs.outputs.data).workflow_runs[0].id",
         ];
 
         for case in cases {
@@ -440,7 +442,11 @@ mod tests {
                     op: BinOp::Or, rhs: Expr::Boolean(false).into()
                     }.into()
                 }
-            )
+            ),
+            // (
+            //     "fromJson(steps.runs.outputs.data).workflow_runs[0].id",
+            //     Expr::Boolean(true),
+            // )
         ];
 
         for (case, expr) in cases {
