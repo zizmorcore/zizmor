@@ -3,7 +3,7 @@
 
 use crate::finding::{Route, SymbolicLocation};
 use crate::registry::InputKey;
-use crate::utils::extract_expressions;
+use crate::utils::{self, extract_expressions};
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8Path;
 use github_actions_models::action;
@@ -21,6 +21,18 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 use terminal_link::Link;
+
+/// Common interfaces between workflow and action steps.
+pub(crate) trait StepCommon {
+    /// Returns whether the given `env.name` environment access is "static,"
+    /// i.e. is not influenced by another expression.
+    fn env_is_static(&self, name: &str) -> bool;
+
+    /// Returns this step's job's strategy, if present.
+    ///
+    /// Composite action steps have no strategy.
+    fn strategy(&self) -> Option<&Strategy>;
+}
 
 /// Represents an entire GitHub Actions workflow.
 ///
@@ -421,18 +433,8 @@ impl<'w> Deref for Step<'w> {
     }
 }
 
-impl<'w> Step<'w> {
-    fn new(index: usize, inner: &'w workflow::job::Step, parent: Job<'w>) -> Self {
-        Self {
-            index,
-            inner,
-            parent,
-        }
-    }
-
-    /// Returns whether the given `env.name` environment access is "static,"
-    /// i.e. is not influenced by another expression.
-    pub(crate) fn env_is_static(&self, name: &str) -> bool {
+impl StepCommon for Step<'_> {
+    fn env_is_static(&self, name: &str) -> bool {
         // Collect each of the step, job, and workflow-level `env` blocks
         // and check each.
         let mut envs = vec![];
@@ -452,27 +454,21 @@ impl<'w> Step<'w> {
         envs.push(&self.job().env);
         envs.push(&self.workflow().env);
 
-        for env in envs {
-            match env {
-                // Any `env:` that is wholly an expression cannot be static.
-                LoE::Expr(_) => return false,
-                LoE::Literal(env) => {
-                    let Some(value) = env.get(name) else {
-                        continue;
-                    };
+        utils::env_is_static(name, &envs)
+    }
 
-                    // A present `env:` value is static if it has no interior expressions.
-                    // TODO: We could instead return the interior expressions here
-                    // for further analysis, to further eliminate false positives
-                    // e.g. `env.foo: ${{ something-safe }}`.
-                    return extract_expressions(&value.to_string()).is_empty();
-                }
-            }
+    fn strategy(&self) -> Option<&Strategy> {
+        self.job().strategy.as_ref()
+    }
+}
+
+impl<'w> Step<'w> {
+    fn new(index: usize, inner: &'w workflow::job::Step, parent: Job<'w>) -> Self {
+        Self {
+            index,
+            inner,
+            parent,
         }
-
-        // No `env:` blocks explicitly contain this name, so it's trivially static.
-        // In practice this is probably an invalid workflow.
-        true
     }
 
     /// Returns this step's parent [`NormalJob`].
@@ -837,16 +833,16 @@ impl Action {
 }
 
 /// An iterable container for steps within a [`Job`].
-pub(crate) struct CompositeSteps<'w> {
-    inner: Enumerate<std::slice::Iter<'w, github_actions_models::action::Step>>,
-    parent: &'w Action,
+pub(crate) struct CompositeSteps<'a> {
+    inner: Enumerate<std::slice::Iter<'a, github_actions_models::action::Step>>,
+    parent: &'a Action,
 }
 
-impl<'w> CompositeSteps<'w> {
+impl<'a> CompositeSteps<'a> {
     /// Create a new [`CompositeSteps`].
     ///
     /// Invariant: panics if the given [`Job`] is a reusable job, rather than a "normal" job.
-    fn new(action: &'w Action) -> Self {
+    fn new(action: &'a Action) -> Self {
         Self {
             inner: action.inner.steps.iter().enumerate(),
             parent: action,
@@ -854,8 +850,8 @@ impl<'w> CompositeSteps<'w> {
     }
 }
 
-impl<'w> Iterator for CompositeSteps<'w> {
-    type Item = CompositeStep<'w>;
+impl<'a> Iterator for CompositeSteps<'a> {
+    type Item = CompositeStep<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let item = self.inner.next();
@@ -871,16 +867,38 @@ pub(crate) struct CompositeStep<'a> {
     /// The step's index within its parent job.
     pub(crate) index: usize,
     /// The inner step model.
-    inner: &'a action::Step,
+    pub(crate) inner: &'a action::Step,
     /// The parent [`Action`].
     pub(crate) parent: &'a Action,
 }
 
-impl Deref for CompositeStep<'_> {
-    type Target = action::Step;
+impl<'a> Deref for CompositeStep<'a> {
+    type Target = &'a action::Step;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+impl StepCommon for CompositeStep<'_> {
+    fn env_is_static(&self, name: &str) -> bool {
+        let env = match &self.body {
+            action::StepBody::Uses { .. } => {
+                panic!("API misuse: can't call env_is_static on a uses: step")
+            }
+            action::StepBody::Run {
+                run: _,
+                working_directory: _,
+                shell: _,
+                env,
+            } => env,
+        };
+
+        utils::env_is_static(name, &[env])
+    }
+
+    fn strategy(&self) -> Option<&Strategy> {
+        None
     }
 }
 
@@ -894,13 +912,13 @@ impl<'a> CompositeStep<'a> {
     }
 
     /// Returns a symbolic location for this [`Step`].
-    pub(crate) fn location(&'a self) -> SymbolicLocation<'a> {
+    pub(crate) fn location(&self) -> SymbolicLocation<'a> {
         self.parent.location().with_composite_step(self)
     }
 
     /// Like [`CompositeStep::location`], except with the step's `name`
     /// key as the final path component if present.
-    pub(crate) fn location_with_name(&'a self) -> SymbolicLocation<'a> {
+    pub(crate) fn location_with_name(&self) -> SymbolicLocation<'a> {
         match self.inner.body {
             action::StepBody::Run { .. } => self.location().with_keys(&["name".into()]),
             _ => self.location(),
@@ -909,53 +927,8 @@ impl<'a> CompositeStep<'a> {
     }
 
     /// Returns this composite step's parent [`Action`].
-    pub(crate) fn action(&self) -> &Action {
+    pub(crate) fn action(&self) -> &'a Action {
         self.parent
-    }
-
-    /// Returns whether the given `env.name` environment access is "static,"
-    /// i.e. is not influenced by another expression.
-    pub(crate) fn env_is_static(&self, name: &str) -> bool {
-        // Collect each of the step and action-level `env` blocks
-        // and check each.
-        let mut envs = vec![];
-
-        match &self.body {
-            action::StepBody::Uses { .. } => {
-                panic!("API misuse: can't call env_is_static on a uses: step")
-            }
-            action::StepBody::Run {
-                run: _,
-                working_directory: _,
-                shell: _,
-                env,
-            } => envs.push(env),
-        };
-
-        envs.push(&self.job().env);
-        envs.push(&self.workflow().env);
-
-        for env in envs {
-            match env {
-                // Any `env:` that is wholly an expression cannot be static.
-                LoE::Expr(_) => return false,
-                LoE::Literal(env) => {
-                    let Some(value) = env.get(name) else {
-                        continue;
-                    };
-
-                    // A present `env:` value is static if it has no interior expressions.
-                    // TODO: We could instead return the interior expressions here
-                    // for further analysis, to further eliminate false positives
-                    // e.g. `env.foo: ${{ something-safe }}`.
-                    return extract_expressions(&value.to_string()).is_empty();
-                }
-            }
-        }
-
-        // No `env:` blocks explicitly contain this name, so it's trivially static.
-        // In practice this is probably an invalid workflow.
-        true
     }
 }
 

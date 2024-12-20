@@ -165,7 +165,7 @@ impl<'w> SymbolicLocation<'w> {
         self.with_keys(&["steps".into(), step.index.into()])
     }
 
-    pub(crate) fn with_composite_step(&self, step: &'w CompositeStep) -> SymbolicLocation<'w> {
+    pub(crate) fn with_composite_step(&self, step: &CompositeStep<'w>) -> SymbolicLocation<'w> {
         self.with_keys(&["steps".into(), step.index.into()])
     }
 
