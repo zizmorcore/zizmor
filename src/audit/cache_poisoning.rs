@@ -116,6 +116,9 @@ static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<Uses>> = LazyLock::new(|| {
     vec![
         Uses::from_step("pypa/gh-action-pypi-publish").unwrap(),
         Uses::from_step("softprops/action-gh-release").unwrap(),
+        Uses::from_step("rubygems/release-gem").unwrap(),
+        Uses::from_step("goreleaser/goreleaser-action").unwrap(),
+        Uses::from_step("jreleaser/release-action").unwrap(),
     ]
 });
 
