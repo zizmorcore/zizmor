@@ -87,7 +87,7 @@ impl Expr {
                 }
             }
             Expr::Context { raw, components } if !matches!(components[0], Expr::Call { .. }) => {
-                contexts.push(&raw)
+                contexts.push(raw)
             }
             Expr::BinOp { lhs, op: _, rhs } => {
                 contexts.extend(lhs.contexts());
@@ -444,7 +444,7 @@ mod tests {
                             ).into(),
                         ),
                     ],
-                ).into(),
+                ),
             ),
             (
                 "foo.bar.baz[*]",
@@ -464,7 +464,7 @@ mod tests {
                             Expr::Star.into(),
                         ),
                     ],
-                ).into(),
+                ),
             ),
             (
                 "vegetables.*.ediblePortions",
@@ -474,12 +474,12 @@ mod tests {
                         Expr::ident(
                             "vegetables",
                         ),
-                        Expr::Star.into(),
+                        Expr::Star,
                         Expr::ident(
                             "ediblePortions",
                         ),
                     ],
-                ).into(),
+                ),
             ),
             (
                 // Sanity check for our associativity: the top level Expr here
