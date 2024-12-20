@@ -94,9 +94,6 @@ impl TemplateInjection {
             // indexing expressions unsafe and `Expr::Star` only occurs
             // within indices at the moment.
             Expr::Star => unreachable!(),
-            // NOTE: Some index operations may be safe, but for now
-            // we consider them all unsafe.
-            Expr::Index { .. } => false,
             // NOTE: Some function calls may be safe, but for now
             // we consider them all unsafe.
             Expr::Call { .. } => false,

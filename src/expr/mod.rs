@@ -40,22 +40,6 @@ pub(crate) enum Expr {
     Null,
     /// The `*` literal within an index.
     Star,
-    /// An index operation.
-    ///
-    /// Three different kinds of expressions can be indexed:
-    ///
-    /// ```
-    /// functionCall[expr]
-    /// context.reference[expr]
-    /// (<arbitrary expression>)[expr]
-    /// ```
-    ///
-    /// Arbitrarily many nestings of indices are allowed,
-    /// e.g. `functionCall()[1][2][3]`.
-    Index {
-        parent: Box<Expr>,
-        indices: Vec<Expr>,
-    },
     /// A function call.
     Call { func: String, args: Vec<Expr> },
     /// A context reference.
@@ -84,13 +68,6 @@ impl Expr {
         let mut contexts = vec![];
 
         match self {
-            Expr::Index { parent, indices } => {
-                contexts.extend(parent.contexts());
-
-                for index in indices {
-                    contexts.extend(index.contexts());
-                }
-            }
             Expr::Call { func: _, args } => {
                 for arg in args {
                     contexts.extend(arg.contexts());
@@ -236,18 +213,6 @@ impl Expr {
                 Rule::boolean => Ok(Expr::Boolean(pair.as_str().parse().unwrap()).into()),
                 Rule::null => Ok(Expr::Null.into()),
                 Rule::star => Ok(Expr::Star.into()),
-                Rule::index => {
-                    // (context | function (expr))[expr]+
-                    let mut pairs = pair.into_inner();
-
-                    Ok(Expr::Index {
-                        parent: parse_pair(pairs.next().unwrap())?,
-                        indices: pairs
-                            .map(|pair| parse_pair(pair).map(|e| *e))
-                            .collect::<Result<_, _>>()?,
-                    }
-                    .into())
-                }
                 Rule::function_call => {
                     let mut pairs = pair.into_inner();
 
@@ -413,17 +378,19 @@ mod tests {
             ("foo.bar.baz", Expr::Context("foo.bar.baz".into())),
             (
                 "foo.bar.baz[1][2]",
-                Expr::Index {
-                    parent: Expr::Context("foo.bar.baz".into()).into(),
-                    indices: vec![Expr::Number(1.0), Expr::Number(2.0)],
-                },
+                Expr::Context("foo.bar.baz[1][2]".into()).into(),
+                // Expr::Index {
+                //     parent: Expr::Context("foo.bar.baz".into()).into(),
+                //     indices: vec![Expr::Number(1.0), Expr::Number(2.0)],
+                // },
             ),
             (
                 "foo.bar.baz[*]",
-                Expr::Index {
-                    parent: Expr::Context("foo.bar.baz".into()).into(),
-                    indices: vec![Expr::Star],
-                },
+                Expr::Context("foo.bar.baz[*]".into()).into(),
+                // Expr::Index {
+                //     parent: Expr::Context("foo.bar.baz".into()).into(),
+                //     indices: vec![Expr::Star],
+                // },
             ),
             (
                 "vegetables.*.ediblePortions",
