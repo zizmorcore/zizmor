@@ -2,7 +2,6 @@ use crate::audit::{audit_meta, WorkflowAudit};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{Job, Step, Steps, Uses};
 use crate::state::AuditState;
-use anyhow::{anyhow, bail};
 use github_actions_models::common::expr::ExplicitExpr;
 use github_actions_models::common::Env;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
@@ -270,14 +269,12 @@ impl CachePoisoning {
         &self,
         step: &Step<'w>,
         scenario: &PublishingArtifactsScenario<'w>,
-    ) -> anyhow::Result<Finding<'w>> {
+    ) -> Option<Finding<'w>> {
         let StepBody::Uses { ref uses, ref with } = &step.deref().body else {
-            bail!(anyhow!("Not a uses step"))
+            return None;
         };
 
-        let Some(cache_usage) = self.evaluate_cache_usage(uses, with) else {
-            bail!(anyhow!("Not using a cache step"))
-        };
+        let cache_usage = self.evaluate_cache_usage(uses, with)?;
 
         let (yaml_key, annotation) = match cache_usage {
             CacheUsage::DefaultActionBehaviour => ("uses", "cache enabled by default here"),
@@ -285,7 +282,7 @@ impl CachePoisoning {
             CacheUsage::ConditionalOptIn => ("with", "opt-in for caching might happen here"),
         };
 
-        match scenario {
+        let finding = match scenario {
             PublishingArtifactsScenario::UsingTypicalWorkflowTrigger => Self::finding()
                 .confidence(Confidence::Low)
                 .severity(Severity::High)
@@ -318,7 +315,9 @@ impl CachePoisoning {
                         .annotated(annotation),
                 )
                 .build(step.workflow()),
-        }
+        };
+
+        finding.ok()
     }
 }
 
@@ -340,7 +339,7 @@ impl WorkflowAudit for CachePoisoning {
         };
 
         for step in job.steps() {
-            if let Ok(finding) = self.uses_cache_aware_step(&step, &scenario) {
+            if let Some(finding) = self.uses_cache_aware_step(&step, &scenario) {
                 findings.push(finding);
             }
         }
