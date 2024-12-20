@@ -77,6 +77,12 @@ impl Expr {
 
     /// Returns all of the contexts used in this expression, regardless
     /// of dataflow.
+    ///
+    /// **IMPORTANT**: This only returns "well-known" contexts, i.e. ones
+    /// that are defined at the top level. In other words, if an expression
+    /// contains both `foo.bar` and `foo().bar`, only the former will be
+    /// returned, as `foo()` can be anything and thus the `bar` access against
+    /// it has no particular meaning.
     pub(crate) fn contexts(&self) -> Vec<&str> {
         let mut contexts = vec![];
 
@@ -86,8 +92,17 @@ impl Expr {
                     contexts.extend(arg.contexts());
                 }
             }
-            Expr::Context { raw, components } if !matches!(components[0], Expr::Call { .. }) => {
-                contexts.push(raw)
+            Expr::Context { raw, components } => {
+                if matches!(components[0], Expr::Call { .. }) {
+                    // If the context looks something like `foo(args).a.b.c`, then
+                    // we need to check each of `args` for contexts but skip
+                    // the trailing identifiers, since those aren't well-known.
+                    contexts.extend(components[0].contexts());
+                } else {
+                    // Otherwise, if the context looks like a normal context,
+                    // we include it in its entirety.
+                    contexts.push(raw)
+                }
             }
             Expr::BinOp { lhs, op: _, rhs } => {
                 contexts.extend(lhs.contexts());
@@ -539,8 +554,15 @@ mod tests {
 
     #[test]
     fn test_expr_contexts() {
-        let expr = Expr::parse("foo.bar && abc && d.e.f").unwrap();
+        let expr = Expr::parse(
+            "foo.bar && abc && d.e.f && andThis(should.work).except.this && but().not.this",
+        )
+        .unwrap();
 
-        assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f"]);
+        assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f", "should.work"]);
+
+        let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id").unwrap();
+
+        assert_eq!(expr.contexts(), ["steps.runs.outputs.data"])
     }
 }
