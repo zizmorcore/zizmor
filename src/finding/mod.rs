@@ -166,7 +166,7 @@ impl<'w> SymbolicLocation<'w> {
     }
 
     pub(crate) fn with_composite_step(&self, step: &CompositeStep<'w>) -> SymbolicLocation<'w> {
-        self.with_keys(&["steps".into(), step.index.into()])
+        self.with_keys(&["runs".into(), "steps".into(), step.index.into()])
     }
 
     /// Adds a human-readable annotation to the current `SymbolicLocation`.

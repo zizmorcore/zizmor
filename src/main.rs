@@ -3,7 +3,7 @@ use std::{io::stdout, process::ExitCode};
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, stream::IsTerminal};
 use anyhow::{anyhow, Context, Result};
-use audit::{Audit, AuditInput};
+use audit::Audit;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
@@ -125,12 +125,12 @@ fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
 
 #[instrument(skip_all)]
 fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry> {
-    let mut workflow_registry = InputRegistry::new();
+    let mut registry = InputRegistry::new();
 
     for input in inputs {
         let input_path = Utf8Path::new(input);
         if input_path.is_file() {
-            workflow_registry
+            registry
                 .register_by_path(input_path)
                 .with_context(|| format!("failed to register workflow: {input_path}"))?;
         } else if input_path.is_dir() {
@@ -144,11 +144,9 @@ fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry
                 let workflow_path = entry.path();
                 match workflow_path.extension() {
                     Some(ext) if ext == "yml" || ext == "yaml" => {
-                        workflow_registry
-                            .register_by_path(workflow_path)
-                            .with_context(|| {
-                                format!("failed to register workflow: {workflow_path}")
-                            })?;
+                        registry.register_by_path(workflow_path).with_context(|| {
+                            format!("failed to register workflow: {workflow_path}")
+                        })?;
                     }
                     _ => continue,
                 }
@@ -190,16 +188,16 @@ fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry
             })?;
 
             for workflow in client.fetch_workflows(&slug)? {
-                workflow_registry.register_workflow(workflow)?;
+                registry.register_input(workflow.into())?;
             }
         }
     }
 
-    if workflow_registry.len() == 0 {
-        return Err(anyhow!("no workflow files collected"));
+    if registry.len() == 0 {
+        return Err(anyhow!("no inputs collected"));
     }
 
-    Ok(workflow_registry)
+    Ok(registry)
 }
 
 fn run() -> Result<ExitCode> {
@@ -229,7 +227,7 @@ fn run() -> Result<ExitCode> {
         .init();
 
     let audit_state = AuditState::new(&app);
-    let workflow_registry = collect_inputs(&app.inputs, &audit_state)?;
+    let registry = collect_inputs(&app.inputs, &audit_state)?;
 
     let config = Config::new(&app)?;
 
@@ -240,7 +238,7 @@ fn run() -> Result<ExitCode> {
             // HACK: https://github.com/rust-lang/rust/issues/48067
             use $rule as base;
             match base::new(audit_state.clone()) {
-                Ok(audit) => audit_registry.register_workflow_audit(base::ident(), Box::new(audit)),
+                Ok(audit) => audit_registry.register_audit(base::ident(), Box::new(audit)),
                 Err(e) => tracing::warn!("skipping {audit}: {e}", audit = base::ident()),
             }
         }};
@@ -265,40 +263,32 @@ fn run() -> Result<ExitCode> {
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");
-        span.pb_set_length((workflow_registry.len() * audit_registry.len()) as u64);
+        span.pb_set_length((registry.len() * audit_registry.len()) as u64);
         span.pb_set_style(
             &ProgressStyle::with_template("[{elapsed_precise}] {bar:!30.cyan/blue} {msg}").unwrap(),
         );
 
         let _guard = span.enter();
 
-        for (_, workflow) in workflow_registry.iter_workflows() {
-            Span::current().pb_set_message(workflow.key.filename());
-            for (name, audit) in audit_registry.iter_workflow_audits() {
-                results.extend(
-                    audit
-                        .audit(AuditInput::Workflow(workflow))
-                        .with_context(|| {
-                            format!(
-                                "{name} failed on {workflow}",
-                                workflow = workflow.filename()
-                            )
-                        })?,
-                );
-                Span::current().pb_inc(1);
-            }
+        for (name, audit) in audit_registry.iter_audits() {
+            Span::current().pb_set_message(name);
 
-            tracing::info!("🌈 completed {workflow}", workflow = workflow.key.path());
+            for (_, input) in registry.iter_inputs() {
+                results.extend(audit.audit(input).with_context(|| {
+                    format!("{name} failed on {input}", input = input.key().filename())
+                })?);
+                Span::current().pb_inc(1);
+                tracing::info!("🌈 completed {input}", input = input.key().path());
+            }
         }
     }
 
     match app.format {
-        OutputFormat::Plain => render::render_findings(&workflow_registry, &results),
+        OutputFormat::Plain => render::render_findings(&registry, &results),
         OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
-        OutputFormat::Sarif => serde_json::to_writer_pretty(
-            stdout(),
-            &sarif::build(&workflow_registry, results.findings()),
-        )?,
+        OutputFormat::Sarif => {
+            serde_json::to_writer_pretty(stdout(), &sarif::build(&registry, results.findings()))?
+        }
     };
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {

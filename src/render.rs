@@ -42,14 +42,14 @@ pub(crate) fn finding_snippet<'w>(
     }
 
     let mut snippets = vec![];
-    for (workflow_key, locations) in locations_by_workflow {
-        let workflow = registry.get_workflow(workflow_key);
+    for (input_key, locations) in locations_by_workflow {
+        let input = registry.get_input(input_key);
 
         snippets.push(
-            Snippet::source(workflow.document.source())
+            Snippet::source(input.document().source())
                 .fold(true)
                 .line_start(1)
-                .origin(workflow.link.as_deref().unwrap_or(workflow_key.path()))
+                .origin(input.link().unwrap_or(input_key.path()))
                 .annotations(locations.iter().map(|loc| {
                     let annotation = match loc.symbolic.link {
                         Some(ref link) => link,

@@ -4,7 +4,7 @@
 use std::{fmt::Display, process::ExitCode};
 
 use crate::{
-    audit::Audit,
+    audit::{Audit, AuditInput},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{Action, RepositoryUses, Workflow},
@@ -105,45 +105,32 @@ impl InputKey {
 }
 
 pub(crate) struct InputRegistry {
-    pub(crate) actions: IndexMap<InputKey, Action>,
-    pub(crate) workflows: IndexMap<InputKey, Workflow>,
+    pub(crate) inputs: IndexMap<InputKey, AuditInput>,
+    // pub(crate) actions: IndexMap<InputKey, Action>,
+    // pub(crate) workflows: IndexMap<InputKey, Workflow>,
 }
 
 impl InputRegistry {
     pub(crate) fn new() -> Self {
         Self {
-            actions: Default::default(),
-            workflows: Default::default(),
+            inputs: Default::default(),
         }
     }
 
     pub(crate) fn len(&self) -> usize {
-        self.workflows.len()
-    }
-
-    pub(crate) fn register_action(&mut self, action: Action) -> Result<()> {
-        if self.workflows.contains_key(&action.key) {
-            return Err(anyhow!(
-                "can't register {key} more than once",
-                key = action.key
-            ));
-        }
-
-        self.actions.insert(action.key.clone(), action);
-
-        Ok(())
+        self.inputs.len()
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn register_workflow(&mut self, workflow: Workflow) -> Result<()> {
-        if self.workflows.contains_key(&workflow.key) {
+    pub(crate) fn register_input(&mut self, input: AuditInput) -> Result<()> {
+        if self.inputs.contains_key(input.key()) {
             return Err(anyhow!(
                 "can't register {key} more than once",
-                key = workflow.key
+                key = input.key()
             ));
         }
 
-        self.workflows.insert(workflow.key.clone(), workflow);
+        self.inputs.insert(input.key().clone(), input);
 
         Ok(())
     }
@@ -151,9 +138,9 @@ impl InputRegistry {
     #[instrument(skip(self))]
     pub(crate) fn register_by_path(&mut self, path: &Utf8Path) -> Result<()> {
         match Workflow::from_file(path) {
-            Ok(workflow) => self.register_workflow(workflow),
+            Ok(workflow) => self.register_input(workflow.into()),
             Err(we) => match Action::from_file(path) {
-                Ok(action) => self.register_action(action),
+                Ok(action) => self.register_input(action.into()),
                 Err(ae) => Err(anyhow!("failed to register input as workflow or action"))
                     .with_context(|| we)
                     .with_context(|| ae),
@@ -161,14 +148,14 @@ impl InputRegistry {
         }
     }
 
-    pub(crate) fn iter_workflows(&self) -> indexmap::map::Iter<'_, InputKey, Workflow> {
-        self.workflows.iter()
+    pub(crate) fn iter_inputs(&self) -> indexmap::map::Iter<'_, InputKey, AuditInput> {
+        self.inputs.iter()
     }
 
-    pub(crate) fn get_workflow(&self, key: &InputKey) -> &Workflow {
-        self.workflows
+    pub(crate) fn get_input(&self, key: &InputKey) -> &AuditInput {
+        self.inputs
             .get(key)
-            .expect("API misuse: requested an un-registered workflow")
+            .expect("API misuse: requested an un-registered input")
     }
 
     /// Returns a subjective relative path for the given workflow.
@@ -207,11 +194,11 @@ impl AuditRegistry {
         self.workflow_audits.len()
     }
 
-    pub(crate) fn register_workflow_audit(&mut self, ident: &'static str, audit: Box<dyn Audit>) {
+    pub(crate) fn register_audit(&mut self, ident: &'static str, audit: Box<dyn Audit>) {
         self.workflow_audits.insert(ident, audit);
     }
 
-    pub(crate) fn iter_workflow_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit>> {
+    pub(crate) fn iter_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit>> {
         self.workflow_audits.iter()
     }
 }

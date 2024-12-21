@@ -78,7 +78,7 @@ impl Workflow {
         let link = match key {
             InputKey::Local(_) => None,
             InputKey::Remote(_) => {
-                // NOTE: WorkflowKey's Display produces a URL, hence `key.to_string()`.
+                // NOTE: InputKey's Display produces a URL, hence `key.to_string()`.
                 Some(Link::new(key.path(), &key.to_string()).to_string())
             }
         };
@@ -97,14 +97,6 @@ impl Workflow {
         let path = p.as_ref().canonicalize_utf8()?;
 
         Self::from_string(contents, InputKey::local(path)?)
-    }
-
-    /// Returns the filename (i.e. base component) of the loaded workflow.
-    ///
-    /// For example, if the workflow was loaded from `/foo/bar/baz.yml`,
-    /// [`Self::filename()`] returns `baz.yml`.
-    pub(crate) fn filename(&self) -> &str {
-        self.key.filename()
     }
 
     /// This workflow's [`SymbolicLocation`].
@@ -790,6 +782,7 @@ impl<'a> Uses<'a> {
 pub(crate) struct Action {
     /// This action's unique key into zizmor's runtime registry.
     pub(crate) key: InputKey,
+    pub(crate) link: Option<String>,
     pub(crate) document: yamlpath::Document,
     inner: action::Action,
 }
@@ -831,8 +824,17 @@ impl Action {
 
         let document = yamlpath::Document::new(&contents)?;
 
+        let link = match key {
+            InputKey::Local(_) => None,
+            InputKey::Remote(_) => {
+                // NOTE: InputKey's Display produces a URL, hence `key.to_string()`.
+                Some(Link::new(key.path(), &key.to_string()).to_string())
+            }
+        };
+
         Ok(Self {
             key,
+            link,
             document,
             inner,
         })

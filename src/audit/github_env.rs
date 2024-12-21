@@ -165,7 +165,7 @@ impl Audit for GitHubEnv {
             let shell = step.shell().unwrap_or_else(|| {
                 tracing::warn!(
                     "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}",
-                    workflow = step.workflow().filename(),
+                    workflow = step.workflow().key.filename(),
                     job = step.parent.id,
                     stepno = step.index
                 );

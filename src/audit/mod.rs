@@ -6,6 +6,7 @@ use tracing::instrument;
 use crate::{
     finding::{Finding, FindingBuilder},
     models::{Action, CompositeStep, Job, Step, Workflow},
+    registry::InputKey,
     state::AuditState,
 };
 
@@ -25,19 +26,42 @@ pub(crate) mod unpinned_uses;
 pub(crate) mod use_trusted_publishing;
 
 #[derive(Debug)]
-pub(crate) enum AuditInput<'a> {
-    Workflow(&'a Workflow),
-    Action(&'a Action),
+pub(crate) enum AuditInput {
+    Workflow(Workflow),
+    Action(Action),
 }
 
-impl<'a> From<&'a Workflow> for AuditInput<'a> {
-    fn from(value: &'a Workflow) -> Self {
+impl AuditInput {
+    pub(crate) fn key(&self) -> &InputKey {
+        match self {
+            AuditInput::Workflow(workflow) => &workflow.key,
+            AuditInput::Action(action) => &action.key,
+        }
+    }
+
+    pub(crate) fn document(&self) -> &yamlpath::Document {
+        match self {
+            AuditInput::Workflow(workflow) => &workflow.document,
+            AuditInput::Action(action) => &action.document,
+        }
+    }
+
+    pub(crate) fn link(&self) -> Option<&str> {
+        match self {
+            AuditInput::Workflow(workflow) => workflow.link.as_deref(),
+            AuditInput::Action(action) => action.link.as_deref(),
+        }
+    }
+}
+
+impl From<Workflow> for AuditInput {
+    fn from(value: Workflow) -> Self {
         Self::Workflow(value)
     }
 }
 
-impl<'a> From<&'a Action> for AuditInput<'a> {
-    fn from(value: &'a Action) -> Self {
+impl From<Action> for AuditInput {
+    fn from(value: Action) -> Self {
         Self::Action(value)
     }
 }
@@ -181,7 +205,7 @@ pub(crate) trait Audit: AuditCore {
     /// Implementors **should not** override this blanket implementation,
     /// since it's marked with tracing instrumentation.
     #[instrument(skip(self))]
-    fn audit<'w>(&self, input: AuditInput<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&self, input: &'w AuditInput) -> Result<Vec<Finding<'w>>> {
         match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow),
             AuditInput::Action(action) => self.audit_action(action),
