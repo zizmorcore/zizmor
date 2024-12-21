@@ -270,16 +270,15 @@ fn run() -> Result<ExitCode> {
 
         let _guard = span.enter();
 
-        for (name, audit) in audit_registry.iter_audits() {
-            Span::current().pb_set_message(name);
-
-            for (_, input) in registry.iter_inputs() {
+        for (_, input) in registry.iter_inputs() {
+            Span::current().pb_set_message(input.key().filename());
+            for (name, audit) in audit_registry.iter_audits() {
                 results.extend(audit.audit(input).with_context(|| {
                     format!("{name} failed on {input}", input = input.key().filename())
                 })?);
                 Span::current().pb_inc(1);
-                tracing::info!("🌈 completed {input}", input = input.key().path());
             }
+            tracing::info!("🌈 completed {input}", input = input.key().path());
         }
     }
 
