@@ -55,7 +55,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
         CacheAwareAction {
             uses: Uses::from_step("actions/setup-go").unwrap(),
             cache_control: CacheControl::OptIn("cache"),
-            control_value: ControlValue::String,
+            control_value: ControlValue::Boolean,
             caching_by_default: true,
         },
         // https://github.com/actions/setup-node/blob/main/action.yml
