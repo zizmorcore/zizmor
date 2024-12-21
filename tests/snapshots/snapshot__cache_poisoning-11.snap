@@ -1,0 +1,60 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"cache-poisoning/issue-343-repro.yml\")).run()?"
+snapshot_kind: text
+---
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:5:1
+   |
+ 5 | / on:
+ 6 | |   push:
+ 7 | |     tags:
+ 8 | |       - "v*.*.*"
+   | |________________^ generally used when publishing artifacts generated at runtime
+ 9 |
+...
+24 |         - name: true-positive-2
+25 |           uses: actions/setup-go@v5
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+   |
+   = note: audit confidence → Low
+
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:5:1
+   |
+ 5 | / on:
+ 6 | |   push:
+ 7 | |     tags:
+ 8 | |       - "v*.*.*"
+   | |________________^ generally used when publishing artifacts generated at runtime
+ 9 |
+...
+31 |           uses: actions/setup-go@v5
+32 | /         with:
+33 | |           go-version: stable
+34 | |           cache: true
+35 | |
+36 | |       # Finding because setup enables cache explicitly
+   | |______________________________________________________^ opt-in for caching here
+   |
+   = note: audit confidence → Low
+
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:5:1
+   |
+ 5 | / on:
+ 6 | |   push:
+ 7 | |     tags:
+ 8 | |       - "v*.*.*"
+   | |________________^ generally used when publishing artifacts generated at runtime
+ 9 |
+...
+38 |           uses: actions/setup-go@v5
+39 | /         with:
+40 | |           go-version: stable
+41 | |           cache: "true"
+   | |________________________^ opt-in for caching here
+   |
+   = note: audit confidence → Low
+
+7 findings (4 suppressed): 0 unknown, 0 informational, 0 low, 0 medium, 3 high
