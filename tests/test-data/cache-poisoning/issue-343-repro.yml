@@ -1,0 +1,41 @@
+# minimized from https://github.com/woodruffw/zizmor/pull/343
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # No finding, since cache is explicitly disabled.
+      - name: true-negative-1
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+
+      # Finding because setup-go enables cache by default
+      - name: true-positive-2
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      # Finding because setup enables cache explicitly
+      - name: true-positive-2
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      # Finding because setup enables cache explicitly
+      - name: true-positive-3
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: "true"

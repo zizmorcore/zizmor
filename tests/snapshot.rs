@@ -257,6 +257,12 @@ fn template_injection() -> Result<()> {
         .workflow(workflow_under_test("template-injection/static-env.yml"))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "template-injection/issue-339-repro.yml"
+        ))
+        .run()?);
+
     Ok(())
 }
 
@@ -316,6 +322,10 @@ fn cache_poisoning() -> Result<()> {
 
     insta::assert_snapshot!(zizmor()
         .workflow(workflow_under_test("cache-poisoning/publisher-step.yml"))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("cache-poisoning/issue-343-repro.yml"))
         .run()?);
 
     Ok(())

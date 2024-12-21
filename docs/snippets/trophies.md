@@ -323,6 +323,12 @@
 
     python/miss-islington#705
 
+-   ![](https://github.com/rubygems.png?size=40){ width="40" loading=lazy align=left } rubygems/rubygems.org
+
+    ---
+
+    rubygems/rubygems.org#5350
+
 -   ![](https://github.com/rust-lang.png?size=40){ width="40" loading=lazy align=left } rust-lang/crates.io
 
     ---
@@ -376,3 +382,9 @@
     ---
 
     vlang/v#22681
+
+-   ![](https://github.com/wagtail.png?size=40){ width="40" loading=lazy align=left } wagtail/wagtail-localize
+
+    ---
+
+    wagtail/wagtail-localize#843

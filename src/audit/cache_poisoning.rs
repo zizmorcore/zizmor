@@ -55,7 +55,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
         CacheAwareAction {
             uses: Uses::from_step("actions/setup-go").unwrap(),
             cache_control: CacheControl::OptIn("cache"),
-            control_value: ControlValue::String,
+            control_value: ControlValue::Boolean,
             caching_by_default: true,
         },
         // https://github.com/actions/setup-node/blob/main/action.yml
@@ -114,11 +114,29 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
 /// In the future we can retrieve this list from the static API
 static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<Uses>> = LazyLock::new(|| {
     vec![
+        // Public packages and/or binary distribution channels
         Uses::from_step("pypa/gh-action-pypi-publish").unwrap(),
-        Uses::from_step("softprops/action-gh-release").unwrap(),
         Uses::from_step("rubygems/release-gem").unwrap(),
-        Uses::from_step("goreleaser/goreleaser-action").unwrap(),
         Uses::from_step("jreleaser/release-action").unwrap(),
+        Uses::from_step("goreleaser/goreleaser-action").unwrap(),
+        // Github releases
+        Uses::from_step("softprops/action-gh-release").unwrap(),
+        Uses::from_step("release-drafter/release-drafter").unwrap(),
+        Uses::from_step("googleapis/release-please-action").unwrap(),
+        // Container registries
+        Uses::from_step("docker/build-push-action").unwrap(),
+        Uses::from_step("redhat-actions/push-to-registry").unwrap(),
+        // Cloud + Edge providers
+        Uses::from_step("aws-actions/amazon-ecs-deploy-task-definition ").unwrap(),
+        Uses::from_step("aws-actions/aws-cloudformation-github-deploy").unwrap(),
+        Uses::from_step("Azure/aci-deploy").unwrap(),
+        Uses::from_step("Azure/container-apps-deploy-action").unwrap(),
+        Uses::from_step("Azure/functions-action").unwrap(),
+        Uses::from_step("Azure/sql-action").unwrap(),
+        Uses::from_step("cloudflare/wrangler-action").unwrap(),
+        Uses::from_step("google-github-actions/deploy-appengine").unwrap(),
+        Uses::from_step("google-github-actions/deploy-cloudrun").unwrap(),
+        Uses::from_step("google-github-actions/deploy-cloud-functions").unwrap(),
     ]
 });
 

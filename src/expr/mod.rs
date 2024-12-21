@@ -38,30 +38,16 @@ pub(crate) enum Expr {
     Boolean(bool),
     /// The `null` literal.
     Null,
-    /// The `*` literal within an index.
+    /// The `*` literal within an index or context.
     Star,
-    /// An index operation.
-    ///
-    /// Three different kinds of expressions can be indexed:
-    ///
-    /// ```
-    /// functionCall[expr]
-    /// context.reference[expr]
-    /// (<arbitrary expression>)[expr]
-    /// ```
-    ///
-    /// Arbitrarily many nestings of indices are allowed,
-    /// e.g. `functionCall()[1][2][3]`.
-    Index {
-        parent: Box<Expr>,
-        indices: Vec<Expr>,
-    },
     /// A function call.
     Call { func: String, args: Vec<Expr> },
-    /// A context reference.
-    // TODO: This should probably be a vec of parts internally,
-    // to expose the individual component/star parts.
-    Context(String),
+    /// A context identifier component, e.g. `github` in `github.actor`.
+    Identifier(String),
+    /// A context index component, e.g. `[0]` in `foo[0]`.
+    Index(Box<Expr>),
+    /// A full context reference.
+    Context { raw: String, components: Vec<Expr> },
     /// A binary operation, either logical or arithmetic.
     BinOp {
         lhs: Box<Expr>,
@@ -78,31 +64,52 @@ impl Expr {
         Self::String(s.into()).into()
     }
 
+    pub(crate) fn ident(i: impl Into<String>) -> Self {
+        Self::Identifier(i.into())
+    }
+
+    pub(crate) fn context(r: impl Into<String>, components: impl Into<Vec<Expr>>) -> Self {
+        Self::Context {
+            raw: r.into(),
+            components: components.into(),
+        }
+    }
+
     /// Returns all of the contexts used in this expression, regardless
     /// of dataflow.
+    ///
+    /// **IMPORTANT**: This only returns "well-known" contexts, i.e. ones
+    /// that are defined at the top level. In other words, if an expression
+    /// contains both `foo.bar` and `foo().bar`, only the former will be
+    /// returned, as `foo()` can be anything and thus the `bar` access against
+    /// it has no particular meaning.
     pub(crate) fn contexts(&self) -> Vec<&str> {
         let mut contexts = vec![];
 
         match self {
-            Expr::Index { parent, indices } => {
-                contexts.extend(parent.contexts());
-
-                for index in indices {
-                    contexts.extend(index.contexts());
-                }
-            }
             Expr::Call { func: _, args } => {
                 for arg in args {
                     contexts.extend(arg.contexts());
                 }
             }
-            Expr::Context(ctx) => contexts.push(ctx.as_str()),
+            Expr::Context { raw, components } => {
+                if matches!(components[0], Expr::Call { .. }) {
+                    // If the context looks something like `foo(args).a.b.c`, then
+                    // we need to check each of `args` for contexts but skip
+                    // the trailing identifiers, since those aren't well-known.
+                    contexts.extend(components[0].contexts());
+                } else {
+                    // Otherwise, if the context looks like a normal context,
+                    // we include it in its entirety.
+                    contexts.push(raw)
+                }
+            }
             Expr::BinOp { lhs, op: _, rhs } => {
                 contexts.extend(lhs.contexts());
                 contexts.extend(rhs.contexts());
             }
             Expr::UnOp { op: _, expr } => contexts.extend(expr.contexts()),
-            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null | Expr::Star => (),
+            _ => (),
         }
 
         contexts
@@ -236,18 +243,6 @@ impl Expr {
                 Rule::boolean => Ok(Expr::Boolean(pair.as_str().parse().unwrap()).into()),
                 Rule::null => Ok(Expr::Null.into()),
                 Rule::star => Ok(Expr::Star.into()),
-                Rule::index => {
-                    // (context | function (expr))[expr]+
-                    let mut pairs = pair.into_inner();
-
-                    Ok(Expr::Index {
-                        parent: parse_pair(pairs.next().unwrap())?,
-                        indices: pairs
-                            .map(|pair| parse_pair(pair).map(|e| *e))
-                            .collect::<Result<_, _>>()?,
-                    }
-                    .into())
-                }
                 Rule::function_call => {
                     let mut pairs = pair.into_inner();
 
@@ -262,8 +257,28 @@ impl Expr {
                     }
                     .into())
                 }
-                Rule::context => Ok(Expr::Context(pair.as_str().into()).into()),
-                r => panic!("fuck: {r:?}"),
+                Rule::identifier => Ok(Expr::ident(pair.as_str()).into()),
+                Rule::index => {
+                    Ok(Expr::Index(parse_pair(pair.into_inner().next().unwrap())?).into())
+                }
+                Rule::context => {
+                    let raw = pair.as_str().to_string();
+                    let pairs = pair.into_inner();
+
+                    let mut inner: Vec<Expr> = pairs
+                        .map(|pair| parse_pair(pair).map(|e| *e))
+                        .collect::<Result<_, _>>()?;
+
+                    // NOTE(ww): Annoying specialization: the `context` rule
+                    // wholly encloses the `function_call` rule, so we clean up
+                    // the AST slightly to turn `Context { Call }` into just `Call`.
+                    if inner.len() == 1 && matches!(inner[0], Expr::Call { .. }) {
+                        Ok(inner.remove(0).into())
+                    } else {
+                        Ok(Expr::context(raw, inner).into())
+                    }
+                }
+                r => panic!("unrecognized rule: {r:?}"),
             }
         }
 
@@ -365,6 +380,8 @@ mod tests {
             "(true == false) == true",
             "(true == (false || true && (true || false))) == true",
             "(github.actor != 'github-actions[bot]' && github.actor) == 'BrewTestBot'",
+            "foo()[0]",
+            "fromJson(steps.runs.outputs.data).workflow_runs[0].id",
         ];
 
         for case in cases {
@@ -410,24 +427,74 @@ mod tests {
                     args: vec![Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)],
                 },
             ),
-            ("foo.bar.baz", Expr::Context("foo.bar.baz".into())),
+            (
+                "foo.bar.baz",
+                Expr::context(
+                    "foo.bar.baz",
+                    [Expr::ident("foo"), Expr::ident("bar"), Expr::ident("baz")]
+                )
+            ),
             (
                 "foo.bar.baz[1][2]",
-                Expr::Index {
-                    parent: Expr::Context("foo.bar.baz".into()).into(),
-                    indices: vec![Expr::Number(1.0), Expr::Number(2.0)],
-                },
+                Expr::context(
+                    "foo.bar.baz[1][2]",
+                    [
+                        Expr::ident(
+                            "foo",
+                        ),
+                        Expr::ident(
+                            "bar",
+                        ),
+                        Expr::ident(
+                            "baz",
+                        ),
+                        Expr::Index(
+                            Expr::Number(
+                                1.0,
+                            ).into(),
+                        ),
+                        Expr::Index(
+                            Expr::Number(
+                                2.0,
+                            ).into(),
+                        ),
+                    ],
+                ),
             ),
             (
                 "foo.bar.baz[*]",
-                Expr::Index {
-                    parent: Expr::Context("foo.bar.baz".into()).into(),
-                    indices: vec![Expr::Star],
-                },
+                Expr::context(
+                    "foo.bar.baz[*]",
+                    [
+                        Expr::ident(
+                            "foo",
+                        ),
+                        Expr::ident(
+                            "bar",
+                        ),
+                        Expr::ident(
+                            "baz",
+                        ),
+                        Expr::Index(
+                            Expr::Star.into(),
+                        ),
+                    ],
+                ),
             ),
             (
                 "vegetables.*.ediblePortions",
-                Expr::Context("vegetables.*.ediblePortions".into()),
+                Expr::context(
+                    "vegetables.*.ediblePortions",
+                    vec![
+                        Expr::ident(
+                            "vegetables",
+                        ),
+                        Expr::Star,
+                        Expr::ident(
+                            "ediblePortions",
+                        ),
+                    ],
+                ),
             ),
             (
                 // Sanity check for our associativity: the top level Expr here
@@ -436,8 +503,12 @@ mod tests {
                 Expr::BinOp {
                     lhs: Expr::BinOp {
                         lhs: Expr::BinOp {
-                            lhs: Expr::Context(
-                                "github.ref".into(),
+                            lhs: Expr::context(
+                                "github.ref",
+                                [
+                                    Expr::ident("github"),
+                                    Expr::ident("ref"),
+                                ],
                             ).into(),
                             op: BinOp::Eq,
                             rhs: Expr::string("refs/heads/main"),
@@ -473,7 +544,7 @@ mod tests {
                     op: BinOp::Or, rhs: Expr::Boolean(false).into()
                     }.into()
                 }
-            )
+            ),
         ];
 
         for (case, expr) in cases {
@@ -483,8 +554,15 @@ mod tests {
 
     #[test]
     fn test_expr_contexts() {
-        let expr = Expr::parse("foo.bar && abc && d.e.f").unwrap();
+        let expr = Expr::parse(
+            "foo.bar && abc && d.e.f && andThis(should.work).except.this && but().not.this",
+        )
+        .unwrap();
 
-        assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f"]);
+        assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f", "should.work"]);
+
+        let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id").unwrap();
+
+        assert_eq!(expr.contexts(), ["steps.runs.outputs.data"])
     }
 }
