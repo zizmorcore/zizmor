@@ -1,0 +1,18 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"template-injection/issue-339-repro.yml\")).run()?"
+snapshot_kind: text
+---
+info[template-injection]: code injection via template expansion
+  --> @@INPUT@@:27:9
+   |
+27 |         - name: "Record run id"
+   |           --------------------- info: this step
+28 |           id: run-id
+29 | /         run: |
+30 | |           echo "run-id=${{ fromJson(steps.runs.outputs.data).workflow_runs[0].id }}" >> "$GITHUB_OUTPUT"
+   | |_________________________________________________________________________________________________________- info: steps.runs.outputs.data may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+
+1 finding: 0 unknown, 1 informational, 0 low, 0 medium, 0 high
