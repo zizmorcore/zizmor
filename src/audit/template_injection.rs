@@ -31,7 +31,7 @@ audit_meta!(
     "code injection via template expansion"
 );
 
-/// Context members that are believed to be always safe.
+/// Contexts that are believed to be always safe.
 const SAFE_CONTEXTS: &[&str] = &[
     // The GitHub event name (i.e. trigger) is itself safe.
     "github.event_name",
@@ -170,7 +170,7 @@ impl TemplateInjection {
                             Persona::default(),
                         ));
                     }
-                } else if context.starts_with("github.event.") || context == "github.ref_name" {
+                } else if context.starts_with("github.event.") || context.starts_with("github.") {
                     // TODO: Filter these more finely; not everything in the event
                     // context is actually attacker-controllable.
                     bad_expressions.push((
