@@ -90,19 +90,15 @@ impl TemplateInjection {
             Expr::String(_) => true,
             Expr::Boolean(_) => true,
             Expr::Null => true,
-            // NOTE: Currently unreachable, since we churlishly consider
-            // indexing expressions unsafe and `Expr::Star` only occurs
-            // within indices at the moment.
-            Expr::Star => unreachable!(),
-            // NOTE: Some index operations may be safe, but for now
-            // we consider them all unsafe.
-            Expr::Index { .. } => false,
+            // NOTE: Currently unreachable, since these only occur
+            // within Expr::Context and we handle that at the top-level.
+            Expr::Star | Expr::Identifier(_) | Expr::Index(_) => unreachable!(),
             // NOTE: Some function calls may be safe, but for now
             // we consider them all unsafe.
             Expr::Call { .. } => false,
             // We consider all context accesses unsafe. This isn't true,
             // but our audit filters the safe ones later on.
-            Expr::Context(_) => false,
+            Expr::Context { .. } => false,
             Expr::BinOp { lhs, op, rhs } => {
                 match op {
                     // `==` and `!=` are always safe, since they evaluate to

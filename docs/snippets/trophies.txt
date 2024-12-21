@@ -58,6 +58,7 @@ python-poetry/poetry-plugin-export#308
 python-poetry/poetry-plugin-bundle#125
 python-telegram-bot/python-telegram-bot#4606
 PyO3/pyo3#4774
+rubygems/rubygems.org#5350
 rust-lang/crates.io#10176
 rustls/rustls#2261
 rustls/tokio-rustls#96
@@ -67,3 +68,4 @@ termcolor/termcolor#89
 tornadoweb/tornado#3438
 ultrajson/ultrajson#650
 vlang/v#22681
+wagtail/wagtail-localize#843
