@@ -134,6 +134,8 @@ fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry
                 .register_by_path(input_path)
                 .with_context(|| format!("failed to register input: {input_path}"))?;
         } else if input_path.is_dir() {
+            // TODO: walk directory to discover composite actions.
+
             let mut absolute = input_path.canonicalize_utf8()?;
             if !absolute.ends_with(".github/workflows") {
                 absolute.push(".github/workflows")
@@ -190,6 +192,8 @@ fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry
             for workflow in client.fetch_workflows(&slug)? {
                 registry.register_input(workflow.into())?;
             }
+
+            // TODO: figure out how to collect composite actions here too
         }
     }
 
