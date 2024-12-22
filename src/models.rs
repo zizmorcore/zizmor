@@ -777,7 +777,7 @@ impl<'a> Uses<'a> {
 
 /// Represents an entire (composite) action.
 ///
-/// This type implements [`Deref`] for [`action::Composite`], providing
+/// This type implements [`Deref`] for [`action::Action`], providing
 /// access to the underlying data model.
 pub(crate) struct Action {
     /// This action's unique key into zizmor's runtime registry.
@@ -812,6 +812,7 @@ impl Action {
     pub(crate) fn from_file<P: AsRef<Utf8Path>>(p: P) -> Result<Self> {
         let contents =
             std::fs::read_to_string(p.as_ref()).with_context(|| "couldn't read action file")?;
+
         let path = p.as_ref().canonicalize_utf8()?;
 
         Self::from_string(contents, InputKey::local(path)?)
@@ -819,7 +820,7 @@ impl Action {
 
     /// Load a workflow from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self> {
-        let inner = serde_yaml::from_str(&contents)
+        let inner: action::Action = serde_yaml::from_str(&contents)
             .with_context(|| format!("invalid GitHub Actions definition: {key}"))?;
 
         let document = yamlpath::Document::new(&contents)?;
@@ -831,6 +832,11 @@ impl Action {
                 Some(Link::new(key.path(), &key.to_string()).to_string())
             }
         };
+
+        // For now, only allow composite actions.
+        if !matches!(inner.runs, action::Runs::Composite(_)) {
+            bail!("can't audit non-composite action: {key}");
+        }
 
         Ok(Self {
             key,
