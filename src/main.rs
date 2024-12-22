@@ -98,10 +98,10 @@ struct App {
 
     /// The inputs to audit.
     ///
-    /// These can be individual workflow filenames, entire directories,
-    /// or a `user/repo` slug for a GitHub repository. In the latter case,
-    /// a `@ref` can be appended to audit the repository at a particular
-    /// git reference state.
+    /// These can be individual workflow filenames, action definitions
+    /// (typically `action.yml`), entire directories, or a `user/repo` slug
+    /// for a GitHub repository. In the latter case, a `@ref` can be appended
+    /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
 }
@@ -132,7 +132,7 @@ fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry
         if input_path.is_file() {
             registry
                 .register_by_path(input_path)
-                .with_context(|| format!("failed to register workflow: {input_path}"))?;
+                .with_context(|| format!("failed to register input: {input_path}"))?;
         } else if input_path.is_dir() {
             let mut absolute = input_path.canonicalize_utf8()?;
             if !absolute.ends_with(".github/workflows") {
@@ -141,12 +141,12 @@ fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry
 
             for entry in absolute.read_dir_utf8()? {
                 let entry = entry?;
-                let workflow_path = entry.path();
-                match workflow_path.extension() {
+                let input_path = entry.path();
+                match input_path.extension() {
                     Some(ext) if ext == "yml" || ext == "yaml" => {
-                        registry.register_by_path(workflow_path).with_context(|| {
-                            format!("failed to register workflow: {workflow_path}")
-                        })?;
+                        registry
+                            .register_by_path(input_path)
+                            .with_context(|| format!("failed to register input: {input_path}"))?;
                     }
                     _ => continue,
                 }
