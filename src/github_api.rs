@@ -390,13 +390,11 @@ impl Client {
                     entry.read_to_string(&mut contents)?;
                     inputs.push(Workflow::from_string(contents, key)?.into());
                 }
-            } else {
-                if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
-                    let key = InputKey::remote(slug, file_path.to_string())?;
-                    let mut contents = String::with_capacity(entry.size() as usize);
-                    entry.read_to_string(&mut contents)?;
-                    inputs.push(Action::from_string(contents, key)?.into());
-                }
+            } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
+                let key = InputKey::remote(slug, file_path.to_string())?;
+                let mut contents = String::with_capacity(entry.size() as usize);
+                entry.read_to_string(&mut contents)?;
+                inputs.push(Action::from_string(contents, key)?.into());
             }
         }
 

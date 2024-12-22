@@ -288,7 +288,7 @@ fn collect_inputs(
         } else {
             // If this input isn't a file or directory, it's probably an
             // `owner/repo(@ref)?` slug.
-            collect_from_repo_slug(&input, mode, state, &mut registry)?;
+            collect_from_repo_slug(input, mode, state, &mut registry)?;
         }
     }
 
