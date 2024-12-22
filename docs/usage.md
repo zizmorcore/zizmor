@@ -98,8 +98,8 @@ sensitive `zizmor`'s analyses are:
 
     This persona is ideal for finding things that are a good idea
     to clean up or resolve, but are likely not immediately actionable
-    security findings (or are actionable, but indicate a intentional
-    security decision by the workflow author).
+    security findings (or are actionable, but suggest a intentional
+    security decision by the workflow/action author).
 
     For example, using the pedantic persona will flag the following
     with an `unpinned-uses` finding, since it uses a symbolic reference
