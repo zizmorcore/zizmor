@@ -19,9 +19,9 @@ enum CacheControlValue {
 
 /// The input that controls the behaviour of a configurable caching Action
 enum CacheControlInput {
-    /// Opt-in means that cache becomes ENABLE when the control value matches
+    /// Opt-in means that cache becomes **enabled** when the control value matches.
     OptIn(&'static str),
-    /// Opt-out means that cache becomes DISABLED when the control value matches
+    /// Opt-out means that cache becomes **disabled** when the control value matches.
     OptOut(&'static str),
 }
 
