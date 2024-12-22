@@ -1,6 +1,7 @@
 //! Core namespace for zizmor's audits.
 
 use anyhow::Result;
+use github_actions_models::action;
 use tracing::instrument;
 
 use crate::{
@@ -193,8 +194,10 @@ pub(crate) trait Audit: AuditCore {
     fn audit_action<'a>(&self, action: &'a Action) -> Result<Vec<Finding<'a>>> {
         let mut results = vec![];
 
-        for step in action.steps() {
-            results.extend(self.audit_composite_step(&step)?);
+        if matches!(action.runs, action::Runs::Composite(_)) {
+            for step in action.steps() {
+                results.extend(self.audit_composite_step(&step)?);
+            }
         }
 
         Ok(results)

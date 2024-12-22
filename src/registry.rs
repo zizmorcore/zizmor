@@ -12,7 +12,6 @@ use crate::{
 };
 use anyhow::{anyhow, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
-use github_actions_models::action;
 use indexmap::IndexMap;
 use serde::Serialize;
 use tracing::instrument;
@@ -123,9 +122,6 @@ impl InputRegistry {
     }
 
     /// Registers an already-loaded workflow or action definition.
-    ///
-    /// Pre-condition: assumes that the input satisfies support requirements,
-    /// e.g. is a composite action definition.
     #[instrument(skip(self))]
     pub(crate) fn register_input(&mut self, input: AuditInput) -> Result<()> {
         if self.inputs.contains_key(input.key()) {
@@ -141,18 +137,12 @@ impl InputRegistry {
     }
 
     /// Registers a workflow or action definition from its path on disk.
-    ///
-    /// Fails if the workflow or action is malformed or unsupported
-    /// (e.g. if the action definition is non-composite).
     #[instrument(skip(self))]
     pub(crate) fn register_by_path(&mut self, path: &Utf8Path) -> Result<()> {
         match Workflow::from_file(path) {
             Ok(workflow) => self.register_input(workflow.into()),
             Err(we) => match Action::from_file(path) {
-                Ok(action) if matches!(action.runs, action::Runs::Composite(_)) => {
-                    self.register_input(action.into())
-                }
-                Ok(_) => Err(anyhow!("can't register non-composite action")),
+                Ok(action) => self.register_input(action.into()),
                 Err(ae) => Err(anyhow!("failed to register input as workflow or action"))
                     .with_context(|| we)
                     .with_context(|| ae),

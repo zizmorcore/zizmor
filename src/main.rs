@@ -9,7 +9,6 @@ use clap::{Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
-use github_actions_models::action;
 use indicatif::ProgressStyle;
 use models::{Action, Uses};
 use owo_colors::OwoColorize;
@@ -194,18 +193,74 @@ fn collect_from_repo_dir(
                 && matches!(entry_path.file_name(), Some("action.yml" | "action.yaml"))
             {
                 let action = Action::from_file(entry_path)?;
-
-                // Silently skip non-composite actions, rather than
-                // spamming the user with warnings about them.
-                if !matches!(action.runs, action::Runs::Composite(_)) {
-                    continue;
-                }
-
                 registry.register_input(action.into())?;
             } else if entry_path.is_dir() && !entry_path.ends_with(".github/workflows") {
                 // Recurse and limit the collection mode to only actions.
                 collect_from_repo_dir(entry_path, &CollectionMode::Actions, registry)?;
             }
+        }
+    }
+
+    Ok(())
+}
+
+fn collect_from_repo_slug(
+    input: &str,
+    mode: &CollectionMode,
+    state: &AuditState,
+    registry: &mut InputRegistry,
+) -> Result<()> {
+    // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
+    let Some(Uses::Repository(slug)) = Uses::from_step(input) else {
+        return Err(anyhow!(tip(
+            format!("invalid input: {input}"),
+            format!(
+                "pass a single {file}, {directory}, or entire repo by {slug} slug",
+                file = "file".green(),
+                directory = "directory".green(),
+                slug = "owner/repo".green()
+            )
+        )));
+    };
+
+    // We don't expect subpaths here.
+    if slug.subpath.is_some() {
+        return Err(anyhow!(tip(
+            "invalid GitHub repository reference",
+            "pass owner/repo or owner/repo@ref"
+        )));
+    }
+
+    let client = state.github_client().ok_or_else(|| {
+        anyhow!(tip(
+            format!("can't retrieve repository: {input}", input = input.green()),
+            format!(
+                "try removing {offline} or passing {gh_token}",
+                offline = "--offline".yellow(),
+                gh_token = "--gh-token <TOKEN>".yellow(),
+            )
+        ))
+    })?;
+
+    if matches!(mode, CollectionMode::Workflows) {
+        // Performance: if we're *only* collecting workflows, then we
+        // can save ourselves a full repo download and only fetch the
+        // repo's workflow files.
+        for workflow in client.fetch_workflows(&slug)? {
+            registry.register_input(workflow.into())?;
+        }
+    } else {
+        let inputs = client.fetch_audit_inputs(&slug)?;
+
+        tracing::info!(
+            "collected {len} inputs from {owner}/{repo}",
+            len = inputs.len(),
+            owner = slug.owner,
+            repo = slug.repo
+        );
+
+        for input in client.fetch_audit_inputs(&slug)? {
+            registry.register_input(input)?;
         }
     }
 
@@ -233,44 +288,7 @@ fn collect_inputs(
         } else {
             // If this input isn't a file or directory, it's probably an
             // `owner/repo(@ref)?` slug.
-
-            // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
-            let Some(Uses::Repository(slug)) = Uses::from_step(input) else {
-                return Err(anyhow!(tip(
-                    format!("invalid input: {input}"),
-                    format!(
-                        "pass a single {file}, {directory}, or entire repo by {slug} slug",
-                        file = "file".green(),
-                        directory = "directory".green(),
-                        slug = "owner/repo".green()
-                    )
-                )));
-            };
-
-            // We don't expect subpaths here.
-            if slug.subpath.is_some() {
-                return Err(anyhow!(tip(
-                    "invalid GitHub repository reference",
-                    "pass owner/repo or owner/repo@ref"
-                )));
-            }
-
-            let client = state.github_client().ok_or_else(|| {
-                anyhow!(tip(
-                    format!("can't retrieve repository: {input}", input = input.green()),
-                    format!(
-                        "try removing {offline} or passing {gh_token}",
-                        offline = "--offline".yellow(),
-                        gh_token = "--gh-token <TOKEN>".yellow(),
-                    )
-                ))
-            })?;
-
-            for workflow in client.fetch_workflows(&slug)? {
-                registry.register_input(workflow.into())?;
-            }
-
-            // TODO: figure out how to collect composite actions here too
+            collect_from_repo_slug(&input, mode, state, &mut registry)?;
         }
     }
 
