@@ -959,6 +959,15 @@ impl<'a> CompositeStep<'a> {
     pub(crate) fn action(&self) -> &'a Action {
         self.parent
     }
+
+    /// Returns a [`Uses`] for this [`Step`], if it has one.
+    pub(crate) fn uses(&self) -> Option<Uses<'a>> {
+        let action::StepBody::Uses { uses, .. } = &self.inner.body else {
+            return None;
+        };
+
+        Uses::from_step(uses)
+    }
 }
 
 #[cfg(test)]

@@ -295,7 +295,7 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 | Type     | Examples              | Introduced in | Works offline  | Enabled by default |
 |----------|-----------------------|---------------|----------------|--------------------|
-| Workflow  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 |
+| Workflow, Action  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 |
 
 [impostor-commit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/impostor-commit.yml
 

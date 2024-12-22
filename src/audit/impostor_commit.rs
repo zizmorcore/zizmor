@@ -173,4 +173,26 @@ impl Audit for ImpostorCommit {
 
         Ok(findings)
     }
+
+    fn audit_composite_step<'a>(
+        &self,
+        step: &super::CompositeStep<'a>,
+    ) -> Result<Vec<Finding<'a>>> {
+        let mut findings = vec![];
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
+
+        if self.impostor(uses)? {
+            findings.push(
+                Self::finding()
+                    .severity(Severity::High)
+                    .confidence(Confidence::High)
+                    .add_location(step.location().primary().annotated(IMPOSTOR_ANNOTATION))
+                    .build(step.action())?,
+            );
+        }
+
+        return Ok(findings);
+    }
 }
