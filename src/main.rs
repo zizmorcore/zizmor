@@ -96,6 +96,12 @@ struct App {
     #[arg(long)]
     cache_dir: Option<Utf8PathBuf>,
 
+    /// Control which kinds of inputs are collected for auditing.
+    ///
+    /// By default, all workflows and composite actions are collected.
+    #[arg(long, value_enum, default_value_t)]
+    collect: CollectionMode,
+
     /// The inputs to audit.
     ///
     /// These can be individual workflow filenames, action definitions
@@ -114,6 +120,28 @@ pub(crate) enum OutputFormat {
     Sarif,
 }
 
+/// How `zizmor` collects inputs from local and remote repository sources.
+#[derive(Copy, Clone, Debug, Default, ValueEnum)]
+pub(crate) enum CollectionMode {
+    /// Collect all supported inputs.
+    #[default]
+    All,
+    /// Collect only workflow definitions.
+    Workflows,
+    /// Collect only action definitions (i.e. `action.yml`).
+    Actions,
+}
+
+impl CollectionMode {
+    pub(crate) fn workflows(&self) -> bool {
+        matches!(self, CollectionMode::All | CollectionMode::Workflows)
+    }
+
+    pub(crate) fn actions(&self) -> bool {
+        matches!(self, CollectionMode::All | CollectionMode::Actions)
+    }
+}
+
 fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
     let message = Level::Error
         .title(err.as_ref())
@@ -123,25 +151,23 @@ fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
     format!("{}", renderer.render(message))
 }
 
-#[instrument(skip_all)]
-fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry> {
-    let mut registry = InputRegistry::new();
+#[instrument(skip(registry))]
+fn collect_from_repo_dir(
+    repo_dir: &Utf8Path,
+    mode: &CollectionMode,
+    registry: &mut InputRegistry,
+) -> Result<()> {
+    // The workflow directory might not exist if we're collecting from
+    // a repository that only contains actions.
+    if mode.workflows() {
+        let workflow_dir = if repo_dir.ends_with(".github/workflows") {
+            repo_dir.into()
+        } else {
+            repo_dir.join(".github/workflows")
+        };
 
-    for input in inputs {
-        let input_path = Utf8Path::new(input);
-        if input_path.is_file() {
-            registry
-                .register_by_path(input_path)
-                .with_context(|| format!("failed to register input: {input_path}"))?;
-        } else if input_path.is_dir() {
-            // TODO: walk directory to discover composite actions.
-
-            let mut absolute = input_path.canonicalize_utf8()?;
-            if !absolute.ends_with(".github/workflows") {
-                absolute.push(".github/workflows")
-            }
-
-            for entry in absolute.read_dir_utf8()? {
+        if workflow_dir.is_dir() {
+            for entry in workflow_dir.read_dir_utf8()? {
                 let entry = entry?;
                 let input_path = entry.path();
                 match input_path.extension() {
@@ -153,6 +179,50 @@ fn collect_inputs(inputs: &[String], state: &AuditState) -> Result<InputRegistry
                     _ => continue,
                 }
             }
+        } else {
+            tracing::warn!("{workflow_dir} not found while collecting workflows")
+        }
+    }
+
+    if mode.actions() {
+        for entry in repo_dir.read_dir_utf8()? {
+            let entry = entry?;
+            let entry_path = entry.path();
+
+            if entry_path.is_file()
+                && matches!(entry_path.file_name(), Some("action.yml" | "action.yaml"))
+            {
+                if let Err(e) = registry.register_by_path(entry_path) {
+                    tracing::warn!("{e}")
+                }
+            } else if entry_path.is_dir() && !entry_path.ends_with(".github/workflows") {
+                // Recurse and limit the collection mode to only actions.
+                collect_from_repo_dir(entry_path, &CollectionMode::Actions, registry)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[instrument(skip_all)]
+fn collect_inputs(
+    inputs: &[String],
+    mode: &CollectionMode,
+    state: &AuditState,
+) -> Result<InputRegistry> {
+    let mut registry = InputRegistry::new();
+
+    for input in inputs {
+        let input_path = Utf8Path::new(input);
+        if input_path.is_file() {
+            registry
+                .register_by_path(input_path)
+                .with_context(|| format!("failed to register input: {input_path}"))?;
+        } else if input_path.is_dir() {
+            // TODO: walk directory to discover composite actions.
+            let absolute = input_path.canonicalize_utf8()?;
+            collect_from_repo_dir(&absolute, mode, &mut registry)?;
         } else {
             // If this input isn't a file or directory, it's probably an
             // `owner/repo(@ref)?` slug.
@@ -231,7 +301,7 @@ fn run() -> Result<ExitCode> {
         .init();
 
     let audit_state = AuditState::new(&app);
-    let registry = collect_inputs(&app.inputs, &audit_state)?;
+    let registry = collect_inputs(&app.inputs, &app.collect, &audit_state)?;
 
     let config = Config::new(&app)?;
 
