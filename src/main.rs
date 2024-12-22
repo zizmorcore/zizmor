@@ -9,8 +9,9 @@ use clap::{Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
+use github_actions_models::action;
 use indicatif::ProgressStyle;
-use models::Uses;
+use models::{Action, Uses};
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, InputRegistry};
 use state::AuditState;
@@ -151,7 +152,7 @@ fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
     format!("{}", renderer.render(message))
 }
 
-#[instrument(skip(registry))]
+#[instrument(skip(mode, registry))]
 fn collect_from_repo_dir(
     repo_dir: &Utf8Path,
     mode: &CollectionMode,
@@ -192,9 +193,15 @@ fn collect_from_repo_dir(
             if entry_path.is_file()
                 && matches!(entry_path.file_name(), Some("action.yml" | "action.yaml"))
             {
-                if let Err(e) = registry.register_by_path(entry_path) {
-                    tracing::warn!("{e}")
+                let action = Action::from_file(entry_path)?;
+
+                // Silently skip non-composite actions, rather than
+                // spamming the user with warnings about them.
+                if !matches!(action.runs, action::Runs::Composite(_)) {
+                    continue;
                 }
+
+                registry.register_input(action.into())?;
             } else if entry_path.is_dir() && !entry_path.ends_with(".github/workflows") {
                 // Recurse and limit the collection mode to only actions.
                 collect_from_repo_dir(entry_path, &CollectionMode::Actions, registry)?;

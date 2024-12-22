@@ -833,11 +833,6 @@ impl Action {
             }
         };
 
-        // For now, only allow composite actions.
-        if !matches!(inner.runs, action::Runs::Composite(_)) {
-            bail!("can't audit non-composite action: {key}");
-        }
-
         Ok(Self {
             key,
             link,
