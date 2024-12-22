@@ -127,18 +127,18 @@ pub(crate) enum CollectionMode {
     #[default]
     All,
     /// Collect only workflow definitions.
-    Workflows,
+    WorkflowsOnly,
     /// Collect only action definitions (i.e. `action.yml`).
-    Actions,
+    ActionsOnly,
 }
 
 impl CollectionMode {
     pub(crate) fn workflows(&self) -> bool {
-        matches!(self, CollectionMode::All | CollectionMode::Workflows)
+        matches!(self, CollectionMode::All | CollectionMode::WorkflowsOnly)
     }
 
     pub(crate) fn actions(&self) -> bool {
-        matches!(self, CollectionMode::All | CollectionMode::Actions)
+        matches!(self, CollectionMode::All | CollectionMode::ActionsOnly)
     }
 }
 
@@ -196,7 +196,7 @@ fn collect_from_repo_dir(
                 registry.register_input(action.into())?;
             } else if entry_path.is_dir() && !entry_path.ends_with(".github/workflows") {
                 // Recurse and limit the collection mode to only actions.
-                collect_from_repo_dir(entry_path, &CollectionMode::Actions, registry)?;
+                collect_from_repo_dir(entry_path, &CollectionMode::ActionsOnly, registry)?;
             }
         }
     }
@@ -242,7 +242,7 @@ fn collect_from_repo_slug(
         ))
     })?;
 
-    if matches!(mode, CollectionMode::Workflows) {
+    if matches!(mode, CollectionMode::WorkflowsOnly) {
         // Performance: if we're *only* collecting workflows, then we
         // can save ourselves a full repo download and only fetch the
         // repo's workflow files.

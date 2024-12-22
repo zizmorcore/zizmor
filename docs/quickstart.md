@@ -39,7 +39,7 @@ Here are some different ways you can run `zizmor` locally:
 
     !!! tip
 
-        Pass `--collect-workflows-only` to disable collecting composite actions.
+        Pass `--collect=workflows-only` to disable collecting composite actions.
 
     When given one or more local directories, `zizmor` will treat each as a
     GitHub repository and attempt to discover workflows defined under the
@@ -54,6 +54,9 @@ Here are some different ways you can run `zizmor` locally:
 
     # or with multiple directories
     zizmor repo-a/ ../../repo-b/
+
+    # collect only workflows, not composite actions
+    zizmor --collect=workflows-only
     ```
 
 === "On one or more remote repositories"
@@ -65,7 +68,7 @@ Here are some different ways you can run `zizmor` locally:
 
     !!! tip
 
-        Pass `--collect-workflows-only` to disable collecting composite actions.
+        Pass `--collect=workflows-only` to disable collecting composite actions.
 
     `zizmor` can also fetch workflows and actions directly from GitHub, if
     given a GitHub API token via `GH_TOKEN` or `--gh-token`:
