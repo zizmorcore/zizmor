@@ -4,7 +4,7 @@ use crate::models::{Job, Step, Steps, Uses};
 use crate::state::AuditState;
 use github_actions_models::common::expr::ExplicitExpr;
 use github_actions_models::common::Env;
-use github_actions_models::workflow::event::{BareEvent, OptionalBody};
+use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 use github_actions_models::workflow::job::StepBody;
 use github_actions_models::workflow::Trigger;
 use std::ops::Deref;
@@ -317,7 +317,19 @@ impl CachePoisoning {
             Trigger::BareEvent(event) => *event == BareEvent::Release,
             Trigger::BareEvents(events) => events.contains(&BareEvent::Release),
             Trigger::Events(events) => match &events.push {
-                OptionalBody::Body(body) => body.tag_filters.is_some(),
+                OptionalBody::Body(body) => {
+                    let pushing_new_tag = &body.tag_filters.is_some();
+                    let pushing_to_release_branch =
+                        if let Some(BranchFilters::Branches(branches)) = &body.branch_filters {
+                            branches
+                                .iter()
+                                .any(|branch| branch.to_lowercase().contains("release"))
+                        } else {
+                            false
+                        };
+
+                    *pushing_new_tag || pushing_to_release_branch
+                }
                 _ => false,
             },
         }
