@@ -50,19 +50,17 @@ impl CacheControlInput {
     }
 }
 
-struct ControllableCacheAction<'w> {
-    /// The owner/repo part within the Action full coordinate
-    uses: Uses<'w>,
-    /// The input that controls caching behavior
-    control: CacheControlInput,
-    /// Whether this Action adopts caching as the default behavior
-    caching_by_default: bool,
-}
-
 /// The general schema for a cache-aware action.
 enum CacheAwareAction<'w> {
     /// This action supports caching depending on how it's been configured.
-    Configurable(ControllableCacheAction<'w>),
+    Configurable {
+        /// The owner/repo part within the Action full coordinate
+        uses: Uses<'w>,
+        /// The input that controls caching behavior
+        control: CacheControlInput,
+        /// Whether this Action adopts caching as the default behavior
+        caching_by_default: bool,
+    },
     /// This action unconditionally enables caching.
     NotConfigurable(Uses<'w>),
 }
@@ -70,7 +68,7 @@ enum CacheAwareAction<'w> {
 impl CacheAwareAction<'_> {
     fn uses(&self) -> Uses {
         match self {
-            CacheAwareAction::Configurable(inner) => inner.uses,
+            CacheAwareAction::Configurable { uses, .. } => *uses,
             CacheAwareAction::NotConfigurable(inner) => *inner,
         }
     }
@@ -82,7 +80,7 @@ impl CacheAwareAction<'_> {
 static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::new(|| {
     vec![
         // https://github.com/actions/cache/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("actions/cache").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptOut,
@@ -90,9 +88,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/actions/setup-java/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("actions/setup-java").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -100,9 +98,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::String,
             ),
             caching_by_default: false,
-        }),
+        },
         // https://github.com/actions/setup-go/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("actions/setup-go").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -110,9 +108,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/actions/setup-node/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("actions/setup-node").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -120,9 +118,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::String,
             ),
             caching_by_default: false,
-        }),
+        },
         // https://github.com/actions/setup-python/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("actions/setup-python").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -130,9 +128,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::String,
             ),
             caching_by_default: false,
-        }),
+        },
         // https://github.com/actions/setup-dotnet/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("actions/setup-dotnet").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -140,9 +138,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: false,
-        }),
+        },
         // https://github.com/astral-sh/setup-uv/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("astral-sh/setup-uv").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptOut,
@@ -150,9 +148,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::String,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/Swatinem/rust-cache/blob/master/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("Swatinem/rust-cache").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptOut,
@@ -160,9 +158,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/ruby/setup-ruby/blob/master/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("ruby/setup-ruby").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -170,9 +168,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: false,
-        }),
+        },
         // https://github.com/PyO3/maturin-action/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("PyO3/maturin-action").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -180,9 +178,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: false,
-        }),
+        },
         // https://github.com/mlugg/setup-zig/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("mlugg/setup-zig").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -190,9 +188,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/oven-sh/setup-bun/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("oven-sh/setup-bun").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptOut,
@@ -200,9 +198,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/DeterminateSystems/magic-nix-cache-action/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("DeterminateSystems/magic-nix-cache-action").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -210,9 +208,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/graalvm/setup-graalvm/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("graalvm/setup-graalvm").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -220,9 +218,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::String,
             ),
             caching_by_default: false,
-        }),
+        },
         // https://github.com/gradle/actions/blob/main/setup-gradle/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("gradle/actions/setup-gradle").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptOut,
@@ -230,9 +228,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/docker/setup-buildx-action/blob/master/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("docker/setup-buildx-action").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -240,9 +238,9 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/actions-rust-lang/setup-rust-toolchain/blob/main/action.yml
-        CacheAwareAction::Configurable(ControllableCacheAction {
+        CacheAwareAction::Configurable {
             uses: Uses::from_step("actions-rust-lang/setup-rust-toolchain").unwrap(),
             control: CacheControlInput::new(
                 CacheToggle::OptIn,
@@ -250,7 +248,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                 CacheControlFieldType::Boolean,
             ),
             caching_by_default: true,
-        }),
+        },
         // https://github.com/Mozilla-Actions/sccache-action/blob/main/action.yml
         CacheAwareAction::NotConfigurable(
             Uses::from_step("Mozilla-Actions/sccache-action").unwrap(),
@@ -357,31 +355,23 @@ impl CachePoisoning {
         ))
     }
 
-    fn evaluate_default_action_behaviour(action: &ControllableCacheAction) -> Option<CacheUsage> {
-        if action.caching_by_default {
-            Some(CacheUsage::DefaultActionBehaviour)
-        } else {
-            None
-        }
-    }
-
     fn evaluate_user_defined_opt_in(
         cache_control_input: &str,
         env: &Env,
-        action: &ControllableCacheAction,
+        field_type: &CacheControlFieldType,
     ) -> Option<CacheUsage> {
         match env.get(cache_control_input) {
             None => None,
             Some(value) => match value.to_string().as_str() {
-                "true" if matches!(action.control.field_type, CacheControlFieldType::Boolean) => {
+                "true" if matches!(field_type, CacheControlFieldType::Boolean) => {
                     Some(CacheUsage::DirectOptIn)
                 }
-                "false" if matches!(action.control.field_type, CacheControlFieldType::Boolean) => {
+                "false" if matches!(field_type, CacheControlFieldType::Boolean) => {
                     // Explicitly opts out from caching
                     None
                 }
                 other => match ExplicitExpr::from_curly(other) {
-                    None if matches!(action.control.field_type, CacheControlFieldType::String) => {
+                    None if matches!(field_type, CacheControlFieldType::String) => {
                         Some(CacheUsage::DirectOptIn)
                     }
                     None => None,
@@ -394,25 +384,32 @@ impl CachePoisoning {
     fn usage_of_controllable_caching(
         &self,
         env: &Env,
-        controllable: &ControllableCacheAction,
+        control: &CacheControlInput,
+        caching_by_default: bool,
     ) -> Option<CacheUsage> {
-        let cache_control_input = env.keys().find(|k| controllable.control.field_name == *k);
+        let cache_control_input = env.keys().find(|k| control.field_name == *k);
 
         match cache_control_input {
             // when not using the specific Action input to control caching behaviour,
             // we evaluate whether it uses caching by default
-            None => CachePoisoning::evaluate_default_action_behaviour(controllable),
+            None => {
+                if caching_by_default {
+                    Some(CacheUsage::DefaultActionBehaviour)
+                } else {
+                    None
+                }
+            }
 
             // otherwise, we infer from the value assigned to the cache control input
             Some(key) => {
                 // first, we extract the value assigned to that input
                 let declared_usage =
-                    CachePoisoning::evaluate_user_defined_opt_in(key, env, controllable);
+                    CachePoisoning::evaluate_user_defined_opt_in(key, env, &control.field_type);
 
                 // we now evaluate the extracted value against the opt-in semantics
                 match &declared_usage {
                     Some(CacheUsage::DirectOptIn) => {
-                        match controllable.control.toggle {
+                        match control.toggle {
                             // in this case, we just follow the opt-in
                             CacheToggle::OptIn => declared_usage,
                             // otherwise, the user opted for disabling the cache
@@ -441,10 +438,12 @@ impl CachePoisoning {
             target_uses.matches(well_known_uses)
         })?;
 
-        match known_action {
-            CacheAwareAction::Configurable(action) => {
-                self.usage_of_controllable_caching(env, action)
-            }
+        match &known_action {
+            CacheAwareAction::Configurable {
+                uses: _,
+                control,
+                caching_by_default,
+            } => self.usage_of_controllable_caching(env, control, *caching_by_default),
             CacheAwareAction::NotConfigurable(_) => Some(CacheUsage::AlwaysCache),
         }
     }
