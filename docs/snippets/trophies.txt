@@ -41,6 +41,7 @@ prettytable/prettytable#339
 psf/cachecontrol#345
 pyca/service-identity#75
 pylast/pylast#465
+pypa/packaging.python.org#1765
 pypa/pip-audit#851
 pypi/stdlib-list#138
 pypi/warehouse#16996
@@ -66,6 +67,7 @@ sigstore/cosign#3959
 sigstore/gitsign#602
 termcolor/termcolor#89
 tornadoweb/tornado#3438
+ua-parser/uap-python#250
 ultrajson/ultrajson#650
 vlang/v#22681
 wagtail/wagtail-localize#843

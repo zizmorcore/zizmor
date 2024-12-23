@@ -227,6 +227,12 @@
 
     pylast/pylast#465
 
+-   ![](https://github.com/pypa.png?size=40){ width="40" loading=lazy align=left } pypa/packaging.python.org
+
+    ---
+
+    pypa/packaging.python.org#1765
+
 -   ![](https://github.com/pypa.png?size=40){ width="40" loading=lazy align=left } pypa/pip-audit
 
     ---
@@ -370,6 +376,12 @@
     ---
 
     tornadoweb/tornado#3438
+
+-   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser/uap-python
+
+    ---
+
+    ua-parser/uap-python#250
 
 -   ![](https://github.com/ultrajson.png?size=40){ width="40" loading=lazy align=left } ultrajson/ultrajson
 
