@@ -126,9 +126,62 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
             control_value: CacheControlValue::Boolean,
             caching_by_default: false,
         }),
+        // https://github.com/mlugg/setup-zig/blob/main/action.yml
+        CacheAwareAction::Configurable(ControllableCacheAction {
+            uses: Uses::from_step("mlugg/setup-zig").unwrap(),
+            control_input: CacheControlInput::OptIn("use-cache"),
+            control_value: CacheControlValue::Boolean,
+            caching_by_default: true,
+        }),
+        // https://github.com/oven-sh/setup-bun/blob/main/action.yml
+        CacheAwareAction::Configurable(ControllableCacheAction {
+            uses: Uses::from_step("oven-sh/setup-bun").unwrap(),
+            control_input: CacheControlInput::OptOut("no-cache"),
+            control_value: CacheControlValue::Boolean,
+            caching_by_default: true,
+        }),
+        // https://github.com/DeterminateSystems/magic-nix-cache-action/blob/main/action.yml
+        CacheAwareAction::Configurable(ControllableCacheAction {
+            uses: Uses::from_step("DeterminateSystems/magic-nix-cache-action").unwrap(),
+            control_input: CacheControlInput::OptIn("use-gha-cache"),
+            control_value: CacheControlValue::Boolean,
+            caching_by_default: true,
+        }),
+        // https://github.com/graalvm/setup-graalvm/blob/main/action.yml
+        CacheAwareAction::Configurable(ControllableCacheAction {
+            uses: Uses::from_step("graalvm/setup-graalvm").unwrap(),
+            control_input: CacheControlInput::OptIn("cache"),
+            control_value: CacheControlValue::String,
+            caching_by_default: false,
+        }),
+        // https://github.com/gradle/actions/blob/main/setup-gradle/action.yml
+        CacheAwareAction::Configurable(ControllableCacheAction {
+            uses: Uses::from_step("gradle/actions/setup-gradle").unwrap(),
+            control_input: CacheControlInput::OptOut("cache-disabled"),
+            control_value: CacheControlValue::Boolean,
+            caching_by_default: true,
+        }),
+        // https://github.com/docker/setup-buildx-action/blob/master/action.yml
+        CacheAwareAction::Configurable(ControllableCacheAction {
+            uses: Uses::from_step("docker/setup-buildx-action").unwrap(),
+            control_input: CacheControlInput::OptIn("cache-binary"),
+            control_value: CacheControlValue::Boolean,
+            caching_by_default: true,
+        }),
+        // https://github.com/actions-rust-lang/setup-rust-toolchain/blob/main/action.yml
+        CacheAwareAction::Configurable(ControllableCacheAction {
+            uses: Uses::from_step("actions-rust-lang/setup-rust-toolchain").unwrap(),
+            control_input: CacheControlInput::OptIn("cache"),
+            control_value: CacheControlValue::Boolean,
+            caching_by_default: true,
+        }),
         // https://github.com/Mozilla-Actions/sccache-action/blob/main/action.yml
         CacheAwareAction::NotConfigurable(
             Uses::from_step("Mozilla-Actions/sccache-action").unwrap(),
+        ),
+        // https://github.com/nix-community/cache-nix-action/blob/main/action.yml
+        CacheAwareAction::NotConfigurable(
+            Uses::from_step("nix-community/cache-nix-action").unwrap(),
         ),
     ]
 });
