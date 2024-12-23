@@ -193,6 +193,6 @@ impl Audit for ImpostorCommit {
             );
         }
 
-        return Ok(findings);
+        Ok(findings)
     }
 }
