@@ -15,10 +15,10 @@ rust-version = "1.80.1"
 [dependencies]
 annotate-snippets = "0.11.5"
 anstream = "0.6.18"
-anyhow = "1.0.94"
+anyhow = "1.0.95"
 camino = { version = "1.1.9", features = ["serde1"] }
 clap = { version = "4.5.23", features = ["derive", "env"] }
-clap-verbosity-flag = { version = "3.0.0", features = [
+clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
 etcetera = "0.8.0"
@@ -41,7 +41,7 @@ reqwest = { version = "0.12.9", features = [
 reqwest-middleware = "0.4.0"
 serde = { version = "1.0.216", features = ["derive"] }
 serde-sarif = "0.7.0"
-serde_json = "1.0.133"
+serde_json = "1.0.134"
 serde_yaml = "0.9.34"
 tar = "0.4.43"
 terminal-link = "0.1.0"
@@ -49,7 +49,7 @@ tokio = { version = "1.42.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-indicatif = "0.3.8"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-tree-sitter = "0.24.4"
+tree-sitter = "0.24.5"
 tree-sitter-bash = "0.23.3"
 tree-sitter-powershell = "0.24.4"
 yamlpath = "0.13.0"
