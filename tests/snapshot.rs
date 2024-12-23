@@ -328,6 +328,12 @@ fn cache_poisoning() -> Result<()> {
         .workflow(workflow_under_test("cache-poisoning/issue-343-repro.yml"))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "cache-poisoning/caching-not-configurable.yml"
+        ))
+        .run()?);
+
     Ok(())
 }
 
