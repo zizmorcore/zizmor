@@ -80,7 +80,6 @@ impl GitHubEnv {
         arg.node.kind() == "word"
             || arg.node.kind() == "raw_string"
             || (arg.node.named_child_count() == 1
-                // NOTE: infallible unwrap given count check above.
                 && arg.node.named_child(0).map(|c| c.kind()) == Some("string_content"))
     }
 
