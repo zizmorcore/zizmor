@@ -627,8 +627,8 @@ impl RepositoryUses<'_> {
             return false;
         };
 
-        self.owner.to_lowercase() == other.owner.to_lowercase()
-            && self.repo.to_lowercase() == other.repo.to_lowercase()
+        self.owner.eq_ignore_ascii_case(other.owner)
+            && self.repo.eq_ignore_ascii_case(other.repo)
             && self.subpath.map(|s| s.to_lowercase()) == other.subpath.map(|s| s.to_lowercase())
             && other.git_ref.map_or(true, |git_ref| {
                 Some(git_ref.to_lowercase()) == self.git_ref.map(|r| r.to_lowercase())
