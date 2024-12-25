@@ -61,7 +61,7 @@ const BASH_PIPELINE_QUERY: &str = r#"
 "#;
 
 impl GitHubEnv {
-    fn echo_arg_is_safe<'a>(&self, arg: &QueryCapture<'_>) -> bool {
+    fn echo_arg_is_safe(&self, arg: &QueryCapture<'_>) -> bool {
         // Different cases we handle:
         // * `word` and `raw_string` are for `echo foo` and `echo 'foo'`
         //    respectively
@@ -147,7 +147,7 @@ impl GitHubEnv {
         ];
 
         for (query, span_idx) in queries {
-            let matches = self.query(&query, &mut cursor, &tree, script_body);
+            let matches = self.query(query, &mut cursor, &tree, script_body);
 
             matches.for_each(|mat| {
                 for cap in mat.captures {
