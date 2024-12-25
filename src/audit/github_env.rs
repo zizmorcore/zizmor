@@ -93,11 +93,15 @@ const PWSH_REDIRECT_QUERY: &str = r#"
     (_)*
     (array_literal_expression
       (unary_expression
-        (variable) @destination
+        [
+          (string_literal
+            (expandable_string_literal (variable) @destination))
+          (variable) @destination
+        ]
       )
     (_)*
   )
-  (#match? @destination "(?i)GITHUB_ENV")
+  (#match? @destination "(?i)ENV:GITHUB_ENV")
 )) @span
 "#;
 
@@ -108,11 +112,15 @@ const PWSH_PIPELINE_QUERY: &str = r#"
     command_elements: (command_elements
       (_)*
       (array_literal_expression
-        (unary_expression
-          (variable) @destination))
+        (unary_expression [
+          (string_literal
+            (expandable_string_literal (variable) @destination))
+          (variable) @destination
+        ])
+      )
       (_)*))
-  (#match? @cmd "(?i)out-file|add-content|set-content")
-  (#match? @destination "(?i)GITHUB_ENV")
+  (#match? @cmd "(?i)out-file|add-content|set-content|tee-object")
+  (#match? @destination "(?i)ENV:GITHUB_ENV")
 ) @span
 "#;
 
@@ -430,9 +438,19 @@ mod tests {
         for (case, expected) in &[
             // Common cases
             ("foo >> ${env:GITHUB_ENV}", true),
+            ("foo >> \"${env:GITHUB_ENV}\"", true),
             ("foo >> $env:GITHUB_ENV", true),
+            ("foo >> \"$env:GITHUB_ENV\"", true),
             (
                 "echo \"UV_CACHE_DIR=$UV_CACHE_DIR\" >> $env:GITHUB_ENV",
+                true,
+            ),
+            ("foo > ${env:GITHUB_ENV}", true),
+            ("foo > \"${env:GITHUB_ENV}\"", true),
+            ("foo > $env:GITHUB_ENV", true),
+            ("foo > \"$env:GITHUB_ENV\"", true),
+            (
+                "echo \"UV_CACHE_DIR=$UV_CACHE_DIR\" > $env:GITHUB_ENV",
                 true,
             ),
             // Case insensitivity
@@ -450,6 +468,9 @@ mod tests {
             // Set-Content cases
             ("Set-Content -Path $env:GITHUB_ENV -Value \"tag=$tag\"", true),
             ("[System.Text.Encoding]::UTF8.GetBytes(\"RELEASE_NOTES<<EOF`n$releaseNotes`nEOF\") |\nSet-Content -Path $Env:GITHUB_ENV -NoNewline -Encoding Byte", true),
+            // Tee-Object cases
+            ("echo \"BRANCH=${{ env.BRANCH_NAME }}\" | Tee-Object -Append -FilePath \"${env:GITHUB_ENV}\"", true),
+            ("echo \"JAVA_HOME=${Env:JAVA_HOME_11_X64}\" | Tee-Object -FilePath $env:GITHUB_ENV -Append", true),
             // Case insensitivity
             ("echo \"foo\" | out-file $Env:GitHub_Env -Append", true),
             ("echo \"foo\" | out-File $Env:GitHub_Env -Append", true),
@@ -462,6 +483,8 @@ mod tests {
                 false,
             ),
             ("foo >> GITHUB_ENV", false), // GITHUB_ENV is not a variable
+            ("foo >> $GITHUB_ENV", false), // variable but not an envvar
+            ("\"PYTHON_BIN=$PYTHON_BIN\" | Out-File -FilePath GITHUB_ENV -Append", false), // GITHUB_ENV is not a variable
         ] {
             let audit_state = AuditState {
                 no_online_audits: false,
