@@ -45,7 +45,7 @@ impl Deref for SpannedQuery {
 
 impl SpannedQuery {
     fn new(query: &'static str, language: &Language) -> Self {
-        let query = Query::new(language, &query).expect("malformed query");
+        let query = Query::new(language, query).expect("malformed query");
         let span_idx = query.capture_index_for_name("span").unwrap();
 
         Self {
@@ -146,7 +146,7 @@ impl GitHubEnv {
         tree: &'a Tree,
         source: &'a str,
     ) -> QueryMatches<'a, 'a, &'a [u8], &'a [u8]> {
-        cursor.matches(&query, tree.root_node(), source.as_bytes())
+        cursor.matches(query, tree.root_node(), source.as_bytes())
     }
 
     fn bash_uses_github_env(&self, script_body: &str) -> Result<Vec<Range<usize>>> {
@@ -224,60 +224,14 @@ impl GitHubEnv {
             .context("failed to parse `run:` body as pwsh")?;
 
         let mut cursor = QueryCursor::new();
-        let mut matches = self.query(&self.pwsh_redirect_query, &mut cursor, tree, script_body);
+        let queries = [&self.pwsh_redirect_query, &self.pwsh_pipeline_query];
 
-        if let Some(_) = matches.next() {
-            return Ok(true);
+        for query in queries {
+            let mut matches = self.query(query, &mut cursor, tree, script_body);
+            if matches.next().is_some() {
+                return Ok(true);
+            }
         }
-
-        let mut matches = self.query(&self.pwsh_pipeline_query, &mut cursor, tree, script_body);
-
-        if let Some(_) = matches.next() {
-            return Ok(true);
-        }
-
-        // let mut stack = vec![tree.root_node()];
-
-        // while let Some(node) = stack.pop() {
-        //     match node.kind() {
-        //         "pipeline" => {
-        //             // A pipeline has one or more "command" children.
-        //             for command in node
-        //                 .named_children(&mut node.walk())
-        //                 .filter(|c| c.kind() == "command")
-        //             {
-        //                 let command =
-        //                     &script_body[command.start_byte()..command.end_byte()].to_lowercase();
-
-        //                 // TODO: We can be more precise here by checking
-        //                 // `command_parameter` and `variable`.
-        //                 if (command.contains("out-file")
-        //                     || command.contains("add-content")
-        //                     || command.contains("set-content"))
-        //                     && command.contains("github_env")
-        //                 {
-        //                     return Ok(true);
-        //                 }
-        //             }
-        //         }
-        //         // "redirection" => {
-        //         //     // A redirection has a redirection_operator and a redirected_file_name.
-        //         //     let redirection =
-        //         //         &script_body[node.start_byte()..node.end_byte()].to_lowercase();
-
-        //         //     // TODO: Is it worth checking that the operator is >/>>?
-
-        //         //     if redirection.to_lowercase().contains("github_env") {
-        //         //         return Ok(true);
-        //         //     }
-        //         // }
-        //         _ => (),
-        //     }
-
-        //     for child in node.named_children(&mut node.walk()) {
-        //         stack.push(child);
-        //     }
-        // }
 
         Ok(false)
     }
