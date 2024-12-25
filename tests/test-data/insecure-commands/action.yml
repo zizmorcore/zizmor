@@ -1,0 +1,32 @@
+# demo of a composite action being flagged by insecure-commands
+
+name: insecure-commands-composite-action
+description: insecure-commands-composite-action
+
+inputs:
+  insecure-commands:
+    default: "yes"
+    description: "do something insecure"
+
+runs:
+  using: composite
+  steps:
+    - name: true-positive-1
+      run: |
+        echo "hello!"
+      shell: bash
+      env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+
+    - name: true-positive-2
+      run: |
+        echo "hello!"
+      shell: bash
+      env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: anything
+
+    - name: true-positive-3
+      run: |
+        echo "hello!"
+      shell: bash
+      env: ${{ mystery }}

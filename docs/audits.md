@@ -623,7 +623,7 @@ A before/after example is shown below.
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default |
 |----------|-------------------------|---------------|----------------|--------------------|
-| Workflow  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅                 |
+| Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅                 |
 
 [insecure-commands.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/insecure-commands.yml
 
@@ -669,7 +669,7 @@ In general, users should use for [GitHub Actions environment files]
 
 | Type     | Examples           | Introduced in | Works offline  | Enabled by default |
 |----------|--------------------|---------------|----------------|--------------------|
-| Workflow  | [github-env.yml]   | v0.6.0        | ✅             | ✅                 |
+| Workflow, Action  | [github-env.yml]   | v0.6.0        | ✅             | ✅                 |
 
 [github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
 

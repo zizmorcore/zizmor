@@ -226,6 +226,11 @@ fn insecure_commands() -> Result<()> {
         .workflow(workflow_under_test("insecure-commands.yml"))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("insecure-commands/action.yml"))
+        .args(["--persona=auditor"])
+        .run()?);
+
     Ok(())
 }
 
