@@ -3,6 +3,7 @@ use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Step;
 use crate::state::AuditState;
 use anyhow::{Context, Result};
+use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
 use regex::Regex;
 use std::cell::RefCell;
@@ -339,6 +340,34 @@ impl Audit for GitHubEnv {
                         .build(step.workflow())?,
                 )
             }
+        }
+
+        Ok(findings)
+    }
+
+    fn audit_composite_step<'a>(
+        &self,
+        step: &super::CompositeStep<'a>,
+    ) -> Result<Vec<Finding<'a>>> {
+        let mut findings = vec![];
+
+        let action::StepBody::Run { run, shell, .. } = &step.body else {
+            return Ok(findings);
+        };
+
+        if self.uses_github_env(run, shell)? {
+            findings.push(
+                Self::finding()
+                    .severity(Severity::High)
+                    .confidence(Confidence::Low)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["run".into()])
+                            .annotated("GITHUB_ENV write may allow code execution"),
+                    )
+                    .build(step.action())?,
+            )
         }
 
         Ok(findings)

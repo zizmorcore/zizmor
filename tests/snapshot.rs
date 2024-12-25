@@ -360,3 +360,12 @@ fn excessive_permissions() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn github_env() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("github-env/action.yml"))
+        .run()?);
+
+    Ok(())
+}
