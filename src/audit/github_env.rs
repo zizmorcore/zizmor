@@ -89,9 +89,16 @@ const BASH_PIPELINE_QUERY: &str = r#"
 const PWSH_REDIRECT_QUERY: &str = r#"
 (redirection
   (file_redirection_operator)
-  (redirected_file_name (_)) @destination
+  (redirected_file_name
+    (_)*
+    (array_literal_expression
+      (unary_expression
+        (variable) @destination
+      )
+    (_)*
+  )
   (#match? @destination "(?i)GITHUB_ENV")
-) @span
+)) @span
 "#;
 
 const PWSH_PIPELINE_QUERY: &str = r#"
@@ -454,8 +461,7 @@ mod tests {
                 "echo \"foo\" | out-file bar -Append # not $env:GITHUB_ENV",
                 false,
             ),
-            // False positives
-            ("foo >> GITHUB_ENV", true), // FP: GITHUB_ENV is not a variable
+            ("foo >> GITHUB_ENV", false), // GITHUB_ENV is not a variable
         ] {
             let audit_state = AuditState {
                 no_online_audits: false,
