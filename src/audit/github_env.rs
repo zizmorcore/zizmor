@@ -355,7 +355,7 @@ impl Audit for GitHubEnv {
             return Ok(findings);
         };
 
-        if self.uses_github_env(&run, &shell)? {
+        if self.uses_github_env(run, shell)? {
             findings.push(
                 Self::finding()
                     .severity(Severity::High)
