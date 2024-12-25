@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use std::ops::{Deref, Range};
 use std::sync::LazyLock;
 use streaming_iterator::StreamingIterator;
-use tree_sitter::{Parser, Query, QueryCursor, QueryMatches, Tree};
+use tree_sitter::{Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
 
 static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(?mi)^.+\s*>>?\s*"?%GITHUB_ENV%"?.*$"#).unwrap());
@@ -32,7 +32,7 @@ audit_meta!(GitHubEnv, "github-env", "dangerous use of GITHUB_ENV");
 const BASH_REDIRECT_QUERY: &str = r#"
 (redirected_statement
  (
-   (command (command_name) @cmd (_)* @args)
+   (command name: (command_name) @cmd argument: (_)* @args)
  )
  (file_redirect (
    [
@@ -61,6 +61,29 @@ const BASH_PIPELINE_QUERY: &str = r#"
 "#;
 
 impl GitHubEnv {
+    fn echo_arg_is_safe<'a>(&self, arg: &QueryCapture<'_>) -> bool {
+        // Different cases we handle:
+        // * `word` and `raw_string` are for `echo foo` and `echo 'foo'`
+        //    respectively
+        // * `string` is for double-quoted arguments; we consider the
+        //    argument safe if it has only a single child (a single
+        //   `string_content` denoting a literal)
+
+        // NOTE: There are additional edge cases we could handle, like
+        // `echo "foo""bar"`, which gets laid out as a `concatenation`
+        // node with children. The value of handling these is probably marginal.
+
+        arg.node.kind() == "word"
+            || arg.node.kind() == "raw_string"
+            || (arg.node.named_child_count() == 1
+                // NOTE: infallible unwrap given count check above.
+                && arg.node.named_child(0).map(|c| c.kind()) == Some("string_content"))
+    }
+
+    fn echo_args_are_safe<'a>(&self, mut args: impl Iterator<Item = &'a QueryCapture<'a>>) -> bool {
+        args.all(|cap| self.echo_arg_is_safe(cap))
+    }
+
     fn query<'a>(
         &self,
         query: &'a Query,
@@ -80,13 +103,48 @@ impl GitHubEnv {
             .parse(script_body, None)
             .context("failed to parse `run:` body as bash")?;
 
+        // Look for redirect patterns, e.g. `... >> $GITHUB_ENV`.
+        //
+        // This requires a bit of extra work, since we want to filter
+        // out false positives like `echo "foo" >> $GITHUB_ENV`, where
+        // the LHS is something trivial like `echo` with only string
+        // literal arguments (no variable expansions).
+        let matches = self.query(&self.bash_redirect_query, &mut cursor, &tree, script_body);
+        let cmd = self
+            .bash_redirect_query
+            .capture_index_for_name("cmd")
+            .unwrap();
+        let args = self
+            .bash_redirect_query
+            .capture_index_for_name("args")
+            .unwrap();
+
+        let mut matching_spans = vec![];
+
+        matches.for_each(|mat| {
+            let cmd = {
+                let cap = mat.captures.iter().find(|cap| cap.index == cmd).unwrap();
+                cap.node.utf8_text(script_body.as_bytes()).unwrap()
+            };
+
+            let args = mat.captures.iter().filter(|cap| cap.index == args);
+
+            // Filter matches down to those where the command isn't `echo`
+            // *or* at least one argument isn't a string literal.
+            if cmd != "echo" || !self.echo_args_are_safe(args) {
+                let span = mat
+                    .captures
+                    .iter()
+                    .find(|cap| cap.index == self.bash_redirect_query_span_idx)
+                    .unwrap();
+                matching_spans.push(span.node.byte_range());
+            }
+        });
+
         let queries = [
-            // matches the `foo >> $GITHUB_ENV` pattern
-            (&self.bash_redirect_query, self.bash_redirect_query_span_idx),
             // matches the `cmd | cmd | tee $GITHUB_ENV` pattern
             (&self.bash_pipeline_query, self.bash_pipeline_query_span_idx),
         ];
-        let mut matching_spans = vec![];
 
         for (query, span_idx) in queries {
             let matches = self.query(&query, &mut cursor, &tree, script_body);
@@ -267,22 +325,30 @@ mod tests {
     fn test_exploitable_bash_patterns() {
         for (case, expected) in &[
             // Common cases
-            ("echo foo >> $GITHUB_ENV", true),
-            ("echo foo >> \"$GITHUB_ENV\"", true),
-            ("echo foo >> ${GITHUB_ENV}", true),
-            ("echo foo >> \"${GITHUB_ENV}\"", true),
+            ("echo $foo >> $GITHUB_ENV", true),
+            ("echo $foo $bar >> $GITHUB_ENV", true),
+            ("echo multiple-args $foo >> $GITHUB_ENV", true),
+            ("echo $foo multiple-args >> $GITHUB_ENV", true),
+            ("echo $foo >> \"$GITHUB_ENV\"", true),
+            ("echo $foo >> ${GITHUB_ENV}", true),
+            ("echo $foo >> \"${GITHUB_ENV}\"", true),
+            // We consider these unsafe because we don't know what
+            // unknown-command produces, unlike echo.
+            ("unknown-command >> $GITHUB_ENV", true),
+            ("unknown-command $foo >> $GITHUB_ENV", true),
+            ("unknown-command 'some args' >> $GITHUB_ENV", true),
             // Single > is buggy most of the time, but still exploitable
-            ("echo foo > $GITHUB_ENV", true),
-            ("echo foo > \"$GITHUB_ENV\"", true),
-            ("echo foo > ${GITHUB_ENV}", true),
-            ("echo foo > \"${GITHUB_ENV}\"", true),
+            ("echo $foo > $GITHUB_ENV", true),
+            ("echo $foo > \"$GITHUB_ENV\"", true),
+            ("echo $foo > ${GITHUB_ENV}", true),
+            ("echo $foo > \"${GITHUB_ENV}\"", true),
             // No spaces
-            ("echo foo>>$GITHUB_ENV", true),
-            ("echo foo>>\"$GITHUB_ENV\"", true),
-            ("echo foo>>${GITHUB_ENV}", true),
-            ("echo foo>>\"${GITHUB_ENV}\"", true),
+            ("echo $foo>>$GITHUB_ENV", true),
+            ("echo $foo>>\"$GITHUB_ENV\"", true),
+            ("echo $foo>>${GITHUB_ENV}", true),
+            ("echo $foo>>\"${GITHUB_ENV}\"", true),
             // Continuations over newlines are OK
-            ("echo foo >> \\\n $GITHUB_ENV", true),
+            ("echo $foo >> \\\n $GITHUB_ENV", true),
             // tee cases
             ("something | tee $GITHUB_ENV", true),
             ("something | tee $GITHUB_ENV | something-else", true),
@@ -292,11 +358,15 @@ mod tests {
             ("something|tee $GITHUB_ENV", true),
             ("something |tee $GITHUB_ENV", true),
             ("something| tee $GITHUB_ENV", true),
-            // negative cases (comments should not be detected)
-            ("echo foo >> $OTHER_ENV # not $GITHUB_ENV", false),
-            ("something | tee \"${$OTHER_ENV}\" # not $GITHUB_ENV", false),
-            ("echo foo >> GITHUB_ENV", false), // FP: GITHUB_ENV is not a variable
-            ("echo foo | tee GITHUB_ENV", false), // FP: GITHUB_ENV is not a variable
+            // negative cases
+            ("echo $foo >> $OTHER_ENV # not $GITHUB_ENV", false), // comments not detected
+            ("something | tee \"${$OTHER_ENV}\" # not $GITHUB_ENV", false), // comments not detected
+            ("echo $foo >> GITHUB_ENV", false),                   // GITHUB_ENV is not a variable
+            ("echo $foo | tee GITHUB_ENV", false),                // GITHUB_ENV is not a variable
+            ("echo completely-static >> $GITHUB_ENV", false),     // LHS is completely static
+            ("echo 'completely-static' >> $GITHUB_ENV", false),   // LHS is completely static
+            ("echo 'completely-static' \"foo\" >> $GITHUB_ENV", false), // LHS is completely static
+            ("echo \"completely-static\" >> $GITHUB_ENV", false), // LHS is completely static
         ] {
             let audit_state = AuditState {
                 no_online_audits: false,
