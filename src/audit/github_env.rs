@@ -73,6 +73,10 @@ impl GitHubEnv {
         // `echo "foo""bar"`, which gets laid out as a `concatenation`
         // node with children. The value of handling these is probably marginal.
 
+        // NOTE: This doesn't catch template expansions within arguments,
+        // e.g. `echo 'foo ${{ bar }}'`. The rationale for this is that
+        // the template-injection audit will catch these separately.
+
         arg.node.kind() == "word"
             || arg.node.kind() == "raw_string"
             || (arg.node.named_child_count() == 1
@@ -142,7 +146,7 @@ impl GitHubEnv {
         });
 
         let queries = [
-            // matches the `cmd | cmd | tee $GITHUB_ENV` pattern
+            // matches the `cmd | ... | tee $GITHUB_ENV` pattern
             (&self.bash_pipeline_query, self.bash_pipeline_query_span_idx),
         ];
 
@@ -332,6 +336,10 @@ mod tests {
             ("echo $foo >> \"$GITHUB_ENV\"", true),
             ("echo $foo >> ${GITHUB_ENV}", true),
             ("echo $foo >> \"${GITHUB_ENV}\"", true),
+            ("echo FOO=$(bar) >> $GITHUB_ENV", true),
+            ("echo FOO=`bar` >> $GITHUB_ENV", true),
+            ("echo $(bar) >> $GITHUB_ENV", true),
+            ("echo `bar` >> $GITHUB_ENV", true),
             // We consider these unsafe because we don't know what
             // unknown-command produces, unlike echo.
             ("unknown-command >> $GITHUB_ENV", true),
