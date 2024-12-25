@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use std::ops::{Deref, Range};
 use std::sync::LazyLock;
 use streaming_iterator::StreamingIterator;
-use tree_sitter::{Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
+use tree_sitter::{Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
 
 static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(?mi)^.+\s*>>?\s*"?%GITHUB_ENV%"?.*$"#).unwrap());
@@ -20,14 +20,40 @@ pub(crate) struct GitHubEnv {
     pwsh_parser: RefCell<Parser>,
 
     // cached queries
-    bash_redirect_query_span_idx: u32,
-    bash_redirect_query: Query,
-
-    bash_pipeline_query_span_idx: u32,
-    bash_pipeline_query: Query,
+    bash_redirect_query: SpannedQuery,
+    bash_pipeline_query: SpannedQuery,
+    pwsh_redirect_query: SpannedQuery,
+    pwsh_pipeline_query: SpannedQuery,
 }
 
 audit_meta!(GitHubEnv, "github-env", "dangerous use of GITHUB_ENV");
+
+/// Holds a tree-sitter query that contains a `@span` capture that
+/// covers the entire range of the query.
+struct SpannedQuery {
+    inner: Query,
+    span_idx: u32,
+}
+
+impl Deref for SpannedQuery {
+    type Target = Query;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl SpannedQuery {
+    fn new(query: &'static str, language: &Language) -> Self {
+        let query = Query::new(language, &query).expect("malformed query");
+        let span_idx = query.capture_index_for_name("span").unwrap();
+
+        Self {
+            inner: query,
+            span_idx,
+        }
+    }
+}
 
 const BASH_REDIRECT_QUERY: &str = r#"
 (redirected_statement
@@ -60,8 +86,31 @@ const BASH_PIPELINE_QUERY: &str = r#"
 ) @span
 "#;
 
+const PWSH_REDIRECT_QUERY: &str = r#"
+(redirection
+  (file_redirection_operator)
+  (redirected_file_name (_)) @destination
+  (#match? @destination "(?i)GITHUB_ENV")
+) @span
+"#;
+
+const PWSH_PIPELINE_QUERY: &str = r#"
+(pipeline
+  (command
+    command_name: (command_name) @cmd
+    command_elements: (command_elements
+      (_)*
+      (array_literal_expression
+        (unary_expression
+          (variable) @destination))
+      (_)*))
+  (#match? @cmd "(?i)out-file|add-content|set-content")
+  (#match? @destination "(?i)GITHUB_ENV")
+) @span
+"#;
+
 impl GitHubEnv {
-    fn echo_arg_is_safe(&self, arg: &QueryCapture<'_>) -> bool {
+    fn bash_echo_arg_is_safe(&self, arg: &QueryCapture<'_>) -> bool {
         // Different cases we handle:
         // * `word` and `raw_string` are for `echo foo` and `echo 'foo'`
         //    respectively
@@ -83,18 +132,21 @@ impl GitHubEnv {
                 && arg.node.named_child(0).map(|c| c.kind()) == Some("string_content"))
     }
 
-    fn echo_args_are_safe<'a>(&self, mut args: impl Iterator<Item = &'a QueryCapture<'a>>) -> bool {
-        args.all(|cap| self.echo_arg_is_safe(cap))
+    fn bash_echo_args_are_safe<'a>(
+        &self,
+        mut args: impl Iterator<Item = &'a QueryCapture<'a>>,
+    ) -> bool {
+        args.all(|cap| self.bash_echo_arg_is_safe(cap))
     }
 
     fn query<'a>(
         &self,
-        query: &'a Query,
+        query: &'a SpannedQuery,
         cursor: &'a mut QueryCursor,
         tree: &'a Tree,
         source: &'a str,
     ) -> QueryMatches<'a, 'a, &'a [u8], &'a [u8]> {
-        cursor.matches(query, tree.root_node(), source.as_bytes())
+        cursor.matches(&query, tree.root_node(), source.as_bytes())
     }
 
     fn bash_uses_github_env(&self, script_body: &str) -> Result<Vec<Range<usize>>> {
@@ -134,11 +186,11 @@ impl GitHubEnv {
 
             // Filter matches down to those where the command isn't `echo`
             // *or* at least one argument isn't a string literal.
-            if cmd != "echo" || !self.echo_args_are_safe(args) {
+            if cmd != "echo" || !self.bash_echo_args_are_safe(args) {
                 let span = mat
                     .captures
                     .iter()
-                    .find(|cap| cap.index == self.bash_redirect_query_span_idx)
+                    .find(|cap| cap.index == self.bash_redirect_query.span_idx)
                     .unwrap();
                 matching_spans.push(span.node.byte_range());
             }
@@ -146,15 +198,15 @@ impl GitHubEnv {
 
         let queries = [
             // matches the `cmd | ... | tee $GITHUB_ENV` pattern
-            (&self.bash_pipeline_query, self.bash_pipeline_query_span_idx),
+            &self.bash_pipeline_query,
         ];
 
-        for (query, span_idx) in queries {
+        for query in queries {
             let matches = self.query(query, &mut cursor, &tree, script_body);
 
             matches.for_each(|mat| {
                 for cap in mat.captures {
-                    if cap.index == span_idx {
+                    if cap.index == query.span_idx {
                         matching_spans.push(cap.node.byte_range());
                     }
                 }
@@ -171,48 +223,61 @@ impl GitHubEnv {
             .parse(script_body, None)
             .context("failed to parse `run:` body as pwsh")?;
 
-        let mut stack = vec![tree.root_node()];
+        let mut cursor = QueryCursor::new();
+        let mut matches = self.query(&self.pwsh_redirect_query, &mut cursor, tree, script_body);
 
-        while let Some(node) = stack.pop() {
-            match node.kind() {
-                "pipeline" => {
-                    // A pipeline has one or more "command" children.
-                    for command in node
-                        .named_children(&mut node.walk())
-                        .filter(|c| c.kind() == "command")
-                    {
-                        let command =
-                            &script_body[command.start_byte()..command.end_byte()].to_lowercase();
-
-                        // TODO: We can be more precise here by checking
-                        // `command_parameter` and `variable`.
-                        if (command.contains("out-file")
-                            || command.contains("add-content")
-                            || command.contains("set-content"))
-                            && command.contains("github_env")
-                        {
-                            return Ok(true);
-                        }
-                    }
-                }
-                "redirection" => {
-                    // A redirection has a redirection_operator and a redirected_file_name.
-                    let redirection =
-                        &script_body[node.start_byte()..node.end_byte()].to_lowercase();
-
-                    // TODO: Is it worth checking that the operator is >/>>?
-
-                    if redirection.to_lowercase().contains("github_env") {
-                        return Ok(true);
-                    }
-                }
-                _ => (),
-            }
-
-            for child in node.named_children(&mut node.walk()) {
-                stack.push(child);
-            }
+        if let Some(_) = matches.next() {
+            return Ok(true);
         }
+
+        let mut matches = self.query(&self.pwsh_pipeline_query, &mut cursor, tree, script_body);
+
+        if let Some(_) = matches.next() {
+            return Ok(true);
+        }
+
+        // let mut stack = vec![tree.root_node()];
+
+        // while let Some(node) = stack.pop() {
+        //     match node.kind() {
+        //         "pipeline" => {
+        //             // A pipeline has one or more "command" children.
+        //             for command in node
+        //                 .named_children(&mut node.walk())
+        //                 .filter(|c| c.kind() == "command")
+        //             {
+        //                 let command =
+        //                     &script_body[command.start_byte()..command.end_byte()].to_lowercase();
+
+        //                 // TODO: We can be more precise here by checking
+        //                 // `command_parameter` and `variable`.
+        //                 if (command.contains("out-file")
+        //                     || command.contains("add-content")
+        //                     || command.contains("set-content"))
+        //                     && command.contains("github_env")
+        //                 {
+        //                     return Ok(true);
+        //                 }
+        //             }
+        //         }
+        //         // "redirection" => {
+        //         //     // A redirection has a redirection_operator and a redirected_file_name.
+        //         //     let redirection =
+        //         //         &script_body[node.start_byte()..node.end_byte()].to_lowercase();
+
+        //         //     // TODO: Is it worth checking that the operator is >/>>?
+
+        //         //     if redirection.to_lowercase().contains("github_env") {
+        //         //         return Ok(true);
+        //         //     }
+        //         // }
+        //         _ => (),
+        //     }
+
+        //     for child in node.named_children(&mut node.walk()) {
+        //         stack.push(child);
+        //     }
+        // }
 
         Ok(false)
     }
@@ -242,10 +307,10 @@ impl WorkflowAudit for GitHubEnv {
     where
         Self: Sized,
     {
-        let bash = tree_sitter_bash::LANGUAGE;
+        let bash: Language = tree_sitter_bash::LANGUAGE.into();
         let mut bash_parser = Parser::new();
         bash_parser
-            .set_language(&bash.into())
+            .set_language(&bash)
             .context("failed to load bash parser")?;
 
         let pwsh = tree_sitter_powershell::language();
@@ -254,20 +319,13 @@ impl WorkflowAudit for GitHubEnv {
             .set_language(&pwsh)
             .context("failed to load powershell parser")?;
 
-        let bash_redirect_query = Query::new(&bash.into(), BASH_REDIRECT_QUERY)?;
-        let bash_pipeline_query = Query::new(&bash.into(), BASH_PIPELINE_QUERY)?;
-
         Ok(Self {
             bash_parser: RefCell::new(bash_parser),
             pwsh_parser: RefCell::new(pwsh_parser),
-            bash_redirect_query_span_idx: bash_redirect_query
-                .capture_index_for_name("span")
-                .unwrap(),
-            bash_redirect_query,
-            bash_pipeline_query_span_idx: bash_pipeline_query
-                .capture_index_for_name("span")
-                .unwrap(),
-            bash_pipeline_query,
+            bash_redirect_query: SpannedQuery::new(BASH_REDIRECT_QUERY, &bash),
+            bash_pipeline_query: SpannedQuery::new(BASH_PIPELINE_QUERY, &bash),
+            pwsh_redirect_query: SpannedQuery::new(PWSH_REDIRECT_QUERY, &pwsh),
+            pwsh_pipeline_query: SpannedQuery::new(PWSH_PIPELINE_QUERY, &pwsh),
         })
     }
 
@@ -412,7 +470,10 @@ mod tests {
             // Common cases
             ("foo >> ${env:GITHUB_ENV}", true),
             ("foo >> $env:GITHUB_ENV", true),
-            ("echo \"UV_CACHE_DIR=$UV_CACHE_DIR\" >> $env:GITHUB_ENV", true),
+            (
+                "echo \"UV_CACHE_DIR=$UV_CACHE_DIR\" >> $env:GITHUB_ENV",
+                true,
+            ),
             // Case insensitivity
             ("foo >> ${ENV:GITHUB_ENV}", true),
             ("foo >> ${ENV:github_env}", true),
@@ -422,7 +483,7 @@ mod tests {
             ("echo \"CUDA_PATH=$env:CUDA_PATH\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append", true),
             ("\"PYTHON_BIN=$PYTHON_BIN\" | Out-File -FilePath $env:GITHUB_ENV -Append", true),
             ("echo \"SOLUTION_PATH=${slnPath}\" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append", true),
-            // Add-Content cases
+            // // Add-Content cases
             ("Add-Content -Path $env:GITHUB_ENV -Value \"RELEASE_VERSION=$releaseVersion\"", true),
             ("Add-Content $env:GITHUB_ENV \"DOTNET_ROOT=$Env:USERPROFILE\\.dotnet\"", true),
             // Set-Content cases
@@ -435,7 +496,12 @@ mod tests {
             // Negative cases (comments should not be detected)
             ("foo >> bar # not $env:GITHUB_ENV", false),
             ("foo >> bar # not ${env:GITHUB_ENV}", false),
-            ("echo \"foo\" | out-file bar -Append # not $env:GITHUB_ENV", false),
+            (
+                "echo \"foo\" | out-file bar -Append # not $env:GITHUB_ENV",
+                false,
+            ),
+            // False positives
+            ("foo >> GITHUB_ENV", true), // FP: GITHUB_ENV is not a variable
         ] {
             let audit_state = AuditState {
                 no_online_audits: false,
@@ -446,7 +512,7 @@ mod tests {
             let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
 
             let uses_github_env = sut.uses_github_env(case, "pwsh").unwrap();
-            assert_eq!(uses_github_env, *expected);
+            assert_eq!(uses_github_env, *expected, "failed: {case}");
         }
     }
 }
