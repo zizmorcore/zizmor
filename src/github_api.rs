@@ -29,7 +29,7 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    pub(crate) fn new(token: &str, cache_dir: &Path) -> Self {
+    pub(crate) fn new(token: &str, cache_dir: &Path, hostname: Option<&str>) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
@@ -66,8 +66,13 @@ impl Client {
         }))
         .build();
 
+        let api_base = match hostname {
+            Some(hostname) => format!("https://{hostname}/api/v3"),
+            None => "https://api.github.com".to_string(),
+        };
+
         Self {
-            api_base: "https://api.github.com",
+            api_base: Box::leak(api_base.into_boxed_str()),
             http,
         }
     }
