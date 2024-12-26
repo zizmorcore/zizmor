@@ -212,6 +212,11 @@ fn unpinned_uses() -> Result<()> {
         .workflow(workflow_under_test("unpinned-uses.yml"))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("unpinned-uses/action.yml"))
+        .args(["--pedantic"])
+        .run()?);
+
     Ok(())
 }
 
