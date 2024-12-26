@@ -357,9 +357,9 @@ the action if one is available, or remove the action's usage entirely.
 
 ## `ref-confusion`
 
-| Type     | Examples            | Introduced in | Works offline  | Enabled by default |
-|----------|---------------------|---------------|----------------|--------------------|
-| Workflow  | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 |
+| Type             | Examples            | Introduced in | Works offline  | Enabled by default |
+|------------------|---------------------|---------------|----------------|--------------------|
+| Workflow, Action | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 |
 
 
 [ref-confusion.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/ref-confusion.yml
