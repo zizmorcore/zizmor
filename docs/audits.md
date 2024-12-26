@@ -547,9 +547,9 @@ or @rubygems/release-gem for canonical examples of using it.
 
 ## `unpinned-uses`
 
-| Type     | Examples                     | Introduced in | Works offline  | Enabled by default |
-|----------|------------------------------|---------------|----------------|--------------------|
-| Workflow  | [unpinned.yml]              | v0.4.0        | ✅             | ✅                 |
+| Type             | Examples                     | Introduced in | Works offline  | Enabled by default |
+|------------------|------------------------------|---------------|----------------|--------------------|
+| Workflow, Action | [unpinned.yml]              | v0.4.0        | ✅             | ✅                 |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
