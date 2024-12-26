@@ -7,14 +7,15 @@
 
 use anyhow::{anyhow, Context, Result};
 
+use super::{audit_meta, Audit};
+use crate::finding::Finding;
+use crate::models::CompositeStep;
 use crate::{
     finding::{Confidence, Severity},
     github_api,
     models::{RepositoryUses, Uses},
     state::AuditState,
 };
-
-use super::{audit_meta, Audit};
 
 pub(crate) struct KnownVulnerableActions {
     client: github_api::Client,
@@ -156,6 +157,32 @@ impl Audit for KnownVulnerableActions {
                             .with_url(format!("https://github.com/advisories/{id}")),
                     )
                     .build(step.workflow())?,
+            );
+        }
+
+        Ok(findings)
+    }
+
+    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+        let mut findings = vec![];
+
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
+
+        for (severity, id) in self.action_known_vulnerabilities(&uses)? {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(severity)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["uses".into()])
+                            .annotated(&id)
+                            .with_url(format!("https://github.com/advisories/{id}")),
+                    )
+                    .build(step.action())?,
             );
         }
 

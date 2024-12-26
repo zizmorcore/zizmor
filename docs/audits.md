@@ -333,9 +333,9 @@ within an authentic commit (or an authentic tag/branch reference).
 
 ## `known-vulnerable-actions`
 
-| Type     | Examples                       | Introduced in | Works offline  | Enabled by default |
-|----------|--------------------------------|---------------|----------------|--------------------|
-| Workflow  | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 |
+| Type             | Examples                       | Introduced in | Works offline  | Enabled by default |
+|------------------|--------------------------------|---------------|----------------|--------------------|
+| Workflow, Action | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 |
 
 [known-vulnerable-actions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/known-vulnerable-actions.yml
 
