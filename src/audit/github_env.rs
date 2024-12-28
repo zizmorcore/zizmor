@@ -238,7 +238,7 @@ mod tests {
                 no_online_audits: false,
                 cache_dir: "/tmp/zizmor".into(),
                 gh_token: None,
-                ghe_hostname: None,
+                gh_hostname: None,
             };
 
             let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
@@ -301,7 +301,7 @@ mod tests {
                 no_online_audits: false,
                 cache_dir: "/tmp/zizmor".into(),
                 gh_token: None,
-                ghe_hostname: None,
+                gh_hostname: None,
             };
 
             let sut = GitHubEnv::new(audit_state).expect("failed to create audit");

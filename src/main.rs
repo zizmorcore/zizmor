@@ -49,7 +49,7 @@ struct App {
     /// This disables all online audit rules, and prevents zizmor from
     /// auditing remote repositories.
     #[arg(short, long, env = "ZIZMOR_OFFLINE", 
-        conflicts_with_all = ["gh_token", "ghe_hostname"])]
+        conflicts_with_all = ["gh_token", "gh_hostname"])]
     offline: bool,
 
     /// The GitHub API token to use.
@@ -58,7 +58,7 @@ struct App {
 
     /// The GitHub API Server Hostname, if you are running GHE.
     #[arg(long, env)]
-    ghe_hostname: Option<String>,
+    gh_hostname: Option<String>,
 
     /// Perform only offline audits.
     ///
