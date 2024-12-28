@@ -23,13 +23,51 @@ use crate::{
     utils::PipeSelf,
 };
 
+/// Represents different types of GitHub hosts
+#[derive(Debug, PartialEq)]
+pub(crate) enum GitHubHost {
+    Garage,
+    Enterprise,
+    Localhost,
+    Standard,
+}
+
+impl GitHubHost {
+    fn from_hostname(hostname: &str) -> Self {
+        let normalized = hostname.to_lowercase();
+
+        if normalized.eq_ignore_ascii_case("garage.github.com") {
+            Self::Garage
+        } else if normalized.eq_ignore_ascii_case("github.localhost") {
+            Self::Localhost
+        } else if normalized.eq_ignore_ascii_case("github.com") || normalized.ends_with(".ghe.com")
+        {
+            Self::Standard
+        } else {
+            Self::Enterprise
+        }
+    }
+
+    fn to_api_url(&self, hostname: &str) -> String {
+        match self {
+            Self::Garage | Self::Enterprise => format!("https://{}/api/v3", hostname),
+            Self::Localhost => format!("http://api.{}", hostname),
+            Self::Standard => format!("https://api.{}", hostname),
+        }
+    }
+}
+
 pub(crate) struct Client {
-    api_base: &'static str,
+    api_base: String,
     http: ClientWithMiddleware,
 }
 
 impl Client {
-    pub(crate) fn new(token: &str, cache_dir: &Path, hostname: Option<&str>) -> Self {
+    fn get_rest_prefix(hostname: &str) -> String {
+        GitHubHost::from_hostname(hostname).to_api_url(hostname)
+    }
+
+    pub(crate) fn new(token: &str, cache_dir: &Path, hostname: &str) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
@@ -66,13 +104,9 @@ impl Client {
         }))
         .build();
 
-        let api_base = match hostname {
-            Some(hostname) => format!("https://{hostname}/api/v3"),
-            None => "https://api.github.com".to_string(),
-        };
-
+        let rest_api_base = Self::get_rest_prefix(hostname);
         Self {
-            api_base: Box::leak(api_base.into_boxed_str()),
+            api_base: rest_api_base,
             http,
         }
     }

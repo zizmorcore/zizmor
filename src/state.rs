@@ -11,7 +11,7 @@ pub(crate) struct AuditState {
     pub(crate) no_online_audits: bool,
     pub(crate) cache_dir: PathBuf,
     pub(crate) gh_token: Option<String>,
-    pub(crate) gh_hostname: Option<String>,
+    pub(crate) gh_hostname: String,
 }
 
 impl AuditState {
@@ -44,6 +44,6 @@ impl AuditState {
     pub(crate) fn github_client(&self) -> Option<Client> {
         self.gh_token
             .as_ref()
-            .map(|token| Client::new(token, &self.cache_dir, self.gh_hostname.as_deref()))
+            .map(|token| Client::new(token, &self.cache_dir, self.gh_hostname.as_ref()))
     }
 }

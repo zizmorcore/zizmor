@@ -56,9 +56,9 @@ struct App {
     #[arg(long, env)]
     gh_token: Option<String>,
 
-    /// The GitHub API Server Hostname, if you are running GHE.
-    #[arg(long, env)]
-    gh_hostname: Option<String>,
+    /// The GitHub Server Hostname. Defaults to github.com
+    #[arg(long, env, default_value = "github.com")]
+    gh_hostname: String,
 
     /// Perform only offline audits.
     ///
