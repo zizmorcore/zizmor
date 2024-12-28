@@ -8,6 +8,7 @@ adafruit/circuitpython#9785
 astral-sh/ruff#14844
 astropy/astropy#17315
 blakeblackshear/frigate#15490
+brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 cakephp/cakephp#18081
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
@@ -40,12 +41,14 @@ hynek/stamina#81
 hynek/structlog#663
 hynek/svcs#111
 Instagram/LibCST#1262
+lmstudio-ai/venvstacks#51
 matplotlib/matplotlib#29251
 marcusvolz/strava_py#53
 mkuf/prind#183
 mne-tools/mne-python#13011
 MoarVM/MoarVM#1875
 mongodb/motor#312
+mongodb/mongo-python-driver#2001
 narwhals-dev/narwhals#1567
 NetApp/harvest#3247
 NLnetLabs/nsd#413
