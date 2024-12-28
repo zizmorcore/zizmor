@@ -113,6 +113,12 @@
 
     blakeblackshear/frigate#15490
 
+-   ![](https://github.com/brian-team.png?size=40){ width="40" loading=lazy align=left } brian-team/brian2
+
+    ---
+
+    brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
+
 -   ![](https://github.com/cakephp.png?size=40){ width="40" loading=lazy align=left } cakephp/cakephp
 
     ---
@@ -269,6 +275,12 @@
 
     hynek/svcs#111
 
+-   ![](https://github.com/lmstudio-ai.png?size=40){ width="40" loading=lazy align=left } lmstudio-ai/venvstacks
+
+    ---
+
+    lmstudio-ai/venvstacks#51
+
 -   ![](https://github.com/marcusvolz.png?size=40){ width="40" loading=lazy align=left } marcusvolz/strava_py
 
     ---
@@ -292,6 +304,12 @@
     ---
 
     mne-tools/mne-python#13011
+
+-   ![](https://github.com/mongodb.png?size=40){ width="40" loading=lazy align=left } mongodb/mongo-python-driver
+
+    ---
+
+    mongodb/mongo-python-driver#2001
 
 -   ![](https://github.com/mongodb.png?size=40){ width="40" loading=lazy align=left } mongodb/motor
 
