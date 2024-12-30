@@ -434,6 +434,22 @@ as GitHub's example of [running ESLint] as a security workflow.
 
 [Advanced Security]: https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security
 
+### Use with GitHub Enterprise
+
+`zizmor` supports GitHub instances other than `github.com`.
+
+To use it with your [GitHub Enterprise] instance (either cloud or self-hosted),
+pass your instance's domain with `--gh-hostname` or `GH_HOST`:
+
+```bash
+zizmor --gh-hostname custom.example.com ...
+
+# or, with GH_HOST
+GH_HOST=custom.ghe.com zizmor ...
+```
+
+[GitHub Enterprise]: https://github.com/enterprise
+
 ### Use with `pre-commit`
 
 `zizmor` can be used with the [`pre-commit`](https://pre-commit.com/) framework.
