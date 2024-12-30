@@ -23,36 +23,28 @@ use crate::{
     utils::PipeSelf,
 };
 
-/// Represents different types of GitHub hosts
+/// Represents different types of GitHub hosts.
 #[derive(Debug, PartialEq)]
 pub(crate) enum GitHubHost {
-    Garage,
-    Enterprise,
-    Localhost,
-    Standard,
+    Enterprise(String),
+    Standard(String),
 }
 
 impl GitHubHost {
     fn from_hostname(hostname: &str) -> Self {
         let normalized = hostname.to_lowercase();
 
-        if normalized.eq_ignore_ascii_case("garage.github.com") {
-            Self::Garage
-        } else if normalized.eq_ignore_ascii_case("github.localhost") {
-            Self::Localhost
-        } else if normalized.eq_ignore_ascii_case("github.com") || normalized.ends_with(".ghe.com")
-        {
-            Self::Standard
+        if normalized.eq_ignore_ascii_case("github.com") || normalized.ends_with(".ghe.com") {
+            Self::Standard(hostname.into())
         } else {
-            Self::Enterprise
+            Self::Enterprise(hostname.into())
         }
     }
 
-    fn to_api_url(&self, hostname: &str) -> String {
+    fn to_api_url(&self) -> String {
         match self {
-            Self::Garage | Self::Enterprise => format!("https://{}/api/v3", hostname),
-            Self::Localhost => format!("http://api.{}", hostname),
-            Self::Standard => format!("https://api.{}", hostname),
+            Self::Enterprise(ref host) => format!("https://{host}/api/v3"),
+            Self::Standard(ref host) => format!("https://api.{host}"),
         }
     }
 }
@@ -63,11 +55,7 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    fn get_rest_prefix(hostname: &str) -> String {
-        GitHubHost::from_hostname(hostname).to_api_url(hostname)
-    }
-
-    pub(crate) fn new(token: &str, cache_dir: &Path, hostname: &str) -> Self {
+    pub(crate) fn new(hostname: &str, token: &str, cache_dir: &Path) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
@@ -104,9 +92,8 @@ impl Client {
         }))
         .build();
 
-        let rest_api_base = Self::get_rest_prefix(hostname);
         Self {
-            api_base: rest_api_base,
+            api_base: GitHubHost::from_hostname(hostname).to_api_url(),
             http,
         }
     }
@@ -432,4 +419,23 @@ pub(crate) struct Advisory {
 pub(crate) struct File {
     name: String,
     path: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::github_api::GitHubHost;
+
+    #[test]
+    fn test_github_host() {
+        for (host, expected) in [
+            ("github.com", "https://api.github.com"),
+            ("something.ghe.com", "https://api.something.ghe.com"),
+            (
+                "selfhosted.example.com",
+                "https://selfhosted.example.com/api/v3",
+            ),
+        ] {
+            assert_eq!(GitHubHost::from_hostname(host).to_api_url(), expected);
+        }
+    }
 }

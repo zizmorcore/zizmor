@@ -44,6 +44,6 @@ impl AuditState {
     pub(crate) fn github_client(&self) -> Option<Client> {
         self.gh_token
             .as_ref()
-            .map(|token| Client::new(token, &self.cache_dir, self.gh_hostname.as_ref()))
+            .map(|token| Client::new(self.gh_hostname.as_ref(), token, &self.cache_dir))
     }
 }
