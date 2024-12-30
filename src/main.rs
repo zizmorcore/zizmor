@@ -9,6 +9,7 @@ use clap::{Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
+use github_api::GitHubHost;
 use indicatif::ProgressStyle;
 use models::Uses;
 use owo_colors::OwoColorize;
@@ -57,8 +58,8 @@ struct App {
     gh_token: Option<String>,
 
     /// The GitHub Server Hostname. Defaults to github.com
-    #[arg(long, env = "GH_HOST", default_value = "github.com")]
-    gh_hostname: String,
+    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::from_clap)]
+    gh_hostname: GitHubHost,
 
     /// Perform only offline audits.
     ///

@@ -24,20 +24,27 @@ use crate::{
 };
 
 /// Represents different types of GitHub hosts.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum GitHubHost {
     Enterprise(String),
     Standard(String),
 }
 
 impl GitHubHost {
-    fn from_hostname(hostname: &str) -> Self {
+    pub(crate) fn from_clap(hostname: &str) -> Result<Self, String> {
         let normalized = hostname.to_lowercase();
 
+        // NOTE: ideally we'd do a full domain validity check here.
+        // For now, this just checks the most likely kind of user
+        // confusion (supplying a URL instead of a bare domain name).
+        if normalized.starts_with("https://") || normalized.starts_with("http://") {
+            return Err("must be a domain name, not a URL".into());
+        }
+
         if normalized.eq_ignore_ascii_case("github.com") || normalized.ends_with(".ghe.com") {
-            Self::Standard(hostname.into())
+            Ok(Self::Standard(hostname.into()))
         } else {
-            Self::Enterprise(hostname.into())
+            Ok(Self::Enterprise(hostname.into()))
         }
     }
 
@@ -55,7 +62,7 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    pub(crate) fn new(hostname: &str, token: &str, cache_dir: &Path) -> Self {
+    pub(crate) fn new(hostname: &GitHubHost, token: &str, cache_dir: &Path) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
@@ -93,7 +100,7 @@ impl Client {
         .build();
 
         Self {
-            api_base: GitHubHost::from_hostname(hostname).to_api_url(),
+            api_base: hostname.to_api_url(),
             http,
         }
     }
@@ -435,7 +442,7 @@ mod tests {
                 "https://selfhosted.example.com/api/v3",
             ),
         ] {
-            assert_eq!(GitHubHost::from_hostname(host).to_api_url(), expected);
+            assert_eq!(GitHubHost::from_clap(host).unwrap().to_api_url(), expected);
         }
     }
 }

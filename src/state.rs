@@ -4,14 +4,17 @@ use std::path::PathBuf;
 
 use etcetera::{choose_app_strategy, AppStrategy, AppStrategyArgs};
 
-use crate::{github_api::Client, App};
+use crate::{
+    github_api::{Client, GitHubHost},
+    App,
+};
 
 #[derive(Clone)]
 pub(crate) struct AuditState {
     pub(crate) no_online_audits: bool,
     pub(crate) cache_dir: PathBuf,
     pub(crate) gh_token: Option<String>,
-    pub(crate) gh_hostname: String,
+    pub(crate) gh_hostname: GitHubHost,
 }
 
 impl AuditState {
@@ -44,6 +47,6 @@ impl AuditState {
     pub(crate) fn github_client(&self) -> Option<Client> {
         self.gh_token
             .as_ref()
-            .map(|token| Client::new(self.gh_hostname.as_ref(), token, &self.cache_dir))
+            .map(|token| Client::new(&self.gh_hostname, token, &self.cache_dir))
     }
 }
