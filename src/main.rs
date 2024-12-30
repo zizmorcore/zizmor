@@ -9,6 +9,7 @@ use clap::{Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
+use github_api::GitHubHost;
 use indicatif::ProgressStyle;
 use models::{Action, Uses};
 use owo_colors::OwoColorize;
@@ -48,12 +49,17 @@ struct App {
     ///
     /// This disables all online audit rules, and prevents zizmor from
     /// auditing remote repositories.
-    #[arg(short, long, env = "ZIZMOR_OFFLINE", group = "_offline")]
+    #[arg(short, long, env = "ZIZMOR_OFFLINE",
+        conflicts_with_all = ["gh_token", "gh_hostname"])]
     offline: bool,
 
     /// The GitHub API token to use.
-    #[arg(long, env, group = "_offline")]
+    #[arg(long, env)]
     gh_token: Option<String>,
+
+    /// The GitHub Server Hostname. Defaults to github.com
+    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::from_clap)]
+    gh_hostname: GitHubHost,
 
     /// Perform only offline audits.
     ///

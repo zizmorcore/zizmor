@@ -378,6 +378,7 @@ impl Audit for GitHubEnv {
 mod tests {
     use crate::audit::github_env::{GitHubEnv, GITHUB_ENV_WRITE_CMD};
     use crate::audit::Audit;
+    use crate::github_api::GitHubHost;
     use crate::state::AuditState;
 
     #[test]
@@ -435,6 +436,7 @@ mod tests {
                 no_online_audits: false,
                 cache_dir: "/tmp/zizmor".into(),
                 gh_token: None,
+                gh_hostname: GitHubHost::Standard("github.com".into()),
             };
 
             let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
@@ -519,6 +521,7 @@ mod tests {
                 no_online_audits: false,
                 cache_dir: "/tmp/zizmor".into(),
                 gh_token: None,
+                gh_hostname: GitHubHost::Standard("github.com".into()),
             };
 
             let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
