@@ -1,8 +1,9 @@
-use crate::audit::WorkflowAudit;
+use crate::audit::Audit;
 use crate::finding::{Confidence, Finding, Persona, Severity, SymbolicLocation};
 use crate::models::{Steps, Workflow};
 use crate::state::AuditState;
 use anyhow::Result;
+use github_actions_models::action;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::common::{Env, EnvValue};
 use github_actions_models::workflow::job::StepBody;
@@ -22,7 +23,7 @@ audit_meta!(
 impl InsecureCommands {
     fn insecure_commands_maybe_present<'w>(
         &self,
-        workflow: &'w Workflow,
+        doc: &'w impl AsRef<yamlpath::Document>,
         location: SymbolicLocation<'w>,
     ) -> Result<Finding<'w>> {
         Self::finding()
@@ -34,12 +35,12 @@ impl InsecureCommands {
                     "non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS",
                 ),
             )
-            .build(workflow)
+            .build(doc)
     }
 
     fn insecure_commands_allowed<'w>(
         &self,
-        workflow: &'w Workflow,
+        doc: &'w impl AsRef<yamlpath::Document>,
         location: SymbolicLocation<'w>,
     ) -> Result<Finding<'w>> {
         Self::finding()
@@ -51,7 +52,7 @@ impl InsecureCommands {
                     .with_keys(&["env".into()])
                     .annotated("insecure commands enabled here"),
             )
-            .build(workflow)
+            .build(doc)
     }
 
     fn has_insecure_commands_enabled(&self, env: &Env) -> bool {
@@ -95,7 +96,7 @@ impl InsecureCommands {
     }
 }
 
-impl WorkflowAudit for InsecureCommands {
+impl Audit for InsecureCommands {
     fn new(_: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -134,5 +135,29 @@ impl WorkflowAudit for InsecureCommands {
         }
 
         Ok(results)
+    }
+
+    fn audit_composite_step<'a>(
+        &self,
+        step: &super::CompositeStep<'a>,
+    ) -> Result<Vec<Finding<'a>>> {
+        let mut findings = vec![];
+
+        let action::StepBody::Run { env, .. } = &step.body else {
+            return Ok(findings);
+        };
+
+        match env {
+            LoE::Expr(_) => {
+                findings.push(self.insecure_commands_maybe_present(step.action(), step.location())?)
+            }
+            LoE::Literal(env) => {
+                if self.has_insecure_commands_enabled(env) {
+                    findings.push(self.insecure_commands_allowed(step.action(), step.location())?);
+                }
+            }
+        }
+
+        Ok(findings)
     }
 }

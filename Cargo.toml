@@ -22,6 +22,7 @@ clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
 etcetera = "0.8.0"
+flate2 = "1.0.35"
 github-actions-models = "0.17.0"
 http-cache-reqwest = "0.15.0"
 human-panic = "2.0.1"
@@ -42,6 +43,9 @@ serde = { version = "1.0.216", features = ["derive"] }
 serde-sarif = "0.7.0"
 serde_json = "1.0.134"
 serde_yaml = "0.9.34"
+# TODO remove pending https://github.com/tree-sitter/tree-sitter/pull/4034
+streaming-iterator = "0.1.9"
+tar = "0.4.43"
 terminal-link = "0.1.0"
 tokio = { version = "1.42.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
@@ -50,7 +54,7 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 tree-sitter = "0.24.5"
 tree-sitter-bash = "0.23.3"
 tree-sitter-powershell = "0.24.4"
-yamlpath = "0.13.0"
+yamlpath = "0.14.0"
 
 [profile.dev.package]
 insta.opt-level = 3

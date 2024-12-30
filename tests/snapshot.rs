@@ -212,6 +212,11 @@ fn unpinned_uses() -> Result<()> {
         .workflow(workflow_under_test("unpinned-uses.yml"))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("unpinned-uses/action.yml"))
+        .args(["--pedantic"])
+        .run()?);
+
     Ok(())
 }
 
@@ -224,6 +229,11 @@ fn insecure_commands() -> Result<()> {
 
     insta::assert_snapshot!(zizmor()
         .workflow(workflow_under_test("insecure-commands.yml"))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("insecure-commands/action.yml"))
+        .args(["--persona=auditor"])
         .run()?);
 
     Ok(())
@@ -356,6 +366,15 @@ fn excessive_permissions() -> Result<()> {
             "excessive-permissions/issue-336-repro.yml"
         ))
         .args(["--pedantic"])
+        .run()?);
+
+    Ok(())
+}
+
+#[test]
+fn github_env() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("github-env/action.yml"))
         .run()?);
 
     Ok(())

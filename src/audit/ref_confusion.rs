@@ -11,7 +11,9 @@ use std::ops::Deref;
 use anyhow::{anyhow, Result};
 use github_actions_models::workflow::Job;
 
-use super::{audit_meta, WorkflowAudit};
+use super::{audit_meta, Audit};
+use crate::finding::Finding;
+use crate::models::CompositeStep;
 use crate::{
     finding::{Confidence, Severity},
     github_api,
@@ -47,7 +49,7 @@ impl RefConfusion {
     }
 }
 
-impl WorkflowAudit for RefConfusion {
+impl Audit for RefConfusion {
     fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -111,6 +113,31 @@ impl WorkflowAudit for RefConfusion {
                     }
                 }
             }
+        }
+
+        Ok(findings)
+    }
+
+    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+        let mut findings = vec![];
+
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
+
+        if self.confusable(&uses)? {
+            findings.push(
+                Self::finding()
+                    .severity(Severity::Medium)
+                    .confidence(Confidence::High)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["uses".into()])
+                            .annotated(REF_CONFUSION_ANNOTATION),
+                    )
+                    .build(step.action())?,
+            );
         }
 
         Ok(findings)

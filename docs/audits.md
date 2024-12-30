@@ -295,7 +295,7 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 | Type     | Examples              | Introduced in | Works offline  | Enabled by default |
 |----------|-----------------------|---------------|----------------|--------------------|
-| Workflow  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 |
+| Workflow, Action  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 |
 
 [impostor-commit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/impostor-commit.yml
 
@@ -333,9 +333,9 @@ within an authentic commit (or an authentic tag/branch reference).
 
 ## `known-vulnerable-actions`
 
-| Type     | Examples                       | Introduced in | Works offline  | Enabled by default |
-|----------|--------------------------------|---------------|----------------|--------------------|
-| Workflow  | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 |
+| Type             | Examples                       | Introduced in | Works offline  | Enabled by default |
+|------------------|--------------------------------|---------------|----------------|--------------------|
+| Workflow, Action | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 |
 
 [known-vulnerable-actions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/known-vulnerable-actions.yml
 
@@ -357,9 +357,10 @@ the action if one is available, or remove the action's usage entirely.
 
 ## `ref-confusion`
 
-| Type     | Examples            | Introduced in | Works offline  | Enabled by default |
-|----------|---------------------|---------------|----------------|--------------------|
-| Workflow  | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 |
+| Type             | Examples            | Introduced in | Works offline  | Enabled by default |
+|------------------|---------------------|---------------|----------------|--------------------|
+| Workflow, Action | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 |
+
 
 [ref-confusion.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/ref-confusion.yml
 
@@ -431,7 +432,7 @@ there are steps you can take to minimize their risk:
 
 | Type     | Examples                 | Introduced in | Works offline  | Enabled by default |
 |----------|--------------------------|---------------|----------------|--------------------|
-| Workflow  | [template-injection.yml] | v0.1.0        | ✅             | ✅                 |
+| Workflow, Action  | [template-injection.yml] | v0.1.0        | ✅             | ✅                 |
 
 [template-injection.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/template-injection.yml
 
@@ -546,9 +547,9 @@ or @rubygems/release-gem for canonical examples of using it.
 
 ## `unpinned-uses`
 
-| Type     | Examples                     | Introduced in | Works offline  | Enabled by default |
-|----------|------------------------------|---------------|----------------|--------------------|
-| Workflow  | [unpinned.yml]              | v0.4.0        | ✅             | ✅                 |
+| Type             | Examples                     | Introduced in | Works offline  | Enabled by default |
+|------------------|------------------------------|---------------|----------------|--------------------|
+| Workflow, Action | [unpinned.yml]              | v0.4.0        | ✅             | ✅                 |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
@@ -622,7 +623,7 @@ A before/after example is shown below.
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default |
 |----------|-------------------------|---------------|----------------|--------------------|
-| Workflow  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅                 |
+| Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅                 |
 
 [insecure-commands.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/insecure-commands.yml
 
@@ -668,7 +669,7 @@ In general, users should use for [GitHub Actions environment files]
 
 | Type     | Examples           | Introduced in | Works offline  | Enabled by default |
 |----------|--------------------|---------------|----------------|--------------------|
-| Workflow  | [github-env.yml]   | v0.6.0        | ✅             | ✅                 |
+| Workflow, Action  | [github-env.yml]   | v0.6.0        | ✅             | ✅                 |
 
 [github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
 

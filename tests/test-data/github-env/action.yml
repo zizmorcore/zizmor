@@ -1,0 +1,28 @@
+# demo of a composite action being flagged by github-env
+
+name: github-env-composite-action
+description: github-env-composite-action
+
+runs:
+  using: composite
+  steps:
+    - name: true-positive-1
+      run: |
+        echo "foo=$(bar)" >> $GITHUB_ENV
+      shell: bash
+
+    - name: true-positive-2
+      run: |
+        echo "foo=$env:BAR" >> $env:GITHUB_ENV
+      shell: pwsh
+
+    - name: true-positive-3
+      run: |
+        echo LIBRARY=%LIBRARY% >> %GITHUB_ENV%
+      shell: cmd
+
+    - name: true-negative-4
+      # No finding because foo=bar is wholly static.
+      run: |
+        echo foo=bar >> $GITHUB_ENV
+      shell: bash

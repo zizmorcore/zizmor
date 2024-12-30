@@ -5,6 +5,12 @@
 
     DataDog/datadog-agent#30871
 
+-   ![](https://github.com/DataDog.png?size=40){ width="40" loading=lazy align=left } DataDog/dd-trace-py
+
+    ---
+
+    DataDog/dd-trace-py#11640
+
 -   ![](https://github.com/Diaoul.png?size=40){ width="40" loading=lazy align=left } Diaoul/subliminal
 
     ---
@@ -17,11 +23,29 @@
 
     Homebrew/brew#18662
 
+-   ![](https://github.com/Homebrew.png?size=40){ width="40" loading=lazy align=left } Homebrew/homebrew-core
+
+    ---
+
+    Homebrew/homebrew-core#195961
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram/LibCST
 
     ---
 
     Instagram/LibCST#1262
+
+-   ![](https://github.com/MoarVM.png?size=40){ width="40" loading=lazy align=left } MoarVM/MoarVM
+
+    ---
+
+    MoarVM/MoarVM#1875
+
+-   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs/nsd
+
+    ---
+
+    NLnetLabs/nsd#413
 
 -   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs/unbound
 
@@ -35,11 +59,35 @@
 
     NetApp/harvest#3247
 
+-   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc/xclim
+
+    ---
+
+    Ouranosinc/xclim#2023
+
 -   ![](https://github.com/PyO3.png?size=40){ width="40" loading=lazy align=left } PyO3/pyo3
 
     ---
 
     PyO3/pyo3#4774
+
+-   ![](https://github.com/PyVRP.png?size=40){ width="40" loading=lazy align=left } PyVRP/PyVRP
+
+    ---
+
+    PyVRP/PyVRP#670
+
+-   ![](https://github.com/Unidata.png?size=40){ width="40" loading=lazy align=left } Unidata/MetPy
+
+    ---
+
+    Unidata/MetPy#3710
+
+-   ![](https://github.com/ViaVersion.png?size=40){ width="40" loading=lazy align=left } ViaVersion/ViaVersion
+
+    ---
+
+    ViaVersion/ViaVersion#4315
 
 -   ![](https://github.com/adafruit.png?size=40){ width="40" loading=lazy align=left } adafruit/circuitpython
 
@@ -58,6 +106,18 @@
     ---
 
     astropy/astropy#17315
+
+-   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear/frigate
+
+    ---
+
+    blakeblackshear/frigate#15490
+
+-   ![](https://github.com/brian-team.png?size=40){ width="40" loading=lazy align=left } brian-team/brian2
+
+    ---
+
+    brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 
 -   ![](https://github.com/cakephp.png?size=40){ width="40" loading=lazy align=left } cakephp/cakephp
 
@@ -95,11 +155,47 @@
 
     ethereum/hevm#615
 
+-   ![](https://github.com/fpgmaas.png?size=40){ width="40" loading=lazy align=left } fpgmaas/deptry
+
+    ---
+
+    fpgmaas/deptry#972
+
+-   ![](https://github.com/freeCodeCamp.png?size=40){ width="40" loading=lazy align=left } freeCodeCamp/devdocs
+
+    ---
+
+    freeCodeCamp/devdocs#2386
+
+-   ![](https://github.com/freemocap.png?size=40){ width="40" loading=lazy align=left } freemocap/freemocap
+
+    ---
+
+    freemocap/freemocap#659
+
+-   ![](https://github.com/gaphor.png?size=40){ width="40" loading=lazy align=left } gaphor/gaphor
+
+    ---
+
+    gaphor/gaphor#3658
+
+-   ![](https://github.com/getsops.png?size=40){ width="40" loading=lazy align=left } getsops/sops
+
+    ---
+
+    getsops/sops#1704
+
 -   ![](https://github.com/girlbossceo.png?size=40){ width="40" loading=lazy align=left } girlbossceo/conduwuit
 
     ---
 
     girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
+
+-   ![](https://github.com/git-lfs.png?size=40){ width="40" loading=lazy align=left } git-lfs/git-lfs
+
+    ---
+
+    git-lfs/git-lfs#5930
 
 -   ![](https://github.com/guacsec.png?size=40){ width="40" loading=lazy align=left } guacsec/guac
 
@@ -173,6 +269,18 @@
 
     hynek/structlog#663
 
+-   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/svcs
+
+    ---
+
+    hynek/svcs#111
+
+-   ![](https://github.com/lmstudio-ai.png?size=40){ width="40" loading=lazy align=left } lmstudio-ai/venvstacks
+
+    ---
+
+    lmstudio-ai/venvstacks#51
+
 -   ![](https://github.com/marcusvolz.png?size=40){ width="40" loading=lazy align=left } marcusvolz/strava_py
 
     ---
@@ -185,11 +293,47 @@
 
     matplotlib/matplotlib#29251
 
+-   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf/prind
+
+    ---
+
+    mkuf/prind#183
+
 -   ![](https://github.com/mne-tools.png?size=40){ width="40" loading=lazy align=left } mne-tools/mne-python
 
     ---
 
     mne-tools/mne-python#13011
+
+-   ![](https://github.com/mongodb.png?size=40){ width="40" loading=lazy align=left } mongodb/mongo-python-driver
+
+    ---
+
+    mongodb/mongo-python-driver#2001
+
+-   ![](https://github.com/mongodb.png?size=40){ width="40" loading=lazy align=left } mongodb/motor
+
+    ---
+
+    mongodb/motor#312
+
+-   ![](https://github.com/narwhals-dev.png?size=40){ width="40" loading=lazy align=left } narwhals-dev/narwhals
+
+    ---
+
+    narwhals-dev/narwhals#1567
+
+-   ![](https://github.com/numpy.png?size=40){ width="40" loading=lazy align=left } numpy/numpy
+
+    ---
+
+    numpy/numpy#27931
+
+-   ![](https://github.com/numpy.png?size=40){ width="40" loading=lazy align=left } numpy/numpy.org
+
+    ---
+
+    numpy/numpy.org#797
 
 -   ![](https://github.com/oxc-project.png?size=40){ width="40" loading=lazy align=left } oxc-project/oxc
 
@@ -317,6 +461,18 @@
 
     python-telegram-bot/python-telegram-bot#4606
 
+-   ![](https://github.com/python-trio.png?size=40){ width="40" loading=lazy align=left } python-trio/trio
+
+    ---
+
+    python-trio/trio#3154
+
+-   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python/bedevere
+
+    ---
+
+    python/bedevere#652
+
 -   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python/cpython
 
     ---
@@ -353,6 +509,12 @@
 
     rustls/tokio-rustls#96
 
+-   ![](https://github.com/rustls.png?size=40){ width="40" loading=lazy align=left } rustls/webpki
+
+    ---
+
+    rustls/webpki#299
+
 -   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore/cosign
 
     ---
@@ -365,11 +527,29 @@
 
     sigstore/gitsign#602
 
+-   ![](https://github.com/simpeg.png?size=40){ width="40" loading=lazy align=left } simpeg/simpeg
+
+    ---
+
+    simpeg/simpeg#1592
+
 -   ![](https://github.com/termcolor.png?size=40){ width="40" loading=lazy align=left } termcolor/termcolor
 
     ---
 
     termcolor/termcolor#89
+
+-   ![](https://github.com/termux.png?size=40){ width="40" loading=lazy align=left } termux/termux-packages
+
+    ---
+
+    termux/termux-packages#22519
+
+-   ![](https://github.com/torchbox.png?size=40){ width="40" loading=lazy align=left } torchbox/wagtailmedia
+
+    ---
+
+    torchbox/wagtailmedia#252
 
 -   ![](https://github.com/tornadoweb.png?size=40){ width="40" loading=lazy align=left } tornadoweb/tornado
 
@@ -388,6 +568,18 @@
     ---
 
     ultrajson/ultrajson#650
+
+-   ![](https://github.com/urllib3.png?size=40){ width="40" loading=lazy align=left } urllib3/urllib3
+
+    ---
+
+    urllib3/urllib3#3528
+
+-   ![](https://github.com/uutils.png?size=40){ width="40" loading=lazy align=left } uutils/coreutils
+
+    ---
+
+    uutils/coreutils#6973
 
 -   ![](https://github.com/vlang.png?size=40){ width="40" loading=lazy align=left } vlang/v
 
