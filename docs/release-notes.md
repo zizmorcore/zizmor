@@ -11,10 +11,6 @@ of `zizmor`.
 
 ## v1.0.0
 
-!!! warning
-
-    The notes below are for an **unreleased version**.
-
 This is the first stable release of `zizmor`!
 
 Starting with this release, `zizmor` will use [Semantic Versioning] for
@@ -68,8 +64,6 @@ as stability commitments for existing features; read more below!
 * The [cache-poisoning] defaults for `setup-go` were fixed (#343)
 * `uses:` matching is now case-insensitive where appropriate (#353)
 * Quoted YAML keys (like `'on': foo`) are now parsed correctly (#368)
-
-### Removed
 
 ## v0.10.0
 
