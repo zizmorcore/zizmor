@@ -4,9 +4,68 @@ description: Abbreviated change notes about each zizmor release.
 
 # Release Notes
 
+This page contains _abbreviated_ release notes for each version of `zizmor`.
+
 !!! note
 
     Release notes for versions before v1.0.0 were produced automatically by GitHub.
+
+## v1.0.0 (UNRELEASED)
+
+This is the first stable release of `zizmor`!
+
+Starting with this release, `zizmor` will use [Semantic Versioning] for
+its versioning scheme. In short, this means that breaking changes will only
+happen with a new major version.
+
+[Semantic Versioning]: https://semver.org/
+
+This stable release comes with a large number of new features as well
+as stability commitments for existing features; read more below!
+
+### Added
+
+* Composite actions (i.e. `action.yml` where the action is *not* a Docker
+  or JavaScript action) are now supported, and are audited by default
+  when running `zizmor` on a directory or remote repository (#331)
+
+    !!! tip
+
+        Composite action discovery and auditing can be disabled by passing
+        `--collect=workflows-only`.
+
+    See #350 for the status of each audit's support for analyzing
+    composite actions.
+
+* The GitHub host to connect to can now be configured with `--gh-hostname`
+  or `GH_HOST` in the environment (#371)
+
+    This can be used to connect to a GitHub Enterprise (GHE) instance
+    instead of the default `github.com` instance.
+
+### Improved
+
+* The [cache-poisoning] audit is now aware of common publishing actions
+  and uses then to determine whether to produce a finding (#338, #341)
+* The [cache-poisoning] audit is now aware of configuration-free caching
+  actions, such as @Mozilla-Actions/sccache-action (#345)
+* The [cache-poisoning] audit is now aware of even more caching actions
+  (#346)
+* The [cache-poisoning] audit is now aware of common publishing triggers
+  (such as pushing to a release branch) and uses them to determine whether
+  to produce a finding (#352)
+* The [github-env] audit is now significantly more precise on `bash` and `pwsh`
+  inputs (#354)
+
+### Fixed
+
+* The [excessive-permissions] audit is now less noisy on single-job workflows (#337)
+* Expressions like `function().foo.bar` are now parsed correctly (#340)
+* The [cache-poisoning] defaults for `setup-go` were fixed (#343)
+* `uses:` matching is now case-insensitive where appropriate (#353)
+* Quoted YAML keys (like `'on': foo`) are now parsed correctly (#368)
+
+### Removed
 
 ## v0.10.0
 
@@ -313,3 +372,9 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ### New Contributors
 * @hugovk made their first contribution in #61
+
+<!-- useful shortlinks -->
+
+[excessive-permissions]: ./audits.md#excessive-permissions
+[cache-poisoning]: ./audits.md#cache-poisoning
+[github-env]: ./audits.md#github-env
