@@ -13,9 +13,9 @@ nav:
   - "installation.md"
   - "quickstart.md"
   - "usage.md"
+  - "release-notes.md"
   - "configuration.md"
   - "audits.md"
-  - "limitations.md"
   - "development.md"
   - "trophy-case.md"
   - External links:
