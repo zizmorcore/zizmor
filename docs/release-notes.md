@@ -4,13 +4,14 @@ description: Abbreviated change notes about each zizmor release.
 
 # Release Notes
 
-This page contains _abbreviated_ release notes for each version of `zizmor`.
-
-!!! note
-
-    Release notes for versions before v1.0.0 were produced automatically by GitHub.
+This page contains _abbreviated_, user-focused release notes for each version
+of `zizmor`.
 
 ## v1.0.0 (UNRELEASED)
+
+!!! warning
+
+    The notes below are for an **unreleased version**.
 
 This is the first stable release of `zizmor`!
 
@@ -32,7 +33,8 @@ as stability commitments for existing features; read more below!
     !!! tip
 
         Composite action discovery and auditing can be disabled by passing
-        `--collect=workflows-only`.
+        `--collect=workflows-only`. Conversely, workflow discovery and auditing
+        can be disabled by passing `--collect=actions-only`.
 
     See #350 for the status of each audit's support for analyzing
     composite actions.
