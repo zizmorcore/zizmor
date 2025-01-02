@@ -7,7 +7,9 @@ description: Abbreviated change notes about each zizmor release.
 This page contains _abbreviated_, user-focused release notes for each version
 of `zizmor`.
 
-## v1.0.0 (UNRELEASED)
+## Upcoming (UNRELEASED)
+
+## v1.0.0
 
 !!! warning
 
