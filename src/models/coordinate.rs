@@ -116,18 +116,18 @@ impl UsesCoordinate<'_> {
 }
 
 pub(crate) enum Toggle {
-    /// Opt-in means that cache is **enabled** when the control value matches.
+    /// Opt-in means that usage is **enabled** when the control value matches.
     OptIn,
-    /// Opt-out means that cache is **disabled** when the control value matches.
+    /// Opt-out means that usage is **disabled** when the control value matches.
     OptOut,
 }
 
-/// The value type that controls the activation/deactivation of caching
+/// The type of value that controls the step's behavior.
 #[derive(PartialEq)]
 pub(crate) enum ControlFieldType {
-    /// The caching behavior is controlled by a boolean field, e.g. `cache: true`.
+    /// The behavior is controlled by a boolean field, e.g. `cache: true`.
     Boolean,
-    /// The caching behavior is controlled by a string field, e.g. `cache: "pip"`.
+    /// The behavior is controlled by a string field, e.g. `cache: "pip"`.
     String,
 }
 
