@@ -22,6 +22,8 @@ use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 use terminal_link::Link;
 
+pub(crate) mod coordinate;
+
 /// Common interfaces between workflow and action steps.
 pub(crate) trait StepCommon {
     /// Returns whether the given `env.name` environment access is "static,"
