@@ -9,6 +9,10 @@ of `zizmor`.
 
 ## Upcoming (UNRELEASED)
 
+### Fixed
+
+* `workflow_call.secrets` keys with missing values are now parsed correctly (#388)
+
 ## v1.0.0
 
 This is the first stable release of `zizmor`!
