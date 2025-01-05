@@ -37,14 +37,7 @@ impl UsesCoordinate<'_> {
         }
     }
 
-    /// Returns the "declared" usage from a `with:` field, modulo an expected field type.
-    ///
-    /// This is an incomplete usage, as the overall semantics can be inverted by the
-    /// coordinate. For example, `foo: true` suggests opt-in, but the coordinate may specify
-    /// that the `true` value is really an opt-out.
-    ///
-    /// Intuitively: `disable-cache: true` is an opt-in to `disable-cache`, but an opt-out
-    /// of caching. So a coordinate that checks for cache usage inverts the naive result.
+    /// Returns the "declared" usage from a `with:` field, modulo a toggle.
     fn declared_usage(
         &self,
         value: &EnvValue,
@@ -52,17 +45,21 @@ impl UsesCoordinate<'_> {
         field_type: &ControlFieldType,
     ) -> Option<Usage> {
         match value.to_string().as_str() {
-            "true" if matches!(field_type, ControlFieldType::Boolean) => match toggle {
-                Toggle::OptIn => Some(Usage::DirectOptIn),
-                Toggle::OptOut => None,
-            },
+            // Handle `false` specially, since we need to invert the toggle.
             "false" if matches!(field_type, ControlFieldType::Boolean) => match toggle {
                 Toggle::OptIn => None,
                 Toggle::OptOut => Some(Usage::DirectOptIn),
             },
+            // NOTE: We don't bother checking for string or other-typed fields here,
+            // since it's all stringly-typed under the hood.
             other => match ExplicitExpr::from_curly(other) {
-                None if matches!(field_type, ControlFieldType::String) => Some(Usage::DirectOptIn),
-                None => None,
+                // If it's not an expression, all we know is that it's likely a
+                // fixed sentinel value.
+                // This catches the `true` boolean case as well.
+                None => match toggle {
+                    Toggle::OptIn => Some(Usage::DirectOptIn),
+                    Toggle::OptOut => None,
+                },
                 Some(_) => Some(Usage::ConditionalOptIn),
             },
         }
@@ -99,16 +96,8 @@ impl UsesCoordinate<'_> {
                 match with.get(control.field_name) {
                     Some(field_value) => {
                         // The declared usage is whatever the user explicitly configured,
-                        // which might be inverted if the semantics are opt-out instead.
+                        // which might be inverted if the toggle semantics are opt-out instead.
                         self.declared_usage(field_value, &control.toggle, &control.field_type)
-
-                        // match declared_usage {
-                        //     Usage::DirectOptIn => match control.toggle {
-                        //         Toggle::OptIn => Some(declared_usage),
-                        //         Toggle::OptOut => None,
-                        //     },
-                        //     _ => Some(declared_usage),
-                        // }
                     }
                     None => {
                         // If the controlling field is not present, the default dictates the semantics.
