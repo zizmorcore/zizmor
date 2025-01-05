@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Upcoming (UNRELEASED)
 
+### Improved
+
+* The [github-env] audit now detects dangerous writes to `GITHUB_PATH`,
+  is more precise, and can produce multiple findings per run block (#391)
+
 ### Fixed
 
 * `workflow_call.secrets` keys with missing values are now parsed correctly (#388)

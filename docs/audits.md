@@ -673,12 +673,17 @@ In general, users should use for [GitHub Actions environment files]
 
 [github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
 
-Detects dangerous usages of the `GITHUB_ENV` environment variable.
+Detects dangerous writes to the `GITHUB_ENV` and `GITHUB_PATH` environment variables.
 
 When used in workflows with dangerous triggers (such as `pull_request_target` and `workflow_run`),
-`GITHUB_ENV` can be an arbitrary code execution risk. In particular, if the attacker is able to set
-arbitrary variables or variable contents via `GITHUB_ENV`, they made be able to set `LD_PRELOAD`
-or otherwise induce code execution implicitly within subsequent steps.
+`GITHUB_ENV` and `GITHUB_PATH` can be an arbitrary code execution risk:
+
+* If the attacker is able to set arbitrary variables or variable contents via
+  `GITHUB_ENV`, they may be able to set `LD_PRELOAD` or otherwise induce code
+  execution implicitly within subsequent steps.
+* If the attacker is able to add an arbitrary directory to the `$PATH` via
+  `GITHUB_PATH`, they may be able to execute arbitrary code by shadowing
+  ordinary system executables (such as `ssh`).
 
 Other resources:
 
@@ -689,8 +694,12 @@ Other resources:
 
 ### Remediation
 
-In general, you should avoid setting `GITHUB_ENV` within workflows that are attacker-triggered,
-like `pull_request_target`.
+In general, you should avoid modifying `GITHUB_ENV` and `GITHUB_PATH` within
+sensitive workflows that are attacker-triggered, like `pull_request_target`.
+
+If you absolutely must use `GITHUB_ENV` or `GITHUB_PATH`, avoid passing
+attacker-controlled values into either. Stick with literal strings and
+values computed solely from trusted sources.
 
 If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 
