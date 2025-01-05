@@ -1,612 +1,621 @@
 
--   ![](https://github.com/DataDog.png?size=40){ width="40" loading=lazy align=left } DataDog/datadog-agent
+-   ![](https://github.com/adafruit.png?size=40){ width="40" loading=lazy align=left } adafruit
 
     ---
 
-    DataDog/datadog-agent#30871
+    ??? example "Examples"
+        - adafruit/circuitpython#9785
 
--   ![](https://github.com/DataDog.png?size=40){ width="40" loading=lazy align=left } DataDog/dd-trace-py
 
-    ---
-
-    DataDog/dd-trace-py#11640
+-   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
 
--   ![](https://github.com/Diaoul.png?size=40){ width="40" loading=lazy align=left } Diaoul/subliminal
-
     ---
-
-    Diaoul/subliminal#1190
 
--   ![](https://github.com/Homebrew.png?size=40){ width="40" loading=lazy align=left } Homebrew/brew
+    ??? example "Examples"
+        - apache/airflow#45408
 
-    ---
-
-    Homebrew/brew#18662
 
--   ![](https://github.com/Homebrew.png?size=40){ width="40" loading=lazy align=left } Homebrew/homebrew-core
+-   ![](https://github.com/ashishb.png?size=40){ width="40" loading=lazy align=left } ashishb
 
     ---
-
-    Homebrew/homebrew-core#195961
-
--   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram/LibCST
 
-    ---
+    ??? example "Examples"
+        - ashishb/wp2hugo#91
 
-    Instagram/LibCST#1262
 
--   ![](https://github.com/MoarVM.png?size=40){ width="40" loading=lazy align=left } MoarVM/MoarVM
+-   ![](https://github.com/astral-sh.png?size=40){ width="40" loading=lazy align=left } astral-sh
 
     ---
-
-    MoarVM/MoarVM#1875
 
--   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs/nsd
-
-    ---
+    ??? example "Examples"
+        - astral-sh/ruff#14844
 
-    NLnetLabs/nsd#413
 
--   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs/unbound
+-   ![](https://github.com/astropy.png?size=40){ width="40" loading=lazy align=left } astropy
 
     ---
 
-    NLnetLabs/unbound#1204
+    ??? example "Examples"
+        - astropy/astropy#17315
 
--   ![](https://github.com/NetApp.png?size=40){ width="40" loading=lazy align=left } NetApp/harvest
 
-    ---
-
-    NetApp/harvest#3247
+-   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear
 
--   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc/xclim
-
     ---
-
-    Ouranosinc/xclim#2023
 
--   ![](https://github.com/PyO3.png?size=40){ width="40" loading=lazy align=left } PyO3/pyo3
+    ??? example "Examples"
+        - blakeblackshear/frigate#15490
 
-    ---
-
-    PyO3/pyo3#4774
 
--   ![](https://github.com/PyVRP.png?size=40){ width="40" loading=lazy align=left } PyVRP/PyVRP
+-   ![](https://github.com/brian-team.png?size=40){ width="40" loading=lazy align=left } brian-team
 
     ---
-
-    PyVRP/PyVRP#670
-
--   ![](https://github.com/Unidata.png?size=40){ width="40" loading=lazy align=left } Unidata/MetPy
 
-    ---
+    ??? example "Examples"
+        - brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 
-    Unidata/MetPy#3710
 
--   ![](https://github.com/ViaVersion.png?size=40){ width="40" loading=lazy align=left } ViaVersion/ViaVersion
+-   ![](https://github.com/cakephp.png?size=40){ width="40" loading=lazy align=left } cakephp
 
     ---
-
-    ViaVersion/ViaVersion#4315
 
--   ![](https://github.com/adafruit.png?size=40){ width="40" loading=lazy align=left } adafruit/circuitpython
-
-    ---
+    ??? example "Examples"
+        - cakephp/cakephp#18081
 
-    adafruit/circuitpython#9785
 
--   ![](https://github.com/ashishb.png?size=40){ width="40" loading=lazy align=left } ashishb/wp2hugo
+-   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl
 
     ---
 
-    ashishb/wp2hugo#91
+    ??? example "Examples"
+        - curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
+        - curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 
--   ![](https://github.com/astral-sh.png?size=40){ width="40" loading=lazy align=left } astral-sh/ruff
 
-    ---
-
-    astral-sh/ruff#14844
+-   ![](https://github.com/danmar.png?size=40){ width="40" loading=lazy align=left } danmar
 
--   ![](https://github.com/astropy.png?size=40){ width="40" loading=lazy align=left } astropy/astropy
-
     ---
-
-    astropy/astropy#17315
 
--   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear/frigate
+    ??? example "Examples"
+        - danmar/cppcheck#7044
 
-    ---
-
-    blakeblackshear/frigate#15490
 
--   ![](https://github.com/brian-team.png?size=40){ width="40" loading=lazy align=left } brian-team/brian2
+-   ![](https://github.com/DataDog.png?size=40){ width="40" loading=lazy align=left } DataDog
 
     ---
-
-    brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
-
--   ![](https://github.com/cakephp.png?size=40){ width="40" loading=lazy align=left } cakephp/cakephp
 
-    ---
+    ??? example "Examples"
+        - DataDog/datadog-agent#30871
+        - DataDog/dd-trace-py#11640
 
-    cakephp/cakephp#18081
 
--   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl/curl-for-win
+-   ![](https://github.com/Diaoul.png?size=40){ width="40" loading=lazy align=left } Diaoul
 
     ---
-
-    curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 
--   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl/curl
-
-    ---
+    ??? example "Examples"
+        - Diaoul/subliminal#1190
 
-    curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 
--   ![](https://github.com/danmar.png?size=40){ width="40" loading=lazy align=left } danmar/cppcheck
+-   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl
 
     ---
 
-    danmar/cppcheck#7044
+    ??? example "Examples"
+        - esl/MongooseIM#4435
 
--   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl/MongooseIM
 
-    ---
-
-    esl/MongooseIM#4435
+-   ![](https://github.com/ethereum.png?size=40){ width="40" loading=lazy align=left } ethereum
 
--   ![](https://github.com/ethereum.png?size=40){ width="40" loading=lazy align=left } ethereum/hevm
-
     ---
-
-    ethereum/hevm#615
 
--   ![](https://github.com/fpgmaas.png?size=40){ width="40" loading=lazy align=left } fpgmaas/deptry
+    ??? example "Examples"
+        - ethereum/hevm#615
 
-    ---
-
-    fpgmaas/deptry#972
 
--   ![](https://github.com/freeCodeCamp.png?size=40){ width="40" loading=lazy align=left } freeCodeCamp/devdocs
+-   ![](https://github.com/fpgmaas.png?size=40){ width="40" loading=lazy align=left } fpgmaas
 
     ---
-
-    freeCodeCamp/devdocs#2386
-
--   ![](https://github.com/freedomofpress.png?size=40){ width="40" loading=lazy align=left } freedomofpress/securedrop-workstation
 
-    ---
+    ??? example "Examples"
+        - fpgmaas/deptry#972
 
-    freedomofpress/securedrop-workstation#1222
 
--   ![](https://github.com/freemocap.png?size=40){ width="40" loading=lazy align=left } freemocap/freemocap
+-   ![](https://github.com/freeCodeCamp.png?size=40){ width="40" loading=lazy align=left } freeCodeCamp
 
     ---
-
-    freemocap/freemocap#659
 
--   ![](https://github.com/gaphor.png?size=40){ width="40" loading=lazy align=left } gaphor/gaphor
-
-    ---
+    ??? example "Examples"
+        - freeCodeCamp/devdocs#2386
 
-    gaphor/gaphor#3658
 
--   ![](https://github.com/getsops.png?size=40){ width="40" loading=lazy align=left } getsops/sops
+-   ![](https://github.com/freedomofpress.png?size=40){ width="40" loading=lazy align=left } freedomofpress
 
     ---
 
-    getsops/sops#1704
+    ??? example "Examples"
+        - freedomofpress/securedrop-workstation#1222
 
--   ![](https://github.com/girlbossceo.png?size=40){ width="40" loading=lazy align=left } girlbossceo/conduwuit
 
-    ---
-
-    girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
+-   ![](https://github.com/freemocap.png?size=40){ width="40" loading=lazy align=left } freemocap
 
--   ![](https://github.com/git-lfs.png?size=40){ width="40" loading=lazy align=left } git-lfs/git-lfs
-
     ---
-
-    git-lfs/git-lfs#5930
 
--   ![](https://github.com/guacsec.png?size=40){ width="40" loading=lazy align=left } guacsec/guac
+    ??? example "Examples"
+        - freemocap/freemocap#659
 
-    ---
-
-    guacsec/guac#2276
 
--   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk/em-keyboard
+-   ![](https://github.com/gaphor.png?size=40){ width="40" loading=lazy align=left } gaphor
 
     ---
-
-    hugovk/em-keyboard#148
-
--   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk/norwegianblue
 
-    ---
+    ??? example "Examples"
+        - gaphor/gaphor#3658
 
-    hugovk/norwegianblue#233
 
--   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk/pypistats
+-   ![](https://github.com/getsops.png?size=40){ width="40" loading=lazy align=left } getsops
 
     ---
-
-    hugovk/pypistats#460
 
--   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/argon2-cffi
-
-    ---
+    ??? example "Examples"
+        - getsops/sops#1704
 
-    hynek/argon2-cffi#185
 
--   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/doc2dash
+-   ![](https://github.com/girlbossceo.png?size=40){ width="40" loading=lazy align=left } girlbossceo
 
     ---
 
-    hynek/doc2dash#225
+    ??? example "Examples"
+        - girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 
--   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/environ-config
 
-    ---
-
-    hynek/environ-config#88
+-   ![](https://github.com/git-lfs.png?size=40){ width="40" loading=lazy align=left } git-lfs
 
--   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/hatch-fancy-pypi-readme
-
     ---
-
-    hynek/hatch-fancy-pypi-readme#57
-
--   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/pem
 
-    ---
+    ??? example "Examples"
+        - git-lfs/git-lfs#5930
 
-    hynek/pem#100
 
--   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/prometheus-async
+-   ![](https://github.com/guacsec.png?size=40){ width="40" loading=lazy align=left } guacsec
 
     ---
-
-    hynek/prometheus-async#70
 
--   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/stamina
-
-    ---
+    ??? example "Examples"
+        - guacsec/guac#2276
 
-    hynek/stamina#81
 
--   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/structlog
+-   ![](https://github.com/Homebrew.png?size=40){ width="40" loading=lazy align=left } Homebrew
 
     ---
 
-    hynek/structlog#663
+    ??? example "Examples"
+        - Homebrew/brew#18662
+        - Homebrew/homebrew-core#195961
 
--   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek/svcs
 
-    ---
-
-    hynek/svcs#111
+-   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk
 
--   ![](https://github.com/lmstudio-ai.png?size=40){ width="40" loading=lazy align=left } lmstudio-ai/venvstacks
-
     ---
-
-    lmstudio-ai/venvstacks#51
 
--   ![](https://github.com/marcusvolz.png?size=40){ width="40" loading=lazy align=left } marcusvolz/strava_py
+    ??? example "Examples"
+        - hugovk/em-keyboard#148
+        - hugovk/norwegianblue#233
+        - hugovk/pypistats#460
 
-    ---
-
-    marcusvolz/strava_py#53
 
--   ![](https://github.com/matplotlib.png?size=40){ width="40" loading=lazy align=left } matplotlib/matplotlib
+-   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek
 
     ---
-
-    matplotlib/matplotlib#29251
-
--   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf/prind
 
-    ---
+    ??? example "Examples"
+        - hynek/argon2-cffi#185
+        - hynek/doc2dash#225
+        - hynek/environ-config#88
+        - hynek/hatch-fancy-pypi-readme#57
+        - hynek/pem#100
+        - hynek/prometheus-async#70
+        - hynek/stamina#81
+        - hynek/structlog#663
+        - hynek/svcs#111
 
-    mkuf/prind#183
 
--   ![](https://github.com/mne-tools.png?size=40){ width="40" loading=lazy align=left } mne-tools/mne-python
+-   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---
-
-    mne-tools/mne-python#13011
 
--   ![](https://github.com/mongodb.png?size=40){ width="40" loading=lazy align=left } mongodb/mongo-python-driver
-
-    ---
+    ??? example "Examples"
+        - Instagram/LibCST#1262
 
-    mongodb/mongo-python-driver#2001
 
--   ![](https://github.com/mongodb.png?size=40){ width="40" loading=lazy align=left } mongodb/motor
+-   ![](https://github.com/lmstudio-ai.png?size=40){ width="40" loading=lazy align=left } lmstudio-ai
 
     ---
 
-    mongodb/motor#312
+    ??? example "Examples"
+        - lmstudio-ai/venvstacks#51
 
--   ![](https://github.com/narwhals-dev.png?size=40){ width="40" loading=lazy align=left } narwhals-dev/narwhals
 
-    ---
-
-    narwhals-dev/narwhals#1567
+-   ![](https://github.com/marcusvolz.png?size=40){ width="40" loading=lazy align=left } marcusvolz
 
--   ![](https://github.com/numpy.png?size=40){ width="40" loading=lazy align=left } numpy/numpy
-
     ---
+
+    ??? example "Examples"
+        - marcusvolz/strava_py#53
 
-    numpy/numpy#27931
 
--   ![](https://github.com/numpy.png?size=40){ width="40" loading=lazy align=left } numpy/numpy.org
+-   ![](https://github.com/matplotlib.png?size=40){ width="40" loading=lazy align=left } matplotlib
 
     ---
 
-    numpy/numpy.org#797
+    ??? example "Examples"
+        - matplotlib/matplotlib#29251
 
--   ![](https://github.com/oxc-project.png?size=40){ width="40" loading=lazy align=left } oxc-project/oxc
 
+-   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf
+
     ---
+
+    ??? example "Examples"
+        - mkuf/prind#183
 
-    oxc-project/oxc#7844
 
--   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc/noseyparker
+-   ![](https://github.com/mne-tools.png?size=40){ width="40" loading=lazy align=left } mne-tools
 
     ---
 
-    praetorian-inc/noseyparker#228
+    ??? example "Examples"
+        - mne-tools/mne-python#13011
 
--   ![](https://github.com/prettytable.png?size=40){ width="40" loading=lazy align=left } prettytable/prettytable
 
+-   ![](https://github.com/MoarVM.png?size=40){ width="40" loading=lazy align=left } MoarVM
+
     ---
+
+    ??? example "Examples"
+        - MoarVM/MoarVM#1875
 
-    prettytable/prettytable#339
 
--   ![](https://github.com/psf.png?size=40){ width="40" loading=lazy align=left } psf/cachecontrol
+-   ![](https://github.com/mongodb.png?size=40){ width="40" loading=lazy align=left } mongodb
 
     ---
 
-    psf/cachecontrol#345
+    ??? example "Examples"
+        - mongodb/motor#312
+        - mongodb/mongo-python-driver#2001
 
--   ![](https://github.com/pyca.png?size=40){ width="40" loading=lazy align=left } pyca/service-identity
 
+-   ![](https://github.com/narwhals-dev.png?size=40){ width="40" loading=lazy align=left } narwhals-dev
+
     ---
+
+    ??? example "Examples"
+        - narwhals-dev/narwhals#1567
 
-    pyca/service-identity#75
 
--   ![](https://github.com/pylast.png?size=40){ width="40" loading=lazy align=left } pylast/pylast
+-   ![](https://github.com/NetApp.png?size=40){ width="40" loading=lazy align=left } NetApp
 
     ---
 
-    pylast/pylast#465
+    ??? example "Examples"
+        - NetApp/harvest#3247
 
--   ![](https://github.com/pypa.png?size=40){ width="40" loading=lazy align=left } pypa/packaging.python.org
 
+-   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs
+
     ---
+
+    ??? example "Examples"
+        - NLnetLabs/nsd#413
+        - NLnetLabs/unbound#1204
 
-    pypa/packaging.python.org#1765
 
--   ![](https://github.com/pypa.png?size=40){ width="40" loading=lazy align=left } pypa/pip-audit
+-   ![](https://github.com/numpy.png?size=40){ width="40" loading=lazy align=left } numpy
 
     ---
 
-    pypa/pip-audit#851
+    ??? example "Examples"
+        - numpy/numpy#27931
+        - numpy/numpy.org#797
 
--   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi/stdlib-list
 
+-   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
+
     ---
+
+    ??? example "Examples"
+        - Ouranosinc/xclim#2023
 
-    pypi/stdlib-list#138
 
--   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi/warehouse
+-   ![](https://github.com/oxc-project.png?size=40){ width="40" loading=lazy align=left } oxc-project
 
     ---
 
-    pypi/warehouse#16996
+    ??? example "Examples"
+        - oxc-project/oxc#7844
 
--   ![](https://github.com/pytest-dev.png?size=40){ width="40" loading=lazy align=left } pytest-dev/pytest
 
+-   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc
+
     ---
+
+    ??? example "Examples"
+        - praetorian-inc/noseyparker#228
 
-    pytest-dev/pytest#13062
 
--   ![](https://github.com/python-attrs.png?size=40){ width="40" loading=lazy align=left } python-attrs/attrs
+-   ![](https://github.com/prettytable.png?size=40){ width="40" loading=lazy align=left } prettytable
 
     ---
 
-    python-attrs/attrs#1368
+    ??? example "Examples"
+        - prettytable/prettytable#339
 
--   ![](https://github.com/python-attrs.png?size=40){ width="40" loading=lazy align=left } python-attrs/cattrs
 
+-   ![](https://github.com/psf.png?size=40){ width="40" loading=lazy align=left } psf
+
     ---
+
+    ??? example "Examples"
+        - psf/cachecontrol#345
 
-    python-attrs/cattrs#605
 
--   ![](https://github.com/python-humanize.png?size=40){ width="40" loading=lazy align=left } python-humanize/humanize
+-   ![](https://github.com/pyca.png?size=40){ width="40" loading=lazy align=left } pyca
 
     ---
 
-    python-humanize/humanize#221
+    ??? example "Examples"
+        - pyca/service-identity#75
 
--   ![](https://github.com/python-pillow.png?size=40){ width="40" loading=lazy align=left } python-pillow/Pillow
 
+-   ![](https://github.com/pylast.png?size=40){ width="40" loading=lazy align=left } pylast
+
     ---
+
+    ??? example "Examples"
+        - pylast/pylast#465
 
-    python-pillow/Pillow#8526
 
--   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/cleo
+-   ![](https://github.com/PyO3.png?size=40){ width="40" loading=lazy align=left } PyO3
 
     ---
 
-    python-poetry/cleo#462
+    ??? example "Examples"
+        - PyO3/pyo3#4774
 
--   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/poetry
 
+-   ![](https://github.com/pypa.png?size=40){ width="40" loading=lazy align=left } pypa
+
     ---
+
+    ??? example "Examples"
+        - pypa/packaging.python.org#1765
+        - pypa/pip-audit#851
 
-    python-poetry/poetry#9895
 
--   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/poetry-core
+-   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi
 
     ---
 
-    python-poetry/poetry-core#799
+    ??? example "Examples"
+        - pypi/stdlib-list#138
+        - pypi/warehouse#16996
 
--   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/poetry-plugin-bundle
 
+-   ![](https://github.com/pytest-dev.png?size=40){ width="40" loading=lazy align=left } pytest-dev
+
     ---
+
+    ??? example "Examples"
+        - pytest-dev/pytest#13062
 
-    python-poetry/poetry-plugin-bundle#125
 
--   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry/poetry-plugin-export
+-   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python
 
     ---
 
-    python-poetry/poetry-plugin-export#308
+    ??? example "Examples"
+        - python/bedevere#652
+        - python/cpython#127749
+        - python/miss-islington#705
 
--   ![](https://github.com/python-telegram-bot.png?size=40){ width="40" loading=lazy align=left } python-telegram-bot/python-telegram-bot
 
+-   ![](https://github.com/python-attrs.png?size=40){ width="40" loading=lazy align=left } python-attrs
+
     ---
+
+    ??? example "Examples"
+        - python-attrs/attrs#1368
+        - python-attrs/cattrs#605
 
-    python-telegram-bot/python-telegram-bot#4606
 
--   ![](https://github.com/python-trio.png?size=40){ width="40" loading=lazy align=left } python-trio/trio
+-   ![](https://github.com/python-humanize.png?size=40){ width="40" loading=lazy align=left } python-humanize
 
     ---
 
-    python-trio/trio#3154
+    ??? example "Examples"
+        - python-humanize/humanize#221
 
--   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python/bedevere
 
+-   ![](https://github.com/python-pillow.png?size=40){ width="40" loading=lazy align=left } python-pillow
+
     ---
+
+    ??? example "Examples"
+        - python-pillow/Pillow#8526
 
-    python/bedevere#652
 
--   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python/cpython
+-   ![](https://github.com/python-poetry.png?size=40){ width="40" loading=lazy align=left } python-poetry
 
     ---
 
-    python/cpython#127749
+    ??? example "Examples"
+        - python-poetry/cleo#462
+        - python-poetry/poetry#9895
+        - python-poetry/poetry-core#799
+        - python-poetry/poetry-plugin-export#308
+        - python-poetry/poetry-plugin-bundle#125
 
--   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python/miss-islington
 
+-   ![](https://github.com/python-telegram-bot.png?size=40){ width="40" loading=lazy align=left } python-telegram-bot
+
     ---
+
+    ??? example "Examples"
+        - python-telegram-bot/python-telegram-bot#4606
 
-    python/miss-islington#705
 
--   ![](https://github.com/rubygems.png?size=40){ width="40" loading=lazy align=left } rubygems/rubygems.org
+-   ![](https://github.com/python-trio.png?size=40){ width="40" loading=lazy align=left } python-trio
 
     ---
 
-    rubygems/rubygems.org#5350
+    ??? example "Examples"
+        - python-trio/trio#3154
 
--   ![](https://github.com/rust-lang.png?size=40){ width="40" loading=lazy align=left } rust-lang/crates.io
 
+-   ![](https://github.com/PyVRP.png?size=40){ width="40" loading=lazy align=left } PyVRP
+
     ---
+
+    ??? example "Examples"
+        - PyVRP/PyVRP#670
 
-    rust-lang/crates.io#10176
 
--   ![](https://github.com/rust-lang.png?size=40){ width="40" loading=lazy align=left } rust-lang/rust-clippy
+-   ![](https://github.com/rubygems.png?size=40){ width="40" loading=lazy align=left } rubygems
 
     ---
 
-    rust-lang/rust-clippy#13933
+    ??? example "Examples"
+        - rubygems/rubygems.org#5350
 
--   ![](https://github.com/rustls.png?size=40){ width="40" loading=lazy align=left } rustls/rustls
 
+-   ![](https://github.com/rust-lang.png?size=40){ width="40" loading=lazy align=left } rust-lang
+
     ---
+
+    ??? example "Examples"
+        - rust-lang/crates.io#10176
+        - rust-lang/rust-clippy#13933
 
-    rustls/rustls#2261
 
--   ![](https://github.com/rustls.png?size=40){ width="40" loading=lazy align=left } rustls/tokio-rustls
+-   ![](https://github.com/rustls.png?size=40){ width="40" loading=lazy align=left } rustls
 
     ---
 
-    rustls/tokio-rustls#96
+    ??? example "Examples"
+        - rustls/rustls#2261
+        - rustls/tokio-rustls#96
+        - rustls/webpki#299
 
--   ![](https://github.com/rustls.png?size=40){ width="40" loading=lazy align=left } rustls/webpki
 
+-   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore
+
     ---
+
+    ??? example "Examples"
+        - sigstore/cosign#3959
+        - sigstore/gitsign#602
 
-    rustls/webpki#299
 
--   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore/cosign
+-   ![](https://github.com/simpeg.png?size=40){ width="40" loading=lazy align=left } simpeg
 
     ---
 
-    sigstore/cosign#3959
+    ??? example "Examples"
+        - simpeg/simpeg#1592
 
--   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore/gitsign
 
+-   ![](https://github.com/termcolor.png?size=40){ width="40" loading=lazy align=left } termcolor
+
     ---
+
+    ??? example "Examples"
+        - termcolor/termcolor#89
 
-    sigstore/gitsign#602
 
--   ![](https://github.com/simpeg.png?size=40){ width="40" loading=lazy align=left } simpeg/simpeg
+-   ![](https://github.com/termux.png?size=40){ width="40" loading=lazy align=left } termux
 
     ---
 
-    simpeg/simpeg#1592
+    ??? example "Examples"
+        - termux/termux-packages#22519
 
--   ![](https://github.com/termcolor.png?size=40){ width="40" loading=lazy align=left } termcolor/termcolor
 
+-   ![](https://github.com/torchbox.png?size=40){ width="40" loading=lazy align=left } torchbox
+
     ---
+
+    ??? example "Examples"
+        - torchbox/wagtailmedia#252
 
-    termcolor/termcolor#89
 
--   ![](https://github.com/termux.png?size=40){ width="40" loading=lazy align=left } termux/termux-packages
+-   ![](https://github.com/tornadoweb.png?size=40){ width="40" loading=lazy align=left } tornadoweb
 
     ---
 
-    termux/termux-packages#22519
+    ??? example "Examples"
+        - tornadoweb/tornado#3438
 
--   ![](https://github.com/torchbox.png?size=40){ width="40" loading=lazy align=left } torchbox/wagtailmedia
 
+-   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser
+
     ---
+
+    ??? example "Examples"
+        - ua-parser/uap-python#250
 
-    torchbox/wagtailmedia#252
 
--   ![](https://github.com/tornadoweb.png?size=40){ width="40" loading=lazy align=left } tornadoweb/tornado
+-   ![](https://github.com/ultrajson.png?size=40){ width="40" loading=lazy align=left } ultrajson
 
     ---
 
-    tornadoweb/tornado#3438
+    ??? example "Examples"
+        - ultrajson/ultrajson#650
 
--   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser/uap-python
 
+-   ![](https://github.com/Unidata.png?size=40){ width="40" loading=lazy align=left } Unidata
+
     ---
+
+    ??? example "Examples"
+        - Unidata/MetPy#3710
 
-    ua-parser/uap-python#250
 
--   ![](https://github.com/ultrajson.png?size=40){ width="40" loading=lazy align=left } ultrajson/ultrajson
+-   ![](https://github.com/urllib3.png?size=40){ width="40" loading=lazy align=left } urllib3
 
     ---
 
-    ultrajson/ultrajson#650
+    ??? example "Examples"
+        - urllib3/urllib3#3528
 
--   ![](https://github.com/urllib3.png?size=40){ width="40" loading=lazy align=left } urllib3/urllib3
 
+-   ![](https://github.com/uutils.png?size=40){ width="40" loading=lazy align=left } uutils
+
     ---
+
+    ??? example "Examples"
+        - uutils/coreutils#6973
 
-    urllib3/urllib3#3528
 
--   ![](https://github.com/uutils.png?size=40){ width="40" loading=lazy align=left } uutils/coreutils
+-   ![](https://github.com/ViaVersion.png?size=40){ width="40" loading=lazy align=left } ViaVersion
 
     ---
 
-    uutils/coreutils#6973
+    ??? example "Examples"
+        - ViaVersion/ViaVersion#4315
 
--   ![](https://github.com/vlang.png?size=40){ width="40" loading=lazy align=left } vlang/v
 
+-   ![](https://github.com/vlang.png?size=40){ width="40" loading=lazy align=left } vlang
+
     ---
 
-    vlang/v#22681
+    ??? example "Examples"
+        - vlang/v#22681
 
--   ![](https://github.com/wagtail.png?size=40){ width="40" loading=lazy align=left } wagtail/wagtail-localize
 
+-   ![](https://github.com/wagtail.png?size=40){ width="40" loading=lazy align=left } wagtail
+
     ---
+
+    ??? example "Examples"
+        - wagtail/wagtail-localize#843
 
-    wagtail/wagtail-localize#843
