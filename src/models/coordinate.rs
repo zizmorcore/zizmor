@@ -75,3 +75,11 @@ impl Control {
         }
     }
 }
+
+#[derive(PartialEq)]
+pub(crate) enum Usage {
+    ConditionalOptIn,
+    DirectOptIn,
+    DefaultActionBehaviour,
+    Always,
+}

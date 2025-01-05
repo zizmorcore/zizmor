@@ -1,6 +1,6 @@
 use crate::audit::{audit_meta, Audit};
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::coordinate::{Control, ControlFieldType, Toggle, UsesCoordinate};
+use crate::models::coordinate::{Control, ControlFieldType, Toggle, Usage, UsesCoordinate};
 use crate::models::{Job, Step, Steps, Uses};
 use crate::state::AuditState;
 use github_actions_models::common::expr::ExplicitExpr;
@@ -155,14 +155,6 @@ static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<Uses>> = LazyLock::new(|| {
     ]
 });
 
-#[derive(PartialEq)]
-enum CacheUsage {
-    ConditionalOptIn,
-    DirectOptIn,
-    DefaultActionBehaviour,
-    AlwaysCache,
-}
-
 enum PublishingArtifactsScenario<'w> {
     UsingTypicalWorkflowTrigger,
     UsingWellKnowPublisherAction(Step<'w>),
@@ -236,12 +228,12 @@ impl CachePoisoning {
         cache_control_input: &str,
         env: &Env,
         field_type: &ControlFieldType,
-    ) -> Option<CacheUsage> {
+    ) -> Option<Usage> {
         match env.get(cache_control_input) {
             None => None,
             Some(value) => match value.to_string().as_str() {
                 "true" if matches!(field_type, ControlFieldType::Boolean) => {
-                    Some(CacheUsage::DirectOptIn)
+                    Some(Usage::DirectOptIn)
                 }
                 "false" if matches!(field_type, ControlFieldType::Boolean) => {
                     // Explicitly opts out from caching
@@ -249,10 +241,10 @@ impl CachePoisoning {
                 }
                 other => match ExplicitExpr::from_curly(other) {
                     None if matches!(field_type, ControlFieldType::String) => {
-                        Some(CacheUsage::DirectOptIn)
+                        Some(Usage::DirectOptIn)
                     }
                     None => None,
-                    Some(_) => Some(CacheUsage::ConditionalOptIn),
+                    Some(_) => Some(Usage::ConditionalOptIn),
                 },
             },
         }
@@ -263,7 +255,7 @@ impl CachePoisoning {
         env: &Env,
         control: &Control,
         enabled_by_default: bool,
-    ) -> Option<CacheUsage> {
+    ) -> Option<Usage> {
         let cache_control_input = env.keys().find(|k| control.field_name == *k);
 
         match cache_control_input {
@@ -271,7 +263,7 @@ impl CachePoisoning {
             // we evaluate whether it uses caching by default
             None => {
                 if enabled_by_default {
-                    Some(CacheUsage::DefaultActionBehaviour)
+                    Some(Usage::DefaultActionBehaviour)
                 } else {
                     None
                 }
@@ -285,24 +277,24 @@ impl CachePoisoning {
 
                 // we now evaluate the extracted value against the opt-in semantics
                 match &declared_usage {
-                    Some(CacheUsage::DirectOptIn) => {
+                    Some(Usage::DirectOptIn) => {
                         match control.toggle {
                             // in this case, we just follow the opt-in
                             Toggle::OptIn => declared_usage,
                             // otherwise, the user opted for disabling the cache
-                            // hence we don't return a CacheUsage
+                            // hence we don't return a Usage
                             Toggle::OptOut => None,
                         }
                     }
                     // Because we can't evaluate expressions, there is nothing to do
-                    // regarding CacheUsage::ConditionalOptIn
+                    // regarding Usage::ConditionalOptIn
                     _ => declared_usage,
                 }
             }
         }
     }
 
-    fn evaluate_cache_usage(&self, target_step: &str, env: &Env) -> Option<CacheUsage> {
+    fn evaluate_cache_usage(&self, target_step: &str, env: &Env) -> Option<Usage> {
         let known_action = KNOWN_CACHE_AWARE_ACTIONS.iter().find(|action| {
             let Uses::Repository(well_known_uses) = action.uses() else {
                 return false;
@@ -321,7 +313,7 @@ impl CachePoisoning {
                 control,
                 enabled_by_default,
             } => self.usage_of_controllable_caching(env, control, *enabled_by_default),
-            UsesCoordinate::NotConfigurable(_) => Some(CacheUsage::AlwaysCache),
+            UsesCoordinate::NotConfigurable(_) => Some(Usage::Always),
         }
     }
 
@@ -337,10 +329,10 @@ impl CachePoisoning {
         let cache_usage = self.evaluate_cache_usage(uses, with)?;
 
         let (yaml_key, annotation) = match cache_usage {
-            CacheUsage::AlwaysCache => ("uses", "caching always restored here"),
-            CacheUsage::DefaultActionBehaviour => ("uses", "cache enabled by default here"),
-            CacheUsage::DirectOptIn => ("with", "opt-in for caching here"),
-            CacheUsage::ConditionalOptIn => ("with", "opt-in for caching might happen here"),
+            Usage::Always => ("uses", "caching always restored here"),
+            Usage::DefaultActionBehaviour => ("uses", "cache enabled by default here"),
+            Usage::DirectOptIn => ("with", "opt-in for caching here"),
+            Usage::ConditionalOptIn => ("with", "opt-in for caching might happen here"),
         };
 
         let finding = match scenario {
