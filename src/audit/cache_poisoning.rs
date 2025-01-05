@@ -123,31 +123,53 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<UsesCoordinate>> = LazyLock::new(
 
 /// A list of well-know publisher actions
 /// In the future we can retrieve this list from the static API
-static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<Uses>> = LazyLock::new(|| {
+static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<UsesCoordinate>> = LazyLock::new(|| {
     vec![
         // Public packages and/or binary distribution channels
-        Uses::from_step("pypa/gh-action-pypi-publish").unwrap(),
-        Uses::from_step("rubygems/release-gem").unwrap(),
-        Uses::from_step("jreleaser/release-action").unwrap(),
-        Uses::from_step("goreleaser/goreleaser-action").unwrap(),
+        UsesCoordinate::NotConfigurable(Uses::from_step("pypa/gh-action-pypi-publish").unwrap()),
+        UsesCoordinate::NotConfigurable(Uses::from_step("rubygems/release-gem").unwrap()),
+        UsesCoordinate::NotConfigurable(Uses::from_step("jreleaser/release-action").unwrap()),
+        UsesCoordinate::NotConfigurable(Uses::from_step("goreleaser/goreleaser-action").unwrap()),
         // Github releases
-        Uses::from_step("softprops/action-gh-release").unwrap(),
-        Uses::from_step("release-drafter/release-drafter").unwrap(),
-        Uses::from_step("googleapis/release-please-action").unwrap(),
+        UsesCoordinate::NotConfigurable(Uses::from_step("softprops/action-gh-release").unwrap()),
+        UsesCoordinate::NotConfigurable(
+            Uses::from_step("release-drafter/release-drafter").unwrap(),
+        ),
+        UsesCoordinate::NotConfigurable(
+            Uses::from_step("googleapis/release-please-action").unwrap(),
+        ),
         // Container registries
-        Uses::from_step("docker/build-push-action").unwrap(),
-        Uses::from_step("redhat-actions/push-to-registry").unwrap(),
+        UsesCoordinate::Configurable {
+            uses: Uses::from_step("docker/build-push-action").unwrap(),
+            control: Control::new(Toggle::OptIn, "push", ControlFieldType::Boolean),
+            enabled_by_default: true,
+        },
+        UsesCoordinate::NotConfigurable(
+            Uses::from_step("redhat-actions/push-to-registry").unwrap(),
+        ),
         // Cloud + Edge providers
-        Uses::from_step("aws-actions/amazon-ecs-deploy-task-definition ").unwrap(),
-        Uses::from_step("aws-actions/aws-cloudformation-github-deploy").unwrap(),
-        Uses::from_step("Azure/aci-deploy").unwrap(),
-        Uses::from_step("Azure/container-apps-deploy-action").unwrap(),
-        Uses::from_step("Azure/functions-action").unwrap(),
-        Uses::from_step("Azure/sql-action").unwrap(),
-        Uses::from_step("cloudflare/wrangler-action").unwrap(),
-        Uses::from_step("google-github-actions/deploy-appengine").unwrap(),
-        Uses::from_step("google-github-actions/deploy-cloudrun").unwrap(),
-        Uses::from_step("google-github-actions/deploy-cloud-functions").unwrap(),
+        UsesCoordinate::NotConfigurable(
+            Uses::from_step("aws-actions/amazon-ecs-deploy-task-definition ").unwrap(),
+        ),
+        UsesCoordinate::NotConfigurable(
+            Uses::from_step("aws-actions/aws-cloudformation-github-deploy").unwrap(),
+        ),
+        UsesCoordinate::NotConfigurable(Uses::from_step("Azure/aci-deploy").unwrap()),
+        UsesCoordinate::NotConfigurable(
+            Uses::from_step("Azure/container-apps-deploy-action").unwrap(),
+        ),
+        UsesCoordinate::NotConfigurable(Uses::from_step("Azure/functions-action").unwrap()),
+        UsesCoordinate::NotConfigurable(Uses::from_step("Azure/sql-action").unwrap()),
+        UsesCoordinate::NotConfigurable(Uses::from_step("cloudflare/wrangler-action").unwrap()),
+        UsesCoordinate::NotConfigurable(
+            Uses::from_step("google-github-actions/deploy-appengine").unwrap(),
+        ),
+        UsesCoordinate::NotConfigurable(
+            Uses::from_step("google-github-actions/deploy-cloudrun").unwrap(),
+        ),
+        UsesCoordinate::NotConfigurable(
+            Uses::from_step("google-github-actions/deploy-cloud-functions").unwrap(),
+        ),
     ]
 });
 
@@ -190,17 +212,11 @@ impl CachePoisoning {
 
     fn detected_well_known_publisher_step(steps: Steps) -> Option<Step> {
         steps.into_iter().find(|step| {
-            let Some(Uses::Repository(target_uses)) = step.uses() else {
-                return false;
-            };
-
-            KNOWN_PUBLISHER_ACTIONS.iter().any(|publisher| {
-                let Uses::Repository(well_known_uses) = publisher else {
-                    return false;
-                };
-
-                target_uses.matches(*well_known_uses)
-            })
+            // TODO: Specialize further here, and produce an appropriate
+            // confidence/persona setting if the usage is conditional.
+            KNOWN_PUBLISHER_ACTIONS
+                .iter()
+                .any(|publisher| publisher.usage(step).is_some())
         })
     }
 
