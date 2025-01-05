@@ -95,6 +95,12 @@
 
     adafruit/circuitpython#9785
 
+-   ![](https://github.com/ashishb.png?size=40){ width="40" loading=lazy align=left } ashishb/wp2hugo
+
+    ---
+
+    ashishb/wp2hugo#91
+
 -   ![](https://github.com/astral-sh.png?size=40){ width="40" loading=lazy align=left } astral-sh/ruff
 
     ---
@@ -166,6 +172,12 @@
     ---
 
     freeCodeCamp/devdocs#2386
+
+-   ![](https://github.com/freedomofpress.png?size=40){ width="40" loading=lazy align=left } freedomofpress/securedrop-workstation
+
+    ---
+
+    freedomofpress/securedrop-workstation#1222
 
 -   ![](https://github.com/freemocap.png?size=40){ width="40" loading=lazy align=left } freemocap/freemocap
 
@@ -496,6 +508,12 @@
     ---
 
     rust-lang/crates.io#10176
+
+-   ![](https://github.com/rust-lang.png?size=40){ width="40" loading=lazy align=left } rust-lang/rust-clippy
+
+    ---
+
+    rust-lang/rust-clippy#13933
 
 -   ![](https://github.com/rustls.png?size=40){ width="40" loading=lazy align=left } rustls/rustls
 
