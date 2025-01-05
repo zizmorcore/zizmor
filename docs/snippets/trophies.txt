@@ -5,6 +5,7 @@
 # owner/repo@commit for individual commits
 
 adafruit/circuitpython#9785
+apache/airflow#45408
 ashishb/wp2hugo#91
 astral-sh/ruff#14844
 astropy/astropy#17315
