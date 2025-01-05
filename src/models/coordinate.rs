@@ -13,7 +13,9 @@
 // able to express things like
 // "match foo/bar if foo: A and not bar: B and baz: /abcd/"
 
-use super::Uses;
+use github_actions_models::common::{expr::ExplicitExpr, EnvValue};
+
+use super::{StepCommon, Uses};
 
 pub(crate) enum UsesCoordinate<'w> {
     Configurable {
@@ -32,6 +34,87 @@ impl UsesCoordinate<'_> {
         match self {
             UsesCoordinate::Configurable { uses, .. } => *uses,
             UsesCoordinate::NotConfigurable(inner) => *inner,
+        }
+    }
+
+    /// Returns the "declared" usage from a `with:` field, modulo an expected field type.
+    ///
+    /// This is an incomplete usage, as the overall semantics can be inverted by the
+    /// coordinate. For example, `foo: true` suggests opt-in, but the coordinate may specify
+    /// that the `true` value is really an opt-out.
+    ///
+    /// Intuitively: `disable-cache: true` is an opt-in to `disable-cache`, but an opt-out
+    /// of caching. So a coordinate that checks for cache usage inverts the naive result.
+    fn declared_usage(&self, value: &EnvValue, field_type: &ControlFieldType) -> Option<Usage> {
+        match value.to_string().as_str() {
+            "true" if matches!(field_type, ControlFieldType::Boolean) => Some(Usage::DirectOptIn),
+            "false" if matches!(field_type, ControlFieldType::Boolean) => {
+                // Explicitly opts out from caching
+                None
+            }
+            other => match ExplicitExpr::from_curly(other) {
+                None if matches!(field_type, ControlFieldType::String) => Some(Usage::DirectOptIn),
+                None => None,
+                Some(_) => Some(Usage::ConditionalOptIn),
+            },
+        }
+    }
+
+    /// Returns the semantic "usage" of the given step relative to the current coordinate.
+    ///
+    /// `None` indicates that the step is "unused" from the perspective of the coordinate,
+    /// while the `Some(_)` variants indicate various (potential) usages (such as being implicitly
+    /// enabled, or explicitly enabled, or potentially enabled by a template expansion that
+    /// can't be directly analyzed).
+    pub(crate) fn usage(&self, step: &impl StepCommon) -> Option<Usage> {
+        let Uses::Repository(template) = self.uses() else {
+            return None;
+        };
+        let Uses::Repository(uses) = step.uses()? else {
+            return None;
+        };
+
+        // If our coordinate's `uses:` template doesn't match the step's `uses:`,
+        // then no usage semantics are possible.
+        if !uses.matches(template) {
+            return None;
+        }
+
+        match self {
+            UsesCoordinate::Configurable {
+                uses: _,
+                control,
+                enabled_by_default,
+            } => {
+                // We need to inspect this `uses:`'s configuration to determine its semantics.
+                let with = step.with()?;
+                match with.get(control.field_name) {
+                    Some(field_value) => {
+                        // The declared usage is whatever the user explicitly configured,
+                        // which might be inverted if the semantics are opt-out instead.
+                        let declared_usage =
+                            self.declared_usage(field_value, &control.field_type)?;
+
+                        match declared_usage {
+                            Usage::DirectOptIn => match control.toggle {
+                                Toggle::OptIn => Some(declared_usage),
+                                Toggle::OptOut => None,
+                            },
+                            _ => Some(declared_usage),
+                        }
+                    }
+                    None => {
+                        // If the controlling field is not present, the default dictates the semantics.
+                        if *enabled_by_default {
+                            Some(Usage::DefaultActionBehaviour)
+                        } else {
+                            None
+                        }
+                    }
+                }
+            }
+            // The mere presence of this `uses:` implies the expected usage semantics.
+            UsesCoordinate::NotConfigurable(_) => Some(Usage::Always),
         }
     }
 }
@@ -76,7 +159,7 @@ impl Control {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub(crate) enum Usage {
     ConditionalOptIn,
     DirectOptIn,
