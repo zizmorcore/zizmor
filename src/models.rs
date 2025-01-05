@@ -8,6 +8,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8Path;
 use github_actions_models::action;
 use github_actions_models::common::expr::LoE;
+use github_actions_models::common::Env;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::job::{RunsOn, Strategy};
 use github_actions_models::workflow::{
@@ -34,6 +35,12 @@ pub(crate) trait StepCommon {
     ///
     /// Composite action steps have no strategy.
     fn strategy(&self) -> Option<&Strategy>;
+
+    /// Returns this step's `uses:` clause, if present.
+    fn uses(&self) -> Option<Uses>;
+
+    /// Returns the `with:` clause for this step.
+    fn with(&self) -> Option<&Env>;
 }
 
 /// Represents an entire GitHub Actions workflow.
@@ -453,6 +460,17 @@ impl StepCommon for Step<'_> {
 
     fn strategy(&self) -> Option<&Strategy> {
         self.job().strategy.as_ref()
+    }
+
+    fn uses(&self) -> Option<Uses> {
+        self.uses()
+    }
+
+    fn with(&self) -> Option<&Env> {
+        match &self.body {
+            StepBody::Uses { uses: _, with } => Some(with),
+            StepBody::Run { .. } => None,
+        }
     }
 }
 
@@ -935,6 +953,17 @@ impl StepCommon for CompositeStep<'_> {
 
     fn strategy(&self) -> Option<&Strategy> {
         None
+    }
+
+    fn uses(&self) -> Option<Uses> {
+        self.uses()
+    }
+
+    fn with(&self) -> Option<&Env> {
+        match &self.body {
+            action::StepBody::Uses { uses: _, with } => Some(with),
+            action::StepBody::Run { .. } => None,
+        }
     }
 }
 

@@ -1,14 +1,10 @@
 use crate::audit::{audit_meta, Audit};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::coordinate::{Control, ControlFieldType, Toggle, Usage, UsesCoordinate};
-use crate::models::{Job, Step, Steps, Uses};
+use crate::models::{Job, Step, StepCommon, Steps, Uses};
 use crate::state::AuditState;
-use github_actions_models::common::expr::ExplicitExpr;
-use github_actions_models::common::Env;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
-use github_actions_models::workflow::job::StepBody;
 use github_actions_models::workflow::Trigger;
-use std::ops::Deref;
 use std::sync::LazyLock;
 
 /// The list of know cache-aware actions
@@ -224,97 +220,10 @@ impl CachePoisoning {
         ))
     }
 
-    fn evaluate_user_defined_opt_in(
-        cache_control_input: &str,
-        env: &Env,
-        field_type: &ControlFieldType,
-    ) -> Option<Usage> {
-        match env.get(cache_control_input) {
-            None => None,
-            Some(value) => match value.to_string().as_str() {
-                "true" if matches!(field_type, ControlFieldType::Boolean) => {
-                    Some(Usage::DirectOptIn)
-                }
-                "false" if matches!(field_type, ControlFieldType::Boolean) => {
-                    // Explicitly opts out from caching
-                    None
-                }
-                other => match ExplicitExpr::from_curly(other) {
-                    None if matches!(field_type, ControlFieldType::String) => {
-                        Some(Usage::DirectOptIn)
-                    }
-                    None => None,
-                    Some(_) => Some(Usage::ConditionalOptIn),
-                },
-            },
-        }
-    }
-
-    fn usage_of_controllable_caching(
-        &self,
-        env: &Env,
-        control: &Control,
-        enabled_by_default: bool,
-    ) -> Option<Usage> {
-        let cache_control_input = env.keys().find(|k| control.field_name == *k);
-
-        match cache_control_input {
-            // when not using the specific Action input to control caching behaviour,
-            // we evaluate whether it uses caching by default
-            None => {
-                if enabled_by_default {
-                    Some(Usage::DefaultActionBehaviour)
-                } else {
-                    None
-                }
-            }
-
-            // otherwise, we infer from the value assigned to the cache control input
-            Some(key) => {
-                // first, we extract the value assigned to that input
-                let declared_usage =
-                    CachePoisoning::evaluate_user_defined_opt_in(key, env, &control.field_type);
-
-                // we now evaluate the extracted value against the opt-in semantics
-                match &declared_usage {
-                    Some(Usage::DirectOptIn) => {
-                        match control.toggle {
-                            // in this case, we just follow the opt-in
-                            Toggle::OptIn => declared_usage,
-                            // otherwise, the user opted for disabling the cache
-                            // hence we don't return a Usage
-                            Toggle::OptOut => None,
-                        }
-                    }
-                    // Because we can't evaluate expressions, there is nothing to do
-                    // regarding Usage::ConditionalOptIn
-                    _ => declared_usage,
-                }
-            }
-        }
-    }
-
-    fn evaluate_cache_usage(&self, target_step: &str, env: &Env) -> Option<Usage> {
-        let known_action = KNOWN_CACHE_AWARE_ACTIONS.iter().find(|action| {
-            let Uses::Repository(well_known_uses) = action.uses() else {
-                return false;
-            };
-
-            let Some(Uses::Repository(target_uses)) = Uses::from_step(target_step) else {
-                return false;
-            };
-
-            target_uses.matches(well_known_uses)
-        })?;
-
-        match &known_action {
-            UsesCoordinate::Configurable {
-                uses: _,
-                control,
-                enabled_by_default,
-            } => self.usage_of_controllable_caching(env, control, *enabled_by_default),
-            UsesCoordinate::NotConfigurable(_) => Some(Usage::Always),
-        }
+    fn evaluate_cache_usage(&self, step: &impl StepCommon) -> Option<Usage> {
+        KNOWN_CACHE_AWARE_ACTIONS
+            .iter()
+            .find_map(|coord| coord.usage(step))
     }
 
     fn uses_cache_aware_step<'w>(
@@ -322,11 +231,7 @@ impl CachePoisoning {
         step: &Step<'w>,
         scenario: &PublishingArtifactsScenario<'w>,
     ) -> Option<Finding<'w>> {
-        let StepBody::Uses { ref uses, ref with } = &step.deref().body else {
-            return None;
-        };
-
-        let cache_usage = self.evaluate_cache_usage(uses, with)?;
+        let cache_usage = self.evaluate_cache_usage(step)?;
 
         let (yaml_key, annotation) = match cache_usage {
             Usage::Always => ("uses", "caching always restored here"),
