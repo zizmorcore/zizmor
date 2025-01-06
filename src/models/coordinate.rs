@@ -184,7 +184,7 @@ mod tests {
         fn uses(&self) -> Option<Uses> {
             match &self.body {
                 github_actions_models::workflow::job::StepBody::Uses { uses, .. } => {
-                    Some(Uses::from_step(&uses).unwrap())
+                    Some(Uses::from_step(uses).unwrap())
                 }
                 github_actions_models::workflow::job::StepBody::Run { .. } => None,
             }

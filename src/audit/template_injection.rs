@@ -33,6 +33,8 @@ audit_meta!(
 
 /// Contexts that are believed to be always safe.
 const SAFE_CONTEXTS: &[&str] = &[
+    // The action path is always safe.
+    "github.action_path",
     // The GitHub event name (i.e. trigger) is itself safe.
     "github.event_name",
     // Safe keys within the otherwise generally unsafe github.event context.
