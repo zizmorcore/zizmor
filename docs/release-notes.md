@@ -389,3 +389,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [excessive-permissions]: ./audits.md#excessive-permissions
 [cache-poisoning]: ./audits.md#cache-poisoning
 [github-env]: ./audits.md#github-env
+[template-injection]: ./audits.md#template-injection
