@@ -731,10 +731,11 @@ by trigger events like `release` or events with path filters like `push`
 (e.g. for tags).
 
 In such scenarios, an attacker with access to a valid `GITHUB_TOKEN` can use it
-poison the repository's GitHub Actions caches. That compounds with the default
-behavior of @actions/tookit during cache restorations, allowing an attacker to
-retrieve payloads from poisoned cache entries, hence achieving code execution at
-Workflow runtime, potentially compromising ready-to-publish artifacts.
+to poison the repository's GitHub Actions caches. That compounds with the
+default behavior of @actions/tookit during cache restorations, allowing an
+attacker to retrieve payloads from poisoned cache entries, hence achieving code
+execution at Workflow runtime, potentially compromising ready-to-publish
+artifacts.
 
 Other resources:
 
