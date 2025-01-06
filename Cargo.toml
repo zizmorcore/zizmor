@@ -28,12 +28,12 @@ http-cache-reqwest = "0.15.0"
 human-panic = "2.0.1"
 indexmap = "2.7.0"
 indicatif = "0.17.9"
-itertools = "0.13.0"
+itertools = "0.14.0"
 owo-colors = "4.1.0"
 pest = "2.7.15"
 pest_derive = "2.7.15"
 regex = "1.11.1"
-reqwest = { version = "0.12.11", features = [
+reqwest = { version = "0.12.12", features = [
     "blocking",
     "json",
     "rustls-tls",
@@ -65,6 +65,6 @@ lto = true
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
-insta = { version = "1.41.1" }
+insta = { version = "1.42.0" }
 pretty_assertions = "1.4.1"
 serde_json_path = "0.7.1"
