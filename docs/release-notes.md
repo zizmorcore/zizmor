@@ -19,6 +19,8 @@ of `zizmor`.
 * `workflow_call.secrets` keys with missing values are now parsed correctly (#388)
 * The [cache-poisoning] audit no longer incorrectly treats `docker/build-push-action` as
   a publishing workflow is `push: false` is explicitly set (#389)
+* The [template-injection] audit no longer considers `github.action_path`
+  to be a potentially dangerous expansion (#402)
 
 ## v1.0.0
 

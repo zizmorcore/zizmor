@@ -508,7 +508,7 @@ mod tests {
 
             let uses_github_env = sut.uses_github_env(case, "bash").unwrap();
 
-            assert!(!uses_github_env.is_empty() == *expected, "failed: {case}");
+            assert!(uses_github_env.is_empty() != *expected, "failed: {case}");
         }
     }
 
@@ -594,7 +594,7 @@ mod tests {
 
             let uses_github_env = sut.uses_github_env(case, "pwsh").unwrap();
 
-            assert!(!uses_github_env.is_empty() == *expected, "failed: {case}");
+            assert!(uses_github_env.is_empty() != *expected, "failed: {case}");
         }
     }
 }
