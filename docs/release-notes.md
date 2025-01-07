@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Upcoming (UNRELEASED)
 
+Nothing to see here yet!
+
+## v1.0.1
+
+This is a small quality and bugfix release. Thank you to everybody
+who helped by reporting and shaking out bugs from our first stable release!
+
 ### Improved
 
 * The [github-env] audit now detects dangerous writes to `GITHUB_PATH`,
