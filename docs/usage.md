@@ -464,19 +464,15 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 1. Don't forget to update this version to the latest `zizmor` release!
 
-This will run `zizmor` on every commit. If you want to run `zizmor` only on
-specific files, you can use the `files` option:
+This will run `zizmor` on every commit.
 
-```yaml
--   repo:
-    ...
-    hooks:
-    - id: zizmor
-      files: ^path/to/audit/.*\.yml$
-```
+!!! tip
 
-See [`pre-commit`](https://pre-commit.com/) documentation for more information on how to configure
-`pre-commit`.
+    If you want to run `zizmor` only on specific files, you can use the
+    `files` option.
+
+    See [`pre-commit`](https://pre-commit.com/) documentation for more
+    information on how to configure `pre-commit`.
 
 ## Limitations
 
