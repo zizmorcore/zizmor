@@ -28,6 +28,7 @@ freemocap/freemocap#659
 gaphor/gaphor#3658
 getsops/sops#1704
 git-lfs/git-lfs#5930
+google/zx#1067
 guacsec/guac#2276
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 Homebrew/brew#18662
