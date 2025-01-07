@@ -469,7 +469,8 @@ This will run `zizmor` on every commit.
 !!! tip
 
     If you want to run `zizmor` only on specific files, you can use the
-    `files` option.
+    `files` option. This setting is *optional*, as `zizmor` will
+    scan the entire repository by default.
 
     See [`pre-commit`](https://pre-commit.com/) documentation for more
     information on how to configure `pre-commit`.
