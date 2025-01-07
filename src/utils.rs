@@ -1,5 +1,6 @@
 //! Helper routines.
 
+use camino::Utf8Path;
 use github_actions_models::common::{
     expr::{ExplicitExpr, LoE},
     Env,
@@ -111,9 +112,19 @@ pub(crate) fn env_is_static(name: &str, envs: &[&LoE<Env>]) -> bool {
     true
 }
 
+/// Returns the name within the given `shell:` stanza.
+pub(crate) fn normalize_shell(shell: &str) -> &str {
+    let path = match shell.split_once(' ') {
+        Some((path, _)) => path,
+        None => shell,
+    };
+
+    Utf8Path::new(path).file_name().unwrap_or(path)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::utils::{extract_expression, extract_expressions};
+    use crate::utils::{extract_expression, extract_expressions, normalize_shell};
 
     #[test]
     fn split_patterns() {
@@ -184,5 +195,20 @@ mod tests {
                 "${{ matrix.PYTHON.OPENSSL.VERSION }}",
             ]
         )
+    }
+
+    #[test]
+    fn test_normalize_shell() {
+        for (actual, expected) in &[
+            ("bash", "bash"),
+            ("/bin/bash", "bash"),
+            ("/bash", "bash"),
+            ("./bash", "bash"),
+            ("../bash", "bash"),
+            ("/./../bash", "bash"),
+            ("/bin/bash -e {0}", "bash"),
+        ] {
+            assert_eq!(normalize_shell(actual), *expected)
+        }
     }
 }

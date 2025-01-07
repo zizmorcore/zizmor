@@ -508,7 +508,7 @@ impl<'w> Step<'w> {
         Uses::from_step(uses)
     }
 
-    /// Returns the name of the shell used by this step, or `None`
+    /// Returns the the shell used by this step, or `None`
     /// if the shell can't be statically inferred.
     ///
     /// Invariant: panics if the step is not a `run:` step.
