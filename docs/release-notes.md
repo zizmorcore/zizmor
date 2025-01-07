@@ -21,6 +21,8 @@ of `zizmor`.
   a publishing workflow is `push: false` is explicitly set (#389)
 * The [template-injection] audit no longer considers `github.action_path`
   to be a potentially dangerous expansion (#402)
+* The [github-env] audit no longer skips `run:` steps with non-trivial
+  `shell:` stanzas (#403)
 
 ## v1.0.0
 
