@@ -385,5 +385,9 @@ fn github_env() -> Result<()> {
         .workflow(workflow_under_test("github-env/github-path.yml"))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("github-env/issue-397-repro.yml"))
+        .run()?);
+
     Ok(())
 }

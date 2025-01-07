@@ -2,6 +2,7 @@ use super::{audit_meta, Audit};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Step;
 use crate::state::AuditState;
+use crate::utils;
 use anyhow::{Context, Result};
 use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
@@ -315,15 +316,19 @@ impl GitHubEnv {
         run_step_body: &'hay str,
         shell: &str,
     ) -> Result<Vec<(&'hay str, Range<usize>)>> {
-        match shell {
+        // The `shell:` stanza can contain a path and/or multiple arguments,
+        // which we need to normalize out before comparing.
+        // For example, `shell: /bin/bash -e {0}` becomes `bash`.
+        let normalized = utils::normalize_shell(shell);
+
+        match normalized {
             "bash" | "sh" => self.bash_uses_github_env(run_step_body),
             "cmd" => Ok(self.cmd_uses_github_env(run_step_body)),
             "pwsh" | "powershell" => self.pwsh_uses_github_env(run_step_body),
             // TODO: handle python.
             &_ => {
                 tracing::warn!(
-                    "'{}' shell not supported when evaluating usage of GITHUB_ENV",
-                    shell
+                    "'{shell}' ({normalized}) shell not supported when evaluating usage of GITHUB_ENV"
                 );
                 Ok(vec![])
             }
