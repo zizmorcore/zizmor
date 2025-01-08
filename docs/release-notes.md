@@ -7,9 +7,12 @@ description: Abbreviated change notes about each zizmor release.
 This page contains _abbreviated_, user-focused release notes for each version
 of `zizmor`.
 
-## Upcoming (UNRELEASED)
+## v1.1.0 (UNRELEASED)
 
-Nothing to see here yet!
+### Added
+
+* **New audit**: [secrets-inherit] detects use of `secrets: inherit` with
+  reusable workflow calls (#408)
 
 ## v1.0.1
 
@@ -399,3 +402,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [cache-poisoning]: ./audits.md#cache-poisoning
 [github-env]: ./audits.md#github-env
 [template-injection]: ./audits.md#template-injection
+[secrets-inherit]: ./audits.md#secrets-inherit
