@@ -391,3 +391,12 @@ fn github_env() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn secrets_inherit() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("secrets-inherit.yml"))
+        .run()?);
+
+    Ok(())
+}

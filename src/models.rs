@@ -177,7 +177,10 @@ impl<'w> Job<'w> {
 
     /// This job's [`SymbolicLocation`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
-        self.parent().location().with_job(self)
+        self.parent()
+            .location()
+            .annotated("this job")
+            .with_job(self)
     }
 
     /// An iterator of this job's constituent [`Step`]s.
