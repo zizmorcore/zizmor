@@ -363,6 +363,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::insecure_commands::InsecureCommands);
     register_audit!(audit::github_env::GitHubEnv);
     register_audit!(audit::cache_poisoning::CachePoisoning);
+    register_audit!(audit::secrets_inherit::SecretsInherit);
 
     let mut results = FindingRegistry::new(&app, &config);
     {

@@ -753,6 +753,48 @@ intended to publish build artifacts:
 * Set an action-specific input to disable cache restoration when appropriate,
   such as `lookup-only` in @Swatinem/rust-cache.
 
+## `secrets-inherit`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [secrets-inherit]   | v1.1.0      | ✅             | ✅                 |
+
+[secrets-inherit]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/secrets-inherit
+
+Detects excessive secret inheritance between calling workflows and reusable
+(called) workflows.
+
+[Reusable workflows] can be given secrets by their calling workflow either
+explicitly, or in a blanket fashion with `secrets: inherit`. The latter
+should almost never be used, as it makes it violates the
+[Principle of Least Authority] and makes it impossible to determine which exact
+secrets a reusable workflow was executed with.
+
+### Remediation
+
+In general, `secrets: inherit` should be replaced with a `secrets:` block
+that explicitly forwards each secret actually needed by the reusable workflow.
+
+=== "Before"
+
+    ```yaml title="reusable.yml" hl_lines="4"
+    jobs:
+      pass-secrets-to-workflow:
+        uses: ./.github/workflows/called-workflow.yml
+        secrets: inherit
+    ```
+
+=== "After"
+
+    ```yaml title="reusable.yml" hl_lines="4-6"
+    jobs:
+      pass-secrets-to-workflow:
+        uses: ./.github/workflows/called-workflow.yml
+        secrets:
+          forward-me: ${{ secrets.forward-me }}
+          me-too: ${{ secrets.me-too }}
+    ```
+
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
@@ -771,3 +813,5 @@ intended to publish build artifacts:
 [Google & Apache Found Vulnerable to GitHub Environment Injection]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability-0
 [Hacking with Environment Variables]: https://www.elttam.com/blog/env/
 [The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]: https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
+[reusable workflows]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
+[Principle of Least Authority]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
