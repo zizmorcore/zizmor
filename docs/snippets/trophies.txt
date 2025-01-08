@@ -33,6 +33,7 @@ guacsec/guac#2276
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 Homebrew/brew#18662
 Homebrew/homebrew-core#195961
+huggingface/peft#2288
 hugovk/em-keyboard#148
 hugovk/norwegianblue#233
 hugovk/pypistats#460

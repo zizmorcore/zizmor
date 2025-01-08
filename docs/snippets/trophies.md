@@ -203,6 +203,14 @@
         - Homebrew/homebrew-core#195961
 
 
+-   ![](https://github.com/huggingface.png?size=40){ width="40" loading=lazy align=left } huggingface
+
+    ---
+
+    ??? example "Examples"
+        - huggingface/peft#2288
+
+
 -   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk
 
     ---
