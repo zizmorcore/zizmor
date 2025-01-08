@@ -57,6 +57,9 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.run_attempt",
     "github.run_id",
     "github.run_number",
+    // Typically something like `https://github.com`; you have bigger problems if
+    // this is attacker-controlled.
+    "github.server_url",
     // Always a 40-char SHA-1 reference.
     "github.sha",
     // Like `secrets.*`: not safe to expose, but safe to interpolate.
