@@ -14,6 +14,11 @@ of `zizmor`.
 * **New audit**: [secrets-inherit] detects use of `secrets: inherit` with
   reusable workflow calls (#408)
 
+### Fixed
+
+* The [template-injection] audit no longer consider `github.server_url`
+  dangerous (#412)
+
 ## v1.0.1
 
 This is a small quality and bugfix release. Thank you to everybody
