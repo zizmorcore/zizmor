@@ -740,6 +740,7 @@ artifacts.
 Other resources:
 
 * [The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]
+* [Cacheract: The Monster in your Build Cache]
 
 ### Remediation
 
@@ -815,3 +816,4 @@ that explicitly forwards each secret actually needed by the reusable workflow.
 [The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]: https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
 [reusable workflows]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 [Principle of Least Authority]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
+[Cacheract: The Monster in your Build Cache]: https://adnanthekhan.com/2024/12/21/cacheract-the-monster-in-your-build-cache/
