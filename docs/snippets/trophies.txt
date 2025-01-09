@@ -18,6 +18,7 @@ curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 danmar/cppcheck#7044
 DataDog/datadog-agent#30871
 DataDog/dd-trace-py#11640
+datalens-tech/datalens-backend#777
 Diaoul/subliminal#1190
 esl/MongooseIM#4435
 ethereum/hevm#615
@@ -31,8 +32,19 @@ git-lfs/git-lfs#5930
 google/zx#1067
 guacsec/guac#2276
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
+Homebrew/actions#630
+Homebrew/actions#631
 Homebrew/brew#18662
+Homebrew/brew.sh#1107
+Homebrew/formulae.brew.sh#1621
+Homebrew/homebrew-cask#195318
+Homebrew/homebrew-cask#195310
+Homebrew/homebrew-cask#195309
+Homebrew/homebrew-cask#195308
+Homebrew/homebrew-command-not-found#203
 Homebrew/homebrew-core#195961
+Homebrew/homebrew-core#201306
+Homebrew/homebrew-portable-ruby#255
 huggingface/peft#2288
 hugovk/em-keyboard#148
 hugovk/norwegianblue#233
