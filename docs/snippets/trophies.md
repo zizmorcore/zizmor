@@ -90,6 +90,14 @@
         - DataDog/dd-trace-py#11640
 
 
+-   ![](https://github.com/datalens-tech.png?size=40){ width="40" loading=lazy align=left } datalens-tech
+
+    ---
+
+    ??? example "Examples"
+        - datalens-tech/datalens-backend#777
+
+
 -   ![](https://github.com/Diaoul.png?size=40){ width="40" loading=lazy align=left } Diaoul
 
     ---
@@ -199,8 +207,19 @@
     ---
 
     ??? example "Examples"
+        - Homebrew/actions#630
+        - Homebrew/actions#631
         - Homebrew/brew#18662
+        - Homebrew/brew.sh#1107
+        - Homebrew/formulae.brew.sh#1621
+        - Homebrew/homebrew-cask#195318
+        - Homebrew/homebrew-cask#195310
+        - Homebrew/homebrew-cask#195309
+        - Homebrew/homebrew-cask#195308
+        - Homebrew/homebrew-command-not-found#203
         - Homebrew/homebrew-core#195961
+        - Homebrew/homebrew-core#201306
+        - Homebrew/homebrew-portable-ruby#255
 
 
 -   ![](https://github.com/huggingface.png?size=40){ width="40" loading=lazy align=left } huggingface
