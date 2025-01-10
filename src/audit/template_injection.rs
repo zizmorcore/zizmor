@@ -291,6 +291,18 @@ impl Audit for TemplateInjection {
                         ),
                         None => return Ok(findings),
                     }
+                } else if uses.starts_with("azure/powershell") || uses.starts_with("azure/cli") {
+                    // Both `azure/powershell` and `azure/cli` uses the same `inlineScript`
+                    // option to feed arbitrary code.
+                    if let Some(script) = with.get("inlineScript") {
+                        (
+                            &script.to_string(),
+                            step.location()
+                                .with_keys(&["with".into(), "inlineScript".into()]),
+                        )
+                    } else {
+                        return Ok(findings);
+                    }
                 } else {
                     return Ok(findings);
                 }

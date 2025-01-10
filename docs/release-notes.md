@@ -14,6 +14,11 @@ of `zizmor`.
 * **New audit**: [secrets-inherit] detects use of `secrets: inherit` with
   reusable workflow calls (#408)
 
+### Improved
+
+* The [template-injection] audit now detects injections in calls
+  to @azure/cli and @azure/powershell (#421)
+
 ### Fixed
 
 * The [template-injection] audit no longer consider `github.server_url`
