@@ -288,6 +288,24 @@
         - matplotlib/matplotlib#29251
 
 
+-   ![](https://github.com/maxmind.png?size=40){ width="40" loading=lazy align=left } maxmind
+
+    ---
+
+    ??? example "Examples"
+        - maxmind/mmdbinspect#82
+        - maxmind/MaxMind-DB-Reader-python#178
+        - maxmind/GeoIP2-php#233
+        - maxmind/MaxMind-DB-Reader-dotnet#198
+        - maxmind/libmaxminddb#365
+        - maxmind/GeoIP2-java#517
+        - maxmind/MaxMind-DB-Reader-java#221
+        - maxmind/geoipupdate#354
+        - maxmind/geoip2-csv-converter#87
+        - maxmind/mmdbwriter#104
+        - maxmind/GeoIP2-node#1387
+
+
 -   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf
 
     ---
