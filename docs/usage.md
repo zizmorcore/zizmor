@@ -456,10 +456,10 @@ GH_HOST=custom.ghe.com zizmor ...
 To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
--   repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.0.1 # (1)!
-    hooks:
-    - id: zizmor
+- repo: https://github.com/woodruffw/zizmor-pre-commit
+  rev: v1.0.1
+  hooks:
+  - id: zizmor
 ```
 
 1. Don't forget to update this version to the latest `zizmor` release!
