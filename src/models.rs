@@ -444,9 +444,9 @@ impl StepCommon for Step<'_> {
         let mut envs = vec![];
 
         match &self.body {
-            workflow::job::StepBody::Uses { .. } => {
-                panic!("API misuse: can't call env_is_static on a uses: step")
-            }
+            // `uses:` does not have an `env:` but its parent
+            // job and workflow might, so we skip instead of failing.
+            workflow::job::StepBody::Uses { .. } => (),
             workflow::job::StepBody::Run {
                 run: _,
                 working_directory: _,

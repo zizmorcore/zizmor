@@ -1,0 +1,6 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"template-injection/issue-418-repro.yml\")).run()?"
+snapshot_kind: text
+---
+No findings to report. Good job! (1 suppressed)
