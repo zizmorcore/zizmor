@@ -1,0 +1,15 @@
+# reproduction case for https://github.com/woodruffw/zizmor/issues/418
+
+name: Test
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  stop:
+    runs-on: ubuntu-latest
+    env:
+      COMMENT_ID: "1234"
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: console.log("${{ env.COMMENT_ID }}")
