@@ -337,6 +337,14 @@
         - NetApp/harvest#3247
 
 
+-   ![](https://github.com/nextcloud.png?size=40){ width="40" loading=lazy align=left } nextcloud
+
+    ---
+
+    ??? example "Examples"
+        - nextcloud/.github#477
+
+
 -   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs
 
     ---
