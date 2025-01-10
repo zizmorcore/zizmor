@@ -8,7 +8,7 @@
 `zizmor` is a static analysis tool for GitHub Actions. It can find
 many common security issues in typical GitHub Actions CI/CD setups.
 
-![zizmor demo](./docs/assets/zizmor-demo.gif)
+![zizmor demo](https://raw.githubusercontent.com/woodruffw/zizmor/main/docs/assets/zizmor-demo.gif)
 
 See [`zizmor`'s documentation](https://woodruffw.github.io/zizmor/)
 for [installation steps], as well as a [quickstart] and
