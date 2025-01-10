@@ -18,6 +18,8 @@ of `zizmor`.
 
 * The [template-injection] audit no longer consider `github.server_url`
   dangerous (#412)
+* The [template-injection] audit no longer crashes when evaluating
+  the static-ness of an environment for a `uses:` step (#420)
 
 ## v1.0.1
 
