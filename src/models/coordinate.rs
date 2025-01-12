@@ -17,7 +17,7 @@ use github_actions_models::common::{expr::ExplicitExpr, EnvValue};
 
 use super::{StepCommon, Uses};
 
-pub(crate) enum UsesCoordinate<'w> {
+pub(crate) enum ActionCoordinate<'w> {
     Configurable {
         /// The `uses:` clause of the coordinate
         uses: Uses<'w>,
@@ -29,11 +29,11 @@ pub(crate) enum UsesCoordinate<'w> {
     NotConfigurable(Uses<'w>),
 }
 
-impl UsesCoordinate<'_> {
+impl ActionCoordinate<'_> {
     pub(crate) fn uses(&self) -> Uses {
         match self {
-            UsesCoordinate::Configurable { uses, .. } => *uses,
-            UsesCoordinate::NotConfigurable(inner) => *inner,
+            ActionCoordinate::Configurable { uses, .. } => *uses,
+            ActionCoordinate::NotConfigurable(inner) => *inner,
         }
     }
 
@@ -86,7 +86,7 @@ impl UsesCoordinate<'_> {
         }
 
         match self {
-            UsesCoordinate::Configurable {
+            ActionCoordinate::Configurable {
                 uses: _,
                 control,
                 enabled_by_default,
@@ -110,7 +110,7 @@ impl UsesCoordinate<'_> {
                 }
             }
             // The mere presence of this `uses:` implies the expected usage semantics.
-            UsesCoordinate::NotConfigurable(_) => Some(Usage::Always),
+            ActionCoordinate::NotConfigurable(_) => Some(Usage::Always),
         }
     }
 }
@@ -169,7 +169,7 @@ mod tests {
 
     use crate::models::coordinate::{Control, ControlFieldType, Toggle, Usage};
 
-    use super::{StepCommon, Uses, UsesCoordinate};
+    use super::{ActionCoordinate, StepCommon, Uses};
 
     // Test-only trait impl.
     impl StepCommon for Step {
@@ -204,7 +204,7 @@ mod tests {
     fn test_usage() {
         // Trivial case: no usage is possible, since the coordinate's `uses:`
         // does not match the step.
-        let coord = UsesCoordinate::NotConfigurable(Uses::from_common("foo/bar").unwrap());
+        let coord = ActionCoordinate::NotConfigurable(Uses::from_common("foo/bar").unwrap());
         let step: Step = serde_yaml::from_str("uses: not/thesame").unwrap();
         assert_eq!(coord.usage(&step), None);
 
@@ -216,7 +216,7 @@ mod tests {
 
         // Coordinate `uses:` matches but is not enabled by default and is
         // missing the needed control.
-        let coord = UsesCoordinate::Configurable {
+        let coord = ActionCoordinate::Configurable {
             uses: Uses::from_common("foo/bar").unwrap(),
             control: Control::new(Toggle::OptIn, "set-me", ControlFieldType::Boolean),
             enabled_by_default: false,
@@ -233,7 +233,7 @@ mod tests {
         assert_eq!(coord.usage(&step), None);
 
         // Coordinate `uses:` matches and is enabled by default.
-        let coord = UsesCoordinate::Configurable {
+        let coord = ActionCoordinate::Configurable {
             uses: Uses::from_common("foo/bar").unwrap(),
             control: Control::new(Toggle::OptIn, "set-me", ControlFieldType::Boolean),
             enabled_by_default: true,
@@ -251,7 +251,7 @@ mod tests {
 
         // Coordinate `uses:` matches and has an opt-out toggle, which does not affect
         // the default.
-        let coord = UsesCoordinate::Configurable {
+        let coord = ActionCoordinate::Configurable {
             uses: Uses::from_common("foo/bar").unwrap(),
             control: Control::new(Toggle::OptOut, "disable-cache", ControlFieldType::Boolean),
             enabled_by_default: false,
