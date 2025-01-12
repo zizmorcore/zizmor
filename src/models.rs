@@ -4,9 +4,8 @@
 use crate::finding::{Route, SymbolicLocation};
 use crate::registry::InputKey;
 use crate::utils::{self, extract_expressions};
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use camino::Utf8Path;
-use github_actions_models::action;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::common::Env;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
@@ -16,6 +15,7 @@ use github_actions_models::workflow::{
     job::{NormalJob, StepBody},
     Trigger,
 };
+use github_actions_models::{action, common};
 use indexmap::IndexMap;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -28,19 +28,19 @@ pub(crate) mod coordinate;
 /// Common fields between workflow and action step bodies.
 pub(crate) enum StepBodyCommon<'s> {
     Uses {
-        uses: Uses<'s>,
+        uses: &'s common::Uses,
         with: &'s Env,
     },
     Run {
         run: &'s str,
-        working_directory: Option<&'s str>,
-        shell: Option<&'s str>,
-        env: &'s LoE<Env>,
+        _working_directory: Option<&'s str>,
+        _shell: Option<&'s str>,
+        _env: &'s LoE<Env>,
     },
 }
 
 /// Common interfaces between workflow and action steps.
-pub(crate) trait StepCommon {
+pub(crate) trait StepCommon<'s> {
     /// Returns whether the given `env.name` environment access is "static,"
     /// i.e. is not influenced by another expression.
     fn env_is_static(&self, name: &str) -> bool;
@@ -50,14 +50,11 @@ pub(crate) trait StepCommon {
     /// Composite action steps have no strategy.
     fn strategy(&self) -> Option<&Strategy>;
 
-    /// Returns this step's `uses:` clause, if present.
-    fn uses(&self) -> Option<Uses>;
-
-    /// Returns the `with:` clause for this step.
-    fn with(&self) -> Option<&Env>;
-
     /// Returns a [`StepBodyCommon`] for this step.
     fn body(&self) -> StepBodyCommon;
+
+    /// Returns a [`SymbolicLocation`] for this step.
+    fn location(&self) -> SymbolicLocation<'s>;
 }
 
 /// Represents an entire GitHub Actions workflow.
@@ -454,7 +451,7 @@ impl<'w> Deref for Step<'w> {
     }
 }
 
-impl StepCommon for Step<'_> {
+impl<'s> StepCommon<'s> for Step<'s> {
     fn env_is_static(&self, name: &str) -> bool {
         // Collect each of the step, job, and workflow-level `env` blocks
         // and check each.
@@ -482,24 +479,9 @@ impl StepCommon for Step<'_> {
         self.job().strategy.as_ref()
     }
 
-    fn uses(&self) -> Option<Uses> {
-        self.uses()
-    }
-
-    fn with(&self) -> Option<&Env> {
-        match &self.body {
-            StepBody::Uses { uses: _, with } => Some(with),
-            StepBody::Run { .. } => None,
-        }
-    }
-
     fn body(&self) -> StepBodyCommon {
         match &self.body {
-            StepBody::Uses { uses, with } => StepBodyCommon::Uses {
-                // TODO: no unwrap here.
-                uses: Uses::from_step(uses).unwrap(),
-                with,
-            },
+            StepBody::Uses { uses, with } => StepBodyCommon::Uses { uses, with },
             StepBody::Run {
                 run,
                 working_directory,
@@ -507,11 +489,15 @@ impl StepCommon for Step<'_> {
                 env,
             } => StepBodyCommon::Run {
                 run,
-                working_directory: working_directory.as_deref(),
-                shell: shell.as_deref(),
-                env,
+                _working_directory: working_directory.as_deref(),
+                _shell: shell.as_deref(),
+                _env: env,
             },
         }
+    }
+
+    fn location(&self) -> SymbolicLocation<'s> {
+        self.location()
     }
 }
 
@@ -541,12 +527,12 @@ impl<'w> Step<'w> {
     }
 
     /// Returns a [`Uses`] for this [`Step`], if it has one.
-    pub(crate) fn uses(&self) -> Option<Uses<'w>> {
+    pub(crate) fn uses(&self) -> Option<&common::Uses> {
         let StepBody::Uses { uses, .. } = &self.inner.body else {
             return None;
         };
 
-        Uses::from_step(uses)
+        Some(uses)
     }
 
     /// Returns the the shell used by this step, or `None`
@@ -639,37 +625,15 @@ impl<'w> Iterator for Steps<'w> {
     }
 }
 
-/// The contents of a `uses: docker://` step stanza.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub(crate) struct DockerUses<'a> {
-    pub(crate) registry: Option<&'a str>,
-    pub(crate) image: &'a str,
-    pub(crate) tag: Option<&'a str>,
-    pub(crate) hash: Option<&'a str>,
+pub(crate) trait RepositoryUsesExt {
+    fn matches(&self, template: &str) -> bool;
+    fn matches_uses(&self, template: &common::RepositoryUses) -> bool;
+    fn ref_is_commit(&self) -> bool;
+    fn commit_ref(&self) -> Option<&str>;
+    fn symbolic_ref(&self) -> Option<&str>;
 }
 
-/// The contents of a `uses: some/repo` step stanza.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub(crate) struct RepositoryUses<'a> {
-    pub(crate) owner: &'a str,
-    pub(crate) repo: &'a str,
-    pub(crate) subpath: Option<&'a str>,
-    pub(crate) git_ref: Option<&'a str>,
-}
-
-impl<'a> TryFrom<&'a str> for RepositoryUses<'a> {
-    type Error = anyhow::Error;
-
-    fn try_from(value: &'a str) -> std::result::Result<Self, Self::Error> {
-        let Some(Uses::Repository(uses)) = Uses::from_common(value) else {
-            return Err(anyhow!("invalid repository uses: {value}"));
-        };
-
-        Ok(uses)
-    }
-}
-
-impl RepositoryUses<'_> {
+impl RepositoryUsesExt for common::RepositoryUses {
     /// Returns whether this `uses:` clause "matches" the given template.
     /// The template is itself formatted like a normal `uses:` clause.
     ///
@@ -680,163 +644,67 @@ impl RepositoryUses<'_> {
     /// case-sensitive URLs, hence templates like
     /// `Actions/Checkout` and `actions/checkout`
     /// resolve to the same Action
-    pub(crate) fn matches<'a>(&self, template: impl TryInto<RepositoryUses<'a>>) -> bool {
-        let Ok(other) = template.try_into() else {
+    fn matches(&self, template: &str) -> bool {
+        let Ok(other) = template.parse::<common::RepositoryUses>() else {
             return false;
         };
 
-        self.owner.eq_ignore_ascii_case(other.owner)
-            && self.repo.eq_ignore_ascii_case(other.repo)
-            && self.subpath.map(|s| s.to_lowercase()) == other.subpath.map(|s| s.to_lowercase())
-            && other.git_ref.map_or(true, |git_ref| {
-                Some(git_ref.to_lowercase()) == self.git_ref.map(|r| r.to_lowercase())
+        self.matches_uses(&other)
+    }
+
+    fn matches_uses(&self, template: &common::RepositoryUses) -> bool {
+        self.owner.eq_ignore_ascii_case(&template.owner)
+            && self.repo.eq_ignore_ascii_case(&template.repo)
+            && self.subpath.as_ref().map(|s| s.to_lowercase())
+                == template.subpath.as_ref().map(|s| s.to_lowercase())
+            && template.git_ref.as_ref().map_or(true, |git_ref| {
+                Some(git_ref.to_lowercase()) == self.git_ref.as_ref().map(|r| r.to_lowercase())
             })
     }
 
-    pub(crate) fn ref_is_commit(&self) -> bool {
-        match self.git_ref {
+    fn ref_is_commit(&self) -> bool {
+        match &self.git_ref {
             Some(git_ref) => git_ref.len() == 40 && git_ref.chars().all(|c| c.is_ascii_hexdigit()),
             None => false,
         }
     }
 
-    pub(crate) fn commit_ref(&self) -> Option<&str> {
-        match self.git_ref {
+    fn commit_ref(&self) -> Option<&str> {
+        match &self.git_ref {
             Some(git_ref) if self.ref_is_commit() => Some(git_ref),
             _ => None,
         }
     }
 
-    pub(crate) fn symbolic_ref(&self) -> Option<&str> {
-        match self.git_ref {
+    fn symbolic_ref(&self) -> Option<&str> {
+        match &self.git_ref {
             Some(git_ref) if !self.ref_is_commit() => Some(git_ref),
             _ => None,
         }
     }
 }
 
-/// Represents the components of an "action ref", i.e. the value
-/// of a `uses:` clause in a normal job step or a reusable workflow job.
-/// Supports Docker (`docker://`) and repository (`actions/checkout`)
-/// style references, but not local (`./foo`) references.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub(crate) enum Uses<'a> {
-    Docker(DockerUses<'a>),
-    Repository(RepositoryUses<'a>),
+pub(crate) trait UsesExt {
+    fn unpinned(&self) -> bool;
+    fn unhashed(&self) -> bool;
 }
 
-impl<'a> Uses<'a> {
-    fn is_registry(registry: &str) -> bool {
-        // https://stackoverflow.com/a/42116190
-        registry == "localhost" || registry.contains('.') || registry.contains(':')
-    }
-
-    /// Parses a Docker image reference.
-    /// See: <https://docs.docker.com/reference/cli/docker/image/tag/>
-    fn from_image_ref(image: &'a str) -> Option<Self> {
-        let (registry, image) = match image.split_once('/') {
-            Some((registry, image)) if Self::is_registry(registry) => (Some(registry), image),
-            _ => (None, image),
-        };
-
-        // NOTE(ww): hashes aren't mentioned anywhere in Docker's own docs,
-        // but appear to be an OCI thing. GitHub doesn't support them
-        // yet either, but we expect them to soon (with "immutable actions").
-        if let Some(at_pos) = image.find('@') {
-            let (image, hash) = image.split_at(at_pos);
-
-            let hash = if hash.is_empty() {
-                None
-            } else {
-                Some(&hash[1..])
-            };
-
-            Some(Self::Docker(DockerUses {
-                registry,
-                image,
-                tag: None,
-                hash,
-            }))
-        } else {
-            let (image, tag) = match image.split_once(':') {
-                Some((image, "")) => (image, None),
-                Some((image, tag)) => (image, Some(tag)),
-                _ => (image, None),
-            };
-
-            Some(Self::Docker(DockerUses {
-                registry,
-                image,
-                tag,
-                hash: None,
-            }))
-        }
-    }
-
-    fn from_common(uses: &'a str) -> Option<Self> {
-        if uses.starts_with("./") {
-            None
-        } else if let Some(image) = uses.strip_prefix("docker://") {
-            Self::from_image_ref(image)
-        } else {
-            // NOTE: Technically both git refs and action paths can contain `@`,
-            // so this isn't guaranteed to be correct. In practice, however,
-            // splitting on the last `@` is mostly reliable.
-            let (path, git_ref) = match uses.rsplit_once('@') {
-                Some((path, git_ref)) => (path, Some(git_ref)),
-                None => (uses, None),
-            };
-
-            let components = path.splitn(3, '/').collect::<Vec<_>>();
-            if components.len() < 2 {
-                tracing::debug!("malformed `uses:` ref: {uses}");
-                return None;
-            }
-
-            Some(Self::Repository(RepositoryUses {
-                owner: components[0],
-                repo: components[1],
-                subpath: components.get(2).copied(),
-                git_ref,
-            }))
-        }
-    }
-
-    pub(crate) fn from_step(uses: &'a str) -> Option<Self> {
-        Self::from_common(uses)
-    }
-
-    /// Parse a [`Uses`] from a reusable workflow `uses:` clause.
-    ///
-    /// Returns only the [`RepositoryUses`] variant since Docker actions
-    /// can't be used in reusable workflows.
-    pub(crate) fn from_reusable(uses: &'a str) -> Option<RepositoryUses<'a>> {
-        match Self::from_common(uses) {
-            // Reusable workflows don't support Docker actions.
-            Some(Uses::Docker(DockerUses { .. })) => None,
-            // Reusable workflows require a git ref.
-            Some(Uses::Repository(RepositoryUses {
-                owner: _,
-                repo: _,
-                subpath: _,
-                git_ref,
-            })) if git_ref.is_none() => None,
-            Some(Uses::Repository(repo)) => Some(repo),
-            None => None,
-        }
-    }
-
-    pub(crate) fn unpinned(&self) -> bool {
+impl UsesExt for common::Uses {
+    fn unpinned(&self) -> bool {
         match self {
-            Uses::Docker(docker) => docker.hash.is_none() && docker.tag.is_none(),
-            Uses::Repository(repo) => repo.git_ref.is_none(),
+            common::Uses::Docker(docker) => docker.hash.is_none() && docker.tag.is_none(),
+            common::Uses::Repository(repo) => repo.git_ref.is_none(),
+            common::Uses::Local(local) => local.git_ref.is_none(),
         }
     }
 
-    pub(crate) fn unhashed(&self) -> bool {
+    fn unhashed(&self) -> bool {
         match self {
-            Uses::Docker(docker) => docker.hash.is_some(),
-            Uses::Repository(repo) => !repo.ref_is_commit(),
+            // TODO: Handle this case. Right now it's not very important,
+            // since we don't really analyze local action uses at all.
+            common::Uses::Local(_) => false,
+            common::Uses::Repository(repo) => !repo.ref_is_commit(),
+            common::Uses::Docker(docker) => docker.hash.is_none(),
         }
     }
 }
@@ -975,7 +843,7 @@ impl<'a> Deref for CompositeStep<'a> {
     }
 }
 
-impl StepCommon for CompositeStep<'_> {
+impl<'s> StepCommon<'s> for CompositeStep<'s> {
     fn env_is_static(&self, name: &str) -> bool {
         let env = match &self.body {
             action::StepBody::Uses { .. } => {
@@ -996,35 +864,25 @@ impl StepCommon for CompositeStep<'_> {
         None
     }
 
-    fn uses(&self) -> Option<Uses> {
-        self.uses()
-    }
-
-    fn with(&self) -> Option<&Env> {
-        match &self.body {
-            action::StepBody::Uses { uses: _, with } => Some(with),
-            action::StepBody::Run { .. } => None,
-        }
-    }
-
     fn body(&self) -> StepBodyCommon {
         match &self.body {
-            action::StepBody::Uses { uses, with } => StepBodyCommon::Uses {
-                uses: Uses::from_step(uses).unwrap(),
-                with,
-            },
+            action::StepBody::Uses { uses, with } => StepBodyCommon::Uses { uses, with },
             action::StepBody::Run {
                 run,
+                working_directory,
                 shell,
                 env,
-                working_directory,
             } => StepBodyCommon::Run {
                 run,
-                working_directory: working_directory.as_deref(),
-                shell: Some(&shell),
-                env,
+                _working_directory: working_directory.as_deref(),
+                _shell: Some(shell),
+                _env: env,
             },
         }
+    }
+
+    fn location(&self) -> SymbolicLocation<'s> {
+        self.location()
     }
 }
 
@@ -1057,243 +915,23 @@ impl<'a> CompositeStep<'a> {
         self.parent
     }
 
-    /// Returns a [`Uses`] for this [`Step`], if it has one.
-    pub(crate) fn uses(&self) -> Option<Uses<'a>> {
+    /// Returns a [`common::Uses`] for this [`Step`], if it has one.
+    pub(crate) fn uses(&self) -> Option<&common::Uses> {
         let action::StepBody::Uses { uses, .. } = &self.inner.body else {
             return None;
         };
 
-        Uses::from_step(uses)
+        Some(uses)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{DockerUses, RepositoryUses, Uses};
+    use std::str::FromStr;
 
-    #[test]
-    fn uses_from_step() {
-        let vectors = [
-            (
-                // Valid: fully pinned.
-                "actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Some(Uses::Repository(RepositoryUses {
-                    owner: "actions",
-                    repo: "checkout",
-                    subpath: None,
-                    git_ref: Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3"),
-                })),
-            ),
-            (
-                // Valid: fully pinned, subpath
-                "actions/aws/ec2@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Some(Uses::Repository(RepositoryUses {
-                    owner: "actions",
-                    repo: "aws",
-                    subpath: Some("ec2"),
-                    git_ref: Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3"),
-                })),
-            ),
-            (
-                // Valid: fully pinned, complex subpath
-                "example/foo/bar/baz/quux@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Some(Uses::Repository(RepositoryUses {
-                    owner: "example",
-                    repo: "foo",
-                    subpath: Some("bar/baz/quux"),
-                    git_ref: Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3"),
-                })),
-            ),
-            (
-                // Valid: pinned with branch/tag
-                "actions/checkout@v4",
-                Some(Uses::Repository(RepositoryUses {
-                    owner: "actions",
-                    repo: "checkout",
-                    subpath: None,
-                    git_ref: Some("v4"),
-                })),
-            ),
-            (
-                "actions/checkout@abcd",
-                Some(Uses::Repository(RepositoryUses {
-                    owner: "actions",
-                    repo: "checkout",
-                    subpath: None,
-                    git_ref: Some("abcd"),
-                })),
-            ),
-            (
-                // Valid: unpinned
-                "actions/checkout",
-                Some(Uses::Repository(RepositoryUses {
-                    owner: "actions",
-                    repo: "checkout",
-                    subpath: None,
-                    git_ref: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, implicit registry
-                "docker://alpine:3.8",
-                Some(Uses::Docker(DockerUses {
-                    registry: None,
-                    image: "alpine",
-                    tag: Some("3.8"),
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, localhost
-                "docker://localhost/alpine:3.8",
-                Some(Uses::Docker(DockerUses {
-                    registry: Some("localhost"),
-                    image: "alpine",
-                    tag: Some("3.8"),
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, localhost w/ port
-                "docker://localhost:1337/alpine:3.8",
-                Some(Uses::Docker(DockerUses {
-                    registry: Some("localhost:1337"),
-                    image: "alpine",
-                    tag: Some("3.8"),
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, custom registry
-                "docker://ghcr.io/foo/alpine:3.8",
-                Some(Uses::Docker(DockerUses {
-                    registry: Some("ghcr.io"),
-                    image: "foo/alpine",
-                    tag: Some("3.8"),
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, missing tag
-                "docker://ghcr.io/foo/alpine",
-                Some(Uses::Docker(DockerUses {
-                    registry: Some("ghcr.io"),
-                    image: "foo/alpine",
-                    tag: None,
-                    hash: None,
-                })),
-            ),
-            (
-                // Invalid, but allowed: Docker ref, empty tag
-                "docker://ghcr.io/foo/alpine:",
-                Some(Uses::Docker(DockerUses {
-                    registry: Some("ghcr.io"),
-                    image: "foo/alpine",
-                    tag: None,
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, bare
-                "docker://alpine",
-                Some(Uses::Docker(DockerUses {
-                    registry: None,
-                    image: "alpine",
-                    tag: None,
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, hash
-                "docker://alpine@hash",
-                Some(Uses::Docker(DockerUses {
-                    registry: None,
-                    image: "alpine",
-                    tag: None,
-                    hash: Some("hash"),
-                })),
-            ),
-            // Invalid: missing user/repo
-            ("checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3", None),
-            // Invalid: local action refs not supported
-            (
-                "./.github/actions/hello-world-action@172239021f7ba04fe7327647b213799853a9eb89",
-                None,
-            ),
-        ];
+    use github_actions_models::common::Uses;
 
-        for (input, expected) in vectors {
-            assert_eq!(Uses::from_step(input), expected);
-        }
-    }
-
-    #[test]
-    fn uses_from_reusable() {
-        let vectors = [
-            // Valid, as expected.
-            (
-                "octo-org/this-repo/.github/workflows/workflow-1.yml@\
-                 172239021f7ba04fe7327647b213799853a9eb89",
-                Some(RepositoryUses {
-                    owner: "octo-org",
-                    repo: "this-repo",
-                    subpath: Some(".github/workflows/workflow-1.yml"),
-                    git_ref: Some("172239021f7ba04fe7327647b213799853a9eb89"),
-                }),
-            ),
-            (
-                "octo-org/this-repo/.github/workflows/workflow-1.yml@notahash",
-                Some(RepositoryUses {
-                    owner: "octo-org",
-                    repo: "this-repo",
-                    subpath: Some(".github/workflows/workflow-1.yml"),
-                    git_ref: Some("notahash"),
-                }),
-            ),
-            (
-                "octo-org/this-repo/.github/workflows/workflow-1.yml@abcd",
-                Some(RepositoryUses {
-                    owner: "octo-org",
-                    repo: "this-repo",
-                    subpath: Some(".github/workflows/workflow-1.yml"),
-                    git_ref: Some("abcd"),
-                }),
-            ),
-            // Invalid: no ref at all
-            ("octo-org/this-repo/.github/workflows/workflow-1.yml", None),
-            // Invalid: missing user/repo
-            (
-                "workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89",
-                None,
-            ),
-            // Invalid: local reusable workflow refs not supported
-            (
-                "./.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89",
-                None,
-            ),
-        ];
-
-        for (input, expected) in vectors {
-            assert_eq!(Uses::from_reusable(input), expected);
-        }
-    }
-
-    #[test]
-    fn uses_ref_is_commit() {
-        assert!(
-            Uses::from_reusable("actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3")
-                .unwrap()
-                .ref_is_commit()
-        );
-
-        assert!(!Uses::from_reusable("actions/checkout@v4")
-            .unwrap()
-            .ref_is_commit());
-
-        assert!(!Uses::from_reusable("actions/checkout@abcd")
-            .unwrap()
-            .ref_is_commit());
-    }
+    use crate::models::RepositoryUsesExt;
 
     #[test]
     fn test_repositoryuses_matches() {
@@ -1321,7 +959,7 @@ mod tests {
             ("actions/checkout", "actions/checkout@v3", false),
             ("actions/checkout/foo", "actions/checkout/foo@v3", false),
         ] {
-            let Some(Uses::Repository(uses)) = Uses::from_common(uses) else {
+            let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
                 panic!();
             };
 

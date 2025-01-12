@@ -6,6 +6,7 @@
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
 use anyhow::{anyhow, Context, Result};
+use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{audit_meta, Audit};
 use crate::finding::Finding;
@@ -13,7 +14,7 @@ use crate::models::CompositeStep;
 use crate::{
     finding::{Confidence, Severity},
     github_api,
-    models::{RepositoryUses, Uses},
+    models::RepositoryUsesExt,
     state::AuditState,
 };
 
@@ -30,9 +31,9 @@ audit_meta!(
 impl KnownVulnerableActions {
     fn action_known_vulnerabilities(
         &self,
-        uses: &RepositoryUses<'_>,
+        uses: &RepositoryUses,
     ) -> Result<Vec<(Severity, String)>> {
-        let version = match uses.git_ref {
+        let version = match &uses.git_ref {
             // If `uses` is pinned to a symbolic ref, we need to perform
             // feats of heroism to figure out what's going on.
             // In the "happy" case the symbolic ref is an exact version tag,
@@ -51,7 +52,8 @@ impl KnownVulnerableActions {
             // and then find the longest tag for that commit.
             Some(version) if !uses.ref_is_commit() => {
                 let Some(commit_ref) =
-                    self.client.commit_for_ref(uses.owner, uses.repo, version)?
+                    self.client
+                        .commit_for_ref(&uses.owner, &uses.repo, &version)?
                 else {
                     // No `ref -> commit` means that the action's version
                     // is probably just outright invalid.
@@ -60,7 +62,7 @@ impl KnownVulnerableActions {
 
                 match self
                     .client
-                    .longest_tag_for_commit(uses.owner, uses.repo, &commit_ref)?
+                    .longest_tag_for_commit(&uses.owner, &uses.repo, &commit_ref)?
                 {
                     Some(tag) => tag.name,
                     // Somehow we've round-tripped through a commit and ended
@@ -76,7 +78,7 @@ impl KnownVulnerableActions {
             // which we should also probably support.
             Some(commit_ref) => match self
                 .client
-                .longest_tag_for_commit(uses.owner, uses.repo, commit_ref)
+                .longest_tag_for_commit(&uses.owner, &uses.repo, &commit_ref)
                 .with_context(|| {
                     format!(
                         "couldn't retrieve tag for {owner}/{repo}@{commit_ref}",
@@ -101,7 +103,7 @@ impl KnownVulnerableActions {
 
         let vulns = self
             .client
-            .gha_advisories(uses.owner, uses.repo, &version)?;
+            .gha_advisories(&uses.owner, &uses.repo, &version)?;
 
         let mut results = vec![];
 

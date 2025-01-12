@@ -9,6 +9,7 @@
 use std::ops::Deref;
 
 use anyhow::{anyhow, Result};
+use github_actions_models::common::{RepositoryUses, Uses};
 use github_actions_models::workflow::Job;
 
 use super::{audit_meta, Audit};
@@ -17,7 +18,7 @@ use crate::models::CompositeStep;
 use crate::{
     finding::{Confidence, Severity},
     github_api,
-    models::{RepositoryUses, Uses},
+    models::RepositoryUsesExt,
     state::AuditState,
 };
 
@@ -40,8 +41,8 @@ impl RefConfusion {
             return Ok(false);
         };
 
-        let branches_match = self.client.has_branch(uses.owner, uses.repo, sym_ref)?;
-        let tags_match = self.client.has_tag(uses.owner, uses.repo, sym_ref)?;
+        let branches_match = self.client.has_branch(&uses.owner, &uses.repo, sym_ref)?;
+        let tags_match = self.client.has_tag(&uses.owner, &uses.repo, sym_ref)?;
 
         // If both the branch and tag namespaces have a match, we have a
         // confusable ref.
@@ -96,7 +97,7 @@ impl Audit for RefConfusion {
                     }
                 }
                 Job::ReusableWorkflowCallJob(reusable) => {
-                    let Some(uses) = Uses::from_reusable(&reusable.uses) else {
+                    let Uses::Repository(uses) = &reusable.uses else {
                         continue;
                     };
 

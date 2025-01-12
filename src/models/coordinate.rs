@@ -13,27 +13,27 @@
 // able to express things like
 // "match foo/bar if foo: A and not bar: B and baz: /abcd/"
 
-use github_actions_models::common::{expr::ExplicitExpr, EnvValue};
+use github_actions_models::common::{expr::ExplicitExpr, EnvValue, Uses};
 
-use super::{StepCommon, Uses};
+use super::{RepositoryUsesExt as _, StepBodyCommon, StepCommon};
 
-pub(crate) enum ActionCoordinate<'w> {
+pub(crate) enum ActionCoordinate {
     Configurable {
         /// The `uses:` clause of the coordinate
-        uses: Uses<'w>,
+        uses: Uses,
         /// The input that controls the coordinate
         control: Control,
         /// Whether or not the behavior is the default
         enabled_by_default: bool,
     },
-    NotConfigurable(Uses<'w>),
+    NotConfigurable(Uses),
 }
 
-impl ActionCoordinate<'_> {
-    pub(crate) fn uses(&self) -> Uses {
+impl ActionCoordinate {
+    pub(crate) fn uses(&self) -> &Uses {
         match self {
-            ActionCoordinate::Configurable { uses, .. } => *uses,
-            ActionCoordinate::NotConfigurable(inner) => *inner,
+            ActionCoordinate::Configurable { uses, .. } => uses,
+            ActionCoordinate::NotConfigurable(inner) => inner,
         }
     }
 
@@ -71,17 +71,21 @@ impl ActionCoordinate<'_> {
     /// while the `Some(_)` variants indicate various (potential) usages (such as being implicitly
     /// enabled, or explicitly enabled, or potentially enabled by a template expansion that
     /// can't be directly analyzed).
-    pub(crate) fn usage(&self, step: &impl StepCommon) -> Option<Usage> {
+    pub(crate) fn usage<'s>(&self, step: &impl StepCommon<'s>) -> Option<Usage> {
         let Uses::Repository(template) = self.uses() else {
             return None;
         };
-        let Uses::Repository(uses) = step.uses()? else {
+        let StepBodyCommon::Uses {
+            uses: Uses::Repository(uses),
+            with,
+        } = step.body()
+        else {
             return None;
         };
 
         // If our coordinate's `uses:` template doesn't match the step's `uses:`,
         // then no usage semantics are possible.
-        if !uses.matches(template) {
+        if !uses.matches_uses(template) {
             return None;
         }
 
@@ -92,7 +96,6 @@ impl ActionCoordinate<'_> {
                 enabled_by_default,
             } => {
                 // We need to inspect this `uses:`'s configuration to determine its semantics.
-                let with = step.with()?;
                 match with.get(control.field_name) {
                     Some(field_value) => {
                         // The declared usage is whatever the user explicitly configured,
@@ -165,14 +168,16 @@ pub(crate) enum Usage {
 
 #[cfg(test)]
 mod tests {
-    use github_actions_models::workflow::job::Step;
+    use std::str::FromStr;
+
+    use github_actions_models::{common::Uses, workflow::job::Step};
 
     use crate::models::coordinate::{Control, ControlFieldType, Toggle, Usage};
 
-    use super::{ActionCoordinate, StepCommon, Uses};
+    use super::{ActionCoordinate, StepCommon};
 
     // Test-only trait impl.
-    impl StepCommon for Step {
+    impl<'s> StepCommon<'s> for Step {
         fn env_is_static(&self, _name: &str) -> bool {
             unimplemented!()
         }
@@ -181,22 +186,27 @@ mod tests {
             unimplemented!()
         }
 
-        fn uses(&self) -> Option<Uses> {
+        fn body(&self) -> super::StepBodyCommon {
             match &self.body {
-                github_actions_models::workflow::job::StepBody::Uses { uses, .. } => {
-                    Some(Uses::from_step(uses).unwrap())
+                github_actions_models::workflow::job::StepBody::Uses { uses, with } => {
+                    super::StepBodyCommon::Uses { uses, with }
                 }
-                github_actions_models::workflow::job::StepBody::Run { .. } => None,
+                github_actions_models::workflow::job::StepBody::Run {
+                    run,
+                    working_directory,
+                    shell,
+                    env,
+                } => super::StepBodyCommon::Run {
+                    run,
+                    _working_directory: working_directory.as_deref(),
+                    _shell: shell.as_deref(),
+                    _env: env,
+                },
             }
         }
 
-        fn with(&self) -> Option<&github_actions_models::common::Env> {
-            match &self.body {
-                github_actions_models::workflow::job::StepBody::Uses { uses: _, with } => {
-                    Some(with)
-                }
-                github_actions_models::workflow::job::StepBody::Run { .. } => None,
-            }
+        fn location(&self) -> crate::models::SymbolicLocation<'s> {
+            unimplemented!()
         }
     }
 
@@ -204,7 +214,7 @@ mod tests {
     fn test_usage() {
         // Trivial case: no usage is possible, since the coordinate's `uses:`
         // does not match the step.
-        let coord = ActionCoordinate::NotConfigurable(Uses::from_common("foo/bar").unwrap());
+        let coord = ActionCoordinate::NotConfigurable(Uses::from_str("foo/bar").unwrap());
         let step: Step = serde_yaml::from_str("uses: not/thesame").unwrap();
         assert_eq!(coord.usage(&step), None);
 
@@ -217,7 +227,7 @@ mod tests {
         // Coordinate `uses:` matches but is not enabled by default and is
         // missing the needed control.
         let coord = ActionCoordinate::Configurable {
-            uses: Uses::from_common("foo/bar").unwrap(),
+            uses: Uses::from_str("foo/bar").unwrap(),
             control: Control::new(Toggle::OptIn, "set-me", ControlFieldType::Boolean),
             enabled_by_default: false,
         };
@@ -234,7 +244,7 @@ mod tests {
 
         // Coordinate `uses:` matches and is enabled by default.
         let coord = ActionCoordinate::Configurable {
-            uses: Uses::from_common("foo/bar").unwrap(),
+            uses: Uses::from_str("foo/bar").unwrap(),
             control: Control::new(Toggle::OptIn, "set-me", ControlFieldType::Boolean),
             enabled_by_default: true,
         };
@@ -252,7 +262,7 @@ mod tests {
         // Coordinate `uses:` matches and has an opt-out toggle, which does not affect
         // the default.
         let coord = ActionCoordinate::Configurable {
-            uses: Uses::from_common("foo/bar").unwrap(),
+            uses: Uses::from_str("foo/bar").unwrap(),
             control: Control::new(Toggle::OptOut, "disable-cache", ControlFieldType::Boolean),
             enabled_by_default: false,
         };

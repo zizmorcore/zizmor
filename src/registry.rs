@@ -7,11 +7,12 @@ use crate::{
     audit::{Audit, AuditInput},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
-    models::{Action, RepositoryUses, Workflow},
+    models::{Action, Workflow},
     App,
 };
 use anyhow::{anyhow, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use github_actions_models::common::RepositoryUses;
 use indexmap::IndexMap;
 use serde::Serialize;
 use tracing::instrument;
@@ -75,9 +76,9 @@ impl InputKey {
         }
 
         Ok(Self::Remote(RemoteKey {
-            owner: slug.owner.into(),
-            repo: slug.repo.into(),
-            git_ref: slug.git_ref.map(Into::into),
+            owner: slug.owner.clone(),
+            repo: slug.repo.clone(),
+            git_ref: slug.git_ref.clone(),
             path: path.into(),
         }))
     }
@@ -300,7 +301,9 @@ impl From<FindingRegistry<'_>> for ExitCode {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::Uses;
+    use std::str::FromStr;
+
+    use github_actions_models::common::Uses;
 
     use super::InputKey;
 
@@ -310,7 +313,7 @@ mod tests {
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
-        let Uses::Repository(slug) = Uses::from_step("foo/bar").unwrap() else {
+        let Uses::Repository(slug) = Uses::from_str("foo/bar").unwrap() else {
             panic!()
         };
         let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
@@ -320,7 +323,7 @@ mod tests {
         );
 
         // With a git ref
-        let Uses::Repository(slug) = Uses::from_step("foo/bar@v1").unwrap() else {
+        let Uses::Repository(slug) = Uses::from_str("foo/bar@v1").unwrap() else {
             panic!()
         };
         let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();

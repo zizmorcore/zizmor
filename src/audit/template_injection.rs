@@ -10,15 +10,16 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::ops::Deref;
-
-use github_actions_models::{action, common::expr::LoE, workflow::job, workflow::job::Strategy};
+use github_actions_models::{
+    common::{expr::LoE, Uses},
+    workflow::job::Strategy,
+};
 
 use super::{audit_meta, Audit};
 use crate::{
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Persona, Severity, SymbolicLocation},
-    models::{self, StepCommon},
+    models::{self, RepositoryUsesExt, StepCommon},
     state::AuditState,
     utils::extract_expressions,
 };
@@ -80,13 +81,40 @@ const SAFE_CONTEXTS: &[&str] = &[
 
 impl TemplateInjection {
     fn script_with_location<'s>(
-        step: &'s impl StepCommon,
-    ) -> Option<(&'s str, SymbolicLocation<'s>)> {
-        let (Some(uses), Some(with)) = (step.uses(), step.with()) else {
-            return None;
-        };
+        step: &impl StepCommon<'s>,
+    ) -> Option<(String, SymbolicLocation<'s>)> {
+        match step.body() {
+            models::StepBodyCommon::Uses {
+                uses: Uses::Repository(uses),
+                with,
+            } => {
+                if uses.matches("actions/github-script") {
+                    with.get("script").map(|script| {
+                        (
+                            script.to_string(),
+                            step.location().with_keys(&["with".into(), "script".into()]),
+                        )
+                    })
+                } else if uses.matches("azure/powershell") || uses.matches("azure/cli") {
+                    // Both `azure/powershell` and `azure/cli` uses the same `inlineScript`
+                    // option to feed arbitrary code.
 
-        todo!()
+                    with.get("inlineScript").map(|script| {
+                        (
+                            script.to_string(),
+                            step.location()
+                                .with_keys(&["with".into(), "inlineScript".into()]),
+                        )
+                    })
+                } else {
+                    None
+                }
+            }
+            models::StepBodyCommon::Run { run, .. } => {
+                Some((run.to_string(), step.location().with_keys(&["run".into()])))
+            }
+            _ => None,
+        }
     }
 
     /// Checks whether an expression is "safe" for the purposes of template
@@ -133,10 +161,10 @@ impl TemplateInjection {
         }
     }
 
-    fn injectable_template_expressions(
+    fn injectable_template_expressions<'s>(
         &self,
         run: &str,
-        step: &impl StepCommon,
+        step: &impl StepCommon<'s>,
     ) -> Vec<(String, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
         for expr in extract_expressions(run) {
@@ -250,25 +278,12 @@ impl Audit for TemplateInjection {
     ) -> anyhow::Result<Vec<super::Finding<'a>>> {
         let mut findings = vec![];
 
-        let (script, script_loc) = match &step.deref().body {
-            action::StepBody::Uses { uses, with } => {
-                if uses.starts_with("actions/github-script") {
-                    match with.get("script") {
-                        Some(script) => (
-                            &script.to_string(),
-                            step.location().with_keys(&["with".into(), "script".into()]),
-                        ),
-                        None => return Ok(findings),
-                    }
-                } else {
-                    return Ok(findings);
-                }
-            }
-            action::StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
+        let Some((script, script_loc)) = Self::script_with_location(step) else {
+            return Ok(findings);
         };
 
         for (expr, severity, confidence, persona) in
-            self.injectable_template_expressions(script, step)
+            self.injectable_template_expressions(&script, step)
         {
             findings.push(
                 Self::finding()
@@ -291,37 +306,12 @@ impl Audit for TemplateInjection {
     fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
 
-        let (script, script_loc) = match &step.deref().body {
-            job::StepBody::Uses { uses, with } => {
-                if uses.starts_with("actions/github-script") {
-                    match with.get("script") {
-                        Some(script) => (
-                            &script.to_string(),
-                            step.location().with_keys(&["with".into(), "script".into()]),
-                        ),
-                        None => return Ok(findings),
-                    }
-                } else if uses.starts_with("azure/powershell") || uses.starts_with("azure/cli") {
-                    // Both `azure/powershell` and `azure/cli` uses the same `inlineScript`
-                    // option to feed arbitrary code.
-                    if let Some(script) = with.get("inlineScript") {
-                        (
-                            &script.to_string(),
-                            step.location()
-                                .with_keys(&["with".into(), "inlineScript".into()]),
-                        )
-                    } else {
-                        return Ok(findings);
-                    }
-                } else {
-                    return Ok(findings);
-                }
-            }
-            job::StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
+        let Some((script, script_loc)) = Self::script_with_location(step) else {
+            return Ok(findings);
         };
 
         for (expr, severity, confidence, persona) in
-            self.injectable_template_expressions(script, step)
+            self.injectable_template_expressions(&script, step)
         {
             findings.push(
                 Self::finding()
