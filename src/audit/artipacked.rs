@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use anyhow::Result;
 use github_actions_models::{
-    common::{expr::ExplicitExpr, EnvValue},
+    common::{expr::ExplicitExpr, EnvValue, Uses},
     workflow::{job::StepBody, Job},
 };
 use itertools::Itertools;
@@ -10,6 +10,7 @@ use itertools::Itertools;
 use super::{audit_meta, Audit};
 use crate::{
     finding::{Confidence, Finding, Persona, Severity},
+    models::uses::RepositoryUsesExt as _,
     state::AuditState,
 };
 use crate::{models::Workflow, utils::split_patterns};
@@ -64,11 +65,15 @@ impl Audit for Artipacked {
             let mut vulnerable_checkouts = vec![];
             let mut vulnerable_uploads = vec![];
             for step in job.steps() {
-                let StepBody::Uses { ref uses, ref with } = &step.deref().body else {
+                let StepBody::Uses {
+                    uses: Uses::Repository(ref uses),
+                    ref with,
+                } = &step.deref().body
+                else {
                     continue;
                 };
 
-                if uses.starts_with("actions/checkout") {
+                if uses.matches("actions/checkout") {
                     match with.get("persist-credentials") {
                         Some(EnvValue::Boolean(false)) => continue,
                         Some(EnvValue::Boolean(true)) => {
@@ -80,7 +85,7 @@ impl Audit for Artipacked {
                         // persist-credentials is true by default.
                         _ => vulnerable_checkouts.push((step, Persona::default())),
                     }
-                } else if uses.starts_with("actions/upload-artifact") {
+                } else if uses.matches("actions/upload-artifact") {
                     let Some(EnvValue::String(path)) = with.get("path") else {
                         continue;
                     };

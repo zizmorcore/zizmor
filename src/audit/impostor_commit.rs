@@ -6,13 +6,16 @@
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
 use anyhow::{anyhow, Result};
-use github_actions_models::workflow::Job;
+use github_actions_models::{
+    common::{RepositoryUses, Uses},
+    workflow::Job,
+};
 
 use super::{audit_meta, Audit};
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, ComparisonStatus},
-    models::{RepositoryUses, Uses, Workflow},
+    models::{uses::RepositoryUsesExt as _, Workflow},
     state::AuditState,
 };
 
@@ -31,14 +34,14 @@ audit_meta!(
 impl ImpostorCommit {
     fn named_ref_contains_commit(
         &self,
-        uses: &RepositoryUses<'_>,
+        uses: &RepositoryUses,
         base_ref: &str,
         head_ref: &str,
     ) -> Result<bool> {
         Ok(
             match self
                 .client
-                .compare_commits(uses.owner, uses.repo, base_ref, head_ref)?
+                .compare_commits(&uses.owner, &uses.repo, base_ref, head_ref)?
             {
                 // A base ref "contains" a commit if the base is either identical
                 // to the head ("identical") or the target is behind the base ("behind").
@@ -55,7 +58,7 @@ impl ImpostorCommit {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    fn impostor(&self, uses: RepositoryUses<'_>) -> Result<bool> {
+    fn impostor(&self, uses: &RepositoryUses) -> Result<bool> {
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
         let Some(head_ref) = uses.commit_ref() else {
             return Ok(false);
@@ -65,7 +68,7 @@ impl ImpostorCommit {
         // the branch or tag's history, so check those first.
         // Check tags before branches, since in practice version tags
         // are more commonly pinned.
-        let tags = self.client.list_tags(uses.owner, uses.repo)?;
+        let tags = self.client.list_tags(&uses.owner, &uses.repo)?;
 
         for tag in &tags {
             if tag.commit.sha == head_ref {
@@ -73,7 +76,7 @@ impl ImpostorCommit {
             }
         }
 
-        let branches = self.client.list_branches(uses.owner, uses.repo)?;
+        let branches = self.client.list_branches(&uses.owner, &uses.repo)?;
 
         for branch in &branches {
             if branch.commit.sha == head_ref {
@@ -83,7 +86,7 @@ impl ImpostorCommit {
 
         for branch in &branches {
             if self.named_ref_contains_commit(
-                &uses,
+                uses,
                 &format!("refs/heads/{}", &branch.name),
                 head_ref,
             )? {
@@ -93,7 +96,7 @@ impl ImpostorCommit {
 
         for tag in &tags {
             if self.named_ref_contains_commit(
-                &uses,
+                uses,
                 &format!("refs/tags/{}", &tag.name),
                 head_ref,
             )? {
@@ -152,7 +155,7 @@ impl Audit for ImpostorCommit {
                 Job::ReusableWorkflowCallJob(reusable) => {
                     // Reusable workflows can also be commit pinned, meaning
                     // they can also be impersonated.
-                    let Some(uses) = Uses::from_reusable(&reusable.uses) else {
+                    let Uses::Repository(uses) = &reusable.uses else {
                         continue;
                     };
 

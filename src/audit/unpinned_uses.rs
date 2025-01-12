@@ -1,6 +1,8 @@
+use github_actions_models::common::Uses;
+
 use super::{audit_meta, Audit, AuditState, Finding, Step};
 use crate::finding::{Confidence, Persona, Severity};
-use crate::models::{CompositeStep, Uses};
+use crate::models::{uses::UsesExt as _, CompositeStep};
 
 pub(crate) struct UnpinnedUses;
 
@@ -41,7 +43,7 @@ impl Audit for UnpinnedUses {
             return Ok(vec![]);
         };
 
-        let Some((annotation, severity, persona)) = self.evaluate_pinning(&uses) else {
+        let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) else {
             return Ok(vec![]);
         };
 
@@ -72,7 +74,7 @@ impl Audit for UnpinnedUses {
             return Ok(vec![]);
         };
 
-        let Some((annotation, severity, persona)) = self.evaluate_pinning(&uses) else {
+        let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) else {
             return Ok(vec![]);
         };
 

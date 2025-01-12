@@ -8,6 +8,7 @@ use std::{io::Read, ops::Deref, path::Path};
 use anyhow::{anyhow, Result};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
+use github_actions_models::common::RepositoryUses;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
 };
@@ -22,7 +23,7 @@ use tracing::instrument;
 
 use crate::{
     audit::AuditInput,
-    models::{Action, RepositoryUses, Workflow},
+    models::{Action, Workflow},
     registry::InputKey,
     utils::PipeSelf,
 };
@@ -315,9 +316,9 @@ impl Client {
     #[instrument(skip(self))]
     #[tokio::main]
     pub(crate) async fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
-        let owner = slug.owner;
-        let repo = slug.repo;
-        let git_ref = slug.git_ref;
+        let owner = &slug.owner;
+        let repo = &slug.repo;
+        let git_ref = &slug.git_ref;
 
         tracing::debug!("fetching workflows for {owner}/{repo}");
 
@@ -354,7 +355,7 @@ impl Client {
                 .http
                 .get(file_url)
                 .header(ACCEPT, "application/vnd.github.raw+json")
-                .pipe(|req| match git_ref {
+                .pipe(|req| match git_ref.as_ref() {
                     Some(g) => req.query(&[("ref", g)]),
                     None => req,
                 })
@@ -391,7 +392,7 @@ impl Client {
             api_base = self.api_base,
             owner = slug.owner,
             repo = slug.repo,
-            git_ref = slug.git_ref.unwrap_or("HEAD")
+            git_ref = slug.git_ref.as_deref().unwrap_or("HEAD")
         );
         tracing::debug!("fetching repo: {url}");
 

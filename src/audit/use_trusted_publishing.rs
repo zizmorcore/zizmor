@@ -1,13 +1,16 @@
 use std::ops::Deref;
 
 use anyhow::Ok;
-use github_actions_models::{common::EnvValue, workflow::job::StepBody};
+use github_actions_models::{
+    common::{EnvValue, Uses},
+    workflow::job::StepBody,
+};
 use indexmap::IndexMap;
 
 use super::{audit_meta, Audit};
 use crate::{
     finding::{Confidence, Severity},
-    models::Uses,
+    models::uses::RepositoryUsesExt as _,
     state::AuditState,
 };
 
@@ -74,11 +77,11 @@ impl Audit for UseTrustedPublishing {
     fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
 
-        let StepBody::Uses { uses, with } = &step.deref().body else {
-            return Ok(findings);
-        };
-
-        let Some(Uses::Repository(uses)) = Uses::from_step(uses) else {
+        let StepBody::Uses {
+            uses: Uses::Repository(uses),
+            with,
+        } = &step.deref().body
+        else {
             return Ok(findings);
         };
 

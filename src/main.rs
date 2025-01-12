@@ -1,4 +1,4 @@
-use std::{io::stdout, process::ExitCode};
+use std::{io::stdout, process::ExitCode, str::FromStr};
 
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, stream::IsTerminal};
@@ -9,9 +9,10 @@ use clap::{Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
+use github_actions_models::common::Uses;
 use github_api::GitHubHost;
 use indicatif::ProgressStyle;
-use models::{Action, Uses};
+use models::Action;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, InputRegistry};
 use state::AuditState;
@@ -217,7 +218,7 @@ fn collect_from_repo_slug(
     registry: &mut InputRegistry,
 ) -> Result<()> {
     // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
-    let Some(Uses::Repository(slug)) = Uses::from_step(input) else {
+    let Ok(Uses::Repository(slug)) = Uses::from_str(input) else {
         return Err(anyhow!(tip(
             format!("invalid input: {input}"),
             format!(
