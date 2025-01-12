@@ -1,0 +1,62 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"template-injection/pr-425-backstop/action.yml\")).run()?"
+snapshot_kind: text
+---
+error[template-injection]: code injection via template expansion
+  --> @@INPUT@@:12:7
+   |
+12 |       - name: case1
+   |         ^^^^^^^^^^^ this step
+13 | /       run: |
+14 | |         hello ${{ inputs.expandme }}
+   | |____________________________________^ inputs.expandme may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+
+error[template-injection]: code injection via template expansion
+  --> @@INPUT@@:17:7
+   |
+17 |     - name: case2
+   |       ^^^^^^^^^^^ this step
+18 |       uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+19 |       with:
+20 |         script: return "${{ inputs.expandme }}"
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ inputs.expandme may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+
+error[template-injection]: code injection via template expansion
+  --> @@INPUT@@:22:7
+   |
+22 |       - name: case3
+   |         ^^^^^^^^^^^ this step
+23 |         uses: azure/cli@089eac9d8cc39f5d003e94f8b65efc51076c9cbd
+24 |         with:
+25 | /         inlineScript: |
+26 | |           echo "hello ${{ inputs.expandme }}"
+   | |_____________________________________________^ inputs.expandme may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+
+error[template-injection]: code injection via template expansion
+  --> @@INPUT@@:28:7
+   |
+28 |     - name: case4
+   |       ^^^^^^^^^^^ this step
+29 |       uses: azure/powershell
+30 |       with:
+31 |         inlineScript: Get-AzVM -ResourceGroupName "${{ inputs.expandme }}"
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ inputs.expandme may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+
+warning[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:29:7
+   |
+29 |       uses: azure/powershell
+   |       ---------------------- action is not pinned to a tag, branch, or hash ref
+   |
+   = note: audit confidence → High
+
+5 findings: 0 unknown, 0 informational, 0 low, 1 medium, 4 high

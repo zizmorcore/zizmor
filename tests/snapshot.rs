@@ -279,6 +279,12 @@ fn template_injection() -> Result<()> {
         ))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "template-injection/pr-425-backstop/action.yml"
+        ))
+        .run()?);
+
     Ok(())
 }
 
