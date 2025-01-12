@@ -10,6 +10,7 @@ apache/opennlp#736
 ashishb/wp2hugo#91
 astral-sh/ruff#14844
 astropy/astropy#17315
+autotag-dev/autotag#142
 blakeblackshear/frigate#15490
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 cakephp/cakephp#18081
@@ -20,6 +21,7 @@ DataDog/datadog-agent#30871
 DataDog/dd-trace-py#11640
 datalens-tech/datalens-backend#777
 Diaoul/subliminal#1190
+Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
 fpgmaas/deptry#972
@@ -119,6 +121,7 @@ rust-lang/rust-clippy#13933
 rustls/rustls#2261
 rustls/tokio-rustls#96
 rustls/webpki#299
+Saghen/blink.cmp#991
 sigstore/cosign#3959
 sigstore/gitsign#602
 simpeg/simpeg#1592
