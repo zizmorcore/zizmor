@@ -17,7 +17,7 @@ use github_actions_models::{action, common::expr::LoE, workflow::job, workflow::
 use super::{audit_meta, Audit};
 use crate::{
     expr::{BinOp, Expr, UnOp},
-    finding::{Confidence, Persona, Severity},
+    finding::{Confidence, Persona, Severity, SymbolicLocation},
     models::{self, StepCommon},
     state::AuditState,
     utils::extract_expressions,
@@ -79,6 +79,16 @@ const SAFE_CONTEXTS: &[&str] = &[
 ];
 
 impl TemplateInjection {
+    fn script_with_location<'s>(
+        step: &'s impl StepCommon,
+    ) -> Option<(&'s str, SymbolicLocation<'s>)> {
+        let (Some(uses), Some(with)) = (step.uses(), step.with()) else {
+            return None;
+        };
+
+        todo!()
+    }
+
     /// Checks whether an expression is "safe" for the purposes of template
     /// injection.
     ///

@@ -25,6 +25,20 @@ use terminal_link::Link;
 
 pub(crate) mod coordinate;
 
+/// Common fields between workflow and action step bodies.
+pub(crate) enum StepBodyCommon<'s> {
+    Uses {
+        uses: Uses<'s>,
+        with: &'s Env,
+    },
+    Run {
+        run: &'s str,
+        working_directory: Option<&'s str>,
+        shell: Option<&'s str>,
+        env: &'s LoE<Env>,
+    },
+}
+
 /// Common interfaces between workflow and action steps.
 pub(crate) trait StepCommon {
     /// Returns whether the given `env.name` environment access is "static,"
@@ -41,6 +55,9 @@ pub(crate) trait StepCommon {
 
     /// Returns the `with:` clause for this step.
     fn with(&self) -> Option<&Env>;
+
+    /// Returns a [`StepBodyCommon`] for this step.
+    fn body(&self) -> StepBodyCommon;
 }
 
 /// Represents an entire GitHub Actions workflow.
@@ -473,6 +490,27 @@ impl StepCommon for Step<'_> {
         match &self.body {
             StepBody::Uses { uses: _, with } => Some(with),
             StepBody::Run { .. } => None,
+        }
+    }
+
+    fn body(&self) -> StepBodyCommon {
+        match &self.body {
+            StepBody::Uses { uses, with } => StepBodyCommon::Uses {
+                // TODO: no unwrap here.
+                uses: Uses::from_step(uses).unwrap(),
+                with,
+            },
+            StepBody::Run {
+                run,
+                working_directory,
+                shell,
+                env,
+            } => StepBodyCommon::Run {
+                run,
+                working_directory: working_directory.as_deref(),
+                shell: shell.as_deref(),
+                env,
+            },
         }
     }
 }
@@ -966,6 +1004,26 @@ impl StepCommon for CompositeStep<'_> {
         match &self.body {
             action::StepBody::Uses { uses: _, with } => Some(with),
             action::StepBody::Run { .. } => None,
+        }
+    }
+
+    fn body(&self) -> StepBodyCommon {
+        match &self.body {
+            action::StepBody::Uses { uses, with } => StepBodyCommon::Uses {
+                uses: Uses::from_step(uses).unwrap(),
+                with,
+            },
+            action::StepBody::Run {
+                run,
+                shell,
+                env,
+                working_directory,
+            } => StepBodyCommon::Run {
+                run,
+                working_directory: working_directory.as_deref(),
+                shell: Some(&shell),
+                env,
+            },
         }
     }
 }
