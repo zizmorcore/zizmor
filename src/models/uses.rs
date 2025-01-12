@@ -102,3 +102,46 @@ impl UsesExt for Uses {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use github_actions_models::common::Uses;
+
+    use crate::models::uses::RepositoryUsesExt;
+
+    #[test]
+    fn test_repositoryuses_matches() {
+        for (uses, template, matches) in [
+            // OK: `uses:` is more specific than template
+            ("actions/checkout@v3", "actions/checkout", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo", true),
+            // OK: equally specific
+            ("actions/checkout@v3", "actions/checkout@v3", true),
+            ("actions/checkout", "actions/checkout", true),
+            ("actions/checkout/foo", "actions/checkout/foo", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
+            // OK: case-insensitive
+            ("actions/checkout@v3", "Actions/Checkout@v3", true),
+            ("actions/checkout/foo", "actions/checkout/Foo", true),
+            ("actions/checkout/foo@v3", "Actions/Checkout/Foo", true),
+            ("actions/checkout@v3", "actions/checkout@V3", true),
+            // NOT OK: owner/repo do not match
+            ("actions/checkout@v3", "foo/checkout", false),
+            ("actions/checkout@v3", "actions/bar", false),
+            // NOT OK: subpath does not match
+            ("actions/checkout/foo", "actions/checkout", false),
+            ("actions/checkout/foo@v3", "actions/checkout@v3", false),
+            // NOT OK: template is more specific than `uses:`
+            ("actions/checkout", "actions/checkout@v3", false),
+            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
+        ] {
+            let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
+                panic!();
+            };
+
+            assert_eq!(uses.matches(template), matches)
+        }
+    }
+}
