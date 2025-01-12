@@ -32,12 +32,6 @@ description: Installation instructions for zizmor.
 
     ![PyPI - Version](https://img.shields.io/pypi/v/zizmor)
 
-    !!! tip
-
-        Despite being available on PyPI, `zizmor` is a compiled binary
-        and has no Python or Python package dependencies.
-
-
     `zizmor` is available on [PyPI](https://pypi.org) and can be installed
     with any Python package installer:
 
@@ -90,6 +84,20 @@ description: Installation instructions for zizmor.
     # with flakes
     nix profile install nixpkgs#zizmor
     ```
+
+=== ":simple-archlinux: Arch Linux"
+
+    [![Arch Linux package](https://repology.org/badge/version-for-repo/arch/zizmor.svg)](https://repology.org/project/zizmor/versions)
+
+    !!! note
+
+        This is a community-maintained package.
+
+    ```bash
+    # zizmor-git is also available in the AUR
+    pacman -S zizmor
+    ```
+
 
 === "Other ecosystems"
 

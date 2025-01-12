@@ -40,6 +40,14 @@
         - astropy/astropy#17315
 
 
+-   ![](https://github.com/autotag-dev.png?size=40){ width="40" loading=lazy align=left } autotag-dev
+
+    ---
+
+    ??? example "Examples"
+        - autotag-dev/autotag#142
+
+
 -   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear
 
     ---
@@ -104,6 +112,14 @@
 
     ??? example "Examples"
         - Diaoul/subliminal#1190
+
+
+-   ![](https://github.com/Electric-Coin-Company.png?size=40){ width="40" loading=lazy align=left } Electric-Coin-Company
+
+    ---
+
+    ??? example "Examples"
+        - Electric-Coin-Company/zcash-light-client-ffi#186
 
 
 -   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl
@@ -567,6 +583,14 @@
         - rustls/rustls#2261
         - rustls/tokio-rustls#96
         - rustls/webpki#299
+
+
+-   ![](https://github.com/Saghen.png?size=40){ width="40" loading=lazy align=left } Saghen
+
+    ---
+
+    ??? example "Examples"
+        - Saghen/blink.cmp#991
 
 
 -   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore
