@@ -43,7 +43,7 @@ impl Audit for UnpinnedUses {
             return Ok(vec![]);
         };
 
-        let Some((annotation, severity, persona)) = self.evaluate_pinning(&uses) else {
+        let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) else {
             return Ok(vec![]);
         };
 
@@ -74,7 +74,7 @@ impl Audit for UnpinnedUses {
             return Ok(vec![]);
         };
 
-        let Some((annotation, severity, persona)) = self.evaluate_pinning(&uses) else {
+        let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) else {
             return Ok(vec![]);
         };
 

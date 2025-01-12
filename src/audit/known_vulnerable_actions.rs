@@ -53,7 +53,7 @@ impl KnownVulnerableActions {
             Some(version) if !uses.ref_is_commit() => {
                 let Some(commit_ref) =
                     self.client
-                        .commit_for_ref(&uses.owner, &uses.repo, &version)?
+                        .commit_for_ref(&uses.owner, &uses.repo, version)?
                 else {
                     // No `ref -> commit` means that the action's version
                     // is probably just outright invalid.
@@ -78,7 +78,7 @@ impl KnownVulnerableActions {
             // which we should also probably support.
             Some(commit_ref) => match self
                 .client
-                .longest_tag_for_commit(&uses.owner, &uses.repo, &commit_ref)
+                .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
                 .with_context(|| {
                     format!(
                         "couldn't retrieve tag for {owner}/{repo}@{commit_ref}",
@@ -146,7 +146,7 @@ impl Audit for KnownVulnerableActions {
             return Ok(findings);
         };
 
-        for (severity, id) in self.action_known_vulnerabilities(&uses)? {
+        for (severity, id) in self.action_known_vulnerabilities(uses)? {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::High)
@@ -172,7 +172,7 @@ impl Audit for KnownVulnerableActions {
             return Ok(findings);
         };
 
-        for (severity, id) in self.action_known_vulnerabilities(&uses)? {
+        for (severity, id) in self.action_known_vulnerabilities(uses)? {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::High)

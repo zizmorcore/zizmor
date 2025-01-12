@@ -80,7 +80,7 @@ impl Audit for RefConfusion {
                             continue;
                         };
 
-                        if self.confusable(&uses)? {
+                        if self.confusable(uses)? {
                             findings.push(
                                 Self::finding()
                                     .severity(Severity::Medium)
@@ -101,7 +101,7 @@ impl Audit for RefConfusion {
                         continue;
                     };
 
-                    if self.confusable(&uses)? {
+                    if self.confusable(uses)? {
                         findings.push(
                             Self::finding()
                                 .severity(Severity::Medium)
@@ -126,7 +126,7 @@ impl Audit for RefConfusion {
             return Ok(findings);
         };
 
-        if self.confusable(&uses)? {
+        if self.confusable(uses)? {
             findings.push(
                 Self::finding()
                     .severity(Severity::Medium)

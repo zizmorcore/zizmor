@@ -86,7 +86,7 @@ impl ImpostorCommit {
 
         for branch in &branches {
             if self.named_ref_contains_commit(
-                &uses,
+                uses,
                 &format!("refs/heads/{}", &branch.name),
                 head_ref,
             )? {
@@ -96,7 +96,7 @@ impl ImpostorCommit {
 
         for tag in &tags {
             if self.named_ref_contains_commit(
-                &uses,
+                uses,
                 &format!("refs/tags/{}", &tag.name),
                 head_ref,
             )? {
