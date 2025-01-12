@@ -93,7 +93,9 @@ impl UsesExt for Uses {
     fn unhashed(&self) -> bool {
         match self {
             // TODO: Handle this case. Right now it's not very important,
-            // since we don't really analyze local action uses at all.
+            // since we don't really analyze local action uses at all,
+            // and the "hashedness" of a local action is mostly moot anyways
+            // (since it's fully contained within the calling repo),
             Uses::Local(_) => false,
             Uses::Repository(repo) => !repo.ref_is_commit(),
             Uses::Docker(docker) => docker.hash.is_none(),
