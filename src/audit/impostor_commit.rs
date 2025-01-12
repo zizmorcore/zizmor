@@ -15,7 +15,7 @@ use super::{audit_meta, Audit};
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, ComparisonStatus},
-    models::{RepositoryUsesExt as _, Workflow},
+    models::{uses::RepositoryUsesExt as _, Workflow},
     state::AuditState,
 };
 

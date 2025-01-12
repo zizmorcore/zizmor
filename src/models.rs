@@ -24,6 +24,7 @@ use std::{iter::Enumerate, ops::Deref};
 use terminal_link::Link;
 
 pub(crate) mod coordinate;
+pub(crate) mod uses;
 
 /// Common fields between workflow and action step bodies.
 pub(crate) enum StepBodyCommon<'s> {
@@ -526,7 +527,7 @@ impl<'w> Step<'w> {
         self.parent.parent()
     }
 
-    /// Returns a [`Uses`] for this [`Step`], if it has one.
+    /// Returns a [`common::Uses`] for this [`Step`], if it has one.
     pub(crate) fn uses(&self) -> Option<&common::Uses> {
         let StepBody::Uses { uses, .. } = &self.inner.body else {
             return None;
@@ -621,90 +622,6 @@ impl<'w> Iterator for Steps<'w> {
         match item {
             Some((idx, step)) => Some(Step::new(idx, step, self.parent.clone())),
             None => None,
-        }
-    }
-}
-
-pub(crate) trait RepositoryUsesExt {
-    fn matches(&self, template: &str) -> bool;
-    fn matches_uses(&self, template: &common::RepositoryUses) -> bool;
-    fn ref_is_commit(&self) -> bool;
-    fn commit_ref(&self) -> Option<&str>;
-    fn symbolic_ref(&self) -> Option<&str>;
-}
-
-impl RepositoryUsesExt for common::RepositoryUses {
-    /// Returns whether this `uses:` clause "matches" the given template.
-    /// The template is itself formatted like a normal `uses:` clause.
-    ///
-    /// This is an asymmetrical match: `actions/checkout@v3` "matches"
-    /// the `actions/checkout` template but not vice versa.
-    ///
-    /// Comparisons consider that GitHub does not adopt
-    /// case-sensitive URLs, hence templates like
-    /// `Actions/Checkout` and `actions/checkout`
-    /// resolve to the same Action
-    fn matches(&self, template: &str) -> bool {
-        let Ok(other) = template.parse::<common::RepositoryUses>() else {
-            return false;
-        };
-
-        self.matches_uses(&other)
-    }
-
-    fn matches_uses(&self, template: &common::RepositoryUses) -> bool {
-        self.owner.eq_ignore_ascii_case(&template.owner)
-            && self.repo.eq_ignore_ascii_case(&template.repo)
-            && self.subpath.as_ref().map(|s| s.to_lowercase())
-                == template.subpath.as_ref().map(|s| s.to_lowercase())
-            && template.git_ref.as_ref().map_or(true, |git_ref| {
-                Some(git_ref.to_lowercase()) == self.git_ref.as_ref().map(|r| r.to_lowercase())
-            })
-    }
-
-    fn ref_is_commit(&self) -> bool {
-        match &self.git_ref {
-            Some(git_ref) => git_ref.len() == 40 && git_ref.chars().all(|c| c.is_ascii_hexdigit()),
-            None => false,
-        }
-    }
-
-    fn commit_ref(&self) -> Option<&str> {
-        match &self.git_ref {
-            Some(git_ref) if self.ref_is_commit() => Some(git_ref),
-            _ => None,
-        }
-    }
-
-    fn symbolic_ref(&self) -> Option<&str> {
-        match &self.git_ref {
-            Some(git_ref) if !self.ref_is_commit() => Some(git_ref),
-            _ => None,
-        }
-    }
-}
-
-pub(crate) trait UsesExt {
-    fn unpinned(&self) -> bool;
-    fn unhashed(&self) -> bool;
-}
-
-impl UsesExt for common::Uses {
-    fn unpinned(&self) -> bool {
-        match self {
-            common::Uses::Docker(docker) => docker.hash.is_none() && docker.tag.is_none(),
-            common::Uses::Repository(repo) => repo.git_ref.is_none(),
-            common::Uses::Local(local) => local.git_ref.is_none(),
-        }
-    }
-
-    fn unhashed(&self) -> bool {
-        match self {
-            // TODO: Handle this case. Right now it's not very important,
-            // since we don't really analyze local action uses at all.
-            common::Uses::Local(_) => false,
-            common::Uses::Repository(repo) => !repo.ref_is_commit(),
-            common::Uses::Docker(docker) => docker.hash.is_none(),
         }
     }
 }
@@ -931,7 +848,7 @@ mod tests {
 
     use github_actions_models::common::Uses;
 
-    use crate::models::RepositoryUsesExt;
+    use crate::models::uses::RepositoryUsesExt;
 
     #[test]
     fn test_repositoryuses_matches() {

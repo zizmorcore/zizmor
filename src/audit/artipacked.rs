@@ -10,7 +10,7 @@ use itertools::Itertools;
 use super::{audit_meta, Audit};
 use crate::{
     finding::{Confidence, Finding, Persona, Severity},
-    models::RepositoryUsesExt as _,
+    models::uses::RepositoryUsesExt as _,
     state::AuditState,
 };
 use crate::{models::Workflow, utils::split_patterns};

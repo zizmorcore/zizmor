@@ -2,7 +2,7 @@ use github_actions_models::common::Uses;
 
 use super::{audit_meta, Audit, AuditState, Finding, Step};
 use crate::finding::{Confidence, Persona, Severity};
-use crate::models::{CompositeStep, UsesExt as _};
+use crate::models::{uses::UsesExt as _, CompositeStep};
 
 pub(crate) struct UnpinnedUses;
 

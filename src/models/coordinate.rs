@@ -15,7 +15,8 @@
 
 use github_actions_models::common::{expr::ExplicitExpr, EnvValue, Uses};
 
-use super::{RepositoryUsesExt as _, StepBodyCommon, StepCommon};
+use super::{StepBodyCommon, StepCommon};
+use crate::models::uses::RepositoryUsesExt as _;
 
 pub(crate) enum ActionCoordinate {
     Configurable {

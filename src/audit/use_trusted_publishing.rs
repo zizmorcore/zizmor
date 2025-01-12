@@ -10,7 +10,7 @@ use indexmap::IndexMap;
 use super::{audit_meta, Audit};
 use crate::{
     finding::{Confidence, Severity},
-    models::RepositoryUsesExt as _,
+    models::uses::RepositoryUsesExt as _,
     state::AuditState,
 };
 

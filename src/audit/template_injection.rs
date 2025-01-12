@@ -19,7 +19,7 @@ use super::{audit_meta, Audit};
 use crate::{
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Persona, Severity, SymbolicLocation},
-    models::{self, RepositoryUsesExt, StepCommon},
+    models::{self, uses::RepositoryUsesExt as _, StepCommon},
     state::AuditState,
     utils::extract_expressions,
 };
