@@ -18,6 +18,11 @@ Nothing to see here (yet!)
 * Fixed a regression where workflows with calls to unpinned reusable workflows
   would fail to parse (#437)
 
+### Improved
+
+* The [unpinned-uses] audit no longer flags local reusable workflows or actions
+  as unpinned/unhashed (#439)
+
 ## v1.1.0
 
 This release comes with one new audit ([secrets-inherit]), plus a slew
@@ -429,3 +434,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [github-env]: ./audits.md#github-env
 [template-injection]: ./audits.md#template-injection
 [secrets-inherit]: ./audits.md#secrets-inherit
+[unpinned-uses]: ./audits.md#unpinned-uses
