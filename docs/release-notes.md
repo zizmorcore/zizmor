@@ -12,7 +12,7 @@ of `zizmor`.
 ### Fixed
 
 * Fixed a regression where workflows with calls to unpinned reusable workflows
-  would fail to parse
+  would fail to parse (#437)
 
 ## v1.1.0
 
