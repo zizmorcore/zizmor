@@ -217,6 +217,11 @@ fn unpinned_uses() -> Result<()> {
         .args(["--pedantic"])
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("unpinned-uses/issue-433-repro.yml"))
+        .args(["--pedantic"])
+        .run()?);
+
     Ok(())
 }
 

@@ -10,6 +10,13 @@ audit_meta!(UnpinnedUses, "unpinned-uses", "unpinned action reference");
 
 impl UnpinnedUses {
     pub fn evaluate_pinning<'u>(&self, uses: &Uses) -> Option<(&'u str, Severity, Persona)> {
+        // Don't evaluate pinning for local `uses:`, since unpinned references
+        // are fully controlled by the repository anyways.
+        // TODO: auditor-level findings instead, perhaps?
+        if matches!(uses, Uses::Local(_)) {
+            return None;
+        }
+
         if uses.unpinned() {
             Some((
                 "action is not pinned to a tag, branch, or hash ref",
@@ -43,23 +50,21 @@ impl Audit for UnpinnedUses {
             return Ok(vec![]);
         };
 
-        let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) else {
-            return Ok(vec![]);
+        if let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(severity)
+                    .persona(persona)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["uses".into()])
+                            .annotated(annotation),
+                    )
+                    .build(step.workflow())?,
+            );
         };
-
-        findings.push(
-            Self::finding()
-                .confidence(Confidence::High)
-                .severity(severity)
-                .persona(persona)
-                .add_location(
-                    step.location()
-                        .primary()
-                        .with_keys(&["uses".into()])
-                        .annotated(annotation),
-                )
-                .build(step.workflow())?,
-        );
 
         Ok(findings)
     }
@@ -74,23 +79,21 @@ impl Audit for UnpinnedUses {
             return Ok(vec![]);
         };
 
-        let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) else {
-            return Ok(vec![]);
+        if let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(severity)
+                    .persona(persona)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["uses".into()])
+                            .annotated(annotation),
+                    )
+                    .build(step.action())?,
+            );
         };
-
-        findings.push(
-            Self::finding()
-                .confidence(Confidence::High)
-                .severity(severity)
-                .persona(persona)
-                .add_location(
-                    step.location()
-                        .primary()
-                        .with_keys(&["uses".into()])
-                        .annotated(annotation),
-                )
-                .build(step.action())?,
-        );
 
         Ok(findings)
     }
