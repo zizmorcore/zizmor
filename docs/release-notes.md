@@ -7,7 +7,14 @@ description: Abbreviated change notes about each zizmor release.
 This page contains _abbreviated_, user-focused release notes for each version
 of `zizmor`.
 
-## v1.1.0 (UNRELEASED)
+## Upcoming (UNRELEASED)
+
+Nothing to see here (yet!)
+
+## v1.1.0
+
+This release comes with one new audit ([secrets-inherit]), plus a slew
+of bugfixes and internal refactors that unblock future improvements!
 
 ### Added
 
