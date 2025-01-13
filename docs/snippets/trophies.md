@@ -218,6 +218,14 @@
         - guacsec/guac#2276
 
 
+-   ![](https://github.com/hellux.png?size=40){ width="40" loading=lazy align=left } hellux
+
+    ---
+
+    ??? example "Examples"
+        - hellux/jotdown#76
+
+
 -   ![](https://github.com/Homebrew.png?size=40){ width="40" loading=lazy align=left } Homebrew
 
     ---
@@ -369,6 +377,14 @@
     ??? example "Examples"
         - mongodb/motor#312
         - mongodb/mongo-python-driver#2001
+
+
+-   ![](https://github.com/mongodb-labs.png?size=40){ width="40" loading=lazy align=left } mongodb-labs
+
+    ---
+
+    ??? example "Examples"
+        - mongodb-labs/flask-pymongo#170
 
 
 -   ![](https://github.com/narwhals-dev.png?size=40){ width="40" loading=lazy align=left } narwhals-dev
