@@ -272,6 +272,14 @@
         - hynek/svcs#111
 
 
+-   ![](https://github.com/icsharpcode.png?size=40){ width="40" loading=lazy align=left } icsharpcode
+
+    ---
+
+    ??? example "Examples"
+        - icsharpcode/ILSpy#3365
+
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---
@@ -320,6 +328,14 @@
         - maxmind/geoip2-csv-converter#87
         - maxmind/mmdbwriter#104
         - maxmind/GeoIP2-node#1387
+
+
+-   ![](https://github.com/mfussenegger.png?size=40){ width="40" loading=lazy align=left } mfussenegger
+
+    ---
+
+    ??? example "Examples"
+        - mfussenegger/nvim-lint#710
 
 
 -   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf

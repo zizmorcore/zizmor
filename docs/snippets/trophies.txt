@@ -60,6 +60,7 @@ hynek/prometheus-async#70
 hynek/stamina#81
 hynek/structlog#663
 hynek/svcs#111
+icsharpcode/ILSpy#3365
 Instagram/LibCST#1262
 lmstudio-ai/venvstacks#51
 matplotlib/matplotlib#29251
@@ -75,6 +76,7 @@ maxmind/geoipupdate#354
 maxmind/geoip2-csv-converter#87
 maxmind/mmdbwriter#104
 maxmind/GeoIP2-node#1387
+mfussenegger/nvim-lint#710
 mkuf/prind#183
 mne-tools/mne-python#13011
 MoarVM/MoarVM#1875
