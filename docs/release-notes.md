@@ -9,7 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
-Nothing to see here (yet!)
+### Improved
+
+* The [unpinned-uses] audit no longer flags local reusable workflows or actions
+  as unpinned/unhashed (#439)
 
 ## v1.1.1
 
@@ -429,3 +432,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [github-env]: ./audits.md#github-env
 [template-injection]: ./audits.md#template-injection
 [secrets-inherit]: ./audits.md#secrets-inherit
+[unpinned-uses]: ./audits.md#unpinned-uses
