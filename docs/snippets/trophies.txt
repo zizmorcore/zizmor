@@ -34,6 +34,7 @@ git-lfs/git-lfs#5930
 google/zx#1067
 guacsec/guac#2276
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
+hellux/jotdown#76
 Homebrew/actions#630
 Homebrew/actions#631
 Homebrew/brew#18662
@@ -82,6 +83,7 @@ mne-tools/mne-python#13011
 MoarVM/MoarVM#1875
 mongodb/motor#312
 mongodb/mongo-python-driver#2001
+mongodb-labs/flask-pymongo#170
 narwhals-dev/narwhals#1567
 NetApp/harvest#3247
 nextcloud/.github#477
