@@ -9,7 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
-Nothing to see here (yet!)
+### Improved
+
+* The [unpinned-uses] audit no longer flags local reusable workflows or actions
+  as unpinned/unhashed (#439)
 
 ## v1.1.1
 
@@ -17,11 +20,6 @@ Nothing to see here (yet!)
 
 * Fixed a regression where workflows with calls to unpinned reusable workflows
   would fail to parse (#437)
-
-### Improved
-
-* The [unpinned-uses] audit no longer flags local reusable workflows or actions
-  as unpinned/unhashed (#439)
 
 ## v1.1.0
 
