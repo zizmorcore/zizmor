@@ -7,9 +7,12 @@ description: Abbreviated change notes about each zizmor release.
 This page contains _abbreviated_, user-focused release notes for each version
 of `zizmor`.
 
-## Upcoming (UNRELEASED)
+## v1.1.1 (UNRELEASED)
 
-Nothing to see here (yet!)
+### Fixed
+
+* Fixed a regression where workflows with calls to unpinned reusable workflows
+  would fail to parse (#437)
 
 ## v1.1.0
 
