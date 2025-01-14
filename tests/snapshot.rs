@@ -143,6 +143,11 @@ fn artipacked() -> Result<()> {
         .args(["--persona=auditor"])
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("artipacked/issue-447-repro.yml"))
+        .args(["--persona=auditor"])
+        .run()?);
+
     Ok(())
 }
 

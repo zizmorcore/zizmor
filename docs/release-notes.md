@@ -20,6 +20,8 @@ of `zizmor`.
 
 * The [template-injection] audit no longer considers `github.event.pull_request.base.sha`
   dangerous (#445)
+* The [artipacked] audit now correctly handles the strings `'true'` and `'false'`
+  as their boolean counterparts (#448)
 
 ## v1.1.1
 
@@ -434,6 +436,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 <!-- useful shortlinks -->
 
+[artipacked]: ./audits.md#artipacked
 [excessive-permissions]: ./audits.md#excessive-permissions
 [cache-poisoning]: ./audits.md#cache-poisoning
 [github-env]: ./audits.md#github-env
