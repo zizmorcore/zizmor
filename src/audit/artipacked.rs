@@ -74,9 +74,13 @@ impl Audit for Artipacked {
                 };
 
                 if uses.matches("actions/checkout") {
-                    match with.get("persist-credentials") {
-                        Some(EnvValue::Boolean(false)) => continue,
-                        Some(EnvValue::Boolean(true)) => {
+                    match with
+                        .get("persist-credentials")
+                        .map(|v| v.to_string())
+                        .as_deref()
+                    {
+                        Some("false") => continue,
+                        Some("true") => {
                             // If a user explicitly sets `persist-credentials: true`,
                             // they probably mean it. Only report if in auditor mode.
                             vulnerable_checkouts.push((step, Persona::Auditor))
