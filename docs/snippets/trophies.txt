@@ -144,3 +144,4 @@ ViaVersion/ViaVersion#4315
 vlang/v#22681
 wagtail/wagtail-localize#843
 zkonduit/ezkl#907
+zkonduit/ezkl#906
