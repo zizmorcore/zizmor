@@ -85,7 +85,7 @@ impl Audit for Artipacked {
                             // they probably mean it. Only report if in auditor mode.
                             vulnerable_checkouts.push((step, Persona::Auditor))
                         }
-                        // TODO: handle expressions and literal strings here.
+                        // TODO: handle expressions here.
                         // persist-credentials is true by default.
                         _ => vulnerable_checkouts.push((step, Persona::default())),
                     }
