@@ -13,6 +13,8 @@ of `zizmor`.
 
 * The [unpinned-uses] audit no longer flags local reusable workflows or actions
   as unpinned/unhashed (#439)
+* The [excessive-permissions] audit has been refactored, and better captures
+  both true positive and true negative cases (#441)
 
 ## v1.1.1
 
