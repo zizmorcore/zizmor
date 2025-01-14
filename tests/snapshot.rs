@@ -425,6 +425,12 @@ fn excessive_permissions() -> Result<()> {
             "excessive-permissions/workflow-write-explicit.yml"
         ))
         .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "excessive-permissions/workflow-default-perms-all-jobs-explicit.yml"
+        ))
+        .run()?);
     Ok(())
 }
 

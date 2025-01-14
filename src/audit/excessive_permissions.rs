@@ -57,11 +57,29 @@ impl Audit for ExcessivePermissions {
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];
 
+        let all_jobs_have_permissions = workflow
+            .jobs()
+            .filter_map(|job| {
+                let Job::NormalJob(job) = *job else {
+                    return None;
+                };
+
+                Some(&job.permissions)
+            })
+            .all(|perm| !matches!(perm, Permissions::Base(BasePermission::Default)));
+
+        let explicit_parent_permissions = !matches!(
+            &workflow.permissions,
+            Permissions::Base(BasePermission::Default)
+        );
+
         // Top-level permissions are a minor issue if there's only one
         // job in the workflow, since they're equivalent to job-level
         // permissions in that case. Emit only pedantic findings in
         // that case.
-        let persona = if workflow.jobs.len() == 1 {
+        // Similarly, if all jobs in the workflow have their own explicit
+        // permissions, then any permissions set at the top-level are moot.
+        let persona = if workflow.jobs.len() == 1 || all_jobs_have_permissions {
             Persona::Pedantic
         } else {
             Persona::Regular
@@ -69,80 +87,18 @@ impl Audit for ExcessivePermissions {
 
         // Handle top-level permissions.
         let location = workflow.location().primary();
-        let explicit_parent_permissions = !matches!(
-            &workflow.permissions,
-            Permissions::Base(BasePermission::Default)
-        );
-        match &workflow.permissions {
-            Permissions::Base(base) => match base {
-                BasePermission::Default => findings.push(
-                    Self::finding()
-                        .severity(Severity::Medium)
-                        .confidence(Confidence::Medium)
-                        .persona(persona)
-                        .add_location(
-                            location
-                                .primary()
-                                .annotated("default permissions used due to no permissions: block"),
-                        )
-                        .build(workflow)?,
-                ),
-                BasePermission::ReadAll => findings.push(
-                    Self::finding()
-                        .severity(Severity::Medium)
-                        .confidence(Confidence::High)
-                        .persona(persona)
-                        .add_location(
-                            location
-                                .primary()
-                                .with_keys(&["permissions".into()])
-                                .annotated("uses read-all permissions"),
-                        )
-                        .build(workflow)?,
-                ),
-                BasePermission::WriteAll => findings.push(
-                    Self::finding()
-                        .severity(Severity::High)
-                        .confidence(Confidence::High)
-                        .persona(persona)
-                        .add_location(
-                            location
-                                .primary()
-                                .with_keys(&["permissions".into()])
-                                .annotated("uses write-all permissions"),
-                        )
-                        .build(workflow)?,
-                ),
-            },
-            Permissions::Explicit(perms) => {
-                for (name, perm) in perms {
-                    if *perm != Permission::Write {
-                        continue;
-                    }
 
-                    let severity = KNOWN_PERMISSIONS.get(name.as_str()).unwrap_or_else(|| {
-                        tracing::warn!("unknown permission: {name}");
-
-                        &Severity::Unknown
-                    });
-
-                    findings.push(
-                        Self::finding()
-                            .severity(*severity)
-                            .confidence(Confidence::High)
-                            .persona(persona)
-                            .add_location(
-                                location
-                                    .with_keys(&["permissions".into(), name.as_str().into()])
-                                    .primary()
-                                    .annotated(format!(
-                                        "{name}: write is overly broad at the workflow level"
-                                    )),
-                            )
-                            .build(workflow)?,
-                    );
-                }
-            }
+        for (severity, confidence, perm_location) in
+            self.check_workflow_permissions(&workflow.permissions, location)
+        {
+            findings.push(
+                Self::finding()
+                    .severity(severity)
+                    .confidence(confidence)
+                    .persona(persona)
+                    .add_location(perm_location)
+                    .build(workflow)?,
+            );
         }
 
         for job in workflow.jobs() {
@@ -172,6 +128,63 @@ impl Audit for ExcessivePermissions {
 }
 
 impl ExcessivePermissions {
+    fn check_workflow_permissions<'a>(
+        &self,
+        permissions: &'a Permissions,
+        location: SymbolicLocation<'a>,
+    ) -> Vec<(Severity, Confidence, SymbolicLocation<'a>)> {
+        let mut results = vec![];
+
+        match &permissions {
+            Permissions::Base(base) => match base {
+                BasePermission::Default => results.push((
+                    Severity::Medium,
+                    Confidence::Medium,
+                    location.annotated("default permissions used due to no permissions: block"),
+                )),
+                BasePermission::ReadAll => results.push((
+                    Severity::Medium,
+                    Confidence::High,
+                    location
+                        .with_keys(&["permissions".into()])
+                        .annotated("uses read-all permissions"),
+                )),
+                BasePermission::WriteAll => results.push((
+                    Severity::High,
+                    Confidence::High,
+                    location
+                        .with_keys(&["permissions".into()])
+                        .annotated("uses write-all permissions"),
+                )),
+            },
+            Permissions::Explicit(perms) => {
+                for (name, perm) in perms {
+                    if *perm != Permission::Write {
+                        continue;
+                    }
+
+                    let severity = KNOWN_PERMISSIONS.get(name.as_str()).unwrap_or_else(|| {
+                        tracing::warn!("unknown permission: {name}");
+
+                        &Severity::Unknown
+                    });
+
+                    results.push((
+                        *severity,
+                        Confidence::High,
+                        location
+                            .with_keys(&["permissions".into(), name.as_str().into()])
+                            .annotated(format!(
+                                "{name}: write is overly broad at the workflow level"
+                            )),
+                    ));
+                }
+            }
+        }
+
+        results
+    }
+
     fn check_job_permissions<'a>(
         &self,
         permissions: &Permissions,
