@@ -16,6 +16,11 @@ of `zizmor`.
 * The [excessive-permissions] audit has been refactored, and better captures
   both true positive and true negative cases (#441)
 
+### Fixed
+
+* The [template-injection] audit no longer considers `github.event.pull_request.base.sha`
+  dangerous (#445)
+
 ## v1.1.1
 
 ### Fixed
