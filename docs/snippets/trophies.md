@@ -202,6 +202,14 @@
         - git-lfs/git-lfs#5930
 
 
+-   ![](https://github.com/gitbutlerapp.png?size=40){ width="40" loading=lazy align=left } gitbutlerapp
+
+    ---
+
+    ??? example "Examples"
+        - gitbutlerapp/gitbutler#5946
+
+
 -   ![](https://github.com/google.png?size=40){ width="40" loading=lazy align=left } google
 
     ---
