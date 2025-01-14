@@ -4,6 +4,8 @@ name: issue-433-repro
 
 on: push
 
+permissions: {}
+
 jobs:
   issue-433-repro:
     runs-on: ubuntu-latest

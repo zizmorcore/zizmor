@@ -1,5 +1,6 @@
-on:
-  release
+on: release
+
+permissions: {}
 
 jobs:
   publish:
@@ -13,9 +14,9 @@ jobs:
       - name: Setup JDK
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
         with:
-          distribution: 'zulu'
-          cache: 'gradle'
-          java-version: '17'
+          distribution: "zulu"
+          cache: "gradle"
+          java-version: "17"
 
       - name: Publish to Maven Central
         run: ./gradlew publishToMavenCentral --no-configuration-cache

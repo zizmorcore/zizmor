@@ -1,0 +1,25 @@
+on: push
+
+# Each of these is flagged as too broad.
+permissions:
+  contents: write
+  id-token: write
+  nonexistent: write
+
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    # not flagged because it's within the job scope
+    permissions:
+      deployments: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+  job2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false

@@ -4,16 +4,16 @@ expression: "zizmor().workflow(workflow_under_test(\"self-hosted/self-hosted-mat
 snapshot_kind: text
 ---
 note[self-hosted-runner]: runs on a self-hosted runner
-  --> @@INPUT@@:8:5
+  --> @@INPUT@@:10:5
    |
- 6 |       runs-on: ${{ matrix.os }}
+ 8 |       runs-on: ${{ matrix.os }}
    |       ------------------------- note: expression may expand into a self-hosted runner
- 7 |
- 8 | /     strategy:
- 9 | |       matrix:
-10 | |         os: [macOS-latest, ubuntu-latest]
-11 | |         include:
-12 | |           - os: self-hosted
+ 9 |
+10 | /     strategy:
+11 | |       matrix:
+12 | |         os: [macOS-latest, ubuntu-latest]
+13 | |         include:
+14 | |           - os: self-hosted
    | |___________________________- note: matrix declares self-hosted runner
    |
    = note: audit confidence → High

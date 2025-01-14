@@ -1,6 +1,8 @@
 name: example
 on: [push]
 
+permissions: {}
+
 jobs:
   unpinned-0:
     runs-on: ubuntu-latest

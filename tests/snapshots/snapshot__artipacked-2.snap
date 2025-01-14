@@ -4,9 +4,9 @@ expression: "zizmor().workflow(workflow_under_test(\"artipacked.yml\")).run()?"
 snapshot_kind: text
 ---
 warning[artipacked]: credential persistence through GitHub Actions artifacts
-  --> @@INPUT@@:13:9
+  --> @@INPUT@@:15:9
    |
-13 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+15 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
    |         ---------------------------------------------------------------------------- does not set persist-credentials: false
    |
    = note: audit confidence → Low

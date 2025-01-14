@@ -1,5 +1,6 @@
-on:
-  release
+on: release
+
+permissions: {}
 
 jobs:
   publish:
@@ -13,7 +14,7 @@ jobs:
       - name: Setup DotNet
         uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25
         with:
-          dotnet-version: '5.0.x'
+          dotnet-version: "5.0.x"
           cache: true
 
       - name: Publish on NuGet

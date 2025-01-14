@@ -1,9 +1,13 @@
 # reproduction case for https://github.com/woodruffw/zizmor/issues/418
 
 name: Test
+
 on:
   issue_comment:
     types: [created]
+
+permissions: {}
+
 jobs:
   stop:
     runs-on: ubuntu-latest

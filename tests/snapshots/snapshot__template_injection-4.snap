@@ -4,11 +4,11 @@ expression: "zizmor().workflow(workflow_under_test(\"template-injection/pr-317-r
 snapshot_kind: text
 ---
 warning[template-injection]: code injection via template expansion
-  --> @@INPUT@@:25:9
+  --> @@INPUT@@:27:9
    |
-25 |         - run: |
+27 |         - run: |
    |  _________-
-26 | |           echo ${{ matrix.bar }}
+28 | |           echo ${{ matrix.bar }}
    | |                                 -
    | |_________________________________|
    |                                   this step

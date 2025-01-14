@@ -7,7 +7,7 @@ use github_actions_models::{
 
 use super::{audit_meta, Audit};
 use crate::{
-    finding::{Confidence, Persona, Severity},
+    finding::{Confidence, Persona, Severity, SymbolicLocation},
     AuditState,
 };
 
@@ -36,7 +36,7 @@ static KNOWN_PERMISSIONS: LazyLock<HashMap<&str, Severity>> = LazyLock::new(|| {
 audit_meta!(
     ExcessivePermissions,
     "excessive-permissions",
-    "overly broad workflow or job-level permissions"
+    "overly broad permissions"
 );
 
 pub(crate) struct ExcessivePermissions {
@@ -57,32 +57,48 @@ impl Audit for ExcessivePermissions {
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];
 
+        let all_jobs_have_permissions = workflow
+            .jobs()
+            .filter_map(|job| {
+                let Job::NormalJob(job) = *job else {
+                    return None;
+                };
+
+                Some(&job.permissions)
+            })
+            .all(|perm| !matches!(perm, Permissions::Base(BasePermission::Default)));
+
+        let explicit_parent_permissions = !matches!(
+            &workflow.permissions,
+            Permissions::Base(BasePermission::Default)
+        );
+
         // Top-level permissions are a minor issue if there's only one
         // job in the workflow, since they're equivalent to job-level
         // permissions in that case. Emit only pedantic findings in
         // that case.
-        let persona = if workflow.jobs.len() == 1 {
+        // Similarly, if all jobs in the workflow have their own explicit
+        // permissions, then any permissions set at the top-level are moot.
+        let persona = if workflow.jobs.len() == 1 || all_jobs_have_permissions {
             Persona::Pedantic
         } else {
             Persona::Regular
         };
 
-        // Top-level permissions.
-        for (severity, confidence, note) in self.check_permissions(&workflow.permissions, None) {
+        // Handle top-level permissions.
+        let location = workflow.location().primary();
+
+        for (severity, confidence, perm_location) in
+            self.check_workflow_permissions(&workflow.permissions, location)
+        {
             findings.push(
                 Self::finding()
                     .severity(severity)
                     .confidence(confidence)
                     .persona(persona)
-                    .add_location(
-                        workflow
-                            .location()
-                            .primary()
-                            .with_keys(&["permissions".into()])
-                            .annotated(note),
-                    )
+                    .add_location(perm_location)
                     .build(workflow)?,
-            )
+            );
         }
 
         for job in workflow.jobs() {
@@ -90,19 +106,18 @@ impl Audit for ExcessivePermissions {
                 continue;
             };
 
-            for (severity, confidence, note) in
-                self.check_permissions(&normal.permissions, Some(&workflow.permissions))
-            {
+            let job_location = job.location();
+            if let Some((severity, confidence, perm_location)) = self.check_job_permissions(
+                &normal.permissions,
+                explicit_parent_permissions,
+                job_location.clone(),
+            ) {
                 findings.push(
                     Self::finding()
                         .severity(severity)
                         .confidence(confidence)
-                        .add_location(
-                            job.location()
-                                .primary()
-                                .with_keys(&["permissions".into()])
-                                .annotated(note),
-                        )
+                        .add_location(job_location)
+                        .add_location(perm_location.primary())
                         .build(workflow)?,
                 )
             }
@@ -113,64 +128,100 @@ impl Audit for ExcessivePermissions {
 }
 
 impl ExcessivePermissions {
-    fn check_permissions(
+    fn check_workflow_permissions<'a>(
         &self,
-        permissions: &Permissions,
-        parent: Option<&Permissions>,
-    ) -> Vec<(Severity, Confidence, String)> {
-        match permissions {
+        permissions: &'a Permissions,
+        location: SymbolicLocation<'a>,
+    ) -> Vec<(Severity, Confidence, SymbolicLocation<'a>)> {
+        let mut results = vec![];
+
+        match &permissions {
             Permissions::Base(base) => match base {
-                // TODO: Think more about what to do here. Flagging default
-                // permissions is likely to be noisy and is annoying to do,
-                // since it involves the *absence* of a key in the YAML
-                // rather than its presence.
-                BasePermission::Default => vec![],
-                BasePermission::ReadAll => vec![(
+                BasePermission::Default => results.push((
+                    Severity::Medium,
+                    Confidence::Medium,
+                    location.annotated("default permissions used due to no permissions: block"),
+                )),
+                BasePermission::ReadAll => results.push((
                     Severity::Medium,
                     Confidence::High,
-                    "uses read-all permissions".into(),
-                )],
-                BasePermission::WriteAll => vec![(
+                    location
+                        .with_keys(&["permissions".into()])
+                        .annotated("uses read-all permissions"),
+                )),
+                BasePermission::WriteAll => results.push((
                     Severity::High,
                     Confidence::High,
-                    "uses write-all permissions".into(),
-                )],
+                    location
+                        .with_keys(&["permissions".into()])
+                        .annotated("uses write-all permissions"),
+                )),
             },
-            Permissions::Explicit(perms) => match parent {
-                // In the general case, it's impossible to tell whether a
-                // job-level permission block is over-scoped.
-                Some(_) => vec![],
-                // Top-level permission-blocks should almost never contain
-                // write permissions.
-                None => {
-                    let mut results = vec![];
-
-                    for (name, perm) in perms {
-                        if *perm != Permission::Write {
-                            continue;
-                        }
-
-                        match KNOWN_PERMISSIONS.get(name.as_str()) {
-                            Some(sev) => results.push((
-                                *sev,
-                                Confidence::High,
-                                format!("{name}: write is overly broad at the workflow level"),
-                            )),
-                            None => {
-                                tracing::debug!("unknown permission: {name}");
-
-                                results.push((
-                                    Severity::Unknown,
-                                    Confidence::High,
-                                    format!("{name}: write is overly broad at the workflow level"),
-                                ))
-                            }
-                        }
+            Permissions::Explicit(perms) => {
+                for (name, perm) in perms {
+                    if *perm != Permission::Write {
+                        continue;
                     }
 
-                    results
+                    let severity = KNOWN_PERMISSIONS.get(name.as_str()).unwrap_or_else(|| {
+                        tracing::warn!("unknown permission: {name}");
+
+                        &Severity::Unknown
+                    });
+
+                    results.push((
+                        *severity,
+                        Confidence::High,
+                        location
+                            .with_keys(&["permissions".into(), name.as_str().into()])
+                            .annotated(format!(
+                                "{name}: write is overly broad at the workflow level"
+                            )),
+                    ));
                 }
+            }
+        }
+
+        results
+    }
+
+    fn check_job_permissions<'a>(
+        &self,
+        permissions: &Permissions,
+        explicit_parent_permissions: bool,
+        location: SymbolicLocation<'a>,
+    ) -> Option<(Severity, Confidence, SymbolicLocation<'a>)> {
+        match permissions {
+            Permissions::Base(base) => match base {
+                // The job has no explicit permissions, meaning it gets
+                // the default $GITHUB_TOKEN *if* the workflow doesn't
+                // set any permissions.
+                BasePermission::Default if !explicit_parent_permissions => Some((
+                    Severity::Medium,
+                    Confidence::Medium,
+                    location.annotated("default permissions used due to no permissions: block"),
+                )),
+                BasePermission::Default => None,
+                BasePermission::ReadAll => Some((
+                    Severity::Medium,
+                    Confidence::High,
+                    location
+                        .with_keys(&["permissions".into()])
+                        .annotated("uses read-all permissions"),
+                )),
+                BasePermission::WriteAll => Some((
+                    Severity::High,
+                    Confidence::High,
+                    location
+                        .with_keys(&["permissions".into()])
+                        .annotated("uses write-all permissions"),
+                )),
             },
+            // In the general case, it's impossible to tell whether a job-level
+            // permission block is over-scoped.
+            // TODO: We could in theory refine this by collecting minimum permission
+            // sets for common actions, but that might be overkill.
+            Permissions::Explicit(_) => None,
         }
     }
 }

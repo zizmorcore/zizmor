@@ -3,12 +3,11 @@ source: tests/snapshot.rs
 expression: "zizmor().workflow(workflow_under_test(\"excessive-permissions/issue-336-repro.yml\")).args([\"--pedantic\"]).run()?"
 snapshot_kind: text
 ---
-error[excessive-permissions]: overly broad workflow or job-level permissions
- --> @@INPUT@@:3:1
+error[excessive-permissions]: overly broad permissions
+ --> @@INPUT@@:4:3
   |
-3 | / permissions:
-4 | |   contents: write
-  | |_________________^ contents: write is overly broad at the workflow level
+4 |   contents: write
+  |   ^^^^^^^^^^^^^^^ contents: write is overly broad at the workflow level
   |
   = note: audit confidence → High
 

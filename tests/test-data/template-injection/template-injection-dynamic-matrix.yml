@@ -4,6 +4,8 @@ name: paw-me
 on:
   issues:
 
+permissions: {}
+
 jobs:
   not-ok:
     runs-on: ubuntu-latest

@@ -3,6 +3,8 @@
 on:
   push:
 
+permissions: {}
+
 jobs:
   whops:
     runs-on: [self-hosted, my-ubuntu-box]

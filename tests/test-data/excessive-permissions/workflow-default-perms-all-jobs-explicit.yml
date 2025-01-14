@@ -1,0 +1,24 @@
+# two findings in pedantic mode: one for the entire workflow for having
+# implicit permissions (pedantic), and one for the 'single' job for having
+# implicit permissions
+
+on: push
+
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+  job2:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
