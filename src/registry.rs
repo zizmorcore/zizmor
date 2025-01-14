@@ -243,10 +243,10 @@ impl<'a> FindingRegistry<'a> {
             } else if finding.ignored
                 || self
                     .minimum_severity
-                    .map_or(false, |min| min > finding.determinations.severity)
+                    .is_some_and(|min| min > finding.determinations.severity)
                 || self
                     .minimum_confidence
-                    .map_or(false, |min| min > finding.determinations.confidence)
+                    .is_some_and(|min| min > finding.determinations.confidence)
                 || self.config.ignores(&finding)
             {
                 self.ignored.push(finding);
