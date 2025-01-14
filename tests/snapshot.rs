@@ -389,6 +389,36 @@ fn excessive_permissions() -> Result<()> {
         .args(["--pedantic"])
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "excessive-permissions/workflow-default-perms.yml"
+        ))
+        .args(["--pedantic"])
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "excessive-permissions/workflow-read-all.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "excessive-permissions/workflow-write-all.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "excessive-permissions/workflow-empty-perms.yml"
+        ))
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "excessive-permissions/jobs-broaden-permissions.yml"
+        ))
+        .run()?);
     Ok(())
 }
 

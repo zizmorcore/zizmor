@@ -1,5 +1,6 @@
-on:
-  release
+on: release
+
+permissions: {}
 
 jobs:
   publish:

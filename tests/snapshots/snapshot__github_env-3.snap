@@ -4,11 +4,11 @@ expression: "zizmor().workflow(workflow_under_test(\"github-env/issue-397-repro.
 snapshot_kind: text
 ---
 error[github-env]: dangerous use of environment file
-  --> @@INPUT@@:12:9
+  --> @@INPUT@@:14:9
    |
-12 | /         run: |
-13 | |           message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
-14 | |           echo "$message" >> $GITHUB_PATH
+14 | /         run: |
+15 | |           message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
+16 | |           echo "$message" >> $GITHUB_PATH
    | |_________________________________________^ write to GITHUB_PATH may allow code execution
    |
    = note: audit confidence → Low

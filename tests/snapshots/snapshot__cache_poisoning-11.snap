@@ -13,8 +13,8 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    | |________________^ generally used when publishing artifacts generated at runtime
  9 |
 ...
-24 |         - name: true-positive-2
-25 |           uses: actions/setup-go@v5
+26 |         - name: true-positive-2
+27 |           uses: actions/setup-go@v5
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
    |
    = note: audit confidence → Low
@@ -29,12 +29,12 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    | |________________^ generally used when publishing artifacts generated at runtime
  9 |
 ...
-31 |           uses: actions/setup-go@v5
-32 | /         with:
-33 | |           go-version: stable
-34 | |           cache: true
-35 | |
-36 | |       # Finding because setup enables cache explicitly
+33 |           uses: actions/setup-go@v5
+34 | /         with:
+35 | |           go-version: stable
+36 | |           cache: true
+37 | |
+38 | |       # Finding because setup enables cache explicitly
    | |______________________________________________________^ opt-in for caching here
    |
    = note: audit confidence → Low
@@ -49,10 +49,10 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    | |________________^ generally used when publishing artifacts generated at runtime
  9 |
 ...
-38 |           uses: actions/setup-go@v5
-39 | /         with:
-40 | |           go-version: stable
-41 | |           cache: "true"
+40 |           uses: actions/setup-go@v5
+41 | /         with:
+42 | |           go-version: stable
+43 | |           cache: "true"
    | |________________________^ opt-in for caching here
    |
    = note: audit confidence → Low

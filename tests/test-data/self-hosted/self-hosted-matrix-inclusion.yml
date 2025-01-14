@@ -1,6 +1,8 @@
 on:
   push:
 
+permissions: {}
+
 jobs:
   whops:
     runs-on: ${{ matrix.os }}

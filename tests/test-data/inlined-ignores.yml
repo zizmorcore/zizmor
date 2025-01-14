@@ -4,6 +4,8 @@ on:
       - master
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   artipacked-ignored:
     runs-on: ubuntu-latest

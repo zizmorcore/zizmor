@@ -4,6 +4,8 @@ name: safe
 on:
   issues:
 
+permissions: {}
+
 jobs:
   ok-ish:
     runs-on: ubuntu-latest

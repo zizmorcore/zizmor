@@ -1,7 +1,9 @@
 on:
   push:
     tags:
-      - '**'
+      - "**"
+
+permissions: {}
 
 jobs:
   publish:

@@ -5,6 +5,8 @@ name: example
 on:
   issues:
 
+permissions: {}
+
 jobs:
   inject-me:
     runs-on: ubuntu-latest

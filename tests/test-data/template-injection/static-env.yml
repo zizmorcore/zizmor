@@ -8,6 +8,8 @@ env:
   baz: baz
   quux: ${{ github.event.issue.title }}
 
+permissions: {}
+
 jobs:
   static-env-1:
     name: static-env

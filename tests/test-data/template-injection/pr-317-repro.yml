@@ -4,6 +4,8 @@ name: PR-317-REPRO
 on:
   pull_request:
 
+permissions: {}
+
 jobs:
   PR-317-REPRO:
     name: PR-317-REPRO

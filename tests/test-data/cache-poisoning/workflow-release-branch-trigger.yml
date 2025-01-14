@@ -1,7 +1,9 @@
 on:
   push:
     branches:
-      - 'release-v2.0.0'
+      - "release-v2.0.0"
+
+permissions: {}
 
 jobs:
   publish:

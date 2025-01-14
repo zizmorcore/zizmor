@@ -10,11 +10,11 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    |   ^^^^^^^^^^^ generally used when publishing artifacts generated at runtime
  5 |
 ...
-12 |           uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
-13 | /         with:
-14 | |           target: ${{ matrix.platform.target }}
-15 | |           args: --release --out dist
-16 | |           sccache: "true"
+14 |           uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
+15 | /         with:
+16 | |           target: ${{ matrix.platform.target }}
+17 | |           args: --release --out dist
+18 | |           sccache: "true"
    | |__________________________^ opt-in for caching here
    |
    = note: audit confidence → Low

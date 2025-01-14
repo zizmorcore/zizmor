@@ -4,34 +4,34 @@ expression: "zizmor().workflow(workflow_under_test(\"template-injection/static-e
 snapshot_kind: text
 ---
 help[template-injection]: code injection via template expansion
-  --> @@INPUT@@:39:9
+  --> @@INPUT@@:41:9
    |
-39 |         - name: step-level-non-static
+41 |         - name: step-level-non-static
    |           --------------------------- help: this step
-40 | /         run: |
-41 | |           echo ${{ env.bar }}
+42 | /         run: |
+43 | |           echo ${{ env.bar }}
    | |_____________________________- help: env.bar may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
 help[template-injection]: code injection via template expansion
-  --> @@INPUT@@:46:9
+  --> @@INPUT@@:48:9
    |
-46 |         - name: job-level-non-static
+48 |         - name: job-level-non-static
    |           -------------------------- help: this step
-47 | /         run: |
-48 | |           echo ${{ env.foo }}
+49 | /         run: |
+50 | |           echo ${{ env.foo }}
    | |_____________________________- help: env.foo may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
 help[template-injection]: code injection via template expansion
-  --> @@INPUT@@:51:9
+  --> @@INPUT@@:53:9
    |
-51 |         - name: workflow-level-non-static
+53 |         - name: workflow-level-non-static
    |           ------------------------------- help: this step
-52 | /         run: |
-53 | |           echo ${{ env.quux }}
+54 | /         run: |
+55 | |           echo ${{ env.quux }}
    | |_______________________________- help: env.quux may expand into attacker-controllable code
    |
    = note: audit confidence → High

@@ -3,6 +3,8 @@
 
 on: release
 
+permissions: {}
+
 jobs:
   publish-crate:
     runs-on: ubuntu-24.04

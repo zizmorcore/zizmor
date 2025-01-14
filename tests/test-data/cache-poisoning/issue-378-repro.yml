@@ -4,6 +4,8 @@ name: issue-378
 
 on: push
 
+permissions: {}
+
 jobs:
   issue-378:
     runs-on: ubuntu-latest
