@@ -338,6 +338,14 @@
         - maxmind/GeoIP2-node#1387
 
 
+-   ![](https://github.com/MeteorDevelopment.png?size=40){ width="40" loading=lazy align=left } MeteorDevelopment
+
+    ---
+
+    ??? example "Examples"
+        - MeteorDevelopment/meteor-client#5091
+
+
 -   ![](https://github.com/mfussenegger.png?size=40){ width="40" loading=lazy align=left } mfussenegger
 
     ---
@@ -736,4 +744,12 @@
 
     ??? example "Examples"
         - wagtail/wagtail-localize#843
+
+
+-   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit
+
+    ---
+
+    ??? example "Examples"
+        - zkonduit/ezkl#907
 

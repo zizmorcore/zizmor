@@ -77,6 +77,7 @@ maxmind/geoipupdate#354
 maxmind/geoip2-csv-converter#87
 maxmind/mmdbwriter#104
 maxmind/GeoIP2-node#1387
+MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
 mkuf/prind#183
 mne-tools/mne-python#13011
@@ -141,3 +142,4 @@ uutils/coreutils#6973
 ViaVersion/ViaVersion#4315
 vlang/v#22681
 wagtail/wagtail-localize#843
+zkonduit/ezkl#907
