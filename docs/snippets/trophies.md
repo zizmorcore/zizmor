@@ -543,6 +543,7 @@
         - python/bedevere#652
         - python/cpython#127749
         - python/miss-islington#705
+        - python/mypy#18413
 
 
 -   ![](https://github.com/python-attrs.png?size=40){ width="40" loading=lazy align=left } python-attrs
