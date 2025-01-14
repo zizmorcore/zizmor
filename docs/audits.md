@@ -139,6 +139,11 @@ Users frequently over-scope their workflow and job permissions,
 or set broad workflow-level permissions without realizing that
 all jobs inherit those permissions.
 
+Furthermore, users often don't realize that the
+[*default* `GITHUB_TOKEN` permissions can be very broad](https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token),
+meaning that workflows that don't configure any permissions at all can *still*
+provide excessive credentials to their individual jobs.
+
 ### Remediation
 
 In general, permissions should be declared as minimally as possible, and
