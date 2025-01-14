@@ -760,4 +760,5 @@
 
     ??? example "Examples"
         - zkonduit/ezkl#907
+        - zkonduit/ezkl#906
 
