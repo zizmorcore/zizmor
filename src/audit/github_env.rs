@@ -1,17 +1,19 @@
-use super::{audit_meta, Audit};
-use crate::finding::{Confidence, Finding, Severity};
-use crate::models::Step;
-use crate::state::AuditState;
-use crate::utils;
+use std::cell::RefCell;
+use std::ops::{Deref, Range};
+use std::sync::LazyLock;
+
 use anyhow::{Context, Result};
 use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
 use regex::Regex;
-use std::cell::RefCell;
-use std::ops::{Deref, Range};
-use std::sync::LazyLock;
 use streaming_iterator::StreamingIterator;
 use tree_sitter::{Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
+
+use super::{audit_meta, Audit};
+use crate::finding::{Confidence, Finding, Severity};
+use crate::models::{JobExt as _, Step};
+use crate::state::AuditState;
+use crate::utils;
 
 static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?mi)^.+\s*>>?\s*"?%(?<destination>GITHUB_ENV|GITHUB_PATH)%"?.*$"#).unwrap()
@@ -380,7 +382,7 @@ impl Audit for GitHubEnv {
                 tracing::warn!(
                     "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}",
                     workflow = step.workflow().key.filename(),
-                    job = step.parent.id,
+                    job = step.parent.id(),
                     stepno = step.index
                 );
 

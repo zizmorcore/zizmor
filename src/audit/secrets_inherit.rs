@@ -1,10 +1,7 @@
-use std::ops::Deref;
-
-use github_actions_models::workflow::{job::Secrets, Job};
-
-use crate::finding::Confidence;
+use github_actions_models::workflow::job::Secrets;
 
 use super::{audit_meta, Audit};
+use crate::{finding::Confidence, models::JobExt as _};
 
 pub(crate) struct SecretsInherit;
 
@@ -24,14 +21,11 @@ impl Audit for SecretsInherit {
 
     fn audit_reusable_job<'w>(
         &self,
-        job: &super::Job<'w>,
+        job: &super::ReusableWorkflowCallJob<'w>,
     ) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
-        let Job::ReusableWorkflowCallJob(reusable) = job.deref() else {
-            return Ok(findings);
-        };
 
-        if matches!(reusable.secrets, Some(Secrets::Inherit)) {
+        if matches!(job.secrets, Some(Secrets::Inherit)) {
             findings.push(
                 Self::finding()
                     .add_location(
