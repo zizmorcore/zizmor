@@ -445,6 +445,14 @@
         - numpy/numpy.org#797
 
 
+-   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource
+
+    ---
+
+    ??? example "Examples"
+        - Orange-OpenSource/hurl#3574
+
+
 -   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
 
     ---
@@ -648,6 +656,7 @@
 
     ??? example "Examples"
         - sigstore/cosign#3959
+        - sigstore/fulcio#1910
         - sigstore/gitsign#602
 
 
