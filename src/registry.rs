@@ -3,6 +3,13 @@
 
 use std::{fmt::Display, process::ExitCode};
 
+use anyhow::{anyhow, Context, Result};
+use camino::{Utf8Path, Utf8PathBuf};
+use github_actions_models::common::RepositoryUses;
+use indexmap::IndexMap;
+use serde::Serialize;
+use tracing::instrument;
+
 use crate::{
     audit::{Audit, AuditInput},
     config::Config,
@@ -10,12 +17,6 @@ use crate::{
     models::{Action, Workflow},
     App,
 };
-use anyhow::{anyhow, Context, Result};
-use camino::{Utf8Path, Utf8PathBuf};
-use github_actions_models::common::RepositoryUses;
-use indexmap::IndexMap;
-use serde::Serialize;
-use tracing::instrument;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
 pub(crate) struct LocalKey {

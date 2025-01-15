@@ -173,9 +173,8 @@ mod tests {
 
     use github_actions_models::{common::Uses, workflow::job::Step};
 
-    use crate::models::coordinate::{Control, ControlFieldType, Toggle, Usage};
-
     use super::{ActionCoordinate, StepCommon};
+    use crate::models::coordinate::{Control, ControlFieldType, Toggle, Usage};
 
     // Test-only trait impl.
     impl<'s> StepCommon<'s> for Step {

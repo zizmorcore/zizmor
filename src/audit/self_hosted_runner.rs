@@ -5,18 +5,18 @@
 //! This audit is "auditor" only, since zizmor can't detect
 //! whether self-hosted runners are ephemeral or not.
 
-use crate::{
-    finding::{Confidence, Persona, Severity},
-    models::JobExt as _,
-    AuditState,
-};
-
-use super::{audit_meta, Audit, Job};
-use crate::models::Matrix;
 use anyhow::Result;
 use github_actions_models::{
     common::expr::{ExplicitExpr, LoE},
     workflow::job::RunsOn,
+};
+
+use super::{audit_meta, Audit, Job};
+use crate::models::Matrix;
+use crate::{
+    finding::{Confidence, Persona, Severity},
+    models::JobExt as _,
+    AuditState,
 };
 
 pub(crate) struct SelfHostedRunner;

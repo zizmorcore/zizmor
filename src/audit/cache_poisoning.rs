@@ -1,13 +1,15 @@
+use std::str::FromStr;
+use std::sync::LazyLock;
+
+use github_actions_models::common::Uses;
+use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
+use github_actions_models::workflow::Trigger;
+
 use crate::audit::{audit_meta, Audit};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::coordinate::{ActionCoordinate, Control, ControlFieldType, Toggle, Usage};
 use crate::models::{JobExt as _, NormalJob, Step, StepCommon, Steps};
 use crate::state::AuditState;
-use github_actions_models::common::Uses;
-use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
-use github_actions_models::workflow::Trigger;
-use std::str::FromStr;
-use std::sync::LazyLock;
 
 /// The list of know cache-aware actions
 /// In the future we can easily retrieve this list from the static API,

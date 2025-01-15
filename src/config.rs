@@ -1,6 +1,7 @@
+use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
+
 use anyhow::{anyhow, Context as _, Result};
 use serde::{de, Deserialize};
-use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
 use crate::{finding::Finding, App};
 

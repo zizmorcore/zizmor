@@ -1,9 +1,10 @@
 //! Enriching/context-bearing wrappers over GitHub Actions models
 //! from the `github-actions-models` crate.
 
-use crate::finding::{Route, SymbolicLocation};
-use crate::registry::InputKey;
-use crate::utils::{self, extract_expressions};
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::{iter::Enumerate, ops::Deref};
+
 use anyhow::{bail, Context, Result};
 use camino::Utf8Path;
 use github_actions_models::common::expr::LoE;
@@ -14,10 +15,11 @@ use github_actions_models::workflow::{self, job, job::StepBody, Trigger};
 use github_actions_models::{action, common};
 use indexmap::IndexMap;
 use serde_json::{json, Value};
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::{iter::Enumerate, ops::Deref};
 use terminal_link::Link;
+
+use crate::finding::{Route, SymbolicLocation};
+use crate::registry::InputKey;
+use crate::utils::{self, extract_expressions};
 
 pub(crate) mod coordinate;
 pub(crate) mod uses;
@@ -170,7 +172,7 @@ pub(crate) trait JobExt<'w> {
 #[derive(Clone)]
 pub(crate) struct NormalJob<'w> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
-    pub(crate) id: &'w str,
+    id: &'w str,
     /// The underlying job.
     inner: &'w job::NormalJob,
     /// The job's parent [`Workflow`].
@@ -247,7 +249,7 @@ impl<'w> Deref for NormalJob<'w> {
 #[derive(Clone)]
 pub(crate) struct ReusableWorkflowCallJob<'w> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
-    pub(crate) id: &'w str,
+    id: &'w str,
     /// The underlying job.
     inner: &'w job::ReusableWorkflowCallJob,
     /// The job's parent [`Workflow`].
