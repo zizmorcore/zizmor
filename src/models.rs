@@ -299,9 +299,9 @@ pub(crate) enum Job<'w> {
 impl<'w> Job<'w> {
     fn new(id: &'w str, inner: &'w workflow::Job, parent: &'w Workflow) -> Self {
         match inner {
-            workflow::Job::NormalJob(normal) => Job::NormalJob(NormalJob::new(id, &normal, parent)),
+            workflow::Job::NormalJob(normal) => Job::NormalJob(NormalJob::new(id, normal, parent)),
             workflow::Job::ReusableWorkflowCallJob(reusable) => {
-                Job::ReusableWorkflowCallJob(ReusableWorkflowCallJob::new(id, &reusable, parent))
+                Job::ReusableWorkflowCallJob(ReusableWorkflowCallJob::new(id, reusable, parent))
             }
         }
     }
