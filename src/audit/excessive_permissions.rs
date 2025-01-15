@@ -1,11 +1,9 @@
-use std::{collections::HashMap, ops::Deref, sync::LazyLock};
+use std::{collections::HashMap, sync::LazyLock};
 
-use github_actions_models::{
-    common::{BasePermission, Permission, Permissions},
-    workflow::Job,
-};
+use github_actions_models::common::{BasePermission, Permission, Permissions};
 
-use super::{audit_meta, Audit};
+use super::{audit_meta, Audit, Job};
+use crate::models::JobExt as _;
 use crate::{
     finding::{Confidence, Persona, Severity, SymbolicLocation},
     AuditState,
@@ -60,7 +58,7 @@ impl Audit for ExcessivePermissions {
         let all_jobs_have_permissions = workflow
             .jobs()
             .filter_map(|job| {
-                let Job::NormalJob(job) = *job else {
+                let Job::NormalJob(job) = job else {
                     return None;
                 };
 
@@ -102,7 +100,7 @@ impl Audit for ExcessivePermissions {
         }
 
         for job in workflow.jobs() {
-            let Job::NormalJob(normal) = job.deref() else {
+            let Job::NormalJob(normal) = &job else {
                 continue;
             };
 

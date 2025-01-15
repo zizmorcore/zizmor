@@ -10,11 +10,7 @@ use github_actions_models::common::expr::LoE;
 use github_actions_models::common::Env;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::job::{RunsOn, Strategy};
-use github_actions_models::workflow::{
-    self, job,
-    job::{NormalJob, StepBody},
-    Trigger,
-};
+use github_actions_models::workflow::{self, job, job::StepBody, Trigger};
 use github_actions_models::{action, common};
 use indexmap::IndexMap;
 use serde_json::{json, Value};
@@ -158,44 +154,32 @@ impl Workflow {
     }
 }
 
-/// Represents a single GitHub Actions job.
-///
-/// This type implements [`Deref`] for [`workflow::Job`], providing
-/// access to the underlying data model.
+/// Common behavior across both normal and reusable jobs.
+pub(crate) trait JobExt<'w> {
+    /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
+    fn id(&self) -> &'w str;
+
+    /// The job's symbolic location.
+    fn location(&self) -> SymbolicLocation<'w>;
+
+    /// The job's parent [`Workflow`].
+    fn parent(&self) -> &'w Workflow;
+}
+
+/// Represents a single "normal" GitHub Actions job.
 #[derive(Clone)]
-pub(crate) struct Job<'w> {
+pub(crate) struct NormalJob<'w> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
     pub(crate) id: &'w str,
     /// The underlying job.
-    inner: &'w workflow::Job,
+    inner: &'w job::NormalJob,
     /// The job's parent [`Workflow`].
     parent: &'w Workflow,
 }
 
-impl<'w> Deref for Job<'w> {
-    type Target = &'w workflow::Job;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl<'w> Job<'w> {
-    fn new(id: &'w str, inner: &'w workflow::Job, parent: &'w Workflow) -> Self {
+impl<'w> NormalJob<'w> {
+    pub(crate) fn new(id: &'w str, inner: &'w job::NormalJob, parent: &'w Workflow) -> Self {
         Self { id, inner, parent }
-    }
-
-    /// This job's parent [`Workflow`]
-    pub(crate) fn parent(&self) -> &'w Workflow {
-        self.parent
-    }
-
-    /// This job's [`SymbolicLocation`].
-    pub(crate) fn location(&self) -> SymbolicLocation<'w> {
-        self.parent()
-            .location()
-            .annotated("this job")
-            .with_job(self)
     }
 
     /// An iterator of this job's constituent [`Step`]s.
@@ -209,11 +193,7 @@ impl<'w> Job<'w> {
     /// Returns `None` if the job is not a normal job, or if the runner
     /// environment is indeterminate (e.g. controlled by an expression).
     pub(crate) fn runner_default_shell(&self) -> Option<&'static str> {
-        let workflow::Job::NormalJob(normal) = self.inner else {
-            return None;
-        };
-
-        match &normal.runs_on {
+        match &self.runs_on {
             // The entire runs-on is an expression, so there's nothing we can do.
             LoE::Expr(_) => None,
             LoE::Literal(RunsOn::Group { group: _, labels })
@@ -234,6 +214,118 @@ impl<'w> Job<'w> {
 
                 None
             }
+        }
+    }
+}
+
+impl<'w> JobExt<'w> for NormalJob<'w> {
+    fn id(&self) -> &'w str {
+        self.id
+    }
+
+    fn location(&self) -> SymbolicLocation<'w> {
+        self.parent()
+            .location()
+            .annotated("this job")
+            .with_job(self)
+    }
+
+    fn parent(&self) -> &'w Workflow {
+        self.parent
+    }
+}
+
+impl<'w> Deref for NormalJob<'w> {
+    type Target = &'w job::NormalJob;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+/// Represents a reusable workflow call job.
+#[derive(Clone)]
+pub(crate) struct ReusableWorkflowCallJob<'w> {
+    /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
+    pub(crate) id: &'w str,
+    /// The underlying job.
+    inner: &'w job::ReusableWorkflowCallJob,
+    /// The job's parent [`Workflow`].
+    parent: &'w Workflow,
+}
+
+impl<'w> ReusableWorkflowCallJob<'w> {
+    pub(crate) fn new(
+        id: &'w str,
+        inner: &'w job::ReusableWorkflowCallJob,
+        parent: &'w Workflow,
+    ) -> Self {
+        Self { id, inner, parent }
+    }
+}
+
+impl<'w> JobExt<'w> for ReusableWorkflowCallJob<'w> {
+    fn id(&self) -> &'w str {
+        self.id
+    }
+
+    fn location(&self) -> SymbolicLocation<'w> {
+        self.parent()
+            .location()
+            .annotated("this job")
+            .with_job(self)
+    }
+
+    fn parent(&self) -> &'w Workflow {
+        self.parent
+    }
+}
+
+impl<'w> Deref for ReusableWorkflowCallJob<'w> {
+    type Target = &'w job::ReusableWorkflowCallJob;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+/// Represents a single GitHub Actions job.
+#[derive(Clone)]
+pub(crate) enum Job<'w> {
+    NormalJob(NormalJob<'w>),
+    ReusableWorkflowCallJob(ReusableWorkflowCallJob<'w>),
+}
+
+impl<'w> Job<'w> {
+    fn new(id: &'w str, inner: &'w workflow::Job, parent: &'w Workflow) -> Self {
+        match inner {
+            workflow::Job::NormalJob(normal) => Job::NormalJob(NormalJob::new(id, &normal, parent)),
+            workflow::Job::ReusableWorkflowCallJob(reusable) => {
+                Job::ReusableWorkflowCallJob(ReusableWorkflowCallJob::new(id, &reusable, parent))
+            }
+        }
+    }
+}
+
+impl<'w> JobExt<'w> for Job<'w> {
+    fn id(&self) -> &'w str {
+        match self {
+            Job::NormalJob(normal) => normal.id(),
+            Job::ReusableWorkflowCallJob(reusable) => reusable.id(),
+        }
+    }
+
+    fn location(&self) -> SymbolicLocation<'w> {
+        match self {
+            Job::NormalJob(normal) => normal.location(),
+            Job::ReusableWorkflowCallJob(reusable) => reusable.location(),
+        }
+    }
+
+    fn parent(&self) -> &'w Workflow {
+        match self {
+            Job::NormalJob(normal) => normal.parent(),
+            Job::ReusableWorkflowCallJob(reusable) => reusable.parent(),
         }
     }
 }
@@ -284,14 +376,10 @@ impl<'w> Deref for Matrix<'w> {
     }
 }
 
-impl<'w> TryFrom<&'w Job<'w>> for Matrix<'w> {
+impl<'w> TryFrom<&'w NormalJob<'w>> for Matrix<'w> {
     type Error = anyhow::Error;
 
-    fn try_from(value: &'w Job<'w>) -> std::result::Result<Self, Self::Error> {
-        let workflow::Job::NormalJob(job) = value.deref() else {
-            bail!("job is not a normal job")
-        };
-
+    fn try_from(job: &'w NormalJob<'w>) -> std::result::Result<Self, Self::Error> {
         let Some(Strategy {
             matrix: Some(inner),
             ..
@@ -441,7 +529,7 @@ pub(crate) struct Step<'w> {
     /// The inner step model.
     inner: &'w workflow::job::Step,
     /// The parent [`Job`].
-    pub(crate) parent: Job<'w>,
+    pub(crate) parent: NormalJob<'w>,
 }
 
 impl<'w> Deref for Step<'w> {
@@ -503,7 +591,7 @@ impl<'s> StepCommon<'s> for Step<'s> {
 }
 
 impl<'w> Step<'w> {
-    fn new(index: usize, inner: &'w workflow::job::Step, parent: Job<'w>) -> Self {
+    fn new(index: usize, inner: &'w workflow::job::Step, parent: NormalJob<'w>) -> Self {
         Self {
             index,
             inner,
@@ -512,14 +600,8 @@ impl<'w> Step<'w> {
     }
 
     /// Returns this step's parent [`NormalJob`].
-    ///
-    /// Note that this returns the [`NormalJob`], not the wrapper [`Job`].
     pub(crate) fn job(&self) -> &'w NormalJob {
-        match *self.parent {
-            workflow::Job::NormalJob(job) => job,
-            // NOTE(ww): Unreachable because steps are always parented by normal jobs.
-            workflow::Job::ReusableWorkflowCallJob(_) => unreachable!(),
-        }
+        &self.parent
     }
 
     /// Returns this step's (grand)parent [`Workflow`].
@@ -592,23 +674,17 @@ impl<'w> Step<'w> {
 /// An iterable container for steps within a [`Job`].
 pub(crate) struct Steps<'w> {
     inner: Enumerate<std::slice::Iter<'w, github_actions_models::workflow::job::Step>>,
-    parent: Job<'w>,
+    parent: NormalJob<'w>,
 }
 
 impl<'w> Steps<'w> {
     /// Create a new [`Steps`].
     ///
     /// Invariant: panics if the given [`Job`] is a reusable job, rather than a "normal" job.
-    fn new(job: &Job<'w>) -> Self {
-        // TODO: do something less silly here.
-        match &job.inner {
-            workflow::Job::ReusableWorkflowCallJob(_) => {
-                panic!("API misuse: can't call steps() on a reusable job")
-            }
-            workflow::Job::NormalJob(ref n) => Self {
-                inner: n.steps.iter().enumerate(),
-                parent: job.clone(),
-            },
+    fn new(job: &NormalJob<'w>) -> Self {
+        Self {
+            inner: job.steps.iter().enumerate(),
+            parent: job.clone(),
         }
     }
 }

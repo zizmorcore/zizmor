@@ -1,7 +1,7 @@
 use crate::audit::{audit_meta, Audit};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::coordinate::{ActionCoordinate, Control, ControlFieldType, Toggle, Usage};
-use crate::models::{Job, Step, StepCommon, Steps};
+use crate::models::{JobExt as _, NormalJob, Step, StepCommon, Steps};
 use crate::state::AuditState;
 use github_actions_models::common::Uses;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
@@ -309,7 +309,7 @@ impl Audit for CachePoisoning {
         Ok(Self)
     }
 
-    fn audit_normal_job<'w>(&self, job: &Job<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_normal_job<'w>(&self, job: &NormalJob<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
         let steps = job.steps();
         let trigger = &job.parent().on;

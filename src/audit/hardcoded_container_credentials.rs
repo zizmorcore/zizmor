@@ -1,16 +1,12 @@
-use std::ops::Deref;
-
 use github_actions_models::{
     common::expr::ExplicitExpr,
-    workflow::{
-        job::{Container, DockerCredentials},
-        Job,
-    },
+    workflow::job::{Container, DockerCredentials},
 };
 
-use super::{audit_meta, Audit};
+use super::{audit_meta, Audit, Job};
 use crate::{
     finding::{Confidence, Severity},
+    models::JobExt as _,
     state::AuditState,
 };
 
@@ -37,7 +33,7 @@ impl Audit for HardcodedContainerCredentials {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
-            let Job::NormalJob(normal) = job.deref() else {
+            let Job::NormalJob(normal) = &job else {
                 continue;
             };
 
