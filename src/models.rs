@@ -656,8 +656,6 @@ pub(crate) struct Steps<'w> {
 
 impl<'w> Steps<'w> {
     /// Create a new [`Steps`].
-    ///
-    /// Invariant: panics if the given [`Job`] is a reusable job, rather than a "normal" job.
     fn new(job: &NormalJob<'w>) -> Self {
         Self {
             inner: job.steps.iter().enumerate(),
