@@ -307,29 +307,6 @@ impl<'w> Job<'w> {
     }
 }
 
-impl<'w> JobExt<'w> for Job<'w> {
-    fn id(&self) -> &'w str {
-        match self {
-            Job::NormalJob(normal) => normal.id(),
-            Job::ReusableWorkflowCallJob(reusable) => reusable.id(),
-        }
-    }
-
-    fn location(&self) -> SymbolicLocation<'w> {
-        match self {
-            Job::NormalJob(normal) => normal.location(),
-            Job::ReusableWorkflowCallJob(reusable) => reusable.location(),
-        }
-    }
-
-    fn parent(&self) -> &'w Workflow {
-        match self {
-            Job::NormalJob(normal) => normal.parent(),
-            Job::ReusableWorkflowCallJob(reusable) => reusable.parent(),
-        }
-    }
-}
-
 /// An iterable container for jobs within a [`Workflow`].
 pub(crate) struct Jobs<'w> {
     parent: &'w Workflow,

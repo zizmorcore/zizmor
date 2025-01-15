@@ -100,13 +100,13 @@ impl Audit for ExcessivePermissions {
         }
 
         for job in workflow.jobs() {
-            let Job::NormalJob(normal) = &job else {
+            let Job::NormalJob(job) = &job else {
                 continue;
             };
 
             let job_location = job.location();
             if let Some((severity, confidence, perm_location)) = self.check_job_permissions(
-                &normal.permissions,
+                &job.permissions,
                 explicit_parent_permissions,
                 job_location.clone(),
             ) {

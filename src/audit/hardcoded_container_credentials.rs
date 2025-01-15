@@ -33,7 +33,7 @@ impl Audit for HardcodedContainerCredentials {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
-            let Job::NormalJob(normal) = &job else {
+            let Job::NormalJob(job) = &job else {
                 continue;
             };
 
@@ -45,7 +45,7 @@ impl Audit for HardcodedContainerCredentials {
                         password: Some(password),
                     }),
                 ..
-            }) = &normal.container
+            }) = &job.container
             {
                 // If the password doesn't parse as an expression, it's hardcoded.
                 if ExplicitExpr::from_curly(password).is_none() {
@@ -64,7 +64,7 @@ impl Audit for HardcodedContainerCredentials {
                 }
             }
 
-            for (service, config) in normal.services.iter() {
+            for (service, config) in job.services.iter() {
                 if let Container::Container {
                     image: _,
                     credentials:
