@@ -105,6 +105,7 @@ pypa/packaging.python.org#1765
 pypa/pip-audit#851
 pypi/stdlib-list#138
 pypi/warehouse#16996
+pymc-devs/pytensor#1136
 pytest-dev/pytest#13062
 python/bedevere#652
 python/cpython#127749

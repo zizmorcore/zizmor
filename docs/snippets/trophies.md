@@ -509,6 +509,14 @@
         - pylast/pylast#465
 
 
+-   ![](https://github.com/pymc-devs.png?size=40){ width="40" loading=lazy align=left } pymc-devs
+
+    ---
+
+    ??? example "Examples"
+        - pymc-devs/pytensor#1136
+
+
 -   ![](https://github.com/PyO3.png?size=40){ width="40" loading=lazy align=left } PyO3
 
     ---
