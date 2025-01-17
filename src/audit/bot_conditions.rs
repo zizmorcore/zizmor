@@ -1,7 +1,7 @@
 use github_actions_models::common::{expr::ExplicitExpr, If};
 
 use crate::{
-    expr::Expr,
+    expr::{self, Expr},
     finding::{Confidence, Persona},
     models::JobExt,
 };
@@ -32,7 +32,7 @@ impl Audit for BotConditions {
         }
 
         if let Some(If::Expr(expr)) = &job.r#if {
-            if let Some((confidence, persona)) = self.bot_condition(expr) {
+            if let Some((confidence, persona)) = Self::bot_condition(expr) {
                 todo!()
             }
         };
@@ -42,7 +42,38 @@ impl Audit for BotConditions {
 }
 
 impl BotConditions {
-    fn bot_condition(&self, expr: &str) -> Option<(Confidence, Persona)> {
+    fn walk_tree(expr: &Expr, dominating: bool) -> (bool, bool) {
+        match expr {
+            // We can't easily analyze the call's semantics, but we can
+            // check to see if any of the call's arguments are
+            // bot conditions. We treat a call as non-dominating always.
+            Expr::Call { func: _, args } => args
+                .iter()
+                .map(|arg| Self::walk_tree(arg, false))
+                .reduce(|(bc, _), (bc_next, _)| (bc || bc_next, false))
+                .unwrap_or((false, dominating)),
+            Expr::Index(expr) => Self::walk_tree(expr, dominating),
+            Expr::Context { raw: _, components } => todo!(),
+            Expr::BinOp { lhs, op, rhs } => match op {
+                // && is non-dominating.
+                expr::BinOp::And => todo!(),
+                // || is dominating.
+                expr::BinOp::Or => todo!(),
+                // == is trivially dominating.
+                expr::BinOp::Eq => todo!(),
+                // Unclear.
+                expr::BinOp::Neq => todo!(),
+                expr::BinOp::Gt => todo!(),
+                expr::BinOp::Ge => todo!(),
+                expr::BinOp::Lt => todo!(),
+                expr::BinOp::Le => todo!(),
+            },
+            Expr::UnOp { op, expr } => todo!(),
+            _ => (false, dominating),
+        }
+    }
+
+    fn bot_condition(expr: &str) -> Option<(Confidence, Persona)> {
         let Ok(expr) = (match ExplicitExpr::from_curly(expr) {
             Some(raw_expr) => Expr::parse(raw_expr.as_bare()),
             None => Expr::parse(expr),
@@ -51,8 +82,12 @@ impl BotConditions {
             return None;
         };
 
-        // We're looking for `github.actor == *[bot]` anywhere in the
-        // expression tree.
+        // We're looking for `github.actor == *[bot]` anywhere in the expression tree.
+        // The bot condition is said to "dominate" if controls the entire
+        // expression truth value. For example, `github.actor == 'dependabot[bot]' || foo`
+        // has the bot condition as dominating, since regardless of `foo` the check
+        // always passes if the actor is dependabot[bot].
+        let (has_bot_condition, condition_dominates) = Self::walk_tree(&expr, true);
 
         None
     }
