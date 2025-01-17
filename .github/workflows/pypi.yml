@@ -19,16 +19,22 @@ jobs:
         platform:
           - runner: ubuntu-22.04
             target: x86_64
+            manylinux: auto
           - runner: ubuntu-22.04
             target: x86
+            manylinux: auto
           - runner: ubuntu-24.04-arm
             target: aarch64
+            manylinux: "2_24"
           - runner: ubuntu-22.04
             target: armv7
+            manylinux: auto
           - runner: ubuntu-22.04
             target: s390x
+            manylinux: auto
           - runner: ubuntu-22.04
             target: ppc64le
+            manylinux: auto
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
@@ -36,11 +42,10 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
         with:
-          before-script-linux: "python3 -m pip --version || python3 -m ensurepip"
           target: ${{ matrix.platform.target }}
           args: --release --out dist
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
-          manylinux: 2_28
+          manylinux: ${{ matrix.platform.manylinux }}
       - name: Upload wheels
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
