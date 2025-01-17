@@ -15,6 +15,9 @@ of `zizmor`.
   as unpinned/unhashed (#439)
 * The [excessive-permissions] audit has been refactored, and better captures
   both true positive and true negative cases (#441)
+* The SARIF output mode (`--format=sarif`) now always returns absolute paths
+  in its location information, rather than attempting to infer a (sometimes
+  incorrect) repository-relative path (#453)
 
 ### Fixed
 
