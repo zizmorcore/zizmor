@@ -36,6 +36,7 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
         with:
+          before-script-linux: "python3 -m pip --version || python3 -m ensurepip"
           target: ${{ matrix.platform.target }}
           args: --release --out dist
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
