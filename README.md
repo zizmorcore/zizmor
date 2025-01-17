@@ -38,7 +38,7 @@ See [our contributing guide!](./CONTRIBUTING.md)
 
 ## Sponsors 💖
 
-`zizmor`'s development is supported by these wonderful sponsors!
+`zizmor`'s development is supported by these amazing sponsors!
 
 <!-- @@begin-sponsors@@ -->
 <table>
