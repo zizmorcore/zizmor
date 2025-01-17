@@ -6,16 +6,13 @@
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
 use anyhow::{anyhow, Result};
-use github_actions_models::{
-    common::{RepositoryUses, Uses},
-    workflow::Job,
-};
+use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{audit_meta, Audit};
+use super::{audit_meta, Audit, Job};
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, ComparisonStatus},
-    models::{uses::RepositoryUsesExt as _, Workflow},
+    models::{uses::RepositoryUsesExt as _, JobExt as _, Workflow},
     state::AuditState,
 };
 
@@ -132,9 +129,9 @@ impl Audit for ImpostorCommit {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
-            match *job {
-                Job::NormalJob(_) => {
-                    for step in job.steps() {
+            match job {
+                Job::NormalJob(normal) => {
+                    for step in normal.steps() {
                         let Some(Uses::Repository(uses)) = step.uses() else {
                             continue;
                         };
@@ -165,7 +162,7 @@ impl Audit for ImpostorCommit {
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
                                 .add_location(
-                                    job.location().primary().annotated(IMPOSTOR_ANNOTATION),
+                                    reusable.location().primary().annotated(IMPOSTOR_ANNOTATION),
                                 )
                                 .build(workflow)?,
                         );

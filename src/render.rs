@@ -2,14 +2,15 @@
 
 use std::collections::{hash_map::Entry, HashMap};
 
-use crate::{
-    finding::{Finding, Location, Severity},
-    registry::{FindingRegistry, InputKey, InputRegistry},
-};
 use annotate_snippets::{Level, Renderer, Snippet};
 use anstream::{print, println};
 use owo_colors::OwoColorize;
 use terminal_link::Link;
+
+use crate::{
+    finding::{Finding, Location, Severity},
+    registry::{FindingRegistry, InputKey, InputRegistry},
+};
 
 impl From<&Severity> for Level {
     fn from(sev: &Severity) -> Self {

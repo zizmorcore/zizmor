@@ -1,16 +1,16 @@
-use crate::audit::Audit;
-use crate::finding::{Confidence, Finding, Persona, Severity, SymbolicLocation};
-use crate::models::{Steps, Workflow};
-use crate::state::AuditState;
+use std::ops::Deref;
+
 use anyhow::Result;
 use github_actions_models::action;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::common::{Env, EnvValue};
 use github_actions_models::workflow::job::StepBody;
-use github_actions_models::workflow::Job;
-use std::ops::Deref;
 
-use super::audit_meta;
+use super::{audit_meta, Job};
+use crate::audit::Audit;
+use crate::finding::{Confidence, Finding, Persona, Severity, SymbolicLocation};
+use crate::models::{JobExt as _, Steps, Workflow};
+use crate::state::AuditState;
 
 pub(crate) struct InsecureCommands;
 
@@ -119,18 +119,19 @@ impl Audit for InsecureCommands {
         }
 
         for job in workflow.jobs() {
-            if let Job::NormalJob(normal) = *job {
+            if let Job::NormalJob(normal) = job {
                 match &normal.env {
                     LoE::Expr(_) => results
-                        .push(self.insecure_commands_maybe_present(workflow, job.location())?),
+                        .push(self.insecure_commands_maybe_present(workflow, normal.location())?),
                     LoE::Literal(env) => {
                         if self.has_insecure_commands_enabled(env) {
-                            results.push(self.insecure_commands_allowed(workflow, job.location())?);
+                            results
+                                .push(self.insecure_commands_allowed(workflow, normal.location())?);
                         }
                     }
                 }
 
-                results.extend(self.audit_steps(workflow, job.steps())?)
+                results.extend(self.audit_steps(workflow, normal.steps())?)
             }
         }
 

@@ -94,6 +94,7 @@ NLnetLabs/unbound#1204
 numpy/numpy#27931
 numpy/numpy.org#797
 Ouranosinc/xclim#2023
+Orange-OpenSource/hurl#3574
 oxc-project/oxc#7844
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
@@ -104,6 +105,7 @@ pypa/packaging.python.org#1765
 pypa/pip-audit#851
 pypi/stdlib-list#138
 pypi/warehouse#16996
+pymc-devs/pytensor#1136
 pytest-dev/pytest#13062
 python/bedevere#652
 python/cpython#127749
@@ -130,6 +132,7 @@ rustls/tokio-rustls#96
 rustls/webpki#299
 Saghen/blink.cmp#991
 sigstore/cosign#3959
+sigstore/fulcio#1910
 sigstore/gitsign#602
 simpeg/simpeg#1592
 termcolor/termcolor#89

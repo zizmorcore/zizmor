@@ -3,6 +3,13 @@
 
 use std::{fmt::Display, process::ExitCode};
 
+use anyhow::{anyhow, Context, Result};
+use camino::{Utf8Path, Utf8PathBuf};
+use github_actions_models::common::RepositoryUses;
+use indexmap::IndexMap;
+use serde::Serialize;
+use tracing::instrument;
+
 use crate::{
     audit::{Audit, AuditInput},
     config::Config,
@@ -10,12 +17,6 @@ use crate::{
     models::{Action, Workflow},
     App,
 };
-use anyhow::{anyhow, Context, Result};
-use camino::{Utf8Path, Utf8PathBuf};
-use github_actions_models::common::RepositoryUses;
-use indexmap::IndexMap;
-use serde::Serialize;
-use tracing::instrument;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
 pub(crate) struct LocalKey {
@@ -159,26 +160,6 @@ impl InputRegistry {
         self.inputs
             .get(key)
             .expect("API misuse: requested an un-registered input")
-    }
-
-    /// Returns a subjective relative path for the given workflow.
-    ///
-    /// In general, this will be a relative path within the repository root,
-    /// e.g. if zizmor was told to scan `/tmp/src` then one of the discovered
-    /// workflows might be `.github/workflows/ci.yml` relative to `/tmp/src`.
-    ///
-    /// The exceptional case here is when zizmor is asked to scan a single
-    /// workflow at some arbitrary location on disk. In that case, just
-    /// the base workflow filename itself is returned.
-    pub(crate) fn get_workflow_relative_path<'a>(&self, key: &'a InputKey) -> &'a str {
-        let path = key.path();
-
-        match path.rfind(".github/workflows") {
-            Some(start) => &path[start..],
-            // NOTE: Unwraps are safe since file component is always present and
-            // all paths are UTF-8 by construction.
-            None => key.filename(),
-        }
     }
 }
 

@@ -340,9 +340,10 @@ fn run() -> Result<ExitCode> {
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {
         ($rule:path) => {{
-            use crate::audit::AuditCore as _;
             // HACK: https://github.com/rust-lang/rust/issues/48067
             use $rule as base;
+
+            use crate::audit::AuditCore as _;
             match base::new(audit_state.clone()) {
                 Ok(audit) => audit_registry.register_audit(base::ident(), Box::new(audit)),
                 Err(e) => tracing::warn!("skipping {audit}: {e}", audit = base::ident()),
@@ -394,7 +395,7 @@ fn run() -> Result<ExitCode> {
         OutputFormat::Plain => render::render_findings(&registry, &results),
         OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
         OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &sarif::build(&registry, results.findings()))?
+            serde_json::to_writer_pretty(stdout(), &sarif::build(results.findings()))?
         }
     };
 

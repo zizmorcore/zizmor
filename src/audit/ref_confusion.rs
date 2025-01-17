@@ -6,15 +6,12 @@
 //! but the upstream repository may host *both* a branch and a tag named
 //! `foo`, making it unclear to the end user which is selected.
 
-use std::ops::Deref;
-
 use anyhow::{anyhow, Result};
 use github_actions_models::common::{RepositoryUses, Uses};
-use github_actions_models::workflow::Job;
 
-use super::{audit_meta, Audit};
+use super::{audit_meta, Audit, Job};
 use crate::finding::Finding;
-use crate::models::CompositeStep;
+use crate::models::{CompositeStep, JobExt as _};
 use crate::{
     finding::{Confidence, Severity},
     github_api,
@@ -73,9 +70,9 @@ impl Audit for RefConfusion {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
-            match job.deref() {
-                Job::NormalJob(_) => {
-                    for step in job.steps() {
+            match job {
+                Job::NormalJob(normal) => {
+                    for step in normal.steps() {
                         let Some(Uses::Repository(uses)) = step.uses() else {
                             continue;
                         };
@@ -107,7 +104,10 @@ impl Audit for RefConfusion {
                                 .severity(Severity::Medium)
                                 .confidence(Confidence::High)
                                 .add_location(
-                                    job.location().primary().annotated(REF_CONFUSION_ANNOTATION),
+                                    reusable
+                                        .location()
+                                        .primary()
+                                        .annotated(REF_CONFUSION_ANNOTATION),
                                 )
                                 .build(workflow)?,
                         )

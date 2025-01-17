@@ -335,9 +335,8 @@ impl Audit for TemplateInjection {
 
 #[cfg(test)]
 mod tests {
-    use crate::audit::template_injection::TemplateInjection;
-
     use super::Expr;
+    use crate::audit::template_injection::TemplateInjection;
 
     #[test]
     fn test_expr_is_safe() {

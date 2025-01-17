@@ -6,7 +6,7 @@ use tracing::instrument;
 
 use crate::{
     finding::{Finding, FindingBuilder},
-    models::{Action, CompositeStep, Job, Step, Workflow},
+    models::{Action, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
     registry::InputKey,
     state::AuditState,
 };
@@ -160,7 +160,7 @@ pub(crate) trait Audit: AuditCore {
         Ok(vec![])
     }
 
-    fn audit_normal_job<'w>(&self, job: &Job<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_normal_job<'w>(&self, job: &NormalJob<'w>) -> Result<Vec<Finding<'w>>> {
         let mut results = vec![];
         for step in job.steps() {
             results.extend(self.audit_step(&step)?);
@@ -168,7 +168,10 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_reusable_job<'w>(&self, _job: &Job<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_reusable_job<'w>(
+        &self,
+        _job: &ReusableWorkflowCallJob<'w>,
+    ) -> Result<Vec<Finding<'w>>> {
         Ok(vec![])
     }
 
@@ -176,12 +179,12 @@ pub(crate) trait Audit: AuditCore {
         let mut results = vec![];
 
         for job in workflow.jobs() {
-            match *job {
-                github_actions_models::workflow::Job::NormalJob(_) => {
-                    results.extend(self.audit_normal_job(&job)?);
+            match job {
+                Job::NormalJob(normal) => {
+                    results.extend(self.audit_normal_job(&normal)?);
                 }
-                github_actions_models::workflow::Job::ReusableWorkflowCallJob(_) => {
-                    results.extend(self.audit_reusable_job(&job)?);
+                Job::ReusableWorkflowCallJob(reusable) => {
+                    results.extend(self.audit_reusable_job(&reusable)?);
                 }
             }
         }

@@ -445,6 +445,14 @@
         - numpy/numpy.org#797
 
 
+-   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource
+
+    ---
+
+    ??? example "Examples"
+        - Orange-OpenSource/hurl#3574
+
+
 -   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
 
     ---
@@ -499,6 +507,14 @@
 
     ??? example "Examples"
         - pylast/pylast#465
+
+
+-   ![](https://github.com/pymc-devs.png?size=40){ width="40" loading=lazy align=left } pymc-devs
+
+    ---
+
+    ??? example "Examples"
+        - pymc-devs/pytensor#1136
 
 
 -   ![](https://github.com/PyO3.png?size=40){ width="40" loading=lazy align=left } PyO3
@@ -648,6 +664,7 @@
 
     ??? example "Examples"
         - sigstore/cosign#3959
+        - sigstore/fulcio#1910
         - sigstore/gitsign#602
 
 
