@@ -726,7 +726,7 @@ by GitHub come with built-in caching functionality, like @actions/setup-node,
 
 Furthermore, there are many examples of community-driven Actions with built-in
 caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
-@Swatinem/rust-cache. In general, most of them build on top of @actions/tookit
+@Swatinem/rust-cache. In general, most of them build on top of @actions/toolkit
 for the sake of easily integrate with GitHub cache server at Workflow runtime.
 
 This vulnerability happens when release workflows leverage build state cached
@@ -737,7 +737,7 @@ by trigger events like `release` or events with path filters like `push`
 
 In such scenarios, an attacker with access to a valid `GITHUB_TOKEN` can use it
 to poison the repository's GitHub Actions caches. That compounds with the
-default behavior of @actions/tookit during cache restorations, allowing an
+default behavior of @actions/toolkit during cache restorations, allowing an
 attacker to retrieve payloads from poisoned cache entries, hence achieving code
 execution at Workflow runtime, potentially compromising ready-to-publish
 artifacts.
