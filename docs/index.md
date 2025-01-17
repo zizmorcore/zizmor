@@ -17,3 +17,11 @@ learn more about how to use `zizmor` locally or in your CI/CD.
 <figure markdown="1">
 ![](./assets/zizmor-demo.gif)
 </figure>
+
+## Sponsors 💖
+
+`zizmor`'s development is supported by these amazing sponsors!
+
+<figure>
+--8<-- "sponsors.html"
+</figure>
