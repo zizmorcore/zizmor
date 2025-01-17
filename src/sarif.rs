@@ -8,10 +8,7 @@ use serde_sarif::sarif::{
     ResultLevel, Run, Sarif, Tool, ToolComponent,
 };
 
-use crate::{
-    finding::{Finding, Location, Severity},
-    registry::InputRegistry,
-};
+use crate::finding::{Finding, Location, Severity};
 
 impl From<Severity> for ResultKind {
     fn from(value: Severity) -> Self {
@@ -39,15 +36,15 @@ impl From<Severity> for ResultLevel {
     }
 }
 
-pub(crate) fn build(registry: &InputRegistry, findings: &[Finding]) -> Sarif {
+pub(crate) fn build(findings: &[Finding]) -> Sarif {
     Sarif::builder()
         .version("2.1.0")
         .schema("https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json")
-        .runs([build_run(registry, findings)])
+        .runs([build_run(findings)])
         .build()
 }
 
-fn build_run(registry: &InputRegistry, findings: &[Finding]) -> Run {
+fn build_run(findings: &[Finding]) -> Run {
     Run::builder()
         .tool(
             Tool::builder()
@@ -63,7 +60,7 @@ fn build_run(registry: &InputRegistry, findings: &[Finding]) -> Run {
                 )
                 .build(),
         )
-        .results(build_results(registry, findings))
+        .results(build_results(findings))
         .build()
 }
 
@@ -84,20 +81,18 @@ fn build_rule(finding: &Finding) -> ReportingDescriptor {
         .build()
 }
 
-fn build_results(registry: &InputRegistry, findings: &[Finding]) -> Vec<SarifResult> {
-    findings.iter().map(|f| build_result(registry, f)).collect()
+fn build_results(findings: &[Finding]) -> Vec<SarifResult> {
+    findings.iter().map(|f| build_result(f)).collect()
 }
 
-fn build_result(registry: &InputRegistry, finding: &Finding<'_>) -> SarifResult {
+fn build_result(finding: &Finding<'_>) -> SarifResult {
     SarifResult::builder()
         .message(finding.desc)
         .rule_id(finding.ident)
         .locations(build_locations(
-            registry,
             finding.locations.iter().filter(|l| l.symbolic.primary),
         ))
         .related_locations(build_locations(
-            registry,
             finding.locations.iter().filter(|l| !l.symbolic.primary),
         ))
         // TODO: https://github.com/psastras/sarif-rs/pull/770
@@ -112,10 +107,7 @@ fn build_result(registry: &InputRegistry, finding: &Finding<'_>) -> SarifResult 
         .build()
 }
 
-fn build_locations<'a>(
-    registry: &InputRegistry,
-    locations: impl Iterator<Item = &'a Location<'a>>,
-) -> Vec<SarifLocation> {
+fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec<SarifLocation> {
     locations
         .map(|location| {
             SarifLocation::builder()
@@ -133,8 +125,7 @@ fn build_locations<'a>(
                     PhysicalLocation::builder()
                         .artifact_location(
                             ArtifactLocation::builder()
-                                .uri_base_id("%SRCROOT%")
-                                .uri(registry.get_workflow_relative_path(location.symbolic.key))
+                                .uri(location.symbolic.key.path())
                                 .build(),
                         )
                         .region(
