@@ -394,7 +394,7 @@ fn run() -> Result<ExitCode> {
         OutputFormat::Plain => render::render_findings(&registry, &results),
         OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
         OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &sarif::build(&registry, results.findings()))?
+            serde_json::to_writer_pretty(stdout(), &sarif::build(results.findings()))?
         }
     };
 
