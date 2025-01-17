@@ -36,6 +36,26 @@ See [our contributing guide!](./CONTRIBUTING.md)
 
 [Now you can have beautiful clean workflows!]: https://www.youtube.com/watch?v=ol7rxFCvpy8
 
+## Sponsors 💖
+
+`zizmor`'s development is supported by these wonderful sponsors!
+
+<!-- @@begin-sponsors@@ -->
+<table>
+<tbody>
+<tr>
+<td align="center" valign="top" width="15%">
+<a href="https://astral.sh/">
+<img src="https://avatars.githubusercontent.com/u/115962839?s=100&v=4" width="100px">
+<br>
+Astral
+</a>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- @@end-sponsors@@ -->
+
 ## Star History
 
 <a href="https://star-history.com/#woodruffw/zizmor&Date">
