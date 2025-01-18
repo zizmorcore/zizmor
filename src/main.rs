@@ -181,7 +181,7 @@ fn collect_from_repo_dir(
                 match input_path.extension() {
                     Some(ext) if ext == "yml" || ext == "yaml" => {
                         registry
-                            .register_by_path(input_path, Some(&top_dir))
+                            .register_by_path(input_path, Some(top_dir))
                             .with_context(|| format!("failed to register input: {input_path}"))?;
                     }
                     _ => continue,
