@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Added
+
+* **New audit**: [bot-conditions] detects spoofable uses of `github.actor`
+  within dangerous triggers (#460)
+
 ### Improved
 
 * The [unpinned-uses] audit no longer flags local reusable workflows or actions
@@ -446,3 +451,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [template-injection]: ./audits.md#template-injection
 [secrets-inherit]: ./audits.md#secrets-inherit
 [unpinned-uses]: ./audits.md#unpinned-uses
+[bot-conditions]: ./audits.md#bot-conditions
