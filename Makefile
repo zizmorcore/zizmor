@@ -3,12 +3,12 @@ all:
 	@echo "Run my targets individually!"
 
 .PHONY: site
-site: site-requirements.txt
-	uvx --with-requirements $< mkdocs build
+site:
+	uv run --no-project --only-group docs mkdocs build
 
 .PHONY: site-live
-site-live: site-requirements.txt
-	uvx --with-requirements $< mkdocs serve
+site-live:
+	uv run --no-project --only-group docs mkdocs serve
 
 .PHONY: snippets
 snippets: trophies sponsors
