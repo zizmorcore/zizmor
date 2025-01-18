@@ -23,6 +23,7 @@ of `zizmor`.
 * The SARIF output mode (`--format=sarif`) now always returns absolute paths
   in its location information, rather than attempting to infer a (sometimes
   incorrect) repository-relative path (#453)
+* `zizmor` now provides `manylinux` wheel builds for `aarch64` (#457)
 
 ### Fixed
 
