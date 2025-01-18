@@ -31,6 +31,7 @@ of `zizmor`.
   dangerous (#445)
 * The [artipacked] audit now correctly handles the strings `'true'` and `'false'`
   as their boolean counterparts (#448)
+* Expressions that span multiple source lines are now parsed correctly (#461)
 
 ## v1.1.1
 
