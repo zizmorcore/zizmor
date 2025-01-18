@@ -101,7 +101,7 @@ impl Workflow {
             InputKey::Local(_) => None,
             InputKey::Remote(_) => {
                 // NOTE: InputKey's Display produces a URL, hence `key.to_string()`.
-                Some(Link::new(key.path(), &key.to_string()).to_string())
+                Some(Link::new(key.best_effort_relative_path(), &key.to_string()).to_string())
             }
         };
 
@@ -114,11 +114,15 @@ impl Workflow {
     }
 
     /// Load a workflow from the given file on disk.
-    pub(crate) fn from_file<P: AsRef<Utf8Path>>(p: P) -> Result<Self> {
-        let contents = std::fs::read_to_string(p.as_ref())?;
-        let path = p.as_ref().canonicalize_utf8()?;
+    pub(crate) fn from_file<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
+        let contents = std::fs::read_to_string(path.as_ref())?;
 
-        Self::from_string(contents, InputKey::local(path)?)
+        let prefix = prefix
+            .map(|pfx| pfx.as_ref().canonicalize_utf8())
+            .transpose()?;
+        let path = path.as_ref().canonicalize_utf8()?;
+
+        Self::from_string(contents, InputKey::local(prefix, path)?)
     }
 
     /// This workflow's [`SymbolicLocation`].
@@ -716,13 +720,16 @@ impl Debug for Action {
 
 impl Action {
     /// Load an action from the given file on disk.
-    pub(crate) fn from_file<P: AsRef<Utf8Path>>(p: P) -> Result<Self> {
+    pub(crate) fn from_file<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
         let contents =
-            std::fs::read_to_string(p.as_ref()).with_context(|| "couldn't read action file")?;
+            std::fs::read_to_string(path.as_ref()).with_context(|| "couldn't read action file")?;
 
-        let path = p.as_ref().canonicalize_utf8()?;
+        let prefix = prefix
+            .map(|pfx| pfx.as_ref().canonicalize_utf8())
+            .transpose()?;
+        let path = path.as_ref().canonicalize_utf8()?;
 
-        Self::from_string(contents, InputKey::local(path)?)
+        Self::from_string(contents, InputKey::local(prefix, path)?)
     }
 
     /// Load a workflow from a buffer, with an assigned name.
@@ -736,7 +743,7 @@ impl Action {
             InputKey::Local(_) => None,
             InputKey::Remote(_) => {
                 // NOTE: InputKey's Display produces a URL, hence `key.to_string()`.
-                Some(Link::new(key.path(), &key.to_string()).to_string())
+                Some(Link::new(key.best_effort_relative_path(), &key.to_string()).to_string())
             }
         };
 

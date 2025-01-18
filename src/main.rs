@@ -160,17 +160,18 @@ fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
 
 #[instrument(skip(mode, registry))]
 fn collect_from_repo_dir(
-    repo_dir: &Utf8Path,
+    top_dir: &Utf8Path,
+    current_dir: &Utf8Path,
     mode: &CollectionMode,
     registry: &mut InputRegistry,
 ) -> Result<()> {
     // The workflow directory might not exist if we're collecting from
     // a repository that only contains actions.
     if mode.workflows() {
-        let workflow_dir = if repo_dir.ends_with(".github/workflows") {
-            repo_dir.into()
+        let workflow_dir = if current_dir.ends_with(".github/workflows") {
+            current_dir.into()
         } else {
-            repo_dir.join(".github/workflows")
+            current_dir.join(".github/workflows")
         };
 
         if workflow_dir.is_dir() {
@@ -180,7 +181,7 @@ fn collect_from_repo_dir(
                 match input_path.extension() {
                     Some(ext) if ext == "yml" || ext == "yaml" => {
                         registry
-                            .register_by_path(input_path)
+                            .register_by_path(input_path, Some(&top_dir))
                             .with_context(|| format!("failed to register input: {input_path}"))?;
                     }
                     _ => continue,
@@ -192,18 +193,18 @@ fn collect_from_repo_dir(
     }
 
     if mode.actions() {
-        for entry in repo_dir.read_dir_utf8()? {
+        for entry in current_dir.read_dir_utf8()? {
             let entry = entry?;
             let entry_path = entry.path();
 
             if entry_path.is_file()
                 && matches!(entry_path.file_name(), Some("action.yml" | "action.yaml"))
             {
-                let action = Action::from_file(entry_path)?;
+                let action = Action::from_file(entry_path, Some(top_dir))?;
                 registry.register_input(action.into())?;
             } else if entry_path.is_dir() && !entry_path.ends_with(".github/workflows") {
                 // Recurse and limit the collection mode to only actions.
-                collect_from_repo_dir(entry_path, &CollectionMode::ActionsOnly, registry)?;
+                collect_from_repo_dir(top_dir, entry_path, &CollectionMode::ActionsOnly, registry)?;
             }
         }
     }
@@ -285,13 +286,15 @@ fn collect_inputs(
     for input in inputs {
         let input_path = Utf8Path::new(input);
         if input_path.is_file() {
+            // When collecting individual files, we don't know which part
+            // of the input path is the prefix.
             registry
-                .register_by_path(input_path)
+                .register_by_path(input_path, None)
                 .with_context(|| format!("failed to register input: {input_path}"))?;
         } else if input_path.is_dir() {
             // TODO: walk directory to discover composite actions.
             let absolute = input_path.canonicalize_utf8()?;
-            collect_from_repo_dir(&absolute, mode, &mut registry)?;
+            collect_from_repo_dir(&absolute, &absolute, mode, &mut registry)?;
         } else {
             // If this input isn't a file or directory, it's probably an
             // `owner/repo(@ref)?` slug.
@@ -387,7 +390,10 @@ fn run() -> Result<ExitCode> {
                 })?);
                 Span::current().pb_inc(1);
             }
-            tracing::info!("🌈 completed {input}", input = input.key().path());
+            tracing::info!(
+                "🌈 completed {input}",
+                input = input.key().best_effort_relative_path()
+            );
         }
     }
 

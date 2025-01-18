@@ -20,7 +20,9 @@ use crate::{
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
 pub(crate) struct LocalKey {
-    path: Utf8PathBuf,
+    /// The path's nondeterministic prefix, if any.
+    prefix: Option<Utf8PathBuf>,
+    absolute_path: Utf8PathBuf,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
@@ -45,7 +47,7 @@ pub(crate) enum InputKey {
 impl Display for InputKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InputKey::Local(local) => write!(f, "file://{path}", path = local.path),
+            InputKey::Local(local) => write!(f, "file://{path}", path = local.absolute_path),
             InputKey::Remote(remote) => {
                 // No ref means assume HEAD, i.e. whatever's on the default branch.
                 let git_ref = remote.git_ref.as_deref().unwrap_or("HEAD");
@@ -62,13 +64,16 @@ impl Display for InputKey {
 }
 
 impl InputKey {
-    pub(crate) fn local(path: Utf8PathBuf) -> Result<Self> {
+    pub(crate) fn local(prefix: Option<Utf8PathBuf>, path: Utf8PathBuf) -> Result<Self> {
         // All keys must have a filename component.
         if path.file_name().is_none() {
             return Err(anyhow!("invalid local input: no filename component"));
         }
 
-        Ok(Self::Local(LocalKey { path }))
+        Ok(Self::Local(LocalKey {
+            prefix,
+            absolute_path: path,
+        }))
     }
 
     pub(crate) fn remote(slug: &RepositoryUses, path: String) -> Result<Self> {
@@ -84,13 +89,18 @@ impl InputKey {
         }))
     }
 
-    /// Returns this [`InputKey`]'s filepath component.
+    /// Return a "best-effort" relative path for this [`InputKey`].
     ///
-    /// This will be an absolute path for local keys, and a relative
-    /// path for remote keys.
-    pub(crate) fn path(&self) -> &str {
+    /// This will always be a relative path for remote keys,
+    /// and will be a "best-effort" relative path for local keys.
+    pub(crate) fn best_effort_relative_path(&self) -> &str {
         match self {
-            InputKey::Local(local) => local.path.as_str(),
+            InputKey::Local(local) => local
+                .prefix
+                .as_ref()
+                .and_then(|pfx| local.absolute_path.strip_prefix(dbg!(pfx)).ok())
+                .unwrap_or_else(|| &local.absolute_path)
+                .as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),
         }
     }
@@ -100,7 +110,7 @@ impl InputKey {
         // NOTE: Safe unwraps, since the presence of a filename component
         // is a construction invariant of all `InputKey` variants.
         match self {
-            InputKey::Local(local) => local.path.file_name().unwrap(),
+            InputKey::Local(local) => local.absolute_path.file_name().unwrap(),
             InputKey::Remote(remote) => remote.path.file_name().unwrap(),
         }
     }
@@ -108,8 +118,6 @@ impl InputKey {
 
 pub(crate) struct InputRegistry {
     pub(crate) inputs: IndexMap<InputKey, AuditInput>,
-    // pub(crate) actions: IndexMap<InputKey, Action>,
-    // pub(crate) workflows: IndexMap<InputKey, Workflow>,
 }
 
 impl InputRegistry {
@@ -140,10 +148,14 @@ impl InputRegistry {
 
     /// Registers a workflow or action definition from its path on disk.
     #[instrument(skip(self))]
-    pub(crate) fn register_by_path(&mut self, path: &Utf8Path) -> Result<()> {
-        match Workflow::from_file(path) {
+    pub(crate) fn register_by_path(
+        &mut self,
+        path: &Utf8Path,
+        prefix: Option<&Utf8Path>,
+    ) -> Result<()> {
+        match Workflow::from_file(path, prefix) {
             Ok(workflow) => self.register_input(workflow.into()),
-            Err(we) => match Action::from_file(path) {
+            Err(we) => match Action::from_file(path, prefix) {
                 Ok(action) => self.register_input(action.into()),
                 Err(ae) => Err(anyhow!("failed to register input as workflow or action"))
                     .with_context(|| we)
@@ -289,8 +301,8 @@ mod tests {
     use super::InputKey;
 
     #[test]
-    fn test_workflow_key_display() {
-        let local = InputKey::local("/foo/bar/baz.yml".into()).unwrap();
+    fn test_input_key_display() {
+        let local = InputKey::local(None, "/foo/bar/baz.yml".into()).unwrap();
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
@@ -311,6 +323,28 @@ mod tests {
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/v1/.github/workflows/baz.yml"
+        );
+    }
+
+    #[test]
+    fn test_input_key_local_path() {
+        let local = InputKey::local(None, "/foo/bar/baz.yml".into()).unwrap();
+        assert_eq!(local.best_effort_relative_path(), "/foo/bar/baz.yml");
+
+        let local = InputKey::local(Some("/foo".into()), "/foo/bar/baz.yml".into()).unwrap();
+        assert_eq!(local.best_effort_relative_path(), "bar/baz.yml");
+
+        let local = InputKey::local(Some("/foo/bar/".into()), "/foo/bar/baz.yml".into()).unwrap();
+        assert_eq!(local.best_effort_relative_path(), "baz.yml");
+
+        let local = InputKey::local(
+            Some("/home/runner/work/repo/repo".into()),
+            "/home/runner/work/repo/repo/.github/workflows/baz.yml".into(),
+        )
+        .unwrap();
+        assert_eq!(
+            local.best_effort_relative_path(),
+            ".github/workflows/baz.yml"
         );
     }
 }
