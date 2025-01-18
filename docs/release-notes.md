@@ -11,6 +11,11 @@ of `zizmor`.
 
 Nothing to see here (yet!)
 
+### Bug Fixes 🐛
+
+* SARIF outputs now use relative paths again, but more correctly
+  than before [v1.2.0](#v120) (#469)
+
 ## v1.2.0
 
 This release comes with one new audit ([bot-conditions]), plus a handful
