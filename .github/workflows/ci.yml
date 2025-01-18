@@ -43,9 +43,21 @@ jobs:
         make snippets
         git diff --exit-code
 
+  test-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@887a942a15af3a7626099df99e897a18d9e5ab3a # v5.1.0
+
+      - name: Test site
+        run: make site
+
   all-tests-pass:
     if: always()
-    needs: [lint, test]
+    needs: [lint, test, test-site]
     runs-on: ubuntu-latest
 
     steps:
