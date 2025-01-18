@@ -64,15 +64,15 @@ impl Display for InputKey {
 }
 
 impl InputKey {
-    pub(crate) fn local(prefix: Option<Utf8PathBuf>, path: Utf8PathBuf) -> Result<Self> {
+    pub(crate) fn local<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
         // All keys must have a filename component.
-        if path.file_name().is_none() {
+        if path.as_ref().file_name().is_none() {
             return Err(anyhow!("invalid local input: no filename component"));
         }
 
         Ok(Self::Local(LocalKey {
-            prefix,
-            absolute_path: path,
+            prefix: prefix.map(|p| p.as_ref().to_path_buf()),
+            absolute_path: path.as_ref().to_path_buf(),
         }))
     }
 
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_input_key_display() {
-        let local = InputKey::local(None, "/foo/bar/baz.yml".into()).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
@@ -328,18 +328,18 @@ mod tests {
 
     #[test]
     fn test_input_key_local_path() {
-        let local = InputKey::local(None, "/foo/bar/baz.yml".into()).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.best_effort_relative_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local(Some("/foo".into()), "/foo/bar/baz.yml".into()).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
         assert_eq!(local.best_effort_relative_path(), "bar/baz.yml");
 
-        let local = InputKey::local(Some("/foo/bar/".into()), "/foo/bar/baz.yml".into()).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
         assert_eq!(local.best_effort_relative_path(), "baz.yml");
 
         let local = InputKey::local(
-            Some("/home/runner/work/repo/repo".into()),
-            "/home/runner/work/repo/repo/.github/workflows/baz.yml".into(),
+            "/home/runner/work/repo/repo/.github/workflows/baz.yml",
+            Some("/home/runner/work/repo/repo"),
         )
         .unwrap();
         assert_eq!(

@@ -1,12 +1,11 @@
 use github_actions_models::common::{expr::ExplicitExpr, If};
 
+use super::{audit_meta, Audit};
 use crate::{
     expr::{self, Expr},
     finding::{Confidence, Severity},
     models::JobExt,
 };
-
-use super::{audit_meta, Audit};
 
 pub(crate) struct BotConditions;
 
@@ -152,7 +151,7 @@ impl BotConditions {
             // We have a bot condition but it doesn't dominate the expression.
             (true, false) => Some(Confidence::Medium),
             // No bot condition.
-            (_, _) => None,
+            (..) => None,
         }
     }
 }

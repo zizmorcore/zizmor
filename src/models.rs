@@ -116,13 +116,7 @@ impl Workflow {
     /// Load a workflow from the given file on disk.
     pub(crate) fn from_file<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
         let contents = std::fs::read_to_string(path.as_ref())?;
-
-        let prefix = prefix
-            .map(|pfx| pfx.as_ref().canonicalize_utf8())
-            .transpose()?;
-        let path = path.as_ref().canonicalize_utf8()?;
-
-        Self::from_string(contents, InputKey::local(prefix, path)?)
+        Self::from_string(contents, InputKey::local(path, prefix)?)
     }
 
     /// This workflow's [`SymbolicLocation`].
@@ -723,13 +717,7 @@ impl Action {
     pub(crate) fn from_file<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
         let contents =
             std::fs::read_to_string(path.as_ref()).with_context(|| "couldn't read action file")?;
-
-        let prefix = prefix
-            .map(|pfx| pfx.as_ref().canonicalize_utf8())
-            .transpose()?;
-        let path = path.as_ref().canonicalize_utf8()?;
-
-        Self::from_string(contents, InputKey::local(prefix, path)?)
+        Self::from_string(contents, InputKey::local(path, prefix)?)
     }
 
     /// Load a workflow from a buffer, with an assigned name.
