@@ -369,6 +369,12 @@ mod tests {
 
     #[test]
     fn test_parse_expr_rule() -> Result<()> {
+        // Ensures that we parse multi-line expressions correctly.
+        let multiline = "github.repository_owner == 'Homebrew' &&
+        ((github.event_name == 'pull_request_review' && github.event.review.state == 'approved') ||
+        (github.event_name == 'pull_request_target' &&
+        (github.event.action == 'ready_for_review' || github.event.label.name == 'automerge-skip')))";
+
         let cases = &[
             "fromJSON(inputs.free-threading) && '--disable-gil' || ''",
             "foo || bar || baz",
@@ -382,6 +388,7 @@ mod tests {
             "(github.actor != 'github-actions[bot]' && github.actor) == 'BrewTestBot'",
             "foo()[0]",
             "fromJson(steps.runs.outputs.data).workflow_runs[0].id",
+            multiline,
         ];
 
         for case in cases {

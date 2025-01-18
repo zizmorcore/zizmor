@@ -3,7 +3,7 @@
 //! See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/evaluate-expressions-in-workflows-and-actions>
 
 /// Whitespace handling
-WHITESPACE = _{ " " }
+WHITESPACE = _{ " " | NEWLINE }
 
 // Misc notes:
 // I have pretty low confidence in this grammar -- it should parse the
