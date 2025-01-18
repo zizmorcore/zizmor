@@ -22,7 +22,8 @@ use crate::{
 pub(crate) struct LocalKey {
     /// The path's nondeterministic prefix, if any.
     prefix: Option<Utf8PathBuf>,
-    absolute_path: Utf8PathBuf,
+    /// The given path to the input. This can be absolute or relative.
+    given_path: Utf8PathBuf,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
@@ -47,7 +48,7 @@ pub(crate) enum InputKey {
 impl Display for InputKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InputKey::Local(local) => write!(f, "file://{path}", path = local.absolute_path),
+            InputKey::Local(local) => write!(f, "file://{path}", path = local.given_path),
             InputKey::Remote(remote) => {
                 // No ref means assume HEAD, i.e. whatever's on the default branch.
                 let git_ref = remote.git_ref.as_deref().unwrap_or("HEAD");
@@ -72,7 +73,7 @@ impl InputKey {
 
         Ok(Self::Local(LocalKey {
             prefix: prefix.map(|p| p.as_ref().to_path_buf()),
-            absolute_path: path.as_ref().to_path_buf(),
+            given_path: path.as_ref().to_path_buf(),
         }))
     }
 
@@ -98,8 +99,8 @@ impl InputKey {
             InputKey::Local(local) => local
                 .prefix
                 .as_ref()
-                .and_then(|pfx| local.absolute_path.strip_prefix(dbg!(pfx)).ok())
-                .unwrap_or_else(|| &local.absolute_path)
+                .and_then(|pfx| local.given_path.strip_prefix(dbg!(pfx)).ok())
+                .unwrap_or_else(|| &local.given_path)
                 .as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),
         }
@@ -110,7 +111,7 @@ impl InputKey {
         // NOTE: Safe unwraps, since the presence of a filename component
         // is a construction invariant of all `InputKey` variants.
         match self {
-            InputKey::Local(local) => local.absolute_path.file_name().unwrap(),
+            InputKey::Local(local) => local.given_path.file_name().unwrap(),
             InputKey::Remote(remote) => remote.path.file_name().unwrap(),
         }
     }
