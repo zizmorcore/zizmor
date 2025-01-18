@@ -4,11 +4,11 @@ all:
 
 .PHONY: site
 site:
-	uv run --no-project --only-group docs mkdocs build
+	uv run --only-group docs mkdocs build
 
 .PHONY: site-live
 site-live:
-	uv run --no-project --only-group docs mkdocs serve
+	uv run --only-group docs mkdocs serve
 
 .PHONY: snippets
 snippets: trophies sponsors

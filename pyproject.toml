@@ -2,6 +2,14 @@
 requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
+# NOTE: This section is a stub; needed to prevent
+# `uv run --only-group docs` from failing.
+[project]
+name = "zizmor"
+dynamic = ["version"]
+# Arbitrarily set to the oldest non-EOL Python.
+requires-python = ">=3.9"
+
 [tool.maturin]
 bindings = "bin"
 
