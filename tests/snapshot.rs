@@ -464,3 +464,12 @@ fn secrets_inherit() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn bot_conditions() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("bot-conditions.yml"))
+        .run()?);
+
+    Ok(())
+}

@@ -9,7 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
-### Improved
+### New Features 🌈
+
+* **New audit**: [bot-conditions] detects spoofable uses of `github.actor`
+  within dangerous triggers (#460)
+
+### Improvements 🌱
 
 * The [unpinned-uses] audit no longer flags local reusable workflows or actions
   as unpinned/unhashed (#439)
@@ -20,7 +25,7 @@ of `zizmor`.
   incorrect) repository-relative path (#453)
 * `zizmor` now provides `manylinux` wheel builds for `aarch64` (#457)
 
-### Fixed
+### Bug Fixes 🐛
 
 * The [template-injection] audit no longer considers `github.event.pull_request.base.sha`
   dangerous (#445)
@@ -29,7 +34,7 @@ of `zizmor`.
 
 ## v1.1.1
 
-### Fixed
+### Bug Fixes 🐛
 
 * Fixed a regression where workflows with calls to unpinned reusable workflows
   would fail to parse (#437)
@@ -39,17 +44,17 @@ of `zizmor`.
 This release comes with one new audit ([secrets-inherit]), plus a slew
 of bugfixes and internal refactors that unblock future improvements!
 
-### Added
+### New Features 🌈
 
 * **New audit**: [secrets-inherit] detects use of `secrets: inherit` with
   reusable workflow calls (#408)
 
-### Improved
+### Improvements 🌱
 
 * The [template-injection] audit now detects injections in calls
   to @azure/cli and @azure/powershell (#421)
 
-### Fixed
+### Bug Fixes 🐛
 
 * The [template-injection] audit no longer consider `github.server_url`
   dangerous (#412)
@@ -61,12 +66,12 @@ of bugfixes and internal refactors that unblock future improvements!
 This is a small quality and bugfix release. Thank you to everybody
 who helped by reporting and shaking out bugs from our first stable release!
 
-### Improved
+### Improvements 🌱
 
 * The [github-env] audit now detects dangerous writes to `GITHUB_PATH`,
   is more precise, and can produce multiple findings per run block (#391)
 
-### Fixed
+### Bug Fixes 🐛
 
 * `workflow_call.secrets` keys with missing values are now parsed correctly (#388)
 * The [cache-poisoning] audit no longer incorrectly treats `docker/build-push-action` as
@@ -89,7 +94,7 @@ happen with a new major version.
 This stable release comes with a large number of new features as well
 as stability commitments for existing features; read more below!
 
-### Added
+### New Features 🌈
 
 * Composite actions (i.e. `action.yml` where the action is *not* a Docker
   or JavaScript action) are now supported, and are audited by default
@@ -110,7 +115,7 @@ as stability commitments for existing features; read more below!
     This can be used to connect to a GitHub Enterprise (GHE) instance
     instead of the default `github.com` instance.
 
-### Improved
+### Improvements 🌱
 
 * The [cache-poisoning] audit is now aware of common publishing actions
   and uses then to determine whether to produce a finding (#338, #341)
@@ -124,7 +129,7 @@ as stability commitments for existing features; read more below!
 * The [github-env] audit is now significantly more precise on `bash` and `pwsh`
   inputs (#354)
 
-### Fixed
+### Bug Fixes 🐛
 
 * The [excessive-permissions] audit is now less noisy on single-job workflows (#337)
 * Expressions like `function().foo.bar` are now parsed correctly (#340)
@@ -447,3 +452,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [template-injection]: ./audits.md#template-injection
 [secrets-inherit]: ./audits.md#secrets-inherit
 [unpinned-uses]: ./audits.md#unpinned-uses
+[bot-conditions]: ./audits.md#bot-conditions

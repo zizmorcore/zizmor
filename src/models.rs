@@ -636,7 +636,10 @@ impl<'w> Step<'w> {
 
     /// Returns a symbolic location for this [`Step`].
     pub(crate) fn location(&self) -> SymbolicLocation<'w> {
-        self.parent.location().with_step(self)
+        self.parent
+            .location()
+            .with_step(self)
+            .annotated("this step")
     }
 
     /// Like [`Step::location`], except with the step's `name`

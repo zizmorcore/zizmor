@@ -47,7 +47,7 @@ Unless needed for `git` operations, @actions/checkout should be used with
 If the persisted credential is needed, it should be made explicit
 with `#!yaml persist-credentials: true`.
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="artipacked.yml" hl_lines="7"
     on: push
@@ -59,7 +59,7 @@ with `#!yaml persist-credentials: true`.
           - uses: actions/checkout@v4
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="artipacked.yml" hl_lines="7-9"
     on: push
@@ -155,7 +155,7 @@ by default, and then set specific job-level permissions as needed.
 
 For example:
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="excessive-permissions.yml" hl_lines="8-9"
     on:
@@ -191,7 +191,7 @@ For example:
             uses: pypa/gh-action-pypi-publish@release/v1
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="excessive-permissions.yml" hl_lines="8 21-22"
     on:
@@ -245,7 +245,7 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 [encrypted secrets]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
     on:
@@ -269,7 +269,7 @@ Use [encrypted secrets] instead of hardcoded credentials.
           - run: echo 'hello!'
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
     on:
@@ -485,7 +485,7 @@ shell quoting/expansion rules.
     To avoid having to specialize your handling for different runners,
     you can set `shell: sh` or `shell: bash`.
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="template-injection.yml" hl_lines="3"
     - name: Check title
@@ -497,7 +497,7 @@ shell quoting/expansion rules.
         fi
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="template-injection.yml" hl_lines="3 8-9"
     - name: Check title
@@ -581,7 +581,7 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
 
 A before/after example is shown below.
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="unpinned-uses.yml" hl_lines="8 12"
     name: unpinned-uses
@@ -601,7 +601,7 @@ A before/after example is shown below.
           args: hello!
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="unpinned-uses.yml" hl_lines="8 12"
     name: unpinned-uses
@@ -652,7 +652,7 @@ Other resources:
 In general, users should use for [GitHub Actions environment files]
 (like `GITHUB_PATH` and `GITHUB_OUTPUT`) instead of using workflow commands.
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="insecure-commands" hl_lines="3"
     - name: Setup my-bin
@@ -662,7 +662,7 @@ In general, users should use for [GitHub Actions environment files]
         ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="insecure-commands" hl_lines="3"
     - name: Setup my-bin
@@ -763,9 +763,9 @@ intended to publish build artifacts:
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default |
 |----------|-------------------------|---------------|----------------|--------------------|
-| Workflow  | [secrets-inherit]   | v1.1.0      | ✅             | ✅                 |
+| Workflow  | [secrets-inherit.yml]   | v1.1.0      | ✅             | ✅                 |
 
-[secrets-inherit]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/secrets-inherit
+[secrets-inherit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/secrets-inherit.yml
 
 Detects excessive secret inheritance between calling workflows and reusable
 (called) workflows.
@@ -781,7 +781,7 @@ secrets a reusable workflow was executed with.
 In general, `secrets: inherit` should be replaced with a `secrets:` block
 that explicitly forwards each secret actually needed by the reusable workflow.
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="reusable.yml" hl_lines="4"
     jobs:
@@ -790,7 +790,7 @@ that explicitly forwards each secret actually needed by the reusable workflow.
         secrets: inherit
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="reusable.yml" hl_lines="4-6"
     jobs:
@@ -799,6 +799,78 @@ that explicitly forwards each secret actually needed by the reusable workflow.
         secrets:
           forward-me: ${{ secrets.forward-me }}
           me-too: ${{ secrets.me-too }}
+    ```
+
+## `bot-conditions`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [bot-conditions.yml]   | v1.2.0      | ✅             | ✅                 |
+
+[bot-conditions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/bot-conditions.yml
+
+Detects potentially spoofable bot conditions.
+
+Many workflows allow trustworthy bots (such as [Dependabot](https://github.com/dependabot))
+to bypass checks or otherwise perform privileged actions. This is often done
+with a `github.actor` check, e.g.:
+
+```yaml
+if: github.actor == 'dependabot[bot]'
+```
+
+However, this condition is spoofable: `github.actor` refers to the *last* actor
+to perform an "action" on the triggering context, and not necessarily
+the actor actually causing the trigger. An attacker can take
+advantage of this discrepancy to create a PR where the `HEAD` commit
+has `github.actor == 'dependabot[bot]'` but the rest of the branch history
+contains attacker-controlled code, bypassing the actor check.
+
+Other resources:
+
+* [GitHub Actions exploitations: Dependabot]
+
+### Remediation
+
+In general, checking a trigger's authenticity via `github.actor` is
+insufficient. Instead, most users should use `github.event.pull_request.user.login`
+or similar, since that context refers to the actor that *created* the Pull Request
+rather than the last one to modify it.
+
+More generally,
+[GitHub's documentation recommends](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions)
+not using `pull_request_target` for auto-merge workflows.
+
+=== "Before :warning:"
+
+    ```yaml title="bot-conditions.yml" hl_lines="1 6"
+    on: pull_request_target
+
+    jobs:
+      automerge:
+        runs-on: ubuntu-latest
+        if: github.actor == 'dependabot[bot] && github.repository == 'me/my-repo'
+        steps:
+          - run: gh pr merge --auto --merge "$PR_URL"
+            env:
+              PR_URL: ${{ github.event.pull_request.html_url }}
+              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="bot-conditions.yml" hl_lines="1 6"
+    on: pull_request
+
+    jobs:
+      automerge:
+        runs-on: ubuntu-latest
+        if: github.event.pull_request.user.login == 'dependabot[bot] && github.repository == 'me/my-repo'
+        steps:
+          - run: gh pr merge --auto --merge "$PR_URL"
+            env:
+              PR_URL: ${{ github.event.pull_request.html_url }}
+              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     ```
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
@@ -822,3 +894,4 @@ that explicitly forwards each secret actually needed by the reusable workflow.
 [reusable workflows]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 [Principle of Least Authority]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 [Cacheract: The Monster in your Build Cache]: https://adnanthekhan.com/2024/12/21/cacheract-the-monster-in-your-build-cache/
+[GitHub Actions exploitations: Dependabot]: https://www.synacktiv.com/publications/github-actions-exploitation-dependabot
