@@ -11,6 +11,11 @@ of `zizmor`.
 
 Nothing to see here (yet!)
 
+## v1.2.1
+
+This is a small corrective release for some SARIF behavior that
+changed with v1.2.0.
+
 ### Bug Fixes 🐛
 
 * SARIF outputs now use relative paths again, but more correctly
