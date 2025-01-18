@@ -32,6 +32,8 @@ of `zizmor`.
 * The [artipacked] audit now correctly handles the strings `'true'` and `'false'`
   as their boolean counterparts (#448)
 * Expressions that span multiple source lines are now parsed correctly (#461)
+* Workflows that contain `timeout-minutes: ${{ expr }}` are now parsed
+  correctly (#462)
 
 ## v1.1.1
 
