@@ -9,6 +9,19 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+Nothing to see here (yet!)
+
+## v1.2.0
+
+This release comes with one new audit ([bot-conditions]), plus a handful
+of bugfixes and analysis improvements to existing audits.
+
+One bugfix in this release is also a slight behavior change: `zizmor`
+now emits SARIF outputs with absolute paths. This should not affect most
+users, but may make it slightly harder to share SARIF outputs between
+machines without fully reproducing exact file paths. If this affects
+you, [please let us know](https://github.com/woodruffw/zizmor/issues/new?template=bug-report.yml)!
+
 ### New Features 🌈
 
 * **New audit**: [bot-conditions] detects spoofable uses of `github.actor`
