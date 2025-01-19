@@ -57,12 +57,9 @@ impl Audit for ExcessivePermissions {
 
         let all_jobs_have_permissions = workflow
             .jobs()
-            .filter_map(|job| {
-                let Job::NormalJob(job) = job else {
-                    return None;
-                };
-
-                Some(&job.permissions)
+            .map(|job| match job {
+                Job::NormalJob(job) => &job.permissions,
+                Job::ReusableWorkflowCallJob(job) => &job.permissions,
             })
             .all(|perm| !matches!(perm, Permissions::Base(BasePermission::Default)));
 
@@ -71,17 +68,21 @@ impl Audit for ExcessivePermissions {
             Permissions::Base(BasePermission::Default)
         );
 
-        // Top-level permissions are a minor issue if there's only one
-        // job in the workflow, since they're equivalent to job-level
-        // permissions in that case. Emit only pedantic findings in
-        // that case.
-        // Similarly, if all jobs in the workflow have their own explicit
-        // permissions, then any permissions set at the top-level are moot.
-        let persona = if workflow.jobs.len() == 1 || all_jobs_have_permissions {
-            Persona::Pedantic
-        } else {
-            Persona::Regular
-        };
+        let workflow_is_reusable_only =
+            workflow.has_workflow_call() && workflow.has_single_trigger();
+
+        // Top-level permissions are a pedantic finding under the following
+        // conditions:
+        //
+        // 1. The workflow has only one job.
+        // 2. All jobs in the workflow have their own explicit permissions.
+        // 3. The workflow is reusable and has only one trigger.
+        let workflow_finding_persona =
+            if workflow.jobs.len() == 1 || all_jobs_have_permissions || workflow_is_reusable_only {
+                Persona::Pedantic
+            } else {
+                Persona::Regular
+            };
 
         // Handle top-level permissions.
         let location = workflow.location().primary();
@@ -93,20 +94,35 @@ impl Audit for ExcessivePermissions {
                 Self::finding()
                     .severity(severity)
                     .confidence(confidence)
-                    .persona(persona)
+                    .persona(workflow_finding_persona)
                     .add_location(perm_location)
                     .build(workflow)?,
             );
         }
 
         for job in workflow.jobs() {
-            let Job::NormalJob(job) = &job else {
-                continue;
+            let (permissions, job_location, job_finding_persona) = match job {
+                Job::NormalJob(job) => {
+                    // For normal jobs: if the workflow is reusable-only, we
+                    // emit pedantic findings.
+                    let persona = if workflow_is_reusable_only {
+                        Persona::Pedantic
+                    } else {
+                        Persona::Regular
+                    };
+
+                    (&job.permissions, job.location(), persona)
+                }
+                Job::ReusableWorkflowCallJob(job) => {
+                    // For reusable jobs: the caller is always responsible for
+                    // permissions, so we emit regular findings even if
+                    // the workflow is reusable-only.
+                    (&job.permissions, job.location(), Persona::Regular)
+                }
             };
 
-            let job_location = job.location();
             if let Some((severity, confidence, perm_location)) = self.check_job_permissions(
-                &job.permissions,
+                permissions,
                 explicit_parent_permissions,
                 job_location.clone(),
             ) {
@@ -114,6 +130,7 @@ impl Audit for ExcessivePermissions {
                     Self::finding()
                         .severity(severity)
                         .confidence(confidence)
+                        .persona(job_finding_persona)
                         .add_location(job_location)
                         .add_location(perm_location.primary())
                         .build(workflow)?,

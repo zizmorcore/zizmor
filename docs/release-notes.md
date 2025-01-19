@@ -11,6 +11,11 @@ of `zizmor`.
 
 Nothing to see here (yet!)
 
+### Bug Fixes 🐛
+
+* The [excessive-permissions] audit is now more precise about both
+  reusable workflows and reusable workflow calls (#473)
+
 ## v1.2.1
 
 This is a small corrective release for some SARIF behavior that
