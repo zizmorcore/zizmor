@@ -457,7 +457,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 - repo: https://github.com/woodruffw/zizmor-pre-commit
-  rev: v1.2.1 # (1)!
+  rev: v1.2.2 # (1)!
   hooks:
   - id: zizmor
 ```
