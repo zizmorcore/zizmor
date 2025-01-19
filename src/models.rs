@@ -135,7 +135,7 @@ impl Workflow {
         Jobs::new(self)
     }
 
-    /// Whether this workflow's is triggered by pull_request_target.
+    /// Whether this workflow is triggered by pull_request_target.
     pub(crate) fn has_pull_request_target(&self) -> bool {
         match &self.on {
             Trigger::BareEvent(event) => *event == BareEvent::PullRequestTarget,
@@ -144,12 +144,30 @@ impl Workflow {
         }
     }
 
-    /// Whether this workflow's is triggered by workflow_run.
+    /// Whether this workflow is triggered by workflow_run.
     pub(crate) fn has_workflow_run(&self) -> bool {
         match &self.on {
             Trigger::BareEvent(event) => *event == BareEvent::WorkflowRun,
             Trigger::BareEvents(events) => events.contains(&BareEvent::WorkflowRun),
             Trigger::Events(events) => !matches!(events.workflow_run, OptionalBody::Missing),
+        }
+    }
+
+    /// Whether this workflow is triggered by workflow_call.
+    pub(crate) fn has_workflow_call(&self) -> bool {
+        match &self.on {
+            Trigger::BareEvent(event) => *event == BareEvent::WorkflowCall,
+            Trigger::BareEvents(events) => events.contains(&BareEvent::WorkflowCall),
+            Trigger::Events(events) => !matches!(events.workflow_call, OptionalBody::Missing),
+        }
+    }
+
+    /// Whether this workflow is triggered by exactly one event.
+    pub(crate) fn has_single_trigger(&self) -> bool {
+        match &self.on {
+            Trigger::BareEvent(_) => true,
+            Trigger::BareEvents(events) => events.len() == 1,
+            Trigger::Events(events) => events.count() == 1,
         }
     }
 }
