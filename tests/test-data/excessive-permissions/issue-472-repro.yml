@@ -1,0 +1,23 @@
+# repro case for https://github.com/woodruffw/zizmor/issues/472
+
+name: issue-472-repro
+
+on:
+  workflow_call:
+
+# no non-pedantic top-level permissions finding, since
+# the workflow is reusable-only
+
+jobs:
+  job1:
+    # no non-pedantic job-level permissions finding, since
+    # the workflow is reusable-only
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo hello
+
+  job2:
+    # normal permissions finding here, since callers are always
+    # responsible for setting permissions, even if the workflow
+    # is reusable-only
+    uses: ./.github/workflows/fake.yml
