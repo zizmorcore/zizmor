@@ -449,6 +449,12 @@ fn excessive_permissions() -> Result<()> {
         ))
         .run()?);
 
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test(
+            "excessive-permissions/reusable-workflow-other-triggers.yml"
+        ))
+        .run()?);
+
     Ok(())
 }
 

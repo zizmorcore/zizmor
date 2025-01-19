@@ -99,7 +99,7 @@ impl InputKey {
             InputKey::Local(local) => local
                 .prefix
                 .as_ref()
-                .and_then(|pfx| local.given_path.strip_prefix(dbg!(pfx)).ok())
+                .and_then(|pfx| local.given_path.strip_prefix(pfx).ok())
                 .unwrap_or_else(|| &local.given_path)
                 .as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),

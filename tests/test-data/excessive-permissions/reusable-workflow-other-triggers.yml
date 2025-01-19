@@ -1,0 +1,21 @@
+name: reusable-workflow-other-triggers
+
+on:
+  workflow_call:
+  push:
+
+# regular top-level finding, since we can be triggered by
+# either a workflow call or a push
+
+jobs:
+  job1:
+    # regular job-level finding, since we can be triggered by
+    # either a workflow call or a push
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo hello
+
+  job2:
+    # normal permissions finding here, since callers are always
+    # responsible for setting permissions
+    uses: ./.github/workflows/fake.yml
