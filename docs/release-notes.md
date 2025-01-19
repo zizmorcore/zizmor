@@ -11,6 +11,8 @@ of `zizmor`.
 
 Nothing to see here (yet!)
 
+## v1.2.2
+
 ### Bug Fixes 🐛
 
 * The [excessive-permissions] audit is now more precise about both
