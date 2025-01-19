@@ -121,7 +121,7 @@ macro_rules! audit_meta {
             }
 
             fn url() -> &'static str {
-                concat!("https://woodruffw.github.io/zizmor/audits#", $id)
+                concat!("https://woodruffw.github.io/zizmor/audits/#", $id)
             }
         }
     };
