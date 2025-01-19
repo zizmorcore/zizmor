@@ -12,6 +12,7 @@ use github_actions_models::common::RepositoryUses;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
 };
+use owo_colors::OwoColorize;
 use reqwest::{
     header::{HeaderMap, ACCEPT, AUTHORIZATION, USER_AGENT},
     StatusCode,
@@ -399,7 +400,16 @@ impl Client {
         // TODO: Could probably make this slightly faster by
         // streaming asynchronously into the decompression,
         // probably with the async-compression crate.
-        let contents = self.http.get(url).send().await?.bytes().await?;
+        let resp = self.http.get(&url).send().await?;
+
+        if !resp.status().is_success() {
+            return Err(anyhow!(
+                "failed to fetch {url}: {status}",
+                status = resp.status().red()
+            ));
+        }
+
+        let contents = resp.bytes().await?;
         let tar = GzDecoder::new(contents.deref());
 
         let mut archive = Archive::new(tar);
