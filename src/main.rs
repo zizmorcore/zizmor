@@ -202,7 +202,7 @@ fn collect_from_repo_dir(
             {
                 let action = Action::from_file(entry_path, Some(top_dir))?;
                 registry.register_input(action.into())?;
-            } else if entry_path.is_dir() && !entry_path.ends_with(".github/workflows") {
+            } else if entry_path.is_dir() {
                 // Recurse and limit the collection mode to only actions.
                 collect_from_repo_dir(top_dir, entry_path, &CollectionMode::ActionsOnly, registry)?;
             }
