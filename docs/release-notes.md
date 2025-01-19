@@ -11,6 +11,11 @@ of `zizmor`.
 
 Nothing to see here (yet!)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to discover actions within
+  subdirectories of `.github/workflows` (#477)
+
 ## v1.2.2
 
 ### Bug Fixes 🐛
