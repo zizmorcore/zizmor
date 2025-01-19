@@ -122,7 +122,7 @@ impl Audit for ExcessivePermissions {
             };
 
             if let Some((severity, confidence, perm_location)) = self.check_job_permissions(
-                &permissions,
+                permissions,
                 explicit_parent_permissions,
                 job_location.clone(),
             ) {
