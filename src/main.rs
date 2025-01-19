@@ -258,7 +258,16 @@ fn collect_from_repo_slug(
             registry.register_input(workflow.into())?;
         }
     } else {
-        let inputs = client.fetch_audit_inputs(&slug)?;
+        let inputs = client.fetch_audit_inputs(&slug).with_context(|| {
+            tip(
+                format!(
+                    "couldn't collect inputs from https://github.com/{owner}/{repo}",
+                    owner = slug.owner,
+                    repo = slug.repo
+                ),
+                "confirm the repository exists and that you have access to it",
+            )
+        })?;
 
         tracing::info!(
             "collected {len} inputs from {owner}/{repo}",
@@ -267,7 +276,7 @@ fn collect_from_repo_slug(
             repo = slug.repo
         );
 
-        for input in client.fetch_audit_inputs(&slug)? {
+        for input in inputs {
             registry.register_input(input)?;
         }
     }
