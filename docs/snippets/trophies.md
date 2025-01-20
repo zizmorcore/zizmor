@@ -514,6 +514,7 @@
     ---
 
     ??? example "Examples"
+        - pymc-devs/pymc#7624
         - pymc-devs/pytensor#1136
 
 
