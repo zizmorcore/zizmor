@@ -26,7 +26,7 @@ flate2 = "1.0.35"
 github-actions-models = "0.22.0"
 http-cache-reqwest = "0.15.0"
 human-panic = "2.0.1"
-indexmap = "2.7.0"
+indexmap = "2.7.1"
 indicatif = "0.17.9"
 itertools = "0.14.0"
 owo-colors = "4.1.0"
@@ -41,7 +41,7 @@ reqwest = { version = "0.12.12", features = [
 reqwest-middleware = "0.4.0"
 serde = { version = "1.0.217", features = ["derive"] }
 serde-sarif = "0.7.0"
-serde_json = "1.0.135"
+serde_json = "1.0.137"
 serde_yaml = "0.9.34"
 # TODO remove pending https://github.com/tree-sitter/tree-sitter/pull/4034
 streaming-iterator = "0.1.9"
@@ -49,7 +49,7 @@ tar = "0.4.43"
 terminal-link = "0.1.0"
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
-tracing-indicatif = "0.3.8"
+tracing-indicatif = "0.3.9"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 tree-sitter = "0.24.7"
 tree-sitter-bash = "0.23.3"
