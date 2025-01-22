@@ -849,7 +849,7 @@ not using `pull_request_target` for auto-merge workflows.
     jobs:
       automerge:
         runs-on: ubuntu-latest
-        if: github.actor == 'dependabot[bot] && github.repository == 'me/my-repo'
+        if: github.actor == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
         steps:
           - run: gh pr merge --auto --merge "$PR_URL"
             env:
@@ -865,7 +865,7 @@ not using `pull_request_target` for auto-merge workflows.
     jobs:
       automerge:
         runs-on: ubuntu-latest
-        if: github.event.pull_request.user.login == 'dependabot[bot] && github.repository == 'me/my-repo'
+        if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
         steps:
           - run: gh pr merge --auto --merge "$PR_URL"
             env:
