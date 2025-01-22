@@ -11,6 +11,11 @@ of `zizmor`.
 
 Nothing to see here (yet!)
 
+### Improvements 🌱
+
+* `zizmor` produces slightly more informative error messages when given
+  an invalid input file (#482)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would fail to discover actions within
