@@ -128,6 +128,17 @@ fn test_conflicting_online_options() -> Result<()> {
 }
 
 #[test]
+fn test_invalid_inputs() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .output(OutputMode::Stderr)
+        .offline(true)
+        .workflow(workflow_under_test("invalid/invalid-workflow.yml"))
+        .run()?);
+
+    Ok(())
+}
+
+#[test]
 fn artipacked() -> Result<()> {
     insta::assert_snapshot!(zizmor()
         .workflow(workflow_under_test("artipacked.yml"))

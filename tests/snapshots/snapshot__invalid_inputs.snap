@@ -1,0 +1,17 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().output(OutputMode::Stderr).offline(true).workflow(workflow_under_test(\"invalid/invalid-workflow.yml\")).run()?"
+snapshot_kind: text
+---
+failed to register input: @@INPUT@@
+
+Caused by:
+    0: invalid GitHub Actions workflow: file://@@INPUT@@
+       
+       Caused by:
+           jobs: data did not match any variant of untagged enum Job at line 10 column 3
+    1: invalid GitHub Actions definition: file://@@INPUT@@
+       
+       Caused by:
+           missing field `runs`
+    2: failed to register input as workflow or action
