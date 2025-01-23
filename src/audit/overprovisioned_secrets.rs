@@ -32,7 +32,7 @@ impl Audit for OverprovisionedSecrets {
                 continue;
             };
 
-            dbg!(expr.as_curly());
+            expr.as_curly();
 
             for _ in Self::secrets_expansions(&parsed) {
                 let start_point = input.line_index().line_col((span.start as u32).into());
@@ -53,7 +53,7 @@ impl Audit for OverprovisionedSecrets {
                                     end_point.into(),
                                     span.start..span.end,
                                 ),
-                                feature: dbg!(&raw[span.start..span.end]),
+                                feature: &raw[span.start..span.end],
                                 comments: vec![], // TODO: extract comments
                             },
                         ))
@@ -62,7 +62,7 @@ impl Audit for OverprovisionedSecrets {
             }
         }
 
-        dbg!(findings.len());
+        findings.len();
 
         Ok(findings)
     }
