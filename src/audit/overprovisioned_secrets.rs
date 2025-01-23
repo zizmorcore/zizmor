@@ -1,6 +1,6 @@
 use crate::{
     expr::Expr,
-    finding::{Confidence, Feature, Location, Severity},
+    finding::{ConcreteLocation, Confidence, Feature, Location, Severity},
     utils::extract_expressions,
 };
 
@@ -11,7 +11,7 @@ pub(crate) struct OverprovisionedSecrets;
 audit_meta!(
     OverprovisionedSecrets,
     "overprovisioned-secrets",
-    "detects secrets that are overprovisioned"
+    "excessively provisioned secrets"
 );
 
 impl Audit for OverprovisionedSecrets {
@@ -32,16 +32,28 @@ impl Audit for OverprovisionedSecrets {
                 continue;
             };
 
+            dbg!(expr.as_curly());
+
             for _ in Self::secrets_expansions(&parsed) {
+                let start_point = input.line_index().line_col((span.start as u32).into());
+                let end_point = input.line_index().line_col((span.end as u32).into());
+
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
                         .severity(Severity::Medium)
                         .add_raw_location(Location::new(
-                            input.location(),
+                            input
+                                .location()
+                                .annotated("injects the entire secrets context into the runner")
+                                .primary(),
                             Feature {
-                                location: todo!(),
-                                feature: todo!(),
+                                location: ConcreteLocation::new(
+                                    start_point.into(),
+                                    end_point.into(),
+                                    span.start..span.end,
+                                ),
+                                feature: dbg!(&raw[span.start..span.end]),
                                 comments: vec![], // TODO: extract comments
                             },
                         ))
@@ -49,6 +61,8 @@ impl Audit for OverprovisionedSecrets {
                 );
             }
         }
+
+        dbg!(findings.len());
 
         Ok(findings)
     }

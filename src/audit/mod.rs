@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use github_actions_models::action;
+use line_index::LineIndex;
 use tracing::instrument;
 use yamlpath::Document;
 
@@ -48,6 +49,13 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => &workflow.document,
             AuditInput::Action(action) => &action.document,
+        }
+    }
+
+    pub(crate) fn line_index(&self) -> &LineIndex {
+        match self {
+            AuditInput::Workflow(workflow) => &workflow.line_index,
+            AuditInput::Action(action) => &action.line_index,
         }
     }
 

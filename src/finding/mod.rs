@@ -1,9 +1,10 @@
 //! Models and APIs for handling findings and their locations.
 
-use std::{borrow::Cow, sync::LazyLock};
+use std::{borrow::Cow, ops::Range, sync::LazyLock};
 
 use anyhow::{anyhow, Result};
 use clap::ValueEnum;
+use line_index::LineCol;
 use regex::Regex;
 use serde::Serialize;
 use terminal_link::Link;
@@ -232,6 +233,15 @@ pub(crate) struct Point {
     pub(crate) column: usize,
 }
 
+impl From<LineCol> for Point {
+    fn from(value: LineCol) -> Self {
+        Self {
+            row: value.line as usize,
+            column: value.col as usize,
+        }
+    }
+}
+
 /// A "concrete" location for some feature.
 /// Every concrete location contains two spans: a line-and-column span,
 /// and an offset range.
@@ -239,8 +249,17 @@ pub(crate) struct Point {
 pub(crate) struct ConcreteLocation {
     pub(crate) start_point: Point,
     pub(crate) end_point: Point,
-    pub(crate) start_offset: usize,
-    pub(crate) end_offset: usize,
+    pub(crate) offset_span: Range<usize>,
+}
+
+impl ConcreteLocation {
+    pub(crate) fn new(start_point: Point, end_point: Point, offset_span: Range<usize>) -> Self {
+        Self {
+            start_point,
+            end_point,
+            offset_span,
+        }
+    }
 }
 
 impl From<&yamlpath::Location> for ConcreteLocation {
@@ -254,8 +273,7 @@ impl From<&yamlpath::Location> for ConcreteLocation {
                 row: value.point_span.1 .0,
                 column: value.point_span.1 .1,
             },
-            start_offset: value.byte_span.0,
-            end_offset: value.byte_span.1,
+            offset_span: value.byte_span.0..value.byte_span.1,
         }
     }
 }
@@ -380,11 +398,13 @@ impl<'w> FindingBuilder<'w> {
     }
 
     pub(crate) fn build(self, document: &'w impl AsRef<yamlpath::Document>) -> Result<Finding<'w>> {
-        let locations = self
+        let mut locations = self
             .locations
             .iter()
             .map(|l| l.clone().concretize(document))
             .collect::<Result<Vec<_>>>()?;
+
+        locations.extend(self.raw_locations);
 
         if !locations.iter().any(|l| l.symbolic.primary) {
             return Err(anyhow!(
@@ -392,7 +412,7 @@ impl<'w> FindingBuilder<'w> {
             ));
         }
 
-        let should_ignore = self.ignored_from_inlined_comment(&locations, self.ident);
+        let should_ignore = Self::ignored_from_inlined_comment(&locations, self.ident);
 
         Ok(Finding {
             ident: self.ident,
@@ -408,7 +428,7 @@ impl<'w> FindingBuilder<'w> {
         })
     }
 
-    fn ignored_from_inlined_comment(&self, locations: &[Location], id: &str) -> bool {
+    fn ignored_from_inlined_comment(locations: &[Location], id: &str) -> bool {
         locations
             .iter()
             .flat_map(|l| &l.concrete.comments)

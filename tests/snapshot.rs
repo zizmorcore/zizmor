@@ -503,3 +503,12 @@ fn bot_conditions() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn overprovisioned_secrets() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("overprovisioned-secrets.yml"))
+        .run()?);
+
+    Ok(())
+}

@@ -62,7 +62,10 @@ pub(crate) fn finding_snippet<'w>(
                     };
 
                     Level::from(&finding.determinations.severity)
-                        .span(loc.concrete.location.start_offset..loc.concrete.location.end_offset)
+                        .span(
+                            loc.concrete.location.offset_span.start
+                                ..loc.concrete.location.offset_span.end,
+                        )
                         .label(annotation)
                 })),
         );
