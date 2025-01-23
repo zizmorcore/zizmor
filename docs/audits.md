@@ -873,6 +873,67 @@ not using `pull_request_target` for auto-merge workflows.
               GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     ```
 
+## `overprovisioned-secrets`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅             | ✅                 |
+
+[overprovisioned-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/overprovisioned-secrets.yml
+
+Detects excessive sharing of the `secrets` context.
+
+Typically, users access the `secrets` context via its individual members:
+
+```yaml
+env:
+  SECRET_ONE: ${{ secrets.SECRET_ONE }}
+  SECRET_TWO: ${{ secrets.SECRET_TWO }}
+```
+
+This allows the Actions runner to only expose the secrets actually used by
+the workflow to the job environment.
+
+However, if the user instead accesses the *entire* `secrets` context:
+
+```yaml
+env:
+  SECRETS: ${{ toJson(secrets) }}
+```
+
+...then the entire `secrets` context is exposed to the runner, even if
+only a single secret is actually needed.
+
+### Remediation
+
+In general, users should avoid loading the entire `secrets` context.
+Secrets should be accessed individually by name.
+
+=== "Before :warning:"
+
+    ```yaml title="overprovisioned.yml" hl_lines="7"
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - run: ./deploy.sh
+            env:
+              SECRETS: ${{ toJSON(secrets) }}
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="overprovisioned.yml" hl_lines="7-8"
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - run: ./deploy.sh
+            env:
+              SECRET_ONE: ${{ secrets.SECRET_ONE }}
+              SECRET_TWO: ${{ secrets.SECRET_TWO }}
+    ```
+
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd

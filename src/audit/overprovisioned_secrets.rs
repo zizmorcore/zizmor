@@ -77,10 +77,10 @@ impl OverprovisionedSecrets {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
                 // would plausible call with the entire `secrets` object?
-                if func == "toJSON"
+                if func.eq_ignore_ascii_case("toJSON")
                     && args
                         .iter()
-                        .any(|arg| matches!(arg, Expr::Context { raw, components: _ } if raw == "secrets"))
+                        .any(|arg| matches!(arg, Expr::Context { raw, components: _ } if raw.eq_ignore_ascii_case("secrets")))
                 {
                     results.push(());
                 } else {
@@ -111,6 +111,9 @@ mod tests {
             ("secrets", 0),
             ("toJSON(secrets.foo)", 0),
             ("toJSON(secrets)", 1),
+            ("tojson(secrets)", 1),
+            ("toJSON(SECRETS)", 1),
+            ("tOjSoN(sECrEtS)", 1),
             ("false || toJSON(secrets)", 1),
             ("toJSON(secrets) || toJSON(secrets)", 2),
             ("format('{0}', toJSON(secrets))", 1),
