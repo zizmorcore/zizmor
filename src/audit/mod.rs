@@ -21,6 +21,7 @@ pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod insecure_commands;
 pub(crate) mod known_vulnerable_actions;
+pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
 pub(crate) mod secrets_inherit;
 pub(crate) mod self_hosted_runner;
@@ -147,6 +148,10 @@ pub(crate) use audit_meta;
 /// 2. [`Audit::audit_composite_step`]: runs on each composite step within the
 ///    action (most specific)
 ///
+/// For both:
+///
+/// 1. [`Audit::audit_raw`]: runs on the raw, unparsed YAML document source
+///
 /// Picking a higher specificity means that the lower methods are shadowed.
 /// In other words, if an audit chooses to implement [`Audit::audit`], it should implement
 /// **only** [`Audit::audit`] and not [`Audit::audit_normal_job`] or
@@ -208,15 +213,23 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
+    fn audit_raw<'w>(&self, _raw: &'w str) -> Result<Vec<Finding<'w>>> {
+        Ok(vec![])
+    }
+
     /// The top-level auditing function for both workflows and actions.
     ///
     /// Implementors **should not** override this blanket implementation,
     /// since it's marked with tracing instrumentation.
     #[instrument(skip(self))]
     fn audit<'w>(&self, input: &'w AuditInput) -> Result<Vec<Finding<'w>>> {
-        match input {
+        let mut results = match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow),
             AuditInput::Action(action) => self.audit_action(action),
-        }
+        }?;
+
+        results.extend(self.audit_raw(input.document().source())?);
+
+        Ok(results)
     }
 }
