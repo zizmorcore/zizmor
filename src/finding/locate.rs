@@ -21,8 +21,8 @@ impl Locator {
 
         // If we don't have a path into the workflow, all
         // we have is the workflow itself.
-        let (feature, parent_feature) = if location.route.components.is_empty() {
-            (document.root(), document.root())
+        let feature = if location.route.components.is_empty() {
+            document.root()
         } else {
             let mut builder = yamlpath::QueryBuilder::new();
 
@@ -35,25 +35,17 @@ impl Locator {
 
             let query = builder.build();
 
-            let parent_feature = if let Some(parent) = query.parent() {
-                document.query(&parent)?
-            } else {
-                document.root()
-            };
-
-            (document.query(&query)?, parent_feature)
+            document.query(&query)?
         };
 
         Ok(Feature {
             location: ConcreteLocation::from(&feature.location),
-            parent_location: ConcreteLocation::from(&parent_feature.location),
             feature: document.extract_with_leading_whitespace(&feature),
             comments: document
                 .feature_comments(&feature)
                 .into_iter()
                 .map(Comment)
                 .collect(),
-            parent_feature: document.extract_with_leading_whitespace(&parent_feature),
         })
     }
 }

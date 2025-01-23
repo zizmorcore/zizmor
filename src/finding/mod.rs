@@ -265,19 +265,11 @@ pub(crate) struct Feature<'w> {
     /// The feature's concrete location, as both an offset range and point span.
     pub(crate) location: ConcreteLocation,
 
-    /// The feature's concrete parent location.
-    /// This can be the same as the feature's own location, if the feature
-    /// is the document root.
-    pub(crate) parent_location: ConcreteLocation,
-
     /// The feature's textual content.
     pub(crate) feature: &'w str,
 
     /// Any comments within the feature's span.
     pub(crate) comments: Vec<Comment<'w>>,
-
-    /// The feature's parent's textual content.
-    pub(crate) parent_feature: &'w str,
 }
 
 /// A location within a GitHub Actions workflow, with both symbolic and concrete components.
