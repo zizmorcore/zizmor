@@ -305,6 +305,12 @@ pub(crate) struct Location<'w> {
     pub(crate) concrete: Feature<'w>,
 }
 
+impl<'w> Location<'w> {
+    pub(crate) fn new(symbolic: SymbolicLocation<'w>, concrete: Feature<'w>) -> Self {
+        Self { symbolic, concrete }
+    }
+}
+
 /// A finding's "determination," i.e. its various classifications.
 #[derive(Serialize)]
 pub(crate) struct Determinations {
@@ -330,6 +336,7 @@ pub(crate) struct FindingBuilder<'w> {
     severity: Severity,
     confidence: Confidence,
     persona: Persona,
+    raw_locations: Vec<Location<'w>>,
     locations: Vec<SymbolicLocation<'w>>,
 }
 
@@ -342,6 +349,7 @@ impl<'w> FindingBuilder<'w> {
             severity: Default::default(),
             confidence: Default::default(),
             persona: Default::default(),
+            raw_locations: vec![],
             locations: vec![],
         }
     }
@@ -358,6 +366,11 @@ impl<'w> FindingBuilder<'w> {
 
     pub(crate) fn persona(mut self, persona: Persona) -> Self {
         self.persona = persona;
+        self
+    }
+
+    pub(crate) fn add_raw_location(mut self, location: Location<'w>) -> Self {
+        self.raw_locations.push(location);
         self
     }
 

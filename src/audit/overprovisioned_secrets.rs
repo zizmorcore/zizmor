@@ -1,8 +1,10 @@
-use std::ops::Range;
+use crate::{
+    expr::Expr,
+    finding::{Confidence, Feature, Location, Severity},
+    utils::extract_expressions,
+};
 
-use crate::{expr::Expr, utils::extract_expressions};
-
-use super::{audit_meta, Audit};
+use super::{audit_meta, Audit, AuditInput};
 
 pub(crate) struct OverprovisionedSecrets;
 
@@ -20,22 +22,90 @@ impl Audit for OverprovisionedSecrets {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(&self, raw: &'w str) -> anyhow::Result<Vec<super::Finding<'w>>> {
+    fn audit_raw<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<super::Finding<'w>>> {
+        let mut findings = vec![];
+        let raw = input.document().source();
+
         for (expr, span) in extract_expressions(raw) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
 
-            // todo!()
+            for _ in Self::secrets_expansions(&parsed) {
+                findings.push(
+                    Self::finding()
+                        .confidence(Confidence::High)
+                        .severity(Severity::Medium)
+                        .add_raw_location(Location::new(
+                            input.location(),
+                            Feature {
+                                location: todo!(),
+                                feature: todo!(),
+                                comments: vec![], // TODO: extract comments
+                            },
+                        ))
+                        .build(input)?,
+                );
+            }
         }
 
-        Ok(vec![])
+        Ok(findings)
     }
 }
 
 impl OverprovisionedSecrets {
-    fn secrets_expansions(span: Range<usize>, expr: &Expr) -> Vec<Range<usize>> {
-        todo!()
+    fn secrets_expansions(expr: &Expr) -> Vec<()> {
+        let mut results = vec![];
+
+        match expr {
+            Expr::Call { func, args } => {
+                // TODO: Consider any function call that accepts bare `secrets`
+                // to be a finding? Are there any other functions that users
+                // would plausible call with the entire `secrets` object?
+                if func == "toJSON"
+                    && args
+                        .iter()
+                        .any(|arg| matches!(arg, Expr::Context { raw, components: _ } if raw == "secrets"))
+                {
+                    results.push(());
+                } else {
+                    results.extend(args.iter().flat_map(Self::secrets_expansions));
+                }
+            }
+            Expr::Index(expr) => results.extend(Self::secrets_expansions(expr)),
+            Expr::Context { raw: _, components } => {
+                results.extend(components.iter().flat_map(Self::secrets_expansions))
+            }
+            Expr::BinOp { lhs, op: _, rhs } => {
+                results.extend(Self::secrets_expansions(lhs));
+                results.extend(Self::secrets_expansions(rhs));
+            }
+            Expr::UnOp { op: _, expr } => results.extend(Self::secrets_expansions(expr)),
+            _ => (),
+        }
+
+        results
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_secrets_expansions() {
+        for (expr, count) in &[
+            ("secrets", 0),
+            ("toJSON(secrets.foo)", 0),
+            ("toJSON(secrets)", 1),
+            ("false || toJSON(secrets)", 1),
+            ("toJSON(secrets) || toJSON(secrets)", 2),
+            ("format('{0}', toJSON(secrets))", 1),
+        ] {
+            let expr = crate::expr::Expr::parse(expr).unwrap();
+            assert_eq!(
+                super::OverprovisionedSecrets::secrets_expansions(&expr).len(),
+                *count
+            );
+        }
     }
 }

@@ -3,9 +3,10 @@
 use anyhow::Result;
 use github_actions_models::action;
 use tracing::instrument;
+use yamlpath::Document;
 
 use crate::{
-    finding::{Finding, FindingBuilder},
+    finding::{Finding, FindingBuilder, SymbolicLocation},
     models::{Action, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
     registry::InputKey,
     state::AuditState,
@@ -55,6 +56,19 @@ impl AuditInput {
             AuditInput::Workflow(workflow) => workflow.link.as_deref(),
             AuditInput::Action(action) => action.link.as_deref(),
         }
+    }
+
+    pub(crate) fn location(&self) -> SymbolicLocation {
+        match self {
+            AuditInput::Workflow(workflow) => workflow.location(),
+            AuditInput::Action(action) => action.location(),
+        }
+    }
+}
+
+impl AsRef<Document> for AuditInput {
+    fn as_ref(&self) -> &Document {
+        self.document()
     }
 }
 
@@ -213,7 +227,7 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_raw<'w>(&self, _raw: &'w str) -> Result<Vec<Finding<'w>>> {
+    fn audit_raw<'w>(&self, _input: &'w AuditInput) -> Result<Vec<Finding<'w>>> {
         Ok(vec![])
     }
 
@@ -228,7 +242,7 @@ pub(crate) trait Audit: AuditCore {
             AuditInput::Action(action) => self.audit_action(action),
         }?;
 
-        results.extend(self.audit_raw(input.document().source())?);
+        results.extend(self.audit_raw(input)?);
 
         Ok(results)
     }
