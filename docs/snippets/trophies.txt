@@ -136,6 +136,7 @@ Saghen/blink.cmp#991
 sigstore/cosign#3959
 sigstore/fulcio#1910
 sigstore/gitsign#602
+sigstore/sigstore-rs#424
 simpeg/simpeg#1592
 termcolor/termcolor#89
 termux/termux-packages#22519
