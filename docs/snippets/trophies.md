@@ -675,6 +675,7 @@
         - sigstore/cosign#3959
         - sigstore/fulcio#1910
         - sigstore/gitsign#602
+        - sigstore/sigstore-rs#424
 
 
 -   ![](https://github.com/simpeg.png?size=40){ width="40" loading=lazy align=left } simpeg
