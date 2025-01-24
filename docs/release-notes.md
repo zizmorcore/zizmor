@@ -20,6 +20,8 @@ Nothing to see here (yet!)
 
 * Fixed a bug where `zizmor` would fail to discover actions within
   subdirectories of `.github/workflows` (#477)
+* Fixed a bug where `zizmor` would fail to parse composite action definitions
+  with no `name` field (#487)
 
 ## v1.2.2
 
