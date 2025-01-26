@@ -14,6 +14,7 @@ use github_actions_models::workflow::job::{RunsOn, Strategy};
 use github_actions_models::workflow::{self, job, job::StepBody, Trigger};
 use github_actions_models::{action, common};
 use indexmap::IndexMap;
+use line_index::LineIndex;
 use serde_json::{json, Value};
 use terminal_link::Link;
 
@@ -66,6 +67,7 @@ pub(crate) struct Workflow {
     /// A clickable (OSC 8) link to this workflow, if remote.
     pub(crate) link: Option<String>,
     pub(crate) document: yamlpath::Document,
+    pub(crate) line_index: LineIndex,
     inner: workflow::Workflow,
 }
 
@@ -97,6 +99,8 @@ impl Workflow {
 
         let document = yamlpath::Document::new(&contents)?;
 
+        let line_index = LineIndex::new(&contents);
+
         let link = match key {
             InputKey::Local(_) => None,
             InputKey::Remote(_) => {
@@ -109,6 +113,7 @@ impl Workflow {
             link,
             key,
             document,
+            line_index,
             inner,
         })
     }
@@ -707,6 +712,7 @@ pub(crate) struct Action {
     pub(crate) key: InputKey,
     pub(crate) link: Option<String>,
     pub(crate) document: yamlpath::Document,
+    pub(crate) line_index: LineIndex,
     inner: action::Action,
 }
 
@@ -745,6 +751,8 @@ impl Action {
 
         let document = yamlpath::Document::new(&contents)?;
 
+        let line_index = LineIndex::new(&contents);
+
         let link = match key {
             InputKey::Local(_) => None,
             InputKey::Remote(_) => {
@@ -757,6 +765,7 @@ impl Action {
             key,
             link,
             document,
+            line_index,
             inner,
         })
     }

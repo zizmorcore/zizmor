@@ -377,6 +377,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::cache_poisoning::CachePoisoning);
     register_audit!(audit::secrets_inherit::SecretsInherit);
     register_audit!(audit::bot_conditions::BotConditions);
+    register_audit!(audit::overprovisioned_secrets::OverprovisionedSecrets);
 
     let mut results = FindingRegistry::new(&app, &config);
     {

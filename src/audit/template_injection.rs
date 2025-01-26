@@ -168,7 +168,7 @@ impl TemplateInjection {
         step: &impl StepCommon<'s>,
     ) -> Vec<(String, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
-        for expr in extract_expressions(run) {
+        for (expr, _) in extract_expressions(run) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
