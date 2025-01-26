@@ -1,6 +1,6 @@
 use crate::{
     expr::Expr,
-    finding::{ConcreteLocation, Confidence, Feature, Location, Severity},
+    finding::{Confidence, Feature, Location, Severity},
     utils::extract_expressions,
 };
 
@@ -35,9 +35,6 @@ impl Audit for OverprovisionedSecrets {
             expr.as_curly();
 
             for _ in Self::secrets_expansions(&parsed) {
-                let start_point = input.line_index().line_col((span.start as u32).into());
-                let end_point = input.line_index().line_col((span.end as u32).into());
-
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
@@ -47,15 +44,7 @@ impl Audit for OverprovisionedSecrets {
                                 .location()
                                 .annotated("injects the entire secrets context into the runner")
                                 .primary(),
-                            Feature {
-                                location: ConcreteLocation::new(
-                                    start_point.into(),
-                                    end_point.into(),
-                                    span.start..span.end,
-                                ),
-                                feature: &raw[span.start..span.end],
-                                comments: vec![], // TODO: extract comments
-                            },
+                            Feature::from_span(&span, input),
                         ))
                         .build(input)?,
                 );

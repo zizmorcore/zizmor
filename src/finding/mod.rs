@@ -4,12 +4,13 @@ use std::{borrow::Cow, ops::Range, sync::LazyLock};
 
 use anyhow::{anyhow, Result};
 use clap::ValueEnum;
-use line_index::LineCol;
+use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
 use terminal_link::Link;
 
 use crate::{
+    audit::AuditInput,
     models::{CompositeStep, JobExt, Step},
     registry::InputKey,
 };
@@ -278,11 +279,13 @@ impl From<&yamlpath::Location> for ConcreteLocation {
     }
 }
 
+static ANY_COMMENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"#.*$").unwrap());
+
 static IGNORE_EXPR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^# zizmor: ignore\[(.+)\]\s*$").unwrap());
+    LazyLock::new(|| Regex::new(r"# zizmor: ignore\[(.+)\]\s*$").unwrap());
 
 /// Represents a single source comment.
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(transparent)]
 pub(crate) struct Comment<'w>(&'w str);
 
@@ -310,8 +313,52 @@ pub(crate) struct Feature<'w> {
     /// The feature's textual content.
     pub(crate) feature: &'w str,
 
-    /// Any comments within the feature's span.
+    /// Any comments within the feature's line span.
     pub(crate) comments: Vec<Comment<'w>>,
+}
+
+impl<'w> Feature<'w> {
+    pub(crate) fn from_span(span: &Range<usize>, input: &'w AuditInput) -> Self {
+        let raw = input.document().source();
+        let start = TextSize::new(span.start as u32);
+        let end = TextSize::new(span.end as u32);
+
+        let start_point = input.line_index().line_col(start);
+        let end_point = input.line_index().line_col(end);
+
+        // Extract any comments within the feature's line span.
+        //
+        // This is slightly less precise than comment extraction
+        // when concretizing a symbolic location, since we're operating
+        // on a raw span rather than an AST-aware YAML path.
+        //
+        // NOTE: We can't use LineIndex::lines() to extract the comment-eligible
+        // lines, because it doesn't include full line spans if the input
+        // span is a strict subset of a single line.
+        let comments = (start_point.line..=end_point.line)
+            .into_iter()
+            .flat_map(|line| {
+                // NOTE: We don't really expect this to fail, since this
+                // line range comes from the line index itself.
+                let line = input.line_index().line(line)?;
+                // Chomp the trailing newline rather than enabling
+                // multi-line mode in ANY_COMMENT, on the theory that
+                // chomping is a little faster.
+                let line = &raw[line].trim_end();
+                ANY_COMMENT.is_match(line).then(|| Comment(line))
+            })
+            .collect();
+
+        Feature {
+            location: ConcreteLocation::new(
+                start_point.into(),
+                end_point.into(),
+                span.start..span.end,
+            ),
+            feature: &raw[span.start..span.end],
+            comments,
+        }
+    }
 }
 
 /// A location within a GitHub Actions workflow, with both symbolic and concrete components.
