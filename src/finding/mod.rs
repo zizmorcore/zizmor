@@ -336,7 +336,6 @@ impl<'w> Feature<'w> {
         // lines, because it doesn't include full line spans if the input
         // span is a strict subset of a single line.
         let comments = (start_point.line..=end_point.line)
-            .into_iter()
             .flat_map(|line| {
                 // NOTE: We don't really expect this to fail, since this
                 // line range comes from the line index itself.
@@ -345,7 +344,7 @@ impl<'w> Feature<'w> {
                 // multi-line mode in ANY_COMMENT, on the theory that
                 // chomping is a little faster.
                 let line = &raw[line].trim_end();
-                ANY_COMMENT.is_match(line).then(|| Comment(line))
+                ANY_COMMENT.is_match(line).then_some(Comment(line))
             })
             .collect();
 
