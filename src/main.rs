@@ -356,7 +356,7 @@ fn run() -> Result<ExitCode> {
             use crate::audit::AuditCore as _;
             match base::new(audit_state.clone()) {
                 Ok(audit) => audit_registry.register_audit(base::ident(), Box::new(audit)),
-                Err(e) => tracing::warn!("skipping {audit}: {e}", audit = base::ident()),
+                Err(e) => tracing::info!("skipping {audit}: {e}", audit = base::ident()),
             }
         }};
     }
