@@ -9,7 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
-Nothing to see here (yet!)
+### New Features 🌈
+
+* **New audit**: [overprovisioned-secrets] detects uses of the `secrets`
+  context that result in excessive secret provisioning (#485)
 
 ### Improvements 🌱
 
@@ -502,3 +505,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [secrets-inherit]: ./audits.md#secrets-inherit
 [unpinned-uses]: ./audits.md#unpinned-uses
 [bot-conditions]: ./audits.md#bot-conditions
+[overprovisioned-secrets]: ./audits.md#overprovisioned-secrets
