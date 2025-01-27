@@ -203,6 +203,7 @@ impl TemplateInjection {
                         Confidence::Low,
                         Persona::default(),
                     ));
+                // TODO: Handle env being case-insensitive.
                 } else if let Some(env) = context.as_str().strip_prefix("env.") {
                     let env_is_static = step.env_is_static(env);
 
@@ -214,7 +215,7 @@ impl TemplateInjection {
                             Persona::default(),
                         ));
                     }
-                } else if context.child_of("github.event") || context.child_of("github") {
+                } else if context.child_of("github") {
                     // TODO: Filter these more finely; not everything in the event
                     // context is actually attacker-controllable.
                     bad_expressions.push((

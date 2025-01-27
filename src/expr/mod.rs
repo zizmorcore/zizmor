@@ -387,6 +387,11 @@ mod tests {
             // Trivial child cases.
             ("foo", true),
             ("foo.bar", true),
+            // Case-insensitive cases.
+            ("FOO", true),
+            ("FOO.BAR", true),
+            ("Foo", true),
+            ("Foo.Bar", true),
             // We consider a context to be a child of itself.
             ("foo.bar.baz", true),
             // Trivial non-child cases.
