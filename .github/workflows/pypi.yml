@@ -40,7 +40,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
+        uses: PyO3/maturin-action@5f8a1b3b0aad13193f46c9131f9b9e663def8ce5 # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -70,7 +70,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
+        uses: PyO3/maturin-action@5f8a1b3b0aad13193f46c9131f9b9e663def8ce5 # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -96,7 +96,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
+        uses: PyO3/maturin-action@5f8a1b3b0aad13193f46c9131f9b9e663def8ce5 # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -121,7 +121,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
+        uses: PyO3/maturin-action@5f8a1b3b0aad13193f46c9131f9b9e663def8ce5 # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -139,7 +139,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build sdist
-        uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
+        uses: PyO3/maturin-action@5f8a1b3b0aad13193f46c9131f9b9e663def8ce5 # v1
         with:
           command: sdist
           args: --out dist
@@ -167,12 +167,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@7668571508540a607bdfd90a87a560489fe372eb # v2
+        uses: actions/attest-build-provenance@520d128f165991a6c774bcb264f323e3d70747f4 # v2
         with:
           subject-path: 'wheels-*/*'
       - name: Publish to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
+        uses: PyO3/maturin-action@5f8a1b3b0aad13193f46c9131f9b9e663def8ce5 # v1
         with:
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
