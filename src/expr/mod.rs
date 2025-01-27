@@ -11,42 +11,42 @@ use pest_derive::Parser;
 struct ExprParser;
 
 #[derive(Debug)]
-pub(crate) struct Context {
-    pub(crate) full: String,
-    pub(crate) components: Vec<Expr>,
+pub(crate) struct Context<'src> {
+    pub(crate) raw: &'src str,
+    pub(crate) components: Vec<Expr<'src>>,
 }
 
-impl Context {
+impl<'src> Context<'src> {
     /// Creates a new `Context` from the given string.
     ///
     /// Assumes that the string is a well-formed context string, and that
     /// it's a "bare" context string, i.e. doesn't begin with a function call.
-    pub(crate) fn from_str(ctx: &str) -> Self {
+    pub(crate) fn from_str(ctx: &'src str) -> Self {
         // TODO: Use Rule::context to parse here instead?
         let components = ctx.split('.').map(Expr::ident).collect::<Vec<_>>();
 
         Self {
-            full: ctx.to_string(),
+            raw: ctx,
             components,
         }
     }
 
-    pub(crate) fn new(full: impl Into<String>, components: impl Into<Vec<Expr>>) -> Self {
+    pub(crate) fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
         Self {
-            full: full.into(),
+            raw,
             components: components.into(),
         }
     }
 
     pub(crate) fn as_str(&self) -> &str {
-        &self.full
+        self.raw
     }
 
     pub(crate) fn components(&self) -> &[Expr] {
         &self.components
     }
 
-    pub(crate) fn child_of(&self, parent: impl Into<Context>) -> bool {
+    pub(crate) fn child_of(&self, parent: impl Into<Context<'src>>) -> bool {
         let parent = parent.into();
         let mut parent_components = parent.components().iter().peekable();
         let mut child_components = self.components().iter().peekable();
@@ -71,21 +71,21 @@ impl Context {
     }
 }
 
-impl From<&str> for Context {
-    fn from(val: &str) -> Self {
+impl<'a> From<&'a str> for Context<'a> {
+    fn from(val: &'a str) -> Self {
         Context::from_str(val)
     }
 }
 
-impl PartialEq for Context {
+impl PartialEq for Context<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.full.eq_ignore_ascii_case(&other.full)
+        self.raw.eq_ignore_ascii_case(other.raw)
     }
 }
 
-impl PartialEq<str> for Context {
+impl PartialEq<str> for Context<'_> {
     fn eq(&self, other: &str) -> bool {
-        self.full.eq_ignore_ascii_case(other)
+        self.raw.eq_ignore_ascii_case(other)
     }
 }
 
@@ -108,7 +108,7 @@ pub(crate) enum UnOp {
 
 /// Represents a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
-pub(crate) enum Expr {
+pub(crate) enum Expr<'src> {
     /// A number literal.
     Number(f64),
     /// A string literal.
@@ -120,34 +120,37 @@ pub(crate) enum Expr {
     /// The `*` literal within an index or context.
     Star,
     /// A function call.
-    Call { func: String, args: Vec<Expr> },
+    Call {
+        func: &'src str,
+        args: Vec<Expr<'src>>,
+    },
     /// A context identifier component, e.g. `github` in `github.actor`.
-    Identifier(String),
+    Identifier(&'src str),
     /// A context index component, e.g. `[0]` in `foo[0]`.
-    Index(Box<Expr>),
+    Index(Box<Expr<'src>>),
     /// A full context reference.
-    Context(Context),
+    Context(Context<'src>),
     /// A binary operation, either logical or arithmetic.
     BinOp {
-        lhs: Box<Expr>,
+        lhs: Box<Expr<'src>>,
         op: BinOp,
-        rhs: Box<Expr>,
+        rhs: Box<Expr<'src>>,
     },
     /// A unary operation. Negation (`!`) is currently the only `UnOp`.
-    UnOp { op: UnOp, expr: Box<Expr> },
+    UnOp { op: UnOp, expr: Box<Expr<'src>> },
 }
 
-impl Expr {
+impl<'src> Expr<'src> {
     /// Convenience API for making a boxed `Expr::String`.
     pub(crate) fn string(s: impl Into<String>) -> Box<Self> {
         Self::String(s.into()).into()
     }
 
-    pub(crate) fn ident(i: impl Into<String>) -> Self {
-        Self::Identifier(i.into())
+    pub(crate) fn ident(i: &'src str) -> Self {
+        Self::Identifier(i)
     }
 
-    pub(crate) fn context(r: impl Into<String>, components: impl Into<Vec<Expr>>) -> Self {
+    pub(crate) fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
         Self::Context(Context::new(r, components))
     }
 
@@ -329,7 +332,7 @@ impl Expr {
                         .collect::<Result<_, _>>()?;
 
                     Ok(Expr::Call {
-                        func: identifier.as_str().into(),
+                        func: identifier.as_str(),
                         args,
                     }
                     .into())
@@ -339,7 +342,7 @@ impl Expr {
                     Ok(Expr::Index(parse_pair(pair.into_inner().next().unwrap())?).into())
                 }
                 Rule::context => {
-                    let raw = pair.as_str().to_string();
+                    let raw = pair.as_str();
                     let pairs = pair.into_inner();
 
                     let mut inner: Vec<Expr> = pairs

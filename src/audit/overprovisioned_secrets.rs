@@ -77,10 +77,9 @@ impl OverprovisionedSecrets {
                 }
             }
             Expr::Index(expr) => results.extend(Self::secrets_expansions(expr)),
-            Expr::Context(Context {
-                full: _,
-                components,
-            }) => results.extend(components.iter().flat_map(Self::secrets_expansions)),
+            Expr::Context(Context { raw: _, components }) => {
+                results.extend(components.iter().flat_map(Self::secrets_expansions))
+            }
             Expr::BinOp { lhs, op: _, rhs } => {
                 results.extend(Self::secrets_expansions(lhs));
                 results.extend(Self::secrets_expansions(rhs));

@@ -74,7 +74,7 @@ impl BotConditions {
                 args: exprs,
             }
             | Expr::Context(Context {
-                full: _,
+                raw: _,
                 components: exprs,
             }) => exprs
                 .iter()
@@ -132,10 +132,13 @@ impl BotConditions {
     }
 
     fn bot_condition(expr: &str) -> Option<Confidence> {
-        let Ok(expr) = (match ExplicitExpr::from_curly(expr) {
-            Some(raw_expr) => Expr::parse(raw_expr.as_bare()),
-            None => Expr::parse(expr),
-        }) else {
+        // TODO: Remove clones here.
+        let bare = match ExplicitExpr::from_curly(expr) {
+            Some(raw_expr) => raw_expr.as_bare().to_string(),
+            None => expr.to_string(),
+        };
+
+        let Ok(expr) = Expr::parse(&bare) else {
             tracing::warn!("couldn't parse expression: {expr}");
             return None;
         };
