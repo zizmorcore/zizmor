@@ -20,6 +20,8 @@ of `zizmor`.
 
 * `zizmor` produces slightly more informative error messages when given
   an invalid input file (#482)
+* Case insensitivity in contexts is now handeled more consistently
+  and pervasively (#491)
 
 ### Bug Fixes 🐛
 
