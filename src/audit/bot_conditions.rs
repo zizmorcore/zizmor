@@ -2,7 +2,7 @@ use github_actions_models::common::{expr::ExplicitExpr, If};
 
 use super::{audit_meta, Audit};
 use crate::{
-    expr::{self, Expr},
+    expr::{self, Context, Expr},
     finding::{Confidence, Severity},
     models::JobExt,
 };
@@ -73,10 +73,10 @@ impl BotConditions {
                 func: _,
                 args: exprs,
             }
-            | Expr::Context {
-                raw: _,
+            | Expr::Context(Context {
+                full: _,
                 components: exprs,
-            } => exprs
+            }) => exprs
                 .iter()
                 .map(|arg| Self::walk_tree_for_bot_condition(arg, false))
                 .reduce(|(bc, _), (bc_next, _)| (bc || bc_next, false))
@@ -92,9 +92,9 @@ impl BotConditions {
                 }
                 // == is trivially dominating.
                 expr::BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
-                    (Expr::Context { raw, .. }, Expr::String(s))
-                    | (Expr::String(s), Expr::Context { raw, .. }) => {
-                        if raw == "github.actor" && s.ends_with("[bot]") {
+                    (Expr::Context(ctx), Expr::String(s))
+                    | (Expr::String(s), Expr::Context(ctx)) => {
+                        if ctx == "github.actor" && s.ends_with("[bot]") {
                             (true, true)
                         } else {
                             (false, true)
@@ -166,6 +166,8 @@ mod tests {
             // Trivial dominating cases.
             ("github.actor == 'dependabot[bot]'", Confidence::High),
             ("'dependabot[bot]' == github.actor", Confidence::High),
+            ("'dependabot[bot]' == GitHub.actor", Confidence::High),
+            ("'dependabot[bot]' == GitHub.ACTOR", Confidence::High),
             // Dominating cases with OR.
             (
                 "'dependabot[bot]' == github.actor || true",

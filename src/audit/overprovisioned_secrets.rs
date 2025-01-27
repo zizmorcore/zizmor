@@ -1,5 +1,5 @@
 use crate::{
-    expr::Expr,
+    expr::{Context, Expr},
     finding::{Confidence, Feature, Location, Severity},
     utils::extract_expressions,
 };
@@ -69,7 +69,7 @@ impl OverprovisionedSecrets {
                 if func.eq_ignore_ascii_case("toJSON")
                     && args
                         .iter()
-                        .any(|arg| matches!(arg, Expr::Context { raw, components: _ } if raw.eq_ignore_ascii_case("secrets")))
+                        .any(|arg| matches!(arg, Expr::Context(ctx) if ctx == "secrets"))
                 {
                     results.push(());
                 } else {
@@ -77,9 +77,10 @@ impl OverprovisionedSecrets {
                 }
             }
             Expr::Index(expr) => results.extend(Self::secrets_expansions(expr)),
-            Expr::Context { raw: _, components } => {
-                results.extend(components.iter().flat_map(Self::secrets_expansions))
-            }
+            Expr::Context(Context {
+                full: _,
+                components,
+            }) => results.extend(components.iter().flat_map(Self::secrets_expansions)),
             Expr::BinOp { lhs, op: _, rhs } => {
                 results.extend(Self::secrets_expansions(lhs));
                 results.extend(Self::secrets_expansions(rhs));

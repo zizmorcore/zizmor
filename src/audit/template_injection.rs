@@ -10,6 +10,8 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
+use std::sync::LazyLock;
+
 use github_actions_models::{
     common::{expr::LoE, Uses},
     workflow::job::Strategy,
@@ -33,52 +35,54 @@ audit_meta!(
 );
 
 /// Contexts that are believed to be always safe.
-const SAFE_CONTEXTS: &[&str] = &[
-    // The action path is always safe.
-    "github.action_path",
-    // The GitHub event name (i.e. trigger) is itself safe.
-    "github.event_name",
-    // Safe keys within the otherwise generally unsafe github.event context.
-    "github.event.after",  // hexadecimal SHA ref
-    "github.event.before", // hexadecimal SHA ref
-    "github.event.issue.number",
-    "github.event.merge_group.base_sha",
-    "github.event.number",
-    "github.event.pull_request.base.sha",
-    "github.event.pull_request.commits", // number of commits in PR
-    "github.event.pull_request.number",  // the PR's own number
-    "github.event.workflow_run.id",
-    // Information about the GitHub repository
-    "github.repository",
-    "github.repository_id",
-    "github.repositoryUrl",
-    // Information about the GitHub repository owner (account/org or ID)
-    "github.repository_owner",
-    "github.repository_owner_id",
-    // Unique numbers assigned by GitHub for workflow runs
-    "github.run_attempt",
-    "github.run_id",
-    "github.run_number",
-    // Typically something like `https://github.com`; you have bigger problems if
-    // this is attacker-controlled.
-    "github.server_url",
-    // Always a 40-char SHA-1 reference.
-    "github.sha",
-    // Like `secrets.*`: not safe to expose, but safe to interpolate.
-    "github.token",
-    // GitHub Actions-controlled local directory.
-    "github.workspace",
-    // GitHub Actions-controller runner architecture.
-    "runner.arch",
-    // Debug logging is (1) or is not (0) enabled on GitHub Actions runner.
-    "runner.debug",
-    // GitHub Actions runner operating system.
-    "runner.os",
-    // GitHub Actions temporary directory, value controlled by the runner itself.
-    "runner.temp",
-    // GitHub Actions cached tool directory, value controlled by the runner itself.
-    "runner.tool_cache",
-];
+const SAFE_CONTEXTS: LazyLock<&[&str]> = LazyLock::new(|| {
+    &[
+        // The action path is always safe.
+        "github.action_path",
+        // The GitHub event name (i.e. trigger) is itself safe.
+        "github.event_name",
+        // Safe keys within the otherwise generally unsafe github.event context.
+        "github.event.after",  // hexadecimal SHA ref
+        "github.event.before", // hexadecimal SHA ref
+        "github.event.issue.number",
+        "github.event.merge_group.base_sha",
+        "github.event.number",
+        "github.event.pull_request.base.sha",
+        "github.event.pull_request.commits", // number of commits in PR
+        "github.event.pull_request.number",  // the PR's own number
+        "github.event.workflow_run.id",
+        // Information about the GitHub repository
+        "github.repository",
+        "github.repository_id",
+        "github.repositoryUrl",
+        // Information about the GitHub repository owner (account/org or ID)
+        "github.repository_owner",
+        "github.repository_owner_id",
+        // Unique numbers assigned by GitHub for workflow runs
+        "github.run_attempt",
+        "github.run_id",
+        "github.run_number",
+        // Typically something like `https://github.com`; you have bigger problems if
+        // this is attacker-controlled.
+        "github.server_url",
+        // Always a 40-char SHA-1 reference.
+        "github.sha",
+        // Like `secrets.*`: not safe to expose, but safe to interpolate.
+        "github.token",
+        // GitHub Actions-controlled local directory.
+        "github.workspace",
+        // GitHub Actions-controller runner architecture.
+        "runner.arch",
+        // Debug logging is (1) or is not (0) enabled on GitHub Actions runner.
+        "runner.debug",
+        // GitHub Actions runner operating system.
+        "runner.os",
+        // GitHub Actions temporary directory, value controlled by the runner itself.
+        "runner.temp",
+        // GitHub Actions cached tool directory, value controlled by the runner itself.
+        "runner.tool_cache",
+    ]
+});
 
 impl TemplateInjection {
     fn script_with_location<'s>(
@@ -187,52 +191,51 @@ impl TemplateInjection {
             }
 
             for context in parsed.contexts() {
-                if context.starts_with("secrets.") {
+                if context.child_of("secrets") {
                     // While not ideal, secret expansion is typically not exploitable.
                     continue;
-                } else if SAFE_CONTEXTS.contains(&context) {
+                } else if SAFE_CONTEXTS.iter().any(|safe| *context == **safe) {
                     continue;
-                } else if context.starts_with("inputs.") {
+                } else if context.child_of("inputs") {
                     // TODO: Currently low confidence because we don't check the
                     // input's type. In the future, we should index back into
                     // the workflow's triggers and exclude input expansions
                     // from innocuous types, e.g. booleans.
                     bad_expressions.push((
-                        context.into(),
+                        context.as_str().into(),
                         Severity::High,
                         Confidence::Low,
                         Persona::default(),
                     ));
-                } else if let Some(env) = context.strip_prefix("env.") {
+                } else if let Some(env) = context.as_str().strip_prefix("env.") {
                     let env_is_static = step.env_is_static(env);
 
                     if !env_is_static {
                         bad_expressions.push((
-                            context.into(),
+                            context.as_str().into(),
                             Severity::Low,
                             Confidence::High,
                             Persona::default(),
                         ));
                     }
-                } else if context.starts_with("github.event.") || context.starts_with("github.") {
+                } else if context.child_of("github.event") || context.child_of("github") {
                     // TODO: Filter these more finely; not everything in the event
                     // context is actually attacker-controllable.
                     bad_expressions.push((
-                        context.into(),
+                        context.as_str().into(),
                         Severity::High,
                         Confidence::High,
                         Persona::default(),
                     ));
-                } else if context.starts_with("matrix.") || context == "matrix" {
+                } else if context.child_of("matrix") || context == "matrix" {
                     if let Some(Strategy { matrix, .. }) = step.strategy() {
                         let matrix_is_static = match matrix {
                             // The matrix is generated by an expression, meaning
                             // that it's trivially not static.
                             Some(LoE::Expr(_)) => false,
                             // The matrix may expand to static values according to the context
-                            Some(inner) => {
-                                models::Matrix::new(inner).expands_to_static_values(context)
-                            }
+                            Some(inner) => models::Matrix::new(inner)
+                                .expands_to_static_values(context.as_str()),
                             // Context specifies a matrix, but there is no matrix defined.
                             // This is an invalid workflow so there's no point in flagging it.
                             None => continue,
@@ -240,7 +243,7 @@ impl TemplateInjection {
 
                         if !matrix_is_static {
                             bad_expressions.push((
-                                context.into(),
+                                context.as_str().into(),
                                 Severity::Medium,
                                 Confidence::Medium,
                                 Persona::default(),
@@ -252,7 +255,7 @@ impl TemplateInjection {
                     // All other contexts are typically not attacker controllable,
                     // but may be in obscure cases.
                     bad_expressions.push((
-                        context.into(),
+                        context.as_str().into(),
                         Severity::Informational,
                         Confidence::Low,
                         Persona::default(),
