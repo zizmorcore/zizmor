@@ -23,7 +23,7 @@ jobs:
           - runner: ubuntu-24.04
             target: x86
             manylinux: auto
-          - runner: ubuntu-24.04-arm
+          - runner: ubuntu-24.04
             target: aarch64
             manylinux: "2_24"
           - runner: ubuntu-24.04
