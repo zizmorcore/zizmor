@@ -61,9 +61,9 @@ impl<'src> Context<'src> {
 
     /// Returns the tail of the context if the head matches the given string.
     pub(crate) fn pop_if(&self, head: &str) -> Option<&str> {
-        match self.components().get(0)? {
+        match self.components().first()? {
             Expr::Identifier(ident) if ident.eq_ignore_ascii_case(head) => {
-                Some(&self.raw.split_once('.').unwrap().1)
+                Some(self.raw.split_once('.')?.1)
             }
             _ => None,
         }
@@ -428,7 +428,7 @@ mod tests {
             ("foo.", None),
             ("bar", None),
         ] {
-            assert_eq!(ctx.pop_if(*case), *expected);
+            assert_eq!(ctx.pop_if(case), *expected);
         }
     }
 
@@ -568,7 +568,7 @@ mod tests {
             (
                 "foo(1, 2, 3)",
                 Expr::Call {
-                    func: "foo".into(),
+                    func: "foo",
                     args: vec![Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)],
                 },
             ),
