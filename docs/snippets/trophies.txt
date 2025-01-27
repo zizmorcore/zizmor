@@ -94,6 +94,8 @@ NLnetLabs/nsd#413
 NLnetLabs/unbound#1204
 numpy/numpy#27931
 numpy/numpy.org#797
+onnx/onnx#6661
+onnx/onnx#6662
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
 oxc-project/oxc#7844
