@@ -1,6 +1,6 @@
 //! Expression parsing and analysis.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
@@ -9,6 +9,91 @@ use pest_derive::Parser;
 #[derive(Parser)]
 #[grammar = "expr/expr.pest"]
 struct ExprParser;
+
+#[derive(Debug)]
+pub(crate) struct Context<'src> {
+    pub(crate) raw: &'src str,
+    pub(crate) components: Vec<Expr<'src>>,
+}
+
+impl<'src> Context<'src> {
+    pub(crate) fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
+        Self {
+            raw,
+            components: components.into(),
+        }
+    }
+
+    pub(crate) fn as_str(&self) -> &str {
+        self.raw
+    }
+
+    pub(crate) fn components(&self) -> &[Expr] {
+        &self.components
+    }
+
+    pub(crate) fn child_of(&self, parent: impl TryInto<Context<'src>>) -> bool {
+        let Ok(parent) = parent.try_into() else {
+            return false;
+        };
+
+        let mut parent_components = parent.components().iter().peekable();
+        let mut child_components = self.components().iter().peekable();
+
+        while let (Some(parent), Some(child)) = (parent_components.peek(), child_components.peek())
+        {
+            match (parent, child) {
+                (Expr::Identifier(parent), Expr::Identifier(child)) => {
+                    if !parent.eq_ignore_ascii_case(child) {
+                        return false;
+                    }
+                }
+                _ => return false,
+            }
+
+            parent_components.next();
+            child_components.next();
+        }
+
+        // If we've exhausted the parent, then the child is a true child.
+        parent_components.next().is_none()
+    }
+
+    /// Returns the tail of the context if the head matches the given string.
+    pub(crate) fn pop_if(&self, head: &str) -> Option<&str> {
+        match self.components().first()? {
+            Expr::Identifier(ident) if ident.eq_ignore_ascii_case(head) => {
+                Some(self.raw.split_once('.')?.1)
+            }
+            _ => None,
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Context<'a> {
+    type Error = anyhow::Error;
+
+    fn try_from(val: &'a str) -> Result<Self> {
+        let expr = Expr::parse(val)?;
+
+        match expr {
+            Expr::Context(ctx) => Ok(ctx),
+            _ => Err(anyhow!("expected context, found {:?}", expr)),
+        }
+    }
+}
+
+impl PartialEq for Context<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.raw.eq_ignore_ascii_case(other.raw)
+    }
+}
+
+impl PartialEq<str> for Context<'_> {
+    fn eq(&self, other: &str) -> bool {
+        self.raw.eq_ignore_ascii_case(other)
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum BinOp {
@@ -29,7 +114,7 @@ pub(crate) enum UnOp {
 
 /// Represents a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
-pub(crate) enum Expr {
+pub(crate) enum Expr<'src> {
     /// A number literal.
     Number(f64),
     /// A string literal.
@@ -41,38 +126,38 @@ pub(crate) enum Expr {
     /// The `*` literal within an index or context.
     Star,
     /// A function call.
-    Call { func: String, args: Vec<Expr> },
+    Call {
+        func: &'src str,
+        args: Vec<Expr<'src>>,
+    },
     /// A context identifier component, e.g. `github` in `github.actor`.
-    Identifier(String),
+    Identifier(&'src str),
     /// A context index component, e.g. `[0]` in `foo[0]`.
-    Index(Box<Expr>),
+    Index(Box<Expr<'src>>),
     /// A full context reference.
-    Context { raw: String, components: Vec<Expr> },
+    Context(Context<'src>),
     /// A binary operation, either logical or arithmetic.
     BinOp {
-        lhs: Box<Expr>,
+        lhs: Box<Expr<'src>>,
         op: BinOp,
-        rhs: Box<Expr>,
+        rhs: Box<Expr<'src>>,
     },
     /// A unary operation. Negation (`!`) is currently the only `UnOp`.
-    UnOp { op: UnOp, expr: Box<Expr> },
+    UnOp { op: UnOp, expr: Box<Expr<'src>> },
 }
 
-impl Expr {
+impl<'src> Expr<'src> {
     /// Convenience API for making a boxed `Expr::String`.
     pub(crate) fn string(s: impl Into<String>) -> Box<Self> {
         Self::String(s.into()).into()
     }
 
-    pub(crate) fn ident(i: impl Into<String>) -> Self {
-        Self::Identifier(i.into())
+    pub(crate) fn ident(i: &'src str) -> Self {
+        Self::Identifier(i)
     }
 
-    pub(crate) fn context(r: impl Into<String>, components: impl Into<Vec<Expr>>) -> Self {
-        Self::Context {
-            raw: r.into(),
-            components: components.into(),
-        }
+    pub(crate) fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
+        Self::Context(Context::new(r, components))
     }
 
     /// Returns all of the contexts used in this expression, regardless
@@ -83,7 +168,7 @@ impl Expr {
     /// contains both `foo.bar` and `foo().bar`, only the former will be
     /// returned, as `foo()` can be anything and thus the `bar` access against
     /// it has no particular meaning.
-    pub(crate) fn contexts(&self) -> Vec<&str> {
+    pub(crate) fn contexts(&self) -> Vec<&Context> {
         let mut contexts = vec![];
 
         match self {
@@ -92,16 +177,17 @@ impl Expr {
                     contexts.extend(arg.contexts());
                 }
             }
-            Expr::Context { raw, components } => {
-                if matches!(components[0], Expr::Call { .. }) {
+            Expr::Index(expr) => contexts.extend(expr.contexts()),
+            Expr::Context(ctx) => {
+                if matches!(ctx.components[0], Expr::Call { .. }) {
                     // If the context looks something like `foo(args).a.b.c`, then
                     // we need to check each of `args` for contexts but skip
                     // the trailing identifiers, since those aren't well-known.
-                    contexts.extend(components[0].contexts());
+                    contexts.extend(ctx.components[0].contexts());
                 } else {
                     // Otherwise, if the context looks like a normal context,
                     // we include it in its entirety.
-                    contexts.push(raw)
+                    contexts.push(ctx)
                 }
             }
             Expr::BinOp { lhs, op: _, rhs } => {
@@ -252,7 +338,7 @@ impl Expr {
                         .collect::<Result<_, _>>()?;
 
                     Ok(Expr::Call {
-                        func: identifier.as_str().into(),
+                        func: identifier.as_str(),
                         args,
                     }
                     .into())
@@ -262,7 +348,7 @@ impl Expr {
                     Ok(Expr::Index(parse_pair(pair.into_inner().next().unwrap())?).into())
                 }
                 Rule::context => {
-                    let raw = pair.as_str().to_string();
+                    let raw = pair.as_str();
                     let pairs = pair.into_inner();
 
                     let mut inner: Vec<Expr> = pairs
@@ -293,6 +379,58 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::{BinOp, Expr, ExprParser, Rule, UnOp};
+
+    #[test]
+    fn test_context_eq() {
+        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+        assert_eq!(&ctx, "foo.bar.baz");
+        assert_eq!(&ctx, "FOO.BAR.BAZ");
+        assert_eq!(&ctx, "Foo.Bar.Baz");
+    }
+
+    #[test]
+    fn test_context_child_of() {
+        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+
+        for (case, child) in &[
+            // Trivial child cases.
+            ("foo", true),
+            ("foo.bar", true),
+            // Case-insensitive cases.
+            ("FOO", true),
+            ("FOO.BAR", true),
+            ("Foo", true),
+            ("Foo.Bar", true),
+            // We consider a context to be a child of itself.
+            ("foo.bar.baz", true),
+            // Trivial non-child cases.
+            ("foo.bar.baz.qux", false),
+            ("foo.bar.qux", false),
+            ("foo.qux", false),
+            ("qux", false),
+            // Invalid cases.
+            ("foo.", false),
+            (".", false),
+            ("", false),
+        ] {
+            assert_eq!(ctx.child_of(*case), *child);
+        }
+    }
+
+    #[test]
+    fn test_context_pop_if() {
+        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+
+        for (case, expected) in &[
+            ("foo", Some("bar.baz")),
+            ("Foo", Some("bar.baz")),
+            ("FOO", Some("bar.baz")),
+            ("foo.", None),
+            ("bar", None),
+        ] {
+            assert_eq!(ctx.pop_if(case), *expected);
+        }
+    }
 
     #[test]
     fn test_parse_string_rule() {
@@ -430,7 +568,7 @@ mod tests {
             (
                 "foo(1, 2, 3)",
                 Expr::Call {
-                    func: "foo".into(),
+                    func: "foo",
                     args: vec![Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)],
                 },
             ),

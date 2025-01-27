@@ -2,7 +2,7 @@ use github_actions_models::common::{expr::ExplicitExpr, If};
 
 use super::{audit_meta, Audit};
 use crate::{
-    expr::{self, Expr},
+    expr::{self, Context, Expr},
     finding::{Confidence, Severity},
     models::JobExt,
 };
@@ -73,10 +73,10 @@ impl BotConditions {
                 func: _,
                 args: exprs,
             }
-            | Expr::Context {
+            | Expr::Context(Context {
                 raw: _,
                 components: exprs,
-            } => exprs
+            }) => exprs
                 .iter()
                 .map(|arg| Self::walk_tree_for_bot_condition(arg, false))
                 .reduce(|(bc, _), (bc_next, _)| (bc || bc_next, false))
@@ -92,9 +92,9 @@ impl BotConditions {
                 }
                 // == is trivially dominating.
                 expr::BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
-                    (Expr::Context { raw, .. }, Expr::String(s))
-                    | (Expr::String(s), Expr::Context { raw, .. }) => {
-                        if raw == "github.actor" && s.ends_with("[bot]") {
+                    (Expr::Context(ctx), Expr::String(s))
+                    | (Expr::String(s), Expr::Context(ctx)) => {
+                        if ctx == "github.actor" && s.ends_with("[bot]") {
                             (true, true)
                         } else {
                             (false, true)
@@ -132,10 +132,13 @@ impl BotConditions {
     }
 
     fn bot_condition(expr: &str) -> Option<Confidence> {
-        let Ok(expr) = (match ExplicitExpr::from_curly(expr) {
-            Some(raw_expr) => Expr::parse(raw_expr.as_bare()),
-            None => Expr::parse(expr),
-        }) else {
+        // TODO: Remove clones here.
+        let bare = match ExplicitExpr::from_curly(expr) {
+            Some(raw_expr) => raw_expr.as_bare().to_string(),
+            None => expr.to_string(),
+        };
+
+        let Ok(expr) = Expr::parse(&bare) else {
             tracing::warn!("couldn't parse expression: {expr}");
             return None;
         };
@@ -166,6 +169,8 @@ mod tests {
             // Trivial dominating cases.
             ("github.actor == 'dependabot[bot]'", Confidence::High),
             ("'dependabot[bot]' == github.actor", Confidence::High),
+            ("'dependabot[bot]' == GitHub.actor", Confidence::High),
+            ("'dependabot[bot]' == GitHub.ACTOR", Confidence::High),
             // Dominating cases with OR.
             (
                 "'dependabot[bot]' == github.actor || true",
