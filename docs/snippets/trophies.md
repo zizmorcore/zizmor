@@ -453,6 +453,15 @@
         - numpy/numpy.org#797
 
 
+-   ![](https://github.com/onnx.png?size=40){ width="40" loading=lazy align=left } onnx
+
+    ---
+
+    ??? example "Examples"
+        - onnx/onnx#6661
+        - onnx/onnx#6662
+
+
 -   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource
 
     ---
