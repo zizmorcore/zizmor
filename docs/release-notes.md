@@ -13,6 +13,8 @@ of `zizmor`.
 
 * **New audit**: [overprovisioned-secrets] detects uses of the `secrets`
   context that result in excessive secret provisioning (#485)
+* Added a special naches mode for when you're feeling particularly proud of
+  your audit results (#490)
 
 ### Improvements 🌱
 

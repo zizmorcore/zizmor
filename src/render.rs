@@ -3,13 +3,14 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use annotate_snippets::{Level, Renderer, Snippet};
-use anstream::{print, println};
+use anstream::{eprintln, print, println};
 use owo_colors::OwoColorize;
 use terminal_link::Link;
 
 use crate::{
     finding::{Finding, Location, Severity},
     registry::{FindingRegistry, InputKey, InputRegistry},
+    App,
 };
 
 impl From<&Severity> for Level {
@@ -74,7 +75,7 @@ pub(crate) fn finding_snippet<'w>(
     snippets
 }
 
-pub(crate) fn render_findings(registry: &InputRegistry, findings: &FindingRegistry) {
+pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &FindingRegistry) {
     for finding in findings.findings() {
         render_finding(registry, finding);
         println!();
@@ -103,6 +104,10 @@ pub(crate) fn render_findings(registry: &InputRegistry, findings: &FindingRegist
                 no_findings = "No findings to report. Good job!".green(),
                 qualifiers = qualifiers.join(", ").bold(),
             );
+        }
+
+        if app.naches {
+            naches();
         }
     } else {
         let mut findings_by_severity = HashMap::new();
@@ -160,4 +165,24 @@ fn render_finding(registry: &InputRegistry, finding: &Finding) {
 
     let renderer = Renderer::styled();
     println!("{}", renderer.render(message));
+}
+
+fn naches() {
+    eprintln!(
+        "
+    ⣿⣿⣿⠟⠋⠙⣉⡉⣉⡙⠻⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠿⠿⠟⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+    ⣿⡿⠋⠀⠀⣶⣾⣿⣿⣿⣷⡄⠙⠻⣿⣿⣿⣿⣿⡿⠿⠿⠟⠛⠛⠋⠍⠉⢡⢰⡦⠔⠀⠀⠁⠚⣿⣿⣿⣿⠿⠿⠛⠛⠋⠉⠉⢸
+    ⣿⡇⠀⠀⡾⣿⣿⣿⣿⣿⣿⣿⣖⠀⢻⣿⡏⢩⠉⠁⣄⣀⡄⣤⡥⢸⠂⣴⣿⢸⠇⠠⠇⠞⠒⡃⠛⠛⠉⠉⠀⠀⢀⣤⠀⢰⡆⢸
+    ⣿⡃⠀⠐⡵⢾⣿⣿⣿⣿⣿⣿⣿⠀⠈⣿⣷⣀⠇⠼⠋⠃⡃⢛⠁⠄⢉⡅⠀⠂⠁⠂⠈⠀⣡⡤⠄⠀⠀⡟⢷⡄⠀⣿⡄⠘⣷⢸
+    ⣿⡇⠀⡉⢌⠁⠨⢹⣯⡑⢊⢭⣻⡇⠠⣿⣿⣤⣬⣤⣷⡾⠶⠚⠋⠉⠀⠀⠀⠀⣶⡘⣧⠀⠸⣷⠒⠠⣀⣗⢩⠻⣦⢚⠓⠮⢩⢹
+    ⣿⡇⠐⡈⣀⣈⣰⢺⣿⣷⣾⣷⣾⡇⣶⣿⣿⡟⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣇⠈⡟⢀⠙⢳⠈⢹⠀⠂⡀⠒⣀⡀⠀⠑⢸
+    ⣿⣇⢡⢘⡵⣟⠣⠊⢟⣯⣿⣿⣿⢿⠊⠉⠀⠀⠀⠀⠀⠀⠀⠀⡀⠠⣀⠢⣌⠴⡡⠻⠊⢓⡁⠄⠑⠂⠈⠘⠠⠁⠄⢠⠐⡈⡮⢹
+    ⣿⣿⣤⡞⣰⠃⠧⣝⣿⣻⢟⣿⡻⠏⠀⠀⠀⠀⡀⠠⣀⠢⢌⣲⣈⡱⠊⡑⠈⣰⠀⠀⠂⢈⠀⠄⡐⣠⢂⡜⡤⣍⣞⣤⣟⢶⣿⣿
+    ⣿⣿⠛⠼⣥⣛⢴⣩⣟⣿⢯⣾⠅⠀⡀⡶⣚⡔⢠⡡⠌⡑⢾⣊⠁⠠⠁⠄⡁⢄⢠⡘⡰⣌⡞⣼⣱⣶⣯⣾⣷⣿⣾⣿⣿⣿⣿⣿
+    ⣿⢁⠉⡄⢈⢹⣌⣧⣹⣿⣿⢿⡄⡌⢁⠧⠹⠀⢀⠀⡀⠄⡀⠠⢈⡀⢇⠸⣸⣸⣤⣹⣧⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+    ⣿⣦⡓⠜⣦⡄⢋⠞⣿⣻⣭⣻⣿⣶⡶⢬⣤⣅⡀⠠⡀⢤⠈⡰⣸⣀⣤⣃⣅⣯⣑⣃⣀⣂⣎⣸⡐⣄⣅⢿⣠⣀⣹⣐⣜⣿⣿⣿
+    ⣿⣿⣵⡊⠴⣻⣽⣮⡗⠻⢿⣿⣿⣿⣧⣼⣥⣥⢵⠤⠵⠢⢱⡤⠠⠧⠧⠼⡤⢤⡵⠧⢴⠭⠤⡤⠮⡬⠼⠤⢬⣼⡤⣼⣶⣤⣾⣿
+    ⠿⠿⠿⠿⠦⠽⠿⠟⠀⠸⠁⠝⠿⠿⠿⠿⠿⠿⠾⠶⠶⠷⠺⠷⠶⠶⠶⠶⠿⠷⠷⠶⠿⠶⠶⠿⠶⠷⠷⠶⢷⣶⣶⣿⢿⣿⣿⣿
+                thank you, dr. zizmor!"
+    )
 }
