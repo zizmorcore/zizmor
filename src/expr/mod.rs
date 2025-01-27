@@ -23,7 +23,7 @@ impl Context {
     /// it's a "bare" context string, i.e. doesn't begin with a function call.
     pub(crate) fn from_str(ctx: &str) -> Self {
         // TODO: Use Rule::context to parse here instead?
-        let components = ctx.split('.').map(|c| Expr::ident(c)).collect::<Vec<_>>();
+        let components = ctx.split('.').map(Expr::ident).collect::<Vec<_>>();
 
         Self {
             full: ctx.to_string(),
@@ -67,13 +67,13 @@ impl Context {
         }
 
         // If we've exhausted the parent, then the child is a true child.
-        return parent_components.next().is_none();
+        parent_components.next().is_none()
     }
 }
 
-impl Into<Context> for &str {
-    fn into(self) -> Context {
-        Context::from_str(self)
+impl From<&str> for Context {
+    fn from(val: &str) -> Self {
+        Context::from_str(val)
     }
 }
 

@@ -10,8 +10,6 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::sync::LazyLock;
-
 use github_actions_models::{
     common::{expr::LoE, Uses},
     workflow::job::Strategy,
@@ -35,54 +33,52 @@ audit_meta!(
 );
 
 /// Contexts that are believed to be always safe.
-const SAFE_CONTEXTS: LazyLock<&[&str]> = LazyLock::new(|| {
-    &[
-        // The action path is always safe.
-        "github.action_path",
-        // The GitHub event name (i.e. trigger) is itself safe.
-        "github.event_name",
-        // Safe keys within the otherwise generally unsafe github.event context.
-        "github.event.after",  // hexadecimal SHA ref
-        "github.event.before", // hexadecimal SHA ref
-        "github.event.issue.number",
-        "github.event.merge_group.base_sha",
-        "github.event.number",
-        "github.event.pull_request.base.sha",
-        "github.event.pull_request.commits", // number of commits in PR
-        "github.event.pull_request.number",  // the PR's own number
-        "github.event.workflow_run.id",
-        // Information about the GitHub repository
-        "github.repository",
-        "github.repository_id",
-        "github.repositoryUrl",
-        // Information about the GitHub repository owner (account/org or ID)
-        "github.repository_owner",
-        "github.repository_owner_id",
-        // Unique numbers assigned by GitHub for workflow runs
-        "github.run_attempt",
-        "github.run_id",
-        "github.run_number",
-        // Typically something like `https://github.com`; you have bigger problems if
-        // this is attacker-controlled.
-        "github.server_url",
-        // Always a 40-char SHA-1 reference.
-        "github.sha",
-        // Like `secrets.*`: not safe to expose, but safe to interpolate.
-        "github.token",
-        // GitHub Actions-controlled local directory.
-        "github.workspace",
-        // GitHub Actions-controller runner architecture.
-        "runner.arch",
-        // Debug logging is (1) or is not (0) enabled on GitHub Actions runner.
-        "runner.debug",
-        // GitHub Actions runner operating system.
-        "runner.os",
-        // GitHub Actions temporary directory, value controlled by the runner itself.
-        "runner.temp",
-        // GitHub Actions cached tool directory, value controlled by the runner itself.
-        "runner.tool_cache",
-    ]
-});
+const SAFE_CONTEXTS: &[&str] = &[
+    // The action path is always safe.
+    "github.action_path",
+    // The GitHub event name (i.e. trigger) is itself safe.
+    "github.event_name",
+    // Safe keys within the otherwise generally unsafe github.event context.
+    "github.event.after",  // hexadecimal SHA ref
+    "github.event.before", // hexadecimal SHA ref
+    "github.event.issue.number",
+    "github.event.merge_group.base_sha",
+    "github.event.number",
+    "github.event.pull_request.base.sha",
+    "github.event.pull_request.commits", // number of commits in PR
+    "github.event.pull_request.number",  // the PR's own number
+    "github.event.workflow_run.id",
+    // Information about the GitHub repository
+    "github.repository",
+    "github.repository_id",
+    "github.repositoryUrl",
+    // Information about the GitHub repository owner (account/org or ID)
+    "github.repository_owner",
+    "github.repository_owner_id",
+    // Unique numbers assigned by GitHub for workflow runs
+    "github.run_attempt",
+    "github.run_id",
+    "github.run_number",
+    // Typically something like `https://github.com`; you have bigger problems if
+    // this is attacker-controlled.
+    "github.server_url",
+    // Always a 40-char SHA-1 reference.
+    "github.sha",
+    // Like `secrets.*`: not safe to expose, but safe to interpolate.
+    "github.token",
+    // GitHub Actions-controlled local directory.
+    "github.workspace",
+    // GitHub Actions-controller runner architecture.
+    "runner.arch",
+    // Debug logging is (1) or is not (0) enabled on GitHub Actions runner.
+    "runner.debug",
+    // GitHub Actions runner operating system.
+    "runner.os",
+    // GitHub Actions temporary directory, value controlled by the runner itself.
+    "runner.temp",
+    // GitHub Actions cached tool directory, value controlled by the runner itself.
+    "runner.tool_cache",
+];
 
 impl TemplateInjection {
     fn script_with_location<'s>(
