@@ -109,6 +109,10 @@ struct App {
     #[arg(long, value_enum, default_value_t)]
     collect: CollectionMode,
 
+    /// Enable naches mode.
+    #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
+    naches: bool,
+
     /// The inputs to audit.
     ///
     /// These can be individual workflow filenames, action definitions
@@ -406,7 +410,7 @@ fn run() -> Result<ExitCode> {
     }
 
     match app.format {
-        OutputFormat::Plain => render::render_findings(&registry, &results),
+        OutputFormat::Plain => render::render_findings(&app, &registry, &results),
         OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
         OutputFormat::Sarif => {
             serde_json::to_writer_pretty(stdout(), &sarif::build(results.findings()))?
