@@ -58,6 +58,16 @@ impl<'src> Context<'src> {
         // If we've exhausted the parent, then the child is a true child.
         parent_components.next().is_none()
     }
+
+    /// Returns the tail of the context if the head matches the given string.
+    pub(crate) fn pop_if(&self, head: &str) -> Option<&str> {
+        match self.components().get(0)? {
+            Expr::Identifier(ident) if ident.eq_ignore_ascii_case(head) => {
+                Some(&self.raw.split_once('.').unwrap().1)
+            }
+            _ => None,
+        }
+    }
 }
 
 impl<'a> TryFrom<&'a str> for Context<'a> {
@@ -404,6 +414,21 @@ mod tests {
             ("", false),
         ] {
             assert_eq!(ctx.child_of(*case), *child);
+        }
+    }
+
+    #[test]
+    fn test_context_pop_if() {
+        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+
+        for (case, expected) in &[
+            ("foo", Some("bar.baz")),
+            ("Foo", Some("bar.baz")),
+            ("FOO", Some("bar.baz")),
+            ("foo.", None),
+            ("bar", None),
+        ] {
+            assert_eq!(ctx.pop_if(*case), *expected);
         }
     }
 

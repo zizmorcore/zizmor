@@ -203,8 +203,7 @@ impl TemplateInjection {
                         Confidence::Low,
                         Persona::default(),
                     ));
-                // TODO: Handle env being case-insensitive.
-                } else if let Some(env) = context.as_str().strip_prefix("env.") {
+                } else if let Some(env) = context.pop_if("env") {
                     let env_is_static = step.env_is_static(env);
 
                     if !env_is_static {
