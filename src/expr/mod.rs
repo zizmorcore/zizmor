@@ -1,6 +1,6 @@
 //! Expression parsing and analysis.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
@@ -17,20 +17,6 @@ pub(crate) struct Context<'src> {
 }
 
 impl<'src> Context<'src> {
-    /// Creates a new `Context` from the given string.
-    ///
-    /// Assumes that the string is a well-formed context string, and that
-    /// it's a "bare" context string, i.e. doesn't begin with a function call.
-    pub(crate) fn from_str(ctx: &'src str) -> Self {
-        // TODO: Use Rule::context to parse here instead?
-        let components = ctx.split('.').map(Expr::ident).collect::<Vec<_>>();
-
-        Self {
-            raw: ctx,
-            components,
-        }
-    }
-
     pub(crate) fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
         Self {
             raw,
@@ -46,8 +32,11 @@ impl<'src> Context<'src> {
         &self.components
     }
 
-    pub(crate) fn child_of(&self, parent: impl Into<Context<'src>>) -> bool {
-        let parent = parent.into();
+    pub(crate) fn child_of(&self, parent: impl TryInto<Context<'src>>) -> bool {
+        let Ok(parent) = parent.try_into() else {
+            return false;
+        };
+
         let mut parent_components = parent.components().iter().peekable();
         let mut child_components = self.components().iter().peekable();
 
@@ -71,9 +60,16 @@ impl<'src> Context<'src> {
     }
 }
 
-impl<'a> From<&'a str> for Context<'a> {
-    fn from(val: &'a str) -> Self {
-        Context::from_str(val)
+impl<'a> TryFrom<&'a str> for Context<'a> {
+    type Error = anyhow::Error;
+
+    fn try_from(val: &'a str) -> Result<Self> {
+        let expr = Expr::parse(val)?;
+
+        match expr {
+            Expr::Context(ctx) => Ok(ctx),
+            _ => Err(anyhow!("expected context, found {:?}", expr)),
+        }
     }
 }
 
@@ -376,7 +372,7 @@ mod tests {
 
     #[test]
     fn test_context_eq() {
-        let ctx = super::Context::from_str("foo.bar.baz");
+        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
         assert_eq!(&ctx, "foo.bar.baz");
         assert_eq!(&ctx, "FOO.BAR.BAZ");
         assert_eq!(&ctx, "Foo.Bar.Baz");
@@ -384,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_context_child_of() {
-        let ctx = super::Context::from_str("foo.bar.baz");
+        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
 
         for (case, child) in &[
             // Trivial child cases.
