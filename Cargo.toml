@@ -50,7 +50,7 @@ tar = "0.4.43"
 terminal-link = "0.1.0"
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
-tracing-indicatif = "0.3.9"
+tracing-indicatif = "0.3.8"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 tree-sitter = "0.24.7"
 tree-sitter-bash = "0.23.3"
