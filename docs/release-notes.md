@@ -12,7 +12,7 @@ of `zizmor`.
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would fail to parse composite actions with
-  inputs/outputs that were missing descriptions (#502)
+  inputs/outputs that are missing descriptions (#502)
 
 ## v1.3.0
 
