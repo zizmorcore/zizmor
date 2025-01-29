@@ -9,6 +9,15 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+Nothing to see here yet!
+
+## v1.3.0
+
+This release comes with one new audit ([overprovisioned-secrets]), plus a
+handful of bugfixes and analysis improvements to existing audits. It also
+comes with a special easter egg for those who wish to *kvell* about their
+audit results.
+
 ### New Features 🌈
 
 * **New audit**: [overprovisioned-secrets] detects uses of the `secrets`
