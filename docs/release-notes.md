@@ -9,7 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
-Nothing to see here yet!
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse composite actions with
+  inputs/outputs that were missing descriptions (#502)
 
 ## v1.3.0
 
