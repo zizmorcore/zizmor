@@ -127,6 +127,7 @@ python-poetry/poetry-plugin-export#308
 python-poetry/poetry-plugin-bundle#125
 python-telegram-bot/python-telegram-bot#4606
 python-trio/trio#3154
+pyvista/pyvista#7006
 PyVRP/PyVRP#670
 PyO3/pyo3#4774
 rubygems/rubygems.org#5350
