@@ -641,6 +641,14 @@
         - python-trio/trio#3154
 
 
+-   ![](https://github.com/pyvista.png?size=40){ width="40" loading=lazy align=left } pyvista
+
+    ---
+
+    ??? example "Examples"
+        - pyvista/pyvista#7006
+
+
 -   ![](https://github.com/PyVRP.png?size=40){ width="40" loading=lazy align=left } PyVRP
 
     ---
