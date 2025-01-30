@@ -5,8 +5,18 @@
 [![Packaging status](https://repology.org/badge/tiny-repos/zizmor.svg)](https://repology.org/project/zizmor/versions)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/woodruffw?style=flat&logo=githubsponsors&labelColor=white&color=white)](https://github.com/sponsors/woodruffw)
 
-`zizmor` is a static analysis tool for GitHub Actions. It can find
-many common security issues in typical GitHub Actions CI/CD setups.
+`zizmor` is a static analysis tool for GitHub Actions.
+
+It can find many common security issues in typical GitHub Actions CI/CD setups,
+including:
+
+* Template injection vulnerabilities, leading to attacker-controlled code execution
+* Accidental credential persistence and leakage
+* Excessive permission scopes and credential grants to runners
+* Impostor commits and confusable `git` references
+* ...[and much more]!
+
+[and much more]: https://woodruffw.github.io/zizmor/audits/
 
 ![zizmor demo](https://raw.githubusercontent.com/woodruffw/zizmor/main/docs/assets/zizmor-demo.gif)
 
