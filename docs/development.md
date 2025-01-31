@@ -215,9 +215,9 @@ Some things that can be useful to discuss beforehand:
 When developing a new `zizmor` audit, there are a couple of implementation details to be aware of:
 
 - All existing audits live in a Rust modules grouped under `src/audit` folder
-- The expected behavior for all audits is defined by the `WorkflowAudit` trait at `src/audit/mod.rs`
+- The expected behavior for all audits is defined by the `Audit` trait at `src/audit/mod.rs`
 - The expected outcome of an executed audit is defined by the `Finding` struct at `src/finding/mod.rs`
-- Any `WorkflowAudit` implementation can have access to an `AuditState` instance, as per `src/state.rs`
+- Any `Audit` implementation can have access to an `AuditState` instance, as per `src/state.rs`
 - If an audit requires data from the GitHub API, there is a `Client` implementation at `src/github_api.rs`
 - All the audits must be registered at `src/main.rs` according to the `register_audit!` macro
 
@@ -233,12 +233,12 @@ cargo test
 
 !!! tip
 
-    `WorkflowAudit` has various default implementations that are useful if your
+    `Audit` has various default implementations that are useful if your
     audit only needs to look at individual jobs, steps, etc.
 
-    For example, you may want to implement `WorkflowAudit::audit_step` to
+    For example, you may want to implement `Audit::audit_step` to
     audit each step individually rather than having to iterate from the workflow
-    downwards with `WorkflowAudit::audit`.
+    downwards with `Audit::audit`.
 
 !!! tip
 
@@ -248,8 +248,8 @@ The general procedure for adding a new audit can be described as:
 
 - Define a new file at `src/audit/my_new_audit.rs`
 - Define a struct like `MyNewAudit`
-- Use the `audit_meta!` macro to implement `Audit` for `MyNewAudit`
-- Implement the `WorkflowAudit` trait for `MyNewAudit`
+- Use the `audit_meta!` macro to implement `AuditCore` for `MyNewAudit`
+- Implement the `Audit` trait for `MyNewAudit`
     - You may want to use both the `AuditState` and `github_api::Client` to get the job done
 - Assign the proper `location` when creating a `Finding`, grabbing it from the
   proper `Workflow`, `Job` or `Step` instance
