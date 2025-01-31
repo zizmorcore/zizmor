@@ -4,8 +4,16 @@ on:
   push:
     branches:
       - main
-
+  workflow_call:
+    inputs:
+      deploy:
+        type: boolean
+        default: false
   workflow_dispatch:
+    inputs:
+      deploy:
+        type: boolean
+        default: false
 
 concurrency:
   group: "pages"
@@ -45,6 +53,6 @@ jobs:
           path: site_html
 
       - name: Deploy to GitHub Pages
-        if: github.repository_owner == 'woodruffw'
+        if: github.repository_owner == 'woodruffw' && github.event.inputs.deploy != 'false'
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

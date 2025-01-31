@@ -44,16 +44,13 @@ jobs:
         git diff --exit-code
 
   test-site:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          persist-credentials: false
-
-      - uses: astral-sh/setup-uv@b5f58b2abc5763ade55e4e9d0fe52cd1ff7979ca # v5.2.1
-
-      - name: Test site
-        run: make site
+    uses: ./.github/workflows/site.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    with:
+      deploy: false
 
   all-tests-pass:
     if: always()
