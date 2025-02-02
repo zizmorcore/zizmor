@@ -7,6 +7,9 @@
 adafruit/circuitpython#9785
 apache/airflow#45408
 apache/opennlp#736
+artichoke/boba#265
+artichoke/project-infrastructure#683
+artichoke/setup-rust#121
 ashishb/wp2hugo#91
 astral-sh/ruff#14844
 astropy/astropy#17315
