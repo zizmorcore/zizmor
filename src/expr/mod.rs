@@ -527,6 +527,10 @@ mod tests {
             "foo()[0]",
             "fromJson(steps.runs.outputs.data).workflow_runs[0].id",
             multiline,
+            "'a' == 'b' && 'c' || 'd'",
+            "github.event['a']",
+            "github.event['a' == 'b']",
+            "github.event['a' == 'b' && 'c' || 'd']",
         ];
 
         for case in cases {

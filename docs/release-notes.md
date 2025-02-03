@@ -13,6 +13,8 @@ of `zizmor`.
 
 * Fixed a bug where `zizmor` would fail to parse composite actions with
   inputs/outputs that are missing descriptions (#502)
+* Expressions that contain indices with non-semantic whitespace are now parsed
+  correctly (#511)
 
 ## v1.3.0
 
