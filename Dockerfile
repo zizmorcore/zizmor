@@ -10,7 +10,6 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Add Rust to PATH
-ENV PATH="/root/.cargo/bin:${PATH}"
 ENV PATH="/root/.local/bin:${PATH}"
 
 RUN set -eux && \
