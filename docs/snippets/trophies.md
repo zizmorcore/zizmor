@@ -641,6 +641,7 @@
 
     ??? example "Examples"
         - python-telegram-bot/python-telegram-bot#4606
+        - python-telegram-bot/python-telegram-bot#4668
 
 
 -   ![](https://github.com/python-trio.png?size=40){ width="40" loading=lazy align=left } python-trio
@@ -700,6 +701,14 @@
 
     ??? example "Examples"
         - Saghen/blink.cmp#991
+
+
+-   ![](https://github.com/scikit-image.png?size=40){ width="40" loading=lazy align=left } scikit-image
+
+    ---
+
+    ??? example "Examples"
+        - scikit-image/scikit-image#7662
 
 
 -   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore
