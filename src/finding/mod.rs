@@ -1,20 +1,19 @@
 //! Models and APIs for handling findings and their locations.
 
-use std::{borrow::Cow, sync::LazyLock};
+use std::{borrow::Cow, ops::Range, sync::LazyLock};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::ValueEnum;
-use locate::Locator;
+use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
 use terminal_link::Link;
 
 use crate::{
-    models::{Job, Step, Workflow},
-    registry::WorkflowKey,
+    audit::AuditInput,
+    models::{CompositeStep, JobExt, Step},
+    registry::InputKey,
 };
-
-pub(crate) mod locate;
 
 /// Represents the expected "persona" that would be interested in a given
 /// finding. This is used to model the sensitivity of different use-cases
@@ -124,7 +123,7 @@ impl<'w> Route<'w> {
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct SymbolicLocation<'w> {
     /// The unique ID of the workflow, as it appears in the workflow registry.
-    pub(crate) key: &'w WorkflowKey,
+    pub(crate) key: &'w InputKey,
 
     /// An annotation for this location.
     pub(crate) annotation: String,
@@ -137,6 +136,13 @@ pub(crate) struct SymbolicLocation<'w> {
 
     /// A symbolic route (of keys and indices) to the final location.
     pub(crate) route: Route<'w>,
+
+    /// Whether this location is subjectively "primary" to a finding,
+    /// or merely a "supporting" location.
+    ///
+    /// This distinction only matters in output formats like SARIF,
+    /// where locations are split between locations and "related" locations.
+    pub(crate) primary: bool,
 }
 
 impl<'w> SymbolicLocation<'w> {
@@ -146,15 +152,20 @@ impl<'w> SymbolicLocation<'w> {
             annotation: self.annotation.clone(),
             link: None,
             route: self.route.with_keys(keys),
+            primary: self.primary,
         }
     }
 
-    pub(crate) fn with_job(&self, job: &Job<'w>) -> SymbolicLocation<'w> {
-        self.with_keys(&["jobs".into(), job.id.into()])
+    pub(crate) fn with_job(&self, job: &impl JobExt<'w>) -> SymbolicLocation<'w> {
+        self.with_keys(&["jobs".into(), job.id().into()])
     }
 
     pub(crate) fn with_step(&self, step: &Step<'w>) -> SymbolicLocation<'w> {
         self.with_keys(&["steps".into(), step.index.into()])
+    }
+
+    pub(crate) fn with_composite_step(&self, step: &CompositeStep<'w>) -> SymbolicLocation<'w> {
+        self.with_keys(&["runs".into(), "steps".into(), step.index.into()])
     }
 
     /// Adds a human-readable annotation to the current `SymbolicLocation`.
@@ -169,13 +180,49 @@ impl<'w> SymbolicLocation<'w> {
         self
     }
 
+    /// Mark the current `SymbolicLocation` as a "primary" location.
+    pub(crate) fn primary(mut self) -> SymbolicLocation<'w> {
+        self.primary = true;
+        self
+    }
+
     /// Concretize this `SymbolicLocation`, consuming it in the process.
-    pub(crate) fn concretize(self, workflow: &'w Workflow) -> Result<Location<'w>> {
-        let feature = Locator::new().concretize(workflow, &self)?;
+    pub(crate) fn concretize(
+        self,
+        document: &'w impl AsRef<yamlpath::Document>,
+    ) -> Result<Location<'w>> {
+        let document = document.as_ref();
+
+        // If we don't have a path into the workflow, all
+        // we have is the workflow itself.
+        let feature = if self.route.components.is_empty() {
+            document.root()
+        } else {
+            let mut builder = yamlpath::QueryBuilder::new();
+
+            for component in &self.route.components {
+                builder = match component {
+                    RouteComponent::Key(key) => builder.key(key.clone()),
+                    RouteComponent::Index(idx) => builder.index(*idx),
+                }
+            }
+
+            let query = builder.build();
+
+            document.query(&query)?
+        };
 
         Ok(Location {
             symbolic: self,
-            concrete: feature,
+            concrete: Feature {
+                location: ConcreteLocation::from(&feature.location),
+                feature: document.extract_with_leading_whitespace(&feature),
+                comments: document
+                    .feature_comments(&feature)
+                    .into_iter()
+                    .map(Comment)
+                    .collect(),
+            },
         })
     }
 }
@@ -187,6 +234,15 @@ pub(crate) struct Point {
     pub(crate) column: usize,
 }
 
+impl From<LineCol> for Point {
+    fn from(value: LineCol) -> Self {
+        Self {
+            row: value.line as usize,
+            column: value.col as usize,
+        }
+    }
+}
+
 /// A "concrete" location for some feature.
 /// Every concrete location contains two spans: a line-and-column span,
 /// and an offset range.
@@ -194,8 +250,17 @@ pub(crate) struct Point {
 pub(crate) struct ConcreteLocation {
     pub(crate) start_point: Point,
     pub(crate) end_point: Point,
-    pub(crate) start_offset: usize,
-    pub(crate) end_offset: usize,
+    pub(crate) offset_span: Range<usize>,
+}
+
+impl ConcreteLocation {
+    pub(crate) fn new(start_point: Point, end_point: Point, offset_span: Range<usize>) -> Self {
+        Self {
+            start_point,
+            end_point,
+            offset_span,
+        }
+    }
 }
 
 impl From<&yamlpath::Location> for ConcreteLocation {
@@ -209,17 +274,18 @@ impl From<&yamlpath::Location> for ConcreteLocation {
                 row: value.point_span.1 .0,
                 column: value.point_span.1 .1,
             },
-            start_offset: value.byte_span.0,
-            end_offset: value.byte_span.1,
+            offset_span: value.byte_span.0..value.byte_span.1,
         }
     }
 }
 
+static ANY_COMMENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"#.*$").unwrap());
+
 static IGNORE_EXPR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^# zizmor: ignore\[(.+)\]\s*$").unwrap());
+    LazyLock::new(|| Regex::new(r"# zizmor: ignore\[(.+)\]\s*$").unwrap());
 
 /// Represents a single source comment.
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(transparent)]
 pub(crate) struct Comment<'w>(&'w str);
 
@@ -244,19 +310,54 @@ pub(crate) struct Feature<'w> {
     /// The feature's concrete location, as both an offset range and point span.
     pub(crate) location: ConcreteLocation,
 
-    /// The feature's concrete parent location.
-    /// This can be the same as the feature's own location, if the feature
-    /// is the document root.
-    pub(crate) parent_location: ConcreteLocation,
-
     /// The feature's textual content.
     pub(crate) feature: &'w str,
 
-    /// Any comments within the feature's span.
+    /// Any comments within the feature's line span.
     pub(crate) comments: Vec<Comment<'w>>,
+}
 
-    /// The feature's parent's textual content.
-    pub(crate) parent_feature: &'w str,
+impl<'w> Feature<'w> {
+    pub(crate) fn from_span(span: &Range<usize>, input: &'w AuditInput) -> Self {
+        let raw = input.document().source();
+        let start = TextSize::new(span.start as u32);
+        let end = TextSize::new(span.end as u32);
+
+        let start_point = input.line_index().line_col(start);
+        let end_point = input.line_index().line_col(end);
+
+        // Extract any comments within the feature's line span.
+        //
+        // This is slightly less precise than comment extraction
+        // when concretizing a symbolic location, since we're operating
+        // on a raw span rather than an AST-aware YAML path.
+        //
+        // NOTE: We can't use LineIndex::lines() to extract the comment-eligible
+        // lines, because it doesn't include full line spans if the input
+        // span is a strict subset of a single line.
+        let comments = (start_point.line..=end_point.line)
+            .flat_map(|line| {
+                // NOTE: We don't really expect this to fail, since this
+                // line range comes from the line index itself.
+                let line = input.line_index().line(line)?;
+                // Chomp the trailing newline rather than enabling
+                // multi-line mode in ANY_COMMENT, on the theory that
+                // chomping is a little faster.
+                let line = &raw[line].trim_end();
+                ANY_COMMENT.is_match(line).then_some(Comment(line))
+            })
+            .collect();
+
+        Feature {
+            location: ConcreteLocation::new(
+                start_point.into(),
+                end_point.into(),
+                span.start..span.end,
+            ),
+            feature: &raw[span.start..span.end],
+            comments,
+        }
+    }
 }
 
 /// A location within a GitHub Actions workflow, with both symbolic and concrete components.
@@ -266,6 +367,12 @@ pub(crate) struct Location<'w> {
     pub(crate) symbolic: SymbolicLocation<'w>,
     /// The concrete location, including extracted feature.
     pub(crate) concrete: Feature<'w>,
+}
+
+impl<'w> Location<'w> {
+    pub(crate) fn new(symbolic: SymbolicLocation<'w>, concrete: Feature<'w>) -> Self {
+        Self { symbolic, concrete }
+    }
 }
 
 /// A finding's "determination," i.e. its various classifications.
@@ -293,6 +400,7 @@ pub(crate) struct FindingBuilder<'w> {
     severity: Severity,
     confidence: Confidence,
     persona: Persona,
+    raw_locations: Vec<Location<'w>>,
     locations: Vec<SymbolicLocation<'w>>,
 }
 
@@ -305,6 +413,7 @@ impl<'w> FindingBuilder<'w> {
             severity: Default::default(),
             confidence: Default::default(),
             persona: Default::default(),
+            raw_locations: vec![],
             locations: vec![],
         }
     }
@@ -324,19 +433,32 @@ impl<'w> FindingBuilder<'w> {
         self
     }
 
+    pub(crate) fn add_raw_location(mut self, location: Location<'w>) -> Self {
+        self.raw_locations.push(location);
+        self
+    }
+
     pub(crate) fn add_location(mut self, location: SymbolicLocation<'w>) -> Self {
         self.locations.push(location);
         self
     }
 
-    pub(crate) fn build(self, workflow: &'w Workflow) -> Result<Finding<'w>> {
-        let locations = self
+    pub(crate) fn build(self, document: &'w impl AsRef<yamlpath::Document>) -> Result<Finding<'w>> {
+        let mut locations = self
             .locations
             .iter()
-            .map(|l| l.clone().concretize(workflow))
+            .map(|l| l.clone().concretize(document))
             .collect::<Result<Vec<_>>>()?;
 
-        let should_ignore = self.ignored_from_inlined_comment(&locations, self.ident);
+        locations.extend(self.raw_locations);
+
+        if !locations.iter().any(|l| l.symbolic.primary) {
+            return Err(anyhow!(
+                "API misuse: at least one location must be marked with primary()"
+            ));
+        }
+
+        let should_ignore = Self::ignored_from_inlined_comment(&locations, self.ident);
 
         Ok(Finding {
             ident: self.ident,
@@ -352,7 +474,7 @@ impl<'w> FindingBuilder<'w> {
         })
     }
 
-    fn ignored_from_inlined_comment(&self, locations: &[Location], id: &str) -> bool {
+    fn ignored_from_inlined_comment(locations: &[Location], id: &str) -> bool {
         locations
             .iter()
             .flat_map(|l| &l.concrete.comments)

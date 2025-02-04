@@ -10,18 +10,16 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::ops::Deref;
-
 use github_actions_models::{
-    common::expr::LoE,
-    workflow::job::{NormalJob, StepBody, Strategy},
+    common::{expr::LoE, Uses},
+    workflow::job::Strategy,
 };
 
-use super::{audit_meta, WorkflowAudit};
+use super::{audit_meta, Audit};
 use crate::{
     expr::{BinOp, Expr, UnOp},
-    finding::{Confidence, Persona, Severity},
-    models,
+    finding::{Confidence, Persona, Severity, SymbolicLocation},
+    models::{self, uses::RepositoryUsesExt as _, StepCommon},
     state::AuditState,
     utils::extract_expressions,
 };
@@ -34,14 +32,19 @@ audit_meta!(
     "code injection via template expansion"
 );
 
-/// Context members that are believed to be always safe.
+/// Contexts that are believed to be always safe.
 const SAFE_CONTEXTS: &[&str] = &[
+    // The action path is always safe.
+    "github.action_path",
     // The GitHub event name (i.e. trigger) is itself safe.
     "github.event_name",
     // Safe keys within the otherwise generally unsafe github.event context.
+    "github.event.after",  // hexadecimal SHA ref
+    "github.event.before", // hexadecimal SHA ref
     "github.event.issue.number",
     "github.event.merge_group.base_sha",
     "github.event.number",
+    "github.event.pull_request.base.sha",
     "github.event.pull_request.commits", // number of commits in PR
     "github.event.pull_request.number",  // the PR's own number
     "github.event.workflow_run.id",
@@ -56,6 +59,9 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.run_attempt",
     "github.run_id",
     "github.run_number",
+    // Typically something like `https://github.com`; you have bigger problems if
+    // this is attacker-controlled.
+    "github.server_url",
     // Always a 40-char SHA-1 reference.
     "github.sha",
     // Like `secrets.*`: not safe to expose, but safe to interpolate.
@@ -75,6 +81,43 @@ const SAFE_CONTEXTS: &[&str] = &[
 ];
 
 impl TemplateInjection {
+    fn script_with_location<'s>(
+        step: &impl StepCommon<'s>,
+    ) -> Option<(String, SymbolicLocation<'s>)> {
+        match step.body() {
+            models::StepBodyCommon::Uses {
+                uses: Uses::Repository(uses),
+                with,
+            } => {
+                if uses.matches("actions/github-script") {
+                    with.get("script").map(|script| {
+                        (
+                            script.to_string(),
+                            step.location().with_keys(&["with".into(), "script".into()]),
+                        )
+                    })
+                } else if uses.matches("azure/powershell") || uses.matches("azure/cli") {
+                    // Both `azure/powershell` and `azure/cli` uses the same `inlineScript`
+                    // option to feed arbitrary code.
+
+                    with.get("inlineScript").map(|script| {
+                        (
+                            script.to_string(),
+                            step.location()
+                                .with_keys(&["with".into(), "inlineScript".into()]),
+                        )
+                    })
+                } else {
+                    None
+                }
+            }
+            models::StepBodyCommon::Run { run, .. } => {
+                Some((run.to_string(), step.location().with_keys(&["run".into()])))
+            }
+            _ => None,
+        }
+    }
+
     /// Checks whether an expression is "safe" for the purposes of template
     /// injection.
     ///
@@ -88,19 +131,15 @@ impl TemplateInjection {
             Expr::String(_) => true,
             Expr::Boolean(_) => true,
             Expr::Null => true,
-            // NOTE: Currently unreachable, since we churlishly consider
-            // indexing expressions unsafe and `Expr::Star` only occurs
-            // within indices at the moment.
-            Expr::Star => unreachable!(),
-            // NOTE: Some index operations may be safe, but for now
-            // we consider them all unsafe.
-            Expr::Index { .. } => false,
+            // NOTE: Currently unreachable, since these only occur
+            // within Expr::Context and we handle that at the top-level.
+            Expr::Star | Expr::Identifier(_) | Expr::Index(_) => unreachable!(),
             // NOTE: Some function calls may be safe, but for now
             // we consider them all unsafe.
             Expr::Call { .. } => false,
             // We consider all context accesses unsafe. This isn't true,
             // but our audit filters the safe ones later on.
-            Expr::Context(_) => false,
+            Expr::Context { .. } => false,
             Expr::BinOp { lhs, op, rhs } => {
                 match op {
                     // `==` and `!=` are always safe, since they evaluate to
@@ -123,13 +162,13 @@ impl TemplateInjection {
         }
     }
 
-    fn injectable_template_expressions(
+    fn injectable_template_expressions<'s>(
         &self,
         run: &str,
-        job: &NormalJob,
+        step: &impl StepCommon<'s>,
     ) -> Vec<(String, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
-        for expr in extract_expressions(run) {
+        for (expr, _) in extract_expressions(run) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
@@ -148,49 +187,51 @@ impl TemplateInjection {
             }
 
             for context in parsed.contexts() {
-                if context.starts_with("secrets.") {
+                if context.child_of("secrets") {
                     // While not ideal, secret expansion is typically not exploitable.
                     continue;
-                } else if SAFE_CONTEXTS.contains(&context) {
+                } else if SAFE_CONTEXTS.iter().any(|safe| *context == **safe) {
                     continue;
-                } else if context.starts_with("inputs.") {
+                } else if context.child_of("inputs") {
                     // TODO: Currently low confidence because we don't check the
                     // input's type. In the future, we should index back into
                     // the workflow's triggers and exclude input expansions
                     // from innocuous types, e.g. booleans.
                     bad_expressions.push((
-                        context.into(),
+                        context.as_str().into(),
                         Severity::High,
                         Confidence::Low,
                         Persona::default(),
                     ));
-                } else if context.starts_with("env.") {
-                    // Almost never exploitable.
-                    bad_expressions.push((
-                        context.into(),
-                        Severity::Low,
-                        Confidence::High,
-                        Persona::default(),
-                    ));
-                } else if context.starts_with("github.event.") || context == "github.ref_name" {
+                } else if let Some(env) = context.pop_if("env") {
+                    let env_is_static = step.env_is_static(env);
+
+                    if !env_is_static {
+                        bad_expressions.push((
+                            context.as_str().into(),
+                            Severity::Low,
+                            Confidence::High,
+                            Persona::default(),
+                        ));
+                    }
+                } else if context.child_of("github") {
                     // TODO: Filter these more finely; not everything in the event
                     // context is actually attacker-controllable.
                     bad_expressions.push((
-                        context.into(),
+                        context.as_str().into(),
                         Severity::High,
                         Confidence::High,
                         Persona::default(),
                     ));
-                } else if context.starts_with("matrix.") || context == "matrix" {
-                    if let Some(Strategy { matrix, .. }) = &job.strategy {
+                } else if context.child_of("matrix") || context == "matrix" {
+                    if let Some(Strategy { matrix, .. }) = step.strategy() {
                         let matrix_is_static = match matrix {
                             // The matrix is generated by an expression, meaning
                             // that it's trivially not static.
                             Some(LoE::Expr(_)) => false,
                             // The matrix may expand to static values according to the context
-                            Some(inner) => {
-                                models::Matrix::new(inner).expands_to_static_values(context)
-                            }
+                            Some(inner) => models::Matrix::new(inner)
+                                .expands_to_static_values(context.as_str()),
                             // Context specifies a matrix, but there is no matrix defined.
                             // This is an invalid workflow so there's no point in flagging it.
                             None => continue,
@@ -198,7 +239,7 @@ impl TemplateInjection {
 
                         if !matrix_is_static {
                             bad_expressions.push((
-                                context.into(),
+                                context.as_str().into(),
                                 Severity::Medium,
                                 Confidence::Medium,
                                 Persona::default(),
@@ -210,7 +251,7 @@ impl TemplateInjection {
                     // All other contexts are typically not attacker controllable,
                     // but may be in obscure cases.
                     bad_expressions.push((
-                        context.into(),
+                        context.as_str().into(),
                         Severity::Informational,
                         Confidence::Low,
                         Persona::default(),
@@ -223,7 +264,7 @@ impl TemplateInjection {
     }
 }
 
-impl WorkflowAudit for TemplateInjection {
+impl Audit for TemplateInjection {
     fn new(_state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -231,28 +272,18 @@ impl WorkflowAudit for TemplateInjection {
         Ok(Self)
     }
 
-    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
+    fn audit_composite_step<'a>(
+        &self,
+        step: &super::CompositeStep<'a>,
+    ) -> anyhow::Result<Vec<super::Finding<'a>>> {
         let mut findings = vec![];
 
-        let (script, script_loc) = match &step.deref().body {
-            StepBody::Uses { uses, with } => {
-                if uses.starts_with("actions/github-script") {
-                    match with.get("script") {
-                        Some(script) => (
-                            &script.to_string(),
-                            step.location().with_keys(&["with".into(), "script".into()]),
-                        ),
-                        None => return Ok(findings),
-                    }
-                } else {
-                    return Ok(findings);
-                }
-            }
-            StepBody::Run { run, .. } => (run, step.location().with_keys(&["run".into()])),
+        let Some((script, script_loc)) = Self::script_with_location(step) else {
+            return Ok(findings);
         };
 
         for (expr, severity, confidence, persona) in
-            self.injectable_template_expressions(script, step.job())
+            self.injectable_template_expressions(&script, step)
         {
             findings.push(
                 Self::finding()
@@ -261,7 +292,35 @@ impl WorkflowAudit for TemplateInjection {
                     .persona(persona)
                     .add_location(step.location_with_name())
                     .add_location(
-                        script_loc.clone().annotated(format!(
+                        script_loc.clone().primary().annotated(format!(
+                            "{expr} may expand into attacker-controllable code"
+                        )),
+                    )
+                    .build(step.action())?,
+            )
+        }
+
+        Ok(findings)
+    }
+
+    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
+        let mut findings = vec![];
+
+        let Some((script, script_loc)) = Self::script_with_location(step) else {
+            return Ok(findings);
+        };
+
+        for (expr, severity, confidence, persona) in
+            self.injectable_template_expressions(&script, step)
+        {
+            findings.push(
+                Self::finding()
+                    .severity(severity)
+                    .confidence(confidence)
+                    .persona(persona)
+                    .add_location(step.location_with_name())
+                    .add_location(
+                        script_loc.clone().primary().annotated(format!(
                             "{expr} may expand into attacker-controllable code"
                         )),
                     )
@@ -275,9 +334,8 @@ impl WorkflowAudit for TemplateInjection {
 
 #[cfg(test)]
 mod tests {
-    use crate::audit::template_injection::TemplateInjection;
-
     use super::Expr;
+    use crate::audit::template_injection::TemplateInjection;
 
     #[test]
     fn test_expr_is_safe() {

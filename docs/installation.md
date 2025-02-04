@@ -10,13 +10,17 @@ description: Installation instructions for zizmor.
 
 === ":simple-rust: crates.io"
 
+    ![Crates.io Version](https://img.shields.io/crates/v/zizmor)
+
     You can install `zizmor` from <https://crates.io> with `cargo`:
 
     ```bash
-    cargo install zizmor
+    cargo install --locked zizmor
     ```
 
 === ":simple-homebrew: Homebrew"
+
+    ![Homebrew Formula Version](https://img.shields.io/homebrew/v/zizmor)
 
     `zizmor` is provided by [Homebrew](https://brew.sh/):
 
@@ -26,11 +30,7 @@ description: Installation instructions for zizmor.
 
 === ":simple-pypi: PyPI"
 
-    !!! tip
-
-        Despite being available on PyPI, `zizmor` is a compiled binary
-        and has no Python or Python package dependencies.
-
+    ![PyPI - Version](https://img.shields.io/pypi/v/zizmor)
 
     `zizmor` is available on [PyPI](https://pypi.org) and can be installed
     with any Python package installer:
@@ -51,6 +51,10 @@ description: Installation instructions for zizmor.
 
 === ":simple-anaconda: Conda"
 
+    [![Anaconda-Server Badge](https://anaconda.org/conda-forge/zizmor/badges/version.svg)](https://anaconda.org/conda-forge/zizmor)
+    [![Anaconda-Server Badge](https://anaconda.org/conda-forge/zizmor/badges/latest_release_date.svg)](https://anaconda.org/conda-forge/zizmor)
+    [![Anaconda-Server Badge](https://anaconda.org/conda-forge/zizmor/badges/platforms.svg)](https://anaconda.org/conda-forge/zizmor)
+
     !!! note
 
         This is a community-maintained package.
@@ -67,6 +71,8 @@ description: Installation instructions for zizmor.
 
 === ":material-nix: Nix"
 
+    [![nixpkgs unstable package](https://repology.org/badge/version-for-repo/nix_unstable/zizmor.svg)](https://repology.org/project/zizmor/versions)
+
     !!! note
 
         This is a community-maintained package.
@@ -78,6 +84,20 @@ description: Installation instructions for zizmor.
     # with flakes
     nix profile install nixpkgs#zizmor
     ```
+
+=== ":simple-archlinux: Arch Linux"
+
+    [![Arch Linux package](https://repology.org/badge/version-for-repo/arch/zizmor.svg)](https://repology.org/project/zizmor/versions)
+
+    !!! note
+
+        This is a community-maintained package.
+
+    ```bash
+    # zizmor-git is also available in the AUR
+    pacman -S zizmor
+    ```
+
 
 === "Other ecosystems"
 

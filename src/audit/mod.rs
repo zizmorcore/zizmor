@@ -1,15 +1,21 @@
 //! Core namespace for zizmor's audits.
 
 use anyhow::Result;
+use github_actions_models::action;
+use line_index::LineIndex;
 use tracing::instrument;
+use yamlpath::Document;
 
 use crate::{
-    finding::{Finding, FindingBuilder},
-    models::{Job, Step, Workflow},
+    finding::{Finding, FindingBuilder, SymbolicLocation},
+    models::{Action, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
+    registry::InputKey,
     state::AuditState,
 };
 
 pub(crate) mod artipacked;
+pub(crate) mod bot_conditions;
+pub(crate) mod cache_poisoning;
 pub(crate) mod dangerous_triggers;
 pub(crate) mod excessive_permissions;
 pub(crate) mod github_env;
@@ -17,18 +23,81 @@ pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod insecure_commands;
 pub(crate) mod known_vulnerable_actions;
+pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
+pub(crate) mod secrets_inherit;
 pub(crate) mod self_hosted_runner;
 pub(crate) mod template_injection;
 pub(crate) mod unpinned_uses;
 pub(crate) mod use_trusted_publishing;
+
+#[derive(Debug)]
+pub(crate) enum AuditInput {
+    Workflow(Workflow),
+    Action(Action),
+}
+
+impl AuditInput {
+    pub(crate) fn key(&self) -> &InputKey {
+        match self {
+            AuditInput::Workflow(workflow) => &workflow.key,
+            AuditInput::Action(action) => &action.key,
+        }
+    }
+
+    pub(crate) fn document(&self) -> &yamlpath::Document {
+        match self {
+            AuditInput::Workflow(workflow) => &workflow.document,
+            AuditInput::Action(action) => &action.document,
+        }
+    }
+
+    pub(crate) fn line_index(&self) -> &LineIndex {
+        match self {
+            AuditInput::Workflow(workflow) => &workflow.line_index,
+            AuditInput::Action(action) => &action.line_index,
+        }
+    }
+
+    pub(crate) fn link(&self) -> Option<&str> {
+        match self {
+            AuditInput::Workflow(workflow) => workflow.link.as_deref(),
+            AuditInput::Action(action) => action.link.as_deref(),
+        }
+    }
+
+    pub(crate) fn location(&self) -> SymbolicLocation {
+        match self {
+            AuditInput::Workflow(workflow) => workflow.location(),
+            AuditInput::Action(action) => action.location(),
+        }
+    }
+}
+
+impl AsRef<Document> for AuditInput {
+    fn as_ref(&self) -> &Document {
+        self.document()
+    }
+}
+
+impl From<Workflow> for AuditInput {
+    fn from(value: Workflow) -> Self {
+        Self::Workflow(value)
+    }
+}
+
+impl From<Action> for AuditInput {
+    fn from(value: Action) -> Self {
+        Self::Action(value)
+    }
+}
 
 /// A supertrait for all audits.
 ///
 /// Workflow audits, action audits, and all future audit types
 /// must derive this trait, either manually or via the [`audit_meta`]
 /// macro.
-pub(crate) trait Audit {
+pub(crate) trait AuditCore {
     fn ident() -> &'static str
     where
         Self: Sized;
@@ -60,9 +129,9 @@ pub(crate) trait Audit {
 /// ```
 macro_rules! audit_meta {
     ($t:ty, $id:literal, $desc:expr) => {
-        use crate::audit::Audit;
+        use crate::audit::AuditCore;
 
-        impl Audit for $t {
+        impl AuditCore for $t {
             fn ident() -> &'static str {
                 $id
             }
@@ -75,7 +144,7 @@ macro_rules! audit_meta {
             }
 
             fn url() -> &'static str {
-                concat!("https://woodruffw.github.io/zizmor/audits#", $id)
+                concat!("https://woodruffw.github.io/zizmor/audits/#", $id)
             }
         }
     };
@@ -83,21 +152,33 @@ macro_rules! audit_meta {
 
 pub(crate) use audit_meta;
 
-/// Workflow auditing trait.
+/// Auditing trait.
 ///
 /// Implementors of this trait can choose the level of specificity/context
-/// they need:
+/// they need for workflows and/or action definitions:
 ///
-/// 1. [`WorkflowAudit::audit_workflow`]: runs at the top of the workflow (most general)
-/// 1. [`WorkflowAudit::audit_normal_job`] and/or [`WorkflowAudit::audit_reusable_job`]:
+/// For workflows:
+///
+/// 1. [`Audit::audit_workflow`]: runs at the top of the workflow (most general)
+/// 1. [`Audit::audit_normal_job`] and/or [`Audit::audit_reusable_job`]:
 ///    runs on each normal/reusable job definition
-/// 1. [`WorkflowAudit::audit_step`]: runs on each step within each normal job (most specific)
+/// 1. [`Audit::audit_step`]: runs on each step within each normal job (most specific)
+///
+/// For actions:
+///
+/// 1. [`Audit::audit_action`]: runs at the top of the action (most general)
+/// 2. [`Audit::audit_composite_step`]: runs on each composite step within the
+///    action (most specific)
+///
+/// For both:
+///
+/// 1. [`Audit::audit_raw`]: runs on the raw, unparsed YAML document source
 ///
 /// Picking a higher specificity means that the lower methods are shadowed.
-/// In other words, if an audit chooses to implement [`WorkflowAudit::audit`], it should implement
-/// **only** [`WorkflowAudit::audit`] and not [`WorkflowAudit::audit_normal_job`] or
-/// [`WorkflowAudit::audit_step`].
-pub(crate) trait WorkflowAudit: Audit {
+/// In other words, if an audit chooses to implement [`Audit::audit`], it should implement
+/// **only** [`Audit::audit`] and not [`Audit::audit_normal_job`] or
+/// [`Audit::audit_step`].
+pub(crate) trait Audit: AuditCore {
     fn new(state: AuditState) -> Result<Self>
     where
         Self: Sized;
@@ -106,7 +187,7 @@ pub(crate) trait WorkflowAudit: Audit {
         Ok(vec![])
     }
 
-    fn audit_normal_job<'w>(&self, job: &Job<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_normal_job<'w>(&self, job: &NormalJob<'w>) -> Result<Vec<Finding<'w>>> {
         let mut results = vec![];
         for step in job.steps() {
             results.extend(self.audit_step(&step)?);
@@ -114,7 +195,10 @@ pub(crate) trait WorkflowAudit: Audit {
         Ok(results)
     }
 
-    fn audit_reusable_job<'w>(&self, _job: &Job<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_reusable_job<'w>(
+        &self,
+        _job: &ReusableWorkflowCallJob<'w>,
+    ) -> Result<Vec<Finding<'w>>> {
         Ok(vec![])
     }
 
@@ -122,12 +206,12 @@ pub(crate) trait WorkflowAudit: Audit {
         let mut results = vec![];
 
         for job in workflow.jobs() {
-            match *job {
-                github_actions_models::workflow::Job::NormalJob(_) => {
-                    results.extend(self.audit_normal_job(&job)?);
+            match job {
+                Job::NormalJob(normal) => {
+                    results.extend(self.audit_normal_job(&normal)?);
                 }
-                github_actions_models::workflow::Job::ReusableWorkflowCallJob(_) => {
-                    results.extend(self.audit_reusable_job(&job)?);
+                Job::ReusableWorkflowCallJob(reusable) => {
+                    results.extend(self.audit_reusable_job(&reusable)?);
                 }
             }
         }
@@ -135,12 +219,39 @@ pub(crate) trait WorkflowAudit: Audit {
         Ok(results)
     }
 
-    /// The top-level workflow auditing function.
+    fn audit_composite_step<'a>(&self, _step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+        Ok(vec![])
+    }
+
+    fn audit_action<'a>(&self, action: &'a Action) -> Result<Vec<Finding<'a>>> {
+        let mut results = vec![];
+
+        if matches!(action.runs, action::Runs::Composite(_)) {
+            for step in action.steps() {
+                results.extend(self.audit_composite_step(&step)?);
+            }
+        }
+
+        Ok(results)
+    }
+
+    fn audit_raw<'w>(&self, _input: &'w AuditInput) -> Result<Vec<Finding<'w>>> {
+        Ok(vec![])
+    }
+
+    /// The top-level auditing function for both workflows and actions.
     ///
     /// Implementors **should not** override this blanket implementation,
     /// since it's marked with tracing instrumentation.
     #[instrument(skip(self))]
-    fn audit<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
-        self.audit_workflow(workflow)
+    fn audit<'w>(&self, input: &'w AuditInput) -> Result<Vec<Finding<'w>>> {
+        let mut results = match input {
+            AuditInput::Workflow(workflow) => self.audit_workflow(workflow),
+            AuditInput::Action(action) => self.audit_action(action),
+        }?;
+
+        results.extend(self.audit_raw(input)?);
+
+        Ok(results)
     }
 }

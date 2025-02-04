@@ -1,0 +1,33 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"github-env/action.yml\")).run()?"
+snapshot_kind: text
+---
+error[github-env]: dangerous use of environment file
+  --> @@INPUT@@:10:7
+   |
+10 | /       run: |
+11 | |         echo "foo=$(bar)" >> $GITHUB_ENV
+   | |________________________________________^ write to GITHUB_ENV may allow code execution
+   |
+   = note: audit confidence → Low
+
+error[github-env]: dangerous use of environment file
+  --> @@INPUT@@:15:7
+   |
+15 | /       run: |
+16 | |         echo "foo=$env:BAR" >> $env:GITHUB_ENV
+   | |______________________________________________^ write to $env:GITHUB_ENV may allow code execution
+   |
+   = note: audit confidence → Low
+
+error[github-env]: dangerous use of environment file
+  --> @@INPUT@@:20:7
+   |
+20 | /       run: |
+21 | |         echo LIBRARY=%LIBRARY% >> %GITHUB_ENV%
+   | |______________________________________________^ write to GITHUB_ENV may allow code execution
+   |
+   = note: audit confidence → Low
+
+3 findings: 0 unknown, 0 informational, 0 low, 0 medium, 3 high

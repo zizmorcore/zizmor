@@ -6,16 +6,16 @@
 //! but the upstream repository may host *both* a branch and a tag named
 //! `foo`, making it unclear to the end user which is selected.
 
-use std::ops::Deref;
-
 use anyhow::{anyhow, Result};
-use github_actions_models::workflow::Job;
+use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{audit_meta, WorkflowAudit};
+use super::{audit_meta, Audit, Job};
+use crate::finding::Finding;
+use crate::models::{CompositeStep, JobExt as _};
 use crate::{
     finding::{Confidence, Severity},
     github_api,
-    models::{RepositoryUses, Uses},
+    models::uses::RepositoryUsesExt as _,
     state::AuditState,
 };
 
@@ -38,8 +38,8 @@ impl RefConfusion {
             return Ok(false);
         };
 
-        let branches_match = self.client.has_branch(uses.owner, uses.repo, sym_ref)?;
-        let tags_match = self.client.has_tag(uses.owner, uses.repo, sym_ref)?;
+        let branches_match = self.client.has_branch(&uses.owner, &uses.repo, sym_ref)?;
+        let tags_match = self.client.has_tag(&uses.owner, &uses.repo, sym_ref)?;
 
         // If both the branch and tag namespaces have a match, we have a
         // confusable ref.
@@ -47,7 +47,7 @@ impl RefConfusion {
     }
 }
 
-impl WorkflowAudit for RefConfusion {
+impl Audit for RefConfusion {
     fn new(state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -70,20 +70,21 @@ impl WorkflowAudit for RefConfusion {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
-            match job.deref() {
-                Job::NormalJob(_) => {
-                    for step in job.steps() {
+            match job {
+                Job::NormalJob(normal) => {
+                    for step in normal.steps() {
                         let Some(Uses::Repository(uses)) = step.uses() else {
                             continue;
                         };
 
-                        if self.confusable(&uses)? {
+                        if self.confusable(uses)? {
                             findings.push(
                                 Self::finding()
                                     .severity(Severity::Medium)
                                     .confidence(Confidence::High)
                                     .add_location(
                                         step.location()
+                                            .primary()
                                             .with_keys(&["uses".into()])
                                             .annotated(REF_CONFUSION_ANNOTATION),
                                     )
@@ -93,21 +94,51 @@ impl WorkflowAudit for RefConfusion {
                     }
                 }
                 Job::ReusableWorkflowCallJob(reusable) => {
-                    let Some(uses) = Uses::from_reusable(&reusable.uses) else {
+                    let Uses::Repository(uses) = &reusable.uses else {
                         continue;
                     };
 
-                    if self.confusable(&uses)? {
+                    if self.confusable(uses)? {
                         findings.push(
                             Self::finding()
                                 .severity(Severity::Medium)
                                 .confidence(Confidence::High)
-                                .add_location(job.location().annotated(REF_CONFUSION_ANNOTATION))
+                                .add_location(
+                                    reusable
+                                        .location()
+                                        .primary()
+                                        .annotated(REF_CONFUSION_ANNOTATION),
+                                )
                                 .build(workflow)?,
                         )
                     }
                 }
             }
+        }
+
+        Ok(findings)
+    }
+
+    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+        let mut findings = vec![];
+
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
+
+        if self.confusable(uses)? {
+            findings.push(
+                Self::finding()
+                    .severity(Severity::Medium)
+                    .confidence(Confidence::High)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["uses".into()])
+                            .annotated(REF_CONFUSION_ANNOTATION),
+                    )
+                    .build(step.action())?,
+            );
         }
 
         Ok(findings)

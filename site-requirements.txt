@@ -1,2 +1,0 @@
-mkdocs ~= 1.6
-mkdocs-material[imaging] ~= 9.5

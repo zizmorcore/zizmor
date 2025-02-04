@@ -1,0 +1,9 @@
+name: reusable-workflow-call
+
+on:
+  workflow_dispatch:
+
+jobs:
+  job1:
+    # finding: reusable jobs should always specify their permissions
+    uses: ./.github/workflows/zizmor-child.yml

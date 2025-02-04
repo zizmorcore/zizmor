@@ -1,13 +1,16 @@
 use std::ops::Deref;
 
 use anyhow::Ok;
-use github_actions_models::{common::EnvValue, workflow::job::StepBody};
+use github_actions_models::{
+    common::{EnvValue, Uses},
+    workflow::job::StepBody,
+};
 use indexmap::IndexMap;
 
-use super::{audit_meta, WorkflowAudit};
+use super::{audit_meta, Audit};
 use crate::{
     finding::{Confidence, Severity},
-    models::Uses,
+    models::uses::RepositoryUsesExt as _,
     state::AuditState,
 };
 
@@ -66,7 +69,7 @@ impl UseTrustedPublishing {
     }
 }
 
-impl WorkflowAudit for UseTrustedPublishing {
+impl Audit for UseTrustedPublishing {
     fn new(state: AuditState) -> anyhow::Result<Self> {
         Ok(Self { _state: state })
     }
@@ -74,11 +77,11 @@ impl WorkflowAudit for UseTrustedPublishing {
     fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
 
-        let StepBody::Uses { uses, with } = &step.deref().body else {
-            return Ok(findings);
-        };
-
-        let Some(Uses::Repository(uses)) = Uses::from_step(uses) else {
+        let StepBody::Uses {
+            uses: Uses::Repository(uses),
+            with,
+        } = &step.deref().body
+        else {
             return Ok(findings);
         };
 
@@ -87,6 +90,7 @@ impl WorkflowAudit for UseTrustedPublishing {
             .confidence(Confidence::High)
             .add_location(
                 step.location()
+                    .primary()
                     .with_keys(&["uses".into()])
                     .annotated("this step"),
             );
@@ -98,6 +102,7 @@ impl WorkflowAudit for UseTrustedPublishing {
                 candidate
                     .add_location(
                         step.location()
+                            .primary()
                             .with_keys(&["with".into(), "password".into()])
                             .annotated(USES_MANUAL_CREDENTIAL),
                     )
@@ -110,7 +115,7 @@ impl WorkflowAudit for UseTrustedPublishing {
         {
             findings.push(
                 candidate
-                    .add_location(step.location().annotated(USES_MANUAL_CREDENTIAL))
+                    .add_location(step.location().primary().annotated(USES_MANUAL_CREDENTIAL))
                     .build(step.workflow())?,
             );
         }

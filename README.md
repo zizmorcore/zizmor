@@ -5,13 +5,20 @@
 [![Packaging status](https://repology.org/badge/tiny-repos/zizmor.svg)](https://repology.org/project/zizmor/versions)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/woodruffw?style=flat&logo=githubsponsors&labelColor=white&color=white)](https://github.com/sponsors/woodruffw)
 
-`zizmor` is a static analysis tool for GitHub Actions. It can find
-many common security issues in typical GitHub Actions CI/CD setups.
+`zizmor` is a static analysis tool for GitHub Actions.
 
-> [!IMPORTANT]
-> `zizmor` is currently in beta. You will encounter bugs; [please file them]!
+It can find many common security issues in typical GitHub Actions CI/CD setups,
+including:
 
-![zizmor demo](./docs/assets/zizmor-demo.gif)
+* Template injection vulnerabilities, leading to attacker-controlled code execution
+* Accidental credential persistence and leakage
+* Excessive permission scopes and credential grants to runners
+* Impostor commits and confusable `git` references
+* ...[and much more]!
+
+[and much more]: https://woodruffw.github.io/zizmor/audits/
+
+![zizmor demo](https://raw.githubusercontent.com/woodruffw/zizmor/main/docs/assets/zizmor-demo.gif)
 
 See [`zizmor`'s documentation](https://woodruffw.github.io/zizmor/)
 for [installation steps], as well as a [quickstart] and
@@ -38,6 +45,26 @@ See [our contributing guide!](./CONTRIBUTING.md)
 *[Now you can have beautiful clean workflows!]*
 
 [Now you can have beautiful clean workflows!]: https://www.youtube.com/watch?v=ol7rxFCvpy8
+
+## Sponsors 💖
+
+`zizmor`'s development is supported by these amazing sponsors!
+
+<!-- @@begin-sponsors@@ -->
+<table>
+<tbody>
+<tr>
+<td align="center" valign="top" width="15%">
+<a href="https://astral.sh/">
+<img src="https://avatars.githubusercontent.com/u/115962839?s=100&v=4" width="100px">
+<br>
+Astral
+</a>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- @@end-sponsors@@ -->
 
 ## Star History
 

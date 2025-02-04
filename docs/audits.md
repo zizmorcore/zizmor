@@ -47,7 +47,7 @@ Unless needed for `git` operations, @actions/checkout should be used with
 If the persisted credential is needed, it should be made explicit
 with `#!yaml persist-credentials: true`.
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="artipacked.yml" hl_lines="7"
     on: push
@@ -59,7 +59,7 @@ with `#!yaml persist-credentials: true`.
           - uses: actions/checkout@v4
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="artipacked.yml" hl_lines="7-9"
     on: push
@@ -139,6 +139,11 @@ Users frequently over-scope their workflow and job permissions,
 or set broad workflow-level permissions without realizing that
 all jobs inherit those permissions.
 
+Furthermore, users often don't realize that the
+[*default* `GITHUB_TOKEN` permissions can be very broad](https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token),
+meaning that workflows that don't configure any permissions at all can *still*
+provide excessive credentials to their individual jobs.
+
 ### Remediation
 
 In general, permissions should be declared as minimally as possible, and
@@ -150,7 +155,7 @@ by default, and then set specific job-level permissions as needed.
 
 For example:
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="excessive-permissions.yml" hl_lines="8-9"
     on:
@@ -186,7 +191,7 @@ For example:
             uses: pypa/gh-action-pypi-publish@release/v1
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="excessive-permissions.yml" hl_lines="8 21-22"
     on:
@@ -240,7 +245,7 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 [encrypted secrets]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
     on:
@@ -264,7 +269,7 @@ Use [encrypted secrets] instead of hardcoded credentials.
           - run: echo 'hello!'
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
     on:
@@ -295,7 +300,7 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 | Type     | Examples              | Introduced in | Works offline  | Enabled by default |
 |----------|-----------------------|---------------|----------------|--------------------|
-| Workflow  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 |
+| Workflow, Action  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 |
 
 [impostor-commit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/impostor-commit.yml
 
@@ -333,9 +338,9 @@ within an authentic commit (or an authentic tag/branch reference).
 
 ## `known-vulnerable-actions`
 
-| Type     | Examples                       | Introduced in | Works offline  | Enabled by default |
-|----------|--------------------------------|---------------|----------------|--------------------|
-| Workflow  | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 |
+| Type             | Examples                       | Introduced in | Works offline  | Enabled by default |
+|------------------|--------------------------------|---------------|----------------|--------------------|
+| Workflow, Action | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 |
 
 [known-vulnerable-actions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/known-vulnerable-actions.yml
 
@@ -357,9 +362,10 @@ the action if one is available, or remove the action's usage entirely.
 
 ## `ref-confusion`
 
-| Type     | Examples            | Introduced in | Works offline  | Enabled by default |
-|----------|---------------------|---------------|----------------|--------------------|
-| Workflow  | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 |
+| Type             | Examples            | Introduced in | Works offline  | Enabled by default |
+|------------------|---------------------|---------------|----------------|--------------------|
+| Workflow, Action | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 |
+
 
 [ref-confusion.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/ref-confusion.yml
 
@@ -431,7 +437,7 @@ there are steps you can take to minimize their risk:
 
 | Type     | Examples                 | Introduced in | Works offline  | Enabled by default |
 |----------|--------------------------|---------------|----------------|--------------------|
-| Workflow  | [template-injection.yml] | v0.1.0        | ✅             | ✅                 |
+| Workflow, Action  | [template-injection.yml] | v0.1.0        | ✅             | ✅                 |
 
 [template-injection.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/template-injection.yml
 
@@ -479,7 +485,7 @@ shell quoting/expansion rules.
     To avoid having to specialize your handling for different runners,
     you can set `shell: sh` or `shell: bash`.
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="template-injection.yml" hl_lines="3"
     - name: Check title
@@ -491,7 +497,7 @@ shell quoting/expansion rules.
         fi
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="template-injection.yml" hl_lines="3 8-9"
     - name: Check title
@@ -546,9 +552,9 @@ or @rubygems/release-gem for canonical examples of using it.
 
 ## `unpinned-uses`
 
-| Type     | Examples                     | Introduced in | Works offline  | Enabled by default |
-|----------|------------------------------|---------------|----------------|--------------------|
-| Workflow  | [unpinned.yml]              | v0.4.0        | ✅             | ✅                 |
+| Type             | Examples                     | Introduced in | Works offline  | Enabled by default |
+|------------------|------------------------------|---------------|----------------|--------------------|
+| Workflow, Action | [unpinned.yml]              | v0.4.0        | ✅             | ✅                 |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
@@ -575,7 +581,7 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
 
 A before/after example is shown below.
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="unpinned-uses.yml" hl_lines="8 12"
     name: unpinned-uses
@@ -595,7 +601,7 @@ A before/after example is shown below.
           args: hello!
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="unpinned-uses.yml" hl_lines="8 12"
     name: unpinned-uses
@@ -622,7 +628,7 @@ A before/after example is shown below.
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default |
 |----------|-------------------------|---------------|----------------|--------------------|
-| Workflow  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅                 |
+| Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅                 |
 
 [insecure-commands.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/insecure-commands.yml
 
@@ -646,7 +652,7 @@ Other resources:
 In general, users should use for [GitHub Actions environment files]
 (like `GITHUB_PATH` and `GITHUB_OUTPUT`) instead of using workflow commands.
 
-=== "Before"
+=== "Before :warning:"
 
     ```yaml title="insecure-commands" hl_lines="3"
     - name: Setup my-bin
@@ -656,7 +662,7 @@ In general, users should use for [GitHub Actions environment files]
         ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     ```
 
-=== "After"
+=== "After :white_check_mark:"
 
     ```yaml title="insecure-commands" hl_lines="3"
     - name: Setup my-bin
@@ -668,16 +674,21 @@ In general, users should use for [GitHub Actions environment files]
 
 | Type     | Examples           | Introduced in | Works offline  | Enabled by default |
 |----------|--------------------|---------------|----------------|--------------------|
-| Workflow  | [github-env.yml]   | v0.6.0        | ✅             | ✅                 |
+| Workflow, Action  | [github-env.yml]   | v0.6.0        | ✅             | ✅                 |
 
 [github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
 
-Detects dangerous usages of the `GITHUB_ENV` environment variable.
+Detects dangerous writes to the `GITHUB_ENV` and `GITHUB_PATH` environment variables.
 
 When used in workflows with dangerous triggers (such as `pull_request_target` and `workflow_run`),
-`GITHUB_ENV` can be an arbitrary code execution risk. In particular, if the attacker is able to set
-arbitrary variables or variable contents via `GITHUB_ENV`, they made be able to set `LD_PRELOAD`
-or otherwise induce code execution implicitly within subsequent steps.
+`GITHUB_ENV` and `GITHUB_PATH` can be an arbitrary code execution risk:
+
+* If the attacker is able to set arbitrary variables or variable contents via
+  `GITHUB_ENV`, they may be able to set `LD_PRELOAD` or otherwise induce code
+  execution implicitly within subsequent steps.
+* If the attacker is able to add an arbitrary directory to the `$PATH` via
+  `GITHUB_PATH`, they may be able to execute arbitrary code by shadowing
+  ordinary system executables (such as `ssh`).
 
 Other resources:
 
@@ -688,11 +699,240 @@ Other resources:
 
 ### Remediation
 
-In general, you should avoid setting `GITHUB_ENV` within workflows that are attacker-triggered,
-like `pull_request_target`.
+In general, you should avoid modifying `GITHUB_ENV` and `GITHUB_PATH` within
+sensitive workflows that are attacker-triggered, like `pull_request_target`.
+
+If you absolutely must use `GITHUB_ENV` or `GITHUB_PATH`, avoid passing
+attacker-controlled values into either. Stick with literal strings and
+values computed solely from trusted sources.
 
 If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 
+## `cache-poisoning`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ✅                 |
+
+[cache-poisoning.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/cache-poisoning.yml
+
+Detects potential cache-poisoning scenarios in release workflows.
+
+Caching and restoring build state is a process eased by utilities provided
+by GitHub, in particular @actions/cache and its "save" and "restore"
+sub-actions. In addition, many of the setup-like actions provided
+by GitHub come with built-in caching functionality, like @actions/setup-node,
+@actions/setup-java and others.
+
+Furthermore, there are many examples of community-driven Actions with built-in
+caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
+@Swatinem/rust-cache. In general, most of them build on top of @actions/toolkit
+for the sake of easily integrate with GitHub cache server at Workflow runtime.
+
+This vulnerability happens when release workflows leverage build state cached
+from previous workflow executions, in general on top of the aforementioned
+actions or  similar ones. The publication of artifacts usually happens driven
+by trigger events like `release` or events with path filters like `push`
+(e.g. for tags).
+
+In such scenarios, an attacker with access to a valid `GITHUB_TOKEN` can use it
+to poison the repository's GitHub Actions caches. That compounds with the
+default behavior of @actions/toolkit during cache restorations, allowing an
+attacker to retrieve payloads from poisoned cache entries, hence achieving code
+execution at Workflow runtime, potentially compromising ready-to-publish
+artifacts.
+
+Other resources:
+
+* [The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]
+* [Cacheract: The Monster in your Build Cache]
+
+### Remediation
+
+In general, you should avoid using previously cached CI state within workflows
+intended to publish build artifacts:
+
+* Remove cache-aware actions like @actions/cache from workflows that produce
+  releases, *or*
+* Disable cache-aware actions with an `if:` condition based on the trigger at
+  the step level, *or*
+* Set an action-specific input to disable cache restoration when appropriate,
+  such as `lookup-only` in @Swatinem/rust-cache.
+
+## `secrets-inherit`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [secrets-inherit.yml]   | v1.1.0      | ✅             | ✅                 |
+
+[secrets-inherit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/secrets-inherit.yml
+
+Detects excessive secret inheritance between calling workflows and reusable
+(called) workflows.
+
+[Reusable workflows] can be given secrets by their calling workflow either
+explicitly, or in a blanket fashion with `secrets: inherit`. The latter
+should almost never be used, as it makes it violates the
+[Principle of Least Authority] and makes it impossible to determine which exact
+secrets a reusable workflow was executed with.
+
+### Remediation
+
+In general, `secrets: inherit` should be replaced with a `secrets:` block
+that explicitly forwards each secret actually needed by the reusable workflow.
+
+=== "Before :warning:"
+
+    ```yaml title="reusable.yml" hl_lines="4"
+    jobs:
+      pass-secrets-to-workflow:
+        uses: ./.github/workflows/called-workflow.yml
+        secrets: inherit
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="reusable.yml" hl_lines="4-6"
+    jobs:
+      pass-secrets-to-workflow:
+        uses: ./.github/workflows/called-workflow.yml
+        secrets:
+          forward-me: ${{ secrets.forward-me }}
+          me-too: ${{ secrets.me-too }}
+    ```
+
+## `bot-conditions`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [bot-conditions.yml]   | v1.2.0      | ✅             | ✅                 |
+
+[bot-conditions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/bot-conditions.yml
+
+Detects potentially spoofable bot conditions.
+
+Many workflows allow trustworthy bots (such as [Dependabot](https://github.com/dependabot))
+to bypass checks or otherwise perform privileged actions. This is often done
+with a `github.actor` check, e.g.:
+
+```yaml
+if: github.actor == 'dependabot[bot]'
+```
+
+However, this condition is spoofable: `github.actor` refers to the *last* actor
+to perform an "action" on the triggering context, and not necessarily
+the actor actually causing the trigger. An attacker can take
+advantage of this discrepancy to create a PR where the `HEAD` commit
+has `github.actor == 'dependabot[bot]'` but the rest of the branch history
+contains attacker-controlled code, bypassing the actor check.
+
+Other resources:
+
+* [GitHub Actions exploitations: Dependabot]
+
+### Remediation
+
+In general, checking a trigger's authenticity via `github.actor` is
+insufficient. Instead, most users should use `github.event.pull_request.user.login`
+or similar, since that context refers to the actor that *created* the Pull Request
+rather than the last one to modify it.
+
+More generally,
+[GitHub's documentation recommends](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions)
+not using `pull_request_target` for auto-merge workflows.
+
+=== "Before :warning:"
+
+    ```yaml title="bot-conditions.yml" hl_lines="1 6"
+    on: pull_request_target
+
+    jobs:
+      automerge:
+        runs-on: ubuntu-latest
+        if: github.actor == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
+        steps:
+          - run: gh pr merge --auto --merge "$PR_URL"
+            env:
+              PR_URL: ${{ github.event.pull_request.html_url }}
+              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="bot-conditions.yml" hl_lines="1 6"
+    on: pull_request
+
+    jobs:
+      automerge:
+        runs-on: ubuntu-latest
+        if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
+        steps:
+          - run: gh pr merge --auto --merge "$PR_URL"
+            env:
+              PR_URL: ${{ github.event.pull_request.html_url }}
+              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    ```
+
+## `overprovisioned-secrets`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅             | ✅                 |
+
+[overprovisioned-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/overprovisioned-secrets.yml
+
+Detects excessive sharing of the `secrets` context.
+
+Typically, users access the `secrets` context via its individual members:
+
+```yaml
+env:
+  SECRET_ONE: ${{ secrets.SECRET_ONE }}
+  SECRET_TWO: ${{ secrets.SECRET_TWO }}
+```
+
+This allows the Actions runner to only expose the secrets actually used by
+the workflow to the job environment.
+
+However, if the user instead accesses the *entire* `secrets` context:
+
+```yaml
+env:
+  SECRETS: ${{ toJson(secrets) }}
+```
+
+...then the entire `secrets` context is exposed to the runner, even if
+only a single secret is actually needed.
+
+### Remediation
+
+In general, users should avoid loading the entire `secrets` context.
+Secrets should be accessed individually by name.
+
+=== "Before :warning:"
+
+    ```yaml title="overprovisioned.yml" hl_lines="7"
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - run: ./deploy.sh
+            env:
+              SECRETS: ${{ toJSON(secrets) }}
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="overprovisioned.yml" hl_lines="7-8"
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - run: ./deploy.sh
+            env:
+              SECRET_ONE: ${{ secrets.SECRET_ONE }}
+              SECRET_TWO: ${{ secrets.SECRET_TWO }}
+    ```
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
@@ -711,3 +951,8 @@ If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability
 [Google & Apache Found Vulnerable to GitHub Environment Injection]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability-0
 [Hacking with Environment Variables]: https://www.elttam.com/blog/env/
+[The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]: https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
+[reusable workflows]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
+[Principle of Least Authority]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
+[Cacheract: The Monster in your Build Cache]: https://adnanthekhan.com/2024/12/21/cacheract-the-monster-in-your-build-cache/
+[GitHub Actions exploitations: Dependabot]: https://www.synacktiv.com/publications/github-actions-exploitation-dependabot

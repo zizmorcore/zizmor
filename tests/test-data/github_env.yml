@@ -1,6 +1,8 @@
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers]
 
+permissions: {}
+
 jobs:
   vulnerable:
     runs-on: ubuntu-latest

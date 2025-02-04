@@ -1,0 +1,18 @@
+# ensures that boolish toggles are treated like booleans,
+# i.e. the `"true"` string is treated like `true`
+
+on: release
+
+permissions: {}
+
+jobs:
+  publish-crate:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Build wheels
+        uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist
+          sccache: "true"

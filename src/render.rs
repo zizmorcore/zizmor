@@ -2,14 +2,16 @@
 
 use std::collections::{hash_map::Entry, HashMap};
 
-use crate::{
-    finding::{Finding, Location, Severity},
-    registry::{FindingRegistry, WorkflowKey, WorkflowRegistry},
-};
 use annotate_snippets::{Level, Renderer, Snippet};
-use anstream::{print, println};
+use anstream::{eprintln, print, println};
 use owo_colors::OwoColorize;
 use terminal_link::Link;
+
+use crate::{
+    finding::{Finding, Location, Severity},
+    registry::{FindingRegistry, InputKey, InputRegistry},
+    App,
+};
 
 impl From<&Severity> for Level {
     fn from(sev: &Severity) -> Self {
@@ -24,12 +26,12 @@ impl From<&Severity> for Level {
 }
 
 pub(crate) fn finding_snippet<'w>(
-    registry: &'w WorkflowRegistry,
+    registry: &'w InputRegistry,
     finding: &'w Finding<'w>,
 ) -> Vec<Snippet<'w>> {
     // Our finding might span multiple workflows, so we need to group locations
     // by their enclosing workflow to generate each snippet correctly.
-    let mut locations_by_workflow: HashMap<&WorkflowKey, Vec<&Location<'w>>> = HashMap::new();
+    let mut locations_by_workflow: HashMap<&InputKey, Vec<&Location<'w>>> = HashMap::new();
     for location in &finding.locations {
         match locations_by_workflow.entry(location.symbolic.key) {
             Entry::Occupied(mut e) => {
@@ -42,14 +44,18 @@ pub(crate) fn finding_snippet<'w>(
     }
 
     let mut snippets = vec![];
-    for (workflow_key, locations) in locations_by_workflow {
-        let workflow = registry.get_workflow(workflow_key);
+    for (input_key, locations) in locations_by_workflow {
+        let input = registry.get_input(input_key);
 
         snippets.push(
-            Snippet::source(workflow.document.source())
+            Snippet::source(input.document().source())
                 .fold(true)
                 .line_start(1)
-                .origin(workflow.link.as_deref().unwrap_or(workflow_key.path()))
+                .origin(
+                    input
+                        .link()
+                        .unwrap_or(input_key.best_effort_relative_path()),
+                )
                 .annotations(locations.iter().map(|loc| {
                     let annotation = match loc.symbolic.link {
                         Some(ref link) => link,
@@ -57,7 +63,10 @@ pub(crate) fn finding_snippet<'w>(
                     };
 
                     Level::from(&finding.determinations.severity)
-                        .span(loc.concrete.location.start_offset..loc.concrete.location.end_offset)
+                        .span(
+                            loc.concrete.location.offset_span.start
+                                ..loc.concrete.location.offset_span.end,
+                        )
                         .label(annotation)
                 })),
         );
@@ -66,7 +75,7 @@ pub(crate) fn finding_snippet<'w>(
     snippets
 }
 
-pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingRegistry) {
+pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &FindingRegistry) {
     for finding in findings.findings() {
         render_finding(registry, finding);
         println!();
@@ -95,6 +104,10 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
                 no_findings = "No findings to report. Good job!".green(),
                 qualifiers = qualifiers.join(", ").bold(),
             );
+        }
+
+        if app.naches {
+            naches();
         }
     } else {
         let mut findings_by_severity = HashMap::new();
@@ -136,7 +149,7 @@ pub(crate) fn render_findings(registry: &WorkflowRegistry, findings: &FindingReg
     }
 }
 
-fn render_finding(registry: &WorkflowRegistry, finding: &Finding) {
+fn render_finding(registry: &InputRegistry, finding: &Finding) {
     let link = Link::new(finding.ident, finding.url).to_string();
     let confidence = format!(
         "audit confidence → {:?}",
@@ -152,4 +165,24 @@ fn render_finding(registry: &WorkflowRegistry, finding: &Finding) {
 
     let renderer = Renderer::styled();
     println!("{}", renderer.render(message));
+}
+
+fn naches() {
+    eprintln!(
+        "
+    ⣿⣿⣿⠟⠋⠙⣉⡉⣉⡙⠻⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠿⠿⠟⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+    ⣿⡿⠋⠀⠀⣶⣾⣿⣿⣿⣷⡄⠙⠻⣿⣿⣿⣿⣿⡿⠿⠿⠟⠛⠛⠋⠍⠉⢡⢰⡦⠔⠀⠀⠁⠚⣿⣿⣿⣿⠿⠿⠛⠛⠋⠉⠉⢸
+    ⣿⡇⠀⠀⡾⣿⣿⣿⣿⣿⣿⣿⣖⠀⢻⣿⡏⢩⠉⠁⣄⣀⡄⣤⡥⢸⠂⣴⣿⢸⠇⠠⠇⠞⠒⡃⠛⠛⠉⠉⠀⠀⢀⣤⠀⢰⡆⢸
+    ⣿⡃⠀⠐⡵⢾⣿⣿⣿⣿⣿⣿⣿⠀⠈⣿⣷⣀⠇⠼⠋⠃⡃⢛⠁⠄⢉⡅⠀⠂⠁⠂⠈⠀⣡⡤⠄⠀⠀⡟⢷⡄⠀⣿⡄⠘⣷⢸
+    ⣿⡇⠀⡉⢌⠁⠨⢹⣯⡑⢊⢭⣻⡇⠠⣿⣿⣤⣬⣤⣷⡾⠶⠚⠋⠉⠀⠀⠀⠀⣶⡘⣧⠀⠸⣷⠒⠠⣀⣗⢩⠻⣦⢚⠓⠮⢩⢹
+    ⣿⡇⠐⡈⣀⣈⣰⢺⣿⣷⣾⣷⣾⡇⣶⣿⣿⡟⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣇⠈⡟⢀⠙⢳⠈⢹⠀⠂⡀⠒⣀⡀⠀⠑⢸
+    ⣿⣇⢡⢘⡵⣟⠣⠊⢟⣯⣿⣿⣿⢿⠊⠉⠀⠀⠀⠀⠀⠀⠀⠀⡀⠠⣀⠢⣌⠴⡡⠻⠊⢓⡁⠄⠑⠂⠈⠘⠠⠁⠄⢠⠐⡈⡮⢹
+    ⣿⣿⣤⡞⣰⠃⠧⣝⣿⣻⢟⣿⡻⠏⠀⠀⠀⠀⡀⠠⣀⠢⢌⣲⣈⡱⠊⡑⠈⣰⠀⠀⠂⢈⠀⠄⡐⣠⢂⡜⡤⣍⣞⣤⣟⢶⣿⣿
+    ⣿⣿⠛⠼⣥⣛⢴⣩⣟⣿⢯⣾⠅⠀⡀⡶⣚⡔⢠⡡⠌⡑⢾⣊⠁⠠⠁⠄⡁⢄⢠⡘⡰⣌⡞⣼⣱⣶⣯⣾⣷⣿⣾⣿⣿⣿⣿⣿
+    ⣿⢁⠉⡄⢈⢹⣌⣧⣹⣿⣿⢿⡄⡌⢁⠧⠹⠀⢀⠀⡀⠄⡀⠠⢈⡀⢇⠸⣸⣸⣤⣹⣧⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+    ⣿⣦⡓⠜⣦⡄⢋⠞⣿⣻⣭⣻⣿⣶⡶⢬⣤⣅⡀⠠⡀⢤⠈⡰⣸⣀⣤⣃⣅⣯⣑⣃⣀⣂⣎⣸⡐⣄⣅⢿⣠⣀⣹⣐⣜⣿⣿⣿
+    ⣿⣿⣵⡊⠴⣻⣽⣮⡗⠻⢿⣿⣿⣿⣧⣼⣥⣥⢵⠤⠵⠢⢱⡤⠠⠧⠧⠼⡤⢤⡵⠧⢴⠭⠤⡤⠮⡬⠼⠤⢬⣼⡤⣼⣶⣤⣾⣿
+    ⠿⠿⠿⠿⠦⠽⠿⠟⠀⠸⠁⠝⠿⠿⠿⠿⠿⠿⠾⠶⠶⠷⠺⠷⠶⠶⠶⠶⠿⠷⠷⠶⠿⠶⠶⠿⠶⠷⠷⠶⢷⣶⣶⣿⢿⣿⣿⣿
+                thank you, dr. zizmor!"
+    )
 }

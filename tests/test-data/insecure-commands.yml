@@ -2,6 +2,8 @@ on: pull_request
 
 name: insecure-commands
 
+permissions: {}
+
 jobs:
   some-dangerous-job:
     runs-on: ubuntu-latest

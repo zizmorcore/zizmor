@@ -13,6 +13,7 @@ nav:
   - "installation.md"
   - "quickstart.md"
   - "usage.md"
+  - "release-notes.md"
   - "configuration.md"
   - "audits.md"
   - "development.md"
@@ -51,9 +52,10 @@ theme:
         name: Switch to system preference
   icon:
     annotation: material/arrow-right-circle
-    repo: fontawesome/brands/github-alt
+    repo: fontawesome/brands/github
   features:
     - navigation.expand
+    - navigation.footer
     - navigation.sections
     - navigation.tracking
     - content.action.edit
@@ -104,3 +106,17 @@ extra_css:
 
 exclude_docs: |
   snippets/
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/woodruffw/zizmor
+      name: "woodruffw/zizmor on GitHub"
+    - icon: fontawesome/brands/mastodon
+      link: https://infosec.exchange/@yossarian
+      name: "@yossarian@infosec.exchange on Mastodon"
+    - icon: fontawesome/brands/bluesky
+      link: https://bsky.app/profile/yossarian.net
+      name: "@yossarian.net on Bluesky"
+
+copyright: "&copy; 2024 William Woodruff"

@@ -1,0 +1,23 @@
+on: release
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Project Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Setup DotNet
+        uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25
+        with:
+          dotnet-version: "5.0.x"
+          cache: true
+
+      - name: Publish on NuGet
+        run: |
+          dotnet build
+          dotnet nuget push My.Tool.1.0.0.nupkg --api-key ${{ secrets.NUGET_PUBLISH_KEY }} --source https://api.nuget.org/v3/index.json

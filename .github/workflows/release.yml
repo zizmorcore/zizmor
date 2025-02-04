@@ -5,6 +5,8 @@ on:
 
 name: release
 
+permissions: {}
+
 jobs:
   crates:
     runs-on: ubuntu-latest

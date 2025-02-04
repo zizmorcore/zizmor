@@ -3,6 +3,8 @@
 on:
   push:
 
+permissions: {}
+
 jobs:
   ok:
     runs-on: ${{ matrix.os }}

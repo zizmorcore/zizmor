@@ -5,17 +5,18 @@
 //! This audit is "auditor" only, since zizmor can't detect
 //! whether self-hosted runners are ephemeral or not.
 
-use crate::{
-    finding::{Confidence, Persona, Severity},
-    AuditState,
-};
-
-use super::{audit_meta, WorkflowAudit};
-use crate::models::Matrix;
 use anyhow::Result;
 use github_actions_models::{
     common::expr::{ExplicitExpr, LoE},
-    workflow::{job::RunsOn, Job},
+    workflow::job::RunsOn,
+};
+
+use super::{audit_meta, Audit, Job};
+use crate::models::Matrix;
+use crate::{
+    finding::{Confidence, Persona, Severity},
+    models::JobExt as _,
+    AuditState,
 };
 
 pub(crate) struct SelfHostedRunner;
@@ -26,7 +27,7 @@ audit_meta!(
     "runs on a self-hosted runner"
 );
 
-impl WorkflowAudit for SelfHostedRunner {
+impl Audit for SelfHostedRunner {
     fn new(_state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -41,11 +42,11 @@ impl WorkflowAudit for SelfHostedRunner {
         let mut results = vec![];
 
         for job in workflow.jobs() {
-            let Job::NormalJob(normal) = *job else {
+            let Job::NormalJob(job) = job else {
                 continue;
             };
 
-            match &normal.runs_on {
+            match &job.runs_on {
                 LoE::Literal(RunsOn::Target(labels)) => {
                     {
                         let Some(label) = labels.first() else {
@@ -62,6 +63,7 @@ impl WorkflowAudit for SelfHostedRunner {
                                     .persona(Persona::Auditor)
                                     .add_location(
                                         job.location()
+                                            .primary()
                                             .with_keys(&["runs-on".into()])
                                             .annotated("self-hosted runner used here"),
                                     )
@@ -78,9 +80,12 @@ impl WorkflowAudit for SelfHostedRunner {
                                     .severity(Severity::Unknown)
                                     .persona(Persona::Auditor)
                                     .add_location(
-                                        job.location().with_keys(&["runs-on".into()]).annotated(
-                                            "expression may expand into a self-hosted runner",
-                                        ),
+                                        job.location()
+                                            .primary()
+                                            .with_keys(&["runs-on".into()])
+                                            .annotated(
+                                                "expression may expand into a self-hosted runner",
+                                            ),
                                     )
                                     .build(workflow)?,
                             );
@@ -99,6 +104,7 @@ impl WorkflowAudit for SelfHostedRunner {
                         .persona(Persona::Auditor)
                         .add_location(
                             job.location()
+                                .primary()
                                 .with_keys(&["runs-on".into()])
                                 .annotated("runner group implies self-hosted runner"),
                         )
@@ -129,9 +135,12 @@ impl WorkflowAudit for SelfHostedRunner {
                                         .annotated("matrix declares self-hosted runner"),
                                 )
                                 .add_location(
-                                    job.location().with_keys(&["runs-on".into()]).annotated(
-                                        "expression may expand into a self-hosted runner",
-                                    ),
+                                    job.location()
+                                        .primary()
+                                        .with_keys(&["runs-on".into()])
+                                        .annotated(
+                                            "expression may expand into a self-hosted runner",
+                                        ),
                                 )
                                 .build(workflow)?,
                         )

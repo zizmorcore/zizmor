@@ -6,6 +6,8 @@ on:
       - main
   pull_request:
 
+permissions: {}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -17,8 +19,10 @@ jobs:
       - name: Format
         run: cargo fmt && git diff --exit-code
 
+      - uses: Swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3 # v2
+
       - name: Lint
-        run: cargo clippy -- -D warnings
+        run: cargo clippy -- -D warnings -D clippy::dbg_macro
 
   test:
     runs-on: ubuntu-latest
@@ -26,6 +30,10 @@ jobs:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
         persist-credentials: false
+
+    - uses: Swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3 # v2
+
+    - uses: astral-sh/setup-uv@4db96194c378173c656ce18a155ffc14a9fc4355 # v5.2.2
 
     - name: Test
       run: cargo test
@@ -35,9 +43,21 @@ jobs:
         make snippets
         git diff --exit-code
 
+  test-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@4db96194c378173c656ce18a155ffc14a9fc4355 # v5.2.2
+
+      - name: Test site
+        run: make site
+
   all-tests-pass:
     if: always()
-    needs: [lint, test]
+    needs: [lint, test, test-site]
     runs-on: ubuntu-latest
 
     steps:

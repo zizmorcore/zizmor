@@ -1,0 +1,19 @@
+# repro case for https://github.com/woodruffw/zizmor/issues/433
+
+name: issue-433-repro
+
+on: push
+
+permissions: {}
+
+jobs:
+  issue-433-repro:
+    runs-on: ubuntu-latest
+    steps:
+      - name: no-finding-1
+        # workflow is local, so tagging is superfluous
+        uses: ./.github/workflows/reusable.yml
+
+      - name: no-finding-2
+        # no pedantic finding for tag-pinned local workflows
+        uses: ./.github/workflows/reusable.yml@tag

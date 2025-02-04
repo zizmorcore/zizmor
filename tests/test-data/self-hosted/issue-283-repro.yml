@@ -6,6 +6,8 @@ on:
       os:
         type: string
 
+permissions: {}
+
 jobs:
   deploy:
     runs-on: ${{inputs.os}}

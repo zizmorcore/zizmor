@@ -3,26 +3,31 @@
 
 use std::{fmt::Display, process::ExitCode};
 
-use crate::{
-    audit::WorkflowAudit,
-    config::Config,
-    finding::{Confidence, Finding, Persona, Severity},
-    models::{RepositoryUses, Workflow},
-    App,
-};
 use anyhow::{anyhow, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use github_actions_models::common::RepositoryUses;
 use indexmap::IndexMap;
 use serde::Serialize;
 use tracing::instrument;
 
+use crate::{
+    audit::{Audit, AuditInput},
+    config::Config,
+    finding::{Confidence, Finding, Persona, Severity},
+    models::{Action, Workflow},
+    App,
+};
+
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
-pub(crate) struct LocalWorkflowKey {
-    path: Utf8PathBuf,
+pub(crate) struct LocalKey {
+    /// The path's nondeterministic prefix, if any.
+    prefix: Option<Utf8PathBuf>,
+    /// The given path to the input. This can be absolute or relative.
+    given_path: Utf8PathBuf,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
-pub(crate) struct RemoteWorkflowKey {
+pub(crate) struct RemoteKey {
     owner: String,
     repo: String,
     git_ref: Option<String>,
@@ -35,16 +40,16 @@ pub(crate) struct RemoteWorkflowKey {
 /// are just canonical paths to files on disk, while remote keys are
 /// relative paths within a referenced GitHub repository.
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
-pub(crate) enum WorkflowKey {
-    Local(LocalWorkflowKey),
-    Remote(RemoteWorkflowKey),
+pub(crate) enum InputKey {
+    Local(LocalKey),
+    Remote(RemoteKey),
 }
 
-impl Display for WorkflowKey {
+impl Display for InputKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WorkflowKey::Local(local) => write!(f, "file://{path}", path = local.path),
-            WorkflowKey::Remote(remote) => {
+            InputKey::Local(local) => write!(f, "file://{path}", path = local.given_path),
+            InputKey::Remote(remote) => {
                 // No ref means assume HEAD, i.e. whatever's on the default branch.
                 let git_ref = remote.git_ref.as_deref().unwrap_or("HEAD");
                 write!(
@@ -59,121 +64,120 @@ impl Display for WorkflowKey {
     }
 }
 
-impl WorkflowKey {
-    pub(crate) fn local(path: Utf8PathBuf) -> Result<Self> {
-        // All workflow keys must have a filename component.
-        if path.file_name().is_none() {
-            return Err(anyhow!("invalid local workflow: no filename component"));
+impl InputKey {
+    pub(crate) fn local<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
+        // All keys must have a filename component.
+        if path.as_ref().file_name().is_none() {
+            return Err(anyhow!("invalid local input: no filename component"));
         }
 
-        Ok(Self::Local(LocalWorkflowKey { path }))
+        Ok(Self::Local(LocalKey {
+            prefix: prefix.map(|p| p.as_ref().to_path_buf()),
+            given_path: path.as_ref().to_path_buf(),
+        }))
     }
 
     pub(crate) fn remote(slug: &RepositoryUses, path: String) -> Result<Self> {
         if Utf8Path::new(&path).file_name().is_none() {
-            return Err(anyhow!("invalid remote workflow: no filename component"));
+            return Err(anyhow!("invalid remote input: no filename component"));
         }
 
-        Ok(Self::Remote(RemoteWorkflowKey {
-            owner: slug.owner.into(),
-            repo: slug.repo.into(),
-            git_ref: slug.git_ref.map(Into::into),
+        Ok(Self::Remote(RemoteKey {
+            owner: slug.owner.clone(),
+            repo: slug.repo.clone(),
+            git_ref: slug.git_ref.clone(),
             path: path.into(),
         }))
     }
 
-    /// Returns this [`WorkflowKey`]'s filepath component.
+    /// Return a "best-effort" relative path for this [`InputKey`].
     ///
-    /// This will be an absolute path for local keys, and a relative
-    /// path for remote keys.
-    pub(crate) fn path(&self) -> &str {
+    /// This will always be a relative path for remote keys,
+    /// and will be a "best-effort" relative path for local keys.
+    pub(crate) fn best_effort_relative_path(&self) -> &str {
         match self {
-            WorkflowKey::Local(local) => local.path.as_str(),
-            WorkflowKey::Remote(remote) => remote.path.as_str(),
+            InputKey::Local(local) => local
+                .prefix
+                .as_ref()
+                .and_then(|pfx| local.given_path.strip_prefix(pfx).ok())
+                .unwrap_or_else(|| &local.given_path)
+                .as_str(),
+            InputKey::Remote(remote) => remote.path.as_str(),
         }
     }
 
-    /// Returns the filename component of this [`WorkflowKey`].
+    /// Returns the filename component of this [`InputKey`].
     pub(crate) fn filename(&self) -> &str {
         // NOTE: Safe unwraps, since the presence of a filename component
-        // is a construction invariant of all `WorkflowKey` variants.
+        // is a construction invariant of all `InputKey` variants.
         match self {
-            WorkflowKey::Local(local) => local.path.file_name().unwrap(),
-            WorkflowKey::Remote(remote) => remote.path.file_name().unwrap(),
+            InputKey::Local(local) => local.given_path.file_name().unwrap(),
+            InputKey::Remote(remote) => remote.path.file_name().unwrap(),
         }
     }
 }
 
-pub(crate) struct WorkflowRegistry {
-    pub(crate) workflows: IndexMap<WorkflowKey, Workflow>,
+pub(crate) struct InputRegistry {
+    pub(crate) inputs: IndexMap<InputKey, AuditInput>,
 }
 
-impl WorkflowRegistry {
+impl InputRegistry {
     pub(crate) fn new() -> Self {
         Self {
-            workflows: Default::default(),
+            inputs: Default::default(),
         }
     }
 
     pub(crate) fn len(&self) -> usize {
-        self.workflows.len()
+        self.inputs.len()
     }
 
+    /// Registers an already-loaded workflow or action definition.
     #[instrument(skip(self))]
-    pub(crate) fn register(&mut self, workflow: Workflow) -> Result<()> {
-        if self.workflows.contains_key(&workflow.key) {
+    pub(crate) fn register_input(&mut self, input: AuditInput) -> Result<()> {
+        if self.inputs.contains_key(input.key()) {
             return Err(anyhow!(
                 "can't register {key} more than once",
-                key = workflow.key
+                key = input.key()
             ));
         }
 
-        self.workflows.insert(workflow.key.clone(), workflow);
+        self.inputs.insert(input.key().clone(), input);
 
         Ok(())
     }
 
+    /// Registers a workflow or action definition from its path on disk.
     #[instrument(skip(self))]
-    pub(crate) fn register_by_path(&mut self, path: &Utf8Path) -> Result<()> {
-        let workflow =
-            Workflow::from_file(path).with_context(|| "couldn't load workflow from file")?;
-
-        self.register(workflow)
-    }
-
-    pub(crate) fn iter_workflows(&self) -> indexmap::map::Iter<'_, WorkflowKey, Workflow> {
-        self.workflows.iter()
-    }
-
-    pub(crate) fn get_workflow(&self, key: &WorkflowKey) -> &Workflow {
-        self.workflows
-            .get(key)
-            .expect("API misuse: requested an un-registered workflow")
-    }
-
-    /// Returns a subjective relative path for the given workflow.
-    ///
-    /// In general, this will be a relative path within the repository root,
-    /// e.g. if zizmor was told to scan `/tmp/src` then one of the discovered
-    /// workflows might be `.github/workflows/ci.yml` relative to `/tmp/src`.
-    ///
-    /// The exceptional case here is when zizmor is asked to scan a single
-    /// workflow at some arbitrary location on disk. In that case, just
-    /// the base workflow filename itself is returned.
-    pub(crate) fn get_workflow_relative_path<'a>(&self, key: &'a WorkflowKey) -> &'a str {
-        let path = key.path();
-
-        match path.rfind(".github/workflows") {
-            Some(start) => &path[start..],
-            // NOTE: Unwraps are safe since file component is always present and
-            // all paths are UTF-8 by construction.
-            None => key.filename(),
+    pub(crate) fn register_by_path(
+        &mut self,
+        path: &Utf8Path,
+        prefix: Option<&Utf8Path>,
+    ) -> Result<()> {
+        match Workflow::from_file(path, prefix) {
+            Ok(workflow) => self.register_input(workflow.into()),
+            Err(we) => match Action::from_file(path, prefix) {
+                Ok(action) => self.register_input(action.into()),
+                Err(ae) => Err(anyhow!("failed to register input as workflow or action"))
+                    .with_context(|| format!("{ae:?}"))
+                    .with_context(|| format!("{we:?}")),
+            },
         }
+    }
+
+    pub(crate) fn iter_inputs(&self) -> indexmap::map::Iter<'_, InputKey, AuditInput> {
+        self.inputs.iter()
+    }
+
+    pub(crate) fn get_input(&self, key: &InputKey) -> &AuditInput {
+        self.inputs
+            .get(key)
+            .expect("API misuse: requested an un-registered input")
     }
 }
 
 pub(crate) struct AuditRegistry {
-    pub(crate) workflow_audits: IndexMap<&'static str, Box<dyn WorkflowAudit>>,
+    pub(crate) workflow_audits: IndexMap<&'static str, Box<dyn Audit>>,
 }
 
 impl AuditRegistry {
@@ -187,15 +191,11 @@ impl AuditRegistry {
         self.workflow_audits.len()
     }
 
-    pub(crate) fn register_workflow_audit(
-        &mut self,
-        ident: &'static str,
-        audit: Box<dyn WorkflowAudit>,
-    ) {
+    pub(crate) fn register_audit(&mut self, ident: &'static str, audit: Box<dyn Audit>) {
         self.workflow_audits.insert(ident, audit);
     }
 
-    pub(crate) fn iter_workflow_audits(&self) -> indexmap::map::Iter<&str, Box<dyn WorkflowAudit>> {
+    pub(crate) fn iter_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit>> {
         self.workflow_audits.iter()
     }
 }
@@ -237,10 +237,10 @@ impl<'a> FindingRegistry<'a> {
             } else if finding.ignored
                 || self
                     .minimum_severity
-                    .map_or(false, |min| min > finding.determinations.severity)
+                    .is_some_and(|min| min > finding.determinations.severity)
                 || self
                     .minimum_confidence
-                    .map_or(false, |min| min > finding.determinations.confidence)
+                    .is_some_and(|min| min > finding.determinations.confidence)
                 || self.config.ignores(&finding)
             {
                 self.ignored.push(finding);
@@ -295,33 +295,57 @@ impl From<FindingRegistry<'_>> for ExitCode {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::Uses;
+    use std::str::FromStr;
 
-    use super::WorkflowKey;
+    use github_actions_models::common::Uses;
+
+    use super::InputKey;
 
     #[test]
-    fn test_workflow_key_display() {
-        let local = WorkflowKey::local("/foo/bar/baz.yml".into()).unwrap();
+    fn test_input_key_display() {
+        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
-        let Uses::Repository(slug) = Uses::from_step("foo/bar").unwrap() else {
+        let Uses::Repository(slug) = Uses::from_str("foo/bar").unwrap() else {
             panic!()
         };
-        let remote = WorkflowKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
+        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/HEAD/.github/workflows/baz.yml"
         );
 
         // With a git ref
-        let Uses::Repository(slug) = Uses::from_step("foo/bar@v1").unwrap() else {
+        let Uses::Repository(slug) = Uses::from_str("foo/bar@v1").unwrap() else {
             panic!()
         };
-        let remote = WorkflowKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
+        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/v1/.github/workflows/baz.yml"
+        );
+    }
+
+    #[test]
+    fn test_input_key_local_path() {
+        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
+        assert_eq!(local.best_effort_relative_path(), "/foo/bar/baz.yml");
+
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
+        assert_eq!(local.best_effort_relative_path(), "bar/baz.yml");
+
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
+        assert_eq!(local.best_effort_relative_path(), "baz.yml");
+
+        let local = InputKey::local(
+            "/home/runner/work/repo/repo/.github/workflows/baz.yml",
+            Some("/home/runner/work/repo/repo"),
+        )
+        .unwrap();
+        assert_eq!(
+            local.best_effort_relative_path(),
+            ".github/workflows/baz.yml"
         );
     }
 }

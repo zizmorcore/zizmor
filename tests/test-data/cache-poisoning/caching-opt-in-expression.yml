@@ -1,0 +1,23 @@
+on: release
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Project Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a
+        with:
+          python-version: "3.12"
+          enable-cache: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Publish on Pypi
+        run: uv build publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_PUBLISH_TOKEN }}

@@ -1,8 +1,74 @@
 ---
-description: Usage recipes for running zizmor locally and in CI/CD.
+description: Usage tips and recipes for running zizmor locally and in CI/CD.
 ---
 
-# Usage Recipes
+# Usage
+
+## Input collection
+
+Before auditing, `zizmor` performs an input collection phase.
+
+There are three input sources that `zizmor` knows about:
+
+1. Individual workflow and composite action files, e.g. `foo.yml` and
+   `my-action/action.yml`;
+2. "Local" GitHub repositories in the form of a directory, e.g. `my-repo/`;
+3. "Remote" GitHub repositories in the form of a "slug", e.g.
+   `pypa/sampleproject`.
+
+    !!! tip
+
+        By default, a remote repository will be audited from the `HEAD`
+        of the default branch. To control this, you can append a `git`
+        reference to the slug:
+
+        ```bash
+        # audit at HEAD on the default branch
+        zizmor example/example
+
+        # audit at branch or tag `v1`
+        zizmor example/example@v1
+
+        # audit at a specific SHA
+        zizmor example/example@abababab...
+        ```
+
+    !!! tip
+
+        Remote auditing requires Internet access and a GitHub API token.
+        See [Operating Modes](#operating-modes) for more information.
+
+`zizmor` can audit multiple inputs in the same run, and different input
+sources can be mixed and matched:
+
+```bash
+# audit a single local workflow, an entire local repository, and
+# a remote repository all in the same run
+zizmor ../example.yml ../other-repo/ example/example
+```
+
+When auditing local and/or remote repositories, `zizmor` will collect both
+workflows (e.g. `.github/workflows/ci.yml`) **and** action definitions
+(e.g. `custom-action/foo.yml`) by default. To disable one or the other,
+you can use the `--collect=...` option.
+
+```bash
+# collect everything (the default)
+zizmor --collect=all example/example
+
+# collect only workflows
+zizmor --collect=workflows-only example/example
+
+# collect only actions
+zizmor --collect=actions-only example/example
+```
+
+!!! tip
+
+    `--collect=...` only controls input collection from repository input
+    sources. In other words, `zizmor --collect=actions-only workflow.yml`
+    *will* audit `workflow.yml`, since it was passed explicitly and not
+    collected indirectly.
 
 ## Operating Modes
 
@@ -98,8 +164,8 @@ sensitive `zizmor`'s analyses are:
 
     This persona is ideal for finding things that are a good idea
     to clean up or resolve, but are likely not immediately actionable
-    security findings (or are actionable, but indicate a intentional
-    security decision by the workflow author).
+    security findings (or are actionable, but suggest a intentional
+    security decision by the workflow/action author).
 
     For example, using the pedantic persona will flag the following
     with an `unpinned-uses` finding, since it uses a symbolic reference
@@ -333,7 +399,7 @@ jobs:
           persist-credentials: false
 
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
 
       - name: Run zizmor 🌈
         run: uvx zizmor --format sarif . > results.sarif # (2)!
@@ -368,30 +434,129 @@ as GitHub's example of [running ESLint] as a security workflow.
 
 [Advanced Security]: https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security
 
+### Use with GitHub Enterprise
+
+`zizmor` supports GitHub instances other than `github.com`.
+
+To use it with your [GitHub Enterprise] instance (either cloud or self-hosted),
+pass your instance's domain with `--gh-hostname` or `GH_HOST`:
+
+```bash
+zizmor --gh-hostname custom.example.com ...
+
+# or, with GH_HOST
+GH_HOST=custom.ghe.com zizmor ...
+```
+
+[GitHub Enterprise]: https://github.com/enterprise
+
 ### Use with `pre-commit`
 
 `zizmor` can be used with the [`pre-commit`](https://pre-commit.com/) framework.
 To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
--   repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v0.8.0 # (1)!
-    hooks:
-    - id: zizmor
+- repo: https://github.com/woodruffw/zizmor-pre-commit
+  rev: v1.3.0 # (1)!
+  hooks:
+  - id: zizmor
 ```
 
 1. Don't forget to update this version to the latest `zizmor` release!
 
-This will run `zizmor` on every commit. If you want to run `zizmor` only on
-specific files, you can use the `files` option:
+This will run `zizmor` on every commit.
+
+!!! tip
+
+    If you want to run `zizmor` only on specific files, you can use the
+    `files` option. This setting is *optional*, as `zizmor` will
+    scan the entire repository by default.
+
+    See [`pre-commit`](https://pre-commit.com/) documentation for more
+    information on how to configure `pre-commit`.
+
+## Limitations
+
+`zizmor` can help you write more secure GitHub workflow and action definitions,
+as well as help you find exploitable bugs in existing definitions.
+
+However, like all tools, `zizmor` is **not a panacea**, and has
+fundamental limitations that must be kept in mind. This page
+documents some of those limitations.
+
+### `zizmor` is a _static_ analysis tool
+
+`zizmor` is a _static_ analysis tool. It never executes any code, nor does it
+have access to any runtime state.
+
+In contrast, GitHub Actions workflow and action definitions are highly
+dynamic, and can be influenced by inputs that can only be inspected at
+runtime.
+
+For example, here is a workflow where a job's matrix is generated
+at runtime by a previous job, making the matrix impossible to
+analyze statically:
 
 ```yaml
--   repo:
-    ...
-    hooks:
-    - id: zizmor
-      files: ^path/to/audit/.*\.yml$
+build-matrix:
+  name: Build the matrix
+  runs-on: ubuntu-latest
+  outputs:
+    matrix: ${{ steps.set-matrix.outputs.matrix }}
+  steps:
+    - id: set-matrix
+      run: |
+        echo "matrix=$(python generate_matrix.py)" >> "${GITHUB_OUTPUT}"
+
+run:
+  name: ${{ matrix.name }}
+  needs:
+    - build-matrix
+  runs-on: ubuntu-latest
+  strategy:
+    matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
+  steps:
+    - run: |
+        echo "hello ${{ matrix.something }}"
 ```
 
-See [`pre-commit`](https://pre-commit.com/) documentation for more information on how to configure
-`pre-commit`.
+In the above, the expansion of `${{ matrix.something }}` is entirely controlled
+by the output of `generate_matrix.py`, which is only known at runtime.
+
+In such cases, `zizmor` will err on the side of verbosity. For example,
+the [template-injection](./audits.md#template-injection) audit will flag
+`${{ matrix.something }}` as a potential code injection risk, since it
+can't infer anything about what `matrix.something` might expand to.
+
+### `zizmor` audits workflow and action _definitions_ only
+
+`zizmor` audits workflow and action _definitions_ only. That means the
+contents of `foo.yml` (for your workflow definitions) or `action.yml` (for your
+composite action definitions).
+
+In practice, this means that `zizmor` does **not** analyze other files
+referenced by workflow and action definitions. For example:
+
+```yaml
+example:
+  runs-on: ubuntu-latest
+  steps:
+    - name: step-1
+      run: |
+        echo foo=$(bar) >> $GITHUB_ENV
+
+    - name: step-2
+      run: |
+        # some-script.sh contains the same code as step-1
+        ./some-script.sh
+```
+
+`zizmor` can analyze `step-1` above, because the code it executes
+is present within the workflow definition itself. It *cannot* analyze
+`step-2` beyond the presence of a script execution, since it doesn't
+audit shell scripts or any other kind of files.
+
+More generally, `zizmor` cannot analyze files indirectly referenced within
+workflow/action definitions, as they may not actually exist until runtime.
+For example, `some-script.sh` above may have been generated or downloaded
+outside of any repository-tracked state.

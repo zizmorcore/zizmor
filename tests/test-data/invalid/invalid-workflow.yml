@@ -1,0 +1,14 @@
+name: "invalid-workflow"
+
+on:
+  repository_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  invalid:
+    name: "invalid"
+
+    steps:
+      - run: echo hello

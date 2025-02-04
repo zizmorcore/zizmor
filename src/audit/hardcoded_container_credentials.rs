@@ -1,16 +1,12 @@
-use std::ops::Deref;
-
 use github_actions_models::{
     common::expr::ExplicitExpr,
-    workflow::{
-        job::{Container, DockerCredentials},
-        Job,
-    },
+    workflow::job::{Container, DockerCredentials},
 };
 
-use super::{audit_meta, WorkflowAudit};
+use super::{audit_meta, Audit, Job};
 use crate::{
     finding::{Confidence, Severity},
+    models::JobExt as _,
     state::AuditState,
 };
 
@@ -22,7 +18,7 @@ audit_meta!(
     "hardcoded credential in GitHub Actions container configurations"
 );
 
-impl WorkflowAudit for HardcodedContainerCredentials {
+impl Audit for HardcodedContainerCredentials {
     fn new(_state: AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -37,7 +33,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
-            let Job::NormalJob(normal) = job.deref() else {
+            let Job::NormalJob(job) = &job else {
                 continue;
             };
 
@@ -49,7 +45,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
                         password: Some(password),
                     }),
                 ..
-            }) = &normal.container
+            }) = &job.container
             {
                 // If the password doesn't parse as an expression, it's hardcoded.
                 if ExplicitExpr::from_curly(password).is_none() {
@@ -59,6 +55,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
                             .confidence(Confidence::High)
                             .add_location(
                                 job.location()
+                                    .primary()
                                     .with_keys(&["container".into(), "credentials".into()])
                                     .annotated("container registry password is hard-coded"),
                             )
@@ -67,7 +64,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
                 }
             }
 
-            for (service, config) in normal.services.iter() {
+            for (service, config) in job.services.iter() {
                 if let Container::Container {
                     image: _,
                     credentials:
@@ -85,6 +82,7 @@ impl WorkflowAudit for HardcodedContainerCredentials {
                                 .confidence(Confidence::High)
                                 .add_location(
                                     job.location()
+                                        .primary()
                                         .with_keys(&[
                                             "services".into(),
                                             service.as_str().into(),

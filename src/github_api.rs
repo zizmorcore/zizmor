@@ -3,33 +3,72 @@
 //! Build on synchronous reqwest to avoid octocrab's need to taint
 //! the whole codebase with async.
 
-use std::path::Path;
+use std::{io::Read, ops::Deref, path::Path};
 
 use anyhow::{anyhow, Result};
+use camino::Utf8Path;
+use flate2::read::GzDecoder;
+use github_actions_models::common::RepositoryUses;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
 };
+use owo_colors::OwoColorize;
 use reqwest::{
     header::{HeaderMap, ACCEPT, AUTHORIZATION, USER_AGENT},
     StatusCode,
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{de::DeserializeOwned, Deserialize};
+use tar::Archive;
 use tracing::instrument;
 
 use crate::{
-    models::{RepositoryUses, Workflow},
-    registry::WorkflowKey,
+    audit::AuditInput,
+    models::{Action, Workflow},
+    registry::InputKey,
     utils::PipeSelf,
 };
 
+/// Represents different types of GitHub hosts.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum GitHubHost {
+    Enterprise(String),
+    Standard(String),
+}
+
+impl GitHubHost {
+    pub(crate) fn from_clap(hostname: &str) -> Result<Self, String> {
+        let normalized = hostname.to_lowercase();
+
+        // NOTE: ideally we'd do a full domain validity check here.
+        // For now, this just checks the most likely kind of user
+        // confusion (supplying a URL instead of a bare domain name).
+        if normalized.starts_with("https://") || normalized.starts_with("http://") {
+            return Err("must be a domain name, not a URL".into());
+        }
+
+        if normalized.eq_ignore_ascii_case("github.com") || normalized.ends_with(".ghe.com") {
+            Ok(Self::Standard(hostname.into()))
+        } else {
+            Ok(Self::Enterprise(hostname.into()))
+        }
+    }
+
+    fn to_api_url(&self) -> String {
+        match self {
+            Self::Enterprise(ref host) => format!("https://{host}/api/v3"),
+            Self::Standard(ref host) => format!("https://api.{host}"),
+        }
+    }
+}
+
 pub(crate) struct Client {
-    api_base: &'static str,
+    api_base: String,
     http: ClientWithMiddleware,
 }
 
 impl Client {
-    pub(crate) fn new(token: &str, cache_dir: &Path) -> Self {
+    pub(crate) fn new(hostname: &GitHubHost, token: &str, cache_dir: &Path) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
@@ -67,7 +106,7 @@ impl Client {
         .build();
 
         Self {
-            api_base: "https://api.github.com",
+            api_base: hostname.to_api_url(),
             http,
         }
     }
@@ -270,13 +309,17 @@ impl Client {
             .map_err(Into::into)
     }
 
-    /// Return temporary files for all workflows listed in the repo.
+    /// Collect all workflows (and only workflows) defined in the given remote
+    /// repository slug.
+    ///
+    /// This is an optimized variant of `fetch_audit_inputs` for the workflow-only
+    /// collection case.
     #[instrument(skip(self))]
     #[tokio::main]
     pub(crate) async fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
-        let owner = slug.owner;
-        let repo = slug.repo;
-        let git_ref = slug.git_ref;
+        let owner = &slug.owner;
+        let repo = &slug.repo;
+        let git_ref = &slug.git_ref;
 
         tracing::debug!("fetching workflows for {owner}/{repo}");
 
@@ -313,7 +356,7 @@ impl Client {
                 .http
                 .get(file_url)
                 .header(ACCEPT, "application/vnd.github.raw+json")
-                .pipe(|req| match git_ref {
+                .pipe(|req| match git_ref.as_ref() {
                     Some(g) => req.query(&[("ref", g)]),
                     None => req,
                 })
@@ -325,11 +368,81 @@ impl Client {
 
             workflows.push(Workflow::from_string(
                 contents,
-                WorkflowKey::remote(slug, file.path)?,
+                InputKey::remote(slug, file.path)?,
             )?);
         }
 
         Ok(workflows)
+    }
+
+    /// Fetch all auditable inputs (both workflows and actions)
+    /// from the given remote repository slug.
+    ///
+    /// This is much slower than `fetch_workflows`, since it involves
+    /// retrieving the entire repository archive and decompressing it.
+    #[instrument(skip(self))]
+    #[tokio::main]
+    pub(crate) async fn fetch_audit_inputs(
+        &self,
+        slug: &RepositoryUses,
+    ) -> Result<Vec<AuditInput>> {
+        let mut inputs = vec![];
+
+        let url = format!(
+            "{api_base}/repos/{owner}/{repo}/tarball/{git_ref}",
+            api_base = self.api_base,
+            owner = slug.owner,
+            repo = slug.repo,
+            git_ref = slug.git_ref.as_deref().unwrap_or("HEAD")
+        );
+        tracing::debug!("fetching repo: {url}");
+
+        // TODO: Could probably make this slightly faster by
+        // streaming asynchronously into the decompression,
+        // probably with the async-compression crate.
+        let resp = self.http.get(&url).send().await?;
+
+        if !resp.status().is_success() {
+            return Err(anyhow!(
+                "failed to fetch {url}: {status}",
+                status = resp.status().red()
+            ));
+        }
+
+        let contents = resp.bytes().await?;
+        let tar = GzDecoder::new(contents.deref());
+
+        let mut archive = Archive::new(tar);
+        for entry in archive.entries()? {
+            let mut entry = entry?;
+
+            // GitHub's tarballs contain entries that are prefixed with
+            // `{owner}-{repo}-{ref}`, where `{ref}` has been concretized
+            // into a short hash. We strip this out to ensure that our
+            // paths look like normal paths.
+            let entry_path = entry.path()?;
+            let file_path: &Utf8Path = {
+                let mut components = entry_path.components();
+                components.next();
+                components.as_path().try_into()?
+            };
+
+            if file_path.starts_with(".github/workflows/") {
+                if matches!(file_path.extension(), Some("yml" | "yaml")) {
+                    let key = InputKey::remote(slug, file_path.to_string())?;
+                    let mut contents = String::with_capacity(entry.size() as usize);
+                    entry.read_to_string(&mut contents)?;
+                    inputs.push(Workflow::from_string(contents, key)?.into());
+                }
+            } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
+                let key = InputKey::remote(slug, file_path.to_string())?;
+                let mut contents = String::with_capacity(entry.size() as usize);
+                entry.read_to_string(&mut contents)?;
+                inputs.push(Action::from_string(contents, key)?.into());
+            }
+        }
+
+        Ok(inputs)
     }
 }
 
@@ -393,4 +506,23 @@ pub(crate) struct Advisory {
 pub(crate) struct File {
     name: String,
     path: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::github_api::GitHubHost;
+
+    #[test]
+    fn test_github_host() {
+        for (host, expected) in [
+            ("github.com", "https://api.github.com"),
+            ("something.ghe.com", "https://api.something.ghe.com"),
+            (
+                "selfhosted.example.com",
+                "https://selfhosted.example.com/api/v3",
+            ),
+        ] {
+            assert_eq!(GitHubHost::from_clap(host).unwrap().to_api_url(), expected);
+        }
+    }
 }

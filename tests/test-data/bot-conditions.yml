@@ -1,0 +1,24 @@
+on: pull_request_target
+
+permissions: {}
+
+jobs:
+  hackme:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: vulnerable-1
+        run: echo hello
+        if: ${{ github.actor == 'dependabot[bot]' }}
+
+      - name: vulnerable-2
+        run: echo hello
+        if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
+
+      - name: vulnerable-3
+        run: echo hello
+        if: github.actor == 'renovate[bot]'
+
+      - name: not-vulnerable-4
+        run: echo hello
+        if: github.actor == 'notabot'

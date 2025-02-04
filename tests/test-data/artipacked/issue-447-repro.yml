@@ -1,0 +1,23 @@
+# see https://github.com/woodruffw/zizmor/issues/447
+
+name: ISSUE-447-REPRO
+on: push
+
+permissions: {}
+
+jobs:
+  issue-557-repro:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: true-negative
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # no finding since GHA permits stringy bools
+          persist-credentials: "false"
+
+      - name: true-positive
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # finding in auditor mode only
+          persist-credentials: "true"

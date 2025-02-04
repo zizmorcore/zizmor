@@ -14,6 +14,8 @@ Options:
           Perform only offline operations [env: ZIZMOR_OFFLINE=]
       --gh-token <GH_TOKEN>
           The GitHub API token to use [env: GH_TOKEN=]
+      --gh-hostname <GH_HOSTNAME>
+          The GitHub Server Hostname. Defaults to github.com [env: GH_HOST=] [default: github.com]
       --no-online-audits
           Perform only offline audits [env: ZIZMOR_NO_ONLINE_AUDITS=]
   -v, --verbose...
@@ -34,6 +36,8 @@ Options:
           Filter all results below this confidence [possible values: unknown, low, medium, high]
       --cache-dir <CACHE_DIR>
           The directory to use for HTTP caching. By default, a host-appropriate user-caching directory will be used
+      --collect <COLLECT>
+          Control which kinds of inputs are collected for auditing [default: all] [possible values: all, workflows-only, actions-only]
   -h, --help
           Print help (see more with '--help')
   -V, --version

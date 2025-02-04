@@ -1,0 +1,18 @@
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
+
+permissions: {}
+
+jobs:
+  issue-397-repro:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Passes the title around
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
+          echo "$message" >> $GITHUB_PATH
+        # should be handled as bash
+        shell: /bin/bash

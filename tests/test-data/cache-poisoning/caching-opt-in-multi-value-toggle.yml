@@ -1,0 +1,22 @@
+on: release
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Project Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK
+        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
+        with:
+          distribution: "zulu"
+          cache: "gradle"
+          java-version: "17"
+
+      - name: Publish to Maven Central
+        run: ./gradlew publishToMavenCentral --no-configuration-cache

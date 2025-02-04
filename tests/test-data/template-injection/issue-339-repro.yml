@@ -1,0 +1,30 @@
+# minimized from https://github.com/woodruffw/zizmor/issues/339
+
+name: "Publish"
+
+on:
+  repository_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  find-run:
+    name: "Find latest kit.yml run"
+    runs-on: "ubuntu-latest"
+    outputs:
+      run-id: ${{ steps.run-id.outputs.run-id }}
+
+    steps:
+      - name: "Find latest kit.yml run"
+        id: runs
+        uses: octokit/request-action@dad4362715b7fb2ddedf9772c8670824af564f0d # v2.4.0
+        with:
+          route: GET /repos/nedbat/coveragepy/actions/workflows/kit.yml/runs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Record run id"
+        id: run-id
+        run: |
+          echo "run-id=${{ fromJson(steps.runs.outputs.data).workflow_runs[0].id }}" >> "$GITHUB_OUTPUT"
