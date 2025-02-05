@@ -69,3 +69,4 @@ assert_cmd = "2.0.16"
 insta = { version = "1.42.1" }
 pretty_assertions = "1.4.1"
 serde_json_path = "0.7.1"
+test-with = { version = "0.14.7", default-features = false }

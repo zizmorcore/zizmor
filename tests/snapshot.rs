@@ -36,6 +36,7 @@ impl Zizmor {
         self
     }
 
+    #[allow(dead_code)]
     fn setenv(mut self, key: &str, value: &str) -> Self {
         self.cmd.env(key, value);
         self
@@ -98,30 +99,6 @@ fn test_cant_retrieve() -> Result<()> {
         .offline(true)
         .unsetenv("GH_TOKEN")
         .args(["pypa/sampleproject"])
-        .run()?);
-
-    Ok(())
-}
-
-#[test]
-fn test_conflicting_online_options() -> Result<()> {
-    insta::assert_snapshot!(zizmor()
-        .output(OutputMode::Stderr)
-        .setenv("GH_TOKEN", "phony")
-        .offline(true)
-        .run()?);
-
-    insta::assert_snapshot!(zizmor()
-        .output(OutputMode::Stderr)
-        .offline(true)
-        .args(["--gh-token=phony"])
-        .run()?);
-
-    insta::assert_snapshot!(zizmor()
-        .output(OutputMode::Stderr)
-        .setenv("ZIZMOR_OFFLINE", "true")
-        .setenv("GH_TOKEN", "phony")
-        .offline(false) // explicitly disable so that we test ZIZMOR_OFFLINE above
         .run()?);
 
     Ok(())
@@ -508,6 +485,22 @@ fn bot_conditions() -> Result<()> {
 fn overprovisioned_secrets() -> Result<()> {
     insta::assert_snapshot!(zizmor()
         .workflow(workflow_under_test("overprovisioned-secrets.yml"))
+        .run()?);
+
+    Ok(())
+}
+
+#[test_with::env(GH_TOKEN)]
+#[test]
+fn ref_confusion() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("ref-confusion.yml"))
+        .offline(false)
+        .run()?);
+
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("ref-confusion/issue-518-repro.yml"))
+        .offline(false)
         .run()?);
 
     Ok(())

@@ -50,8 +50,7 @@ struct App {
     ///
     /// This disables all online audit rules, and prevents zizmor from
     /// auditing remote repositories.
-    #[arg(short, long, env = "ZIZMOR_OFFLINE",
-        conflicts_with_all = ["gh_token", "gh_hostname"])]
+    #[arg(short, long, env = "ZIZMOR_OFFLINE")]
     offline: bool,
 
     /// The GitHub API token to use.
@@ -328,6 +327,14 @@ fn run() -> Result<ExitCode> {
     // `--pedantic` is a shortcut for `--persona=pedantic`.
     if app.pedantic {
         app.persona = Persona::Pedantic;
+    }
+
+    // Unset the GitHub token if we're in offline mode.
+    // We do this manually instead of with clap's `conflicts_with` because
+    // we want to support explicitly enabling offline mode while still
+    // having `GH_TOKEN` present in the environment.
+    if app.offline {
+        app.gh_token = None;
     }
 
     let indicatif_layer = IndicatifLayer::new();
