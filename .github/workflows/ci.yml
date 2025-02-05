@@ -36,7 +36,9 @@ jobs:
     - uses: astral-sh/setup-uv@4db96194c378173c656ce18a155ffc14a9fc4355 # v5.2.2
 
     - name: Test
-      run: cargo test
+      run: cargo test --features online-tests
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Test snippets
       run: |
