@@ -9,12 +9,21 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Improvements 🌱
+
+* Passing both `--offline` and a GitHub token (either implicitly with
+  `GH_TOKEN` or explicitly with `--gh-token`) no longer results in an
+  error. `--offline` is now given precedence, regardless of
+  any other flags or environment settings (#519)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would fail to parse composite actions with
   inputs/outputs that are missing descriptions (#502)
 * Expressions that contain indices with non-semantic whitespace are now parsed
   correctly (#511)
+* Fixed a false positive in [ref-confusion] where partial tag matches were
+  incorrectly considered confusable (#519)
 
 ## v1.3.0
 
