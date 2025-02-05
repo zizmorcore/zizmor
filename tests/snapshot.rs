@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use assert_cmd::Command;
 use common::workflow_under_test;
 
@@ -66,6 +66,10 @@ impl Zizmor {
     fn run(mut self) -> Result<String> {
         if self.offline {
             self.cmd.arg("--offline");
+        } else {
+            // If we're running in online mode, we pre-assert the
+            // presence of GH_TOKEN to make configuration failures more obvious.
+            std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
         }
 
         if let Some(workflow) = &self.workflow {
@@ -490,7 +494,7 @@ fn overprovisioned_secrets() -> Result<()> {
     Ok(())
 }
 
-#[test_with::env(GH_TOKEN)]
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn ref_confusion() -> Result<()> {
     insta::assert_snapshot!(zizmor()
