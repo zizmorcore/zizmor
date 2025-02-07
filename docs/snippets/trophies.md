@@ -711,6 +711,22 @@
         - Saghen/blink.cmp#991
 
 
+-   ![](https://github.com/scientific-python.png?size=40){ width="40" loading=lazy align=left } scientific-python
+
+    ---
+
+    ??? example "Examples"
+        - scientific-python/repo-review#257
+
+
+-   ![](https://github.com/scikit-build.png?size=40){ width="40" loading=lazy align=left } scikit-build
+
+    ---
+
+    ??? example "Examples"
+        - scikit-build/scikit-build-core#983
+
+
 -   ![](https://github.com/scikit-image.png?size=40){ width="40" loading=lazy align=left } scikit-image
 
     ---
@@ -832,6 +848,14 @@
 
     ??? example "Examples"
         - wagtail/wagtail-localize#843
+
+
+-   ![](https://github.com/wntrblm.png?size=40){ width="40" loading=lazy align=left } wntrblm
+
+    ---
+
+    ??? example "Examples"
+        - wntrblm/nox#925
 
 
 -   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit
