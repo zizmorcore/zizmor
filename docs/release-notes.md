@@ -9,6 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+Nothing yet!
+
+## v1.3.1
+
 ### Improvements 🌱
 
 * Passing both `--offline` and a GitHub token (either implicitly with
