@@ -858,6 +858,14 @@
         - wntrblm/nox#925
 
 
+-   ![](https://github.com/zcash.png?size=40){ width="40" loading=lazy align=left } zcash
+
+    ---
+
+    ??? example "Examples"
+        - zcash/librustzcash#1679
+
+
 -   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit
 
     ---
