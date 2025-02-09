@@ -24,6 +24,8 @@ of `zizmor`.
   correctly (#511)
 * Fixed a false positive in [ref-confusion] where partial tag matches were
   incorrectly considered confusable (#519)
+* Fixed a bug where `zizmor` would fail to parse workflow definitions with
+  an expression inside `strategy.max-parallel` (#522)
 
 ## v1.3.0
 
