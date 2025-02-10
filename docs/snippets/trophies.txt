@@ -104,6 +104,8 @@ onnx/onnx#6662
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
 oxc-project/oxc#7844
+oxc-project/oxc-resolver#370
+oxc-project/oxc-resolver#373
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 psf/cachecontrol#345
