@@ -510,6 +510,8 @@
 
     ??? example "Examples"
         - oxc-project/oxc#7844
+        - oxc-project/oxc-resolver#370
+        - oxc-project/oxc-resolver#373
 
 
 -   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc
