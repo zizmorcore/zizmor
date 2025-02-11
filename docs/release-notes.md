@@ -9,7 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
-Nothing yet!
+### Improvements 🌱
+
+* SARIF outputs are now slightly more aligned with GitHub Code Scanning
+  expectations (#528)
 
 ## v1.3.1
 

@@ -393,6 +393,18 @@ pub(crate) struct Finding<'w> {
     pub(crate) ignored: bool,
 }
 
+impl Finding<'_> {
+    /// A basic Markdown representation of the finding's metadata.
+    pub(crate) fn to_markdown(&self) -> String {
+        format!(
+            "`{ident}`: {desc}\n\nDocs: <{url}>",
+            ident = self.ident,
+            desc = self.desc,
+            url = self.url
+        )
+    }
+}
+
 pub(crate) struct FindingBuilder<'w> {
     ident: &'static str,
     desc: &'static str,
