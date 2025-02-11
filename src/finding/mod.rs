@@ -397,7 +397,7 @@ impl Finding<'_> {
     /// A basic Markdown representation of the finding's metadata.
     pub(crate) fn to_markdown(&self) -> String {
         format!(
-            "`{ident}`: {desc}\n\n<{url}>",
+            "`{ident}`: {desc}\n\nDocs: <{url}>",
             ident = self.ident,
             desc = self.desc,
             url = self.url
