@@ -29,6 +29,7 @@ Diaoul/subliminal#1190
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
+foyer-rs/foyer#859
 fpgmaas/deptry#972
 freeCodeCamp/devdocs#2386
 freedomofpress/securedrop-workstation#1222

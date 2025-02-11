@@ -164,6 +164,14 @@
         - ethereum/hevm#615
 
 
+-   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
+
+    ---
+
+    ??? example "Examples"
+        - foyer-rs/foyer#859
+
+
 -   ![](https://github.com/fpgmaas.png?size=40){ width="40" loading=lazy align=left } fpgmaas
 
     ---
