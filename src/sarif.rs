@@ -81,6 +81,7 @@ fn build_rule(finding: &Finding) -> ReportingDescriptor {
         .help(
             MultiformatMessageString::builder()
                 .text(finding.desc)
+                .markdown(finding.to_markdown())
                 .build(),
         )
         .build()
