@@ -30,8 +30,12 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           persist-credentials: false
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a # v3
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a # v3
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3
+      #   with:
+      #     cache-binary: false
       - name: Extract Docker metadata
         id: docker-metadata
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5
@@ -54,4 +58,6 @@ jobs:
           tags: ${{ steps.docker-metadata.outputs.tags }}
           build-args: |
             ZIZMOR_VERSION=${{ github.event.inputs.version }}
-          platforms: linux/amd64,linux/arm64
+          # platforms: linux/amd64,linux/arm64
+          # # Build provenance attestations
+          # provenance: true
