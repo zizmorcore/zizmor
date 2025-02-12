@@ -90,6 +90,21 @@ cargo test --test snapshot
 cargo test
 ```
 
+### Online tests
+
+`zizmor` has some online tests that are ignored by default. These
+tests are gated behind crate features:
+
+- `gh-token-tests`: Enable online tests that use the GitHub API.
+- `online-tests`: Enable all online tests, including `gh-token-tests`.
+
+To run these successfully, you'll need to set the `GH_TOKEN` environment
+variable and pass the `--features` flag to `cargo test`:
+
+```bash
+GH_TOKEN=$(gh auth token) cargo test --features online-tests
+```
+
 ### Writing snapshot tests
 
 `zizmor` uses @mitsuhiko/insta for snapshot testing.

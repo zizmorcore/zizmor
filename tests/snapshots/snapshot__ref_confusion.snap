@@ -1,0 +1,13 @@
+---
+source: tests/snapshot.rs
+expression: "zizmor().workflow(workflow_under_test(\"ref-confusion.yml\")).offline(false).run()?"
+---
+warning[ref-confusion]: git ref for action with ambiguous ref type
+  --> @@INPUT@@:11:9
+   |
+11 |       - uses: woodruffw/gha-hazmat/ref-confusion@confusable
+   |         --------------------------------------------------- uses a ref that's provided by both the branch and tag namespaces
+   |
+   = note: audit confidence → High
+
+2 findings (1 suppressed): 0 unknown, 0 informational, 0 low, 1 medium, 0 high

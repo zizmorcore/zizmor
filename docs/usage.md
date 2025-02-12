@@ -287,6 +287,12 @@ For example, to ignore a single `artipacked` finding:
 uses: actions/checkout@v3 # zizmor: ignore[artipacked]
 ```
 
+Ignore comments can also have a trailing explanation:
+
+```yaml title="example.yml"
+uses: actions/checkout@v3 # zizmor: ignore[artipacked] this is actually fine
+```
+
 ### With `zizmor.yml`
 
 When ignoring multiple findings (or entire files), a `zizmor.yml` configuration
@@ -457,7 +463,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 - repo: https://github.com/woodruffw/zizmor-pre-commit
-  rev: v1.3.0 # (1)!
+  rev: v1.3.1 # (1)!
   hooks:
   - id: zizmor
 ```

@@ -182,7 +182,7 @@ impl Client {
     #[tokio::main]
     pub(crate) async fn has_tag(&self, owner: &str, repo: &str, tag: &str) -> Result<bool> {
         let url = format!(
-            "{api_base}/repos/{owner}/{repo}/git/refs/tags/{tag}",
+            "{api_base}/repos/{owner}/{repo}/git/ref/tags/{tag}",
             api_base = self.api_base
         );
 

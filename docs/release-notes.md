@@ -9,12 +9,32 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Improvements 🌱
+
+* SARIF outputs are now slightly more aligned with GitHub Code Scanning
+  expectations (#528)
+* `# zizmor: ignore[rule]` comments can now have trailing explanations,
+  e.g. `# zizmor: ignore[rule] because reasons` (#531)
+
+## v1.3.1
+
+### Improvements 🌱
+
+* Passing both `--offline` and a GitHub token (either implicitly with
+  `GH_TOKEN` or explicitly with `--gh-token`) no longer results in an
+  error. `--offline` is now given precedence, regardless of
+  any other flags or environment settings (#519)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would fail to parse composite actions with
   inputs/outputs that are missing descriptions (#502)
 * Expressions that contain indices with non-semantic whitespace are now parsed
   correctly (#511)
+* Fixed a false positive in [ref-confusion] where partial tag matches were
+  incorrectly considered confusable (#519)
+* Fixed a bug where `zizmor` would fail to parse workflow definitions with
+  an expression inside `strategy.max-parallel` (#522)
 
 ## v1.3.0
 

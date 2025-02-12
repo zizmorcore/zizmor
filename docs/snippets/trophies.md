@@ -164,6 +164,14 @@
         - ethereum/hevm#615
 
 
+-   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
+
+    ---
+
+    ??? example "Examples"
+        - foyer-rs/foyer#859
+
+
 -   ![](https://github.com/fpgmaas.png?size=40){ width="40" loading=lazy align=left } fpgmaas
 
     ---
@@ -242,6 +250,14 @@
 
     ??? example "Examples"
         - google/zx#1067
+
+
+-   ![](https://github.com/GreptimeTeam.png?size=40){ width="40" loading=lazy align=left } GreptimeTeam
+
+    ---
+
+    ??? example "Examples"
+        - GreptimeTeam/greptimedb#5491
 
 
 -   ![](https://github.com/guacsec.png?size=40){ width="40" loading=lazy align=left } guacsec
@@ -429,6 +445,14 @@
         - mongodb-labs/flask-pymongo#170
 
 
+-   ![](https://github.com/mozilla.png?size=40){ width="40" loading=lazy align=left } mozilla
+
+    ---
+
+    ??? example "Examples"
+        - mozilla/neqo#2413
+
+
 -   ![](https://github.com/narwhals-dev.png?size=40){ width="40" loading=lazy align=left } narwhals-dev
 
     ---
@@ -502,6 +526,8 @@
 
     ??? example "Examples"
         - oxc-project/oxc#7844
+        - oxc-project/oxc-resolver#370
+        - oxc-project/oxc-resolver#373
 
 
 -   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc
@@ -703,6 +729,22 @@
         - Saghen/blink.cmp#991
 
 
+-   ![](https://github.com/scientific-python.png?size=40){ width="40" loading=lazy align=left } scientific-python
+
+    ---
+
+    ??? example "Examples"
+        - scientific-python/repo-review#257
+
+
+-   ![](https://github.com/scikit-build.png?size=40){ width="40" loading=lazy align=left } scikit-build
+
+    ---
+
+    ??? example "Examples"
+        - scikit-build/scikit-build-core#983
+
+
 -   ![](https://github.com/scikit-image.png?size=40){ width="40" loading=lazy align=left } scikit-image
 
     ---
@@ -824,6 +866,22 @@
 
     ??? example "Examples"
         - wagtail/wagtail-localize#843
+
+
+-   ![](https://github.com/wntrblm.png?size=40){ width="40" loading=lazy align=left } wntrblm
+
+    ---
+
+    ??? example "Examples"
+        - wntrblm/nox#925
+
+
+-   ![](https://github.com/zcash.png?size=40){ width="40" loading=lazy align=left } zcash
+
+    ---
+
+    ??? example "Examples"
+        - zcash/librustzcash#1679
 
 
 -   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit

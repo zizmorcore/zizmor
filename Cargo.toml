@@ -1,7 +1,7 @@
 [package]
 name = "zizmor"
 description = "Static analysis for GitHub Actions"
-version = "1.3.0"
+version = "1.3.1"
 edition = "2021"
 repository = "https://github.com/woodruffw/zizmor"
 homepage = "https://github.com/woodruffw/zizmor"
@@ -12,18 +12,24 @@ keywords = ["cli", "github-actions", "static-analysis", "security"]
 categories = ["command-line-utilities"]
 rust-version = "1.80.1"
 
+[features]
+# Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
+gh-token-tests = []
+# Test-only: enable all online audits.
+online-tests = ["gh-token-tests"]
+
 [dependencies]
 annotate-snippets = "0.11.5"
 anstream = "0.6.18"
 anyhow = "1.0.95"
 camino = { version = "1.1.9", features = ["serde1"] }
-clap = { version = "4.5.27", features = ["derive", "env"] }
+clap = { version = "4.5.28", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
 etcetera = "0.8.0"
 flate2 = "1.0.35"
-github-actions-models = "0.24.0"
+github-actions-models = "0.25.0"
 http-cache-reqwest = "0.15.1"
 human-panic = "2.0.1"
 indexmap = "2.7.1"
