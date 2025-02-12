@@ -22,7 +22,7 @@ jobs:
       matrix:
         image:
           - runner: ubuntu-latest
-          - runner: ubuntu-24.04-arm64
+          - runner: ubuntu-24.04-arm
 
     name: Build and publish Docker image (${{ matrix.image.runner }})
 
