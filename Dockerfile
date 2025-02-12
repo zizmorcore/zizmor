@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm AS build
+FROM python:3.13-slim-bullseye AS build
 
 LABEL org.opencontainers.image.source=https://github.com/woodruffw/zizmor
 
@@ -9,26 +9,22 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Add Rust to PATH
-ENV PATH="/root/.local/bin:${PATH}"
-
 RUN set -eux && \
     apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install uv && \
-    uv tool install zizmor=="${ZIZMOR_VERSION}" && \
+RUN pip install zizmor && \
     which zizmor
 
 # ------------------------------------------------------------------------------
 # Runtime image
 # ------------------------------------------------------------------------------
 
-FROM python:3.12-slim-bookworm
+FROM debian:bullseye-slim
 
 # Copy necessary files from build stage
-COPY --from=build /root/.local/bin/zizmor /root/.local/bin/zizmor
+COPY --from=build /usr/local/bin/zizmor /app/zizmor
 
 # Set the entrypoint to zizmor
-ENTRYPOINT ["/root/.local/bin/zizmor"]
+ENTRYPOINT ["/app/zizmor"]
