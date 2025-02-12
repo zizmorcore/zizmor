@@ -123,6 +123,7 @@ jobs:
           images: "${{ env.ZIZMOR_IMAGE }}"
           tags: |
             type=raw,value=${{ github.event.inputs.version }}
+            typw=raw,value=latest
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests

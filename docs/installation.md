@@ -49,6 +49,14 @@ description: Installation instructions for zizmor.
     uvx zizmor --help
     ```
 
+=== ":simple-docker: Docker"
+
+    An official `zizmor` image is available from the [GitHub Container Registry](https://ghcr.io/woodruffw/zizmor):
+
+    ```bash
+    docker pull ghcr.io/woodruffw/zizmor:latest
+    ```
+
 === ":simple-anaconda: Conda"
 
     [![Anaconda-Server Badge](https://anaconda.org/conda-forge/zizmor/badges/version.svg)](https://anaconda.org/conda-forge/zizmor)
@@ -97,7 +105,6 @@ description: Installation instructions for zizmor.
     # zizmor-git is also available in the AUR
     pacman -S zizmor
     ```
-
 
 === "Other ecosystems"
 
