@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* `zizmor` now has official Docker images! You can find them on the
+  GitHub Container Registry under
+  [`ghcr.io/woodruffw/zizmor`](https://ghcr.io/woodruffw/zizmor) (#532)
+
 ### Improvements 🌱
 
 * SARIF outputs are now slightly more aligned with GitHub Code Scanning
