@@ -22,7 +22,9 @@ jobs:
       matrix:
         image:
           - runner: ubuntu-latest
-          - runner: ubuntu-24.04-arm
+            platform: linux/amd64
+          # - runner: ubuntu-24.04-arm
+          #   platform: linux/arm64
 
     name: Build and publish Docker image (${{ matrix.image.runner }})
 
@@ -54,9 +56,9 @@ jobs:
         with:
           images: "${{ env.ZIZMOR_IMAGE }}"
           tags: |
-            type=raw, value=${{ github.event.inputs.version }}
+            type=raw,value=${{ github.event.inputs.version }}
 
-      - name: Login to GHRC
+      - name: Login to GHCR
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v6
         if: github.repository_owner == 'woodruffw'
         with:
@@ -73,3 +75,4 @@ jobs:
           build-args: |
             ZIZMOR_VERSION=${{ github.event.inputs.version }}
           provenance: true
+          platforms: ${{ matrix.image.platform }}
