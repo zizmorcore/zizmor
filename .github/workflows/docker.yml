@@ -13,6 +13,8 @@ on:
         type: boolean
         default: false
 
+permissions: {}
+
 jobs:
   docker-build:
     name: Build and publish Docker image
@@ -23,6 +25,7 @@ jobs:
       name: docker
     permissions:
       contents: read
+      packages: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
