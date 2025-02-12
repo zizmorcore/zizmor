@@ -51,8 +51,6 @@ jobs:
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5
         with:
           images: "${{ env.ZIZMOR_IMAGE }}"
-          tags: |
-            type=raw,value=${{ github.event.inputs.version }}
 
       - name: Login to GHCR
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v6
