@@ -7,12 +7,6 @@ on:
         description: 'The version of zizmor to build against'
         required: true
 
-      dry-run:
-        description: 'Dry run?'
-        required: false
-        type: boolean
-        default: false
-
 permissions: {}
 
 jobs:
@@ -70,7 +64,7 @@ jobs:
         uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991 # v6
         with:
           context: .
-          push: ${{ !github.event.inputs.dry-run }}
+          push: true
           tags: ${{ steps.docker-metadata.outputs.tags }}
           build-args: |
             ZIZMOR_VERSION=${{ github.event.inputs.version }}
