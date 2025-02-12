@@ -42,8 +42,7 @@ jobs:
         with:
           images: "${{ env.ZIZMOR_IMAGE }}"
           tags: |
-            # use the release tag for the image tag too
-            type=ref, event=tag
+            type=raw, event=${{ github.event.inputs.version }}
       - name: Login to GHRC
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v6
         if: github.repository_owner == 'woodruffw'
