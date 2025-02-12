@@ -13,6 +13,8 @@ of `zizmor`.
 
 * SARIF outputs are now slightly more aligned with GitHub Code Scanning
   expectations (#528)
+* `# zizmor: ignore[rule]` comments can now have trailing explanations,
+  e.g. `# zizmor: ignore[rule] because reasons` (#531)
 
 ## v1.3.1
 

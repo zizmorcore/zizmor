@@ -287,6 +287,12 @@ For example, to ignore a single `artipacked` finding:
 uses: actions/checkout@v3 # zizmor: ignore[artipacked]
 ```
 
+Ignore comments can also have a trailing explanation:
+
+```yaml title="example.yml"
+uses: actions/checkout@v3 # zizmor: ignore[artipacked] this is actually fine
+```
+
 ### With `zizmor.yml`
 
 When ignoring multiple findings (or entire files), a `zizmor.yml` configuration

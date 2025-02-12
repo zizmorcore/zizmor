@@ -282,7 +282,7 @@ impl From<&yamlpath::Location> for ConcreteLocation {
 static ANY_COMMENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"#.*$").unwrap());
 
 static IGNORE_EXPR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"# zizmor: ignore\[(.+)\]\s*$").unwrap());
+    LazyLock::new(|| Regex::new(r"# zizmor: ignore\[(.+)\](?:\s+.*)?$").unwrap());
 
 /// Represents a single source comment.
 #[derive(Debug, Serialize)]
@@ -510,6 +510,14 @@ mod tests {
             ("# zizmor: ignore[foo, bar,   foo-bar]", "foo-bar", true),
             // Extra commas and duplicates are nonsense but OK.
             ("# zizmor: ignore[foo,foo,,foo,,,,foo,]", "foo", true),
+            // Trailing content with a space is OK.
+            ("# zizmor: ignore[foo] some other stuff", "foo", true),
+            // Trailing spaces are OK.
+            ("# zizmor: ignore[foo] ", "foo", true),
+            ("# zizmor: ignore[foo]  ", "foo", true),
+            ("# zizmor: ignore[foo]   ", "foo", true),
+            // Trailing content without a space is not OK.
+            ("# zizmor: ignore[foo]some other stuff", "foo", false),
             // Valid ignore, but not a match.
             ("# zizmor: ignore[foo,bar]", "baz", false),
             // Invalid ignore: empty rule list.
