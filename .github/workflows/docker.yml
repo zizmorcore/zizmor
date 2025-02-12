@@ -126,7 +126,7 @@ jobs:
         id: docker-metadata
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5
         env:
-          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: index
         with:
           images: "${{ env.ZIZMOR_IMAGE }}"
           tags: |
