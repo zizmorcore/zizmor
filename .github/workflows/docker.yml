@@ -66,6 +66,7 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.docker-metadata.outputs.tags }}
+          labels: ${{ steps.docker-metadata.outputs.labels }}
           build-args: |
             ZIZMOR_VERSION=${{ github.event.inputs.version }}
           provenance: true
