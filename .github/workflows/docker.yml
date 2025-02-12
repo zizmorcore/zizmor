@@ -125,6 +125,8 @@ jobs:
       - name: Extract Docker metadata
         id: docker-metadata
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
           images: "${{ env.ZIZMOR_IMAGE }}"
           tags: |
@@ -133,8 +135,18 @@ jobs:
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
+        # NOTE: annotation technique adapted from Ruff's build-docker.yml,
+        # see: https://github.com/astral-sh/ruff/blob/6e34f74c16/.github/workflows/build-docker.yml
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          readarray -t lines <<< "$DOCKER_METADATA_OUTPUT_ANNOTATIONS"
+          annotations=()
+          for line in "${lines[@]}"; do
+            annotations+=(--annotation "$line")
+          done
+
+          docker buildx imagetools create \
+            "${annotations[@]}" \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.ZIZMOR_IMAGE }}@sha256:%s ' *)
 
       - name: Inspect image
