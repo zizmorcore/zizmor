@@ -23,7 +23,7 @@ annotate-snippets = "0.11.5"
 anstream = "0.6.18"
 anyhow = "1.0.95"
 camino = { version = "1.1.9", features = ["serde1"] }
-clap = { version = "4.5.28", features = ["derive", "env"] }
+clap = { version = "4.5.29", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
