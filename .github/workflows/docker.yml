@@ -8,7 +8,7 @@ on:
         required: true
 
       dry-run:
-        description: 'Whether to perform a dry run'
+        description: 'Dry run?'
         required: false
         type: boolean
         default: false
