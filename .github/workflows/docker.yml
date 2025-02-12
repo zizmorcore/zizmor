@@ -89,6 +89,14 @@ jobs:
   merge:
     needs: build
     runs-on: ubuntu-latest
+
+    environment:
+      name: docker
+
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
