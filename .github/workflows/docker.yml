@@ -7,6 +7,12 @@ on:
         description: 'The version of zizmor to build against'
         required: true
 
+      latest:
+        description: 'Whether to tag the image as latest'
+        required: false
+        default: true
+        type: boolean
+
 permissions: {}
 
 env:
@@ -123,7 +129,7 @@ jobs:
           images: "${{ env.ZIZMOR_IMAGE }}"
           tags: |
             type=raw,value=${{ github.event.inputs.version }}
-            typw=raw,value=latest
+            typw=raw,value=latest,enable=${{ github.event.inputs.latest }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
