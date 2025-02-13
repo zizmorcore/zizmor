@@ -694,6 +694,14 @@
         - PyVRP/PyVRP#670
 
 
+-   ![](https://github.com/quarkslab.png?size=40){ width="40" loading=lazy align=left } quarkslab
+
+    ---
+
+    ??? example "Examples"
+        - quarkslab/quokka#46
+
+
 -   ![](https://github.com/rubygems.png?size=40){ width="40" loading=lazy align=left } rubygems
 
     ---
