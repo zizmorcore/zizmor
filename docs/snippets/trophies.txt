@@ -71,6 +71,7 @@ hynek/structlog#663
 hynek/svcs#111
 icsharpcode/ILSpy#3365
 Instagram/LibCST#1262
+jj-vcs/jj#5076
 lmstudio-ai/venvstacks#51
 matplotlib/matplotlib#29251
 marcusvolz/strava_py#53

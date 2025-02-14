@@ -346,6 +346,14 @@
         - Instagram/LibCST#1262
 
 
+-   ![](https://github.com/jj-vcs.png?size=40){ width="40" loading=lazy align=left } jj-vcs
+
+    ---
+
+    ??? example "Examples"
+        - jj-vcs/jj#5076
+
+
 -   ![](https://github.com/lmstudio-ai.png?size=40){ width="40" loading=lazy align=left } lmstudio-ai
 
     ---
