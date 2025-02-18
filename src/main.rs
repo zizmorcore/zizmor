@@ -346,6 +346,7 @@ fn run() -> Result<ExitCode> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
+                .without_time()
                 .with_ansi(std::io::stderr().is_terminal())
                 .with_writer(indicatif_layer.get_stderr_writer()),
         )
