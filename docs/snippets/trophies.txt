@@ -25,6 +25,7 @@ danmar/cppcheck#7044
 DataDog/datadog-agent#30871
 DataDog/dd-trace-py#11640
 datalens-tech/datalens-backend#777
+deltachat/deltachat-core-rust#6539
 Diaoul/subliminal#1190
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
@@ -57,6 +58,7 @@ Homebrew/homebrew-core#195961
 Homebrew/homebrew-core#201306
 Homebrew/homebrew-portable-ruby#255
 huggingface/peft#2288
+huggingface/lerobot#732
 hugovk/em-keyboard#148
 hugovk/norwegianblue#233
 hugovk/pypistats#460
@@ -72,6 +74,7 @@ hynek/svcs#111
 icsharpcode/ILSpy#3365
 Instagram/LibCST#1262
 jj-vcs/jj#5076
+kanidm/kanidm#3430
 lmstudio-ai/venvstacks#51
 matplotlib/matplotlib#29251
 marcusvolz/strava_py#53
@@ -158,6 +161,7 @@ sigstore/sigstore-rs#424
 simpeg/simpeg#1592
 termcolor/termcolor#89
 termux/termux-packages#22519
+theupdateframework/tuf-on-ci#548
 torchbox/wagtailmedia#252
 tornadoweb/tornado#3438
 ua-parser/uap-python#250

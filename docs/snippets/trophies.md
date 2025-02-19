@@ -132,6 +132,14 @@
         - datalens-tech/datalens-backend#777
 
 
+-   ![](https://github.com/deltachat.png?size=40){ width="40" loading=lazy align=left } deltachat
+
+    ---
+
+    ??? example "Examples"
+        - deltachat/deltachat-core-rust#6539
+
+
 -   ![](https://github.com/Diaoul.png?size=40){ width="40" loading=lazy align=left } Diaoul
 
     ---
@@ -302,6 +310,7 @@
 
     ??? example "Examples"
         - huggingface/peft#2288
+        - huggingface/lerobot#732
 
 
 -   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk
@@ -352,6 +361,14 @@
 
     ??? example "Examples"
         - jj-vcs/jj#5076
+
+
+-   ![](https://github.com/kanidm.png?size=40){ width="40" loading=lazy align=left } kanidm
+
+    ---
+
+    ??? example "Examples"
+        - kanidm/kanidm#3430
 
 
 -   ![](https://github.com/lmstudio-ai.png?size=40){ width="40" loading=lazy align=left } lmstudio-ai
@@ -802,6 +819,14 @@
 
     ??? example "Examples"
         - termux/termux-packages#22519
+
+
+-   ![](https://github.com/theupdateframework.png?size=40){ width="40" loading=lazy align=left } theupdateframework
+
+    ---
+
+    ??? example "Examples"
+        - theupdateframework/tuf-on-ci#548
 
 
 -   ![](https://github.com/torchbox.png?size=40){ width="40" loading=lazy align=left } torchbox
