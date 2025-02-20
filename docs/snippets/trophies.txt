@@ -25,6 +25,7 @@ danmar/cppcheck#7044
 DataDog/datadog-agent#30871
 DataDog/dd-trace-py#11640
 datalens-tech/datalens-backend#777
+davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
 Diaoul/subliminal#1190
 Electric-Coin-Company/zcash-light-client-ffi#186
