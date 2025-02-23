@@ -877,7 +877,7 @@ not using `pull_request_target` for auto-merge workflows.
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default |
 |----------|-------------------------|---------------|----------------|--------------------|
-| Workflow  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅             | ✅                 |
+| Workflow, Action  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅             | ✅                 |
 
 [overprovisioned-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/overprovisioned-secrets.yml
 
@@ -933,6 +933,70 @@ Secrets should be accessed individually by name.
               SECRET_ONE: ${{ secrets.SECRET_ONE }}
               SECRET_TWO: ${{ secrets.SECRET_TWO }}
     ```
+
+## `unredacted-secret`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
+|----------|-------------------------|---------------|----------------|--------------------|
+| Workflow, Action  | [unredacted-secret.yml]   | v1.4.0      | ✅             | ✅                 |
+
+[unredacted-secret.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unredacted-secret.yml
+
+Detects potential secret leakage via redaction failures.
+
+Typically, users access the `secrets` context via its individual members:
+
+```yaml
+env:
+  PASSWORD: ${{ secrets.PASSWORD }}
+```
+
+This allows the Actions runner to redact the secret values from the job logs,
+as it knows the exact string value of each secret.
+
+However, if the user instead treats the secret as a structured value,
+e.g. JSON:
+
+```yaml
+env:
+  PASSWORD: ${{ fromJSON(secrets.MY_SECRET).password }}
+```
+
+...then the `password` field is not redacted, as the runner does not
+treat arbitrary substrings of secrets as secret values.
+
+### Remediation
+
+In general, users should avoid treating secrets as structured values.
+For example, instead of storing a JSON object in a secret, store the
+individual fields as separate secrets.
+
+=== "Before :warning:"
+
+    ```yaml title="unredacted-secret.yml" hl_lines="7-8"
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - run: ./deploy.sh
+            env:
+              USERNAME: ${{ fromJSON(secrets.MY_SECRET).username }}
+              PASSWORD: ${{ fromJSON(secrets.MY_SECRET).password }}
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="unredacted-secret.yml" hl_lines="7-8"
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - run: ./deploy.sh
+            env:
+              USERNAME: ${{ secrets.MY_SECRET_USERNAME }}
+              PASSWORD: ${{ secrets.MY_SECRET_PASSWORD }}
+    ```
+
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/

@@ -25,11 +25,11 @@ pub(crate) mod insecure_commands;
 pub(crate) mod known_vulnerable_actions;
 pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
-pub(crate) mod secret_leakage;
 pub(crate) mod secrets_inherit;
 pub(crate) mod self_hosted_runner;
 pub(crate) mod template_injection;
 pub(crate) mod unpinned_uses;
+pub(crate) mod unredacted_secret;
 pub(crate) mod use_trusted_publishing;
 
 #[derive(Debug)]
