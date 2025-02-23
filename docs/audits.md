@@ -934,13 +934,13 @@ Secrets should be accessed individually by name.
               SECRET_TWO: ${{ secrets.SECRET_TWO }}
     ```
 
-## `unredacted-secret`
+## `unredacted-secrets`
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default |
 |----------|-------------------------|---------------|----------------|--------------------|
-| Workflow, Action  | [unredacted-secret.yml]   | v1.4.0      | ✅             | ✅                 |
+| Workflow, Action  | [unredacted-secrets.yml]   | v1.4.0      | ✅             | ✅                 |
 
-[unredacted-secret.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unredacted-secret.yml
+[unredacted-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unredacted-secrets.yml
 
 Detects potential secret leakage via redaction failures.
 
@@ -973,7 +973,7 @@ individual fields as separate secrets.
 
 === "Before :warning:"
 
-    ```yaml title="unredacted-secret.yml" hl_lines="7-8"
+    ```yaml title="unredacted-secrets.yml" hl_lines="7-8"
     jobs:
       deploy:
         runs-on: ubuntu-latest
@@ -986,7 +986,7 @@ individual fields as separate secrets.
 
 === "After :white_check_mark:"
 
-    ```yaml title="unredacted-secret.yml" hl_lines="7-8"
+    ```yaml title="unredacted-secrets.yml" hl_lines="7-8"
     jobs:
       deploy:
         runs-on: ubuntu-latest

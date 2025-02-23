@@ -7,11 +7,11 @@ use crate::{
 
 use super::{audit_meta, Audit};
 
-pub(crate) struct UnredactedSecret;
+pub(crate) struct UnredactedSecrets;
 
-audit_meta!(UnredactedSecret, "secret-leakage", "leaked secret values");
+audit_meta!(UnredactedSecrets, "secret-leakage", "leaked secret values");
 
-impl Audit for UnredactedSecret {
+impl Audit for UnredactedSecrets {
     fn new(_: crate::AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -57,7 +57,7 @@ impl Audit for UnredactedSecret {
     }
 }
 
-impl UnredactedSecret {
+impl UnredactedSecrets {
     fn secret_leakages(expr: &Expr) -> Vec<()> {
         let mut results = vec![];
 
@@ -95,7 +95,7 @@ impl UnredactedSecret {
 
 #[cfg(test)]
 mod tests {
-    use crate::audit::unredacted_secret;
+    use crate::audit::unredacted_secrets;
 
     #[test]
     fn test_secret_leakages() {
@@ -113,7 +113,7 @@ mod tests {
         ] {
             let expr = crate::expr::Expr::parse(expr).unwrap();
             assert_eq!(
-                unredacted_secret::UnredactedSecret::secret_leakages(&expr).len(),
+                unredacted_secrets::UnredactedSecrets::secret_leakages(&expr).len(),
                 *count
             );
         }

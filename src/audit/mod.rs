@@ -29,7 +29,7 @@ pub(crate) mod secrets_inherit;
 pub(crate) mod self_hosted_runner;
 pub(crate) mod template_injection;
 pub(crate) mod unpinned_uses;
-pub(crate) mod unredacted_secret;
+pub(crate) mod unredacted_secrets;
 pub(crate) mod use_trusted_publishing;
 
 #[derive(Debug)]
