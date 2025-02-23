@@ -390,6 +390,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::secrets_inherit::SecretsInherit);
     register_audit!(audit::bot_conditions::BotConditions);
     register_audit!(audit::overprovisioned_secrets::OverprovisionedSecrets);
+    register_audit!(audit::unredacted_secrets::UnredactedSecrets);
 
     let mut results = FindingRegistry::new(&app, &config);
     {

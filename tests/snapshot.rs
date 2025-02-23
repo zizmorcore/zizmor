@@ -509,3 +509,12 @@ fn ref_confusion() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn unredacted_secrets() -> Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .workflow(workflow_under_test("unredacted-secrets.yml"))
+        .run()?);
+
+    Ok(())
+}

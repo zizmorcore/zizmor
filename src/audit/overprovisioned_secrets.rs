@@ -65,7 +65,7 @@ impl OverprovisionedSecrets {
             Expr::Call { func, args } => {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
-                // would plausible call with the entire `secrets` object?
+                // would plausibly call with the entire `secrets` object?
                 if func.eq_ignore_ascii_case("toJSON")
                     && args
                         .iter()
