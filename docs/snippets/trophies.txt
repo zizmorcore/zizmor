@@ -7,6 +7,7 @@
 adafruit/circuitpython#9785
 apache/airflow#45408
 apache/opennlp#736
+artichoke/artichoke#2825
 artichoke/boba#265
 artichoke/project-infrastructure#683
 artichoke/setup-rust#121
@@ -162,9 +163,11 @@ sigstore/sigstore-rs#424
 simpeg/simpeg#1592
 termcolor/termcolor#89
 termux/termux-packages#22519
+theupdateframework/python-tuf#2798
 theupdateframework/tuf-on-ci#548
 torchbox/wagtailmedia#252
 tornadoweb/tornado#3438
+tornadoweb/tornado#3463
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710

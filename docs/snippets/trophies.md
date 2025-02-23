@@ -21,6 +21,7 @@
     ---
 
     ??? example "Examples"
+        - artichoke/artichoke#2825
         - artichoke/boba#265
         - artichoke/project-infrastructure#683
         - artichoke/setup-rust#121
@@ -834,6 +835,7 @@
     ---
 
     ??? example "Examples"
+        - theupdateframework/python-tuf#2798
         - theupdateframework/tuf-on-ci#548
 
 
@@ -851,6 +853,7 @@
 
     ??? example "Examples"
         - tornadoweb/tornado#3438
+        - tornadoweb/tornado#3463
 
 
 -   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser
