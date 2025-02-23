@@ -128,7 +128,7 @@ pub(crate) trait AuditCore {
 /// audit_meta!(SomeAudit, "some-audit", "brief description");
 /// ```
 macro_rules! audit_meta {
-    ($t:ty, $id:literal, $desc:expr) => {
+    ($t:ty, $id:literal, $desc:expr_2021) => {
         use crate::audit::AuditCore;
 
         impl AuditCore for $t {

@@ -58,8 +58,8 @@ impl Audit for Artipacked {
         let mut vulnerable_uploads = vec![];
         for step in job.steps() {
             let StepBody::Uses {
-                uses: Uses::Repository(ref uses),
-                ref with,
+                uses: Uses::Repository(uses),
+                with,
             } = &step.deref().body
             else {
                 continue;

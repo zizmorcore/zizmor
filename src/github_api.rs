@@ -56,8 +56,8 @@ impl GitHubHost {
 
     fn to_api_url(&self) -> String {
         match self {
-            Self::Enterprise(ref host) => format!("https://{host}/api/v3"),
-            Self::Standard(ref host) => format!("https://api.{host}"),
+            Self::Enterprise(host) => format!("https://{host}/api/v3"),
+            Self::Standard(host) => format!("https://api.{host}"),
         }
     }
 }
