@@ -1,9 +1,9 @@
 use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
-use anyhow::{Context as _, Result, anyhow};
-use serde::{Deserialize, de};
+use anyhow::{anyhow, Context as _, Result};
+use serde::{de, Deserialize};
 
-use crate::{App, finding::Finding};
+use crate::{finding::Finding, App};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct WorkflowRule {

@@ -4,7 +4,7 @@ use crate::{
     utils::extract_expressions,
 };
 
-use super::{Audit, AuditInput, audit_meta};
+use super::{audit_meta, Audit, AuditInput};
 
 pub(crate) struct OverprovisionedSecrets;
 
