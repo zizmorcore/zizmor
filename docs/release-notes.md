@@ -14,6 +14,8 @@ of `zizmor`.
 * `zizmor` now has official Docker images! You can find them on the
   GitHub Container Registry under
   [`ghcr.io/woodruffw/zizmor`](https://ghcr.io/woodruffw/zizmor) (#532)
+* **New audit**: [unredacted-secrets] detects secret accesses that
+  are not redacted in logs (#549)
 
 ### Improvements 🌱
 
@@ -558,3 +560,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [unpinned-uses]: ./audits.md#unpinned-uses
 [bot-conditions]: ./audits.md#bot-conditions
 [overprovisioned-secrets]: ./audits.md#overprovisioned-secrets
+[unredacted-secrets]: ./audits.md#unredacted-secrets
