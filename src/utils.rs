@@ -4,8 +4,8 @@ use std::ops::Range;
 
 use camino::Utf8Path;
 use github_actions_models::common::{
-    expr::{ExplicitExpr, LoE},
     Env,
+    expr::{ExplicitExpr, LoE},
 };
 
 /// Convenience trait for inline transformations of `Self`.
