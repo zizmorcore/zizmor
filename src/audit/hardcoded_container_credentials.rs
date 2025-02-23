@@ -3,7 +3,7 @@ use github_actions_models::{
     workflow::job::{Container, DockerCredentials},
 };
 
-use super::{audit_meta, Audit, Job};
+use super::{Audit, Job, audit_meta};
 use crate::{
     finding::{Confidence, Severity},
     models::JobExt as _,

@@ -1,6 +1,6 @@
 //! APIs for rendering zizmor's "plain" (i.e. terminal) output format.
 
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 
 use annotate_snippets::{Level, Renderer, Snippet};
 use anstream::{eprintln, print, println};
@@ -8,9 +8,9 @@ use owo_colors::OwoColorize;
 use terminal_link::Link;
 
 use crate::{
+    App,
     finding::{Finding, Location, Severity},
     registry::{FindingRegistry, InputKey, InputRegistry},
-    App,
 };
 
 impl From<&Severity> for Level {
@@ -141,10 +141,22 @@ pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &Fi
         println!(
             "{nunknown} unknown, {ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
             nunknown = findings_by_severity.get(&Severity::Unknown).unwrap_or(&0),
-            ninformational = findings_by_severity.get(&Severity::Informational).unwrap_or(&0).purple(),
-            nlow = findings_by_severity.get(&Severity::Low).unwrap_or(&0).cyan(),
-            nmedium = findings_by_severity.get(&Severity::Medium).unwrap_or(&0).yellow(),
-            nhigh = findings_by_severity.get(&Severity::High).unwrap_or(&0).red(),
+            ninformational = findings_by_severity
+                .get(&Severity::Informational)
+                .unwrap_or(&0)
+                .purple(),
+            nlow = findings_by_severity
+                .get(&Severity::Low)
+                .unwrap_or(&0)
+                .cyan(),
+            nmedium = findings_by_severity
+                .get(&Severity::Medium)
+                .unwrap_or(&0)
+                .yellow(),
+            nhigh = findings_by_severity
+                .get(&Severity::High)
+                .unwrap_or(&0)
+                .red(),
         );
     }
 }

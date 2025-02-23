@@ -3,7 +3,7 @@
 
 use std::{fmt::Display, process::ExitCode};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use camino::{Utf8Path, Utf8PathBuf};
 use github_actions_models::common::RepositoryUses;
 use indexmap::IndexMap;
@@ -11,11 +11,11 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::{
+    App,
     audit::{Audit, AuditInput},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{Action, Workflow},
-    App,
 };
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
@@ -247,7 +247,7 @@ impl<'a> FindingRegistry<'a> {
             } else {
                 if self
                     .highest_seen_severity
-                    .map_or(true, |s| finding.determinations.severity > s)
+                    .is_none_or(|s| finding.determinations.severity > s)
                 {
                     self.highest_seen_severity = Some(finding.determinations.severity);
                 }

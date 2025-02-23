@@ -16,6 +16,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Update Rust toolchain
+        run: rustup update
+
       - name: Format
         run: cargo fmt && git diff --exit-code
 
@@ -30,6 +33,9 @@ jobs:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
         persist-credentials: false
+
+    - name: Update Rust toolchain
+      run: rustup update
 
     - uses: Swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3 # v2
 
