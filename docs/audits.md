@@ -965,6 +965,10 @@ env:
 ...then the `password` field is not redacted, as the runner does not
 treat arbitrary substrings of secrets as secret values.
 
+Other resources:
+
+* [Using secrets in GitHub Actions]
+
 ### Remediation
 
 In general, users should avoid treating secrets as structured values.
@@ -1020,3 +1024,4 @@ individual fields as separate secrets.
 [Principle of Least Authority]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 [Cacheract: The Monster in your Build Cache]: https://adnanthekhan.com/2024/12/21/cacheract-the-monster-in-your-build-cache/
 [GitHub Actions exploitations: Dependabot]: https://www.synacktiv.com/publications/github-actions-exploitation-dependabot
+[Using secrets in GitHub Actions]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
