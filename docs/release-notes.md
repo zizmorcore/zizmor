@@ -22,6 +22,14 @@ of `zizmor`.
 * `# zizmor: ignore[rule]` comments can now have trailing explanations,
   e.g. `# zizmor: ignore[rule] because reasons` (#531)
 
+### Miscellaneous 📝
+
+* `zizmor` is now built with the [latest edition of Rust] (Rust 2024).
+  This should not affect most users, but those who compile from
+  source may need to update their Rust toolchain (#547)
+
+[latest edition of Rust]: https://blog.rust-lang.org/2025/02/20/Rust-1.85.0.html
+
 ## v1.3.1
 
 ### Improvements 🌱

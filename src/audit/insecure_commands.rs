@@ -75,7 +75,7 @@ impl InsecureCommands {
                     run: _,
                     working_directory: _,
                     shell: _,
-                    ref env,
+                    env,
                 } = &step.deref().body
                 else {
                     return None;
