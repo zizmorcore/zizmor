@@ -7,7 +7,7 @@ use github_actions_models::{
 };
 use indexmap::IndexMap;
 
-use super::{Audit, audit_meta};
+use super::{audit_meta, Audit};
 use crate::{
     finding::{Confidence, Severity},
     models::uses::RepositoryUsesExt as _,

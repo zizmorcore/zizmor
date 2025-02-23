@@ -13,7 +13,7 @@
 // able to express things like
 // "match foo/bar if foo: A and not bar: B and baz: /abcd/"
 
-use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
+use github_actions_models::common::{expr::ExplicitExpr, EnvValue, Uses};
 
 use super::{StepBodyCommon, StepCommon};
 use crate::models::uses::RepositoryUsesExt as _;

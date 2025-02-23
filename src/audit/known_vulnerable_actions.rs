@@ -5,10 +5,10 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{Audit, audit_meta};
+use super::{audit_meta, Audit};
 use crate::finding::Finding;
 use crate::models::CompositeStep;
 use crate::{

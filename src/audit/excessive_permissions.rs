@@ -2,11 +2,11 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
-use super::{Audit, Job, audit_meta};
+use super::{audit_meta, Audit, Job};
 use crate::models::JobExt as _;
 use crate::{
-    AuditState,
     finding::{Confidence, Persona, Severity, SymbolicLocation},
+    AuditState,
 };
 
 // Subjective mapping of permissions to severities, when given `write` access.

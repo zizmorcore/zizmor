@@ -46,7 +46,7 @@ impl RepositoryUsesExt for RepositoryUses {
             && self.repo.eq_ignore_ascii_case(&template.repo)
             && self.subpath.as_ref().map(|s| s.to_lowercase())
                 == template.subpath.as_ref().map(|s| s.to_lowercase())
-            && template.git_ref.as_ref().is_none_or(|git_ref| {
+            && template.git_ref.as_ref().map_or(true, |git_ref| {
                 Some(git_ref.to_lowercase()) == self.git_ref.as_ref().map(|r| r.to_lowercase())
             })
     }

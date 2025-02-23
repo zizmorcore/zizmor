@@ -2,11 +2,11 @@
 
 use std::path::PathBuf;
 
-use etcetera::{AppStrategy, AppStrategyArgs, choose_app_strategy};
+use etcetera::{choose_app_strategy, AppStrategy, AppStrategyArgs};
 
 use crate::{
-    App,
     github_api::{Client, GitHubHost},
+    App,
 };
 
 #[derive(Clone)]

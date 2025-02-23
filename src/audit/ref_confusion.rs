@@ -6,10 +6,10 @@
 //! but the upstream repository may host *both* a branch and a tag named
 //! `foo`, making it unclear to the end user which is selected.
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{Audit, Job, audit_meta};
+use super::{audit_meta, Audit, Job};
 use crate::finding::Finding;
 use crate::models::{CompositeStep, JobExt as _};
 use crate::{

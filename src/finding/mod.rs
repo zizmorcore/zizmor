@@ -2,7 +2,7 @@
 
 use std::{borrow::Cow, ops::Range, sync::LazyLock};
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use clap::ValueEnum;
 use line_index::{LineCol, TextSize};
 use regex::Regex;
@@ -267,12 +267,12 @@ impl From<&yamlpath::Location> for ConcreteLocation {
     fn from(value: &yamlpath::Location) -> Self {
         Self {
             start_point: Point {
-                row: value.point_span.0.0,
-                column: value.point_span.0.1,
+                row: value.point_span.0 .0,
+                column: value.point_span.0 .1,
             },
             end_point: Point {
-                row: value.point_span.1.0,
-                column: value.point_span.1.1,
+                row: value.point_span.1 .0,
+                column: value.point_span.1 .1,
             },
             offset_span: value.byte_span.0..value.byte_span.1,
         }

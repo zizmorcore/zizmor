@@ -2,7 +2,7 @@ use std::{io::stdout, process::ExitCode, str::FromStr};
 
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, stream::IsTerminal};
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use audit::Audit;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
@@ -16,9 +16,9 @@ use models::Action;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, InputRegistry};
 use state::AuditState;
-use tracing::{Span, info_span, instrument};
-use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
+use tracing::{info_span, instrument, Span};
+use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
+use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
 mod audit;
 mod config;

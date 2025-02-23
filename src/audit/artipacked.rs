@@ -2,16 +2,16 @@ use std::ops::Deref as _;
 
 use anyhow::Result;
 use github_actions_models::{
-    common::{EnvValue, Uses, expr::ExplicitExpr},
+    common::{expr::ExplicitExpr, EnvValue, Uses},
     workflow::job::StepBody,
 };
 use itertools::Itertools as _;
 
-use super::{Audit, audit_meta};
+use super::{audit_meta, Audit};
 use crate::utils::split_patterns;
 use crate::{
     finding::{Confidence, Finding, Persona, Severity},
-    models::{JobExt, uses::RepositoryUsesExt as _},
+    models::{uses::RepositoryUsesExt as _, JobExt},
     state::AuditState,
 };
 
