@@ -11,6 +11,8 @@ pub(crate) struct BotConditions;
 
 audit_meta!(BotConditions, "bot-conditions", "spoofable bot actor check");
 
+const SPOOFABLE_ACTOR_CONTEXTS: &[&str] = &["github.actor", "github.triggering_actor"];
+
 impl Audit for BotConditions {
     fn new(_state: super::AuditState) -> anyhow::Result<Self>
     where
@@ -52,7 +54,7 @@ impl Audit for BotConditions {
                         .add_location(
                             loc.with_keys(&["if".into()])
                                 .primary()
-                                .annotated("github.actor may be spoofable"),
+                                .annotated("actor context may be spoofable"),
                         )
                         .build(job.parent())?,
                 );
@@ -94,7 +96,11 @@ impl BotConditions {
                 expr::BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
                     (Expr::Context(ctx), Expr::String(s))
                     | (Expr::String(s), Expr::Context(ctx)) => {
-                        if ctx == "github.actor" && s.ends_with("[bot]") {
+                        // NOTE: Can't use `contains` here because we need
+                        // Context's `PartialEq` for case insensitive matching.
+                        if SPOOFABLE_ACTOR_CONTEXTS.iter().any(|x| ctx == *x)
+                            && s.ends_with("[bot]")
+                        {
                             (true, true)
                         } else {
                             (false, true)
@@ -171,6 +177,10 @@ mod tests {
             ("'dependabot[bot]' == github.actor", Confidence::High),
             ("'dependabot[bot]' == GitHub.actor", Confidence::High),
             ("'dependabot[bot]' == GitHub.ACTOR", Confidence::High),
+            (
+                "'dependabot[bot]' == GitHub.triggering_actor",
+                Confidence::High,
+            ),
             // Dominating cases with OR.
             (
                 "'dependabot[bot]' == github.actor || true",
