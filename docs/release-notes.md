@@ -26,6 +26,12 @@ of `zizmor`.
 * The [bot-conditions] audit now detects `github.triggering_actor`
   as another spoofable actor check (#559)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse workflows with
+  `workflow_dispatch` triggers that contained non-string inputs
+  (#563)
+
 ### Upcoming Changes 🚧
 
 * The next minor release of `zizmor` will be built with
