@@ -15,7 +15,7 @@ error[bot-conditions]: spoofable bot actor check
  --> @@INPUT@@:8:5
   |
 8 |     if: github.actor == 'dependabot[bot]'
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ github.actor may be spoofable
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
   |
   = note: audit confidence → High
 
@@ -23,7 +23,7 @@ error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:12:9
    |
 12 |         if: ${{ github.actor == 'dependabot[bot]' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ github.actor may be spoofable
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
@@ -31,7 +31,7 @@ error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:16:9
    |
 16 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ github.actor may be spoofable
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → Medium
 
@@ -39,7 +39,7 @@ error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:20:9
    |
 20 |         if: github.actor == 'renovate[bot]'
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ github.actor may be spoofable
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 

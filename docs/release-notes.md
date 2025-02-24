@@ -23,6 +23,8 @@ of `zizmor`.
   expectations (#528)
 * `# zizmor: ignore[rule]` comments can now have trailing explanations,
   e.g. `# zizmor: ignore[rule] because reasons` (#531)
+* The [bot-conditions] audit now detects `github.triggering_actor`
+  as another spoofable actor check (#559)
 
 ### Upcoming Changes 🚧
 
