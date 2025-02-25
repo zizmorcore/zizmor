@@ -105,7 +105,7 @@ impl Workflow {
             InputKey::Local(_) => None,
             InputKey::Remote(_) => {
                 // NOTE: InputKey's Display produces a URL, hence `key.to_string()`.
-                Some(Link::new(key.best_effort_relative_path(), &key.to_string()).to_string())
+                Some(Link::new(key.presentation_path(), &key.to_string()).to_string())
             }
         };
 
@@ -757,7 +757,7 @@ impl Action {
             InputKey::Local(_) => None,
             InputKey::Remote(_) => {
                 // NOTE: InputKey's Display produces a URL, hence `key.to_string()`.
-                Some(Link::new(key.best_effort_relative_path(), &key.to_string()).to_string())
+                Some(Link::new(key.presentation_path(), &key.to_string()).to_string())
             }
         };
 

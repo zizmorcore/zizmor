@@ -413,7 +413,7 @@ fn run() -> Result<ExitCode> {
             }
             tracing::info!(
                 "🌈 completed {input}",
-                input = input.key().best_effort_relative_path()
+                input = input.key().presentation_path()
             );
         }
     }

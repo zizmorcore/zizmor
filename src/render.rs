@@ -51,11 +51,7 @@ pub(crate) fn finding_snippet<'w>(
             Snippet::source(input.document().source())
                 .fold(true)
                 .line_start(1)
-                .origin(
-                    input
-                        .link()
-                        .unwrap_or(input_key.best_effort_relative_path()),
-                )
+                .origin(input.link().unwrap_or(input_key.presentation_path()))
                 .annotations(locations.iter().map(|loc| {
                     let annotation = match loc.symbolic.link {
                         Some(ref link) => link,
