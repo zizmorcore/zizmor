@@ -8,6 +8,8 @@ use github_actions_models::common::{
     Env,
 };
 
+use crate::audit::AuditInput;
+
 /// Convenience trait for inline transformations of `Self`.
 ///
 /// This is similar to the `tap` crate's `Pipe` trait, except that
@@ -88,6 +90,32 @@ pub(crate) fn extract_expressions(text: &str) -> Vec<(ExplicitExpr, Range<usize>
 
     exprs
 }
+
+// /// Like `extract_expressions`, but over an entire audit input (e.g. workflow
+// /// or action definition).
+// ///
+// /// Unlike `extract_expressions`, this function performs some semantic
+// /// filtering over the raw input. For example, it skip ignore expressions
+// /// that are inside comments.
+// pub(crate) fn extract_expressions_raw(input: &AuditInput) -> Vec<(ExplicitExpr, Range<usize>)> {
+//     let text = input.document().source();
+//     let doc = input.document();
+
+//     let mut exprs = vec![];
+//     let mut offset = 0;
+
+//     while let Some((expr, span)) = extract_expression(text, offset) {
+//         exprs.push((expr, (span.start..span.end)));
+
+//         if span.end >= text.len() {
+//             break;
+//         } else {
+//             offset = span.end;
+//         }
+//     }
+
+//     exprs
+// }
 
 /// Returns whether the given `env.name` environment access is "static,"
 /// i.e. is not influenced by another expression.
