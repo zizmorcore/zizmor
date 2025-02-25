@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed `zizmor`'s path presentation behavior to correctly present
+  unambiguous paths in both SARIF and "plain" outputs when
+  multiple input directories are given (#572)
+
 ## v1.4.1
 
 This is a small corrective release for v1.4.0.
