@@ -9,7 +9,11 @@ use super::{audit_meta, Audit};
 
 pub(crate) struct UnredactedSecrets;
 
-audit_meta!(UnredactedSecrets, "secret-leakage", "leaked secret values");
+audit_meta!(
+    UnredactedSecrets,
+    "unredacted-secrets",
+    "leaked secret values"
+);
 
 impl Audit for UnredactedSecrets {
     fn new(_: crate::AuditState) -> anyhow::Result<Self>
