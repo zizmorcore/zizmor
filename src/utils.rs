@@ -184,20 +184,33 @@ mod tests {
 
     #[test]
     fn test_parse_expressions() {
-        let expressions = r#"echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${OPENSSL_HASH}" >> $GITHUB_ENV"#;
-        let exprs = extract_expressions(expressions)
-            .into_iter()
-            .map(|(e, _)| e.as_curly().to_string())
-            .collect::<Vec<_>>();
+        let multiple = r#"echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${OPENSSL_HASH}" >> $GITHUB_ENV"#;
 
-        assert_eq!(
-            exprs,
-            &[
-                "${{ github.workspace }}",
-                "${{ matrix.PYTHON.OPENSSL.TYPE }}",
-                "${{ matrix.PYTHON.OPENSSL.VERSION }}",
-            ]
-        )
+        // See #569 -- we should ignore the broken expression since it's inside a comment.
+        let incomplete = r#"
+name: >-  # ${{ '' } is a hack to nest jobs under the same sidebar category
+  Windows MSI${{ '' }}
+        "#;
+
+        for (raw, expected) in &[
+            (
+                multiple,
+                [
+                    "${{ github.workspace }}",
+                    "${{ matrix.PYTHON.OPENSSL.TYPE }}",
+                    "${{ matrix.PYTHON.OPENSSL.VERSION }}",
+                ]
+                .as_slice(),
+            ),
+            (incomplete, ["${{ '' }"].as_slice()),
+        ] {
+            let exprs = extract_expressions(raw)
+                .into_iter()
+                .map(|(e, _)| e.as_curly().to_string())
+                .collect::<Vec<_>>();
+
+            assert_eq!(exprs, *expected)
+        }
     }
 
     #[test]
