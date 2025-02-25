@@ -73,6 +73,8 @@ jobs:
           platforms: ${{ matrix.image.platform }}
           labels: ${{ steps.docker-metadata.outputs.labels }}
           outputs: type=image,"name=${{ env.ZIZMOR_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
+          build-args: |
+            ZIZMOR_VERSION=${{ github.event.inputs.version }}
 
       - name: Export digest
         run: |
