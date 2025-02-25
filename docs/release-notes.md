@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Findings produced by ([unredacted-secrets]) now use the correct ID and
+  link to the correct URL in the audit documentation (#566)
+
 ## v1.4.0
 
 This release comes with one new audit ([unredacted-secrets]), plus a handful
