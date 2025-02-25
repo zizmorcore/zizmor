@@ -9,6 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## v1.4.1
+
+This is a small corrective release for v1.4.0.
+
 ### Bug Fixes 🐛
 
 * Findings produced by ([unredacted-secrets]) now use the correct ID and
