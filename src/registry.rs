@@ -90,18 +90,13 @@ impl InputKey {
         }))
     }
 
-    /// Return a "best-effort" relative path for this [`InputKey`].
+    /// Return a "presentation" path for this [`InputKey`].
     ///
     /// This will always be a relative path for remote keys,
-    /// and will be a "best-effort" relative path for local keys.
-    pub(crate) fn best_effort_relative_path(&self) -> &str {
+    /// and will be the given path for local keys.
+    pub(crate) fn presentation_path(&self) -> &str {
         match self {
-            InputKey::Local(local) => local
-                .prefix
-                .as_ref()
-                .and_then(|pfx| local.given_path.strip_prefix(pfx).ok())
-                .unwrap_or_else(|| &local.given_path)
-                .as_str(),
+            InputKey::Local(local) => local.given_path.as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),
         }
     }
@@ -330,13 +325,13 @@ mod tests {
     #[test]
     fn test_input_key_local_path() {
         let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
-        assert_eq!(local.best_effort_relative_path(), "/foo/bar/baz.yml");
+        assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
         let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
-        assert_eq!(local.best_effort_relative_path(), "bar/baz.yml");
+        assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
         let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
-        assert_eq!(local.best_effort_relative_path(), "baz.yml");
+        assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
         let local = InputKey::local(
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
@@ -344,8 +339,8 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            local.best_effort_relative_path(),
-            ".github/workflows/baz.yml"
+            local.presentation_path(),
+            "/home/runner/work/repo/repo/.github/workflows/baz.yml"
         );
     }
 }

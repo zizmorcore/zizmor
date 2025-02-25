@@ -145,7 +145,7 @@ fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec
                         .artifact_location(
                             ArtifactLocation::builder()
                                 .uri_base_id("%SRCROOT%")
-                                .uri(location.symbolic.key.best_effort_relative_path())
+                                .uri(location.symbolic.key.presentation_path())
                                 .build(),
                         )
                         .region(
