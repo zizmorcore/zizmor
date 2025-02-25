@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## v1.4.0
+
+This release comes with one new audit ([unredacted-secrets]), plus a handful
+of bugfixes and analysis improvements to existing audits. It also comes
+with improvements to SARIF presentation, ignore comments, as well as an
+[official Docker image](https://ghcr.io/woodruffw/zizmor)!
+
 ### New Features 🌈
 
 * `zizmor` now has official Docker images! You can find them on the
