@@ -14,7 +14,7 @@ RUN set -eux && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install zizmor && \
+RUN pip install zizmor==${ZIZMOR_VERSION} && \
     which zizmor
 
 # ------------------------------------------------------------------------------
