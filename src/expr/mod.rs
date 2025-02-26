@@ -44,7 +44,7 @@ impl<'src> Context<'src> {
         {
             match (parent, child) {
                 (Expr::Identifier(parent), Expr::Identifier(child)) => {
-                    if !parent.eq_ignore_ascii_case(child) {
+                    if parent != child {
                         return false;
                     }
                 }
@@ -62,9 +62,7 @@ impl<'src> Context<'src> {
     /// Returns the tail of the context if the head matches the given string.
     pub(crate) fn pop_if(&self, head: &str) -> Option<&str> {
         match self.components().first()? {
-            Expr::Identifier(ident) if ident.eq_ignore_ascii_case(head) => {
-                Some(self.raw.split_once('.')?.1)
-            }
+            Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
             _ => None,
         }
     }
@@ -92,6 +90,21 @@ impl PartialEq for Context<'_> {
 impl PartialEq<str> for Context<'_> {
     fn eq(&self, other: &str) -> bool {
         self.raw.eq_ignore_ascii_case(other)
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct Identifier<'src>(&'src str);
+
+impl PartialEq for Identifier<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq_ignore_ascii_case(other.0)
+    }
+}
+
+impl PartialEq<str> for Identifier<'_> {
+    fn eq(&self, other: &str) -> bool {
+        self.0.eq_ignore_ascii_case(other)
     }
 }
 
@@ -131,7 +144,7 @@ pub(crate) enum Expr<'src> {
         args: Vec<Expr<'src>>,
     },
     /// A context identifier component, e.g. `github` in `github.actor`.
-    Identifier(&'src str),
+    Identifier(Identifier<'src>),
     /// A context index component, e.g. `[0]` in `foo[0]`.
     Index(Box<Expr<'src>>),
     /// A full context reference.
@@ -153,7 +166,7 @@ impl<'src> Expr<'src> {
     }
 
     pub(crate) fn ident(i: &'src str) -> Self {
-        Self::Identifier(i)
+        Self::Identifier(Identifier(i))
     }
 
     pub(crate) fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {

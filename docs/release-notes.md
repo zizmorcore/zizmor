@@ -9,6 +9,17 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed `zizmor`'s path presentation behavior to correctly present
+  unambiguous paths in both SARIF and "plain" outputs when
+  multiple input directories are given (#572)
+
+### Enhancements 🌱
+
+* The [overprovisioned-secrets] audit now detects indexing operations
+  on the `secrets` context that result in overprovisioning (#573)
+
 ## v1.4.1
 
 This is a small corrective release for v1.4.0.
@@ -93,7 +104,7 @@ audit results.
 
 * `zizmor` produces slightly more informative error messages when given
   an invalid input file (#482)
-* Case insensitivity in contexts is now handeled more consistently
+* Case insensitivity in contexts is now handled more consistently
   and pervasively (#491)
 
 ### Bug Fixes 🐛

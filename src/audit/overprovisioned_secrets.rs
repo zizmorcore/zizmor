@@ -1,5 +1,5 @@
 use crate::{
-    expr::{Context, Expr},
+    expr::Expr,
     finding::{Confidence, Feature, Location, Severity},
     utils::extract_expressions,
 };
@@ -77,8 +77,17 @@ impl OverprovisionedSecrets {
                 }
             }
             Expr::Index(expr) => results.extend(Self::secrets_expansions(expr)),
-            Expr::Context(Context { raw: _, components }) => {
-                results.extend(components.iter().flat_map(Self::secrets_expansions))
+            Expr::Context(ctx) => {
+                match (ctx.components().first(), ctx.components().get(1)) {
+                    // Look for `secrets[...]` accesses where the index component
+                    // is not a string literal.
+                    (Some(Expr::Identifier(ident)), Some(Expr::Index(idx)))
+                        if ident == "secrets" && !matches!(idx.as_ref(), Expr::String(_)) =>
+                    {
+                        results.push(())
+                    }
+                    _ => results.extend(ctx.components.iter().flat_map(Self::secrets_expansions)),
+                }
             }
             Expr::BinOp { lhs, op: _, rhs } => {
                 results.extend(Self::secrets_expansions(lhs));
@@ -106,6 +115,10 @@ mod tests {
             ("false || toJSON(secrets)", 1),
             ("toJSON(secrets) || toJSON(secrets)", 2),
             ("format('{0}', toJSON(secrets))", 1),
+            ("secrets[format('GH_PAT_%s', matrix.env)]", 1),
+            ("SECRETS[format('GH_PAT_%s', matrix.env)]", 1),
+            ("SECRETS[something.else]", 1),
+            ("SECRETS['literal']", 0),
         ] {
             let expr = crate::expr::Expr::parse(expr).unwrap();
             assert_eq!(
