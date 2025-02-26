@@ -164,17 +164,20 @@ impl Config {
         false
     }
 
-    pub(crate) fn rule_config<'a, T>(&'a self, ident: &str) -> Option<T>
+    pub(crate) fn rule_config<T>(&self, ident: &str) -> Result<T>
     where
-        T: DeserializeOwned,
+        T: Default + DeserializeOwned,
     {
-        self.rules.get(ident).and_then(|audit_rule_config| {
-            serde_yaml::from_value::<T>(audit_rule_config.policy.clone())
-                .inspect_err(|err| {
+        Ok(self.rules
+            .get(ident)
+            .map(|audit_rule_config| &audit_rule_config.policy)
+            .filter(|policy| !matches!(policy, serde_yaml::Value::Null))
+            .map(|policy| {
+                serde_yaml::from_value::<T>(policy.clone()).inspect_err(|err| {
                     tracing::error!("failed to deserialize settings for rule {ident:?}: {err:?}");
                 })
-                .ok()
-        })
+            })
+            .unwrap_or_else(|| Ok(T::default()))?)
     }
 }
 

@@ -62,7 +62,7 @@ impl Audit for ForbiddenUses {
         Self: Sized,
     {
         Ok(Self {
-            config: config.rule_config(Self::ident()).unwrap_or_default(),
+            config: config.rule_config(Self::ident())?,
         })
     }
 
