@@ -7,6 +7,7 @@ use tracing::instrument;
 use yamlpath::Document;
 
 use crate::{
+    config::Config,
     finding::{Finding, FindingBuilder, SymbolicLocation},
     models::{Action, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
     registry::InputKey,
@@ -180,7 +181,7 @@ pub(crate) use audit_meta;
 /// **only** [`Audit::audit`] and not [`Audit::audit_normal_job`] or
 /// [`Audit::audit_step`].
 pub(crate) trait Audit: AuditCore {
-    fn new(state: AuditState) -> Result<Self>
+    fn new(state: AuditState, config: &Config) -> Result<Self>
     where
         Self: Sized;
 

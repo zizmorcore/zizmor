@@ -5,6 +5,7 @@ use github_actions_models::{
 
 use super::{audit_meta, Audit, Job};
 use crate::{
+    config::Config,
     finding::{Confidence, Severity},
     models::JobExt as _,
     state::AuditState,
@@ -19,7 +20,7 @@ audit_meta!(
 );
 
 impl Audit for HardcodedContainerCredentials {
-    fn new(_state: AuditState) -> anyhow::Result<Self>
+    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

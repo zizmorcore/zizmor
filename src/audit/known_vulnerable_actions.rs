@@ -12,6 +12,7 @@ use super::{audit_meta, Audit};
 use crate::finding::Finding;
 use crate::models::CompositeStep;
 use crate::{
+    config::Config,
     finding::{Confidence, Severity},
     github_api,
     models::uses::RepositoryUsesExt as _,
@@ -124,7 +125,7 @@ impl KnownVulnerableActions {
 }
 
 impl Audit for KnownVulnerableActions {
-    fn new(state: AuditState) -> anyhow::Result<Self>
+    fn new(state: AuditState, _config: &Config) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

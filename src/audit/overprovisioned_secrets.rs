@@ -1,10 +1,11 @@
 use crate::{
+    config::Config,
     expr::Expr,
     finding::{Confidence, Feature, Location, Severity},
     utils::extract_expressions,
 };
 
-use super::{audit_meta, Audit, AuditInput};
+use super::{audit_meta, Audit, AuditInput, AuditState};
 
 pub(crate) struct OverprovisionedSecrets;
 
@@ -15,7 +16,7 @@ audit_meta!(
 );
 
 impl Audit for OverprovisionedSecrets {
-    fn new(_state: super::AuditState) -> anyhow::Result<Self>
+    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

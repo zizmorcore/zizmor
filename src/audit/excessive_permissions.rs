@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::LazyLock};
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
 use super::{audit_meta, Audit, Job};
+use crate::config::Config;
 use crate::models::JobExt as _;
 use crate::{
     finding::{Confidence, Persona, Severity, SymbolicLocation},
@@ -42,11 +43,11 @@ pub(crate) struct ExcessivePermissions {
 }
 
 impl Audit for ExcessivePermissions {
-    fn new(config: AuditState) -> anyhow::Result<Self>
+    fn new(state: AuditState, _config: &Config) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self { _config: config })
+        Ok(Self { _config: state })
     }
 
     fn audit_workflow<'w>(

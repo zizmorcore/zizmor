@@ -1,7 +1,10 @@
 use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
 use anyhow::{anyhow, Context as _, Result};
-use serde::{de, Deserialize};
+use serde::{
+    de::{self, DeserializeOwned},
+    Deserialize,
+};
 
 use crate::{finding::Finding, App};
 
@@ -65,6 +68,8 @@ impl<'de> Deserialize<'de> for WorkflowRule {
 #[derive(Clone, Debug, Deserialize)]
 pub(crate) struct AuditRuleConfig {
     ignore: Vec<WorkflowRule>,
+    #[serde(default)]
+    policy: serde_yaml::Value,
 }
 
 /// Runtime configuration, corresponding to a `zizmor.yml` file.
@@ -157,6 +162,19 @@ impl Config {
         }
 
         false
+    }
+
+    pub(crate) fn rule_config<'a, T>(&'a self, ident: &str) -> Option<T>
+    where
+        T: DeserializeOwned,
+    {
+        self.rules.get(ident).and_then(|audit_rule_config| {
+            serde_yaml::from_value::<T>(audit_rule_config.policy.clone())
+                .inspect_err(|err| {
+                    tracing::error!("failed to deserialize settings for rule {ident:?}: {err:?}");
+                })
+                .ok()
+        })
     }
 }
 

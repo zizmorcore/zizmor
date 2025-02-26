@@ -6,6 +6,7 @@ use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalB
 use github_actions_models::workflow::Trigger;
 
 use crate::audit::{audit_meta, Audit};
+use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::coordinate::{ActionCoordinate, Control, ControlFieldType, Toggle, Usage};
 use crate::models::{JobExt as _, NormalJob, Step, StepCommon, Steps};
@@ -304,7 +305,7 @@ impl CachePoisoning {
 }
 
 impl Audit for CachePoisoning {
-    fn new(_: AuditState) -> anyhow::Result<Self>
+    fn new(_state: AuditState, _: &Config) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

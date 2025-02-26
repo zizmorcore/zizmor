@@ -372,10 +372,9 @@ fn run() -> Result<ExitCode> {
     macro_rules! register_audit {
         ($rule:path) => {{
             // HACK: https://github.com/rust-lang/rust/issues/48067
-            use $rule as base;
-
             use crate::audit::AuditCore as _;
-            match base::new(audit_state.clone()) {
+            use $rule as base;
+            match base::new(audit_state.clone(), &config) {
                 Ok(audit) => audit_registry.register_audit(base::ident(), Box::new(audit)),
                 Err(e) => tracing::info!("skipping {audit}: {e}", audit = base::ident()),
             }

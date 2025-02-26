@@ -1,7 +1,7 @@
 use github_actions_models::workflow::job::Secrets;
 
-use super::{audit_meta, Audit};
-use crate::{finding::Confidence, models::JobExt as _};
+use super::{audit_meta, Audit, AuditState};
+use crate::{config::Config, finding::Confidence, models::JobExt as _};
 
 pub(crate) struct SecretsInherit;
 
@@ -12,7 +12,7 @@ audit_meta!(
 );
 
 impl Audit for SecretsInherit {
-    fn new(_state: super::AuditState) -> anyhow::Result<Self>
+    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

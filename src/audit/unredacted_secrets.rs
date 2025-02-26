@@ -1,11 +1,12 @@
 use crate::{
+    config::Config,
     expr::{Context, Expr},
     finding::{Feature, Location},
     utils::extract_expressions,
     Confidence, Severity,
 };
 
-use super::{audit_meta, Audit};
+use super::{audit_meta, Audit, AuditState};
 
 pub(crate) struct UnredactedSecrets;
 
@@ -16,7 +17,7 @@ audit_meta!(
 );
 
 impl Audit for UnredactedSecrets {
-    fn new(_: crate::AuditState) -> anyhow::Result<Self>
+    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

@@ -9,6 +9,7 @@ use indexmap::IndexMap;
 
 use super::{audit_meta, Audit};
 use crate::{
+    config::Config,
     finding::{Confidence, Severity},
     models::uses::RepositoryUsesExt as _,
     state::AuditState,
@@ -70,7 +71,7 @@ impl UseTrustedPublishing {
 }
 
 impl Audit for UseTrustedPublishing {
-    fn new(state: AuditState) -> anyhow::Result<Self> {
+    fn new(state: AuditState, _config: &Config) -> anyhow::Result<Self> {
         Ok(Self { _state: state })
     }
 
