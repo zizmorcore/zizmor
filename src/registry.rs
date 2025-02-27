@@ -117,6 +117,10 @@ impl InputKey {
 }
 
 pub(crate) struct InputRegistry {
+    // NOTE: We use a BTreeMap here to ensure that registered inputs
+    // iterate in a deterministic order. This saves us a lot of pain
+    // while snapshot testing across multiple input files, and makes
+    // the user experience more predictable.
     pub(crate) inputs: BTreeMap<InputKey, AuditInput>,
 }
 
