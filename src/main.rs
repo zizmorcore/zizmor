@@ -204,7 +204,7 @@ fn collect_from_dir(
             && matches!(entry.extension(), Some("yml" | "yaml"))
             && entry
                 .parent()
-                .map_or(false, |dir| dir.ends_with(".github/workflows"))
+                .is_some_and(|dir| dir.ends_with(".github/workflows"))
         {
             registry
                 .register_by_path(entry, Some(input_path))
