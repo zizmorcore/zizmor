@@ -25,7 +25,7 @@ pub fn workflow_under_test(name: &str) -> String {
 pub enum OutputMode {
     Stdout,
     Stderr,
-    Both,
+    // Both,
 }
 
 pub struct Zizmor {
@@ -53,10 +53,10 @@ impl Zizmor {
         self
     }
 
-    pub fn setenv(mut self, key: &str, value: &str) -> Self {
-        self.cmd.env(key, value);
-        self
-    }
+    // pub fn setenv(mut self, key: &str, value: &str) -> Self {
+    //     self.cmd.env(key, value);
+    //     self
+    // }
 
     pub fn unsetenv(mut self, key: &str) -> Self {
         self.cmd.env_remove(key);
@@ -96,7 +96,7 @@ impl Zizmor {
         let mut raw = String::from_utf8(match self.output {
             OutputMode::Stdout => output.stdout,
             OutputMode::Stderr => output.stderr,
-            OutputMode::Both => [output.stdout, output.stderr].concat(),
+            // OutputMode::Both => [output.stdout, output.stderr].concat(),
         })?;
 
         for input in &self.inputs {
