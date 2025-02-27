@@ -21,8 +21,16 @@ fn gha_hazmat() -> Result<()> {
 
 #[test]
 fn menagerie() -> Result<()> {
+    // Respects .gitignore by default.
     insta::assert_snapshot!(zizmor()
         .output(OutputMode::Both)
+        .input(input_under_test("e2e-menagerie"))
+        .run()?);
+
+    // Ignores .gitignore when --collect=all is specified.
+    insta::assert_snapshot!(zizmor()
+        .output(OutputMode::Both)
+        .args(["--collect=all"])
         .input(input_under_test("e2e-menagerie"))
         .run()?);
 
