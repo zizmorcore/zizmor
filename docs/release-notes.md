@@ -9,6 +9,16 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* `zizmor` now ignores patterns in `.gitignore` (and related files,
+  like `.git/info/exclude`) by default when performing input collection.
+  This makes input collection significantly faster for users
+  with local development state and more closely reflects typical
+  user expectation. Users who wish to explicitly collect everything
+  regardless of ignore patterns can continue to use `--collect=all`
+  (#575)
+
 ### Bug Fixes 🐛
 
 * Fixed `zizmor`'s path presentation behavior to correctly present

@@ -49,12 +49,15 @@ zizmor ../example.yml ../other-repo/ example/example
 
 When auditing local and/or remote repositories, `zizmor` will collect both
 workflows (e.g. `.github/workflows/ci.yml`) **and** action definitions
-(e.g. `custom-action/foo.yml`) by default. To disable one or the other,
+(e.g. `custom-action/foo.yml`) by default. To configure collection behavior,
 you can use the `--collect=...` option.
 
 ```bash
-# collect everything (the default)
+# collect everything regardless of `.gitignore` patterns
 zizmor --collect=all example/example
+
+# collect everything while respecting `.gitignore` patterns (the default)
+zizmor --collect=default example/example
 
 # collect only workflows
 zizmor --collect=workflows-only example/example
@@ -62,6 +65,12 @@ zizmor --collect=workflows-only example/example
 # collect only actions
 zizmor --collect=actions-only example/example
 ```
+
+!!! tip
+
+    `--collect=all` can be significantly slower than `--collect=default`,
+    particularly when collecting from directories that contain large
+    hierarchies of paths that would be ignored by `.gitignore` patterns.
 
 !!! tip
 
