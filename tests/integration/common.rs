@@ -25,7 +25,7 @@ pub fn workflow_under_test(name: &str) -> String {
 pub enum OutputMode {
     Stdout,
     Stderr,
-    // Both,
+    Both,
 }
 
 pub struct Zizmor {
@@ -96,7 +96,7 @@ impl Zizmor {
         let mut raw = String::from_utf8(match self.output {
             OutputMode::Stdout => output.stdout,
             OutputMode::Stderr => output.stderr,
-            // OutputMode::Both => [output.stdout, output.stderr].concat(),
+            OutputMode::Both => [output.stderr, output.stdout].concat(),
         })?;
 
         for input in &self.inputs {
