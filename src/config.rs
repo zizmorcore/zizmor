@@ -168,7 +168,8 @@ impl Config {
     where
         T: Default + DeserializeOwned,
     {
-        Ok(self.rules
+        Ok(self
+            .rules
             .get(ident)
             .map(|audit_rule_config| &audit_rule_config.policy)
             .filter(|policy| !matches!(policy, serde_yaml::Value::Null))

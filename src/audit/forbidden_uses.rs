@@ -11,14 +11,19 @@ struct ForbiddenUsesConfig {
     allow: Vec<String>,
 }
 
+const DEFAULT_ALLOWLIST: [&str; 3] = [
+    "actions/checkout",
+    "actions/cache",
+    "actions/upload-artifact",
+];
+
 impl Default for ForbiddenUsesConfig {
     fn default() -> Self {
         Self {
-            allow: vec![
-                String::from("actions/checkout"),
-                String::from("actions/cache"),
-                String::from("actions/upload-artifact"),
-            ],
+            allow: DEFAULT_ALLOWLIST
+                .iter()
+                .map(|item| item.to_string())
+                .collect(),
         }
     }
 }
