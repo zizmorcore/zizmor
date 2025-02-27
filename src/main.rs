@@ -11,6 +11,7 @@ use config::Config;
 use finding::{Confidence, Persona, Severity};
 use github_actions_models::common::Uses;
 use github_api::GitHubHost;
+use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
 use models::Action;
 use owo_colors::OwoColorize;
@@ -133,9 +134,11 @@ pub(crate) enum OutputFormat {
 /// How `zizmor` collects inputs from local and remote repository sources.
 #[derive(Copy, Clone, Debug, Default, ValueEnum)]
 pub(crate) enum CollectionMode {
-    /// Collect all supported inputs.
-    #[default]
+    /// Collect all possible inputs, ignoring `.gitignore` files.
     All,
+    /// Collect all possible inputs, respecting `.gitignore` files.
+    #[default]
+    Default,
     /// Collect only workflow definitions.
     WorkflowsOnly,
     /// Collect only action definitions (i.e. `action.yml`).
@@ -143,12 +146,25 @@ pub(crate) enum CollectionMode {
 }
 
 impl CollectionMode {
+    pub(crate) fn respects_gitignore(&self) -> bool {
+        matches!(
+            self,
+            CollectionMode::Default | CollectionMode::WorkflowsOnly | CollectionMode::ActionsOnly
+        )
+    }
+
     pub(crate) fn workflows(&self) -> bool {
-        matches!(self, CollectionMode::All | CollectionMode::WorkflowsOnly)
+        matches!(
+            self,
+            CollectionMode::All | CollectionMode::Default | CollectionMode::WorkflowsOnly
+        )
     }
 
     pub(crate) fn actions(&self) -> bool {
-        matches!(self, CollectionMode::All | CollectionMode::ActionsOnly)
+        matches!(
+            self,
+            CollectionMode::All | CollectionMode::Default | CollectionMode::ActionsOnly
+        )
     }
 }
 
@@ -162,53 +178,45 @@ fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
 }
 
 #[instrument(skip(mode, registry))]
-fn collect_from_repo_dir(
-    top_dir: &Utf8Path,
-    current_dir: &Utf8Path,
+fn collect_from_dir(
+    input_path: &Utf8Path,
     mode: &CollectionMode,
     registry: &mut InputRegistry,
 ) -> Result<()> {
-    // The workflow directory might not exist if we're collecting from
-    // a repository that only contains actions.
-    if mode.workflows() {
-        let workflow_dir = if current_dir.ends_with(".github/workflows") {
-            current_dir.into()
-        } else {
-            current_dir.join(".github/workflows")
-        };
+    // Start with all filters disabled, i.e. walk everything.
+    let mut walker = WalkBuilder::new(input_path);
+    let walker = walker.standard_filters(false);
 
-        if workflow_dir.is_dir() {
-            for entry in workflow_dir.read_dir_utf8()? {
-                let entry = entry?;
-                let input_path = entry.path();
-                match input_path.extension() {
-                    Some(ext) if ext == "yml" || ext == "yaml" => {
-                        registry
-                            .register_by_path(input_path, Some(top_dir))
-                            .with_context(|| format!("failed to register input: {input_path}"))?;
-                    }
-                    _ => continue,
-                }
-            }
-        } else {
-            tracing::warn!("{workflow_dir} not found while collecting workflows")
-        }
+    // If the user wants to respect `.gitignore` files, then we need to
+    // explicitly enable it. This also enables filtering by a global
+    // `.gitignore` file and the `.git/info/exclude` file, since these
+    // typically align with the user's expectations.
+    if mode.respects_gitignore() {
+        walker.git_ignore(true).git_global(true).git_exclude(true);
     }
 
-    if mode.actions() {
-        for entry in current_dir.read_dir_utf8()? {
-            let entry = entry?;
-            let entry_path = entry.path();
+    for entry in walker.build() {
+        let entry = entry?;
+        let entry = <&Utf8Path>::try_from(entry.path())?;
 
-            if entry_path.is_file()
-                && matches!(entry_path.file_name(), Some("action.yml" | "action.yaml"))
-            {
-                let action = Action::from_file(entry_path, Some(top_dir))?;
-                registry.register_input(action.into())?;
-            } else if entry_path.is_dir() {
-                // Recurse and limit the collection mode to only actions.
-                collect_from_repo_dir(top_dir, entry_path, &CollectionMode::ActionsOnly, registry)?;
-            }
+        if mode.workflows()
+            && entry.is_file()
+            && matches!(entry.extension(), Some("yml" | "yaml"))
+            && entry
+                .parent()
+                .map_or(false, |dir| dir.ends_with(".github/workflows"))
+        {
+            registry
+                .register_by_path(entry, Some(input_path))
+                .with_context(|| format!("failed to register input: {entry}"))?;
+        }
+
+        if mode.actions()
+            && entry.is_file()
+            && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
+        {
+            let action = Action::from_file(entry, Some(input_path))?;
+            registry.register_input(action.into())?;
         }
     }
 
@@ -304,7 +312,8 @@ fn collect_inputs(
                 .register_by_path(input_path, None)
                 .with_context(|| format!("failed to register input: {input_path}"))?;
         } else if input_path.is_dir() {
-            collect_from_repo_dir(input_path, input_path, mode, &mut registry)?;
+            collect_from_dir(input_path, mode, &mut registry)?;
+            // collect_from_repo_dir(input_path, input_path, mode, &mut registry)?;
         } else {
             // If this input isn't a file or directory, it's probably an
             // `owner/repo(@ref)?` slug.
