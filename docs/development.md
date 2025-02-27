@@ -141,6 +141,9 @@ or, as a shortcut:
 
 ```bash
 cargo insta test --review
+
+# or, with online tests
+GH_TOKEN=$(gh auth token) cargo insta test --review --features online-tests
 ```
 
 See [insta's documentation] for more details.

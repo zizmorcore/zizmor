@@ -1,0 +1,21 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"excessive-permissions/issue-472-repro.yml\")).run()?"
+snapshot_kind: text
+---
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:19:3
+   |
+19 | /   job2:
+20 | |     # normal permissions finding here, since callers are always
+21 | |     # responsible for setting permissions, even if the workflow
+22 | |     # is reusable-only
+23 | |     uses: ./.github/workflows/fake.yml
+   | |                                       -
+   | |_______________________________________|
+   |                                         this job
+   |                                         default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+3 findings (2 suppressed): 0 unknown, 0 informational, 0 low, 1 medium, 0 high

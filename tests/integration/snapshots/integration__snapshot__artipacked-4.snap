@@ -1,0 +1,19 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"artipacked/issue-447-repro.yml\")).args([\"--persona=auditor\"]).run()?"
+snapshot_kind: text
+---
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:19:9
+   |
+19 |         - name: true-positive
+   |  _________-
+20 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+21 | |         with:
+22 | |           # finding in auditor mode only
+23 | |           persist-credentials: "true"
+   | |______________________________________- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+
+1 finding: 0 unknown, 0 informational, 0 low, 1 medium, 0 high

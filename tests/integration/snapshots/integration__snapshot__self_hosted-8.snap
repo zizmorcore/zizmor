@@ -1,0 +1,6 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"self-hosted/issue-283-repro.yml\")).args([\"--persona=auditor\"]).run()?"
+snapshot_kind: text
+---
+No findings to report. Good job!
