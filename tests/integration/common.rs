@@ -3,7 +3,7 @@ use std::env::current_dir;
 
 use assert_cmd::Command;
 
-pub fn workflow_under_test(name: &str) -> String {
+pub fn input_under_test(name: &str) -> String {
     let current_dir = current_dir().expect("Cannot figure out current directory");
 
     let file_path = current_dir
@@ -13,7 +13,7 @@ pub fn workflow_under_test(name: &str) -> String {
         .join(name);
 
     if !file_path.exists() {
-        panic!("Cannot find workflow under test: {}", file_path.display());
+        panic!("Cannot find input under test: {}", file_path.display());
     }
 
     file_path

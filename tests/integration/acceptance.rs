@@ -1,4 +1,4 @@
-use crate::common::workflow_under_test;
+use crate::common::input_under_test;
 use assert_cmd::Command;
 use serde_json::Value;
 use serde_json_path::JsonPath;
@@ -26,7 +26,7 @@ fn assert_value_match(json: &Value, path_pattern: &str, value: &str) {
 
 #[test]
 fn catches_inlined_ignore() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("inlined-ignores.yml");
+    let auditable = input_under_test("inlined-ignores.yml");
 
     let cli_args = [&auditable];
 
@@ -43,7 +43,7 @@ fn catches_inlined_ignore() -> anyhow::Result<()> {
 
 #[test]
 fn audit_artipacked() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("artipacked.yml");
+    let auditable = input_under_test("artipacked.yml");
     let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).output()?;
@@ -64,7 +64,7 @@ fn audit_artipacked() -> anyhow::Result<()> {
 
 #[test]
 fn audit_excessive_permission() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("excessive-permissions.yml");
+    let auditable = input_under_test("excessive-permissions.yml");
     let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).output()?;
@@ -85,7 +85,7 @@ fn audit_excessive_permission() -> anyhow::Result<()> {
 
 #[test]
 fn audit_hardcoded_credentials() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("hardcoded-credentials.yml");
+    let auditable = input_under_test("hardcoded-credentials.yml");
     let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).output()?;
@@ -106,7 +106,7 @@ fn audit_hardcoded_credentials() -> anyhow::Result<()> {
 
 #[test]
 fn audit_template_injection() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("template-injection.yml");
+    let auditable = input_under_test("template-injection.yml");
     let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).output()?;
@@ -127,7 +127,7 @@ fn audit_template_injection() -> anyhow::Result<()> {
 
 #[test]
 fn audit_use_trusted_publishing() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("use-trusted-publishing.yml");
+    let auditable = input_under_test("use-trusted-publishing.yml");
     let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).output()?;
@@ -148,7 +148,7 @@ fn audit_use_trusted_publishing() -> anyhow::Result<()> {
 
 #[test]
 fn audit_self_hosted() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("self-hosted.yml");
+    let auditable = input_under_test("self-hosted.yml");
 
     // Note: self-hosted audit is auditor-only
     let cli_args = ["--persona=auditor", &auditable];
@@ -171,7 +171,7 @@ fn audit_self_hosted() -> anyhow::Result<()> {
 
 #[test]
 fn audit_unpinned_uses() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("unpinned-uses.yml");
+    let auditable = input_under_test("unpinned-uses.yml");
 
     let cli_args = [&auditable];
 
@@ -209,7 +209,7 @@ fn audit_unpinned_uses() -> anyhow::Result<()> {
 
 #[test]
 fn audit_insecure_commands_allowed() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("insecure-commands.yml");
+    let auditable = input_under_test("insecure-commands.yml");
 
     let cli_args = [&auditable];
 
@@ -231,7 +231,7 @@ fn audit_insecure_commands_allowed() -> anyhow::Result<()> {
 
 #[test]
 fn audit_github_env_injection() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("github_env.yml");
+    let auditable = input_under_test("github_env.yml");
 
     let cli_args = [&auditable];
 
@@ -253,7 +253,7 @@ fn audit_github_env_injection() -> anyhow::Result<()> {
 
 #[test]
 fn audit_cache_poisoning() -> anyhow::Result<()> {
-    let auditable = workflow_under_test("cache-poisoning.yml");
+    let auditable = input_under_test("cache-poisoning.yml");
 
     let cli_args = [&auditable];
 
