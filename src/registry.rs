@@ -1,7 +1,11 @@
 //! Functionality for registering and managing the lifecycles of
 //! audits.
 
-use std::{fmt::Display, process::ExitCode};
+use std::{
+    collections::{btree_map, BTreeMap},
+    fmt::Display,
+    process::ExitCode,
+};
 
 use anyhow::{anyhow, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -18,7 +22,7 @@ use crate::{
     App,
 };
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct LocalKey {
     /// The path's nondeterministic prefix, if any.
     prefix: Option<Utf8PathBuf>,
@@ -26,7 +30,7 @@ pub(crate) struct LocalKey {
     given_path: Utf8PathBuf,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct RemoteKey {
     owner: String,
     repo: String,
@@ -39,7 +43,7 @@ pub(crate) struct RemoteKey {
 /// zizmor currently knows two different kinds of keys: local keys
 /// are just canonical paths to files on disk, while remote keys are
 /// relative paths within a referenced GitHub repository.
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) enum InputKey {
     Local(LocalKey),
     Remote(RemoteKey),
@@ -113,7 +117,7 @@ impl InputKey {
 }
 
 pub(crate) struct InputRegistry {
-    pub(crate) inputs: IndexMap<InputKey, AuditInput>,
+    pub(crate) inputs: BTreeMap<InputKey, AuditInput>,
 }
 
 impl InputRegistry {
@@ -160,7 +164,7 @@ impl InputRegistry {
         }
     }
 
-    pub(crate) fn iter_inputs(&self) -> indexmap::map::Iter<'_, InputKey, AuditInput> {
+    pub(crate) fn iter_inputs(&self) -> btree_map::Iter<'_, InputKey, AuditInput> {
         self.inputs.iter()
     }
 
