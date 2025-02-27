@@ -9,13 +9,23 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* `zizmor` now ignores patterns in `.gitignore` (and related files,
+  like `.git/info/exclude`) by default when performing input collection.
+  This makes input collection significantly faster for users
+  with local development state and more closely reflects typical
+  user expectation. Users who wish to explicitly collect everything
+  regardless of ignore patterns can continue to use `--collect=all`
+  (#575)
+
 ### Bug Fixes 🐛
 
 * Fixed `zizmor`'s path presentation behavior to correctly present
   unambiguous paths in both SARIF and "plain" outputs when
   multiple input directories are given (#572)
 
-### Enhancements 🌱
+### New Features 🌈
 
 * The [overprovisioned-secrets] audit now detects indexing operations
   on the `secrets` context that result in overprovisioning (#573)

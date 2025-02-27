@@ -37,7 +37,7 @@ Options:
       --cache-dir <CACHE_DIR>
           The directory to use for HTTP caching. By default, a host-appropriate user-caching directory will be used
       --collect <COLLECT>
-          Control which kinds of inputs are collected for auditing [default: all] [possible values: all, workflows-only, actions-only]
+          Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows-only, actions-only]
   -h, --help
           Print help (see more with '--help')
   -V, --version
