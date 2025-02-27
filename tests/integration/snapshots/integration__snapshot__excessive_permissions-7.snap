@@ -1,0 +1,36 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"excessive-permissions/jobs-broaden-permissions.yml\")).run()?"
+snapshot_kind: text
+---
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:6:3
+   |
+ 6 | /   job1:
+ 7 | |     runs-on: ubuntu-latest
+ 8 | |     permissions: read-all
+   | |     --------------------- uses read-all permissions
+ 9 | |     steps:
+10 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+11 | |         with:
+12 | |           persist-credentials: false
+   | |____________________________________- this job
+   |
+   = note: audit confidence → High
+
+error[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:14:3
+   |
+14 | /   job2:
+15 | |     runs-on: ubuntu-latest
+16 | |     permissions: write-all
+   | |     ^^^^^^^^^^^^^^^^^^^^^^ uses write-all permissions
+17 | |     steps:
+18 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+19 | |         with:
+20 | |           persist-credentials: false
+   | |_____________________________________^ this job
+   |
+   = note: audit confidence → High
+
+2 findings: 0 unknown, 0 informational, 0 low, 1 medium, 1 high

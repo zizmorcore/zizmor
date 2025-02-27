@@ -1,0 +1,6 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"excessive-permissions/workflow-default-perms-all-jobs-explicit.yml\")).run()?"
+snapshot_kind: text
+---
+No findings to report. Good job! (1 suppressed)

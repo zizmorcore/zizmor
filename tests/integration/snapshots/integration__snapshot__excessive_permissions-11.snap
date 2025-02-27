@@ -1,0 +1,19 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"excessive-permissions/reusable-workflow-call.yml\")).run()?"
+snapshot_kind: text
+---
+warning[excessive-permissions]: overly broad permissions
+ --> @@INPUT@@:7:3
+  |
+7 | /   job1:
+8 | |     # finding: reusable jobs should always specify their permissions
+9 | |     uses: ./.github/workflows/zizmor-child.yml
+  | |                                               -
+  | |_______________________________________________|
+  |                                                 this job
+  |                                                 default permissions used due to no permissions: block
+  |
+  = note: audit confidence → Medium
+
+2 findings (1 suppressed): 0 unknown, 0 informational, 0 low, 1 medium, 0 high

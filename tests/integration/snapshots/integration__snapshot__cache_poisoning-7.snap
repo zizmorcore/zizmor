@@ -1,0 +1,6 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"cache-poisoning/no-cache-aware-steps.yml\")).run()?"
+snapshot_kind: text
+---
+No findings to report. Good job!
