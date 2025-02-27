@@ -1,0 +1,16 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"github-env/github-path.yml\")).run()?"
+snapshot_kind: text
+---
+error[github-env]: dangerous use of environment file
+  --> @@INPUT@@:14:9
+   |
+14 | /         run: |
+15 | |           message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
+16 | |           echo "$message" >> $GITHUB_PATH
+   | |__________________________________________^ write to GITHUB_PATH may allow code execution
+   |
+   = note: audit confidence → Low
+
+2 findings (1 ignored): 0 unknown, 0 informational, 0 low, 0 medium, 1 high
