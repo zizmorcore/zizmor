@@ -1,0 +1,23 @@
+on: push
+
+permissions: {}
+
+jobs:
+  hackme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: vulnerable-1
+        run: echo hello
+        if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}
+
+      - name: vulnerable-2
+        run: echo hello
+        if: ${{ contains('main,develop', env.REF_NAME) }}
+
+      - name: vulnerable-3
+        run: echo hello
+        if: contains('refs/heads/main refs/heads/develop', github.ref)
+
+      - name: vulnerable-4
+        run: echo hello
+        if: contains('main,develop', env.REF_NAME)

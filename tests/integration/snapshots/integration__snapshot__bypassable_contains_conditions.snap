@@ -1,0 +1,38 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"bypassable-contains-conditions.yml\")).run()?"
+snapshot_kind: text
+---
+error[bypassable-contains-conditions]: bypassable contains conditions checks
+  --> @@INPUT@@:11:9
+   |
+11 |         if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains condition can be bypassed
+   |
+   = note: audit confidence → High
+
+error[bypassable-contains-conditions]: bypassable contains conditions checks
+  --> @@INPUT@@:15:9
+   |
+15 |         if: ${{ contains('main,develop', env.REF_NAME) }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains condition can be bypassed
+   |
+   = note: audit confidence → High
+
+error[bypassable-contains-conditions]: bypassable contains conditions checks
+  --> @@INPUT@@:19:9
+   |
+19 |         if: contains('refs/heads/main refs/heads/develop', github.ref)
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains condition can be bypassed
+   |
+   = note: audit confidence → High
+
+error[bypassable-contains-conditions]: bypassable contains conditions checks
+  --> @@INPUT@@:23:9
+   |
+23 |         if: contains('main,develop', env.REF_NAME)
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains condition can be bypassed
+   |
+   = note: audit confidence → High
+
+4 findings: 0 unknown, 0 informational, 0 low, 0 medium, 4 high
