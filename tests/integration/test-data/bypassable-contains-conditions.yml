@@ -1,4 +1,10 @@
-on: push
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      some_value:
+        required: true
 
 permissions: {}
 
@@ -12,12 +18,12 @@ jobs:
 
       - name: vulnerable-2
         run: echo hello
-        if: ${{ contains('main,develop', env.REF_NAME) }}
+        if: ${{ contains('main,develop', env.GITHUB_REF_NAME) }}
 
       - name: vulnerable-3
         run: echo hello
-        if: contains('refs/heads/main refs/heads/develop', github.ref)
+        if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true
 
-      - name: vulnerable-4
+      - name: probably-not-vulnerable-but-still-bad
         run: echo hello
-        if: contains('main,develop', env.REF_NAME)
+        if: contains('runner1,runner2', runner.name)

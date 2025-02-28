@@ -4,35 +4,43 @@ expression: "zizmor().input(input_under_test(\"bypassable-contains-conditions.ym
 snapshot_kind: text
 ---
 error[bypassable-contains-conditions]: bypassable contains conditions checks
-  --> @@INPUT@@:11:9
+  --> @@INPUT@@:17:9
    |
-11 |         if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains condition can be bypassed
-   |
-   = note: audit confidence → High
-
-error[bypassable-contains-conditions]: bypassable contains conditions checks
-  --> @@INPUT@@:15:9
-   |
-15 |         if: ${{ contains('main,develop', env.REF_NAME) }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains condition can be bypassed
+17 |         if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'github.ref'
    |
    = note: audit confidence → High
 
 error[bypassable-contains-conditions]: bypassable contains conditions checks
-  --> @@INPUT@@:19:9
+  --> @@INPUT@@:21:9
    |
-19 |         if: contains('refs/heads/main refs/heads/develop', github.ref)
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains condition can be bypassed
+21 |         if: ${{ contains('main,develop', env.GITHUB_REF_NAME) }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'env.GITHUB_REF_NAME'
    |
    = note: audit confidence → High
 
 error[bypassable-contains-conditions]: bypassable contains conditions checks
-  --> @@INPUT@@:23:9
+  --> @@INPUT@@:25:9
    |
-23 |         if: contains('main,develop', env.REF_NAME)
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains condition can be bypassed
+25 |         if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'github.ref_name'
    |
    = note: audit confidence → High
 
-4 findings: 0 unknown, 0 informational, 0 low, 0 medium, 4 high
+error[bypassable-contains-conditions]: bypassable contains conditions checks
+  --> @@INPUT@@:25:9
+   |
+25 |         if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'github.actor'
+   |
+   = note: audit confidence → High
+
+error[bypassable-contains-conditions]: bypassable contains conditions checks
+  --> @@INPUT@@:29:9
+   |
+29 |         if: contains('runner1,runner2', runner.name)
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'runner.name'
+   |
+   = note: audit confidence → Medium
+
+5 findings: 0 unknown, 0 informational, 0 low, 0 medium, 5 high
