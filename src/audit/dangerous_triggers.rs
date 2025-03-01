@@ -1,7 +1,6 @@
 use anyhow::Result;
 
 use super::{audit_meta, Audit};
-use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Workflow;
 use crate::state::AuditState;
@@ -15,7 +14,7 @@ audit_meta!(
 );
 
 impl Audit for DangerousTriggers {
-    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self> {
+    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self> {
         Ok(Self)
     }
 

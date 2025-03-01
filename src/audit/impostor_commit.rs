@@ -10,7 +10,6 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{audit_meta, Audit, Job};
 use crate::{
-    config::Config,
     finding::{Confidence, Finding, Severity},
     github_api::{self, ComparisonStatus},
     models::{uses::RepositoryUsesExt as _, JobExt as _, Workflow},
@@ -114,7 +113,7 @@ impl ImpostorCommit {
 }
 
 impl Audit for ImpostorCommit {
-    fn new(state: AuditState, _config: &Config) -> anyhow::Result<Self> {
+    fn new(state: &AuditState<'_>) -> anyhow::Result<Self> {
         if state.no_online_audits {
             return Err(anyhow!("offline audits only requested"));
         }

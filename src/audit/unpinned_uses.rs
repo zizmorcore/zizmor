@@ -1,7 +1,6 @@
 use github_actions_models::common::Uses;
 
 use super::{audit_meta, Audit, AuditState, Finding, Step};
-use crate::config::Config;
 use crate::finding::{Confidence, Persona, Severity};
 use crate::models::{uses::UsesExt as _, CompositeStep};
 
@@ -37,7 +36,7 @@ impl UnpinnedUses {
 }
 
 impl Audit for UnpinnedUses {
-    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

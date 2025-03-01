@@ -10,7 +10,6 @@ use itertools::Itertools as _;
 use super::{audit_meta, Audit};
 use crate::utils::split_patterns;
 use crate::{
-    config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{uses::RepositoryUsesExt as _, JobExt},
     state::AuditState,
@@ -47,7 +46,7 @@ impl Artipacked {
 }
 
 impl Audit for Artipacked {
-    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self> {
+    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self> {
         Ok(Self)
     }
 

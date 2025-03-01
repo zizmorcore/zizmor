@@ -10,7 +10,6 @@ use streaming_iterator::StreamingIterator;
 use tree_sitter::{Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
 
 use super::{audit_meta, Audit};
-use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{JobExt as _, Step};
 use crate::state::AuditState;
@@ -340,7 +339,7 @@ impl GitHubEnv {
 }
 
 impl Audit for GitHubEnv {
-    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

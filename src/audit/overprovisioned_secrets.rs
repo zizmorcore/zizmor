@@ -1,5 +1,4 @@
 use crate::{
-    config::Config,
     expr::Expr,
     finding::{Confidence, Feature, Location, Severity},
     utils::extract_expressions,
@@ -16,7 +15,7 @@ audit_meta!(
 );
 
 impl Audit for OverprovisionedSecrets {
-    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
+    fn new(_state: &AuditState) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

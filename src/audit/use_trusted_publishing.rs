@@ -9,7 +9,6 @@ use indexmap::IndexMap;
 
 use super::{audit_meta, Audit};
 use crate::{
-    config::Config,
     finding::{Confidence, Severity},
     models::uses::RepositoryUsesExt as _,
     state::AuditState,
@@ -23,9 +22,7 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
     "https://test.pypi.org/legacy/",
 ];
 
-pub(crate) struct UseTrustedPublishing {
-    pub(crate) _state: AuditState,
-}
+pub(crate) struct UseTrustedPublishing;
 
 audit_meta!(
     UseTrustedPublishing,
@@ -71,8 +68,8 @@ impl UseTrustedPublishing {
 }
 
 impl Audit for UseTrustedPublishing {
-    fn new(state: AuditState, _config: &Config) -> anyhow::Result<Self> {
-        Ok(Self { _state: state })
+    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self> {
+        Ok(Self)
     }
 
     fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {

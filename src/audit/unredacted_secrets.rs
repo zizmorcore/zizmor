@@ -1,5 +1,4 @@
 use crate::{
-    config::Config,
     expr::{Context, Expr},
     finding::{Feature, Location},
     utils::extract_expressions,
@@ -17,7 +16,7 @@ audit_meta!(
 );
 
 impl Audit for UnredactedSecrets {
-    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

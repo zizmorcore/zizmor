@@ -1,7 +1,6 @@
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{audit_meta, Audit, AuditState, Finding, Step};
-use crate::config::Config;
 use crate::finding::{Confidence, Persona, Severity};
 use crate::models::{uses::RepositoryUsesExt, CompositeStep};
 use serde::Deserialize;
@@ -62,12 +61,12 @@ impl ForbiddenUses {
 }
 
 impl Audit for ForbiddenUses {
-    fn new(_state: AuditState, config: &Config) -> anyhow::Result<Self>
+    fn new(state: &AuditState<'_>) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
         Ok(Self {
-            config: config.rule_config(Self::ident())?,
+            config: state.config.rule_config(Self::ident())?,
         })
     }
 

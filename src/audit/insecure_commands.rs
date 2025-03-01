@@ -8,7 +8,6 @@ use github_actions_models::workflow::job::StepBody;
 
 use super::{audit_meta, Job};
 use crate::audit::Audit;
-use crate::config::Config;
 use crate::finding::{Confidence, Finding, Persona, Severity, SymbolicLocation};
 use crate::models::{JobExt as _, Steps, Workflow};
 use crate::state::AuditState;
@@ -98,11 +97,11 @@ impl InsecureCommands {
 }
 
 impl Audit for InsecureCommands {
-    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Ok(Self {})
+        Ok(Self)
     }
 
     fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {

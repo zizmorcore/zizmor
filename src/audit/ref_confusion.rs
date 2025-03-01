@@ -13,7 +13,6 @@ use super::{audit_meta, Audit, Job};
 use crate::finding::Finding;
 use crate::models::{CompositeStep, JobExt as _};
 use crate::{
-    config::Config,
     finding::{Confidence, Severity},
     github_api,
     models::uses::RepositoryUsesExt as _,
@@ -49,7 +48,7 @@ impl RefConfusion {
 }
 
 impl Audit for RefConfusion {
-    fn new(state: AuditState, _: &Config) -> anyhow::Result<Self>
+    fn new(state: &AuditState<'_>) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

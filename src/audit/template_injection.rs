@@ -17,7 +17,6 @@ use github_actions_models::{
 
 use super::{audit_meta, Audit};
 use crate::{
-    config::Config,
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Persona, Severity, SymbolicLocation},
     models::{self, uses::RepositoryUsesExt as _, StepCommon},
@@ -266,7 +265,7 @@ impl TemplateInjection {
 }
 
 impl Audit for TemplateInjection {
-    fn new(_state: AuditState, _config: &Config) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

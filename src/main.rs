@@ -363,10 +363,9 @@ fn run() -> Result<ExitCode> {
         .with(indicatif_layer)
         .init();
 
-    let audit_state = AuditState::new(&app);
-    let registry = collect_inputs(&app.inputs, &app.collect, &audit_state)?;
-
     let config = Config::new(&app)?;
+    let audit_state = AuditState::new(&app, &config);
+    let registry = collect_inputs(&app.inputs, &app.collect, &audit_state)?;
 
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {
@@ -374,7 +373,7 @@ fn run() -> Result<ExitCode> {
             // HACK: https://github.com/rust-lang/rust/issues/48067
             use crate::audit::AuditCore as _;
             use $rule as base;
-            match base::new(audit_state.clone(), &config) {
+            match base::new(&audit_state) {
                 Ok(audit) => audit_registry.register_audit(base::ident(), Box::new(audit)),
                 Err(e) => tracing::info!("skipping {audit}: {e}", audit = base::ident()),
             }
