@@ -86,6 +86,13 @@ impl Audit for Artipacked {
                     continue;
                 };
 
+                if with
+                    .get("include-hidden-files")
+                    .map_or(false, |v| v.to_string() == "false")
+                {
+                    continue;
+                }
+
                 let dangerous_paths = self.dangerous_artifact_patterns(path);
                 if !dangerous_paths.is_empty() {
                     // TODO: plumb dangerous_paths into the annotation here.
