@@ -67,6 +67,7 @@ impl<'de> Deserialize<'de> for WorkflowRule {
 
 #[derive(Clone, Debug, Deserialize)]
 pub(crate) struct AuditRuleConfig {
+    #[serde(default)]
     ignore: Vec<WorkflowRule>,
     #[serde(default)]
     policy: serde_yaml::Value,
