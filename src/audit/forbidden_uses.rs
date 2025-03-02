@@ -7,6 +7,8 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct ForbiddenUsesConfig {
+    #[serde(skip)]
+    is_default: bool,
     allow: Vec<String>,
 }
 
@@ -19,6 +21,7 @@ const DEFAULT_ALLOWLIST: [&str; 3] = [
 impl Default for ForbiddenUsesConfig {
     fn default() -> Self {
         Self {
+            is_default: true,
             allow: DEFAULT_ALLOWLIST
                 .iter()
                 .map(|item| item.to_string())
@@ -52,10 +55,16 @@ impl ForbiddenUses {
             return None;
         };
 
+        let auditor = if self.config.is_default {
+            Persona::Auditor
+        } else {
+            Persona::default()
+        };
+
         self.config.is_uses_denied(repo_uses).then_some((
             "action is not on the allowlist",
             Severity::Medium,
-            Persona::default(),
+            auditor,
         ))
     }
 }
