@@ -157,6 +157,14 @@
         - Diaoul/subliminal#1190
 
 
+-   ![](https://github.com/earthobservations.png?size=40){ width="40" loading=lazy align=left } earthobservations
+
+    ---
+
+    ??? example "Examples"
+        - earthobservations/wetterdienst#1440
+
+
 -   ![](https://github.com/Electric-Coin-Company.png?size=40){ width="40" loading=lazy align=left } Electric-Coin-Company
 
     ---
@@ -544,6 +552,14 @@
 
     ??? example "Examples"
         - Orange-OpenSource/hurl#3574
+
+
+-   ![](https://github.com/orion-rs.png?size=40){ width="40" loading=lazy align=left } orion-rs
+
+    ---
+
+    ??? example "Examples"
+        - orion-rs/orion#441
 
 
 -   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
