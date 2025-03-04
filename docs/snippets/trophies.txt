@@ -29,6 +29,7 @@ datalens-tech/datalens-backend#777
 davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
 Diaoul/subliminal#1190
+earthobservations/wetterdienst#1440
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
@@ -111,6 +112,7 @@ onnx/onnx#6661
 onnx/onnx#6662
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
+orion-rs/orion#441
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
