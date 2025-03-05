@@ -249,8 +249,7 @@ impl<'a> FindingRegistry<'a> {
                 self.ignored.push(finding);
             } else {
                 if self
-                    .highest_seen_severity
-                    .map_or(true, |s| finding.determinations.severity > s)
+                    .highest_seen_severity.is_none_or(|s| finding.determinations.severity > s)
                 {
                     self.highest_seen_severity = Some(finding.determinations.severity);
                 }
