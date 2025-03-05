@@ -112,6 +112,8 @@ jobs:
     strategy:
       matrix:
         platform:
+          # TODO: Bump to macos-15 once Rust 1.85+ is available.
+          # See: https://github.com/actions/runner-images/issues/11637
           - runner: macos-13
             target: x86_64
           - runner: macos-13
