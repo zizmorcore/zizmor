@@ -1,8 +1,8 @@
 //! Expression parsing and analysis.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use itertools::Itertools;
-use pest::{iterators::Pair, Parser};
+use pest::{Parser, iterators::Pair};
 use pest_derive::Parser;
 
 /// A parser for GitHub Actions' expression language.
@@ -593,33 +593,19 @@ mod tests {
                 "foo.bar.baz",
                 Expr::context(
                     "foo.bar.baz",
-                    [Expr::ident("foo"), Expr::ident("bar"), Expr::ident("baz")]
-                )
+                    [Expr::ident("foo"), Expr::ident("bar"), Expr::ident("baz")],
+                ),
             ),
             (
                 "foo.bar.baz[1][2]",
                 Expr::context(
                     "foo.bar.baz[1][2]",
                     [
-                        Expr::ident(
-                            "foo",
-                        ),
-                        Expr::ident(
-                            "bar",
-                        ),
-                        Expr::ident(
-                            "baz",
-                        ),
-                        Expr::Index(
-                            Expr::Number(
-                                1.0,
-                            ).into(),
-                        ),
-                        Expr::Index(
-                            Expr::Number(
-                                2.0,
-                            ).into(),
-                        ),
+                        Expr::ident("foo"),
+                        Expr::ident("bar"),
+                        Expr::ident("baz"),
+                        Expr::Index(Expr::Number(1.0).into()),
+                        Expr::Index(Expr::Number(2.0).into()),
                     ],
                 ),
             ),
@@ -628,18 +614,10 @@ mod tests {
                 Expr::context(
                     "foo.bar.baz[*]",
                     [
-                        Expr::ident(
-                            "foo",
-                        ),
-                        Expr::ident(
-                            "bar",
-                        ),
-                        Expr::ident(
-                            "baz",
-                        ),
-                        Expr::Index(
-                            Expr::Star.into(),
-                        ),
+                        Expr::ident("foo"),
+                        Expr::ident("bar"),
+                        Expr::ident("baz"),
+                        Expr::Index(Expr::Star.into()),
                     ],
                 ),
             ),
@@ -648,13 +626,9 @@ mod tests {
                 Expr::context(
                     "vegetables.*.ediblePortions",
                     vec![
-                        Expr::ident(
-                            "vegetables",
-                        ),
+                        Expr::ident("vegetables"),
                         Expr::Star,
-                        Expr::ident(
-                            "ediblePortions",
-                        ),
+                        Expr::ident("ediblePortions"),
                     ],
                 ),
             ),
@@ -667,20 +641,20 @@ mod tests {
                         lhs: Expr::BinOp {
                             lhs: Expr::context(
                                 "github.ref",
-                                [
-                                    Expr::ident("github"),
-                                    Expr::ident("ref"),
-                                ],
-                            ).into(),
+                                [Expr::ident("github"), Expr::ident("ref")],
+                            )
+                            .into(),
                             op: BinOp::Eq,
                             rhs: Expr::string("refs/heads/main"),
-                        }.into(),
+                        }
+                        .into(),
                         op: BinOp::And,
                         rhs: Expr::string("value_for_main_branch"),
-                    }.into(),
+                    }
+                    .into(),
                     op: BinOp::Or,
                     rhs: Expr::string("value_for_other_branches"),
-                }
+                },
             ),
             (
                 "(true || false) == true",
@@ -688,11 +662,12 @@ mod tests {
                     lhs: Expr::BinOp {
                         lhs: Expr::Boolean(true).into(),
                         op: BinOp::Or,
-                        rhs: Expr::Boolean(false).into()
-                    }.into(),
+                        rhs: Expr::Boolean(false).into(),
+                    }
+                    .into(),
                     op: BinOp::Eq,
-                    rhs: Expr::Boolean(true).into()
-                }
+                    rhs: Expr::Boolean(true).into(),
+                },
             ),
             (
                 "!(!true || false)",
@@ -701,11 +676,14 @@ mod tests {
                     expr: Expr::BinOp {
                         lhs: Expr::UnOp {
                             op: UnOp::Not,
-                            expr: Expr::Boolean(true).into()
-                        }.into(),
-                    op: BinOp::Or, rhs: Expr::Boolean(false).into()
-                    }.into()
-                }
+                            expr: Expr::Boolean(true).into(),
+                        }
+                        .into(),
+                        op: BinOp::Or,
+                        rhs: Expr::Boolean(false).into(),
+                    }
+                    .into(),
+                },
             ),
         ];
 

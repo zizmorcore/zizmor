@@ -1,11 +1,11 @@
 use crate::{
+    Confidence, Severity,
     expr::{Context, Expr},
     finding::{Feature, Location},
     utils::extract_expressions,
-    Confidence, Severity,
 };
 
-use super::{audit_meta, Audit};
+use super::{Audit, audit_meta};
 
 pub(crate) struct UnredactedSecrets;
 

@@ -5,17 +5,17 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use camino::Utf8Path;
-use github_actions_models::common::expr::LoE;
 use github_actions_models::common::Env;
+use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::job::{RunsOn, Strategy};
-use github_actions_models::workflow::{self, job, job::StepBody, Trigger};
+use github_actions_models::workflow::{self, Trigger, job, job::StepBody};
 use github_actions_models::{action, common};
 use indexmap::IndexMap;
 use line_index::LineIndex;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use terminal_link::Link;
 
 use crate::finding::{Route, SymbolicLocation};
