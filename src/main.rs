@@ -1,4 +1,8 @@
-use std::{io::stdout, process::ExitCode, str::FromStr};
+use std::{
+    io::{Write, stdout},
+    process::ExitCode,
+    str::FromStr,
+};
 
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, stream::IsTerminal};
@@ -77,6 +81,10 @@ struct App {
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
 
+    /// Control the use of color in output.
+    #[arg(long, value_enum, value_name = "MODE")]
+    color: Option<ColorMode>,
+
     /// The configuration file to load. By default, any config will be
     /// discovered relative to $CWD.
     #[arg(short, long, group = "conf")]
@@ -129,6 +137,26 @@ pub(crate) enum OutputFormat {
     Plain,
     Json,
     Sarif,
+}
+
+#[derive(Debug, Copy, Clone, ValueEnum)]
+pub(crate) enum ColorMode {
+    /// Enable color output if the output is a compatible terminal.
+    Auto,
+    /// Force color output, even if the output isn't a terminal.
+    Always,
+    /// Disable color output, even if the output is a compatible terminal.
+    Never,
+}
+
+impl From<ColorMode> for anstream::ColorChoice {
+    fn from(value: ColorMode) -> Self {
+        match value {
+            ColorMode::Auto => Self::Auto,
+            ColorMode::Always => Self::Always,
+            ColorMode::Never => Self::Never,
+        }
+    }
 }
 
 /// How `zizmor` collects inputs from local and remote repository sources.
@@ -333,6 +361,26 @@ fn run() -> Result<ExitCode> {
 
     let mut app = App::parse();
 
+    let color_mode = match app.color {
+        // Honor an explicit `--color` flag.
+        Some(color_mode) => color_mode,
+        None => {
+            // If the user doesn't pass `--color` explicitly,
+            // then check for some common environment variables.
+            if std::env::var("NO_COLOR").is_ok() {
+                ColorMode::Never
+            } else if std::env::var("FORCE_COLOR").is_ok()
+                || std::env::var("CLICOLOR_FORCE").is_ok()
+            {
+                ColorMode::Always
+            } else {
+                ColorMode::Auto
+            }
+        }
+    };
+
+    anstream::ColorChoice::write_global(color_mode.into());
+
     // `--pedantic` is a shortcut for `--persona=pedantic`.
     if app.pedantic {
         app.persona = Persona::Pedantic;
@@ -348,6 +396,10 @@ fn run() -> Result<ExitCode> {
 
     let indicatif_layer = IndicatifLayer::new();
 
+    let writer = indicatif_layer.get_stderr_writer();
+    let writer = Box::new(writer.clone()) as Box<dyn Write + Send>;
+    let writer = std::sync::Mutex::new(anstream::AutoStream::new(writer, color_mode.into()));
+
     let filter = EnvFilter::builder()
         .with_default_directive(app.verbose.tracing_level_filter().into())
         .from_env()?;
@@ -356,8 +408,12 @@ fn run() -> Result<ExitCode> {
         .with(
             tracing_subscriber::fmt::layer()
                 .without_time()
-                .with_ansi(std::io::stderr().is_terminal())
-                .with_writer(indicatif_layer.get_stderr_writer()),
+                // .with_ansi(match color_mode {
+                //     ColorMode::Auto => std::io::stderr().is_terminal(),
+                //     ColorMode::Always => true,
+                //     ColorMode::Never => false,
+                // })
+                .with_writer(writer),
         )
         .with(filter)
         .with(indicatif_layer)
@@ -421,7 +477,8 @@ fn run() -> Result<ExitCode> {
                 Span::current().pb_inc(1);
             }
             tracing::info!(
-                "🌈 completed {input}",
+                "🌈 {completed} {input}",
+                completed = "completed".green(),
                 input = input.key().presentation_path()
             );
         }
