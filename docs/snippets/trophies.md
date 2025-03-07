@@ -123,6 +123,7 @@
     ??? example "Examples"
         - DataDog/datadog-agent#30871
         - DataDog/dd-trace-py#11640
+        - DataDog/dd-trace-rb#4456
 
 
 -   ![](https://github.com/datalens-tech.png?size=40){ width="40" loading=lazy align=left } datalens-tech
@@ -610,6 +611,14 @@
 
     ??? example "Examples"
         - pyca/service-identity#75
+
+
+-   ![](https://github.com/pydata.png?size=40){ width="40" loading=lazy align=left } pydata
+
+    ---
+
+    ??? example "Examples"
+        - pydata/pydata-sphinx-theme#2077
 
 
 -   ![](https://github.com/pylast.png?size=40){ width="40" loading=lazy align=left } pylast
