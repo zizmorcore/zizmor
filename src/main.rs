@@ -433,7 +433,7 @@ fn run() -> Result<ExitCode> {
 
     let writer = std::sync::Mutex::new(anstream::AutoStream::new(
         Box::new(indicatif_layer.get_stderr_writer()) as Box<dyn Write + Send>,
-        dbg!(color_mode.color_choice_for_terminal(std::io::stderr())),
+        color_mode.color_choice_for_terminal(std::io::stderr()),
     ));
 
     let filter = EnvFilter::builder()
