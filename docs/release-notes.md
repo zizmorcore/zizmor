@@ -18,6 +18,8 @@ of `zizmor`.
   user expectation. Users who wish to explicitly collect everything
   regardless of ignore patterns can continue to use `--collect=all`
   (#575)
+* `zizmor` now has a `--no-progress` flag that disables
+  progress bars, even if the terminal supports them (#589)
 
 ### Bug Fixes 🐛
 
