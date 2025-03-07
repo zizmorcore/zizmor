@@ -145,15 +145,40 @@ pub(crate) enum OutputFormat {
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub(crate) enum ColorMode {
+    /// Use color output if the output supports it.
+    Auto,
     /// Force color output, even if the output isn't a terminal.
     Always,
     /// Disable color output, even if the output is a compatible terminal.
     Never,
 }
 
+impl ColorMode {
+    /// Returns a concrete (i.e. non-auto) `anstream::ColorChoice` for the given terminal.
+    ///
+    /// This is useful for passing to `anstream::AutoStream` when the underlying
+    /// stream is something that is a terminal or should be treated as such,
+    /// but can't be inferred due to type erasure (e.g. `Box<dyn Write>`).
+    fn color_choice_for_terminal(&self, io: impl IsTerminal) -> anstream::ColorChoice {
+        match self {
+            ColorMode::Auto => {
+                if io.is_terminal() {
+                    anstream::ColorChoice::Always
+                } else {
+                    anstream::ColorChoice::Never
+                }
+            }
+            ColorMode::Always => anstream::ColorChoice::Always,
+            ColorMode::Never => anstream::ColorChoice::Never,
+        }
+    }
+}
+
 impl From<ColorMode> for anstream::ColorChoice {
+    /// Maps `ColorMode` to `anstream::ColorChoice`.
     fn from(value: ColorMode) -> Self {
         match value {
+            ColorMode::Auto => Self::Auto,
             ColorMode::Always => Self::Always,
             ColorMode::Never => Self::Never,
         }
@@ -365,8 +390,9 @@ fn run() -> Result<ExitCode> {
     let color_mode = match app.color {
         Some(color_mode) => color_mode,
         None => {
-            // Check some common environment variables to determine if we should
-            // enable color output.
+            // If `--color` wasn't specified, we first check a handful
+            // of common environment variables, and then fall
+            // back to `anstream`'s auto detection.
             if std::env::var("NO_COLOR").is_ok() {
                 ColorMode::Never
             } else if std::env::var("FORCE_COLOR").is_ok()
@@ -374,17 +400,21 @@ fn run() -> Result<ExitCode> {
             {
                 ColorMode::Always
             } else {
-                // Check if the output is a terminal.
-                if std::io::stderr().is_terminal() {
-                    ColorMode::Always
-                } else {
-                    ColorMode::Never
-                }
+                ColorMode::Auto
             }
         }
     };
 
     anstream::ColorChoice::write_global(color_mode.into());
+
+    // Disable progress bars if colorized output is disabled.
+    // We do this because `anstream` and `tracing_indicatif` don't
+    // compose perfectly: `anstream` wants to strip all ANSI escapes,
+    // while `tracing_indicatif` needs line control to render progress bars.
+    // TODO: In the future, perhaps we could make these work together.
+    if matches!(color_mode, ColorMode::Never) {
+        app.no_progress = true;
+    }
 
     // `--pedantic` is a shortcut for `--persona=pedantic`.
     if app.pedantic {
@@ -401,9 +431,10 @@ fn run() -> Result<ExitCode> {
 
     let indicatif_layer = IndicatifLayer::new();
 
-    let writer = indicatif_layer.get_stderr_writer();
-    let writer = Box::new(writer.clone()) as Box<dyn Write + Send>;
-    let writer = std::sync::Mutex::new(anstream::AutoStream::new(writer, color_mode.into()));
+    let writer = std::sync::Mutex::new(anstream::AutoStream::new(
+        Box::new(indicatif_layer.get_stderr_writer()) as Box<dyn Write + Send>,
+        dbg!(color_mode.color_choice_for_terminal(std::io::stderr())),
+    ));
 
     let filter = EnvFilter::builder()
         .with_default_directive(app.verbose.tracing_level_filter().into())
@@ -414,11 +445,7 @@ fn run() -> Result<ExitCode> {
             tracing_subscriber::fmt::layer()
                 .without_time()
                 // NOTE: We don't need `with_ansi` here since our writer is
-                // an `AutoStream` that handles color output for us.
-                // .with_ansi(match color_mode {
-                //     ColorMode::Always => true,
-                //     ColorMode::Never => false,
-                // })
+                // an `anstream::AutoStream` that handles color output for us.
                 .with_writer(writer),
         )
         .with(filter);
