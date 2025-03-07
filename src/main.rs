@@ -141,8 +141,6 @@ pub(crate) enum OutputFormat {
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub(crate) enum ColorMode {
-    /// Enable color output if the output is a compatible terminal.
-    Auto,
     /// Force color output, even if the output isn't a terminal.
     Always,
     /// Disable color output, even if the output is a compatible terminal.
@@ -152,7 +150,6 @@ pub(crate) enum ColorMode {
 impl From<ColorMode> for anstream::ColorChoice {
     fn from(value: ColorMode) -> Self {
         match value {
-            ColorMode::Auto => Self::Auto,
             ColorMode::Always => Self::Always,
             ColorMode::Never => Self::Never,
         }
@@ -362,11 +359,10 @@ fn run() -> Result<ExitCode> {
     let mut app = App::parse();
 
     let color_mode = match app.color {
-        // Honor an explicit `--color` flag.
         Some(color_mode) => color_mode,
         None => {
-            // If the user doesn't pass `--color` explicitly,
-            // then check for some common environment variables.
+            // Check some common environment variables to determine if we should
+            // enable color output.
             if std::env::var("NO_COLOR").is_ok() {
                 ColorMode::Never
             } else if std::env::var("FORCE_COLOR").is_ok()
@@ -374,7 +370,12 @@ fn run() -> Result<ExitCode> {
             {
                 ColorMode::Always
             } else {
-                ColorMode::Auto
+                // Check if the output is a terminal.
+                if std::io::stderr().is_terminal() {
+                    ColorMode::Always
+                } else {
+                    ColorMode::Never
+                }
             }
         }
     };
@@ -408,8 +409,9 @@ fn run() -> Result<ExitCode> {
         .with(
             tracing_subscriber::fmt::layer()
                 .without_time()
+                // NOTE: We don't need `with_ansi` here since our writer is
+                // an `AutoStream` that handles color output for us.
                 // .with_ansi(match color_mode {
-                //     ColorMode::Auto => std::io::stderr().is_terminal(),
                 //     ColorMode::Always => true,
                 //     ColorMode::Never => false,
                 // })
