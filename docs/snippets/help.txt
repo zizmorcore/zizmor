@@ -22,6 +22,8 @@ Options:
           Increase logging verbosity
   -q, --quiet...
           Decrease logging verbosity
+      --no-progress
+          Don't show progress bars, even if the terminal supports them
       --format <FORMAT>
           The output format to emit. By default, plain text will be emitted [default: plain] [possible values: plain, json, sarif]
   -c, --config <CONFIG>
