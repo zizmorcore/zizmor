@@ -77,6 +77,10 @@ struct App {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
 
+    /// Don't show progress bars, even if the terminal supports them.
+    #[arg(long)]
+    no_progress: bool,
+
     /// The output format to emit. By default, plain text will be emitted
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
@@ -405,7 +409,7 @@ fn run() -> Result<ExitCode> {
         .with_default_directive(app.verbose.tracing_level_filter().into())
         .from_env()?;
 
-    tracing_subscriber::registry()
+    let reg = tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
                 .without_time()
@@ -417,9 +421,13 @@ fn run() -> Result<ExitCode> {
                 // })
                 .with_writer(writer),
         )
-        .with(filter)
-        .with(indicatif_layer)
-        .init();
+        .with(filter);
+
+    if app.no_progress {
+        reg.init();
+    } else {
+        reg.with(indicatif_layer).init();
+    }
 
     let audit_state = AuditState::new(&app);
     let registry = collect_inputs(&app.inputs, &app.collect, &audit_state)?;
