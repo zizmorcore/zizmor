@@ -11,6 +11,8 @@ of `zizmor`.
 
 ### New Features 🌈
 
+* The [overprovisioned-secrets] audit now detects indexing operations
+  on the `secrets` context that result in overprovisioning (#573)
 * `zizmor` now ignores patterns in `.gitignore` (and related files,
   like `.git/info/exclude`) by default when performing input collection.
   This makes input collection significantly faster for users
@@ -28,11 +30,6 @@ of `zizmor`.
 * Fixed `zizmor`'s path presentation behavior to correctly present
   unambiguous paths in both SARIF and "plain" outputs when
   multiple input directories are given (#572)
-
-### New Features 🌈
-
-* The [overprovisioned-secrets] audit now detects indexing operations
-  on the `secrets` context that result in overprovisioning (#573)
 
 ## v1.4.1
 
