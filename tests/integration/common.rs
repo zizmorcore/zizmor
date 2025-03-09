@@ -1,7 +1,7 @@
 use anyhow::{Context as _, Result};
 use std::{env::current_dir, io::ErrorKind};
 
-use assert_cmd::{Command, output};
+use assert_cmd::Command;
 
 pub fn input_under_test(name: &str) -> String {
     let current_dir = current_dir().expect("Cannot figure out current directory");
