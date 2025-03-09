@@ -17,6 +17,8 @@ rust-version = "1.85.0"
 gh-token-tests = []
 # Test-only: enable all online audits.
 online-tests = ["gh-token-tests"]
+# Test-only: enable tests that require `unbuffer` for TTY behavior.
+tty-tests = []
 
 [dependencies]
 annotate-snippets = "0.11.5"

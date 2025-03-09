@@ -30,6 +30,7 @@ pub enum OutputMode {
 
 pub struct Zizmor {
     cmd: Command,
+    unbuffer: bool,
     offline: bool,
     inputs: Vec<String>,
     output: OutputMode,
@@ -42,6 +43,7 @@ impl Zizmor {
 
         Self {
             cmd,
+            unbuffer: false,
             offline: true,
             inputs: vec![],
             output: OutputMode::Stdout,
@@ -53,10 +55,10 @@ impl Zizmor {
         self
     }
 
-    // pub fn setenv(mut self, key: &str, value: &str) -> Self {
-    //     self.cmd.env(key, value);
-    //     self
-    // }
+    pub fn setenv(mut self, key: &str, value: &str) -> Self {
+        self.cmd.env(key, value);
+        self
+    }
 
     pub fn unsetenv(mut self, key: &str) -> Self {
         self.cmd.env_remove(key);
@@ -65,6 +67,11 @@ impl Zizmor {
 
     pub fn input(mut self, input: impl Into<String>) -> Self {
         self.inputs.push(input.into());
+        self
+    }
+
+    pub fn unbuffer(mut self, flag: bool) -> Self {
+        self.unbuffer = flag;
         self
     }
 
@@ -91,7 +98,27 @@ impl Zizmor {
             self.cmd.arg(input);
         }
 
-        let output = self.cmd.output()?;
+        let output = if self.unbuffer {
+            // If we're using unbuffer, we need to rebuild the `Command`
+            // from `zizmor args...` to `unbuffer zizmor args...`.
+            let mut cmd = Command::new("unbuffer");
+            let cmd = cmd.arg(self.cmd.get_program()).args(self.cmd.get_args());
+
+            for (env, value) in self.cmd.get_envs() {
+                match value {
+                    Some(value) => {
+                        cmd.env(env, value);
+                    }
+                    None => {
+                        cmd.env_remove(env);
+                    }
+                }
+            }
+
+            cmd.output()?
+        } else {
+            self.cmd.output()?
+        };
 
         let mut raw = String::from_utf8(match self.output {
             OutputMode::Stdout => output.stdout,
