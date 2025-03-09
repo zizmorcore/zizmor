@@ -1,7 +1,7 @@
 use anyhow::{Context as _, Result};
-use std::env::current_dir;
+use std::{env::current_dir, io::ErrorKind};
 
-use assert_cmd::Command;
+use assert_cmd::{Command, output};
 
 pub fn input_under_test(name: &str) -> String {
     let current_dir = current_dir().expect("Cannot figure out current directory");
@@ -115,7 +115,17 @@ impl Zizmor {
                 }
             }
 
-            cmd.output()?
+            match cmd.output() {
+                Ok(output) => output,
+                Err(err) => match err.kind() {
+                    // Specialize the not found case, to make configuration failures
+                    // more obvious.
+                    ErrorKind::NotFound => {
+                        panic!("TTY tests require `unbuffer` to be installed");
+                    }
+                    _ => panic!("error running `unbuffer`: {err}"),
+                },
+            }
         } else {
             self.cmd.output()?
         };
