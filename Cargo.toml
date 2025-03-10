@@ -29,7 +29,7 @@ clap = { version = "4.5.31", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
-etcetera = "0.9.0"
+etcetera = "0.10.0"
 flate2 = "1.1.0"
 github-actions-models = "0.26.0"
 http-cache-reqwest = "0.15.1"
@@ -49,7 +49,7 @@ reqwest = { version = "0.12.12", features = [
     "rustls-tls",
 ], default-features = false }
 reqwest-middleware = "0.4.1"
-serde = { version = "1.0.218", features = ["derive"] }
+serde = { version = "1.0.219", features = ["derive"] }
 serde-sarif = "0.7.0"
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
@@ -57,7 +57,7 @@ serde_yaml = "0.9.34"
 streaming-iterator = "0.1.9"
 tar = "0.4.44"
 terminal-link = "0.1.0"
-tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+tokio = { version = "1.44.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-indicatif = "0.3.9"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
