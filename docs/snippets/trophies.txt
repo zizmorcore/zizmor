@@ -184,3 +184,5 @@ wntrblm/nox#925
 zcash/librustzcash#1679
 zkonduit/ezkl#907
 zkonduit/ezkl#906
+google/zx#1067
+google/zx#1126
