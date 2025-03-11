@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## v1.5.0
+
 ### New Features 🌈
 
 * The [overprovisioned-secrets] audit now detects indexing operations
