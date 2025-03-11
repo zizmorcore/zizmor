@@ -465,7 +465,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 ### Bug Fixes 🐛
 * Fix typos including `github.repostoryUrl` -> `github.repositoryUrl` by @hugovk in #164
 
-## v0.3,2
+## v0.3.2
 
 **Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.3.1...v0.3.2
 
