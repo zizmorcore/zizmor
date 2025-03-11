@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to honor `.gitignore` files
+  when a `.git/` directory is not present (#598)
+
 ## v1.5.0
 
 ### New Features 🌈
