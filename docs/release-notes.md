@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## v1.5.1
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would fail to honor `.gitignore` files
