@@ -245,8 +245,19 @@ fn collect_from_dir(
     // explicitly enable it. This also enables filtering by a global
     // `.gitignore` file and the `.git/info/exclude` file, since these
     // typically align with the user's expectations.
+    //
+    // We honor `.gitignore` and similar files even if `.git/` is not
+    // present, since users may retrieve or reconstruct a source archive
+    // without a `.git/` directory. In particular, this snares some
+    // zizmor integrators.
+    //
+    // See: https://github.com/woodruffw/zizmor/issues/596
     if mode.respects_gitignore() {
-        walker.git_ignore(true).git_global(true).git_exclude(true);
+        walker
+            .require_git(false)
+            .git_ignore(true)
+            .git_global(true)
+            .git_exclude(true);
     }
 
     for entry in walker.build() {
