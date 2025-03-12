@@ -44,6 +44,7 @@ getsops/sops#1704
 git-lfs/git-lfs#5930
 gitbutlerapp/gitbutler#5946
 google/zx#1067
+google/zx#1126
 guacsec/guac#2276
 GreptimeTeam/greptimedb#5491
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
@@ -184,5 +185,3 @@ wntrblm/nox#925
 zcash/librustzcash#1679
 zkonduit/ezkl#907
 zkonduit/ezkl#906
-google/zx#1067
-google/zx#1126
