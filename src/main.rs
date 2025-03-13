@@ -1,8 +1,12 @@
-use std::{io::stdout, process::ExitCode, str::FromStr};
+use std::{
+    io::{Write, stdout},
+    process::ExitCode,
+    str::FromStr,
+};
 
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, stream::IsTerminal};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use audit::Audit;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
@@ -11,14 +15,15 @@ use config::Config;
 use finding::{Confidence, Persona, Severity};
 use github_actions_models::common::Uses;
 use github_api::GitHubHost;
+use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
 use models::Action;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, InputRegistry};
 use state::AuditState;
-use tracing::{info_span, instrument, Span};
-use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
-use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
+use tracing::{Span, info_span, instrument};
+use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 mod audit;
 mod config;
@@ -72,9 +77,17 @@ struct App {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
 
+    /// Don't show progress bars, even if the terminal supports them.
+    #[arg(long)]
+    no_progress: bool,
+
     /// The output format to emit. By default, plain text will be emitted
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
+
+    /// Control the use of color in output.
+    #[arg(long, value_enum, value_name = "MODE")]
+    color: Option<ColorMode>,
 
     /// The configuration file to load. By default, any config will be
     /// discovered relative to $CWD.
@@ -130,12 +143,56 @@ pub(crate) enum OutputFormat {
     Sarif,
 }
 
+#[derive(Debug, Copy, Clone, ValueEnum)]
+pub(crate) enum ColorMode {
+    /// Use color output if the output supports it.
+    Auto,
+    /// Force color output, even if the output isn't a terminal.
+    Always,
+    /// Disable color output, even if the output is a compatible terminal.
+    Never,
+}
+
+impl ColorMode {
+    /// Returns a concrete (i.e. non-auto) `anstream::ColorChoice` for the given terminal.
+    ///
+    /// This is useful for passing to `anstream::AutoStream` when the underlying
+    /// stream is something that is a terminal or should be treated as such,
+    /// but can't be inferred due to type erasure (e.g. `Box<dyn Write>`).
+    fn color_choice_for_terminal(&self, io: impl IsTerminal) -> anstream::ColorChoice {
+        match self {
+            ColorMode::Auto => {
+                if io.is_terminal() {
+                    anstream::ColorChoice::Always
+                } else {
+                    anstream::ColorChoice::Never
+                }
+            }
+            ColorMode::Always => anstream::ColorChoice::Always,
+            ColorMode::Never => anstream::ColorChoice::Never,
+        }
+    }
+}
+
+impl From<ColorMode> for anstream::ColorChoice {
+    /// Maps `ColorMode` to `anstream::ColorChoice`.
+    fn from(value: ColorMode) -> Self {
+        match value {
+            ColorMode::Auto => Self::Auto,
+            ColorMode::Always => Self::Always,
+            ColorMode::Never => Self::Never,
+        }
+    }
+}
+
 /// How `zizmor` collects inputs from local and remote repository sources.
 #[derive(Copy, Clone, Debug, Default, ValueEnum)]
 pub(crate) enum CollectionMode {
-    /// Collect all supported inputs.
-    #[default]
+    /// Collect all possible inputs, ignoring `.gitignore` files.
     All,
+    /// Collect all possible inputs, respecting `.gitignore` files.
+    #[default]
+    Default,
     /// Collect only workflow definitions.
     WorkflowsOnly,
     /// Collect only action definitions (i.e. `action.yml`).
@@ -143,12 +200,25 @@ pub(crate) enum CollectionMode {
 }
 
 impl CollectionMode {
+    pub(crate) fn respects_gitignore(&self) -> bool {
+        matches!(
+            self,
+            CollectionMode::Default | CollectionMode::WorkflowsOnly | CollectionMode::ActionsOnly
+        )
+    }
+
     pub(crate) fn workflows(&self) -> bool {
-        matches!(self, CollectionMode::All | CollectionMode::WorkflowsOnly)
+        matches!(
+            self,
+            CollectionMode::All | CollectionMode::Default | CollectionMode::WorkflowsOnly
+        )
     }
 
     pub(crate) fn actions(&self) -> bool {
-        matches!(self, CollectionMode::All | CollectionMode::ActionsOnly)
+        matches!(
+            self,
+            CollectionMode::All | CollectionMode::Default | CollectionMode::ActionsOnly
+        )
     }
 }
 
@@ -162,53 +232,56 @@ fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
 }
 
 #[instrument(skip(mode, registry))]
-fn collect_from_repo_dir(
-    top_dir: &Utf8Path,
-    current_dir: &Utf8Path,
+fn collect_from_dir(
+    input_path: &Utf8Path,
     mode: &CollectionMode,
     registry: &mut InputRegistry,
 ) -> Result<()> {
-    // The workflow directory might not exist if we're collecting from
-    // a repository that only contains actions.
-    if mode.workflows() {
-        let workflow_dir = if current_dir.ends_with(".github/workflows") {
-            current_dir.into()
-        } else {
-            current_dir.join(".github/workflows")
-        };
+    // Start with all filters disabled, i.e. walk everything.
+    let mut walker = WalkBuilder::new(input_path);
+    let walker = walker.standard_filters(false);
 
-        if workflow_dir.is_dir() {
-            for entry in workflow_dir.read_dir_utf8()? {
-                let entry = entry?;
-                let input_path = entry.path();
-                match input_path.extension() {
-                    Some(ext) if ext == "yml" || ext == "yaml" => {
-                        registry
-                            .register_by_path(input_path, Some(top_dir))
-                            .with_context(|| format!("failed to register input: {input_path}"))?;
-                    }
-                    _ => continue,
-                }
-            }
-        } else {
-            tracing::warn!("{workflow_dir} not found while collecting workflows")
-        }
+    // If the user wants to respect `.gitignore` files, then we need to
+    // explicitly enable it. This also enables filtering by a global
+    // `.gitignore` file and the `.git/info/exclude` file, since these
+    // typically align with the user's expectations.
+    //
+    // We honor `.gitignore` and similar files even if `.git/` is not
+    // present, since users may retrieve or reconstruct a source archive
+    // without a `.git/` directory. In particular, this snares some
+    // zizmor integrators.
+    //
+    // See: https://github.com/woodruffw/zizmor/issues/596
+    if mode.respects_gitignore() {
+        walker
+            .require_git(false)
+            .git_ignore(true)
+            .git_global(true)
+            .git_exclude(true);
     }
 
-    if mode.actions() {
-        for entry in current_dir.read_dir_utf8()? {
-            let entry = entry?;
-            let entry_path = entry.path();
+    for entry in walker.build() {
+        let entry = entry?;
+        let entry = <&Utf8Path>::try_from(entry.path())?;
 
-            if entry_path.is_file()
-                && matches!(entry_path.file_name(), Some("action.yml" | "action.yaml"))
-            {
-                let action = Action::from_file(entry_path, Some(top_dir))?;
-                registry.register_input(action.into())?;
-            } else if entry_path.is_dir() {
-                // Recurse and limit the collection mode to only actions.
-                collect_from_repo_dir(top_dir, entry_path, &CollectionMode::ActionsOnly, registry)?;
-            }
+        if mode.workflows()
+            && entry.is_file()
+            && matches!(entry.extension(), Some("yml" | "yaml"))
+            && entry
+                .parent()
+                .is_some_and(|dir| dir.ends_with(".github/workflows"))
+        {
+            registry
+                .register_by_path(entry, Some(input_path))
+                .with_context(|| format!("failed to register input: {entry}"))?;
+        }
+
+        if mode.actions()
+            && entry.is_file()
+            && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
+        {
+            let action = Action::from_file(entry, Some(input_path))?;
+            registry.register_input(action.into())?;
         }
     }
 
@@ -304,7 +377,8 @@ fn collect_inputs(
                 .register_by_path(input_path, None)
                 .with_context(|| format!("failed to register input: {input_path}"))?;
         } else if input_path.is_dir() {
-            collect_from_repo_dir(input_path, input_path, mode, &mut registry)?;
+            collect_from_dir(input_path, mode, &mut registry)?;
+            // collect_from_repo_dir(input_path, input_path, mode, &mut registry)?;
         } else {
             // If this input isn't a file or directory, it's probably an
             // `owner/repo(@ref)?` slug.
@@ -324,6 +398,35 @@ fn run() -> Result<ExitCode> {
 
     let mut app = App::parse();
 
+    let color_mode = match app.color {
+        Some(color_mode) => color_mode,
+        None => {
+            // If `--color` wasn't specified, we first check a handful
+            // of common environment variables, and then fall
+            // back to `anstream`'s auto detection.
+            if std::env::var("NO_COLOR").is_ok() {
+                ColorMode::Never
+            } else if std::env::var("FORCE_COLOR").is_ok()
+                || std::env::var("CLICOLOR_FORCE").is_ok()
+            {
+                ColorMode::Always
+            } else {
+                ColorMode::Auto
+            }
+        }
+    };
+
+    anstream::ColorChoice::write_global(color_mode.into());
+
+    // Disable progress bars if colorized output is disabled.
+    // We do this because `anstream` and `tracing_indicatif` don't
+    // compose perfectly: `anstream` wants to strip all ANSI escapes,
+    // while `tracing_indicatif` needs line control to render progress bars.
+    // TODO: In the future, perhaps we could make these work together.
+    if matches!(color_mode, ColorMode::Never) {
+        app.no_progress = true;
+    }
+
     // `--pedantic` is a shortcut for `--persona=pedantic`.
     if app.pedantic {
         app.persona = Persona::Pedantic;
@@ -339,20 +442,30 @@ fn run() -> Result<ExitCode> {
 
     let indicatif_layer = IndicatifLayer::new();
 
+    let writer = std::sync::Mutex::new(anstream::AutoStream::new(
+        Box::new(indicatif_layer.get_stderr_writer()) as Box<dyn Write + Send>,
+        color_mode.color_choice_for_terminal(std::io::stderr()),
+    ));
+
     let filter = EnvFilter::builder()
         .with_default_directive(app.verbose.tracing_level_filter().into())
         .from_env()?;
 
-    tracing_subscriber::registry()
+    let reg = tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
                 .without_time()
-                .with_ansi(std::io::stderr().is_terminal())
-                .with_writer(indicatif_layer.get_stderr_writer()),
+                // NOTE: We don't need `with_ansi` here since our writer is
+                // an `anstream::AutoStream` that handles color output for us.
+                .with_writer(writer),
         )
-        .with(filter)
-        .with(indicatif_layer)
-        .init();
+        .with(filter);
+
+    if app.no_progress {
+        reg.init();
+    } else {
+        reg.with(indicatif_layer).init();
+    }
 
     let audit_state = AuditState::new(&app);
     let registry = collect_inputs(&app.inputs, &app.collect, &audit_state)?;
@@ -412,7 +525,8 @@ fn run() -> Result<ExitCode> {
                 Span::current().pb_inc(1);
             }
             tracing::info!(
-                "🌈 completed {input}",
+                "🌈 {completed} {input}",
+                completed = "completed".green(),
                 input = input.key().presentation_path()
             );
         }

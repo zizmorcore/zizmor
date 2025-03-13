@@ -105,6 +105,20 @@ variable and pass the `--features` flag to `cargo test`:
 GH_TOKEN=$(gh auth token) cargo test --features online-tests
 ```
 
+### TTY behavior tests
+
+`zizmor` also has some tests that require a TTY to run. These tests are
+gated behind the `tty-tests` feature. To run these tests, you'll need to
+pass the `--features` flag to `cargo test`:
+
+```bash
+cargo test --features tty-tests
+```
+
+These tests use [`unbuffer`](https://linux.die.net/man/1/unbuffer)
+from the [Expect project](https://core.tcl-lang.org/expect/index)
+to provide a TTY-like environment.
+
 ### Writing snapshot tests
 
 `zizmor` uses @mitsuhiko/insta for snapshot testing.
@@ -141,6 +155,9 @@ or, as a shortcut:
 
 ```bash
 cargo insta test --review
+
+# or, with online tests
+GH_TOKEN=$(gh auth token) cargo insta test --review --features online-tests
 ```
 
 See [insta's documentation] for more details.

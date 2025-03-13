@@ -25,10 +25,12 @@ curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 danmar/cppcheck#7044
 DataDog/datadog-agent#30871
 DataDog/dd-trace-py#11640
+DataDog/dd-trace-rb#4456
 datalens-tech/datalens-backend#777
 davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
 Diaoul/subliminal#1190
+earthobservations/wetterdienst#1440
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
@@ -111,6 +113,7 @@ onnx/onnx#6661
 onnx/onnx#6662
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
+orion-rs/orion#441
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
@@ -118,6 +121,7 @@ praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 psf/cachecontrol#345
 pyca/service-identity#75
+pydata/pydata-sphinx-theme#2077
 pylast/pylast#465
 pypa/packaging.python.org#1765
 pypa/pip-audit#851

@@ -1,9 +1,13 @@
 //! Functionality for registering and managing the lifecycles of
 //! audits.
 
-use std::{fmt::Display, process::ExitCode};
+use std::{
+    collections::{BTreeMap, btree_map},
+    fmt::Display,
+    process::ExitCode,
+};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use camino::{Utf8Path, Utf8PathBuf};
 use github_actions_models::common::RepositoryUses;
 use indexmap::IndexMap;
@@ -11,14 +15,14 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::{
+    App,
     audit::{Audit, AuditInput},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{Action, Workflow},
-    App,
 };
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct LocalKey {
     /// The path's nondeterministic prefix, if any.
     prefix: Option<Utf8PathBuf>,
@@ -26,7 +30,7 @@ pub(crate) struct LocalKey {
     given_path: Utf8PathBuf,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct RemoteKey {
     owner: String,
     repo: String,
@@ -39,7 +43,7 @@ pub(crate) struct RemoteKey {
 /// zizmor currently knows two different kinds of keys: local keys
 /// are just canonical paths to files on disk, while remote keys are
 /// relative paths within a referenced GitHub repository.
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) enum InputKey {
     Local(LocalKey),
     Remote(RemoteKey),
@@ -113,7 +117,11 @@ impl InputKey {
 }
 
 pub(crate) struct InputRegistry {
-    pub(crate) inputs: IndexMap<InputKey, AuditInput>,
+    // NOTE: We use a BTreeMap here to ensure that registered inputs
+    // iterate in a deterministic order. This saves us a lot of pain
+    // while snapshot testing across multiple input files, and makes
+    // the user experience more predictable.
+    pub(crate) inputs: BTreeMap<InputKey, AuditInput>,
 }
 
 impl InputRegistry {
@@ -160,7 +168,7 @@ impl InputRegistry {
         }
     }
 
-    pub(crate) fn iter_inputs(&self) -> indexmap::map::Iter<'_, InputKey, AuditInput> {
+    pub(crate) fn iter_inputs(&self) -> btree_map::Iter<'_, InputKey, AuditInput> {
         self.inputs.iter()
     }
 
@@ -242,7 +250,7 @@ impl<'a> FindingRegistry<'a> {
             } else {
                 if self
                     .highest_seen_severity
-                    .map_or(true, |s| finding.determinations.severity > s)
+                    .is_none_or(|s| finding.determinations.severity > s)
                 {
                     self.highest_seen_severity = Some(finding.determinations.severity);
                 }

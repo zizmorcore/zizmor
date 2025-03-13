@@ -1,0 +1,870 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@42064a9533f401a493c3599e56f144918f8eacfd\").run()?"
+snapshot_kind: text
+---
+ INFO collect_inputs: zizmor: collected 20 inputs from woodruffw/gha-hazmat
+ INFO zizmor: skipping impostor-commit: offline audits only requested
+ INFO zizmor: skipping ref-confusion: offline audits only requested
+ INFO zizmor: skipping known-vulnerable-actions: offline audits only requested
+ INFO audit: zizmor: 🌈 completed .github/workflows/artipacked.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/bot-conditions.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/cache-poisoning.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/excessive-permissions.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/github-env.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/hardcoded-credentials.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/impostor-commit.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/insecure-commands.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/known-vulnerable-actions.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/overprovisioned-secrets.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/pull-request-target.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/pypi-manual-credential.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/ref-confusion.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/secrets-inherit.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/self-hosted.yml
+ WARN audit:audit{input=Workflow(https://github.com/woodruffw/gha-hazmat/blob/42064a9533f401a493c3599e56f144918f8eacfd/.github/workflows/template-injection.yml)}: zizmor::audit::overprovisioned_secrets: couldn't parse expression: ...
+ WARN audit:audit{input=Workflow(https://github.com/woodruffw/gha-hazmat/blob/42064a9533f401a493c3599e56f144918f8eacfd/.github/workflows/template-injection.yml)}: zizmor::audit::unredacted_secrets: couldn't parse expression: ...
+ INFO audit: zizmor: 🌈 completed .github/workflows/template-injection.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/unpinned.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/unredacted-secrets.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/workflow-run.yml
+ INFO audit: zizmor: 🌈 completed ref-confusion/action.yml
+error[artipacked]: credential persistence through GitHub Actions artifacts
+  --> .github/workflows/artipacked.yml:34:9
+   |
+34 |         - name: Checkout
+   |  _________^
+35 | |         uses: actions/checkout@v4
+36 | |
+37 | |       # NOT OK: upload-artifact archives entire repo, including persisted creds
+   | |_______________________________________________________________________________^ does not set persist-credentials: false
+38 |         - name: Upload artifact
+   |  _________^
+39 | |         uses: actions/upload-artifact@v4
+...  |
+46 | |   # minimized from firebase-js-sdk:
+47 | |   # https://github.com/firebase/firebase-js-sdk/blob/4f157b486833/.github/workflows/test-all.yml
+   | |________________________________________________________________________________________________^ may leak the credentials persisted above
+   |
+   = note: audit confidence → High
+
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> .github/workflows/artipacked.yml:52:9
+   |
+52 |         - uses: actions/checkout@v3
+   |  _________-
+53 | |
+54 | |       # NOT OK: archives the entire repo, including persisted creds
+   | |___________________________________________________________________- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+
+error[artipacked]: credential persistence through GitHub Actions artifacts
+  --> .github/workflows/artipacked.yml:77:9
+   |
+77 |         - name: Checkout
+   |  _________^
+78 | |         uses: actions/checkout@v4
+79 | |
+80 | |       # NOT OK: archives and uploads entire workspace
+   | |_____________________________________________________^ does not set persist-credentials: false
+81 |         - uses: actions/upload-artifact@v4
+   |  _________^
+82 | |         if: failure()
+83 | |         with:
+84 | |           name: workspace
+85 | |           path: ${{ github.workspace }}
+   | |________________________________________^ may leak the credentials persisted above
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/artipacked.yml:1:1
+   |
+ 1 | / # artipacked.yml
+ 2 | | #
+...  |
+84 | |           name: workspace
+85 | |           path: ${{ github.workspace }}
+   | |________________________________________- default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/artipacked.yml:30:3
+   |
+30 | /   vulnerable-1:
+31 | |     runs-on: ubuntu-latest
+...  |
+46 | |   # minimized from firebase-js-sdk:
+47 | |   # https://github.com/firebase/firebase-js-sdk/blob/4f157b486833/.github/workflows/test-all.yml
+   | |                                                                                                -
+   | |________________________________________________________________________________________________|
+   |                                                                                                  this job
+   |                                                                                                  default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/artipacked.yml:48:3
+   |
+48 | /   vulnerable-2:
+49 | |     runs-on: ubuntu-latest
+...  |
+71 | |   # minimized from quay/clair:
+72 | |   # https://github.com/quay/clair/blob/1d338051f374/.github/workflows/tests.yml
+   | |                                                                               -
+   | |_______________________________________________________________________________|
+   |                                                                                 this job
+   |                                                                                 default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/artipacked.yml:73:3
+   |
+73 | /   vulnerable-3:
+74 | |     runs-on: ubuntu-latest
+...  |
+84 | |           name: workspace
+85 | |           path: ${{ github.workspace }}
+   | |                                        -
+   | |________________________________________|
+   |                                          this job
+   |                                          default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+  --> .github/workflows/bot-conditions.yml:11:1
+   |
+11 | on: pull_request_target
+   | ^^^^^^^^^^^^^^^^^^^^^^^ pull_request_target is almost always used insecurely
+   |
+   = note: audit confidence → Medium
+
+error[bot-conditions]: spoofable bot actor check
+  --> .github/workflows/bot-conditions.yml:18:5
+   |
+18 |     if: github.actor == 'dependabot[bot]'
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |
+   = note: audit confidence → High
+
+error[bot-conditions]: spoofable bot actor check
+  --> .github/workflows/bot-conditions.yml:22:9
+   |
+22 |         if: ${{ github.actor == 'dependabot[bot]' }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |
+   = note: audit confidence → High
+
+error[bot-conditions]: spoofable bot actor check
+  --> .github/workflows/bot-conditions.yml:26:9
+   |
+26 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |
+   = note: audit confidence → Medium
+
+error[bot-conditions]: spoofable bot actor check
+  --> .github/workflows/bot-conditions.yml:30:9
+   |
+30 |         if: github.actor == 'renovate[bot]'
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/cache-poisoning.yml:1:1
+   |
+ 1 | / # cache-poisoning.yml
+ 2 | | #
+...  |
+57 | |       - name: Publish on crates.io
+58 | |         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}
+   | |_________________________________________________________________________- default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/cache-poisoning.yml:25:3
+   |
+25 | /   vulnerable-1:
+26 | |     runs-on: ubuntu-latest
+...  |
+41 | |       - name: Publish to Maven Central
+42 | |         run: ./gradlew publishToMavenCentral --no-configuration-cache
+   | |                                                                     -
+   | |_____________________________________________________________________|
+   |                                                                       this job
+   |                                                                       default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/cache-poisoning.yml:44:3
+   |
+44 | /   vulnerable-2:
+45 | |     runs-on: ubuntu-latest
+...  |
+57 | |       - name: Publish on crates.io
+58 | |         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}
+   | |                                                                         -
+   | |_________________________________________________________________________|
+   |                                                                           this job
+   |                                                                           default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> .github/workflows/cache-poisoning.yml:22:1
+   |
+22 |   on: release
+   |   ^^^^^^^^^^^ generally used when publishing artifacts generated at runtime
+23 |
+...
+35 |           uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
+36 | /         with:
+37 | |           distribution: "zulu"
+38 | |           cache: "gradle"
+39 | |           java-version: "17"
+   | |____________________________^ opt-in for caching here
+   |
+   = note: audit confidence → Low
+
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> .github/workflows/cache-poisoning.yml:22:1
+   |
+22 | on: release
+   | ^^^^^^^^^^^ generally used when publishing artifacts generated at runtime
+23 |
+...
+54 |       - name: Setup CI caching
+55 |         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+   |
+   = note: audit confidence → Low
+
+error[excessive-permissions]: overly broad permissions
+  --> .github/workflows/excessive-permissions.yml:19:3
+   |
+19 |   id-token: write
+   |   ^^^^^^^^^^^^^^^ id-token: write is overly broad at the workflow level
+   |
+   = note: audit confidence → High
+
+error[excessive-permissions]: overly broad permissions
+  --> .github/workflows/excessive-permissions.yml:21:3
+   |
+21 |   contents: write
+   |   ^^^^^^^^^^^^^^^ contents: write is overly broad at the workflow level
+   |
+   = note: audit confidence → High
+
+error[excessive-permissions]: overly broad permissions
+  --> .github/workflows/excessive-permissions.yml:29:3
+   |
+29 | /   perms-2:
+30 | |     runs-on: ubuntu-latest
+31 | |     # NOT OK: extremely broad job-level permissions
+32 | |     permissions: write-all
+   | |     ^^^^^^^^^^^^^^^^^^^^^^ uses write-all permissions
+33 | |     steps:
+34 | |       - run: "echo hello"
+   | |_________________________^ this job
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/github-env.yml:24:3
+   |
+24 | /   vulnerable:
+25 | |     runs-on: ubuntu-latest
+...  |
+33 | |         env:
+34 | |           TITLE: ${{ github.event.pull_request.title }}
+   | |                                                        -
+   | |________________________________________________________|
+   |                                                          this job
+   |                                                          default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+  --> .github/workflows/github-env.yml:19:1
+   |
+19 | / on:
+20 | |   # NOT OK: pull_request_target enables this attack
+21 | |   pull_request_target:
+   | |______________________^ pull_request_target is almost always used insecurely
+   |
+   = note: audit confidence → Medium
+
+error[github-env]: dangerous use of environment file
+  --> .github/workflows/github-env.yml:30:9
+   |
+30 |         - run: |
+   |  _________^
+31 | |           message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
+32 | |           echo "message=$message" >> $GITHUB_ENV
+   | |________________________________________________^ write to GITHUB_ENV may allow code execution
+   |
+   = note: audit confidence → Low
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/hardcoded-credentials.yml:23:3
+   |
+23 | /   test:
+24 | |     runs-on: ubuntu-latest
+...  |
+44 | |     steps:
+45 | |       - run: echo 'vulnerable!'
+   | |                                -
+   | |________________________________|
+   |                                  this job
+   |                                  default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+error[hardcoded-container-credentials]: hardcoded credential in GitHub Actions container configurations
+  --> .github/workflows/hardcoded-credentials.yml:27:7
+   |
+27 | /       credentials:
+28 | |         username: user
+29 | |         # NOT OK: hardcoded credential
+30 | |         password: hackme
+   | |________________________^ container registry password is hard-coded
+   |
+   = note: audit confidence → High
+
+error[hardcoded-container-credentials]: hardcoded credential in GitHub Actions container configurations
+  --> .github/workflows/hardcoded-credentials.yml:34:9
+   |
+34 | /         credentials:
+35 | |           username: user
+36 | |           # NOT OK: hardcoded credential
+37 | |           password: hackme
+   | |__________________________^ service service-1: container registry password is hard-coded
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/impostor-commit.yml:22:2
+   |
+22 | /  commit:
+23 | |    runs-on: ubuntu-latest
+...  |
+30 | |        run: |
+31 | |          echo 'hello world!'
+   | |                             -
+   | |_____________________________|
+   |                               this job
+   |                               default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/insecure-commands.yml:10:3
+   |
+10 | /   some-dangerous-job:
+11 | |     runs-on: ubuntu-latest
+...  |
+18 | |           # NOT OK
+19 | |           ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+   | |                                               -
+   | |_______________________________________________|
+   |                                                 this job
+   |                                                 default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+error[insecure-commands]: execution of insecure workflow commands is enabled
+ --> .github/workflows/insecure-commands.yml:5:1
+  |
+5 | / env:
+6 | |   # NOT OK
+7 | |   ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+  | |______________________________________^ insecure commands enabled here
+  |
+  = note: audit confidence → High
+
+error[insecure-commands]: execution of insecure workflow commands is enabled
+  --> .github/workflows/insecure-commands.yml:12:5
+   |
+12 | /     env:
+13 | |       # NOT OK
+14 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+   | |__________________________________________^ insecure commands enabled here
+   |
+   = note: audit confidence → High
+
+error[insecure-commands]: execution of insecure workflow commands is enabled
+  --> .github/workflows/insecure-commands.yml:17:9
+   |
+17 | /         env:
+18 | |           # NOT OK
+19 | |           ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+   | |_______________________________________________^ insecure commands enabled here
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/known-vulnerable-actions.yml:14:3
+   |
+14 | /   vulnerable:
+15 | |     runs-on: ubuntu-latest
+...  |
+27 | |       # NOT OK: GHSA-6q4m-7476-932w
+28 | |       - uses: rlespinasse/github-slug-action@4.0.1
+   | |                                                   -
+   | |___________________________________________________|
+   |                                                     this job
+   |                                                     default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[overprovisioned-secrets]: excessively provisioned secrets
+  --> .github/workflows/overprovisioned-secrets.yml:21:18
+   |
+21 |           stuff: ${{ format('{0}', toJSON(secrets)) }}
+   |                  ------------------------------------- injects the entire secrets context into the runner
+   |
+   = note: audit confidence → High
+
+warning[overprovisioned-secrets]: excessively provisioned secrets
+  --> .github/workflows/overprovisioned-secrets.yml:31:25
+   |
+31 |           secrets_json: ${{ toJSON(secrets) }}
+   |                         ---------------------- injects the entire secrets context into the runner
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/pull-request-target.yml:25:3
+   |
+25 | /   vulnerable:
+26 | |     runs-on: ubuntu-latest
+...  |
+39 | |           npm install
+40 | |           npm build
+   | |                    -
+   | |____________________|
+   |                      this job
+   |                      default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+  --> .github/workflows/pull-request-target.yml:20:1
+   |
+20 | / on:
+21 | |   # NOT OK: pull_request_target should almost never be used
+22 | |   pull_request_target:
+   | |______________________^ pull_request_target is almost always used insecurely
+   |
+   = note: audit confidence → Medium
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> .github/workflows/pypi-manual-credential.yml:27:9
+   |
+27 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         -------------------------------------------- info: this step
+28 |         with:
+29 |           password: ${{ secrets.PYPI_TOKEN }}
+   |           ----------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> .github/workflows/pypi-manual-credential.yml:58:9
+   |
+58 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         -------------------------------------------- info: this step
+59 |         with:
+60 |           repository-url: https://upload.pypi.org/legacy/
+61 |           password: ${{ secrets.PYPI_TOKEN }}
+   |           ----------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> .github/workflows/pypi-manual-credential.yml:66:9
+   |
+66 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         -------------------------------------------- info: this step
+67 |         with:
+68 |           repository-url: https://test.pypi.org/legacy/
+69 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
+   |           ---------------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> .github/workflows/pypi-manual-credential.yml:73:9
+   |
+73 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         -------------------------------------------- info: this step
+74 |         with:
+75 |           repository_url: https://upload.pypi.org/legacy/
+76 |           password: ${{ secrets.PYPI_TOKEN }}
+   |           ----------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> .github/workflows/pypi-manual-credential.yml:81:9
+   |
+81 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         -------------------------------------------- info: this step
+82 |         with:
+83 |           repository_url: https://test.pypi.org/legacy/
+84 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
+   |           ---------------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/ref-confusion.yml:20:3
+   |
+20 | /   commit:
+21 | |     runs-on: ubuntu-latest
+22 | |     steps:
+23 | |       # NOT OK: `confusable` is both a tag and a branch
+24 | |       - uses: woodruffw/gha-hazmat/ref-confusion@confusable
+   | |                                                            -
+   | |____________________________________________________________|
+   |                                                              this job
+   |                                                              default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/secrets-inherit.yml:1:1
+   |
+ 1 | / # secrets-inherit.yml
+ 2 | | #
+...  |
+32 | |     # OK: no secrets forwarded
+33 | |     secrets: {}
+   | |________________- default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/secrets-inherit.yml:15:3
+   |
+15 | /   call-workflow-vulnerable-1:
+16 | |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+17 | |     # NOT OK: unconditionally inherits
+18 | |     secrets: inherit
+   | |                    -
+   | |____________________|
+   |                      this job
+   |                      default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/secrets-inherit.yml:20:3
+   |
+20 | /   call-workflow-not-vulnerable-2:
+21 | |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+22 | |     # OK: explicitly forwards intended secrets
+23 | |     secrets:
+24 | |       special-secret: ${{ secrets.special-secret }}
+   | |                                                   -
+   | |___________________________________________________|
+   |                                                     this job
+   |                                                     default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/secrets-inherit.yml:26:3
+   |
+26 | /   call-workflow-not-vulnerable-3:
+27 | |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+28 | |     # OK: no secrets forwarded
+   | |                              -
+   | |______________________________|
+   |                                this job
+   |                                default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/secrets-inherit.yml:30:3
+   |
+30 | /   call-workflow-not-vulnerable-4:
+31 | |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+32 | |     # OK: no secrets forwarded
+33 | |     secrets: {}
+   | |                -
+   | |________________|
+   |                  this job
+   |                  default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+  --> .github/workflows/secrets-inherit.yml:16:5
+   |
+16 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+   |     ---------------------------------------------------------------------- this reusable workflow
+17 |     # NOT OK: unconditionally inherits
+18 |     secrets: inherit
+   |     ---------------- inherits all parent secrets
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/self-hosted.yml:22:3
+   |
+22 | /   vulnerable:
+23 | |     # NOT OK: self-hosted runners are difficult to secure in public repos
+...  |
+27 | |       - run: |
+28 | |           echo "hello from a self-hosted runner"
+   | |                                                 -
+   | |_________________________________________________|
+   |                                                   this job
+   |                                                   default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+   --> .github/workflows/template-injection.yml:1:1
+    |
+  1 | / # template-injection.yml
+  2 | | #
+...   |
+127 | |         run: |
+128 | |           ${{ some.context == 'success' }}
+    | |___________________________________________- default permissions used due to no permissions: block
+    |
+    = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/template-injection.yml:36:3
+   |
+36 | /   vulnerable-1:
+37 | |     runs-on: ubuntu-latest
+...  |
+94 | |         run: |
+95 | |           echo "doing a thing: ${{ github.workspace }}"
+   | |                                                       -
+   | |_______________________________________________________|
+   |                                                         this job
+   |                                                         default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+   --> .github/workflows/template-injection.yml:97:3
+    |
+ 97 | /   vulnerable-2:
+ 98 | |     runs-on: ubuntu-latest
+...   |
+106 | |         run: |
+107 | |           echo "doing a thing: ${{ matrix.unknown-key }}"
+    | |                                                         -
+    | |_________________________________________________________|
+    |                                                           this job
+    |                                                           default permissions used due to no permissions: block
+    |
+    = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+   --> .github/workflows/template-injection.yml:110:3
+    |
+110 | /   vulnerable-3:
+111 | |     runs-on: ubuntu-latest
+...   |
+118 | |           script: |
+119 | |             return "doing a thing: ${{ github.event.issue.title }}"
+    | |                                                                   -
+    | |___________________________________________________________________|
+    |                                                                     this job
+    |                                                                     default permissions used due to no permissions: block
+    |
+    = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+   --> .github/workflows/template-injection.yml:121:3
+    |
+121 | /   not-vulnerable-4:
+122 | |     runs-on: ubuntu-latest
+...   |
+127 | |         run: |
+128 | |           ${{ some.context == 'success' }}
+    | |                                           -
+    | |___________________________________________|
+    |                                             this job
+    |                                             default permissions used due to no permissions: block
+    |
+    = note: audit confidence → Medium
+
+error[template-injection]: code injection via template expansion
+  --> .github/workflows/template-injection.yml:45:9
+   |
+45 |         - name: vulnerable-1
+   |           ^^^^^^^^^^^^^^^^^^ this step
+46 |           # NOT OK: attacker controlled issue title
+47 | /         run: |
+48 | |           echo "issue created: ${{ github.event.issue.title }}"
+   | |_______________________________________________________________^ github.event.issue.title may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+error[template-injection]: code injection via template expansion
+  --> .github/workflows/template-injection.yml:50:9
+   |
+50 |         - name: vulnerable-2
+   |           ^^^^^^^^^^^^^^^^^^ this step
+51 |           # NOT OK: attacker controlled workflow_dispatch input
+52 | /         run: |
+53 | |           echo "doing a thing: ${{ inputs.hackme }}"
+   | |____________________________________________________^ inputs.hackme may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+
+error[template-injection]: code injection via template expansion
+  --> .github/workflows/template-injection.yml:60:9
+   |
+60 |         - name: vulnerable-4
+   |           ^^^^^^^^^^^^^^^^^^ this step
+61 |           # NOT OK: `workflow_call` inputs may or may not be trusted
+62 | /         run: |
+63 | |           echo "doing a thing: ${{ inputs.hackme-call }}"
+   | |_________________________________________________________^ inputs.hackme-call may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+
+warning[template-injection]: code injection via template expansion
+  --> .github/workflows/template-injection.yml:82:9
+   |
+82 |         - name: vulnerable-8
+   |           ------------------ this step
+83 |           # NOT OK: matrix.dynamic is dynamic
+84 | /         run: |
+85 | |           echo "doing a thing: ${{ matrix.dynamic }}"
+   | |_____________________________________________________- matrix.dynamic may expand into attacker-controllable code
+   |
+   = note: audit confidence → Medium
+
+warning[template-injection]: code injection via template expansion
+   --> .github/workflows/template-injection.yml:104:9
+    |
+104 |         - name: vulnerable-11
+    |           ------------------- this step
+105 |           # NOT OK: entire matrix is dynamic
+106 | /         run: |
+107 | |           echo "doing a thing: ${{ matrix.unknown-key }}"
+    | |_________________________________________________________- matrix.unknown-key may expand into attacker-controllable code
+    |
+    = note: audit confidence → Medium
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/template-injection.yml:114:9
+    |
+114 |         - name: vulnerable-12
+    |           ^^^^^^^^^^^^^^^^^^^ this step
+115 |           uses: actions/github-script@v7
+116 |           with:
+117 |             # NOT OK: attacker-controlled issue title
+118 | /           script: |
+119 | |             return "doing a thing: ${{ github.event.issue.title }}"
+    | |___________________________________________________________________^ github.event.issue.title may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/unpinned.yml:16:3
+   |
+16 | /   unpinned-0:
+17 | |     runs-on: ubuntu-latest
+...  |
+37 | |           args: hello!
+38 | |
+   | |_-- this job
+   |   |
+   |   default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[unpinned-uses]: unpinned action reference
+  --> .github/workflows/unpinned.yml:20:9
+   |
+20 |       - uses: actions/checkout
+   |         ---------------------- action is not pinned to a tag, branch, or hash ref
+   |
+   = note: audit confidence → High
+
+warning[unpinned-uses]: unpinned action reference
+  --> .github/workflows/unpinned.yml:25:9
+   |
+25 |       - uses: github/codeql-action/upload-sarif
+   |         --------------------------------------- action is not pinned to a tag, branch, or hash ref
+   |
+   = note: audit confidence → High
+
+warning[unpinned-uses]: unpinned action reference
+  --> .github/workflows/unpinned.yml:28:9
+   |
+28 |       - uses: docker://ubuntu
+   |         --------------------- action is not pinned to a tag, branch, or hash ref
+   |
+   = note: audit confidence → High
+
+warning[unpinned-uses]: unpinned action reference
+  --> .github/workflows/unpinned.yml:34:9
+   |
+34 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
+   |         -------------------------------------------------- action is not pinned to a tag, branch, or hash ref
+   |
+   = note: audit confidence → High
+
+warning[unredacted-secrets]: leaked secret values
+  --> .github/workflows/unredacted-secrets.yml:20:18
+   |
+20 |           stuff: ${{ fromJSON(secrets.password) }}
+   |                  --------------------------------- bypasses secret redaction
+   |
+   = note: audit confidence → High
+
+warning[unredacted-secrets]: leaked secret values
+  --> .github/workflows/unredacted-secrets.yml:23:23
+   |
+23 |           otherstuff: ${{ fromJson(secrets.otherstuff).field }}
+   |                       ----------------------------------------- bypasses secret redaction
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/workflow-run.yml:23:3
+   |
+23 | /   vulnerable:
+24 | |     runs-on: ubuntu-latest
+...  |
+29 | |         env:
+30 | |           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+   | |                                                -
+   | |________________________________________________|
+   |                                                  this job
+   |                                                  default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+  --> .github/workflows/workflow-run.yml:17:1
+   |
+17 | / on:
+18 | |   # NOT OK: allows trivial third-party access to the upstream's context
+19 | |   workflow_run:
+20 | |     workflows: ["CI"]
+   | |_____________________^ workflow_run is almost always used insecurely
+   |
+   = note: audit confidence → Medium
+
+105 findings (36 suppressed): 0 unknown, 5 informational, 0 low, 39 medium, 25 high

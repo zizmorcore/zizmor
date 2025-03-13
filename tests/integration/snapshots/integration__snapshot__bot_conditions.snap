@@ -1,0 +1,46 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"bot-conditions.yml\")).run()?"
+snapshot_kind: text
+---
+error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+ --> @@INPUT@@:1:1
+  |
+1 | on: pull_request_target
+  | ^^^^^^^^^^^^^^^^^^^^^^^ pull_request_target is almost always used insecurely
+  |
+  = note: audit confidence → Medium
+
+error[bot-conditions]: spoofable bot actor check
+ --> @@INPUT@@:8:5
+  |
+8 |     if: github.actor == 'dependabot[bot]'
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+  |
+  = note: audit confidence → High
+
+error[bot-conditions]: spoofable bot actor check
+  --> @@INPUT@@:12:9
+   |
+12 |         if: ${{ github.actor == 'dependabot[bot]' }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |
+   = note: audit confidence → High
+
+error[bot-conditions]: spoofable bot actor check
+  --> @@INPUT@@:16:9
+   |
+16 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |
+   = note: audit confidence → Medium
+
+error[bot-conditions]: spoofable bot actor check
+  --> @@INPUT@@:20:9
+   |
+20 |         if: github.actor == 'renovate[bot]'
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |
+   = note: audit confidence → High
+
+5 findings: 0 unknown, 0 informational, 0 low, 0 medium, 5 high

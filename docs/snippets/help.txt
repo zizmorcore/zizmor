@@ -22,8 +22,12 @@ Options:
           Increase logging verbosity
   -q, --quiet...
           Decrease logging verbosity
+      --no-progress
+          Don't show progress bars, even if the terminal supports them
       --format <FORMAT>
           The output format to emit. By default, plain text will be emitted [default: plain] [possible values: plain, json, sarif]
+      --color <MODE>
+          Control the use of color in output [possible values: auto, always, never]
   -c, --config <CONFIG>
           The configuration file to load. By default, any config will be discovered relative to $CWD
       --no-config
@@ -37,7 +41,7 @@ Options:
       --cache-dir <CACHE_DIR>
           The directory to use for HTTP caching. By default, a host-appropriate user-caching directory will be used
       --collect <COLLECT>
-          Control which kinds of inputs are collected for auditing [default: all] [possible values: all, workflows-only, actions-only]
+          Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows-only, actions-only]
   -h, --help
           Print help (see more with '--help')
   -V, --version

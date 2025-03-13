@@ -40,7 +40,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@53965ae436bfa278197425c78ac1e3eeebc7cc33 # v1
+        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -70,7 +70,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@53965ae436bfa278197425c78ac1e3eeebc7cc33 # v1
+        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -96,7 +96,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@53965ae436bfa278197425c78ac1e3eeebc7cc33 # v1
+        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -112,16 +112,18 @@ jobs:
     strategy:
       matrix:
         platform:
+          # TODO: Bump to macos-15 once Rust 1.85+ is available.
+          # See: https://github.com/actions/runner-images/issues/11637
           - runner: macos-13
             target: x86_64
-          - runner: macos-14
+          - runner: macos-13
             target: aarch64
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@53965ae436bfa278197425c78ac1e3eeebc7cc33 # v1
+        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -139,7 +141,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build sdist
-        uses: PyO3/maturin-action@53965ae436bfa278197425c78ac1e3eeebc7cc33 # v1
+        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
         with:
           command: sdist
           args: --out dist
@@ -155,7 +157,7 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/zizmor
-    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
     needs: [linux, musllinux, windows, macos, sdist]
     permissions:
       # Use to sign the release artifacts
@@ -165,14 +167,14 @@ jobs:
       # Used to generate artifact attestation
       attestations: write
     steps:
-      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+      - uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@520d128f165991a6c774bcb264f323e3d70747f4 # v2
+        uses: actions/attest-build-provenance@c074443f1aee8d4aeeae555aebba3282517141b2 # v2
         with:
           subject-path: 'wheels-*/*'
       - name: Publish to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: PyO3/maturin-action@53965ae436bfa278197425c78ac1e3eeebc7cc33 # v1
+        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
         with:
           command: upload
           args: --non-interactive --skip-existing wheels-*/*

@@ -1,0 +1,22 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().output(OutputMode::Both).args([\"--collect=all\"]).input(input_under_test(\"e2e-menagerie\")).run()?"
+snapshot_kind: text
+---
+ INFO zizmor: skipping impostor-commit: can't run without a GitHub API token
+ INFO zizmor: skipping ref-confusion: can't run without a GitHub API token
+ INFO zizmor: skipping known-vulnerable-actions: can't run without a GitHub API token
+ INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/dummy-action-2/action.yml
+ INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/another-dummy.yml
+ INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/dummy.yml
+ INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/ignored.yaml
+ INFO audit: zizmor: 🌈 completed @@INPUT@@/dummy-action-1/action.yaml
+error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+ --> @@INPUT@@/.github/workflows/ignored.yaml:4:1
+  |
+4 | on: pull_request_target
+  | ^^^^^^^^^^^^^^^^^^^^^^^ pull_request_target is almost always used insecurely
+  |
+  = note: audit confidence → Medium
+
+1 finding: 0 unknown, 0 informational, 0 low, 0 medium, 1 high

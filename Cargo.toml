@@ -1,8 +1,8 @@
 [package]
 name = "zizmor"
 description = "Static analysis for GitHub Actions"
-version = "1.4.1"
-edition = "2021"
+version = "1.5.1"
+edition = "2024"
 repository = "https://github.com/woodruffw/zizmor"
 homepage = "https://github.com/woodruffw/zizmor"
 documentation = "https://woodruffw.github.io/zizmor/"
@@ -10,28 +10,31 @@ authors = ["William Woodruff <william@yossarian.net>"]
 license = "MIT"
 keywords = ["cli", "github-actions", "static-analysis", "security"]
 categories = ["command-line-utilities"]
-rust-version = "1.80.1"
+rust-version = "1.85.0"
 
 [features]
 # Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
 gh-token-tests = []
 # Test-only: enable all online audits.
 online-tests = ["gh-token-tests"]
+# Test-only: enable tests that require `unbuffer` for TTY behavior.
+tty-tests = []
 
 [dependencies]
 annotate-snippets = "0.11.5"
 anstream = "0.6.18"
-anyhow = "1.0.96"
+anyhow = "1.0.97"
 camino = { version = "1.1.9", features = ["serde1"] }
-clap = { version = "4.5.30", features = ["derive", "env"] }
+clap = { version = "4.5.31", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
-etcetera = "0.8.0"
+etcetera = "0.10.0"
 flate2 = "1.1.0"
 github-actions-models = "0.26.0"
 http-cache-reqwest = "0.15.1"
 human-panic = "2.0.1"
+ignore = "0.4.23"
 indexmap = "2.7.1"
 indicatif = "0.17.11"
 itertools = "0.14.0"
@@ -46,15 +49,15 @@ reqwest = { version = "0.12.12", features = [
     "rustls-tls",
 ], default-features = false }
 reqwest-middleware = "0.4.1"
-serde = { version = "1.0.218", features = ["derive"] }
+serde = { version = "1.0.219", features = ["derive"] }
 serde-sarif = "0.7.0"
-serde_json = "1.0.139"
+serde_json = "1.0.140"
 serde_yaml = "0.9.34"
 # TODO remove pending https://github.com/tree-sitter/tree-sitter/pull/4034
 streaming-iterator = "0.1.9"
 tar = "0.4.44"
 terminal-link = "0.1.0"
-tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+tokio = { version = "1.44.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-indicatif = "0.3.9"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
@@ -72,6 +75,6 @@ lto = true
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
-insta = { version = "1.42.1" }
+insta = { version = "1.42.2" }
 pretty_assertions = "1.4.1"
 serde_json_path = "0.7.1"

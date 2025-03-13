@@ -49,12 +49,15 @@ zizmor ../example.yml ../other-repo/ example/example
 
 When auditing local and/or remote repositories, `zizmor` will collect both
 workflows (e.g. `.github/workflows/ci.yml`) **and** action definitions
-(e.g. `custom-action/foo.yml`) by default. To disable one or the other,
+(e.g. `custom-action/foo.yml`) by default. To configure collection behavior,
 you can use the `--collect=...` option.
 
 ```bash
-# collect everything (the default)
+# collect everything regardless of `.gitignore` patterns
 zizmor --collect=all example/example
+
+# collect everything while respecting `.gitignore` patterns (the default)
+zizmor --collect=default example/example
 
 # collect only workflows
 zizmor --collect=workflows-only example/example
@@ -62,6 +65,12 @@ zizmor --collect=workflows-only example/example
 # collect only actions
 zizmor --collect=actions-only example/example
 ```
+
+!!! tip
+
+    `--collect=all` can be significantly slower than `--collect=default`,
+    particularly when collecting from directories that contain large
+    hierarchies of paths that would be ignored by `.gitignore` patterns.
 
 !!! tip
 
@@ -463,7 +472,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 - repo: https://github.com/woodruffw/zizmor-pre-commit
-  rev: v1.4.1 # (1)!
+  rev: v1.5.1 # (1)!
   hooks:
   - id: zizmor
 ```
@@ -480,6 +489,36 @@ This will run `zizmor` on every commit.
 
     See [`pre-commit`](https://pre-commit.com/) documentation for more
     information on how to configure `pre-commit`.
+
+### Color customization
+
+When invoked from a terminal, `zizmor` will attempt to enrich its output
+with ANSI colors.
+
+!!! note
+
+    `--color` is available in `v1.5.0` and later.
+
+Some users may prefer to explicitly enable or disable this behavior. For
+example, GitHub Actions is not a terminal but it does support ANSI colors,
+so enabling colors in GitHub Actions can make logs more readable.
+
+To explicitly control `zizmor`'s colorization behavior, use the
+`--color` option:
+
+```bash
+# force colorization
+zizmor --color=always ...
+
+# force no colorization
+zizmor --color=never ...
+```
+
+`zizmor` also respects various environment variables for colorization:
+
+* [`NO_COLOR`](https://no-color.org/): if set to any value, disables colorization
+* [`FORCE_COLOR`](https://force-color.org/): if set to any value, enables colorization
+* [`CLICOLOR_FORCE`](https://bixense.com/clicolors/): if set to any value, enables colorization
 
 ## Limitations
 

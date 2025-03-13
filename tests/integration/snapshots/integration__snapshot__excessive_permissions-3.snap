@@ -1,0 +1,33 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(workflow_under_test(\"excessive-permissions/workflow-default-perms.yml\")).args([\"--pedantic\"]).run()?"
+snapshot_kind: text
+---
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:1:1
+   |
+ 1 | / # two findings in pedantic mode: one for the entire workflow for having
+ 2 | | # implicit permissions (pedantic), and one for the 'single' job for having
+...  |
+12 | |         with:
+13 | |           persist-credentials: false
+   | |_____________________________________- default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:8:3
+   |
+ 8 | /   single:
+ 9 | |     runs-on: ubuntu-latest
+...  |
+12 | |         with:
+13 | |           persist-credentials: false
+   | |                                     -
+   | |_____________________________________|
+   |                                       this job
+   |                                       default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+2 findings: 0 unknown, 0 informational, 0 low, 2 medium, 0 high
