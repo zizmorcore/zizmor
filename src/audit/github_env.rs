@@ -349,7 +349,7 @@ impl Audit for GitHubEnv {
             .set_language(&bash)
             .context("failed to load bash parser")?;
 
-        let pwsh = tree_sitter_powershell::language();
+        let pwsh = tree_sitter_powershell::LANGUAGE.into();
         let mut pwsh_parser = Parser::new();
         pwsh_parser
             .set_language(&pwsh)

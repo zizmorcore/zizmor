@@ -8,8 +8,6 @@ use github_actions_models::common::{
     expr::{ExplicitExpr, LoE},
 };
 
-use crate::audit::AuditInput;
-
 /// Convenience trait for inline transformations of `Self`.
 ///
 /// This is similar to the `tap` crate's `Pipe` trait, except that
