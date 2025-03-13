@@ -276,6 +276,7 @@
 
     ??? example "Examples"
         - google/zx#1067
+        - google/zx#1126
 
 
 -   ![](https://github.com/GreptimeTeam.png?size=40){ width="40" loading=lazy align=left } GreptimeTeam
