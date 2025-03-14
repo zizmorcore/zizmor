@@ -22,8 +22,6 @@ snapshot_kind: text
  INFO audit: zizmor: 🌈 completed .github/workflows/ref-confusion.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/secrets-inherit.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/self-hosted.yml
- WARN audit:audit{input=Workflow(https://github.com/woodruffw/gha-hazmat/blob/42064a9533f401a493c3599e56f144918f8eacfd/.github/workflows/template-injection.yml)}: zizmor::audit::overprovisioned_secrets: couldn't parse expression: ...
- WARN audit:audit{input=Workflow(https://github.com/woodruffw/gha-hazmat/blob/42064a9533f401a493c3599e56f144918f8eacfd/.github/workflows/template-injection.yml)}: zizmor::audit::unredacted_secrets: couldn't parse expression: ...
  INFO audit: zizmor: 🌈 completed .github/workflows/template-injection.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/unpinned.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/unredacted-secrets.yml

@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would over-eagerly parse invalid and
+  commented-out expressions, resulting in spurious warnings (#570)
+
 ## v1.5.1
 
 ### Bug Fixes 🐛

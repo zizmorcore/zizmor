@@ -1,7 +1,7 @@
 use crate::{
     expr::Expr,
     finding::{Confidence, Feature, Location, Severity},
-    utils::extract_expressions,
+    utils::parse_expressions_from_input,
 };
 
 use super::{Audit, AuditInput, audit_meta};
@@ -24,9 +24,8 @@ impl Audit for OverprovisionedSecrets {
 
     fn audit_raw<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
-        let raw = input.document().source();
 
-        for (expr, span) in extract_expressions(raw) {
+        for (expr, span) in parse_expressions_from_input(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
