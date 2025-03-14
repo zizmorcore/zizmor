@@ -20,21 +20,21 @@ jobs:
           - runner: ubuntu-24.04
             target: x86_64
             manylinux: "2_28"
-          - runner: ubuntu-24.04
-            target: x86
-            manylinux: "2_28"
+          # - runner: ubuntu-24.04
+          #   target: x86
+          #   manylinux: "auto"
           - runner: ubuntu-24.04
             target: aarch64
             manylinux: "2_24"
           - runner: ubuntu-24.04
             target: armv7
             manylinux: "2_28"
-          - runner: ubuntu-24.04
-            target: s390x
-            manylinux: "2_28"
-          - runner: ubuntu-24.04
-            target: ppc64le
-            manylinux: "2_28"
+          # - runner: ubuntu-24.04
+          #   target: s390x
+          #   manylinux: "2_28"
+          # - runner: ubuntu-24.04
+          #   target: ppc64le
+          #   manylinux: "2_28"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
@@ -58,8 +58,8 @@ jobs:
         platform:
           - runner: ubuntu-24.04
             target: x86_64
-          - runner: ubuntu-24.04
-            target: x86
+          # - runner: ubuntu-24.04
+          #   target: x86
           - runner: ubuntu-24.04
             target: aarch64
           - runner: ubuntu-24.04
