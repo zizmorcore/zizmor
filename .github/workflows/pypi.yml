@@ -31,10 +31,10 @@ jobs:
             manylinux: "2_28"
           - runner: ubuntu-24.04
             target: s390x
-            manylinux: "2_28"
+            manylinux: "auto"
           - runner: ubuntu-24.04
             target: ppc64le
-            manylinux: "2_28"
+            manylinux: "auto"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
@@ -46,7 +46,7 @@ jobs:
           args: --release --out dist
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           manylinux: ${{ matrix.platform.manylinux }}
-          before-script-linux: python3 -m ensurepip
+          before-script-linux: ${{ matrix.platform.manylinux == '2_28' && 'python3 -m ensurepip' || 'true'}}
       - name: Upload wheels
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         with:
