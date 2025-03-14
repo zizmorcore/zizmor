@@ -19,7 +19,7 @@ jobs:
         platform:
           - runner: ubuntu-24.04
             target: x86_64
-            manylinux: "2_24"
+            manylinux: "2_28"
             before-script: python3 -m ensurepip
           - runner: ubuntu-24.04
             target: x86
