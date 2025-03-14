@@ -6,8 +6,9 @@ use anyhow::{Context, Result};
 use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
 use regex::Regex;
-use streaming_iterator::StreamingIterator;
-use tree_sitter::{Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
+use tree_sitter::{
+    Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
+};
 
 use super::{Audit, audit_meta};
 use crate::finding::{Confidence, Finding, Severity};

@@ -3166,7 +3166,6 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "serde_yaml",
- "streaming-iterator",
  "tar",
  "terminal-link",
  "tokio",
