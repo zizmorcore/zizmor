@@ -19,9 +19,7 @@ jobs:
         platform:
           - runner: ubuntu-24.04
             target: x86_64
-            manylinux: "auto"
-            # https://github.com/tree-sitter/tree-sitter/issues/4186
-            docker-options: -e CFLAGS="-D_BSD_SOURCE"
+            manylinux: "2_24"
           - runner: ubuntu-24.04
             target: x86
             manylinux: "auto"
