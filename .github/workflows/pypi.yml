@@ -19,22 +19,22 @@ jobs:
         platform:
           - runner: ubuntu-24.04
             target: x86_64
-            manylinux: auto
-          - runner: ubuntu-24.04
-            target: x86
-            manylinux: auto
+            manylinux: "2_28"
+          # - runner: ubuntu-24.04
+          #   target: x86
+          #   manylinux: "auto"
           - runner: ubuntu-24.04
             target: aarch64
             manylinux: "2_24"
           - runner: ubuntu-24.04
             target: armv7
-            manylinux: auto
-          - runner: ubuntu-24.04
-            target: s390x
-            manylinux: auto
-          - runner: ubuntu-24.04
-            target: ppc64le
-            manylinux: auto
+            manylinux: "2_28"
+          # - runner: ubuntu-24.04
+          #   target: s390x
+          #   manylinux: "2_28"
+          # - runner: ubuntu-24.04
+          #   target: ppc64le
+          #   manylinux: "2_28"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
@@ -44,7 +44,6 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           manylinux: ${{ matrix.platform.manylinux }}
       - name: Upload wheels
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
@@ -59,8 +58,8 @@ jobs:
         platform:
           - runner: ubuntu-24.04
             target: x86_64
-          - runner: ubuntu-24.04
-            target: x86
+          # - runner: ubuntu-24.04
+          #   target: x86
           - runner: ubuntu-24.04
             target: aarch64
           - runner: ubuntu-24.04
@@ -74,7 +73,6 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           manylinux: musllinux_1_2
       - name: Upload wheels
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
@@ -100,7 +98,6 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
       - name: Upload wheels
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         with:
@@ -127,7 +124,6 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
       - name: Upload wheels
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         with:

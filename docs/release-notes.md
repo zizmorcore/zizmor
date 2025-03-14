@@ -14,6 +14,14 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would over-eagerly parse invalid and
   commented-out expressions, resulting in spurious warnings (#570)
 
+### Upcoming Changes 🚧
+
+* The official [PyPI builds](./installation.md/#pypi) for `zizmor`
+  will support fewer architectures in the next release, due to
+  cross-compilation and testing difficulties. This should have
+  **no effect** on the overwhelming majority of users.
+  See #603 for additional details.
+
 ## v1.5.1
 
 ### Bug Fixes 🐛
