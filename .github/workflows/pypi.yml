@@ -28,7 +28,7 @@ jobs:
             manylinux: "2_24"
           - runner: ubuntu-24.04
             target: armv7
-            manylinux: "2_28"
+            manylinux: "auto"
           - runner: ubuntu-24.04
             target: s390x
             manylinux: "auto"
