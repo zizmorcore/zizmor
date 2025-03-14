@@ -21,6 +21,23 @@ fn gha_hazmat() -> Result<()> {
     Ok(())
 }
 
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_569() -> Result<()> {
+    // Regression test for #569.
+    // Ensures that we don't produce spurious warnings for unreachable
+    // expressions (i.e. inside comments).
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(OutputMode::Both)
+            .args(["--no-online-audits", "--collect=workflows-only"])
+            .input("python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6")
+            .run()?
+    );
+    Ok(())
+}
+
 #[test]
 fn menagerie() -> Result<()> {
     // Respects .gitignore by default.
