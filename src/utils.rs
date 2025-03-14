@@ -8,6 +8,8 @@ use github_actions_models::common::{
     expr::{ExplicitExpr, LoE},
 };
 
+use crate::audit::AuditInput;
+
 /// Convenience trait for inline transformations of `Self`.
 ///
 /// This is similar to the `tap` crate's `Pipe` trait, except that
@@ -89,31 +91,42 @@ pub(crate) fn extract_expressions(text: &str) -> Vec<(ExplicitExpr, Range<usize>
     exprs
 }
 
-// /// Like `extract_expressions`, but over an entire audit input (e.g. workflow
-// /// or action definition).
-// ///
-// /// Unlike `extract_expressions`, this function performs some semantic
-// /// filtering over the raw input. For example, it skip ignore expressions
-// /// that are inside comments.
-// pub(crate) fn extract_expressions_raw(input: &AuditInput) -> Vec<(ExplicitExpr, Range<usize>)> {
-//     let text = input.document().source();
-//     let doc = input.document();
+/// Like `extract_expressions`, but over an entire audit input (e.g. workflow
+/// or action definition).
+///
+/// Unlike `extract_expressions`, this function performs some semantic
+/// filtering over the raw input. For example, it skip ignore expressions
+/// that are inside comments.
+pub(crate) fn parse_expressions_from_input(
+    input: &AuditInput,
+) -> Vec<(ExplicitExpr, Range<usize>)> {
+    let text = input.document().source();
+    let doc = input.document();
 
-//     let mut exprs = vec![];
-//     let mut offset = 0;
+    let mut exprs = vec![];
+    let mut offset = 0;
 
-//     while let Some((expr, span)) = extract_expression(text, offset) {
-//         exprs.push((expr, (span.start..span.end)));
+    while let Some((expr, span)) = extract_expression(text, offset) {
+        // Ignore expressions that are inside comments.
+        if doc.offset_inside_comment(span.start) {
+            // Don't jump the entire span, since we might have an
+            // actual expression accidentally captured within it.
+            // Instead, just resume searching from the next character.
+            offset = span.start + 1;
+            continue;
+        }
 
-//         if span.end >= text.len() {
-//             break;
-//         } else {
-//             offset = span.end;
-//         }
-//     }
+        exprs.push((expr, (span.start..span.end)));
 
-//     exprs
-// }
+        if span.end >= text.len() {
+            break;
+        } else {
+            offset = span.end;
+        }
+    }
+
+    exprs
+}
 
 /// Returns whether the given `env.name` environment access is "static,"
 /// i.e. is not influenced by another expression.
@@ -153,7 +166,16 @@ pub(crate) fn normalize_shell(shell: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::{extract_expression, extract_expressions, normalize_shell};
+    use anyhow::Result;
+
+    use crate::{
+        Action,
+        models::Workflow,
+        registry::InputKey,
+        utils::{
+            extract_expression, extract_expressions, normalize_shell, parse_expressions_from_input,
+        },
+    };
 
     #[test]
     fn split_patterns() {
@@ -188,7 +210,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_expression() {
+    fn test_extract_expression() {
         let exprs = &[
             ("${{ foo }}", "foo", 0..10),
             ("${{ foo }}${{ bar }}", "foo", 0..10),
@@ -209,27 +231,18 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_expressions() {
+    fn test_extract_expressions() {
         let multiple = r#"echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${OPENSSL_HASH}" >> $GITHUB_ENV"#;
 
-        // See #569 -- we should ignore the broken expression since it's inside a comment.
-        let incomplete = r#"
-name: >-  # ${{ '' } is a hack to nest jobs under the same sidebar category
-  Windows MSI${{ '' }}
-        "#;
-
-        for (raw, expected) in &[
-            (
-                multiple,
-                [
-                    "${{ github.workspace }}",
-                    "${{ matrix.PYTHON.OPENSSL.TYPE }}",
-                    "${{ matrix.PYTHON.OPENSSL.VERSION }}",
-                ]
-                .as_slice(),
-            ),
-            (incomplete, ["${{ '' }"].as_slice()),
-        ] {
+        for (raw, expected) in &[(
+            multiple,
+            [
+                "${{ github.workspace }}",
+                "${{ matrix.PYTHON.OPENSSL.TYPE }}",
+                "${{ matrix.PYTHON.OPENSSL.VERSION }}",
+            ]
+            .as_slice(),
+        )] {
             let exprs = extract_expressions(raw)
                 .into_iter()
                 .map(|(e, _)| e.as_curly().to_string())
@@ -237,6 +250,66 @@ name: >-  # ${{ '' } is a hack to nest jobs under the same sidebar category
 
             assert_eq!(exprs, *expected)
         }
+    }
+
+    #[test]
+    fn test_extract_expressions_from_input() -> Result<()> {
+        // Repro cases for #569; ensures we handle broken expressions that
+        // are commented out. Observe that the commented expression isn't
+        // terminated correctly, so the naive parse continues to the next
+        // expression.
+        let action = r#"
+name: >-  # ${{ '' } is a hack to nest jobs under the same sidebar category
+  Windows MSI${{ '' }}
+
+description: test
+
+runs:
+  using: composite
+  steps:
+    - name: foo
+      run: echo hello
+      shell: bash
+"#;
+
+        let action = Action::from_string(action.into(), InputKey::local("fake", None)?)?;
+
+        let exprs = parse_expressions_from_input(&action.into());
+        assert_eq!(exprs.len(), 1);
+        assert_eq!(exprs[0].0.as_curly().to_string(), "${{ '' }}");
+
+        let workflow = r#"
+# ${{ 'don''t parse me' }}
+
+# Observe that the expression in the comment below is invalid:
+# it's missing a closing brace. This should not interfere with
+# parsing the rest of the file's expressions
+name: >- # ${{ 'oops' }
+  custom-name-${{ github.sha }}
+
+on:
+  push:
+
+permissions: {}
+
+jobs:
+  whops:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: echo hello from ${{ github.actor }}
+"#;
+
+        let workflow = Workflow::from_string(workflow.into(), InputKey::local("fake", None)?)?;
+
+        let exprs = parse_expressions_from_input(&workflow.into())
+            .into_iter()
+            .map(|(e, _)| e.as_raw().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(exprs, &["${{ github.sha }}", "${{ github.actor }}",]);
+
+        Ok(())
     }
 
     #[test]
