@@ -20,6 +20,7 @@ jobs:
           - runner: ubuntu-24.04
             target: x86_64
             manylinux: "2_24"
+            before-script: python3 -m ensurepip
           - runner: ubuntu-24.04
             target: x86
             manylinux: "auto"
@@ -46,7 +47,7 @@ jobs:
           args: --release --out dist
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           manylinux: ${{ matrix.platform.manylinux }}
-          docker-options: ${{ matrix.platform.docker-options }}
+          before-script-linux: ${{ matrix.platform.before-script }}
       - name: Upload wheels
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         with:
