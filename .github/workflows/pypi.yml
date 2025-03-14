@@ -25,7 +25,7 @@ jobs:
             manylinux: "2_28"
           - runner: ubuntu-24.04
             target: aarch64
-            manylinux: "2_28"
+            manylinux: "2_24"
           - runner: ubuntu-24.04
             target: armv7
             manylinux: "2_28"
