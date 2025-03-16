@@ -84,13 +84,14 @@ impl BypassableContainsConditions {
         expr: &'a Expr,
     ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>)> + 'a> {
         match expr {
-            Expr::Call {
-                func: "contains",
-                args: exprs,
-            } => match exprs.as_slice() {
-                [Expr::String(s), Expr::Context(c)] => Box::new(std::iter::once((s.as_str(), c))),
-                args => Box::new(args.iter().flat_map(Self::walk_tree_for_insecure_contains)),
-            },
+            Expr::Call { func, args: exprs } if func.eq_ignore_ascii_case("contains") => {
+                match exprs.as_slice() {
+                    [Expr::String(s), Expr::Context(c)] => {
+                        Box::new(std::iter::once((s.as_str(), c)))
+                    }
+                    args => Box::new(args.iter().flat_map(Self::walk_tree_for_insecure_contains)),
+                }
+            }
             Expr::Call {
                 func: _,
                 args: exprs,
