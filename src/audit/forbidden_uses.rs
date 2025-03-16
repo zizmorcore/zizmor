@@ -21,11 +21,7 @@ struct ForbiddenUsesConfig {
     actions: Vec<String>,
 }
 
-const DEFAULT_ALLOWLIST: [&str; 3] = [
-    "actions/checkout",
-    "actions/cache",
-    "actions/upload-artifact",
-];
+const DEFAULT_ALLOWLIST: [&str; 1] = ["actions/*"];
 
 impl Default for ForbiddenUsesConfig {
     fn default() -> Self {
