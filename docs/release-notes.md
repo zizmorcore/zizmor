@@ -9,26 +9,49 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would over-eagerly parse invalid and
+  commented-out expressions, resulting in spurious warnings (#570)
+
+### Upcoming Changes 🚧
+
+* The official [PyPI builds](./installation.md/#pypi) for `zizmor`
+  will support fewer architectures in the next release, due to
+  cross-compilation and testing difficulties. This should have
+  **no effect** on the overwhelming majority of users.
+  See #603 for additional details.
+
+## v1.5.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to honor `.gitignore` files
+  when a `.git/` directory is not present (#598)
+
+## v1.5.0
+
 ### New Features 🌈
 
+* The [overprovisioned-secrets] audit now detects indexing operations
+  on the `secrets` context that result in overprovisioning (#573)
 * `zizmor` now ignores patterns in `.gitignore` (and related files,
   like `.git/info/exclude`) by default when performing input collection.
   This makes input collection significantly faster for users
   with local development state and more closely reflects typical
-  user expectation. Users who wish to explicitly collect everything
+  user expectations. Users who wish to explicitly collect everything
   regardless of ignore patterns can continue to use `--collect=all`
   (#575)
+* `zizmor` now has a `--no-progress` flag that disables
+  progress bars, even if the terminal supports them (#589)
+* `zizmor` now has a `--color` flag that controls when `zizmor`'s
+  output is colorized (beyond basic terminal detection) (#586)
 
 ### Bug Fixes 🐛
 
 * Fixed `zizmor`'s path presentation behavior to correctly present
   unambiguous paths in both SARIF and "plain" outputs when
   multiple input directories are given (#572)
-
-### New Features 🌈
-
-* The [overprovisioned-secrets] audit now detects indexing operations
-  on the `secrets` context that result in overprovisioning (#573)
 
 ## v1.4.1
 
@@ -462,7 +485,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 ### Bug Fixes 🐛
 * Fix typos including `github.repostoryUrl` -> `github.repositoryUrl` by @hugovk in #164
 
-## v0.3,2
+## v0.3.2
 
 **Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.3.1...v0.3.2
 

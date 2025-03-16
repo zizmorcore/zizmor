@@ -1,11 +1,11 @@
 use crate::{
+    Confidence, Severity,
     expr::{Context, Expr},
     finding::{Feature, Location},
-    utils::extract_expressions,
-    Confidence, Severity,
+    utils::parse_expressions_from_input,
 };
 
-use super::{audit_meta, Audit, AuditState};
+use super::{Audit, AuditState, audit_meta};
 
 pub(crate) struct UnredactedSecrets;
 
@@ -28,9 +28,8 @@ impl Audit for UnredactedSecrets {
         input: &'w super::AuditInput,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];
-        let raw = input.document().source();
 
-        for (expr, span) in extract_expressions(raw) {
+        for (expr, span) in parse_expressions_from_input(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;

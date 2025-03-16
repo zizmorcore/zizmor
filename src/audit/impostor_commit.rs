@@ -5,14 +5,14 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{audit_meta, Audit, Job};
+use super::{Audit, Job, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, ComparisonStatus},
-    models::{uses::RepositoryUsesExt as _, JobExt as _, Workflow},
+    models::{JobExt as _, Workflow, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 

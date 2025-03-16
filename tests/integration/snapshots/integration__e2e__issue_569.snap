@@ -1,0 +1,41 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\",\n\"--collect=workflows-only\"]).input(\"python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6\").run()?"
+snapshot_kind: text
+---
+ INFO zizmor: skipping impostor-commit: offline audits only requested
+ INFO zizmor: skipping ref-confusion: offline audits only requested
+ INFO zizmor: skipping known-vulnerable-actions: offline audits only requested
+ INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/documentation-links.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/jit.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/lint.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/mypy.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/new-bugs-announce-notifier.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/project-updater.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/require-pr-label.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/reusable-context.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/reusable-docs.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/reusable-macos.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/reusable-tsan.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/reusable-ubuntu.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/reusable-wasi.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/reusable-windows-msi.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/reusable-windows.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/stale.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/tail-call.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/verify-ensurepip-wheels.yml
+error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+  --> .github/workflows/documentation-links.yml:5:1
+   |
+ 5 | / on:
+ 6 | |   pull_request_target:
+...  |
+10 | |     - 'Doc/**'
+11 | |     - '.github/workflows/doc.yml'
+   | |_________________________________^ pull_request_target is almost always used insecurely
+   |
+   = note: audit confidence → Medium
+
+104 findings (103 suppressed): 0 unknown, 0 informational, 0 low, 0 medium, 1 high

@@ -1,8 +1,8 @@
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{audit_meta, Audit, AuditState, Finding, Step};
+use super::{Audit, AuditState, Finding, Step, audit_meta};
 use crate::finding::{Confidence, Persona, Severity};
-use crate::models::{uses::RepositoryUsesExt, CompositeStep};
+use crate::models::{CompositeStep, uses::RepositoryUsesExt};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

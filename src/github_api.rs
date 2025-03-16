@@ -5,7 +5,7 @@
 
 use std::{io::Read, ops::Deref, path::Path};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
 use github_actions_models::common::RepositoryUses;
@@ -14,11 +14,11 @@ use http_cache_reqwest::{
 };
 use owo_colors::OwoColorize;
 use reqwest::{
-    header::{HeaderMap, ACCEPT, AUTHORIZATION, USER_AGENT},
     StatusCode,
+    header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT},
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{Deserialize, de::DeserializeOwned};
 use tar::Archive;
 use tracing::instrument;
 

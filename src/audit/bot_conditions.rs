@@ -1,6 +1,6 @@
-use github_actions_models::common::{expr::ExplicitExpr, If};
+use github_actions_models::common::{If, expr::ExplicitExpr};
 
-use super::{audit_meta, Audit, AuditState};
+use super::{Audit, AuditState, audit_meta};
 use crate::{
     expr::{self, Context, Expr},
     finding::{Confidence, Severity},

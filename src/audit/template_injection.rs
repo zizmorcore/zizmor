@@ -11,15 +11,15 @@
 //! expressions that an attacker can't control.
 
 use github_actions_models::{
-    common::{expr::LoE, Uses},
+    common::{Uses, expr::LoE},
     workflow::job::Strategy,
 };
 
-use super::{audit_meta, Audit};
+use super::{Audit, audit_meta};
 use crate::{
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Persona, Severity, SymbolicLocation},
-    models::{self, uses::RepositoryUsesExt as _, StepCommon},
+    models::{self, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
     utils::extract_expressions,
 };

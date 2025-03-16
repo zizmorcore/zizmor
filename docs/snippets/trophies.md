@@ -123,6 +123,7 @@
     ??? example "Examples"
         - DataDog/datadog-agent#30871
         - DataDog/dd-trace-py#11640
+        - DataDog/dd-trace-rb#4456
 
 
 -   ![](https://github.com/datalens-tech.png?size=40){ width="40" loading=lazy align=left } datalens-tech
@@ -155,6 +156,14 @@
 
     ??? example "Examples"
         - Diaoul/subliminal#1190
+
+
+-   ![](https://github.com/earthobservations.png?size=40){ width="40" loading=lazy align=left } earthobservations
+
+    ---
+
+    ??? example "Examples"
+        - earthobservations/wetterdienst#1440
 
 
 -   ![](https://github.com/Electric-Coin-Company.png?size=40){ width="40" loading=lazy align=left } Electric-Coin-Company
@@ -267,6 +276,7 @@
 
     ??? example "Examples"
         - google/zx#1067
+        - google/zx#1126
 
 
 -   ![](https://github.com/GreptimeTeam.png?size=40){ width="40" loading=lazy align=left } GreptimeTeam
@@ -546,6 +556,14 @@
         - Orange-OpenSource/hurl#3574
 
 
+-   ![](https://github.com/orion-rs.png?size=40){ width="40" loading=lazy align=left } orion-rs
+
+    ---
+
+    ??? example "Examples"
+        - orion-rs/orion#441
+
+
 -   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
 
     ---
@@ -594,6 +612,14 @@
 
     ??? example "Examples"
         - pyca/service-identity#75
+
+
+-   ![](https://github.com/pydata.png?size=40){ width="40" loading=lazy align=left } pydata
+
+    ---
+
+    ??? example "Examples"
+        - pydata/pydata-sphinx-theme#2077
 
 
 -   ![](https://github.com/pylast.png?size=40){ width="40" loading=lazy align=left } pylast

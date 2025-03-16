@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use super::{audit_meta, Audit};
+use super::{Audit, audit_meta};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::Workflow;
 use crate::state::AuditState;
