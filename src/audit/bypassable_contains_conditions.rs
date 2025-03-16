@@ -63,10 +63,10 @@ impl Audit for BypassableContainsConditions {
 
         conditions
             .flat_map(|(expr, loc)| {
-                Self::insecure_contains(expr).into_iter().map(move |(confidence, context)| {
+                Self::insecure_contains(expr).into_iter().map(move |(severity, context)| {
                     Self::finding()
-                        .severity(Severity::High)
-                        .confidence(confidence)
+                        .severity(severity)
+                        .confidence(Confidence::High)
                         .add_location(
                             loc.with_keys(&["if".into()])
                                 .primary()
@@ -111,7 +111,7 @@ impl BypassableContainsConditions {
         }
     }
 
-    fn insecure_contains(expr: &str) -> Vec<(Confidence, String)> {
+    fn insecure_contains(expr: &str) -> Vec<(Severity, String)> {
         let bare = match ExplicitExpr::from_curly(expr) {
             Some(raw_expr) => raw_expr.as_bare().to_string(),
             None => expr.to_string(),
@@ -122,15 +122,15 @@ impl BypassableContainsConditions {
             .iter()
             .flat_map(|expression| Self::walk_tree_for_insecure_contains(expression))
             .map(|(_s, ctx)| {
-                let confidence = if USER_CONTROLLABLE_CONTEXTS.iter().any(|item| {
+                let severity = if USER_CONTROLLABLE_CONTEXTS.iter().any(|item| {
                     let context = &ctx.as_str();
                     item == context || (item.ends_with(".") && context.starts_with(item))
                 }) {
-                    Confidence::High
+                    Severity::High
                 } else {
-                    Confidence::Medium
+                    Severity::Informational
                 };
-                (confidence, ctx.as_str().to_string())
+                (severity, ctx.as_str().to_string())
             })
             .collect()
     }
@@ -139,21 +139,21 @@ impl BypassableContainsConditions {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::finding::Confidence;
 
     #[test]
     fn test_bot_condition() {
-        for (cond, confidence) in &[
+        for (cond, severity) in &[
             // Vulnerable conditions
-            ("contains('refs/heads/main refs/heads/develop', github.ref)", vec![(Confidence::High, String::from("github.ref"))]),
-            ("false || contains('main,develop', github.head_ref)", vec![(Confidence::High, String::from("github.head_ref"))]),
-            ("!contains('main|develop', github.base_ref)", vec![(Confidence::High, String::from("github.base_ref"))]),
-            ("contains(fromJSON('[true]'), contains('refs/heads/main refs/heads/develop', env.GITHUB_REF))", vec![(Confidence::High, String::from("env.GITHUB_REF"))]),
+            ("contains('refs/heads/main refs/heads/develop', github.ref)", vec![(Severity::High, String::from("github.ref"))]),
+            ("false || contains('main,develop', github.head_ref)", vec![(Severity::High, String::from("github.head_ref"))]),
+            ("!contains('main|develop', github.base_ref)", vec![(Severity::High, String::from("github.base_ref"))]),
+            ("contains(fromJSON('[true]'), contains('refs/heads/main refs/heads/develop', env.GITHUB_REF))", vec![(Severity::High, String::from("env.GITHUB_REF"))]),
+            ("contains('push pull_request', github.event_name)", vec![(Severity::Informational, String::from("github.event_name"))]),
             // These are okay.
             ("github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'", vec![]),
             ("contains(fromJSON('[\"refs/heads/main\", \"refs/heads/develop\"]'), github.ref)", vec![]),
         ] {
-            assert_eq!(BypassableContainsConditions::insecure_contains(cond).as_slice(), confidence.as_slice());
+            assert_eq!(BypassableContainsConditions::insecure_contains(cond).as_slice(), severity.as_slice());
         }
     }
 }
