@@ -881,7 +881,7 @@ not using `pull_request_target` for auto-merge workflows.
 
 [bypassable-contains-conditions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/bypassable-contains-conditions.yml
 
-Detects conditions that use the `contains()` function in a way that make it possible to bypassing.
+Detects conditions that use the `contains()` function in a way that can be bypassed.
 
 Some workflows use `contains()` to check if a context variable is in a list of
 values (e.g., if the the `push` that triggered the job targeted a certain
@@ -907,7 +907,7 @@ the `fromJSON()` function:
 if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
 ```
 
-Alternative, it's possible to check for equality individually and combine the
+Alternatively, it's possible to check for equality individually and combine the
 results using the logical "or" operator:
 
 ```yaml
