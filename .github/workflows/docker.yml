@@ -59,7 +59,7 @@ jobs:
           images: "${{ env.ZIZMOR_IMAGE }}"
 
       - name: Login to GHCR
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v6
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v6
         if: github.repository_owner == 'woodruffw'
         with:
           registry: ghcr.io
@@ -112,7 +112,7 @@ jobs:
           merge-multiple: true
 
       - name: Login to GHCR
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v6
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v6
         if: github.repository_owner == 'woodruffw'
         with:
           registry: ghcr.io
