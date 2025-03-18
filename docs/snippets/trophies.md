@@ -548,6 +548,14 @@
         - onnx/onnx#6662
 
 
+-   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
+
+    ---
+
+    ??? example "Examples"
+        - openbao/openbao#924
+
+
 -   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource
 
     ---
@@ -819,6 +827,14 @@
 
     ??? example "Examples"
         - scikit-image/scikit-image#7662
+
+
+-   ![](https://github.com/scroll-tech.png?size=40){ width="40" loading=lazy align=left } scroll-tech
+
+    ---
+
+    ??? example "Examples"
+        - scroll-tech/go-ethereum#1146
 
 
 -   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore
