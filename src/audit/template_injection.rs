@@ -290,6 +290,7 @@ impl Audit for TemplateInjection {
                     .severity(severity)
                     .confidence(confidence)
                     .persona(persona)
+                    .add_location(step.location().invisible())
                     .add_location(step.location_with_name())
                     .add_location(
                         script_loc.clone().primary().annotated(format!(
@@ -318,6 +319,7 @@ impl Audit for TemplateInjection {
                     .severity(severity)
                     .confidence(confidence)
                     .persona(persona)
+                    .add_location(step.location().invisible())
                     .add_location(step.location_with_name())
                     .add_location(
                         script_loc.clone().primary().annotated(format!(

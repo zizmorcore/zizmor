@@ -94,9 +94,8 @@ fn build_results(findings: &[Finding]) -> Vec<SarifResult> {
 fn build_result(finding: &Finding<'_>) -> SarifResult {
     // NOTE: Safe unwrap because FindingBuilder::build ensures a primary location.
     let primary = finding
-        .locations
-        .iter()
-        .find(|l| l.symbolic.primary)
+        .visible_locations()
+        .find(|l| l.symbolic.is_primary())
         .unwrap();
 
     SarifResult::builder()
@@ -112,7 +111,9 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         .message(&primary.symbolic.annotation)
         .locations(build_locations(std::iter::once(primary)))
         .related_locations(build_locations(
-            finding.locations.iter().filter(|l| !l.symbolic.primary),
+            finding
+                .visible_locations()
+                .filter(|l| !l.symbolic.is_primary()),
         ))
         // TODO: https://github.com/psastras/sarif-rs/pull/770
         .level(
