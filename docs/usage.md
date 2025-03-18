@@ -288,9 +288,7 @@ Multiple different audits can be ignored with a single comment by
 separating each rule with a comma, e.g.
 `# zizmor: ignore[artipacked,ref-confusion]`.
 
-These comments can be placed anywhere in any span identified by a finding.
-
-For example, to ignore a single `artipacked` finding:
+To ignore a single `artipacked` finding:
 
 ```yaml title="example.yml"
 uses: actions/checkout@v3 # zizmor: ignore[artipacked]
@@ -301,6 +299,27 @@ Ignore comments can also have a trailing explanation:
 ```yaml title="example.yml"
 uses: actions/checkout@v3 # zizmor: ignore[artipacked] this is actually fine
 ```
+
+!!! important
+
+    An ignore comment can be placed anywhere in any span identified by a finding,
+    **so long** as it can be identified as a YAML comment. In particular,
+    this means that you **can't** place an ignore comment in the middle of a string
+    or a block literal. For example, the following does not work:
+
+    ```yaml title="example.yml"
+    # this is not suppressed, since the comment is actually part of the string
+    run: |
+      echo "${{ github.event.issue.title }}" # zizmor: ignore[template-injection]
+    ```
+
+    To fix this, you should place the ignore comment outside of the string,
+    e.g. directly above it:
+
+    ```yaml title="example.yml"
+    run: | # zizmor: ignore[template-injection]
+      echo "${{ github.event.issue.title }}"
+    ```
 
 ### With `zizmor.yml`
 
