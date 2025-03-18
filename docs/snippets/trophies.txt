@@ -112,6 +112,7 @@ numpy/numpy#27931
 numpy/numpy.org#797
 onnx/onnx#6661
 onnx/onnx#6662
+openbao/openbao#924
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
 orion-rs/orion#441
@@ -161,6 +162,7 @@ Saghen/blink.cmp#991
 scientific-python/repo-review#257
 scikit-build/scikit-build-core#983
 scikit-image/scikit-image#7662
+scroll-tech/go-ethereum#1146
 sigstore/cosign#3959
 sigstore/fulcio#1910
 sigstore/gitsign#602
