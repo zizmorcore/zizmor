@@ -404,9 +404,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
-      # required for workflows in private repositories
-      contents: read
-      actions: read
+      contents: read # only required for workflows in private repositories
+      actions: read # only required for workflows in private repositories
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
