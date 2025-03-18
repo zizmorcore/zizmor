@@ -13,6 +13,8 @@ of `zizmor`.
 
 * Fixed a bug where `zizmor` would over-eagerly parse invalid and
   commented-out expressions, resulting in spurious warnings (#570)
+* Fixed a bug where `zizmor` would fail to honor `# zizmor: ignore[rule]`
+  comments in unintuitive cases (#612)
 
 ### Upcoming Changes 🚧
 
