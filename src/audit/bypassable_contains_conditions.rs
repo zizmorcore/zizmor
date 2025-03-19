@@ -7,7 +7,7 @@ use crate::{
     models::JobExt,
 };
 
-const USER_CONTROLLABLE_CONTEXTS: [&str; 15] = [
+const USER_CONTROLLABLE_CONTEXTS: &[&str] = &[
     "env.GITHUB_ACTOR",
     "env.GITHUB_BASE_REF",
     "env.GITHUB_HEAD_REF",
