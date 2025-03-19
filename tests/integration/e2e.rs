@@ -169,3 +169,14 @@ fn progress_bar_tty() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn issue_612_repro() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("issue-612-repro/action.yml"))
+            .run()?
+    );
+
+    Ok(())
+}
