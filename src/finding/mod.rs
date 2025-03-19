@@ -132,12 +132,12 @@ pub(crate) enum LocationKind {
     ///
     /// This is the default location type.
     Related,
-    /// An invisible location.
+    /// A hidden location.
     ///
     /// These locations are not rendered in output formats like SARIF or
     /// the cargo-style output. Instead, they're used to provide spanning
     /// information for checking things like ignore comments.
-    Invisible,
+    Hidden,
 }
 
 /// Represents a symbolic location.
@@ -203,9 +203,9 @@ impl<'w> SymbolicLocation<'w> {
         self
     }
 
-    /// Mark the current `SymbolicLocation` as an "invisible" location.
-    pub(crate) fn invisible(mut self) -> SymbolicLocation<'w> {
-        self.kind = LocationKind::Invisible;
+    /// Mark the current `SymbolicLocation` as a "hidden" location.
+    pub(crate) fn hidden(mut self) -> SymbolicLocation<'w> {
+        self.kind = LocationKind::Hidden;
         self
     }
 
@@ -213,8 +213,8 @@ impl<'w> SymbolicLocation<'w> {
         matches!(self.kind, LocationKind::Primary)
     }
 
-    pub(crate) fn is_invisible(&self) -> bool {
-        matches!(self.kind, LocationKind::Invisible)
+    pub(crate) fn is_hidden(&self) -> bool {
+        matches!(self.kind, LocationKind::Hidden)
     }
 
     /// Concretize this `SymbolicLocation`, consuming it in the process.
@@ -436,7 +436,7 @@ impl Finding<'_> {
     }
 
     pub(crate) fn visible_locations(&self) -> impl Iterator<Item = &Location<'_>> {
-        self.locations.iter().filter(|l| !l.symbolic.is_invisible())
+        self.locations.iter().filter(|l| !l.symbolic.is_hidden())
     }
 }
 

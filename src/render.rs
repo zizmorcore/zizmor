@@ -33,8 +33,8 @@ pub(crate) fn finding_snippet<'w>(
     // by their enclosing workflow to generate each snippet correctly.
     let mut locations_by_workflow: HashMap<&InputKey, Vec<&Location<'w>>> = HashMap::new();
     for location in &finding.locations {
-        // Never include invisible locations in the output.
-        if location.symbolic.is_invisible() {
+        // Never include hidden locations in the output.
+        if location.symbolic.is_hidden() {
             continue;
         }
 
