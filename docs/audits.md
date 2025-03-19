@@ -877,7 +877,7 @@ not using `pull_request_target` for auto-merge workflows.
 
 | Type     | Examples                                       | Introduced in | Works offline | Enabled by default |
 |----------|------------------------------------------------|---------------|---------------|--------------------|
-| Workflow | [bypassable-contains-conditions.yml]           | v1.5.0        | ✅            | ✅                 |
+| Workflow | [bypassable-contains-conditions.yml]           | v1.6.0        | ✅            | ✅                 |
 
 [bypassable-contains-conditions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/bypassable-contains-conditions.yml
 
