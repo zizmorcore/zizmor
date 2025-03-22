@@ -41,6 +41,7 @@ freedomofpress/securedrop-workstation#1222
 freemocap/freemocap#659
 gaphor/gaphor#3658
 getsops/sops#1704
+GenericMappingTools/pygmt#3861
 git-lfs/git-lfs#5930
 gitbutlerapp/gitbutler#5946
 google/zx#1067
@@ -152,6 +153,7 @@ pyvista/pyvista#7006
 PyVRP/PyVRP#670
 PyO3/pyo3#4774
 quarkslab/quokka#46
+rolldown/rolldown#3861
 rubygems/rubygems.org#5350
 rust-lang/crates.io#10176
 rust-lang/rust-clippy#13933
@@ -166,6 +168,7 @@ scroll-tech/go-ethereum#1146
 sigstore/cosign#3959
 sigstore/fulcio#1910
 sigstore/gitsign#602
+sigstore/model-transparency#369
 sigstore/sigstore-rs#424
 simpeg/simpeg#1592
 termcolor/termcolor#89

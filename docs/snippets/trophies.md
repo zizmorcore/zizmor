@@ -238,6 +238,14 @@
         - gaphor/gaphor#3658
 
 
+-   ![](https://github.com/GenericMappingTools.png?size=40){ width="40" loading=lazy align=left } GenericMappingTools
+
+    ---
+
+    ??? example "Examples"
+        - GenericMappingTools/pygmt#3861
+
+
 -   ![](https://github.com/getsops.png?size=40){ width="40" loading=lazy align=left } getsops
 
     ---
@@ -770,6 +778,14 @@
         - quarkslab/quokka#46
 
 
+-   ![](https://github.com/rolldown.png?size=40){ width="40" loading=lazy align=left } rolldown
+
+    ---
+
+    ??? example "Examples"
+        - rolldown/rolldown#3861
+
+
 -   ![](https://github.com/rubygems.png?size=40){ width="40" loading=lazy align=left } rubygems
 
     ---
@@ -845,6 +861,7 @@
         - sigstore/cosign#3959
         - sigstore/fulcio#1910
         - sigstore/gitsign#602
+        - sigstore/model-transparency#369
         - sigstore/sigstore-rs#424
 
 
