@@ -47,7 +47,7 @@ pub(crate) fn build(findings: &[Finding], cwd: &Utf8Path) -> Sarif {
 
 fn build_run(findings: &[Finding], cwd: &Utf8Path) -> Run {
     let name = if cfg!(debug_assertions) {
-        "zizmor[debug]"
+        "zizmor-debug"
     } else {
         env!("CARGO_CRATE_NAME")
     };
