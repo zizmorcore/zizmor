@@ -14,6 +14,8 @@ jobs:
   test-sarif-presentation:
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'test-sarif-presentation')
+    permissions:
+      issues: write # for 'Leave comment' step
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -31,3 +33,16 @@ jobs:
         with:
           sarif_file: results.sarif
           category: zizmor-test-sarif-presentation
+
+      - name: Leave comment
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            let url = `https://github.com/woodruffw/zizmor/security/code-scanning?query=pr%3A${context.issue.number}+is%3Aopen+sort%3Acreated-desc`
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Presentation results: <${url}>`
+            })
