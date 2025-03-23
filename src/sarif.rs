@@ -46,12 +46,18 @@ pub(crate) fn build(findings: &[Finding], cwd: &Utf8Path) -> Sarif {
 }
 
 fn build_run(findings: &[Finding], cwd: &Utf8Path) -> Run {
+    let name = if cfg!(debug_assertions) {
+        "zizmor[debug]"
+    } else {
+        env!("CARGO_CRATE_NAME")
+    };
+
     Run::builder()
         .tool(
             Tool::builder()
                 .driver(
                     ToolComponent::builder()
-                        .name(env!("CARGO_CRATE_NAME"))
+                        .name(name)
                         .version(env!("CARGO_PKG_VERSION"))
                         .semantic_version(env!("CARGO_PKG_VERSION"))
                         .download_uri(env!("CARGO_PKG_REPOSITORY"))
