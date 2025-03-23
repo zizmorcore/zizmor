@@ -80,7 +80,7 @@ fn build_rules(findings: &[Finding]) -> Vec<ReportingDescriptor> {
 
 fn build_rule(finding: &Finding) -> ReportingDescriptor {
     ReportingDescriptor::builder()
-        .id(format!("zizmor/{}", finding.ident))
+        .id(finding.ident)
         .help_uri(finding.url)
         .help(
             MultiformatMessageString::builder()
@@ -103,7 +103,7 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         .unwrap();
 
     SarifResult::builder()
-        .rule_id(format!("zizmor/{}", finding.ident))
+        .rule_id(finding.ident)
         // NOTE: We use the primary location's annotation for the result's message.
         // This is conceptually incorrect since the location's annotation should
         // only be on the location itself. However, GitHub's SARIF viewer does not
