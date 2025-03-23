@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## v1.5.2
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would over-eagerly parse invalid and
