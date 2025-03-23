@@ -94,6 +94,20 @@ impl InputKey {
         }))
     }
 
+    /// Returns a path for this [`InputKey`] that's suitable for SARIF
+    /// outputs.
+    ///
+    /// This is similar to [`InputKey::presentation_path`] in terms of being
+    /// a relative path (if the input is relative), but it also strips
+    /// the prefix from local paths, if one is present.
+    ///
+    /// For example, if the user runs `zizmor .`, then an input at
+    /// `./.github/workflows/foo.yml` will be returned as `.github/workflows/foo.yml`,
+    /// rather than `./.github/workflows/foo.yml`.
+    ///
+    /// This is needed for GitHub's interpretation of SARIF, which is brittle
+    /// with absolute paths but _also_ doesn't like relative paths that
+    /// start with relative directory markers.
     pub(crate) fn sarif_path(&self) -> &str {
         match self {
             InputKey::Local(local) => local
@@ -343,7 +357,7 @@ mod tests {
     }
 
     #[test]
-    fn test_input_key_local_path() {
+    fn test_input_key_local_presentation_path() {
         let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
@@ -362,5 +376,27 @@ mod tests {
             local.presentation_path(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml"
         );
+    }
+
+    #[test]
+    fn test_input_key_local_sarif_path() {
+        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
+        assert_eq!(local.sarif_path(), "/foo/bar/baz.yml");
+
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
+        assert_eq!(local.sarif_path(), "bar/baz.yml");
+
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
+        assert_eq!(local.sarif_path(), "baz.yml");
+
+        let local = InputKey::local(
+            "/home/runner/work/repo/repo/.github/workflows/baz.yml",
+            Some("/home/runner/work/repo/repo"),
+        )
+        .unwrap();
+        assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
+
+        let local = InputKey::local("./.github/workflows/baz.yml", Some(".")).unwrap();
+        assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
     }
 }
