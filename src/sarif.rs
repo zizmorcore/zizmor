@@ -166,7 +166,7 @@ fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec
                     PhysicalLocation::builder()
                         .artifact_location(
                             ArtifactLocation::builder()
-                                .uri_base_id("%SRCROOT%")
+                                // .uri_base_id("%SRCROOT%")
                                 .uri(location.symbolic.key.presentation_path())
                                 .build(),
                         )
