@@ -94,6 +94,13 @@ impl InputKey {
         }))
     }
 
+    pub(crate) fn sarif_path(&self) -> String {
+        match self {
+            InputKey::Local(local) => local.given_path.canonicalize_utf8().unwrap().into(),
+            InputKey::Remote(_) => todo!(),
+        }
+    }
+
     /// Return a "presentation" path for this [`InputKey`].
     ///
     /// This will always be a relative path for remote keys,
