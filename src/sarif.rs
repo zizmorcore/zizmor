@@ -70,7 +70,7 @@ fn build_run(findings: &[Finding], cwd: &Utf8Path) -> Run {
             // we include the `$CWD` as `invocations[0].working_directory.uri`,
             // which should make GitHub's viewer process relative paths
             // as if they were absolute.
-            .working_directory(ArtifactLocation::builder().uri(cwd).build())
+            .working_directory(ArtifactLocation::builder().uri(cwd.as_str()).build())
             .build()])
         .build()
 }
