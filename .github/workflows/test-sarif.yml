@@ -1,0 +1,48 @@
+name: Test SARIF Presentation
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+
+permissions: {}
+
+jobs:
+  test-sarif-presentation:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'test-sarif-presentation')
+    permissions:
+      pull-requests: write # for 'Leave comment' step
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - uses: Swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3 # v2
+
+      - name: Run zizmor
+        run: |
+          cargo run -- --format sarif . > results.sarif
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@6bb031afdd8eb862ea3fc1848194185e076637e5 # v3.28.11
+        with:
+          sarif_file: results.sarif
+          category: zizmor-test-sarif-presentation
+
+      - name: Leave comment
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            let url = `https://github.com/woodruffw/zizmor/security/code-scanning?query=pr%3A${context.issue.number}+is%3Aopen+sort%3Acreated-desc`
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `:robot: Presentation results: <${url}>`
+            })

@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 
 use serde_sarif::sarif::{
-    ArtifactContent, ArtifactLocation, Location as SarifLocation, LogicalLocation, Message,
-    MultiformatMessageString, PhysicalLocation, PropertyBag, Region, ReportingDescriptor,
+    ArtifactContent, ArtifactLocation, Invocation, Location as SarifLocation, LogicalLocation,
+    Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region, ReportingDescriptor,
     Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, Tool, ToolComponent,
 };
 
@@ -61,6 +61,10 @@ fn build_run(findings: &[Finding]) -> Run {
                 .build(),
         )
         .results(build_results(findings))
+        .invocations([Invocation::builder()
+            // We only produce results on successful executions.
+            .execution_successful(true)
+            .build()])
         .build()
 }
 
@@ -94,9 +98,8 @@ fn build_results(findings: &[Finding]) -> Vec<SarifResult> {
 fn build_result(finding: &Finding<'_>) -> SarifResult {
     // NOTE: Safe unwrap because FindingBuilder::build ensures a primary location.
     let primary = finding
-        .locations
-        .iter()
-        .find(|l| l.symbolic.primary)
+        .visible_locations()
+        .find(|l| l.symbolic.is_primary())
         .unwrap();
 
     SarifResult::builder()
@@ -112,7 +115,9 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         .message(&primary.symbolic.annotation)
         .locations(build_locations(std::iter::once(primary)))
         .related_locations(build_locations(
-            finding.locations.iter().filter(|l| !l.symbolic.primary),
+            finding
+                .visible_locations()
+                .filter(|l| !l.symbolic.is_primary()),
         ))
         // TODO: https://github.com/psastras/sarif-rs/pull/770
         .level(
@@ -144,8 +149,7 @@ fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec
                     PhysicalLocation::builder()
                         .artifact_location(
                             ArtifactLocation::builder()
-                                .uri_base_id("%SRCROOT%")
-                                .uri(location.symbolic.key.presentation_path())
+                                .uri(location.symbolic.key.sarif_path())
                                 .build(),
                         )
                         .region(

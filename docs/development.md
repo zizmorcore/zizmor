@@ -291,6 +291,27 @@ The general procedure for adding a new audit can be described as:
   information about the underlying vulnerability
 - Open your Pull Request!
 
+#### Adding locations to an audit
+
+Locations can be added to a finding via the `FindingBuilder::add_location`
+method. Locations have a few different flavors that can be used in
+different situations:
+
+* "Primary" locations are subjectively the most important locations
+  for a finding. In general, a finding should have exactly one primary location.
+* "Related" locations are additional locations that are related to the
+  finding, but not as important as the primary location. A finding can
+  have multiple related locations.
+* "Hidden" locations are used to mark a span as relevant to a finding,
+  but are not shown in outputs like SARIF or the cargo-style "plain"
+  output. These are useful marking spans as included in a finding e.g.
+  so that `# zizmor: ignore` works in intuitive places.
+
+In general, audit authors shouldn't need hidden locations at all.
+They're only needed in specific cases where a finding's locations result
+in "gaps" in the finding's spans, resulting in ignore comments not
+working as expected.
+
 ### Changing an existing audit
 
 The general procedure for changing an existing audit is:

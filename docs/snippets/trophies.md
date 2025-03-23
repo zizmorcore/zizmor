@@ -238,6 +238,14 @@
         - gaphor/gaphor#3658
 
 
+-   ![](https://github.com/GenericMappingTools.png?size=40){ width="40" loading=lazy align=left } GenericMappingTools
+
+    ---
+
+    ??? example "Examples"
+        - GenericMappingTools/pygmt#3861
+
+
 -   ![](https://github.com/getsops.png?size=40){ width="40" loading=lazy align=left } getsops
 
     ---
@@ -548,6 +556,14 @@
         - onnx/onnx#6662
 
 
+-   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
+
+    ---
+
+    ??? example "Examples"
+        - openbao/openbao#924
+
+
 -   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource
 
     ---
@@ -762,6 +778,14 @@
         - quarkslab/quokka#46
 
 
+-   ![](https://github.com/rolldown.png?size=40){ width="40" loading=lazy align=left } rolldown
+
+    ---
+
+    ??? example "Examples"
+        - rolldown/rolldown#3861
+
+
 -   ![](https://github.com/rubygems.png?size=40){ width="40" loading=lazy align=left } rubygems
 
     ---
@@ -821,6 +845,14 @@
         - scikit-image/scikit-image#7662
 
 
+-   ![](https://github.com/scroll-tech.png?size=40){ width="40" loading=lazy align=left } scroll-tech
+
+    ---
+
+    ??? example "Examples"
+        - scroll-tech/go-ethereum#1146
+
+
 -   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore
 
     ---
@@ -829,6 +861,7 @@
         - sigstore/cosign#3959
         - sigstore/fulcio#1910
         - sigstore/gitsign#602
+        - sigstore/model-transparency#369
         - sigstore/sigstore-rs#424
 
 
