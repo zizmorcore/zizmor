@@ -94,10 +94,15 @@ impl InputKey {
         }))
     }
 
-    pub(crate) fn sarif_path(&self) -> String {
+    pub(crate) fn sarif_path(&self) -> &str {
         match self {
-            InputKey::Local(local) => local.given_path.canonicalize_utf8().unwrap().into(),
-            InputKey::Remote(_) => todo!(),
+            InputKey::Local(local) => local
+                .prefix
+                .as_ref()
+                .and_then(|pfx| local.given_path.strip_prefix(pfx).ok())
+                .unwrap_or_else(|| &local.given_path)
+                .as_str(),
+            InputKey::Remote(remote) => remote.path.as_str(),
         }
     }
 

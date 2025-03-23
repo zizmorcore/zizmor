@@ -61,10 +61,6 @@ fn build_run(findings: &[Finding], cwd: &Utf8Path) -> Run {
                 )
                 .build(),
         )
-        // .original_uri_base_ids([(
-        //     "SRCROOT".into(),
-        //     ArtifactLocation::builder().uri(cwd.as_str()).build(),
-        // )])
         .results(build_results(findings))
         .invocations([Invocation::builder()
             // We only produce results on successful executions.
@@ -164,7 +160,6 @@ fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec
                     PhysicalLocation::builder()
                         .artifact_location(
                             ArtifactLocation::builder()
-                                .uri_base_id("%SRCROOT%")
                                 .uri(location.symbolic.key.sarif_path())
                                 .build(),
                         )
