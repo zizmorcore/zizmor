@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'test-sarif-presentation')
     permissions:
-      issues: write # for 'Leave comment' step
+      pull-requests: write # for 'Leave comment' step
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
