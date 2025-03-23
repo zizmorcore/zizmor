@@ -15,6 +15,8 @@ of `zizmor`.
   commented-out expressions, resulting in spurious warnings (#570)
 * Fixed a bug where `zizmor` would fail to honor `# zizmor: ignore[rule]`
   comments in unintuitive cases (#612)
+* Fixed a regression in `zizmor`'s SARIF output format that caused suboptimal
+  presentation of findings on GitHub (#621)
 
 ### Upcoming Changes 🚧
 
