@@ -61,6 +61,10 @@ fn build_run(findings: &[Finding], cwd: &Utf8Path) -> Run {
                 )
                 .build(),
         )
+        // .original_uri_base_ids([(
+        //     "SRCROOT".into(),
+        //     ArtifactLocation::builder().uri(cwd.as_str()).build(),
+        // )])
         .results(build_results(findings))
         .invocations([Invocation::builder()
             // We only produce results on successful executions.
@@ -87,7 +91,7 @@ fn build_rules(findings: &[Finding]) -> Vec<ReportingDescriptor> {
 
 fn build_rule(finding: &Finding) -> ReportingDescriptor {
     ReportingDescriptor::builder()
-        .id(finding.ident)
+        .id(format!("zizmor/{}", finding.ident))
         .help_uri(finding.url)
         .help(
             MultiformatMessageString::builder()
