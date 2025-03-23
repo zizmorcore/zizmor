@@ -114,7 +114,7 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         .unwrap();
 
     SarifResult::builder()
-        .rule_id(finding.ident)
+        .rule_id(format!("zizmor/{}", finding.ident))
         // NOTE: We use the primary location's annotation for the result's message.
         // This is conceptually incorrect since the location's annotation should
         // only be on the location itself. However, GitHub's SARIF viewer does not
