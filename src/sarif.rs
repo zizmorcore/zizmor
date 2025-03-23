@@ -2,7 +2,6 @@
 
 use std::collections::HashSet;
 
-use camino::Utf8Path;
 use serde_sarif::sarif::{
     ArtifactContent, ArtifactLocation, Invocation, Location as SarifLocation, LogicalLocation,
     Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region, ReportingDescriptor,
@@ -37,15 +36,15 @@ impl From<Severity> for ResultLevel {
     }
 }
 
-pub(crate) fn build(findings: &[Finding], cwd: &Utf8Path) -> Sarif {
+pub(crate) fn build(findings: &[Finding]) -> Sarif {
     Sarif::builder()
         .version("2.1.0")
         .schema("https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json")
-        .runs([build_run(findings, cwd)])
+        .runs([build_run(findings)])
         .build()
 }
 
-fn build_run(findings: &[Finding], cwd: &Utf8Path) -> Run {
+fn build_run(findings: &[Finding]) -> Run {
     Run::builder()
         .tool(
             Tool::builder()
@@ -65,16 +64,6 @@ fn build_run(findings: &[Finding], cwd: &Utf8Path) -> Run {
         .invocations([Invocation::builder()
             // We only produce results on successful executions.
             .execution_successful(true)
-            // HACK(ww): GitHub's SARIF feature doesn't handle relative paths
-            // that are prefixed with `./` correctly. To work around this,
-            // we include the `$CWD` as `invocations[0].working_directory.uri`,
-            // which should make GitHub's viewer process relative paths
-            // as if they were absolute.
-            .working_directory(
-                ArtifactLocation::builder()
-                    .uri(format!("file://{cwd}"))
-                    .build(),
-            )
             .build()])
         .build()
 }
