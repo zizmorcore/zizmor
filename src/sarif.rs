@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 
 use serde_sarif::sarif::{
-    ArtifactContent, ArtifactLocation, Location as SarifLocation, LogicalLocation, Message,
-    MultiformatMessageString, PhysicalLocation, PropertyBag, Region, ReportingDescriptor,
+    ArtifactContent, ArtifactLocation, Invocation, Location as SarifLocation, LogicalLocation,
+    Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region, ReportingDescriptor,
     Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, Tool, ToolComponent,
 };
 
@@ -61,6 +61,10 @@ fn build_run(findings: &[Finding]) -> Run {
                 .build(),
         )
         .results(build_results(findings))
+        .invocations([Invocation::builder()
+            // We only produce results on successful executions.
+            .execution_successful(true)
+            .build()])
         .build()
 }
 
@@ -145,8 +149,7 @@ fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec
                     PhysicalLocation::builder()
                         .artifact_location(
                             ArtifactLocation::builder()
-                                .uri_base_id("%SRCROOT%")
-                                .uri(location.symbolic.key.presentation_path())
+                                .uri(location.symbolic.key.sarif_path())
                                 .build(),
                         )
                         .region(
