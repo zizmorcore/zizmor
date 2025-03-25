@@ -95,7 +95,7 @@ fn build_rule(finding: &Finding) -> ReportingDescriptor {
                 // NOTE: This is a dummy value; each result will have its own severity.
                 // This is needed to ensure that GitHub properly renders results
                 // as "security" findings.
-                .additional_properties([("security-severity".into(), json!(1.0))])
+                .additional_properties([("security-severity".into(), json!("1.0"))])
                 .build(),
         )
         .build()
