@@ -40,13 +40,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
+        uses: PyO3/maturin-action@22fe573c6ed0c03ab9b84e631cbfa49bddf6e20e # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
           manylinux: ${{ matrix.platform.manylinux }}
       - name: Upload wheels
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
@@ -69,13 +69,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
+        uses: PyO3/maturin-action@22fe573c6ed0c03ab9b84e631cbfa49bddf6e20e # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
           manylinux: musllinux_1_2
       - name: Upload wheels
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
@@ -94,12 +94,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
+        uses: PyO3/maturin-action@22fe573c6ed0c03ab9b84e631cbfa49bddf6e20e # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
       - name: Upload wheels
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
@@ -120,12 +120,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
+        uses: PyO3/maturin-action@22fe573c6ed0c03ab9b84e631cbfa49bddf6e20e # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
       - name: Upload wheels
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
@@ -137,12 +137,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Build sdist
-        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
+        uses: PyO3/maturin-action@22fe573c6ed0c03ab9b84e631cbfa49bddf6e20e # v1
         with:
           command: sdist
           args: --out dist
       - name: Upload sdist
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: wheels-sdist
           path: dist
@@ -163,14 +163,14 @@ jobs:
       # Used to generate artifact attestation
       attestations: write
     steps:
-      - uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
+      - uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@c074443f1aee8d4aeeae555aebba3282517141b2 # v2
         with:
           subject-path: 'wheels-*/*'
       - name: Publish to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: PyO3/maturin-action@36db84001d74475ad1b8e6613557ae4ee2dc3598 # v1
+        uses: PyO3/maturin-action@22fe573c6ed0c03ab9b84e631cbfa49bddf6e20e # v1
         with:
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
