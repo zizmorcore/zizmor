@@ -50,6 +50,7 @@ guacsec/guac#2276
 GreptimeTeam/greptimedb#5491
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 hellux/jotdown#76
+h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
 Homebrew/actions#630
 Homebrew/actions#631
 Homebrew/brew#18662
