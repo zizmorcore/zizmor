@@ -2,7 +2,6 @@
 
 use std::collections::HashSet;
 
-use serde_json::json;
 use serde_sarif::sarif::{
     ArtifactContent, ArtifactLocation, Invocation, Location as SarifLocation, LogicalLocation,
     Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region, ReportingDescriptor,
@@ -89,15 +88,7 @@ fn build_rule(finding: &Finding) -> ReportingDescriptor {
                 .markdown(finding.to_markdown())
                 .build(),
         )
-        .properties(
-            PropertyBag::builder()
-                .tags(["security".into()])
-                // NOTE: This is a dummy value; each result will have its own severity.
-                // This is needed to ensure that GitHub properly renders results
-                // as "security" findings.
-                .additional_properties([("security-severity".into(), json!("1.0"))])
-                .build(),
-        )
+        .properties(PropertyBag::builder().tags(["security".into()]).build())
         .build()
 }
 
