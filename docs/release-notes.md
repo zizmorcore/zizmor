@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Improvements 🌱
+
+* The SARIF output format now marks each rule as a "security" rule,
+  which helps GitHub's presentation of the results (#631)
+
 ## v1.5.2
 
 ### Bug Fixes 🐛
