@@ -62,4 +62,6 @@ jobs:
 
       - name: Run zizmor
         run: |
-          cargo run -- --format github .
+          # Normally we'd want a workflow to fail if the audit fails,
+          # but we're only testing presentation here.
+          cargo run -- --no-exit-codes --format github .
