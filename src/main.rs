@@ -80,7 +80,7 @@ struct App {
     #[arg(long)]
     no_progress: bool,
 
-    /// The output format to emit. By default, plain text will be emitted
+    /// The output format to emit. By default, cargo-style diagnostics will be emitted.
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
 
@@ -136,10 +136,14 @@ struct App {
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
 pub(crate) enum OutputFormat {
+    /// cargo-style output.
     #[default]
     Plain,
+    /// JSON-formatted output.
     Json,
+    /// SARIF-formatted output.
     Sarif,
+    /// GitHub Actions workflow command-formatted output.
     Github,
 }
 
