@@ -538,7 +538,7 @@ fn run() -> Result<ExitCode> {
         OutputFormat::Sarif => {
             serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))?
         }
-        OutputFormat::Github => output::github::output(stdout(), &results.findings())?,
+        OutputFormat::Github => output::github::output(stdout(), results.findings())?,
     };
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {

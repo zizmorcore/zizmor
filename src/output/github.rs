@@ -30,8 +30,8 @@ impl Finding<'_> {
             .unwrap();
 
         let filename = primary.symbolic.key.sarif_path();
-        let start_line = primary.concrete.location.start_point.row;
-        let end_line = primary.concrete.location.end_point.row;
+        let start_line = primary.concrete.location.start_point.row + 1;
+        let end_line = primary.concrete.location.end_point.row + 1;
         let title = self.ident;
         let message = self.desc;
 
