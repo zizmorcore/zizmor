@@ -236,14 +236,14 @@ mod tests {
 
         {
             let (raw, expected) = &(
-            multiple,
-            [
-                "${{ github.workspace }}",
-                "${{ matrix.PYTHON.OPENSSL.TYPE }}",
-                "${{ matrix.PYTHON.OPENSSL.VERSION }}",
-            ]
-            .as_slice(),
-        );
+                multiple,
+                [
+                    "${{ github.workspace }}",
+                    "${{ matrix.PYTHON.OPENSSL.TYPE }}",
+                    "${{ matrix.PYTHON.OPENSSL.VERSION }}",
+                ]
+                .as_slice(),
+            );
             let exprs = extract_expressions(raw)
                 .into_iter()
                 .map(|(e, _)| e.as_curly().to_string())
