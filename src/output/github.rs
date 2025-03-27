@@ -29,7 +29,7 @@ impl Finding<'_> {
             .find(|l| l.symbolic.is_primary())
             .unwrap();
 
-        let filename = primary.symbolic.key.presentation_path();
+        let filename = primary.symbolic.key.sarif_path();
         let start_line = primary.concrete.location.start_point.row;
         let end_line = primary.concrete.location.end_point.row;
         let title = self.ident;
