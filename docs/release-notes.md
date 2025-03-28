@@ -14,6 +14,11 @@ of `zizmor`.
 * The SARIF output format now marks each rule as a "security" rule,
   which helps GitHub's presentation of the results (#631)
 
+### Bug Fixes 🐛
+
+* The [template-injection] audit no longer considers
+  `github.event.pull_request.head.sha` dangerous (#636)
+
 ## v1.5.2
 
 ### Bug Fixes 🐛
