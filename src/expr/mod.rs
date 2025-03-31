@@ -200,6 +200,9 @@ impl<'src> Expr<'src> {
 
         match self {
             Expr::Call { func, args } => {
+                // These functions, when evaluated, produce an evaluation
+                // that includes some or all of the contexts listed in
+                // their arguments.
                 if func == "toJSON" || func == "format" || func == "join" {
                     for arg in args {
                         contexts.extend(arg.expanded_contexts());
@@ -214,9 +217,12 @@ impl<'src> Expr<'src> {
             // to the contents of `something.foo`.
             Expr::Context(ctx) => contexts.push(ctx),
             Expr::BinOp { lhs, op, rhs } => match op {
+                // With && only the RHS can flow into the evaluation as a context
+                // (rather than a boolean).
                 BinOp::And => {
                     contexts.extend(rhs.expanded_contexts());
                 }
+                // With || either the LHS or RHS can flow into the evaluation as a context.
                 BinOp::Or => {
                     contexts.extend(lhs.expanded_contexts());
                     contexts.extend(rhs.expanded_contexts());
