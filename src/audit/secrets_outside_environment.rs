@@ -50,6 +50,7 @@ impl Audit for SecretsOutsideEnvironment {
                                 working_directory: _,
                             } => match env {
                                 LoE::Expr(_) => {
+                                    // TODO: Implement this.
                                     panic!("We don't handle Expr yet!")
                                 }
                                 LoE::Literal(env) => eenv = env,
