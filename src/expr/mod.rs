@@ -237,47 +237,6 @@ impl<'src> Expr<'src> {
         contexts
     }
 
-    /// Returns all of the contexts used in this expression, regardless
-    /// of dataflow.
-    ///
-    /// **IMPORTANT**: This only returns "well-known" contexts, i.e. ones
-    /// that are defined at the top level. In other words, if an expression
-    /// contains both `foo.bar` and `foo().bar`, only the former will be
-    /// returned, as `foo()` can be anything and thus the `bar` access against
-    /// it has no particular meaning.
-    pub(crate) fn contexts(&self) -> Vec<&Context> {
-        let mut contexts = vec![];
-
-        match self {
-            Expr::Call { func: _, args } => {
-                for arg in args {
-                    contexts.extend(arg.contexts());
-                }
-            }
-            Expr::Index(expr) => contexts.extend(expr.contexts()),
-            Expr::Context(ctx) => {
-                if matches!(ctx.components[0], Expr::Call { .. }) {
-                    // If the context looks something like `foo(args).a.b.c`, then
-                    // we need to check each of `args` for contexts but skip
-                    // the trailing identifiers, since those aren't well-known.
-                    contexts.extend(ctx.components[0].contexts());
-                } else {
-                    // Otherwise, if the context looks like a normal context,
-                    // we include it in its entirety.
-                    contexts.push(ctx)
-                }
-            }
-            Expr::BinOp { lhs, op: _, rhs } => {
-                contexts.extend(lhs.contexts());
-                contexts.extend(rhs.contexts());
-            }
-            Expr::UnOp { op: _, expr } => contexts.extend(expr.contexts()),
-            _ => (),
-        }
-
-        contexts
-    }
-
     pub(crate) fn parse(expr: &str) -> Result<Expr> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?
@@ -756,17 +715,38 @@ mod tests {
         }
     }
 
+    // #[test]
+    // fn test_expr_contexts() -> Result<()> {
+    //     let expr = Expr::parse(
+    //         "foo.bar && abc && d.e.f && andThis(should.work).except.this && but().not.this",
+    //     )?;
+
+    //     assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f", "should.work"]);
+
+    //     let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id")?;
+
+    //     assert_eq!(expr.contexts(), ["steps.runs.outputs.data"]);
+
+    //     Ok(())
+    // }
+
     #[test]
-    fn test_expr_contexts() -> Result<()> {
-        let expr = Expr::parse(
-            "foo.bar && abc && d.e.f && andThis(should.work).except.this && but().not.this",
-        )?;
+    fn test_expr_expanded_contexts() -> Result<()> {
+        // Trivial case.
+        let expr = Expr::parse("foo.bar")?;
+        assert_eq!(expr.expanded_contexts(), ["foo.bar"]);
 
-        assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f", "should.work"]);
+        // || case.
+        let expr = Expr::parse("foo.bar || abc || d.e.f")?;
+        assert_eq!(expr.expanded_contexts(), ["foo.bar", "abc", "d.e.f"]);
 
-        let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id")?;
+        let expr = Expr::parse("foo.bar == 'bar' && foo.baz || 'false'")?;
+        assert_eq!(expr.expanded_contexts(), ["foo.baz"]);
 
-        assert_eq!(expr.contexts(), ["steps.runs.outputs.data"]);
+        // No expanded contexts with && expressions, since the evaluation
+        // is a boolean.
+        let expr = Expr::parse("foo.bar && abc && d.e.f")?;
+        assert!(expr.expanded_contexts().is_empty());
 
         Ok(())
     }
