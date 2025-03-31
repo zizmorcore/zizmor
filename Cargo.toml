@@ -25,7 +25,7 @@ annotate-snippets = "0.11.5"
 anstream = "0.6.18"
 anyhow = "1.0.97"
 camino = { version = "1.1.9", features = ["serde1"] }
-clap = { version = "4.5.32", features = ["derive", "env"] }
+clap = { version = "4.5.34", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
@@ -40,8 +40,8 @@ indicatif = "0.17.11"
 itertools = "0.14.0"
 line-index = "0.1.2"
 owo-colors = "4.2.0"
-pest = "2.7.15"
-pest_derive = "2.7.15"
+pest = "2.8.0"
+pest_derive = "2.8.0"
 regex = "1.11.1"
 reqwest = { version = "0.12.15", features = [
     "blocking",
