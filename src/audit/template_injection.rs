@@ -187,7 +187,7 @@ impl TemplateInjection {
                 continue;
             }
 
-            for context in parsed.contexts() {
+            for context in parsed.expanded_contexts() {
                 if context.child_of("secrets") {
                     // While not ideal, secret expansion is typically not exploitable.
                     continue;

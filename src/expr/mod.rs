@@ -217,9 +217,20 @@ impl<'src> Expr<'src> {
                 | Function("hashFiles") => (),
                 _ => todo!(),
             },
-            Expr::Context(ctx) => todo!(),
-            Expr::BinOp { lhs, op, rhs } => todo!(),
-            Expr::UnOp { op, expr } => todo!(),
+            // NOTE: We intentionally don't handle the `func(...).foo.bar`
+            // case differently here, since a call followed by a
+            // context access *can* flow into the evaluation.
+            // For example, `${{ fromJSON(something) }}` evaluates to
+            // `Object` but `${{ fromJSON(something).foo }}` evaluates
+            // to the contents of `something.foo`.
+            Expr::Context(ctx) => contexts.push(ctx),
+            Expr::BinOp { lhs, op, rhs } => match op {
+                BinOp::Or => {
+                    contexts.extend(lhs.expanded_contexts());
+                    contexts.extend(rhs.expanded_contexts());
+                }
+                _ => (),
+            },
             _ => (),
         }
 
@@ -746,16 +757,17 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_contexts() {
+    fn test_expr_contexts() -> Result<()> {
         let expr = Expr::parse(
             "foo.bar && abc && d.e.f && andThis(should.work).except.this && but().not.this",
-        )
-        .unwrap();
+        )?;
 
         assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f", "should.work"]);
 
-        let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id").unwrap();
+        let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id")?;
 
-        assert_eq!(expr.contexts(), ["steps.runs.outputs.data"])
+        assert_eq!(expr.contexts(), ["steps.runs.outputs.data"]);
+
+        Ok(())
     }
 }
