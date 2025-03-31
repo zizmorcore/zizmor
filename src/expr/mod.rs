@@ -199,24 +199,13 @@ impl<'src> Expr<'src> {
         let mut contexts = vec![];
 
         match self {
-            Expr::Call { func, args } => match func {
-                // These functions evaluate to a value that contains some controllable
-                // variant of any context passed to them.
-                Function("toJSON") | Function("format") | Function("join") => {
+            Expr::Call { func, args } => {
+                if func == "toJSON" || func == "format" || func == "join" {
                     for arg in args {
                         contexts.extend(arg.expanded_contexts());
                     }
                 }
-                // These functions evaluate to a boolean or some other
-                // value that destroys the structure of any context passed
-                // to them.
-                Function("contains")
-                | Function("startsWith")
-                | Function("endsWith")
-                | Function("fromJSON")
-                | Function("hashFiles") => (),
-                _ => todo!(),
-            },
+            }
             // NOTE: We intentionally don't handle the `func(...).foo.bar`
             // case differently here, since a call followed by a
             // context access *can* flow into the evaluation.
@@ -225,6 +214,9 @@ impl<'src> Expr<'src> {
             // to the contents of `something.foo`.
             Expr::Context(ctx) => contexts.push(ctx),
             Expr::BinOp { lhs, op, rhs } => match op {
+                BinOp::And => {
+                    contexts.extend(rhs.expanded_contexts());
+                }
                 BinOp::Or => {
                     contexts.extend(lhs.expanded_contexts());
                     contexts.extend(rhs.expanded_contexts());
@@ -414,11 +406,21 @@ mod tests {
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
+    use super::{BinOp, Context, Expr, ExprParser, Function, Rule, UnOp};
+
+    #[test]
+    fn test_function_eq() {
+        let func = Function("foo");
+        assert_eq!(&func, "foo");
+        assert_eq!(&func, "FOO");
+        assert_eq!(&func, "Foo");
+
+        assert_eq!(func, Function("FOO"));
+    }
 
     #[test]
     fn test_context_eq() {
-        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+        let ctx = Context::try_from("foo.bar.baz").unwrap();
         assert_eq!(&ctx, "foo.bar.baz");
         assert_eq!(&ctx, "FOO.BAR.BAZ");
         assert_eq!(&ctx, "Foo.Bar.Baz");
@@ -426,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_context_child_of() {
-        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+        let ctx = Context::try_from("foo.bar.baz").unwrap();
 
         for (case, child) in &[
             // Trivial child cases.
@@ -455,7 +457,7 @@ mod tests {
 
     #[test]
     fn test_context_pop_if() {
-        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+        let ctx = Context::try_from("foo.bar.baz").unwrap();
 
         for (case, expected) in &[
             ("foo", Some("bar.baz")),
@@ -715,38 +717,34 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn test_expr_contexts() -> Result<()> {
-    //     let expr = Expr::parse(
-    //         "foo.bar && abc && d.e.f && andThis(should.work).except.this && but().not.this",
-    //     )?;
-
-    //     assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f", "should.work"]);
-
-    //     let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id")?;
-
-    //     assert_eq!(expr.contexts(), ["steps.runs.outputs.data"]);
-
-    //     Ok(())
-    // }
-
     #[test]
     fn test_expr_expanded_contexts() -> Result<()> {
         // Trivial case.
         let expr = Expr::parse("foo.bar")?;
         assert_eq!(expr.expanded_contexts(), ["foo.bar"]);
 
-        // || case.
+        // ||: all contexts potentially expand into the evaluation.
         let expr = Expr::parse("foo.bar || abc || d.e.f")?;
         assert_eq!(expr.expanded_contexts(), ["foo.bar", "abc", "d.e.f"]);
 
-        let expr = Expr::parse("foo.bar == 'bar' && foo.baz || 'false'")?;
-        assert_eq!(expr.expanded_contexts(), ["foo.baz"]);
-
-        // No expanded contexts with && expressions, since the evaluation
-        // is a boolean.
+        // &&: only the RHS context(s) expand into the evaluation.
         let expr = Expr::parse("foo.bar && abc && d.e.f")?;
-        assert!(expr.expanded_contexts().is_empty());
+        assert_eq!(expr.expanded_contexts(), ["d.e.f"]);
+
+        let expr = Expr::parse("foo.bar == 'bar' && foo.bar || 'false'")?;
+        assert_eq!(expr.expanded_contexts(), ["foo.bar"]);
+
+        let expr = Expr::parse("foo.bar == 'bar' && foo.bar || foo.baz")?;
+        assert_eq!(expr.expanded_contexts(), ["foo.bar", "foo.baz"]);
+
+        let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id")?;
+        assert_eq!(
+            expr.expanded_contexts(),
+            ["fromJson(steps.runs.outputs.data).workflow_runs[0].id"]
+        );
+
+        let expr = Expr::parse("format('{0} {1} {2}', foo.bar, tojson(github), toJSON(github))")?;
+        assert_eq!(expr.expanded_contexts(), ["foo.bar", "github", "github"]);
 
         Ok(())
     }
