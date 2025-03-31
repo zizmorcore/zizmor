@@ -94,6 +94,20 @@ impl PartialEq<str> for Context<'_> {
 }
 
 #[derive(Debug)]
+pub(crate) struct Function<'src>(pub(crate) &'src str);
+
+impl PartialEq for Function<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq_ignore_ascii_case(other.0)
+    }
+}
+impl PartialEq<str> for Function<'_> {
+    fn eq(&self, other: &str) -> bool {
+        self.0.eq_ignore_ascii_case(other)
+    }
+}
+
+#[derive(Debug)]
 pub(crate) struct Identifier<'src>(&'src str);
 
 impl PartialEq for Identifier<'_> {
@@ -140,7 +154,7 @@ pub(crate) enum Expr<'src> {
     Star,
     /// A function call.
     Call {
-        func: &'src str,
+        func: Function<'src>,
         args: Vec<Expr<'src>>,
     },
     /// A context identifier component, e.g. `github` in `github.actor`.
@@ -171,6 +185,45 @@ impl<'src> Expr<'src> {
 
     pub(crate) fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
         Self::Context(Context::new(r, components))
+    }
+
+    /// Returns the contexts in this expression that directly flow into the
+    /// expression's evaluation.
+    ///
+    /// For example `${{ foo.bar }}` returns `foo.bar` since the value
+    /// of `foo.bar` flows into the evaluation. On the other hand,
+    /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
+    /// since the value of `foo.bar` flows into a boolean evaluation
+    /// that gets expanded.
+    pub(crate) fn expanded_contexts(&self) -> Vec<&Context> {
+        let mut contexts = vec![];
+
+        match self {
+            Expr::Call { func, args } => match func {
+                // These functions evaluate to a value that contains some controllable
+                // variant of any context passed to them.
+                Function("toJSON") | Function("format") | Function("join") => {
+                    for arg in args {
+                        contexts.extend(arg.expanded_contexts());
+                    }
+                }
+                // These functions evaluate to a boolean or some other
+                // value that destroys the structure of any context passed
+                // to them.
+                Function("contains")
+                | Function("startsWith")
+                | Function("endsWith")
+                | Function("fromJSON")
+                | Function("hashFiles") => (),
+                _ => todo!(),
+            },
+            Expr::Context(ctx) => todo!(),
+            Expr::BinOp { lhs, op, rhs } => todo!(),
+            Expr::UnOp { op, expr } => todo!(),
+            _ => (),
+        }
+
+        contexts
     }
 
     /// Returns all of the contexts used in this expression, regardless
@@ -351,7 +404,7 @@ impl<'src> Expr<'src> {
                         .collect::<Result<_, _>>()?;
 
                     Ok(Expr::Call {
-                        func: identifier.as_str(),
+                        func: Function(identifier.as_str()),
                         args,
                     }
                     .into())
@@ -391,7 +444,7 @@ mod tests {
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use super::{BinOp, Expr, ExprParser, Rule, UnOp};
+    use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
     #[test]
     fn test_context_eq() {
@@ -585,7 +638,7 @@ mod tests {
             (
                 "foo(1, 2, 3)",
                 Expr::Call {
-                    func: "foo",
+                    func: Function("foo"),
                     args: vec![Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)],
                 },
             ),
