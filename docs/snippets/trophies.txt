@@ -34,6 +34,7 @@ earthobservations/wetterdienst#1440
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
+fatiando/harmonica#550
 foyer-rs/foyer#859
 fpgmaas/deptry#972
 freeCodeCamp/devdocs#2386
@@ -98,6 +99,7 @@ maxmind/mmdbwriter#104
 maxmind/GeoIP2-node#1387
 MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
+microsoft/linux-package-repositories#208
 mkuf/prind#183
 mne-tools/mne-python#13011
 MoarVM/MoarVM#1875
@@ -172,6 +174,7 @@ sigstore/gitsign#602
 sigstore/model-transparency#369
 sigstore/sigstore-rs#424
 simpeg/simpeg#1592
+TecharoHQ/anubis#188
 termcolor/termcolor#89
 termux/termux-packages#22519
 theupdateframework/python-tuf#2798
@@ -189,5 +192,6 @@ vlang/v#22681
 wagtail/wagtail-localize#843
 wntrblm/nox#925
 zcash/librustzcash#1679
+ZcashFoundation/zebra#9110
 zkonduit/ezkl#907
 zkonduit/ezkl#906
