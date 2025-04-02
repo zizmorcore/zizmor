@@ -13,6 +13,9 @@ of `zizmor`.
 
 * The SARIF output format now marks each rule as a "security" rule,
   which helps GitHub's presentation of the results (#631)
+* The [template-injection] audit is now performs dataflow analysis
+  to determine whether contexts actually expand in an unsafe manner,
+  making it significantly more accurate (#640)
 
 ### Bug Fixes 🐛
 
