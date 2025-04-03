@@ -64,30 +64,12 @@ impl ActionCoordinate {
         }
 
         match self {
-            ActionCoordinate::Configurable { uses: _, control } => {
-                match control.eval(with) {
-                    ControlStatus::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
-                    ControlStatus::Satisfied => Some(Usage::DirectOptIn),
-                    ControlStatus::NotSatisfied => None,
-                    ControlStatus::Conditional => Some(Usage::ConditionalOptIn),
-                }
-                // // We need to inspect this `uses:`'s configuration to determine its semantics.
-                // match with.get(control.field_name) {
-                //     Some(field_value) => {
-                //         // The declared usage is whatever the user explicitly configured,
-                //         // which might be inverted if the toggle semantics are opt-out instead.
-                //         self.declared_usage(field_value, &control.toggle, &control.field_type)
-                //     }
-                //     None => {
-                //         // If the controlling field is not present, the default dictates the semantics.
-                //         if *enabled_by_default {
-                //             Some(Usage::DefaultActionBehaviour)
-                //         } else {
-                //             None
-                //         }
-                //     }
-                // }
-            }
+            ActionCoordinate::Configurable { uses: _, control } => match control.eval(with) {
+                ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
+                ControlEvaluation::Satisfied => Some(Usage::DirectOptIn),
+                ControlEvaluation::NotSatisfied => None,
+                ControlEvaluation::Conditional => Some(Usage::ConditionalOptIn),
+            },
             // The mere presence of this `uses:` implies the expected usage semantics.
             ActionCoordinate::NotConfigurable(_) => Some(Usage::Always),
         }
@@ -112,7 +94,7 @@ pub(crate) enum ControlFieldType {
 
 /// The result of evaluating a control expression.
 #[derive(Copy, Clone, PartialEq)]
-pub(crate) enum ControlStatus {
+pub(crate) enum ControlEvaluation {
     /// The control expression is satisfied by default.
     DefaultSatisfied,
     /// The control expression is satisfied.
@@ -124,82 +106,118 @@ pub(crate) enum ControlStatus {
     Conditional,
 }
 
-impl BitAnd for ControlStatus {
+impl BitAnd for ControlEvaluation {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
         // NOTE: This could be done less literally, but I find it easier to read.
         match (self, rhs) {
-            (ControlStatus::DefaultSatisfied, ControlStatus::DefaultSatisfied) => {
-                ControlStatus::DefaultSatisfied
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
             }
-            (ControlStatus::DefaultSatisfied, ControlStatus::Satisfied) => ControlStatus::Satisfied,
-            (ControlStatus::DefaultSatisfied, ControlStatus::NotSatisfied) => {
-                ControlStatus::NotSatisfied
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
             }
-            (ControlStatus::DefaultSatisfied, ControlStatus::Conditional) => {
-                ControlStatus::Conditional
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
             }
-            (ControlStatus::Satisfied, ControlStatus::DefaultSatisfied) => ControlStatus::Satisfied,
-            (ControlStatus::Satisfied, ControlStatus::Satisfied) => ControlStatus::Satisfied,
-            (ControlStatus::Satisfied, ControlStatus::NotSatisfied) => ControlStatus::NotSatisfied,
-            (ControlStatus::Satisfied, ControlStatus::Conditional) => ControlStatus::Conditional,
-            (ControlStatus::NotSatisfied, ControlStatus::DefaultSatisfied) => {
-                ControlStatus::NotSatisfied
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
             }
-            (ControlStatus::NotSatisfied, ControlStatus::Satisfied) => ControlStatus::NotSatisfied,
-            (ControlStatus::NotSatisfied, ControlStatus::NotSatisfied) => {
-                ControlStatus::NotSatisfied
+            (ControlEvaluation::Satisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::Satisfied
             }
-            (ControlStatus::NotSatisfied, ControlStatus::Conditional) => {
-                ControlStatus::NotSatisfied
+            (ControlEvaluation::Satisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
             }
-            (ControlStatus::Conditional, ControlStatus::DefaultSatisfied) => {
-                ControlStatus::Satisfied
+            (ControlEvaluation::Satisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
             }
-            (ControlStatus::Conditional, ControlStatus::Satisfied) => ControlStatus::Conditional,
-            (ControlStatus::Conditional, ControlStatus::NotSatisfied) => {
-                ControlStatus::NotSatisfied
+            (ControlEvaluation::Satisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
             }
-            (ControlStatus::Conditional, ControlStatus::Conditional) => ControlStatus::Conditional,
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Conditional
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
+            }
         }
     }
 }
 
-impl BitOr for ControlStatus {
+impl BitOr for ControlEvaluation {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
         // TODO: Does this mapping make sense?
         match (self, rhs) {
-            (ControlStatus::DefaultSatisfied, ControlStatus::DefaultSatisfied) => {
-                ControlStatus::DefaultSatisfied
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
             }
-            (ControlStatus::DefaultSatisfied, ControlStatus::Satisfied) => ControlStatus::Satisfied,
-            (ControlStatus::DefaultSatisfied, ControlStatus::NotSatisfied) => {
-                ControlStatus::DefaultSatisfied
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
             }
-            (ControlStatus::DefaultSatisfied, ControlStatus::Conditional) => {
-                ControlStatus::DefaultSatisfied
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
             }
-            (ControlStatus::Satisfied, ControlStatus::DefaultSatisfied) => ControlStatus::Satisfied,
-            (ControlStatus::Satisfied, ControlStatus::Satisfied) => ControlStatus::Satisfied,
-            (ControlStatus::Satisfied, ControlStatus::NotSatisfied) => ControlStatus::Satisfied,
-            (ControlStatus::Satisfied, ControlStatus::Conditional) => ControlStatus::Satisfied,
-            (ControlStatus::NotSatisfied, ControlStatus::DefaultSatisfied) => {
-                ControlStatus::DefaultSatisfied
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::DefaultSatisfied
             }
-            (ControlStatus::NotSatisfied, ControlStatus::Satisfied) => ControlStatus::Satisfied,
-            (ControlStatus::NotSatisfied, ControlStatus::NotSatisfied) => {
-                ControlStatus::NotSatisfied
+            (ControlEvaluation::Satisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::Satisfied
             }
-            (ControlStatus::NotSatisfied, ControlStatus::Conditional) => ControlStatus::Conditional,
-            (ControlStatus::Conditional, ControlStatus::DefaultSatisfied) => {
-                ControlStatus::DefaultSatisfied
+            (ControlEvaluation::Satisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
             }
-            (ControlStatus::Conditional, ControlStatus::Satisfied) => ControlStatus::Satisfied,
-            (ControlStatus::Conditional, ControlStatus::NotSatisfied) => ControlStatus::Conditional,
-            (ControlStatus::Conditional, ControlStatus::Conditional) => ControlStatus::Conditional,
+            (ControlEvaluation::Satisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Satisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::Conditional
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
+            }
         }
     }
 }
@@ -210,9 +228,10 @@ impl BitOr for ControlStatus {
 /// "all/any of these fields must be satisfied".
 ///
 /// This is made slightly more complicated by the fact that our logic is
-/// three-valued: control fields can be satisfied, not satisfied, or conditionally
-/// satisfied.
+/// four-valued: control fields can be default-satisfied, explicitly satisfied,
+/// not satisfied, or conditionally satisfied.
 pub(crate) enum ControlExpr {
+    /// A single control field.
     Single {
         /// What kind of toggle the input is.
         toggle: Toggle,
@@ -220,10 +239,12 @@ pub(crate) enum ControlExpr {
         field_name: &'static str,
         /// The type of the field that controls the action's behavior.
         field_type: ControlFieldType,
-        /// Whether this control is enabled by default, if not present.
-        enabled_by_default: bool,
+        /// Whether this control is satisfied by default, if not present.
+        satisfied_by_default: bool,
     },
+    /// Universal quantification: all of the fields must be satisfied.
     All(Vec<ControlExpr>),
+    /// Existential quantification: any of the fields must be satisfied.
     #[allow(dead_code)]
     Any(Vec<ControlExpr>),
 }
@@ -239,7 +260,7 @@ impl ControlExpr {
             toggle,
             field_name,
             field_type,
-            enabled_by_default,
+            satisfied_by_default: enabled_by_default,
         }
     }
 
@@ -247,45 +268,45 @@ impl ControlExpr {
         Self::All(exprs.into_iter().collect())
     }
 
-    pub(crate) fn eval(&self, with: &IndexMap<String, EnvValue>) -> ControlStatus {
+    pub(crate) fn eval(&self, with: &IndexMap<String, EnvValue>) -> ControlEvaluation {
         match self {
             ControlExpr::Single {
                 toggle,
                 field_name,
                 field_type,
-                enabled_by_default,
+                satisfied_by_default: enabled_by_default,
             } => {
                 // If the controlling field is not present, the default dictates the semantics.
                 if let Some(field_value) = with.get(*field_name) {
                     match field_value.to_string().as_str() {
                         "false" if matches!(field_type, ControlFieldType::Boolean) => {
                             match toggle {
-                                Toggle::OptIn => ControlStatus::NotSatisfied,
-                                Toggle::OptOut => ControlStatus::Satisfied,
+                                Toggle::OptIn => ControlEvaluation::NotSatisfied,
+                                Toggle::OptOut => ControlEvaluation::Satisfied,
                             }
                         }
                         other => match ExplicitExpr::from_curly(other) {
                             None => match toggle {
-                                Toggle::OptIn => ControlStatus::Satisfied,
-                                Toggle::OptOut => ControlStatus::NotSatisfied,
+                                Toggle::OptIn => ControlEvaluation::Satisfied,
+                                Toggle::OptOut => ControlEvaluation::NotSatisfied,
                             },
-                            Some(_) => ControlStatus::Conditional,
+                            Some(_) => ControlEvaluation::Conditional,
                         },
                     }
                 } else if *enabled_by_default {
-                    ControlStatus::DefaultSatisfied
+                    ControlEvaluation::DefaultSatisfied
                 } else {
-                    ControlStatus::NotSatisfied
+                    ControlEvaluation::NotSatisfied
                 }
             }
             ControlExpr::All(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(with))
-                .fold(ControlStatus::Satisfied, |acc, expr| acc & expr),
+                .fold(ControlEvaluation::Satisfied, |acc, expr| acc & expr),
             ControlExpr::Any(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(with))
-                .fold(ControlStatus::NotSatisfied, |acc, expr| acc | expr),
+                .fold(ControlEvaluation::NotSatisfied, |acc, expr| acc | expr),
         }
     }
 }
