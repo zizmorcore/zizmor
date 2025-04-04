@@ -88,6 +88,7 @@ fn build_rule(finding: &Finding) -> ReportingDescriptor {
                 .markdown(finding.to_markdown())
                 .build(),
         )
+        .properties(PropertyBag::builder().tags(["security".into()]).build())
         .build()
 }
 

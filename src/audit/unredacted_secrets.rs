@@ -70,7 +70,7 @@ impl UnredactedSecrets {
 
         match expr {
             Expr::Call { func, args } => {
-                if func.eq_ignore_ascii_case("fromJSON")
+                if func == "fromJSON"
                     && args
                         .iter()
                         .any(|arg| matches!(arg, Expr::Context(ctx) if ctx.child_of("secrets")))
