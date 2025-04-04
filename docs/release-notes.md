@@ -16,6 +16,7 @@ of `zizmor`.
 * The [template-injection] audit is now performs dataflow analysis
   to determine whether contexts actually expand in an unsafe manner,
   making it significantly more accurate (#640)
+* The [cache-poisoning] audit is now aware of @jdx/mise-action (#645)
 
 ### Bug Fixes 🐛
 
