@@ -162,6 +162,12 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         ActionCoordinate::NotConfigurable(
             Uses::from_str("nix-community/cache-nix-action").unwrap(),
         ),
+        // https://github.com/jdx/mise-action/blob/main/action.yml
+        ActionCoordinate::Configurable {
+            uses: Uses::from_str("jdx/mise-action").unwrap(),
+            control: Control::new(Toggle::OptIn, "cache", ControlFieldType::Boolean),
+            enabled_by_default: true,
+        },
     ]
 });
 
