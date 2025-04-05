@@ -210,14 +210,14 @@ pub(crate) struct AuditRegistry {
 }
 
 impl AuditRegistry {
-    pub(crate) fn new() -> Self {
+    fn empty() -> Self {
         Self {
             workflow_audits: Default::default(),
         }
     }
 
     pub(crate) fn default_audits(audit_state: &AuditState) -> Self {
-        let mut registry = Self::new();
+        let mut registry = Self::empty();
 
         macro_rules! register_audit {
             ($rule:path) => {{
