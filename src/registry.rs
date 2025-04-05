@@ -206,7 +206,7 @@ impl InputRegistry {
 }
 
 pub(crate) struct AuditRegistry {
-    pub(crate) workflow_audits: IndexMap<&'static str, Box<dyn Audit>>,
+    pub(crate) workflow_audits: IndexMap<&'static str, Box<dyn Audit + Send + Sync>>,
 }
 
 impl AuditRegistry {
@@ -260,12 +260,24 @@ impl AuditRegistry {
         self.workflow_audits.len()
     }
 
-    pub(crate) fn register_audit(&mut self, ident: &'static str, audit: Box<dyn Audit>) {
+    pub(crate) fn register_audit(
+        &mut self,
+        ident: &'static str,
+        audit: Box<dyn Audit + Send + Sync>,
+    ) {
         self.workflow_audits.insert(ident, audit);
     }
 
-    pub(crate) fn iter_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit>> {
+    pub(crate) fn iter_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit + Send + Sync>> {
         self.workflow_audits.iter()
+    }
+}
+
+impl std::fmt::Debug for AuditRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AuditRegistry")
+            .field("workflow_audits", &self.workflow_audits.len())
+            .finish()
     }
 }
 
