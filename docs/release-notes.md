@@ -17,6 +17,8 @@ of `zizmor`.
   to determine whether contexts actually expand in an unsafe manner,
   making it significantly more accurate (#640)
 * The [cache-poisoning] audit is now aware of @jdx/mise-action (#645)
+* The [cache-poisoning] audit is now significantly more accurate
+  when analyzing workflows that use @docker/setup-buildx-action (#644)
 
 ### Bug Fixes 🐛
 
