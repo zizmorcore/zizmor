@@ -24,6 +24,9 @@ of `zizmor`.
 
 * The [template-injection] audit no longer considers
   `github.event.pull_request.head.sha` dangerous (#636)
+* Fixed a bug where `zizmor` would fail to parse workflows
+  with `workflow_call` triggers that specified inputs without the
+  `required` field being present (#646)
 
 ## v1.5.2
 
