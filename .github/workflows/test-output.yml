@@ -64,4 +64,8 @@ jobs:
         run: |
           # Normally we'd want a workflow to fail if the audit fails,
           # but we're only testing presentation here.
-          cargo run -- --no-exit-codes --format github .
+          cargo run \
+            -- \
+            --no-exit-codes \
+            --format github \
+            tests/integration/test-data/several-vulnerabilities.yml
