@@ -190,6 +190,14 @@
         - ethereum/hevm#615
 
 
+-   ![](https://github.com/fatiando.png?size=40){ width="40" loading=lazy align=left } fatiando
+
+    ---
+
+    ??? example "Examples"
+        - fatiando/harmonica#550
+
+
 -   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
 
     ---
@@ -301,6 +309,14 @@
 
     ??? example "Examples"
         - guacsec/guac#2276
+
+
+-   ![](https://github.com/h2non.png?size=40){ width="40" loading=lazy align=left } h2non
+
+    ---
+
+    ??? example "Examples"
+        - h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
 
 
 -   ![](https://github.com/hellux.png?size=40){ width="40" loading=lazy align=left } hellux
@@ -454,6 +470,14 @@
 
     ??? example "Examples"
         - mfussenegger/nvim-lint#710
+
+
+-   ![](https://github.com/microsoft.png?size=40){ width="40" loading=lazy align=left } microsoft
+
+    ---
+
+    ??? example "Examples"
+        - microsoft/linux-package-repositories#208
 
 
 -   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf
@@ -873,6 +897,14 @@
         - simpeg/simpeg#1592
 
 
+-   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
+
+    ---
+
+    ??? example "Examples"
+        - TecharoHQ/anubis#188
+
+
 -   ![](https://github.com/termcolor.png?size=40){ width="40" loading=lazy align=left } termcolor
 
     ---
@@ -993,6 +1025,14 @@
 
     ??? example "Examples"
         - zcash/librustzcash#1679
+
+
+-   ![](https://github.com/ZcashFoundation.png?size=40){ width="40" loading=lazy align=left } ZcashFoundation
+
+    ---
+
+    ??? example "Examples"
+        - ZcashFoundation/zebra#9110
 
 
 -   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit

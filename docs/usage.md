@@ -455,6 +455,21 @@ jobs:
 For more inspiration, see `zizmor`'s own [repository workflow scan], as well
 as GitHub's example of [running ESLint] as a security workflow.
 
+!!! important
+
+    When using `--format sarif`, `zizmor` does not use its
+    [exit codes](#exit-codes) to signal the presence of findings. As a result,
+    `zizmor` will always exit with code `0` even if findings are present,
+    **unless** an internal error occurs during the audit.
+
+    As a result of this, the `zizmor.yml` workflow itself will always
+    succeed, resulting in a green checkmark in GitHub Actions.
+    This should **not** be confused with a lack of findings.
+
+    To prevent a branch from being merged with findings present, you can
+    use GitHub's rulesets feature. For more information, see
+    [About code scanning alerts - Pull request check failures for code scanning alerts].
+
 [zizmor package from PyPI]: https://pypi.org/p/zizmor
 
 [SARIF]: https://sarifweb.azurewebsites.net/
@@ -466,6 +481,8 @@ as GitHub's example of [running ESLint] as a security workflow.
 [running ESLint]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github#example-workflow-that-runs-the-eslint-analysis-tool
 
 [Advanced Security]: https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security
+
+[About code scanning alerts - Pull request check failures for code scanning alerts]: https://docs.github.com/en/code-security/code-scanning/managing-code-scanning-alerts/about-code-scanning-alerts#pull-request-check-failures-for-code-scanning-alerts
 
 ### Use with GitHub Enterprise
 
