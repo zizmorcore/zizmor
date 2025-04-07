@@ -14,6 +14,3 @@ jobs:
       - name: hackme
         run: |
           echo "${{ github.event.pull_request.title }}"
-
-      - name: foo
-        run: true

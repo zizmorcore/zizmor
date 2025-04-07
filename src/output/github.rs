@@ -29,12 +29,11 @@ impl Finding<'_> {
             .find(|l| l.symbolic.is_primary())
             .unwrap();
 
-        // NOTE: We don't bother with `col` and `endColumn` because
-        // GitHub doesn't handle end columns at the end of the input
-        // correctly.
+        // NOTE: We intentionally only use the start line, since our spans
+        // sometimes end at EOF and GitHub's annotations don't handle that
+        // gracefully.
         let filepath = primary.symbolic.key.sarif_path();
         let start_line = primary.concrete.location.start_point.row + 1;
-        let end_line = primary.concrete.location.end_point.row + 1;
         let title = self.ident;
 
         let message = format!(
@@ -45,7 +44,7 @@ impl Finding<'_> {
 
         writeln!(
             sink,
-            "::{} file={filepath},line={start_line},endLine={end_line},title={title}::{message}",
+            "::{} file={filepath},line={start_line},title={title}::{message}",
             self.determinations.severity.as_github_command()
         )?;
 
