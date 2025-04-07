@@ -225,6 +225,10 @@ functionality via GitHub Actions.
 
 ### GitHub Annotations
 
+!!! note
+
+    `--format=github` is available in `v1.6.0` and later.
+
 `zizmor` supports GitHub annotations via `--format=github`.
 
 See [Workflow Commands for GitHub Actions] for additional information about
