@@ -27,6 +27,9 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would fail to parse workflows
   with `workflow_call` triggers that specified inputs without the
   `required` field being present (#646)
+* Fixed a bug where `zizmor` would fail to parse workflows with
+  `pull_request` or `pull_request_target` triggers that specified
+  `types` as a scalar value (#653)
 
 ## v1.5.2
 
