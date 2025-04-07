@@ -9,6 +9,14 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* `zizmor` now supports `--format=github` as an output format.
+  This format produces check annotations via GitHub workflow commands,
+  e.g. `::warning` and `::error`. See the
+  [Output formats](./usage.md#output-formats) documentation for more information
+  on annotations, including key limitations (#634)
+
 ### Improvements 🌱
 
 * The SARIF output format now marks each rule as a "security" rule,

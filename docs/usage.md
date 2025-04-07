@@ -105,28 +105,143 @@ zizmor --no-online-audits --gh-token ghp-... example/example
 
 `zizmor` always produces output on `stdout`.
 
-By default, `zizmor` produces `cargo`-style diagnostic output. This output
-will be colorized by default when sent to a supporting terminal and
+See [Integration](#integration) for suggestions on when to use each format.
+
+### Cargo-style output ("plain")
+
+By default, `zizmor` produces `cargo`-style diagnostic output.
+
+```console
+error[template-injection]: code injection via template expansion
+  --> ./tests/integration/test-data/template-injection/pr-425-backstop/action.yml:28:7
+   |
+28 |     - name: case4
+   |       ^^^^^^^^^^^ this step
+29 |       uses: azure/powershell
+30 |       with:
+31 |         inlineScript: Get-AzVM -ResourceGroupName "${{ inputs.expandme }}"
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ inputs.expandme may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+```
+
+This output will be colorized by default when sent to a supporting terminal and
 uncolorized by default when piped to another program. Users can also explicitly
 disable output colorization by setting `NO_COLOR=1` in their environment.
 
-Apart from the default, `zizmor` supports JSON and [SARIF] as machine-readable
-output modes. These can be selected via the `--format` option:
+This format can also be explicitly selected with `--format=plain`:
 
-Output formats can be controlled explicitly via the `--format` option:
+### JSON
+
+!!! important
+
+    The JSON format is currently a flat array of findings, and is not
+    currently versioned.
+
+    Future versions of `zizmor` may change the top-level structure of the
+    JSON output,
+
+
+With `--format=json`, `zizmor` will produce a flat array of findings in
+JSON format:
 
 ```bash
-# use the default diagnostic output explicitly
-zizmor --format plain
-
-# emit zizmor's own JSON format
-zizmor --format json
-
-# emit SARIF JSON instead of normal JSON
-zizmor --format sarif
+zizmor --format=json . | jq .[0]
 ```
 
-See [Integration](#integration) for suggestions on when to use each format.
+??? Example "Example output"
+
+    ```json
+    {
+      "ident": "github-env",
+      "desc": "dangerous use of environment file",
+      "url": "https://woodruffw.github.io/zizmor/audits/#github-env",
+      "determinations": {
+        "confidence": "Low",
+        "severity": "High",
+        "persona": "Regular"
+      },
+      "locations": [
+        {
+          "symbolic": {
+            "key": {
+              "Local": {
+                "prefix": ".",
+                "given_path": "./tests/integration/test-data/github-env/action.yml"
+              }
+            },
+            "annotation": "write to GITHUB_ENV may allow code execution",
+            "route": {
+              "components": [
+                {
+                  "Key": "runs"
+                },
+                {
+                  "Key": "steps"
+                },
+                {
+                  "Index": 0
+                },
+                {
+                  "Key": "run"
+                }
+              ]
+            },
+            "kind": "Primary"
+          },
+          "concrete": {
+            "location": {
+              "start_point": {
+                "row": 9,
+                "column": 6
+              },
+              "end_point": {
+                "row": 10,
+                "column": 40
+              },
+              "offset_span": {
+                "start": 202,
+                "end": 249
+              }
+            },
+            "feature": "      run: |\n        echo \"foo=$(bar)\" >> $GITHUB_ENV",
+            "comments": []
+          }
+        }
+      ],
+      "ignored": false
+    }
+    ```
+
+
+### SARIF
+
+`zizmor` supports [SARIF] via `--format=sarif`.
+SARIF is a JSON-based standard for representing static analysis results.
+
+See [Use in GitHub Actions](#use-in-github-actions) for
+information on using `zizmor` with GitHub's Advanced Security
+functionality via GitHub Actions.
+
+### GitHub Annotations
+
+`zizmor` supports GitHub annotations via `--format=github`.
+
+See [Workflow Commands for GitHub Actions] for additional information about
+annotations.
+
+!!! warning
+
+    GitHub annotations come with significant limitations: a single CI step
+    can only render 10 annotations at a time.
+
+    If your `zizmor` run produces more than 10 findings, only the first 10 will
+    be rendered; all subsequent findings will be logged in the actions log but
+    **will not be rendered** as annotations.
+
+    See orgs/community?26680 and orgs/community?68471 for additional
+    information.
+
 
 ## Exit codes
 
@@ -392,89 +507,147 @@ zizmor --cache-dir /tmp/zizmor ...
 
 ### Use in GitHub Actions
 
-`zizmor` is designed to integrate with GitHub Actions. In particular,
-`zizmor --format sarif` specifies [SARIF] as the output format, which GitHub's
-code scanning feature uses.
+`zizmor` is designed to integrate with GitHub Actions. There are
+two primary ways to use `zizmor` in GitHub Actions:
 
-You can integrate `zizmor` into your CI/CD however you please, but one
-easy way to do it is with a workflow that connects to
-[GitHub's code scanning functionality].
+1. With `--format=sarif` via Advanced Security (recommended)
+2. With `--format=github` via GitHub Annotations
 
-!!! important
+=== "With Advanced Security (recommended)"
 
-    The workflow below performs a [SARIF] upload, which is available for public
-    repositories and for GitHub Enterprise Cloud organizations that have
-    [Advanced Security]. If neither of these apply to you, then you can
-    adapt the workflow to emit JSON or diagnostic output via `--format json`
-    or `--format plain` respectively.
+    GitHub's Advanced Security and [code scanning functionality] supports
+    [SARIF], which `zizmor` can produce via `--format=sarif`.
 
-```yaml title="zizmor.yml"
-name: GitHub Actions Security Analysis with zizmor 🌈
+    !!! important
 
-on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["**"]
+        The workflow below performs a [SARIF] upload, which is available for public
+        repositories and for GitHub Enterprise Cloud organizations that have
+        [Advanced Security]. If neither of these apply to you, then you can
+        use `--format=github` or adapt the `--format=json` or `--format=plain`
+        output formats to your needs.
 
-jobs:
-  zizmor:
-    name: zizmor latest via PyPI
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      contents: read # only needed for private repos
-      actions: read # only needed for private repos
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+    ```yaml title="zizmor.yml"
+    name: GitHub Actions Security Analysis with zizmor 🌈
 
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+    on:
+      push:
+        branches: ["main"]
+      pull_request:
+        branches: ["**"]
 
-      - name: Run zizmor 🌈
-        run: uvx zizmor --format sarif . > results.sarif # (2)!
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
+    jobs:
+      zizmor:
+        name: zizmor latest via PyPI
+        runs-on: ubuntu-latest
+        permissions:
+          security-events: write
+          contents: read # only needed for private repos
+          actions: read # only needed for private repos
+        steps:
+          - name: Checkout repository
+            uses: actions/checkout@v4
+            with:
+              persist-credentials: false
 
-      - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: results.sarif
-          category: zizmor
-```
+          - name: Install the latest version of uv
+            uses: astral-sh/setup-uv@v5
 
-1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
+          - name: Run zizmor 🌈
+            run: uvx zizmor --format=sarif . > results.sarif # (2)!
+            env:
+              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
 
-2. This installs the [zizmor package from PyPI], since it's pre-compiled
-   and therefore completes much faster. You could instead compile `zizmor`
-   within CI/CD with `cargo install zizmor`.
+          - name: Upload SARIF file
+            uses: github/codeql-action/upload-sarif@v3
+            with:
+              sarif_file: results.sarif
+              category: zizmor
+    ```
 
-For more inspiration, see `zizmor`'s own [repository workflow scan], as well
-as GitHub's example of [running ESLint] as a security workflow.
+    1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
-!!! important
+    2. This installs the [zizmor package from PyPI], since it's pre-compiled
+       and therefore completes much faster. You could instead compile `zizmor`
+       within CI/CD with `cargo install zizmor`.
 
-    When using `--format sarif`, `zizmor` does not use its
-    [exit codes](#exit-codes) to signal the presence of findings. As a result,
-    `zizmor` will always exit with code `0` even if findings are present,
-    **unless** an internal error occurs during the audit.
+    For more inspiration, see `zizmor`'s own [repository workflow scan], as well
+    as GitHub's example of [running ESLint] as a security workflow.
 
-    As a result of this, the `zizmor.yml` workflow itself will always
-    succeed, resulting in a green checkmark in GitHub Actions.
-    This should **not** be confused with a lack of findings.
+    !!! important
 
-    To prevent a branch from being merged with findings present, you can
-    use GitHub's rulesets feature. For more information, see
-    [About code scanning alerts - Pull request check failures for code scanning alerts].
+        When using `--format=sarif`, `zizmor` does not use its
+        [exit codes](#exit-codes) to signal the presence of findings. As a result,
+        `zizmor` will always exit with code `0` even if findings are present,
+        **unless** an internal error occurs during the audit.
+
+        As a result of this, the `zizmor.yml` workflow itself will always
+        succeed, resulting in a green checkmark in GitHub Actions.
+        This should **not** be confused with a lack of findings.
+
+        To prevent a branch from being merged with findings present, you can
+        use GitHub's rulesets feature. For more information, see
+        [About code scanning alerts - Pull request check failures for code scanning alerts].
+
+=== "With annotations"
+
+    A simpler (but more limited) way to use `zizmor` in GitHub Actions is
+    with annotations, which `zizmor` can produce via `--format=github`.
+
+    This is a good option if:
+
+    1. You don't have Advanced Security (or you don't want to use it)
+    1. You don't want to run `zizmor` with `security-events: write`
+
+    ```yaml title="zizmor.yml"
+    name: GitHub Actions Security Analysis with zizmor 🌈
+
+    on:
+      push:
+        branches: ["main"]
+      pull_request:
+        branches: ["**"]
+
+    jobs:
+      zizmor:
+        name: zizmor latest via PyPI
+        runs-on: ubuntu-latest
+        permissions:
+          contents: read # only needed for private repos
+          actions: read # only needed for private repos
+        steps:
+          - name: Checkout repository
+            uses: actions/checkout@v4
+
+          - name: Install the latest version of uv
+            uses: astral-sh/setup-uv@v5
+
+          - name: Run zizmor 🌈
+            run: uvx zizmor --format=github . # (2)!
+            env:
+              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
+    ```
+
+    1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
+
+    2. This installs the [zizmor package from PyPI], since it's pre-compiled
+       and therefore completes much faster. You could instead compile `zizmor`
+       within CI/CD with `cargo install zizmor`.
+
+    !!! warning
+
+        GitHub Actions has a limit of 10 annotations per step.
+
+        If your `zizmor` run produces more than 10 findings, only the first 10 will
+        be rendered; all subsequent findings will be logged in the actions log but
+        **will not be rendered** as annotations.
 
 [zizmor package from PyPI]: https://pypi.org/p/zizmor
 
 [SARIF]: https://sarifweb.azurewebsites.net/
 
-[GitHub's code scanning functionality]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
+[Workflow Commands for GitHub Actions]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions
+
+[code scanning functionality]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
 
 [repository workflow scan]: https://github.com/woodruffw/zizmor/blob/main/.github/workflows/zizmor.yml
 
