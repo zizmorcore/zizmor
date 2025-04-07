@@ -553,6 +553,14 @@
         - nextcloud/.github#477
 
 
+-   ![](https://github.com/NixOS.png?size=40){ width="40" loading=lazy align=left } NixOS
+
+    ---
+
+    ??? example "Examples"
+        - NixOS/infra#613
+
+
 -   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs
 
     ---
@@ -759,6 +767,14 @@
         - python-poetry/poetry-core#799
         - python-poetry/poetry-plugin-export#308
         - python-poetry/poetry-plugin-bundle#125
+
+
+-   ![](https://github.com/python-social-auth.png?size=40){ width="40" loading=lazy align=left } python-social-auth
+
+    ---
+
+    ??? example "Examples"
+        - python-social-auth/social-core#1098
 
 
 -   ![](https://github.com/python-telegram-bot.png?size=40){ width="40" loading=lazy align=left } python-telegram-bot

@@ -110,6 +110,7 @@ mozilla/neqo#2413
 narwhals-dev/narwhals#1567
 NetApp/harvest#3247
 nextcloud/.github#477
+NixOS/infra#613
 NLnetLabs/nsd#413
 NLnetLabs/unbound#1204
 numpy/numpy#27931
@@ -149,6 +150,7 @@ python-poetry/poetry#9895
 python-poetry/poetry-core#799
 python-poetry/poetry-plugin-export#308
 python-poetry/poetry-plugin-bundle#125
+python-social-auth/social-core#1098
 python-telegram-bot/python-telegram-bot#4606
 python-telegram-bot/python-telegram-bot#4668
 python-trio/trio#3154
