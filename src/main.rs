@@ -139,8 +139,13 @@ pub(crate) enum OutputFormat {
     /// cargo-style output.
     #[default]
     Plain,
-    /// JSON-formatted output.
+    // NOTE: clap doesn't support visible aliases for enum variants yet,
+    // so we need an explicit Json variant here.
+    // See: https://github.com/clap-rs/clap/pull/5480
+    /// JSON-formatted output (currently v1).
     Json,
+    /// "v1" JSON format.
+    JsonV1,
     /// SARIF-formatted output.
     Sarif,
     /// GitHub Actions workflow command-formatted output.
@@ -538,7 +543,9 @@ fn run() -> Result<ExitCode> {
 
     match app.format {
         OutputFormat::Plain => output::plain::render_findings(&app, &registry, &results),
-        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
+        OutputFormat::Json | OutputFormat::JsonV1 => {
+            serde_json::to_writer_pretty(stdout(), &results.findings())?
+        }
         OutputFormat::Sarif => {
             serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))?
         }

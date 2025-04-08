@@ -135,12 +135,26 @@ This format can also be explicitly selected with `--format=plain`:
 
 !!! important
 
-    The JSON format is currently a flat array of findings, and is not
-    currently versioned.
+    The JSON format is versioned, and `--format=json` is an alias for the
+    current version.
 
-    Future versions of `zizmor` may change the top-level structure of the
-    JSON output,
+    The current version of the JSON format is `v1`. You can use
+    `--format=json-v1` to explicitly select the current version.
 
+    The following compatibility policy is used for JSON format versions:
+
+    1. The current version of the format is always aliased as `json`.
+    2. When a new version of the JSON format is added, `--format=json`
+       will show a deprecation warning, and will transition to the new version
+       with the next major release.
+    3. When a new version of the JSON format is added, explicit uses of the
+       old version will show a deprecation warning.
+    4. The old version will be removed in the *subsequent* major release
+       (i.e., the major release after the one that transitions the `json` alias).
+
+!!! important
+
+    `--format=json-v1` is available in `v1.6.0` and later.
 
 With `--format=json`, `zizmor` will produce a flat array of findings in
 JSON format:

@@ -27,6 +27,9 @@ of `zizmor`.
 * The [cache-poisoning] audit is now aware of @jdx/mise-action (#645)
 * The [cache-poisoning] audit is now significantly more accurate
   when analyzing workflows that use @docker/setup-buildx-action (#644)
+* `--format=json` is now an alias for `--format=json-v1`, enabling
+  future JSON formats. The policy for the `--format=json` alias is
+  documented under [Output formats - JSON](./usage.md#json)
 
 ### Bug Fixes 🐛
 
@@ -52,7 +55,7 @@ of `zizmor`.
 
 ### Upcoming Changes 🚧
 
-* The official [PyPI builds](./installation.md/#pypi) for `zizmor`
+* The official [PyPI builds](./installation.md#pypi) for `zizmor`
   will support fewer architectures in the next release, due to
   cross-compilation and testing difficulties. This should have
   **no effect** on the overwhelming majority of users.
