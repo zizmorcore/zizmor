@@ -190,6 +190,14 @@
         - ethereum/hevm#615
 
 
+-   ![](https://github.com/fatiando.png?size=40){ width="40" loading=lazy align=left } fatiando
+
+    ---
+
+    ??? example "Examples"
+        - fatiando/harmonica#550
+
+
 -   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
 
     ---
@@ -236,6 +244,14 @@
 
     ??? example "Examples"
         - gaphor/gaphor#3658
+
+
+-   ![](https://github.com/GenericMappingTools.png?size=40){ width="40" loading=lazy align=left } GenericMappingTools
+
+    ---
+
+    ??? example "Examples"
+        - GenericMappingTools/pygmt#3861
 
 
 -   ![](https://github.com/getsops.png?size=40){ width="40" loading=lazy align=left } getsops
@@ -293,6 +309,14 @@
 
     ??? example "Examples"
         - guacsec/guac#2276
+
+
+-   ![](https://github.com/h2non.png?size=40){ width="40" loading=lazy align=left } h2non
+
+    ---
+
+    ??? example "Examples"
+        - h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
 
 
 -   ![](https://github.com/hellux.png?size=40){ width="40" loading=lazy align=left } hellux
@@ -448,6 +472,14 @@
         - mfussenegger/nvim-lint#710
 
 
+-   ![](https://github.com/microsoft.png?size=40){ width="40" loading=lazy align=left } microsoft
+
+    ---
+
+    ??? example "Examples"
+        - microsoft/linux-package-repositories#208
+
+
 -   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf
 
     ---
@@ -519,6 +551,14 @@
 
     ??? example "Examples"
         - nextcloud/.github#477
+
+
+-   ![](https://github.com/NixOS.png?size=40){ width="40" loading=lazy align=left } NixOS
+
+    ---
+
+    ??? example "Examples"
+        - NixOS/infra#613
 
 
 -   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs
@@ -729,6 +769,14 @@
         - python-poetry/poetry-plugin-bundle#125
 
 
+-   ![](https://github.com/python-social-auth.png?size=40){ width="40" loading=lazy align=left } python-social-auth
+
+    ---
+
+    ??? example "Examples"
+        - python-social-auth/social-core#1098
+
+
 -   ![](https://github.com/python-telegram-bot.png?size=40){ width="40" loading=lazy align=left } python-telegram-bot
 
     ---
@@ -768,6 +816,14 @@
 
     ??? example "Examples"
         - quarkslab/quokka#46
+
+
+-   ![](https://github.com/rolldown.png?size=40){ width="40" loading=lazy align=left } rolldown
+
+    ---
+
+    ??? example "Examples"
+        - rolldown/rolldown#3861
 
 
 -   ![](https://github.com/rubygems.png?size=40){ width="40" loading=lazy align=left } rubygems
@@ -845,6 +901,7 @@
         - sigstore/cosign#3959
         - sigstore/fulcio#1910
         - sigstore/gitsign#602
+        - sigstore/model-transparency#369
         - sigstore/sigstore-rs#424
 
 
@@ -854,6 +911,14 @@
 
     ??? example "Examples"
         - simpeg/simpeg#1592
+
+
+-   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
+
+    ---
+
+    ??? example "Examples"
+        - TecharoHQ/anubis#188
 
 
 -   ![](https://github.com/termcolor.png?size=40){ width="40" loading=lazy align=left } termcolor
@@ -976,6 +1041,14 @@
 
     ??? example "Examples"
         - zcash/librustzcash#1679
+
+
+-   ![](https://github.com/ZcashFoundation.png?size=40){ width="40" loading=lazy align=left } ZcashFoundation
+
+    ---
+
+    ??? example "Examples"
+        - ZcashFoundation/zebra#9110
 
 
 -   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit

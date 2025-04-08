@@ -31,6 +31,19 @@ fn test_invalid_inputs() -> Result<()> {
 }
 
 #[test]
+fn test_github_output() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .input(input_under_test("several-vulnerabilities.yml"))
+            .args(["--persona=auditor", "--format=github"])
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
 fn artipacked() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
@@ -338,6 +351,12 @@ fn cache_poisoning() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("cache-poisoning/issue-378-repro.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("cache-poisoning/issue-642-repro.yml"))
             .run()?
     );
 
