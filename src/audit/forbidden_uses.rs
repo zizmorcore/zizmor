@@ -19,16 +19,13 @@ struct ForbiddenUsesConfig {
     patterns: Vec<String>,
 }
 
-const DEFAULT_ALLOWLIST: [&str; 1] = ["actions/*"];
+const DEFAULT_ALLOWLIST: &[&str] = &["actions/*", "github/*"];
 
 impl Default for ForbiddenUsesConfig {
     fn default() -> Self {
         Self {
             policy: ForbiddenUsesListType::Allow,
-            patterns: DEFAULT_ALLOWLIST
-                .iter()
-                .map(|item| item.to_string())
-                .collect(),
+            patterns: DEFAULT_ALLOWLIST.iter().map(|s| s.to_string()).collect(),
         }
     }
 }
@@ -52,7 +49,7 @@ pub(crate) struct ForbiddenUses {
     config: ForbiddenUsesConfig,
 }
 
-audit_meta!(ForbiddenUses, "forbidden-uses", "fobidden action used");
+audit_meta!(ForbiddenUses, "forbidden-uses", "forbidden action used");
 
 impl ForbiddenUses {
     pub fn use_denied(&self, uses: &Uses) -> bool {
@@ -71,6 +68,8 @@ impl Audit for ForbiddenUses {
     {
         let (persona, severity, config) = match state.config.rule_config(Self::ident())? {
             Some(config) => (Persona::default(), Severity::High, config),
+            // If the user doesn't give us a config, then we use the default
+            // config and record everything as an audit finding.
             None => (
                 Persona::Auditor,
                 Severity::Unknown,
