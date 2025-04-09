@@ -1,4 +1,4 @@
-//! APIs for rendering zizmor's "plain" (i.e. terminal) output format.
+//! "plain" (i.e. cargo-style) output.
 
 use std::collections::{HashMap, hash_map::Entry};
 
@@ -33,6 +33,11 @@ pub(crate) fn finding_snippet<'w>(
     // by their enclosing workflow to generate each snippet correctly.
     let mut locations_by_workflow: HashMap<&InputKey, Vec<&Location<'w>>> = HashMap::new();
     for location in &finding.locations {
+        // Never include hidden locations in the output.
+        if location.symbolic.is_hidden() {
+            continue;
+        }
+
         match locations_by_workflow.entry(location.symbolic.key) {
             Entry::Occupied(mut e) => {
                 e.get_mut().push(location);

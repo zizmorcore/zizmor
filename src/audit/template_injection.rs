@@ -39,14 +39,15 @@ const SAFE_CONTEXTS: &[&str] = &[
     // The GitHub event name (i.e. trigger) is itself safe.
     "github.event_name",
     // Safe keys within the otherwise generally unsafe github.event context.
-    "github.event.after",  // hexadecimal SHA ref
-    "github.event.before", // hexadecimal SHA ref
-    "github.event.issue.number",
-    "github.event.merge_group.base_sha",
+    "github.event.after",                // hexadecimal SHA ref
+    "github.event.before",               // hexadecimal SHA ref
+    "github.event.issue.number",         // the issue's own number
+    "github.event.merge_group.base_sha", // hexadecimal SHA ref
     "github.event.number",
-    "github.event.pull_request.base.sha",
-    "github.event.pull_request.commits", // number of commits in PR
-    "github.event.pull_request.number",  // the PR's own number
+    "github.event.pull_request.base.sha", // hexadecimal SHA ref
+    "github.event.pull_request.head.sha", // hexadecimal SHA ref
+    "github.event.pull_request.commits",  // number of commits in PR
+    "github.event.pull_request.number",   // the PR's own number
     "github.event.workflow_run.id",
     // Information about the GitHub repository
     "github.repository",
@@ -186,7 +187,7 @@ impl TemplateInjection {
                 continue;
             }
 
-            for context in parsed.contexts() {
+            for context in parsed.dataflow_contexts() {
                 if context.child_of("secrets") {
                     // While not ideal, secret expansion is typically not exploitable.
                     continue;
@@ -290,6 +291,7 @@ impl Audit for TemplateInjection {
                     .severity(severity)
                     .confidence(confidence)
                     .persona(persona)
+                    .add_location(step.location().hidden())
                     .add_location(step.location_with_name())
                     .add_location(
                         script_loc.clone().primary().annotated(format!(
@@ -318,6 +320,7 @@ impl Audit for TemplateInjection {
                     .severity(severity)
                     .confidence(confidence)
                     .persona(persona)
+                    .add_location(step.location().hidden())
                     .add_location(step.location_with_name())
                     .add_location(
                         script_loc.clone().primary().annotated(format!(

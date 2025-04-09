@@ -1,0 +1,29 @@
+name: template-injection-dataflow
+
+on: pull_request
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # OK: dangerous context but without dataflow
+      - name: ok
+        run: |
+          echo "issue is foo: ${{ github.event.pull_request.title == 'foo' }}"
+          echo "issue contains foo: ${{ contains(github.event.pull_request.title, 'foo') }}"
+
+      # NOT OK: function call propagates dataflow
+      - name: notok
+        run: |
+          echo "${{ toJSON(github.event.pull_request.title) }}"
+          echo "${{ format('{0}', github.event.pull_request.title) }}"
+          echo "${{ join(github.event.pull_request.labels.*.name) }}"
+
+      # NOT OK: control flow propagates dataflow
+      - name: notok-2
+        run: |
+          echo "${{ github.event.pull_request.title || github.event.issue.title }}"
+          echo "${{ false || github.event.issue.title }}"

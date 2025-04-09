@@ -9,14 +9,53 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* `zizmor` now supports `--format=github` as an output format.
+  This format produces check annotations via GitHub workflow commands,
+  e.g. `::warning` and `::error`. See the
+  [Output formats](./usage.md#output-formats) documentation for more information
+  on annotations, including key limitations (#634)
+
+### Improvements 🌱
+
+* The SARIF output format now marks each rule as a "security" rule,
+  which helps GitHub's presentation of the results (#631)
+* The [template-injection] audit is now performs dataflow analysis
+  to determine whether contexts actually expand in an unsafe manner,
+  making it significantly more accurate (#640)
+* The [cache-poisoning] audit is now aware of @jdx/mise-action (#645)
+* The [cache-poisoning] audit is now significantly more accurate
+  when analyzing workflows that use @docker/setup-buildx-action (#644)
+* `--format=json` is now an alias for `--format=json-v1`, enabling
+  future JSON formats. The policy for the `--format=json` alias is
+  documented under [Output formats - JSON](./usage.md#json) (#657)
+
+### Bug Fixes 🐛
+
+* The [template-injection] audit no longer considers
+  `github.event.pull_request.head.sha` dangerous (#636)
+* Fixed a bug where `zizmor` would fail to parse workflows
+  with `workflow_call` triggers that specified inputs without the
+  `required` field being present (#646)
+* Fixed a bug where `zizmor` would fail to parse workflows with
+  `pull_request` or `pull_request_target` triggers that specified
+  `types` as a scalar value (#653)
+
+## v1.5.2
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would over-eagerly parse invalid and
   commented-out expressions, resulting in spurious warnings (#570)
+* Fixed a bug where `zizmor` would fail to honor `# zizmor: ignore[rule]`
+  comments in unintuitive cases (#612)
+* Fixed a regression in `zizmor`'s SARIF output format that caused suboptimal
+  presentation of findings on GitHub (#621)
 
 ### Upcoming Changes 🚧
 
-* The official [PyPI builds](./installation.md/#pypi) for `zizmor`
+* The official [PyPI builds](./installation.md#pypi) for `zizmor`
   will support fewer architectures in the next release, due to
   cross-compilation and testing difficulties. This should have
   **no effect** on the overwhelming majority of users.

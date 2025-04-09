@@ -131,7 +131,7 @@ impl Workflow {
             annotation: "this workflow".to_string(),
             link: None,
             route: Route::new(),
-            primary: false,
+            kind: Default::default(),
         }
     }
 
@@ -600,7 +600,7 @@ impl<'w> Step<'w> {
     }
 
     /// Returns this step's parent [`NormalJob`].
-    pub(crate) fn job(&self) -> &'w NormalJob {
+    pub(crate) fn job(&self) -> &NormalJob<'w> {
         &self.parent
     }
 
@@ -777,7 +777,7 @@ impl Action {
             annotation: "this action".to_string(),
             link: None,
             route: Route::new(),
-            primary: false,
+            kind: Default::default(),
         }
     }
 

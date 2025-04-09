@@ -152,10 +152,31 @@ impl<'w> Route<'w> {
     }
 }
 
-/// Represents a symbolic workflow location.
+/// Represents a location's type.
+#[derive(Serialize, Copy, Clone, Debug, Default)]
+pub(crate) enum LocationKind {
+    /// A location that is subjectively "primary" to a finding.
+    ///
+    /// This is used to distinguish between "primary" and "related" locations
+    /// in output formats like SARIF.
+    Primary,
+    #[default]
+    /// A location that is "related" to a finding.
+    ///
+    /// This is the default location type.
+    Related,
+    /// A hidden location.
+    ///
+    /// These locations are not rendered in output formats like SARIF or
+    /// the cargo-style output. Instead, they're used to provide spanning
+    /// information for checking things like ignore comments.
+    Hidden,
+}
+
+/// Represents a symbolic location.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct SymbolicLocation<'w> {
-    /// The unique ID of the workflow, as it appears in the workflow registry.
+    /// The unique ID of the input, as it appears in the input registry.
     pub(crate) key: &'w InputKey,
 
     /// An annotation for this location.
@@ -170,12 +191,8 @@ pub(crate) struct SymbolicLocation<'w> {
     /// A symbolic route (of keys and indices) to the final location.
     pub(crate) route: Route<'w>,
 
-    /// Whether this location is subjectively "primary" to a finding,
-    /// or merely a "supporting" location.
-    ///
-    /// This distinction only matters in output formats like SARIF,
-    /// where locations are split between locations and "related" locations.
-    pub(crate) primary: bool,
+    /// The kind of location.
+    pub(crate) kind: LocationKind,
 }
 
 impl<'w> SymbolicLocation<'w> {
@@ -185,7 +202,7 @@ impl<'w> SymbolicLocation<'w> {
             annotation: self.annotation.clone(),
             link: None,
             route: self.route.with_keys(keys),
-            primary: self.primary,
+            kind: self.kind,
         }
     }
 
@@ -215,8 +232,22 @@ impl<'w> SymbolicLocation<'w> {
 
     /// Mark the current `SymbolicLocation` as a "primary" location.
     pub(crate) fn primary(mut self) -> SymbolicLocation<'w> {
-        self.primary = true;
+        self.kind = LocationKind::Primary;
         self
+    }
+
+    /// Mark the current `SymbolicLocation` as a "hidden" location.
+    pub(crate) fn hidden(mut self) -> SymbolicLocation<'w> {
+        self.kind = LocationKind::Hidden;
+        self
+    }
+
+    pub(crate) fn is_primary(&self) -> bool {
+        matches!(self.kind, LocationKind::Primary)
+    }
+
+    pub(crate) fn is_hidden(&self) -> bool {
+        matches!(self.kind, LocationKind::Hidden)
     }
 
     /// Concretize this `SymbolicLocation`, consuming it in the process.
@@ -436,6 +467,10 @@ impl Finding<'_> {
             url = self.url
         )
     }
+
+    pub(crate) fn visible_locations(&self) -> impl Iterator<Item = &Location<'_>> {
+        self.locations.iter().filter(|l| !l.symbolic.is_hidden())
+    }
 }
 
 pub(crate) struct FindingBuilder<'w> {
@@ -497,7 +532,7 @@ impl<'w> FindingBuilder<'w> {
 
         locations.extend(self.raw_locations);
 
-        if !locations.iter().any(|l| l.symbolic.primary) {
+        if !locations.iter().any(|l| l.symbolic.is_primary()) {
             return Err(anyhow!(
                 "API misuse: at least one location must be marked with primary()"
             ));

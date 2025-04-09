@@ -142,7 +142,7 @@ impl Config {
                         ..
                     } => {
                         if *line == loc.concrete.location.start_point.row + 1
-                            && column.map_or(true, |col| {
+                            && column.is_none_or(|col| {
                                 col == loc.concrete.location.start_point.column + 1
                             })
                         {
