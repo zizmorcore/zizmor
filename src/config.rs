@@ -173,11 +173,7 @@ impl Config {
             .rules
             .get(ident)
             .and_then(|rule_config| rule_config.config.as_ref())
-            .and_then(|policy| {
-                Some(serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(
-                    policy.clone(),
-                )))
-            })
+            .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
             .transpose()?)
     }
 }

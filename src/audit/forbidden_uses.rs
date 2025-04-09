@@ -55,7 +55,7 @@ pub(crate) struct ForbiddenUses {
 audit_meta!(ForbiddenUses, "forbidden-uses", "fobidden action used");
 
 impl ForbiddenUses {
-    pub fn use_denied<'u>(&self, uses: &Uses) -> bool {
+    pub fn use_denied(&self, uses: &Uses) -> bool {
         let Uses::Repository(repo_uses) = uses else {
             return false;
         };
