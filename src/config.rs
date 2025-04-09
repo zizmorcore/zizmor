@@ -70,7 +70,7 @@ pub(crate) struct AuditRuleConfig {
     #[serde(default)]
     ignore: Vec<WorkflowRule>,
     #[serde(default)]
-    policy: serde_yaml::Value,
+    policy: Option<serde_yaml::Mapping>,
 }
 
 /// Runtime configuration, corresponding to a `zizmor.yml` file.
@@ -165,21 +165,20 @@ impl Config {
         false
     }
 
-    pub(crate) fn rule_config<T>(&self, ident: &str) -> Result<T>
+    pub(crate) fn rule_config<T>(&self, ident: &str) -> Result<Option<T>>
     where
-        T: Default + DeserializeOwned,
+        T: DeserializeOwned,
     {
         Ok(self
             .rules
             .get(ident)
-            .map(|audit_rule_config| &audit_rule_config.policy)
-            .filter(|policy| !matches!(policy, serde_yaml::Value::Null))
-            .map(|policy| {
-                serde_yaml::from_value::<T>(policy.clone()).inspect_err(|err| {
-                    tracing::error!("failed to deserialize settings for rule {ident:?}: {err:?}");
-                })
+            .and_then(|rule_config| rule_config.policy.as_ref())
+            .and_then(|policy| {
+                Some(serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(
+                    policy.clone(),
+                )))
             })
-            .unwrap_or_else(|| Ok(T::default()))?)
+            .transpose()?)
     }
 }
 
