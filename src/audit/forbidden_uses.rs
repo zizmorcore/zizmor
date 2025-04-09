@@ -19,7 +19,7 @@ struct ForbiddenUsesConfig {
     patterns: Vec<String>,
 }
 
-const DEFAULT_ALLOWLIST: &[&str] = &["actions/*", "github/*"];
+const DEFAULT_ALLOWLIST: &[&str] = &["actions/*", "github/*", "dependabot/*"];
 
 impl Default for ForbiddenUsesConfig {
     fn default() -> Self {
