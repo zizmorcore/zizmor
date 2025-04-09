@@ -70,7 +70,7 @@ pub(crate) struct AuditRuleConfig {
     #[serde(default)]
     ignore: Vec<WorkflowRule>,
     #[serde(default)]
-    policy: Option<serde_yaml::Mapping>,
+    config: Option<serde_yaml::Mapping>,
 }
 
 /// Runtime configuration, corresponding to a `zizmor.yml` file.
@@ -172,7 +172,7 @@ impl Config {
         Ok(self
             .rules
             .get(ident)
-            .and_then(|rule_config| rule_config.policy.as_ref())
+            .and_then(|rule_config| rule_config.config.as_ref())
             .and_then(|policy| {
                 Some(serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(
                     policy.clone(),

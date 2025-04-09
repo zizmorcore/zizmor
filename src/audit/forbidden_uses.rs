@@ -5,18 +5,18 @@ use crate::finding::{Confidence, Persona, Severity};
 use crate::models::{CompositeStep, uses::RepositoryUsesExt};
 use serde::Deserialize;
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 enum ForbiddenUsesListType {
-    #[default]
     Allow,
     Deny,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct ForbiddenUsesConfig {
-    #[serde(default)]
-    list_type: ForbiddenUsesListType,
-    actions: Vec<String>,
+    policy: ForbiddenUsesListType,
+    patterns: Vec<String>,
 }
 
 const DEFAULT_ALLOWLIST: [&str; 1] = ["actions/*"];
@@ -24,8 +24,8 @@ const DEFAULT_ALLOWLIST: [&str; 1] = ["actions/*"];
 impl Default for ForbiddenUsesConfig {
     fn default() -> Self {
         Self {
-            list_type: ForbiddenUsesListType::Allow,
-            actions: DEFAULT_ALLOWLIST
+            policy: ForbiddenUsesListType::Allow,
+            patterns: DEFAULT_ALLOWLIST
                 .iter()
                 .map(|item| item.to_string())
                 .collect(),
@@ -36,18 +36,13 @@ impl Default for ForbiddenUsesConfig {
 impl ForbiddenUsesConfig {
     fn is_uses_allowed(&self, uses: &RepositoryUses) -> bool {
         let matched = self
-            .actions
+            .patterns
             .iter()
             .any(|allowlist_entry| uses.matches(allowlist_entry));
-        match &self.list_type {
+        match &self.policy {
             ForbiddenUsesListType::Allow => matched,
             ForbiddenUsesListType::Deny => !matched,
         }
-    }
-
-    #[inline]
-    fn is_uses_denied(&self, uses: &RepositoryUses) -> bool {
-        !self.is_uses_allowed(uses)
     }
 }
 
@@ -60,12 +55,12 @@ pub(crate) struct ForbiddenUses {
 audit_meta!(ForbiddenUses, "forbidden-uses", "fobidden action used");
 
 impl ForbiddenUses {
-    pub fn evaluate_allowlist<'u>(&self, uses: &Uses) -> bool {
+    pub fn use_denied<'u>(&self, uses: &Uses) -> bool {
         let Uses::Repository(repo_uses) = uses else {
             return false;
         };
 
-        self.config.is_uses_denied(repo_uses)
+        !self.config.is_uses_allowed(repo_uses)
     }
 }
 
@@ -97,7 +92,7 @@ impl Audit for ForbiddenUses {
             return Ok(vec![]);
         };
 
-        if self.evaluate_allowlist(uses) {
+        if self.use_denied(uses) {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::High)
@@ -126,7 +121,7 @@ impl Audit for ForbiddenUses {
             return Ok(vec![]);
         };
 
-        if self.evaluate_allowlist(uses) {
+        if self.use_denied(uses) {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::High)
