@@ -51,6 +51,7 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.event.workflow_run.id",
     // Corresponds to the job ID, which is workflow-controlled
     // but can only be [A-Za-z0-9-_].
+    // See: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_id
     "github.job",
     // Information about the GitHub repository
     "github.repository",
