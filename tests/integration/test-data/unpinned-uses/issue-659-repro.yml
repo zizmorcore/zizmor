@@ -1,0 +1,19 @@
+# minimized from https://raw.githubusercontent.com/docker/actions-toolkit/59501e62b/.github/workflows/test.yml
+name: issue-659-repro
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-itg:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.prepare-itg.outputs.includes) }}
+    steps:
+      - # FIXME: Needs to setup node twice on Windows due to a bug with runner
+        name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
