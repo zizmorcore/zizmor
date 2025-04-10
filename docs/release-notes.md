@@ -41,6 +41,8 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would fail to parse workflows with
   `pull_request` or `pull_request_target` triggers that specified
   `types` as a scalar value (#653)
+* Fixed a crash where `zizmor` would fail to generate correct concrete
+  location spans for YAML inputs with comments inside block sequences (#660)
 
 ## v1.5.2
 

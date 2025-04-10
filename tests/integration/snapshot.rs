@@ -163,6 +163,13 @@ fn unpinned_uses() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-uses/issue-659-repro.yml"))
+            .args(["--pedantic"])
+            .run()?
+    );
+
     Ok(())
 }
 
