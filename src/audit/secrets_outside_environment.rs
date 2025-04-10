@@ -1,10 +1,10 @@
 use github_actions_models::{
-    common::{expr::LoE, Env, EnvValue},
+    common::{Env, EnvValue, expr::LoE},
     workflow::job::StepBody,
 };
 
-use super::{audit_meta, Audit};
-use crate::{finding::Confidence, models::Job};
+use super::{Audit, audit_meta};
+use crate::finding::Confidence;
 
 pub(crate) struct SecretsOutsideEnvironment;
 
@@ -22,59 +22,61 @@ impl Audit for SecretsOutsideEnvironment {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(
+    fn audit_step<'w>(
         &self,
-        input: &'w super::AuditInput,
+        step: &crate::models::Step<'w>,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];
 
-        if let super::AuditInput::Workflow(w) = input {
-            for job in w.jobs() {
-                if let Job::NormalJob(j) = job {
-                    if j.environment().is_some() {
-                        continue;
-                    }
+        if step.parent.environment().is_some() {
+            return Ok(findings);
+        }
 
-                    for step in j.steps() {
-                        let body = &step.body;
-                        let eenv: &Env;
-
-                        match body {
-                            StepBody::Uses { uses: _, with } => {
-                                eenv = with;
-                            }
-                            StepBody::Run {
-                                run: _,
-                                shell: _,
-                                env,
-                                working_directory: _,
-                            } => match env {
-                                LoE::Expr(_) => {
-                                    // TODO: Implement this.
-                                    panic!("We don't handle Expr yet!")
-                                }
-                                LoE::Literal(env) => eenv = env,
-                            },
-                        }
-
-                        for v in eenv.values() {
-                            if let EnvValue::String(s) = v {
-                                if s.contains("secrets") {
-                                    findings.push(
-                                        Self::finding()
-                                            .add_location(step.location().primary())
-                                            .confidence(Confidence::High)
-                                            .severity(crate::finding::Severity::High)
-                                            .build(input)?,
-                                    );
-                                }
-                            }
-                        }
-                    }
+        let eenv: &Env;
+        match &step.body {
+            StepBody::Uses { uses: _, with } => {
+                eenv = with;
+            }
+            StepBody::Run {
+                run: _,
+                shell: _,
+                env,
+                working_directory: _,
+            } => match env {
+                LoE::Expr(e) => {
+                    Self::check_secrets_access(e.as_bare(), step, &mut findings)?;
+                    return Ok(findings);
                 }
+                LoE::Literal(env) => eenv = env,
+            },
+        }
+
+        for v in eenv.values() {
+            if let EnvValue::String(s) = v {
+                Self::check_secrets_access(s, step, &mut findings)?
             }
         }
 
         Ok(findings)
+    }
+}
+
+impl SecretsOutsideEnvironment {
+    fn check_secrets_access<'w>(
+        s: &str,
+        step: &crate::models::Step<'w>,
+        findings: &mut Vec<crate::finding::Finding<'w>>,
+    ) -> anyhow::Result<()> {
+        if s.contains("secrets") {
+            findings.push(
+                Self::finding()
+                    .add_location(step.location().primary())
+                    .confidence(Confidence::High)
+                    .severity(crate::finding::Severity::High)
+                    .build(step.workflow())?,
+            );
+        }
+
+        Ok(())
     }
 }
