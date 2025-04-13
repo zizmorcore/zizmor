@@ -8,5 +8,5 @@ snapshot_kind: text
  INFO zizmor: skipping known-vulnerable-actions: can't run without a GitHub API token
 fatal: no audit was performed
 error: failed to load audit: unpinned-uses
- = note: invalid configuration: invalid uses pattern: foo/
+ = note: invalid configuration: invalid repository uses pattern: foo/
  = note: see: https://woodruffw.github.io/zizmor/audits/#unpinned-uses

@@ -1,8 +1,63 @@
 //! Extension traits for the `Uses` APIs.
 
-use github_actions_models::common::{RepositoryUses, Uses};
+use std::{str::FromStr, sync::LazyLock};
 
-/// Useful APIs for interacting with `uses: org/repo` clauses.
+use github_actions_models::common::{RepositoryUses, Uses};
+use regex::Regex;
+use serde::Deserialize;
+
+// Matches patterns like `owner/repo` and `owner/*`.
+static REPOSITORY_USES_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?mi)^[\w-]+/([\w\.-]+|\*)$"#).unwrap());
+
+/// Represents a pattern for matching repository `uses` references.
+/// These patterns are ordered by specificity; more specific patterns
+/// should be listed first.
+#[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+pub(crate) enum RepositoryUsesPattern {
+    InRepo { owner: String, repo: String },
+    InOwner(String),
+    Any,
+}
+
+impl FromStr for RepositoryUsesPattern {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "*" {
+            return Ok(RepositoryUsesPattern::Any);
+        }
+
+        if !REPOSITORY_USES_PATTERN.is_match(&s) {
+            return Err(anyhow::anyhow!("invalid repository uses pattern: {s}"));
+        }
+
+        let (owner, repo) = s
+            .split_once('/')
+            .ok_or_else(|| anyhow::anyhow!("invalid repository uses pattern: {s}"))?;
+
+        Ok(if repo == "*" {
+            RepositoryUsesPattern::InOwner(owner.into())
+        } else {
+            RepositoryUsesPattern::InRepo {
+                owner: owner.into(),
+                repo: repo.into(),
+            }
+        })
+    }
+}
+
+impl<'de> Deserialize<'de> for RepositoryUsesPattern {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        RepositoryUsesPattern::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+/// Useful APIs for interacting with `uses: owner/repo` clauses.
 pub(crate) trait RepositoryUsesExt {
     /// Returns whether this `uses:` clause "matches" the given template.
     /// The template is itself formatted like a normal `uses:` clause.

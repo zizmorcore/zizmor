@@ -1,13 +1,12 @@
 use std::collections::HashMap;
-use std::sync::LazyLock;
 
 use anyhow::Context;
 use github_actions_models::common::{RepositoryUses, Uses};
-use regex::Regex;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
 use super::{Audit, AuditLoadError, AuditState, Finding, Step, audit_meta};
 use crate::finding::{Confidence, Persona, Severity};
+use crate::models::uses::RepositoryUsesPattern;
 use crate::models::{CompositeStep, uses::UsesExt as _};
 
 pub(crate) struct UnpinnedUses {
@@ -50,9 +49,11 @@ impl UnpinnedUses {
                 let (pattern, policy) = self.policies.get_policy(repo_uses);
 
                 let pat_desc = match pattern {
-                    Some(UsesPattern::Any) | None => "blanket".into(),
-                    Some(UsesPattern::InOwner(owner)) => format!("{owner}/*"),
-                    Some(UsesPattern::InRepo { owner, repo }) => format!("{owner}/{repo}"),
+                    Some(RepositoryUsesPattern::Any) | None => "blanket".into(),
+                    Some(RepositoryUsesPattern::InOwner(owner)) => format!("{owner}/*"),
+                    Some(RepositoryUsesPattern::InRepo { owner, repo }) => {
+                        format!("{owner}/{repo}")
+                    }
                 };
 
                 match policy {
@@ -148,10 +149,6 @@ impl Audit for UnpinnedUses {
     }
 }
 
-// Matches patterns like `owner/repo` and `owner/*`.
-static USES_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"(?mi)^[\w-]+/([\w\.-]+|\*)$"#).unwrap());
-
 /// Config for the `unpinned-uses` rule.
 ///
 /// This configuration is reified into an `UnpinnedUsesPolicies`.
@@ -159,68 +156,29 @@ static USES_PATTERN: LazyLock<Regex> =
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct UnpinnedUsesConfig {
     /// A mapping of `uses:` patterns to policies.
-    policies: HashMap<UsesPattern, UsesPolicy>,
+    policies: HashMap<RepositoryUsesPattern, UsesPolicy>,
 }
 
 impl Default for UnpinnedUsesConfig {
     fn default() -> Self {
         Self {
             policies: [
-                (UsesPattern::InOwner("actions".into()), UsesPolicy::RefPin),
-                (UsesPattern::InOwner("github".into()), UsesPolicy::RefPin),
                 (
-                    UsesPattern::InOwner("dependabot".into()),
+                    RepositoryUsesPattern::InOwner("actions".into()),
                     UsesPolicy::RefPin,
                 ),
-                (UsesPattern::Any, UsesPolicy::HashPin),
+                (
+                    RepositoryUsesPattern::InOwner("github".into()),
+                    UsesPolicy::RefPin,
+                ),
+                (
+                    RepositoryUsesPattern::InOwner("dependabot".into()),
+                    UsesPolicy::RefPin,
+                ),
+                (RepositoryUsesPattern::Any, UsesPolicy::HashPin),
             ]
             .into(),
         }
-    }
-}
-
-/// Represents a pattern for matching `uses` references.
-/// These patterns are ordered by specificity; more specific patterns
-/// should be listed first.
-#[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
-enum UsesPattern {
-    /// `owner/repo`: matches all actions in the given repository.
-    InRepo { owner: String, repo: String },
-    /// `owner/*`: matches all actions in repositories owned by the given owner.
-    InOwner(String),
-    /// `*`: matches all actions in all repositories.
-    Any,
-}
-
-impl<'de> Deserialize<'de> for UsesPattern {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let raw = String::deserialize(deserializer)?;
-
-        if raw == "*" {
-            return Ok(UsesPattern::Any);
-        }
-
-        if !USES_PATTERN.is_match(&raw) {
-            return Err(serde::de::Error::custom(format!(
-                "invalid uses pattern: {raw}"
-            )));
-        }
-
-        let (owner, repo) = raw
-            .split_once('/')
-            .ok_or_else(|| serde::de::Error::custom(format!("invalid uses pattern: {raw}")))?;
-
-        Ok(if repo == "*" {
-            UsesPattern::InOwner(owner.into())
-        } else {
-            UsesPattern::InRepo {
-                owner: owner.into(),
-                repo: repo.into(),
-            }
-        })
     }
 }
 
@@ -253,7 +211,7 @@ struct UnpinnedUsesPolicies {
     /// This is done for performance reasons: a two-level structure here
     /// means that checking a `uses:` is a linear scan of the policies
     /// for that owner, rather than a full scan of all policies.
-    policy_tree: HashMap<String, Vec<(UsesPattern, UsesPolicy)>>,
+    policy_tree: HashMap<String, Vec<(RepositoryUsesPattern, UsesPolicy)>>,
 
     /// This is the policy that's applied if nothing in the policy tree matches.
     ///
@@ -266,24 +224,24 @@ struct UnpinnedUsesPolicies {
 impl UnpinnedUsesPolicies {
     /// Returns the most specific policy for the given repository `uses` reference,
     /// or the default policy if none match.
-    fn get_policy(&self, uses: &RepositoryUses) -> (Option<&UsesPattern>, UsesPolicy) {
+    fn get_policy(&self, uses: &RepositoryUses) -> (Option<&RepositoryUsesPattern>, UsesPolicy) {
         match self.policy_tree.get(&uses.owner) {
             Some(policies) => {
                 // Policies are ordered by specificity, so we can
                 // iterate and return eagerly.
                 for (uses_pattern, policy) in policies {
                     match uses_pattern {
-                        UsesPattern::InRepo { owner: _, repo } => {
+                        RepositoryUsesPattern::InRepo { owner: _, repo } => {
                             if repo == &uses.repo {
                                 return (Some(uses_pattern), *policy);
                             } else {
                                 continue;
                             }
                         }
-                        UsesPattern::InOwner(_) => return (Some(uses_pattern), *policy),
+                        RepositoryUsesPattern::InOwner(_) => return (Some(uses_pattern), *policy),
                         // NOTE: Unreachable because we only
                         // allow `*` to configure the default policy.
-                        UsesPattern::Any => unreachable!(),
+                        RepositoryUsesPattern::Any => unreachable!(),
                     }
                 }
                 // The policies under `owner/` might be fully divergent
@@ -298,24 +256,25 @@ impl UnpinnedUsesPolicies {
 
 impl From<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
     fn from(config: UnpinnedUsesConfig) -> Self {
-        let mut policy_tree: HashMap<String, Vec<(UsesPattern, UsesPolicy)>> = HashMap::new();
+        let mut policy_tree: HashMap<String, Vec<(RepositoryUsesPattern, UsesPolicy)>> =
+            HashMap::new();
         let mut default_policy = UsesPolicy::HashPin;
 
         for (pattern, policy) in config.policies {
             match pattern {
-                UsesPattern::InRepo { owner, repo } => {
+                RepositoryUsesPattern::InRepo { owner, repo } => {
                     policy_tree
                         .entry(owner.clone())
                         .or_default()
-                        .push((UsesPattern::InRepo { owner, repo }, policy));
+                        .push((RepositoryUsesPattern::InRepo { owner, repo }, policy));
                 }
-                UsesPattern::InOwner(owner) => {
+                RepositoryUsesPattern::InOwner(owner) => {
                     policy_tree
                         .entry(owner.clone())
                         .or_default()
-                        .push((UsesPattern::InOwner(owner), policy));
+                        .push((RepositoryUsesPattern::InOwner(owner), policy));
                 }
-                UsesPattern::Any => {
+                RepositoryUsesPattern::Any => {
                     default_policy = policy;
                 }
             }
@@ -335,17 +294,17 @@ impl From<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
 
 #[cfg(test)]
 mod tests {
-    use super::UsesPattern;
+    use crate::models::uses::RepositoryUsesPattern;
 
     #[test]
     fn test_uses_pattern_ord() {
         let mut patterns = vec![
-            UsesPattern::Any,
-            UsesPattern::InRepo {
+            RepositoryUsesPattern::Any,
+            RepositoryUsesPattern::InRepo {
                 owner: "owner".into(),
                 repo: "repo".into(),
             },
-            UsesPattern::InOwner("owner/*".into()),
+            RepositoryUsesPattern::InOwner("owner/*".into()),
         ];
 
         patterns.sort();
@@ -353,12 +312,12 @@ mod tests {
         assert_eq!(
             patterns,
             vec![
-                UsesPattern::InRepo {
+                RepositoryUsesPattern::InRepo {
                     owner: "owner".into(),
                     repo: "repo".into()
                 },
-                UsesPattern::InOwner("owner/*".into()),
-                UsesPattern::Any,
+                RepositoryUsesPattern::InOwner("owner/*".into()),
+                RepositoryUsesPattern::Any,
             ]
         );
     }
