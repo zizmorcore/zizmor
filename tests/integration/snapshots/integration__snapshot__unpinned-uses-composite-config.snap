@@ -1,0 +1,14 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().config(input_under_test(\"unpinned-uses/configs/composite.yml\")).input(input_under_test(\"unpinned-uses/menagerie-of-uses.yml\")).run()?"
+snapshot_kind: text
+---
+error[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:11:9
+   |
+11 |       - uses: actions/setup-python@v4
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by actions/setup-python policy)
+   |
+   = note: audit confidence → High
+
+1 finding: 0 unknown, 0 informational, 0 low, 0 medium, 1 high

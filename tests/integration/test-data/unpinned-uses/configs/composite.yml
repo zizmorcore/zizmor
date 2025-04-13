@@ -1,0 +1,10 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Ensures that we handle overlapping patterns correctly,
+        # favoring more specific ones: `actions/*` is shadowed by
+        # `actions/setup-python`, which has a stronger policy.
+        "actions/*": any
+        "actions/setup-python": hash-pin
+        "pypa/gh-action-pypi-publish": ref-pin

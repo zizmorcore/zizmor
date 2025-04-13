@@ -33,6 +33,7 @@ pub struct Zizmor {
     unbuffer: bool,
     offline: bool,
     inputs: Vec<String>,
+    config: Option<String>,
     output: OutputMode,
 }
 
@@ -46,6 +47,7 @@ impl Zizmor {
             unbuffer: false,
             offline: true,
             inputs: vec![],
+            config: None,
             output: OutputMode::Stdout,
         }
     }
@@ -67,6 +69,11 @@ impl Zizmor {
 
     pub fn input(mut self, input: impl Into<String>) -> Self {
         self.inputs.push(input.into());
+        self
+    }
+
+    pub fn config(mut self, config: impl Into<String>) -> Self {
+        self.config = Some(config.into());
         self
     }
 
@@ -92,6 +99,12 @@ impl Zizmor {
             // If we're running in online mode, we pre-assert the
             // presence of GH_TOKEN to make configuration failures more obvious.
             std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
+        }
+
+        if let Some(config) = self.config {
+            self.cmd.arg("--config").arg(config);
+        } else {
+            self.cmd.arg("--no-config");
         }
 
         for input in &self.inputs {

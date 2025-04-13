@@ -212,7 +212,7 @@ impl<'de> Deserialize<'de> for UsesPattern {
             .ok_or_else(|| serde::de::Error::custom(format!("invalid uses pattern: {raw}")))?;
 
         Ok(if repo == "*" {
-            UsesPattern::InOwner(raw)
+            UsesPattern::InOwner(owner.into())
         } else {
             UsesPattern::InRepo {
                 owner: owner.into(),

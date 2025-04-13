@@ -1,4 +1,7 @@
 //! Snapshot integration tests.
+//!
+//! TODO: This file is too big; break it into multiple
+//! modules, one per audit/conceptual group.
 
 use crate::common::{OutputMode, input_under_test, zizmor};
 use anyhow::Result;
@@ -167,6 +170,56 @@ fn unpinned_uses() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-uses/issue-659-repro.yml"))
             .args(["--pedantic"])
+            .run()?
+    );
+
+    // Config tests for `unpinned-uses`.
+
+    // Default policies (no explicit config).
+    insta::assert_snapshot!(
+        "unpinned-uses-default-config",
+        zizmor()
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    // Require all uses to be hash-pinned.
+    insta::assert_snapshot!(
+        "unpinned-uses-hash-pin-everything-config",
+        zizmor()
+            .config(input_under_test(
+                "unpinned-uses/configs/hash-pin-everything.yml"
+            ))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    // Require all uses to be ref-pinned.
+    insta::assert_snapshot!(
+        "unpinned-uses-ref-pin-everything-config",
+        zizmor()
+            .config(input_under_test(
+                "unpinned-uses/configs/ref-pin-everything.yml"
+            ))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    // Composite config.
+    insta::assert_snapshot!(
+        "unpinned-uses-composite-config",
+        zizmor()
+            .config(input_under_test("unpinned-uses/configs/composite.yml"))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    // Empty config.
+    insta::assert_snapshot!(
+        "unpinned-uses-empty-config",
+        zizmor()
+            .config(input_under_test("unpinned-uses/configs/empty.yml"))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?
     );
 
