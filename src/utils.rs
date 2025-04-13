@@ -1,14 +1,76 @@
 //! Helper routines.
 
-use std::ops::Range;
-
+use anyhow::{Error, anyhow};
 use camino::Utf8Path;
 use github_actions_models::common::{
     Env,
     expr::{ExplicitExpr, LoE},
 };
+use jsonschema::{
+    BasicOutput::{Invalid, Valid},
+    Validator,
+    output::{ErrorDescription, OutputUnit},
+    validator_for,
+};
+use std::fmt::Write;
+use std::{collections::VecDeque, ops::Range};
+use tokio::sync::OnceCell;
 
 use crate::audit::AuditInput;
+
+static GITHUB_WORKFLOW_SCHEMA_URL: &str = "https://json.schemastore.org/github-workflow.json";
+static WORKFLOW_VALIDATOR: OnceCell<Option<Validator>> = OnceCell::const_new();
+
+async fn get_validator() -> &'static Option<Validator> {
+    return WORKFLOW_VALIDATOR
+        .get_or_init(|| async {
+            match reqwest::get(GITHUB_WORKFLOW_SCHEMA_URL).await {
+                Ok(response) => match response.text().await {
+                    Ok(content) => match serde_json::from_str(content.as_str()) {
+                        Ok(schema) => validator_for(&schema).ok(),
+                        Err(_) => None,
+                    },
+                    Err(_) => None,
+                },
+                Err(_) => None,
+            }
+        })
+        .await;
+}
+
+#[tokio::main]
+pub(crate) async fn validate_workflow(contents: String) -> Option<Error> {
+    match get_validator().await {
+        Some(validator) => match serde_yaml::from_str(&contents) {
+            Ok(workflow) => match validator.apply(&workflow).basic() {
+                Valid(_) => Some(anyhow!("valid workflow but failed unmarshaling")),
+                Invalid(errors) => Some(parse_workflow_validation_errors(errors)),
+            },
+            Err(_) => Some(anyhow!("unable to validate contents")),
+        },
+        None => None,
+    }
+}
+
+fn parse_workflow_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Error {
+    let mut message = String::new();
+
+    for error in errors {
+        let description = error.error_description().to_string();
+        if !description.starts_with("{") {
+            let mut location = error.instance_location().to_string();
+            if location.is_empty() {
+                writeln!(message, "{}", description,).unwrap();
+            } else {
+                location = location.replace("/", ".").get(1..).unwrap().to_string();
+
+                writeln!(message, "{}: {}", location, description,).unwrap();
+            }
+        }
+    }
+
+    anyhow!(message)
+}
 
 /// Convenience trait for inline transformations of `Self`.
 ///
@@ -174,6 +236,7 @@ mod tests {
         registry::InputKey,
         utils::{
             extract_expression, extract_expressions, normalize_shell, parse_expressions_from_input,
+            validate_workflow,
         },
     };
 
@@ -326,5 +389,62 @@ jobs:
         ] {
             assert_eq!(normalize_shell(actual), *expected)
         }
+    }
+
+    #[test]
+    fn test_workflow_validation_valid() {
+        let workflow = "name: Valid
+
+on:
+  push:
+
+permissions: {}
+
+jobs:
+  valid:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'valid'
+"
+        .to_string();
+
+        let err = validate_workflow(workflow);
+
+        assert_eq!(err.is_some(), true);
+        assert_eq!(
+            format!("{}", err.unwrap()),
+            "valid workflow but failed unmarshaling"
+        )
+    }
+
+    #[test]
+    fn test_workflow_validation_invalid() {
+        let workflow = "name: Invalid
+
+boom:
+
+on:
+  workflow_call:
+    inputs:
+      input:
+        description: Input
+
+permissions: {}
+
+jobs:
+  valid:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'invalid'
+"
+        .to_string();
+
+        let err = validate_workflow(workflow);
+
+        assert_eq!(err.is_some(), true);
+        assert_eq!(
+            format!("{}", err.unwrap()),
+            "on.workflow_call.inputs.input: \"type\" is a required property\nAdditional properties are not allowed ('boom' was unexpected)\n"
+        );
     }
 }
