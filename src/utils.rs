@@ -410,7 +410,7 @@ jobs:
 
         let err = validate_workflow(workflow);
 
-        assert_eq!(err.is_some(), true);
+        assert!(err.is_some());
         assert_eq!(
             format!("{}", err.unwrap()),
             "valid workflow but failed unmarshaling"
@@ -441,7 +441,7 @@ jobs:
 
         let err = validate_workflow(workflow);
 
-        assert_eq!(err.is_some(), true);
+        assert!(err.is_some());
         assert_eq!(
             format!("{}", err.unwrap()),
             "on.workflow_call.inputs.input: \"type\" is a required property\nAdditional properties are not allowed ('boom' was unexpected)\n"
