@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+use anyhow::Context;
 use github_actions_models::common::{RepositoryUses, Uses};
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
@@ -82,7 +83,8 @@ impl Audit for UnpinnedUses {
         let config = state
             .config
             .rule_config::<UnpinnedUsesConfig>(Self::ident())
-            .map_err(|e| AuditLoadError::Config(e.to_string()))?
+            .context("invalid configuration")
+            .map_err(|e| AuditLoadError::Fail(e))?
             .unwrap_or_default();
 
         Ok(Self {

@@ -492,14 +492,10 @@ fn run() -> Result<ExitCode> {
                 Err(AuditLoadError::Skip(e)) => {
                     tracing::info!("skipping {audit}: {e}", audit = base::ident())
                 }
-                Err(AuditLoadError::Config(e)) => {
-                    // TODO: add audit's doc URL to this message.
+                Err(AuditLoadError::Fail(e)) => {
                     return Err(anyhow!(tips(
                         format!("failed to load audit: {audit}", audit = base::ident()),
-                        &[
-                            format!("invalid configuration: {e}"),
-                            format!("see: {url}", url = base::url())
-                        ]
+                        &[format!("{e:#}"), format!("see: {url}", url = base::url())]
                     )));
                 }
             }

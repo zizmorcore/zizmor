@@ -155,10 +155,14 @@ pub(crate) use audit_meta;
 
 #[derive(Error, Debug)]
 pub(crate) enum AuditLoadError {
+    /// The audit's initialization failed in a way that suggests it should
+    /// be skipped, rather than failing the entire run.
     #[error("{0}")]
     Skip(anyhow::Error),
-    #[error("failed to load config: {0}")]
-    Config(String),
+    /// The audit's initialization failed in a way that suggests that the
+    /// entire run should be aborted.
+    #[error("{0}")]
+    Fail(anyhow::Error),
 }
 
 /// Auditing trait.
