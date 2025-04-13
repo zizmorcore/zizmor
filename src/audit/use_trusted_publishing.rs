@@ -1,13 +1,12 @@
 use std::ops::Deref;
 
-use anyhow::Ok;
 use github_actions_models::{
     common::{EnvValue, Uses},
     workflow::job::StepBody,
 };
 use indexmap::IndexMap;
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{Confidence, Severity},
     models::uses::RepositoryUsesExt as _,
@@ -68,7 +67,7 @@ impl UseTrustedPublishing {
 }
 
 impl Audit for UseTrustedPublishing {
-    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self> {
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 

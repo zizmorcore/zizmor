@@ -7,7 +7,7 @@ use std::{
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
-use audit::Audit;
+use audit::{Audit, AuditLoadError};
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
@@ -231,10 +231,11 @@ impl CollectionMode {
     }
 }
 
-fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
-    let message = Level::Error
-        .title(err.as_ref())
-        .footer(Level::Note.title(tip.as_ref()));
+fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
+    let mut message = Level::Error.title(err.as_ref());
+    for tip in tips {
+        message = message.footer(Level::Note.title(tip.as_ref()));
+    }
 
     let renderer = Renderer::styled();
     format!("{}", renderer.render(message))
@@ -305,33 +306,33 @@ fn collect_from_repo_slug(
 ) -> Result<()> {
     // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
     let Ok(Uses::Repository(slug)) = Uses::from_str(input) else {
-        return Err(anyhow!(tip(
+        return Err(anyhow!(tips(
             format!("invalid input: {input}"),
-            format!(
+            &[format!(
                 "pass a single {file}, {directory}, or entire repo by {slug} slug",
                 file = "file".green(),
                 directory = "directory".green(),
                 slug = "owner/repo".green()
-            )
+            )]
         )));
     };
 
     // We don't expect subpaths here.
     if slug.subpath.is_some() {
-        return Err(anyhow!(tip(
+        return Err(anyhow!(tips(
             "invalid GitHub repository reference",
-            "pass owner/repo or owner/repo@ref"
+            &["pass owner/repo or owner/repo@ref"]
         )));
     }
 
     let client = state.github_client().ok_or_else(|| {
-        anyhow!(tip(
+        anyhow!(tips(
             format!("can't retrieve repository: {input}", input = input.green()),
-            format!(
+            &[format!(
                 "try removing {offline} or passing {gh_token}",
                 offline = "--offline".yellow(),
                 gh_token = "--gh-token <TOKEN>".yellow(),
-            )
+            )]
         ))
     })?;
 
@@ -344,13 +345,13 @@ fn collect_from_repo_slug(
         }
     } else {
         let inputs = client.fetch_audit_inputs(&slug).with_context(|| {
-            tip(
+            tips(
                 format!(
                     "couldn't collect inputs from https://github.com/{owner}/{repo}",
                     owner = slug.owner,
                     repo = slug.repo
                 ),
-                "confirm the repository exists and that you have access to it",
+                &["confirm the repository exists and that you have access to it"],
             )
         })?;
 
@@ -488,7 +489,19 @@ fn run() -> Result<ExitCode> {
             use $rule as base;
             match base::new(&audit_state) {
                 Ok(audit) => audit_registry.register_audit(base::ident(), Box::new(audit)),
-                Err(e) => tracing::info!("skipping {audit}: {e}", audit = base::ident()),
+                Err(AuditLoadError::Skip(e)) => {
+                    tracing::info!("skipping {audit}: {e}", audit = base::ident())
+                }
+                Err(AuditLoadError::Config(e)) => {
+                    // TODO: add audit's doc URL to this message.
+                    return Err(anyhow!(tips(
+                        format!("failed to load audit: {audit}", audit = base::ident()),
+                        &[
+                            format!("invalid configuration: {e}"),
+                            format!("see: {url}", url = base::url())
+                        ]
+                    )));
+                }
             }
         }};
     }
@@ -511,7 +524,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::bot_conditions::BotConditions);
     register_audit!(audit::overprovisioned_secrets::OverprovisionedSecrets);
     register_audit!(audit::unredacted_secrets::UnredactedSecrets);
-    register_audit!(audit::forbidden_uses::ForbiddenUses);
+    // register_audit!(audit::forbidden_uses::ForbiddenUses);
 
     let mut results = FindingRegistry::new(&app, &config);
     {

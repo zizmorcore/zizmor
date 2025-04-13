@@ -3,7 +3,7 @@ use github_actions_models::{
     workflow::job::{Container, DockerCredentials},
 };
 
-use super::{Audit, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     finding::{Confidence, Severity},
     models::JobExt as _,
@@ -19,7 +19,7 @@ audit_meta!(
 );
 
 impl Audit for HardcodedContainerCredentials {
-    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

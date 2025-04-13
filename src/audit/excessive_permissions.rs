@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
-use super::{Audit, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::models::JobExt as _;
 use crate::{
     AuditState,
@@ -40,7 +40,7 @@ audit_meta!(
 pub(crate) struct ExcessivePermissions;
 
 impl Audit for ExcessivePermissions {
-    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

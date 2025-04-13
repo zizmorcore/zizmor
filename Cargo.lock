@@ -1331,7 +1331,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "198db74531d58c70a361c42201efde7e2591e976d518caf7662a47dc5720e7b6"
 dependencies = [
  "memchr",
- "thiserror 2.0.9",
+ "thiserror 2.0.12",
  "ucd-trie",
 ]
 
@@ -1840,7 +1840,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "syn 2.0.90",
- "thiserror 2.0.9",
+ "thiserror 2.0.12",
  "typed-builder",
 ]
 
@@ -2186,11 +2186,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.9"
+version = "2.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f072643fd0190df67a8bab670c20ef5d8737177d6ac6b2e9a236cb096206b2cc"
+checksum = "567b8a2dae586314f7be2a752ec7474332959c6460e02bde30d702a66d488708"
 dependencies = [
- "thiserror-impl 2.0.9",
+ "thiserror-impl 2.0.12",
 ]
 
 [[package]]
@@ -2206,9 +2206,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.9"
+version = "2.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b50fa271071aae2e6ee85f842e2e28ba8cd2c5fb67f11fcb1fd70b276f9e7d4"
+checksum = "7f7cf42b4507d8ea322120659672cf1b9dbb93f8f2d4ecfd6e51350ff5b17a1d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3119,7 +3119,7 @@ version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87c585ad15cb2a723978a39719af264133486ee68bd980e214ff43402e7b674a"
 dependencies = [
- "thiserror 2.0.9",
+ "thiserror 2.0.12",
  "tree-sitter",
  "tree-sitter-yaml",
 ]
@@ -3260,6 +3260,7 @@ dependencies = [
  "serde_yaml",
  "tar",
  "terminal-link",
+ "thiserror 2.0.12",
  "tokio",
  "tracing",
  "tracing-indicatif",

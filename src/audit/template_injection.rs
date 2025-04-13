@@ -15,7 +15,7 @@ use github_actions_models::{
     workflow::job::Strategy,
 };
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Persona, Severity, SymbolicLocation},
@@ -270,7 +270,7 @@ impl TemplateInjection {
 }
 
 impl Audit for TemplateInjection {
-    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

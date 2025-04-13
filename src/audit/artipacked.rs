@@ -7,7 +7,7 @@ use github_actions_models::{
 };
 use itertools::Itertools as _;
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::utils::split_patterns;
 use crate::{
     finding::{Confidence, Finding, Persona, Severity},
@@ -46,7 +46,7 @@ impl Artipacked {
 }
 
 impl Audit for Artipacked {
-    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self> {
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 

@@ -1,0 +1,10 @@
+rules:
+  unpinned-uses:
+    config:
+      policy:
+        "foo/bar": ref-pin
+        "foo/*": ref-pin
+        # "foo/foo": any
+        "foo/foo": hash-pin
+        # "*/foo": ref-pin
+        # "foo": ref-pin

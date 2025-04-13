@@ -55,6 +55,7 @@ serde_json = "1.0.140"
 serde_yaml = "0.9.34"
 tar = "0.4.44"
 terminal-link = "0.1.0"
+thiserror = "2.0.12"
 tokio = { version = "1.44.2", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-indicatif = "0.3.9"
@@ -66,7 +67,6 @@ yamlpath = "0.16.0"
 
 [profile.dev.package]
 insta.opt-level = 3
-similar.opt-level = 3
 
 [profile.release]
 lto = true

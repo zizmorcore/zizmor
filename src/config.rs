@@ -66,6 +66,7 @@ impl<'de> Deserialize<'de> for WorkflowRule {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct AuditRuleConfig {
     #[serde(default)]
     ignore: Vec<WorkflowRule>,
@@ -75,6 +76,7 @@ pub(crate) struct AuditRuleConfig {
 
 /// Runtime configuration, corresponding to a `zizmor.yml` file.
 #[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct Config {
     rules: HashMap<String, AuditRuleConfig>,
 }

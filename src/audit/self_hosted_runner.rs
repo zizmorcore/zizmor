@@ -11,7 +11,7 @@ use github_actions_models::{
     workflow::job::RunsOn,
 };
 
-use super::{Audit, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::models::Matrix;
 use crate::{
     AuditState,
@@ -28,7 +28,7 @@ audit_meta!(
 );
 
 impl Audit for SelfHostedRunner {
-    fn new(_state: &AuditState<'_>) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

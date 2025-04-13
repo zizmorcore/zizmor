@@ -8,7 +8,7 @@
 use anyhow::{Context, Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::finding::Finding;
 use crate::models::CompositeStep;
 use crate::{
@@ -124,16 +124,20 @@ impl KnownVulnerableActions {
 }
 
 impl Audit for KnownVulnerableActions {
-    fn new(state: &AuditState<'_>) -> anyhow::Result<Self>
+    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         if state.no_online_audits {
-            return Err(anyhow!("offline audits only requested"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "offline audits only requested"
+            )));
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't run without a GitHub API token"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "can't run without a GitHub API token"
+            )));
         };
 
         Ok(Self { client })

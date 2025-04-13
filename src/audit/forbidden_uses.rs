@@ -1,6 +1,6 @@
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{Audit, AuditState, Finding, Step, audit_meta};
+use super::{Audit, AuditLoadError, AuditState, Finding, Step, audit_meta};
 use crate::finding::{Confidence, Persona, Severity};
 use crate::models::{CompositeStep, uses::RepositoryUsesExt};
 use serde::Deserialize;
@@ -62,11 +62,15 @@ impl ForbiddenUses {
 }
 
 impl Audit for ForbiddenUses {
-    fn new(state: &AuditState<'_>) -> anyhow::Result<Self>
+    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
-        let (persona, severity, config) = match state.config.rule_config(Self::ident())? {
+        let (persona, severity, config) = match state
+            .config
+            .rule_config(Self::ident())
+            .map_err(|e| AuditLoadError::Config(e.to_string()))?
+        {
             Some(config) => (Persona::default(), Severity::High, config),
             // If the user doesn't give us a config, then we use the default
             // config and record everything as an audit finding.
