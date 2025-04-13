@@ -1,0 +1,6 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Invalid: foo/ should be foo/*
+        "foo/": "any"

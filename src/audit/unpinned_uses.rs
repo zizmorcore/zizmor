@@ -148,7 +148,7 @@ impl Audit for UnpinnedUses {
 
 // Matches patterns like `owner/repo` and `owner/*`.
 static USES_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"(?mi)^[\w-]+/([\w\.-]+)|\*$"#).unwrap());
+    LazyLock::new(|| Regex::new(r#"(?mi)^[\w-]+/([\w\.-]+|\*)$"#).unwrap());
 
 /// Config for the `unpinned-uses` rule.
 ///

@@ -223,6 +223,26 @@ fn unpinned_uses() -> Result<()> {
             .run()?
     );
 
+    // Invalid config: invalid policy syntax cases.
+    for tc in [
+        "invalid-wrong-policy-object",
+        "invalid-policy-syntax-1",
+        "invalid-policy-syntax-2",
+        "invalid-policy-syntax-3",
+        "invalid-policy-syntax-4",
+        "invalid-policy-syntax-5",
+    ] {
+        insta::assert_snapshot!(
+            zizmor()
+                .output(OutputMode::Stderr)
+                .config(input_under_test(
+                    &format!("unpinned-uses/configs/{tc}.yml",)
+                ))
+                .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+                .run()?
+        );
+    }
+
     Ok(())
 }
 
