@@ -1,7 +1,7 @@
 rules:
   unpinned-uses:
     config:
-      policy:
+      policies:
         "foo/bar": ref-pin
         "foo/*": ref-pin
         # "foo/foo": any

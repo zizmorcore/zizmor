@@ -18,7 +18,6 @@ pub(crate) mod bot_conditions;
 pub(crate) mod cache_poisoning;
 pub(crate) mod dangerous_triggers;
 pub(crate) mod excessive_permissions;
-pub(crate) mod forbidden_uses;
 pub(crate) mod github_env;
 pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;

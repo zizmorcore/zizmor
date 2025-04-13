@@ -1,28 +1,21 @@
 ---
 source: tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"unpinned-uses.yml\")).args([\"--pedantic\"]).run()?"
+snapshot_kind: text
 ---
-warning[unpinned-uses]: unpinned action reference
+error[unpinned-uses]: unpinned action reference
   --> @@INPUT@@:11:9
    |
 11 |       - uses: actions/checkout
-   |         ---------------------- action is not pinned to a tag, branch, or hash ref
+   |         ^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a ref or hash (required by actions/* policy)
    |
    = note: audit confidence → High
 
-help[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:16:9
-   |
-16 |       - uses: actions/checkout@v3
-   |         ------------------------- help: action is not pinned to a hash ref
-   |
-   = note: audit confidence → High
-
-warning[unpinned-uses]: unpinned action reference
+error[unpinned-uses]: unpinned action reference
   --> @@INPUT@@:21:9
    |
 21 |       - uses: github/codeql-action/upload-sarif
-   |         --------------------------------------- action is not pinned to a tag, branch, or hash ref
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a ref or hash (required by github/* policy)
    |
    = note: audit confidence → High
 
@@ -42,4 +35,4 @@ warning[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
 
-5 findings: 0 unknown, 0 informational, 1 low, 4 medium, 0 high
+4 findings: 0 unknown, 0 informational, 0 low, 2 medium, 2 high
