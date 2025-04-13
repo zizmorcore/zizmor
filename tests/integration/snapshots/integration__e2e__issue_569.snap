@@ -6,6 +6,7 @@ snapshot_kind: text
  INFO zizmor: skipping impostor-commit: offline audits only requested
  INFO zizmor: skipping ref-confusion: offline audits only requested
  INFO zizmor: skipping known-vulnerable-actions: offline audits only requested
+ INFO zizmor: skipping forbidden-uses: audit not configured
  INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/documentation-links.yml
