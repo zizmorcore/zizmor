@@ -4,6 +4,7 @@ use github_actions_models::common::Uses;
 use super::{Audit, AuditLoadError, AuditState, Finding, Step, audit_meta};
 use crate::finding::{Confidence, Persona, Severity};
 use crate::models::CompositeStep;
+use crate::models::uses::RepositoryUsesPattern;
 use serde::Deserialize;
 
 pub(crate) struct ForbiddenUses {
@@ -14,7 +15,25 @@ audit_meta!(ForbiddenUses, "forbidden-uses", "forbidden action used");
 
 impl ForbiddenUses {
     pub fn use_denied(&self, uses: &Uses) -> bool {
-        todo!()
+        match uses {
+            // Local uses are never denied.
+            Uses::Local(_) => false,
+            // TODO: Support Docker uses here?
+            // We'd need some equivalent to RepositoryUsesPattern
+            // but for Docker uses, which will be slightly annoying.
+            Uses::Docker(_) => {
+                tracing::warn!("can't evaluate direct Docker uses");
+                false
+            }
+            Uses::Repository(uses) => match &self.config {
+                ForbiddenUsesConfig::Allow { allow } => {
+                    !allow.iter().any(|pattern| pattern.matches(uses))
+                }
+                ForbiddenUsesConfig::Deny { deny } => {
+                    deny.iter().any(|pattern| pattern.matches(uses))
+                }
+            },
+        }
     }
 }
 
@@ -52,7 +71,7 @@ impl Audit for ForbiddenUses {
                         step.location()
                             .primary()
                             .with_keys(&["uses".into()])
-                            .annotated("action is not on the allowlist"),
+                            .annotated("use of this action is forbidden"),
                     )
                     .build(step.workflow())?,
             );
@@ -81,7 +100,7 @@ impl Audit for ForbiddenUses {
                         step.location()
                             .primary()
                             .with_keys(&["uses".into()])
-                            .annotated("action is not on the allowlist"),
+                            .annotated("use of this action is forbidden"),
                     )
                     .build(step.action())?,
             );
@@ -94,6 +113,6 @@ impl Audit for ForbiddenUses {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case", untagged)]
 enum ForbiddenUsesConfig {
-    Allow { allow: Vec<String> },
-    Deny { deny: Vec<String> },
+    Allow { allow: Vec<RepositoryUsesPattern> },
+    Deny { deny: Vec<RepositoryUsesPattern> },
 }
