@@ -1,0 +1,9 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().output(OutputMode::Stderr).config(\"/dev/null\").input(input_under_test(\"e2e-menagerie\")).run()?"
+snapshot_kind: text
+---
+fatal: no audit was performed
+error: failed to load config: missing field `rules`
+ = note: check your configuration file for errors
+ = note: see: https://woodruffw.github.io/zizmor/configuration/

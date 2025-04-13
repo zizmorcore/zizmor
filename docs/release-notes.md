@@ -46,6 +46,8 @@ of `zizmor`.
 * `--format=json` is now an alias for `--format=json-v1`, enabling
   future JSON formats. The policy for the `--format=json` alias is
   documented under [Output formats - JSON](./usage.md#json) (#657)
+* Configuration file loading is now stricter, and produces a more useful
+  error message when the configuration file is invalid (#663)
 
 ### Bug Fixes 🐛
 

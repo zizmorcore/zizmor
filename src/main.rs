@@ -477,7 +477,16 @@ fn run() -> Result<ExitCode> {
         reg.with(indicatif_layer).init();
     }
 
-    let config = Config::new(&app)?;
+    let config = Config::new(&app).map_err(|e| {
+        anyhow!(tips(
+            format!("failed to load config: {e:#}"),
+            &[
+                "check your configuration file for errors",
+                "see: https://woodruffw.github.io/zizmor/configuration/"
+            ]
+        ))
+    })?;
+
     let audit_state = AuditState::new(&app, &config);
     let registry = collect_inputs(&app.inputs, &app.collect, &audit_state)?;
 
@@ -520,7 +529,6 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::bot_conditions::BotConditions);
     register_audit!(audit::overprovisioned_secrets::OverprovisionedSecrets);
     register_audit!(audit::unredacted_secrets::UnredactedSecrets);
-    // register_audit!(audit::forbidden_uses::ForbiddenUses);
 
     let mut results = FindingRegistry::new(&app, &config);
     {
@@ -573,6 +581,10 @@ fn main() -> ExitCode {
     match run() {
         Ok(exit) => exit,
         Err(err) => {
+            eprintln!(
+                "{fatal}: no audit was performed",
+                fatal = "fatal".red().bold()
+            );
             eprintln!("{err:?}");
             ExitCode::FAILURE
         }
