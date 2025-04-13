@@ -8,13 +8,14 @@ use serde::Deserialize;
 
 // Matches patterns like `owner/repo` and `owner/*`.
 static REPOSITORY_USES_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"(?mi)^[\w-]+/([\w\.-]+|\*)$"#).unwrap());
+    LazyLock::new(|| Regex::new(r#"(?mi)^([\w-]+)/([\w\.-]+|\*)$"#).unwrap());
 
 /// Represents a pattern for matching repository `uses` references.
 /// These patterns are ordered by specificity; more specific patterns
 /// should be listed first.
 #[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub(crate) enum RepositoryUsesPattern {
+    // TODO: InRepoPath for `owner/repo/path`?
     InRepo { owner: String, repo: String },
     InOwner(String),
     Any,
@@ -40,13 +41,12 @@ impl FromStr for RepositoryUsesPattern {
             return Ok(RepositoryUsesPattern::Any);
         }
 
-        if !REPOSITORY_USES_PATTERN.is_match(s) {
-            return Err(anyhow::anyhow!("invalid repository pattern: {s}"));
-        }
+        let caps = REPOSITORY_USES_PATTERN.captures(s).ok_or_else(|| {
+            anyhow::anyhow!("invalid repository pattern: {s} (expected owner/repo or owner/*)")
+        })?;
 
-        let (owner, repo) = s
-            .split_once('/')
-            .ok_or_else(|| anyhow::anyhow!("invalid repository pattern: {s}"))?;
+        let owner = &caps[1];
+        let repo = &caps[2];
 
         Ok(if repo == "*" {
             RepositoryUsesPattern::InOwner(owner.into())
