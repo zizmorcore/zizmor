@@ -84,7 +84,7 @@ impl Audit for UnpinnedUses {
             .config
             .rule_config::<UnpinnedUsesConfig>(Self::ident())
             .context("invalid configuration")
-            .map_err(|e| AuditLoadError::Fail(e))?
+            .map_err(AuditLoadError::Fail)?
             .unwrap_or_default();
 
         Ok(Self {
