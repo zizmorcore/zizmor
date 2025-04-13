@@ -12,35 +12,20 @@ use jsonschema::{
     output::{ErrorDescription, OutputUnit},
     validator_for,
 };
-use std::fmt::Write;
 use std::{collections::VecDeque, ops::Range};
-use tokio::sync::OnceCell;
+use std::{fmt::Write, sync::LazyLock};
 
 use crate::audit::AuditInput;
 
-static GITHUB_WORKFLOW_SCHEMA_URL: &str = "https://json.schemastore.org/github-workflow.json";
-static WORKFLOW_VALIDATOR: OnceCell<Option<Validator>> = OnceCell::const_new();
+static WORKFLOW_VALIDATOR: LazyLock<Option<Validator>> = LazyLock::new(
+    || match serde_json::from_str(include_str!("../github-workflow.json")) {
+        Ok(schema) => validator_for(&schema).ok(),
+        Err(_) => None,
+    },
+);
 
-async fn get_validator() -> &'static Option<Validator> {
-    return WORKFLOW_VALIDATOR
-        .get_or_init(|| async {
-            match reqwest::get(GITHUB_WORKFLOW_SCHEMA_URL).await {
-                Ok(response) => match response.text().await {
-                    Ok(content) => match serde_json::from_str(content.as_str()) {
-                        Ok(schema) => validator_for(&schema).ok(),
-                        Err(_) => None,
-                    },
-                    Err(_) => None,
-                },
-                Err(_) => None,
-            }
-        })
-        .await;
-}
-
-#[tokio::main]
-pub(crate) async fn validate_workflow(contents: String) -> Option<Error> {
-    match get_validator().await {
+pub(crate) fn validate_workflow(contents: String) -> Option<Error> {
+    match &*WORKFLOW_VALIDATOR {
         Some(validator) => match serde_yaml::from_str(&contents) {
             Ok(workflow) => match validator.apply(&workflow).basic() {
                 Valid(_) => Some(anyhow!("valid workflow but failed unmarshaling")),
