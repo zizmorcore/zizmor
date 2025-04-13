@@ -16,6 +16,22 @@ of `zizmor`.
   e.g. `::warning` and `::error`. See the
   [Output formats](./usage.md#output-formats) documentation for more information
   on annotations, including key limitations (#634)
+* The [unpinned-uses] audit has been completely rewritten, with two key
+  changes:
+
+    * The audit now has
+      [configurable policies](./audits.md#unpinned-uses-configuration)
+      that give users more control over the audit's behavior. In particular,
+      users can now define policies that mirror their actual threat model,
+      such as trusting their own GitHub organizations while leaving
+      others untrusted.
+    * The audit's default policy is more precise and conservative:
+      official GitHub actions (e.g. those under `actions/*` and similar)
+      are allowed to be pinned by branch or tag, but all other actions
+      are required to be pinned by SHA. This is a change from the previous
+      policy, which was to only flag completely unpinned actions by default.
+
+    Many thanks to @Holzhaus for motivating this change! (#663, #574)
 
 ### Improvements 🌱
 

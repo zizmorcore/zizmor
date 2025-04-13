@@ -593,6 +593,10 @@ allow symbolic references for trusted repositories or entire namespaces
 (e.g. `foocorp/*`). See
 [`unpinned-uses` - Configuration](#unpinned-uses-configuration) for details.
 
+Other resources:
+
+* [Palo Alto Networks Unit42: tj-actions/changed-files incident]
+
 ### Configuration { #unpinned-uses-configuration }
 
 !!! note
@@ -1123,3 +1127,4 @@ individual fields as separate secrets.
 [Cacheract: The Monster in your Build Cache]: https://adnanthekhan.com/2024/12/21/cacheract-the-monster-in-your-build-cache/
 [GitHub Actions exploitations: Dependabot]: https://www.synacktiv.com/publications/github-actions-exploitation-dependabot
 [Using secrets in GitHub Actions]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
+[Palo Alto Networks Unit42: tj-actions/changed-files incident]: https://unit42.paloaltonetworks.com/github-actions-supply-chain-attack/
