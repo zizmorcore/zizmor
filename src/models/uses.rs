@@ -40,7 +40,7 @@ impl FromStr for RepositoryUsesPattern {
             return Ok(RepositoryUsesPattern::Any);
         }
 
-        if !REPOSITORY_USES_PATTERN.is_match(&s) {
+        if !REPOSITORY_USES_PATTERN.is_match(s) {
             return Err(anyhow::anyhow!("invalid repository pattern: {s}"));
         }
 
