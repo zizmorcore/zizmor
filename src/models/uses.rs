@@ -29,12 +29,12 @@ impl FromStr for RepositoryUsesPattern {
         }
 
         if !REPOSITORY_USES_PATTERN.is_match(&s) {
-            return Err(anyhow::anyhow!("invalid repository uses pattern: {s}"));
+            return Err(anyhow::anyhow!("invalid repository pattern: {s}"));
         }
 
         let (owner, repo) = s
             .split_once('/')
-            .ok_or_else(|| anyhow::anyhow!("invalid repository uses pattern: {s}"))?;
+            .ok_or_else(|| anyhow::anyhow!("invalid repository pattern: {s}"))?;
 
         Ok(if repo == "*" {
             RepositoryUsesPattern::InOwner(owner.into())
