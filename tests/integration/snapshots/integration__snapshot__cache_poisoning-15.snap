@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"cache-poisoning/issue-642-repro.yml\")).run()?"
-snapshot_kind: text
 ---
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
   --> @@INPUT@@:20:9

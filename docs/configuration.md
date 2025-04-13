@@ -79,3 +79,12 @@ rules:
       # ignore line 12, column 10 on pypi.yml
       - pypi.yml:12:10
 ```
+
+#### `rules.<id>.config`
+
+_Type_: `object`
+
+Per-audit configuration, where `id` is the audit's name, e.g.
+[`unpinned-uses`](./audits.md#unpinned-uses).
+
+Not all audits are configurable. See each audit's documentation for details.

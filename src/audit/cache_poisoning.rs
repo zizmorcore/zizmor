@@ -11,6 +11,8 @@ use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType,
 use crate::models::{JobExt as _, NormalJob, Step, StepCommon, Steps};
 use crate::state::AuditState;
 
+use super::AuditLoadError;
+
 /// The list of know cache-aware actions
 /// In the future we can easily retrieve this list from the static API,
 /// since it should be easily serializable
@@ -344,7 +346,7 @@ impl CachePoisoning {
 }
 
 impl Audit for CachePoisoning {
-    fn new(_: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

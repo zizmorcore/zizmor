@@ -6,7 +6,7 @@ use github_actions_models::common::expr::LoE;
 use github_actions_models::common::{Env, EnvValue};
 use github_actions_models::workflow::job::StepBody;
 
-use super::{Job, audit_meta};
+use super::{AuditLoadError, Job, audit_meta};
 use crate::audit::Audit;
 use crate::finding::{Confidence, Finding, Persona, Severity, SymbolicLocation};
 use crate::models::{JobExt as _, Steps, Workflow};
@@ -97,11 +97,11 @@ impl InsecureCommands {
 }
 
 impl Audit for InsecureCommands {
-    fn new(_: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
-        Ok(Self {})
+        Ok(Self)
     }
 
     fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {

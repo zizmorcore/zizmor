@@ -26,6 +26,62 @@ snapshot_kind: text
  INFO audit: zizmor: 🌈 completed .github/workflows/stale.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/tail-call.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/verify-ensurepip-wheels.yml
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:117:9
+    |
+117 |         uses: hendrikmuhs/ccache-action@v1.2
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:313:7
+    |
+313 |       uses: hendrikmuhs/ccache-action@v1.2
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:368:7
+    |
+368 |       uses: hendrikmuhs/ccache-action@v1.2
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:477:7
+    |
+477 |       uses: egor-tensin/setup-gcc@v1
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:498:7
+    |
+498 |       uses: hendrikmuhs/ccache-action@v1.2
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:583:9
+    |
+583 |         uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:588:9
+    |
+588 |         uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   --> .github/workflows/documentation-links.yml:5:1
    |
@@ -38,4 +94,84 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-104 findings (103 suppressed): 0 unknown, 0 informational, 0 low, 0 medium, 1 high
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/documentation-links.yml:25:9
+   |
+25 |       - uses: readthedocs/actions/preview@v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/lint.yml:28:9
+   |
+28 |       - uses: pre-commit/action@v3.0.1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/require-pr-label.yml:19:9
+   |
+19 |         uses: mheap/github-action-required-labels@v5
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/require-pr-label.yml:38:9
+   |
+38 |         uses: mheap/github-action-required-labels@v5
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/require-pr-label.yml:47:9
+   |
+47 |         uses: mheap/github-action-required-labels@v5
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/require-pr-label.yml:58:9
+   |
+58 |         uses: mheap/github-action-required-labels@v5
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-tsan.yml:60:7
+   |
+60 |       uses: hendrikmuhs/ccache-action@v1.2
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-ubuntu.yml:68:7
+   |
+68 |       uses: hendrikmuhs/ccache-action@v1.2
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-wasi.yml:30:7
+   |
+30 |       uses: bytecodealliance/actions/wasmtime/setup@v1
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-wasi.yml:46:7
+   |
+46 |       uses: hendrikmuhs/ccache-action@v1.2
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+46 findings (28 suppressed): 0 unknown, 0 informational, 0 low, 0 medium, 18 high

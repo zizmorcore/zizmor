@@ -3,5 +3,6 @@ source: tests/integration/snapshot.rs
 expression: "zizmor().output(OutputMode::Stderr).offline(true).unsetenv(\"GH_TOKEN\").args([\"pypa/sampleproject\"]).run()?"
 snapshot_kind: text
 ---
+fatal: no audit was performed
 error: can't retrieve repository: pypa/sampleproject
  = note: try removing --offline or passing --gh-token <TOKEN>

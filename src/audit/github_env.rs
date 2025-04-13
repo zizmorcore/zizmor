@@ -10,7 +10,7 @@ use tree_sitter::{
     Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
 };
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{JobExt as _, Step};
 use crate::state::AuditState;
@@ -340,7 +340,7 @@ impl GitHubEnv {
 }
 
 impl Audit for GitHubEnv {
-    fn new(_: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -348,13 +348,15 @@ impl Audit for GitHubEnv {
         let mut bash_parser = Parser::new();
         bash_parser
             .set_language(&bash)
-            .context("failed to load bash parser")?;
+            .context("failed to load bash parser")
+            .map_err(AuditLoadError::Skip)?;
 
         let pwsh = tree_sitter_powershell::LANGUAGE.into();
         let mut pwsh_parser = Parser::new();
         pwsh_parser
             .set_language(&pwsh)
-            .context("failed to load powershell parser")?;
+            .context("failed to load powershell parser")
+            .map_err(AuditLoadError::Skip)?;
 
         Ok(Self {
             bash_parser: RefCell::new(bash_parser),
@@ -506,13 +508,14 @@ mod tests {
             ("echo \"completely-static\" >> $GITHUB_ENV", false), // LHS is completely static
         ] {
             let audit_state = AuditState {
+                config: &Default::default(),
                 no_online_audits: false,
                 cache_dir: "/tmp/zizmor".into(),
                 gh_token: None,
                 gh_hostname: GitHubHost::Standard("github.com".into()),
             };
 
-            let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
+            let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 
             let uses_github_env = sut.uses_github_env(case, "bash").unwrap();
 
@@ -622,13 +625,14 @@ mod tests {
             ), // GITHUB_ENV is not a variable
         ] {
             let audit_state = AuditState {
+                config: &Default::default(),
                 no_online_audits: false,
                 cache_dir: "/tmp/zizmor".into(),
                 gh_token: None,
                 gh_hostname: GitHubHost::Standard("github.com".into()),
             };
 
-            let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
+            let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 
             let uses_github_env = sut.uses_github_env(case, "pwsh").unwrap();
 

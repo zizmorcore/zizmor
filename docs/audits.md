@@ -10,15 +10,15 @@ See each audit's section for its scope, behavior, and other information.
 
 Legend:
 
-| Type     | Examples         | Introduced in | Works offline  | Enabled by default |
-|----------|------------------|---------------|----------------|--------------------|
-| The kind of audit ("Workflow" or "Action") | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit needs to be explicitly enabled with `--pedantic` |
+| Type     | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|------------------|---------------|----------------|--------------------|--------------|
+| The kind of audit ("Workflow" or "Action") | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit needs to be explicitly enabled with `--pedantic` | The audit supports custom configuration |
 
 ## `artipacked`
 
-| Type     | Examples         | Introduced in | Works offline  | Enabled by default |
-|----------|------------------|---------------|----------------|--------------------|
-| Workflow  | [artipacked.yml] | v0.1.0        | ✅             | ✅                 |
+| Type     | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|------------------|---------------|----------------|--------------------| -------------|
+| Workflow  | [artipacked.yml] | v0.1.0        | ✅             | ✅               | ❌           |
 
 [artipacked.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/artipacked.yml
 
@@ -75,9 +75,9 @@ with `#!yaml persist-credentials: true`.
 
 ## `dangerous-triggers`
 
-| Type     | Examples                  | Introduced in | Works offline  | Enabled by default |
-|----------|---------------------------|---------------|----------------|--------------------|
-| Workflow  | [pull-request-target.yml] | v0.1.0        | ✅             | ✅                 |
+| Type     | Examples                  | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|---------------------------|---------------|----------------|--------------------|--------------|
+| Workflow  | [pull-request-target.yml] | v0.1.0        | ✅             | ✅                 | ❌         |
 
 [pull-request-target.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pull-request-target.yml
 
@@ -126,9 +126,9 @@ Some general pointers:
 
 ## `excessive-permissions`
 
-| Type     | Examples                    | Introduced in | Works offline  | Enabled by default |
-|----------|-----------------------------|---------------|----------------|--------------------|
-| Workflow  | [excessive-permissions.yml] | v0.1.0        | ✅             | ✅                 |
+| Type     | Examples                    | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-----------------------------|---------------|----------------|--------------------|---------------|
+| Workflow  | [excessive-permissions.yml] | v0.1.0        | ✅             | ✅                 | ❌         |
 
 [excessive-permissions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/excessive-permissions.yml
 
@@ -230,9 +230,9 @@ For example:
 
 ## `hardcoded-container-credentials`
 
-| Type     | Examples                    | Introduced in | Works offline  | Enabled by default |
-|----------|-----------------------------|---------------|----------------|--------------------|
-| Workflow  | [hardcoded-credentials.yml] | v0.1.0        | ✅             | ✅                 |
+| Type     | Examples                    | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-----------------------------|---------------|----------------|--------------------|---------------|
+| Workflow  | [hardcoded-credentials.yml] | v0.1.0        | ✅             | ✅               | ❌         |
 
 [hardcoded-credentials.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/hardcoded-credentials.yml
 
@@ -298,9 +298,9 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 ## `impostor-commit`
 
-| Type     | Examples              | Introduced in | Works offline  | Enabled by default |
-|----------|-----------------------|---------------|----------------|--------------------|
-| Workflow, Action  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 |
+| Type     | Examples              | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-----------------------|---------------|----------------|--------------------|---------------|
+| Workflow, Action  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 | ❌  |
 
 [impostor-commit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/impostor-commit.yml
 
@@ -338,9 +338,9 @@ within an authentic commit (or an authentic tag/branch reference).
 
 ## `known-vulnerable-actions`
 
-| Type             | Examples                       | Introduced in | Works offline  | Enabled by default |
-|------------------|--------------------------------|---------------|----------------|--------------------|
-| Workflow, Action | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 |
+| Type             | Examples                       | Introduced in | Works offline  | Enabled by default | Configurable |
+|------------------|--------------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 | ❌  |
 
 [known-vulnerable-actions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/known-vulnerable-actions.yml
 
@@ -362,9 +362,9 @@ the action if one is available, or remove the action's usage entirely.
 
 ## `ref-confusion`
 
-| Type             | Examples            | Introduced in | Works offline  | Enabled by default |
-|------------------|---------------------|---------------|----------------|--------------------|
-| Workflow, Action | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 |
+| Type             | Examples            | Introduced in | Works offline  | Enabled by default | Configurable |
+|------------------|---------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 | ❌  |
 
 
 [ref-confusion.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/ref-confusion.yml
@@ -388,9 +388,9 @@ Switch to hash-pinned actions.
 
 ## `self-hosted-runner`
 
-| Type     | Examples            | Introduced in | Works offline  | Enabled by default |
-|----------|---------------------|---------------|----------------|--------------------|
-| Workflow  | [self-hosted.yml] | v0.1.0        | ✅             | ❌                 |
+| Type     | Examples            | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|---------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [self-hosted.yml] | v0.1.0        | ✅             | ❌                 | ❌  |
 
 [self-hosted.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/self-hosted.yml
 
@@ -435,9 +435,9 @@ there are steps you can take to minimize their risk:
 
 ## `template-injection`
 
-| Type     | Examples                 | Introduced in | Works offline  | Enabled by default |
-|----------|--------------------------|---------------|----------------|--------------------|
-| Workflow, Action  | [template-injection.yml] | v0.1.0        | ✅             | ✅                 |
+| Type     | Examples                 | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|--------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [template-injection.yml] | v0.1.0        | ✅             | ✅        | ❌  |
 
 [template-injection.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/template-injection.yml
 
@@ -513,9 +513,9 @@ shell quoting/expansion rules.
 
 ## `use-trusted-publishing`
 
-| Type     | Examples                     | Introduced in | Works offline  | Enabled by default |
-|----------|------------------------------|---------------|----------------|--------------------|
-| Workflow  | [pypi-manual-credential.yml] | v0.1.0        | ✅             | ✅                 |
+| Type     | Examples                     | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|------------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [pypi-manual-credential.yml] | v0.1.0        | ✅             | ✅                 | ❌  |
 
 [pypi-manual-credential.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pypi-manual-credential.yml
 
@@ -552,24 +552,126 @@ or @rubygems/release-gem for canonical examples of using it.
 
 ## `unpinned-uses`
 
-| Type             | Examples                     | Introduced in | Works offline  | Enabled by default |
-|------------------|------------------------------|---------------|----------------|--------------------|
-| Workflow, Action | [unpinned.yml]              | v0.4.0        | ✅             | ✅                 |
+| Type             | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
+|------------------|------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ✅                | ✅           |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
 Detects "unpinned" `uses:` clauses.
 
 When a `uses:` clause is not pinned by branch, tag, or SHA reference,
-GitHub Actions will use the latest commit on the referenced repository
-(or, in the case of Docker actions, the `:latest` tag).
+GitHub Actions will use the latest commit on the referenced repository's
+default branch (or, in the case of Docker actions, the `:latest` tag).
 
-This can represent a (small) security risk, as it leaves the calling workflow
-at the mercy of the callee action's default branch.
+Similarly, if a `uses:` clause is pinned via branch or tag (i.e. a "symbolic
+reference") instead of a SHA reference, GitHub Actions will use whatever
+commit is at the tip of that branch or tag. GitHub does not have immutable
+branches or tags, meaning that the action can change without the symbolic
+reference changing.
 
-When used with `--pedantic`, this audit will also flag pinned-but-unhashed
-`uses:`. For example, `actions/checkout@v4` will not be flagged by default,
-but would be flagged with `--pedantic`.
+This can be a security risk:
+
+1. Completely unpinned actions can be changed at any time by the upstream
+   repository.
+2. Tag- or branch-pinned actions can be changed by the upstream repository,
+   either by force-pushing over the tag or updating the branch.
+
+If the upstream repository is trusted, then symbolic references are
+often suitable. However, if the upstream repository is not trusted, then
+actions should be pinned by SHA reference.
+
+By default, this audit applies the following policy:
+
+* Official GitHub actions namespaces can be pinned by branch or tag.
+  In other words, `actions/checkout@v4` is acceptable, but `actions/checkout`
+  is not.
+* All other actions must be pinned by SHA reference.
+
+This audit can be configured with a custom set of rules, e.g. to
+allow symbolic references for trusted repositories or entire namespaces
+(e.g. `foocorp/*`). See
+[`unpinned-uses` - Configuration](#unpinned-uses-configuration) for details.
+
+Other resources:
+
+* [Palo Alto Networks Unit42: tj-actions/changed-files incident]
+
+### Configuration { #unpinned-uses-configuration }
+
+!!! note
+
+    `unpinned-uses` is configurable in `v1.6.0` and later.
+
+If the default `unpinned-uses` rules isn't suitable for your use case,
+you can override it with a custom set of policies.
+
+#### `rules.unpinned-uses.config.policies`
+
+_Type_: `object`
+
+The `rules.unpinned-uses.config.policies` object defines your `unpinned-uses`
+policies.
+
+Each member is a `pattern: policy` rule, where `pattern` describes which
+`uses:` clauses to match and `policy` describes how to treat them.
+
+The valid patterns are (in order of specificity):
+
+* `owner/repo`: match all `uses:` clauses that are exact matches for the
+  `owner/repo` pattern.
+
+    For example, `actions/checkout` matches only @actions/checkout.
+
+* `owner/*`: match all `uses:` clauses that have the given `owner`.
+
+    For example, `actions/*` matches both @actions/checkout and @actions/setup-node.
+
+* `*`: match all `uses:` clauses.
+
+    For example, `*` matches @actions/checkout and @pypa/gh-action-pypi-publish.
+
+The valid policies are:
+
+* `hash-pin`: any `uses:` clauses that match the associated pattern must be
+  fully pinned by SHA reference.
+* `ref-pin`: any `uses:` clauses that match the associated pattern must be
+  pinned either symbolic or SHA reference.
+* `any`: no pinning is required for any `uses:` clauses that match the associated
+  pattern.
+
+If a `uses:` clauses matches multiple rules, the most specific one is used
+regardless of definition order. For example, the following
+configuration contains two rules that could match @actions/checkout,
+but the first one is more specific and therefore gets applied:
+
+```yaml title="zizmor.yml"
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        actions/checkout: hash-pin
+        actions/*: ref-pin
+```
+
+In plain English, this policy set says "anything that `uses: actions/*` must
+be at least ref-pinned, but @actions/checkout in particular must be hash-pinned."
+
+If a `uses:` clause does not match any rules, then an implicit `"*": hash-pin`
+rule is applied. Users can override this implicit rule by adding their
+own `*` rule. For example:
+
+```yaml title="zizmor.yml"
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "example/*": hash-pin
+        "*": ref-pin
+```
+
+In plain English, this policy set says "anything that `uses: example/*` must
+be hash-pinned, and anything else must be at least ref-pinned."
 
 ### Remediation
 
@@ -626,9 +728,9 @@ A before/after example is shown below.
 
 ## `insecure-commands`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
-|----------|-------------------------|---------------|----------------|--------------------|
-| Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅                 |
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅       | ❌  |
 
 [insecure-commands.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/insecure-commands.yml
 
@@ -672,9 +774,9 @@ In general, users should use for [GitHub Actions environment files]
 
 ## `github-env`
 
-| Type     | Examples           | Introduced in | Works offline  | Enabled by default |
-|----------|--------------------|---------------|----------------|--------------------|
-| Workflow, Action  | [github-env.yml]   | v0.6.0        | ✅             | ✅                 |
+| Type     | Examples           | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|--------------------|---------------|----------------|--------------------| --------------|
+| Workflow, Action  | [github-env.yml]   | v0.6.0        | ✅             | ✅       | ❌  |
 
 [github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
 
@@ -710,9 +812,9 @@ If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 
 ## `cache-poisoning`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
-|----------|-------------------------|---------------|----------------|--------------------|
-| Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ✅                 |
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ✅               | ❌  |
 
 [cache-poisoning.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/cache-poisoning.yml
 
@@ -761,9 +863,9 @@ intended to publish build artifacts:
 
 ## `secrets-inherit`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
-|----------|-------------------------|---------------|----------------|--------------------|
-| Workflow  | [secrets-inherit.yml]   | v1.1.0      | ✅             | ✅                 |
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [secrets-inherit.yml]   | v1.1.0      | ✅             | ✅                 | ❌  |
 
 [secrets-inherit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/secrets-inherit.yml
 
@@ -803,9 +905,9 @@ that explicitly forwards each secret actually needed by the reusable workflow.
 
 ## `bot-conditions`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
-|----------|-------------------------|---------------|----------------|--------------------|
-| Workflow  | [bot-conditions.yml]   | v1.2.0      | ✅             | ✅                 |
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [bot-conditions.yml]   | v1.2.0      | ✅             | ✅                 | ❌  |
 
 [bot-conditions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/bot-conditions.yml
 
@@ -875,9 +977,9 @@ not using `pull_request_target` for auto-merge workflows.
 
 ## `overprovisioned-secrets`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
-|----------|-------------------------|---------------|----------------|--------------------|
-| Workflow, Action  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅             | ✅                 |
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅     | ✅         | ❌  |
 
 [overprovisioned-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/overprovisioned-secrets.yml
 
@@ -936,9 +1038,9 @@ Secrets should be accessed individually by name.
 
 ## `unredacted-secrets`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default |
-|----------|-------------------------|---------------|----------------|--------------------|
-| Workflow, Action  | [unredacted-secrets.yml]   | v1.4.0      | ✅             | ✅                 |
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [unredacted-secrets.yml]   | v1.4.0      | ✅   | ✅                 | ❌  |
 
 [unredacted-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unredacted-secrets.yml
 
@@ -1025,3 +1127,4 @@ individual fields as separate secrets.
 [Cacheract: The Monster in your Build Cache]: https://adnanthekhan.com/2024/12/21/cacheract-the-monster-in-your-build-cache/
 [GitHub Actions exploitations: Dependabot]: https://www.synacktiv.com/publications/github-actions-exploitation-dependabot
 [Using secrets in GitHub Actions]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
+[Palo Alto Networks Unit42: tj-actions/changed-files incident]: https://unit42.paloaltonetworks.com/github-actions-supply-chain-attack/
