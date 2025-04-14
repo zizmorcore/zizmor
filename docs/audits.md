@@ -1103,6 +1103,80 @@ individual fields as separate secrets.
               PASSWORD: ${{ secrets.MY_SECRET_PASSWORD }}
     ```
 
+## `forbidden-uses`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | N/A            | v1.6.0        | ✅             | ❌                |  ✅ |
+
+An *opt-in* audit for denylisting/allowlisting specific `uses:` clauses.
+This is not enabled by default; you must
+[configure it](#forbidden-uses-configuration) to use it.
+
+!!! warning
+
+    This audit comes with several limitations that are important to understand:
+
+    * This audit is *opt-in*. You must configure it to use it; it
+      **does nothing** by default.
+    * This audit (currently) operates on *repository* `uses:` clauses,
+      e.g. `#!yaml uses: actions/checkout@v4`. It does not operate on Docker
+      `uses:` clauses, e.g. `#!yaml uses: docker://ubuntu:24.04`. This limitation
+      may be lifted in the future.
+    * This audit operates on `uses:` clauses *as they appear* in the workflow
+      and action files. In other words, in *cannot* detect
+      [impostor commits](#impostor-commit) or indirect usage of actions
+      via manual `git clone` and local path usage.
+
+### Configuration { #forbidden-uses-configuration }
+
+#### `rules.forbidden-uses.config.<allow|deny>`
+
+_Type_: `list`
+
+The `forbidden-uses` audit operates on either an allowlist or denylist
+basis:
+
+* In allowlist mode, only the listed `uses:` patterns are allowed. All
+  non-matching `uses:` clauses result in a finding.
+
+    Intended use case: only allowing "known good" actions to be used,
+    and forbidding everything else.
+
+* In denylist mode, only the listed `uses:` patterns are disallowed. All
+  matching `uses:` clauses result in a finding.
+
+    Intended use case: permitting all `uses:` by default, but explicitly
+    forbidding "known bad" actions.
+
+Regardless of the mode used, the patterns allowed are the same as those
+in [unpinned-uses](#unpinned-uses-configuration).
+
+For example, the following configuration would allow only actions owned by
+the @actions organization:
+
+```yaml title="zizmor.yml"
+rules:
+  forbidden-uses:
+    config:
+      allow:
+        - actions/*
+```
+
+Whereas the following would allow all actions except for those in @actions:
+
+```yaml title="zizmor.yml"
+rules:
+  forbidden-uses:
+    config:
+      deny:
+        - actions/*
+```
+
+### Remediation
+
+Either remove the offending `uses:` clause or, if intended, add it to
+your [configuration](#forbidden-uses-configuration).
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
@@ -1128,3 +1202,5 @@ individual fields as separate secrets.
 [GitHub Actions exploitations: Dependabot]: https://www.synacktiv.com/publications/github-actions-exploitation-dependabot
 [Using secrets in GitHub Actions]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
 [Palo Alto Networks Unit42: tj-actions/changed-files incident]: https://unit42.paloaltonetworks.com/github-actions-supply-chain-attack/
+
+
