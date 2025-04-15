@@ -414,6 +414,14 @@
         - jj-vcs/jj#5076
 
 
+-   ![](https://github.com/jupyterhub.png?size=40){ width="40" loading=lazy align=left } jupyterhub
+
+    ---
+
+    ??? example "Examples"
+        - jupyterhub/jupyterhub#5049
+
+
 -   ![](https://github.com/kanidm.png?size=40){ width="40" loading=lazy align=left } kanidm
 
     ---

@@ -83,6 +83,7 @@ hynek/svcs#111
 icsharpcode/ILSpy#3365
 Instagram/LibCST#1262
 jj-vcs/jj#5076
+jupyterhub/jupyterhub#5049
 kanidm/kanidm#3430
 lmstudio-ai/venvstacks#51
 matplotlib/matplotlib#29251
