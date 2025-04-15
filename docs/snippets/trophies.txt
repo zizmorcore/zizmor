@@ -30,6 +30,7 @@ datalens-tech/datalens-backend#777
 davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
 Diaoul/subliminal#1190
+docker/compose#12737
 earthobservations/wetterdienst#1440
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
