@@ -47,7 +47,7 @@ impl RepositoryUsesPattern {
                     && uses
                         .subpath
                         .as_deref()
-                        .map_or(false, |s| s.eq_ignore_ascii_case(subpath))
+                        .is_some_and(|s| s.eq_ignore_ascii_case(subpath))
             }
             RepositoryUsesPattern::ExactRepo { owner, repo } => {
                 uses.owner.eq_ignore_ascii_case(owner)
