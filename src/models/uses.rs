@@ -305,7 +305,7 @@ mod tests {
                     subpath: "/".into(),
                 }),
             ),
-            // Weird, we allow it (for now).
+            // Weird, but we allow it (for now).
             (
                 "owner/repo/**",
                 Some(RepositoryUsesPattern::ExactPath {
