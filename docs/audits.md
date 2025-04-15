@@ -12,7 +12,7 @@ Legend:
 
 | Type     | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
 |----------|------------------|---------------|----------------|--------------------|--------------|
-| The kind of audit ("Workflow" or "Action") | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit needs to be explicitly enabled with `--pedantic` | The audit supports custom configuration |
+| The kind of audit ("Workflow" or "Action") | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit needs to be explicitly enabled via configuration or an API token | The audit supports custom configuration |
 
 ## `artipacked`
 
@@ -313,7 +313,7 @@ that exists only in a fork can be referenced via its parent's
 `owner/repo` slug, and vice versa.
 
 GitHub's network-of-forks design can be used to obscure a commit's true origin
-in a fully-pinned `uses:` workflow reference. This can be used by an attacker
+in a fully-pinned `#!yaml uses:` workflow reference. This can be used by an attacker
 to surreptitiously introduce a backdoored action into a victim's workflows(s).
 
 A notable historical example of this is github/dmca@565ece486c7c1652754d7b6d2b5ed9cb4097f9d5,
@@ -373,7 +373,7 @@ Detects actions that are pinned to confusable symbolic refs (i.e. branches
 or tags).
 
 Like with [impostor commits], actions that are used with a symbolic ref
-in their `uses:` are subject to a degree of ambiguity: a ref like
+in their `#!yaml uses:` are subject to a degree of ambiguity: a ref like
 `@v1` might refer to either a branch or tag ref.
 
 An attacker can exploit this ambiguity to publish a branch or tag ref that
@@ -483,7 +483,7 @@ shell quoting/expansion rules.
     default shell on Windows runners) uses `${env:VARNAME}`.
 
     To avoid having to specialize your handling for different runners,
-    you can set `shell: sh` or `shell: bash`.
+    you can set `#!yaml shell: sh` or `#!yaml shell: bash`.
 
 === "Before :warning:"
 
@@ -558,13 +558,13 @@ or @rubygems/release-gem for canonical examples of using it.
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
-Detects "unpinned" `uses:` clauses.
+Detects "unpinned" `#!yaml uses:` clauses.
 
-When a `uses:` clause is not pinned by branch, tag, or SHA reference,
+When a `#!yaml uses:` clause is not pinned by branch, tag, or SHA reference,
 GitHub Actions will use the latest commit on the referenced repository's
 default branch (or, in the case of Docker actions, the `:latest` tag).
 
-Similarly, if a `uses:` clause is pinned via branch or tag (i.e. a "symbolic
+Similarly, if a `#!yaml uses:` clause is pinned via branch or tag (i.e. a "symbolic
 reference") instead of a SHA reference, GitHub Actions will use whatever
 commit is at the tip of that branch or tag. GitHub does not have immutable
 branches or tags, meaning that the action can change without the symbolic
@@ -613,34 +613,34 @@ _Type_: `object`
 The `rules.unpinned-uses.config.policies` object defines your `unpinned-uses`
 policies.
 
-Each member is a `pattern: policy` rule, where `pattern` describes which
-`uses:` clauses to match and `policy` describes how to treat them.
+Each member is a `#!yaml pattern: policy` rule, where `pattern` describes which
+`#!yaml uses:` clauses to match and `policy` describes how to treat them.
 
 The valid patterns are (in order of specificity):
 
-* `owner/repo`: match all `uses:` clauses that are exact matches for the
+* `owner/repo`: match all `#!yaml uses:` clauses that are exact matches for the
   `owner/repo` pattern.
 
     For example, `actions/checkout` matches only @actions/checkout.
 
-* `owner/*`: match all `uses:` clauses that have the given `owner`.
+* `owner/*`: match all `#!yaml uses:` clauses that have the given `owner`.
 
     For example, `actions/*` matches both @actions/checkout and @actions/setup-node.
 
-* `*`: match all `uses:` clauses.
+* `*`: match all `#!yaml uses:` clauses.
 
     For example, `*` matches @actions/checkout and @pypa/gh-action-pypi-publish.
 
 The valid policies are:
 
-* `hash-pin`: any `uses:` clauses that match the associated pattern must be
+* `hash-pin`: any `#!yaml uses:` clauses that match the associated pattern must be
   fully pinned by SHA reference.
-* `ref-pin`: any `uses:` clauses that match the associated pattern must be
+* `ref-pin`: any `#!yaml uses:` clauses that match the associated pattern must be
   pinned either symbolic or SHA reference.
-* `any`: no pinning is required for any `uses:` clauses that match the associated
+* `any`: no pinning is required for any `#!yaml uses:` clauses that match the associated
   pattern.
 
-If a `uses:` clauses matches multiple rules, the most specific one is used
+If a `#!yaml uses:` clauses matches multiple rules, the most specific one is used
 regardless of definition order. For example, the following
 configuration contains two rules that could match @actions/checkout,
 but the first one is more specific and therefore gets applied:
@@ -654,10 +654,10 @@ rules:
         actions/*: ref-pin
 ```
 
-In plain English, this policy set says "anything that `uses: actions/*` must
+In plain English, this policy set says "anything that `#!yaml uses: actions/*` must
 be at least ref-pinned, but @actions/checkout in particular must be hash-pinned."
 
-If a `uses:` clause does not match any rules, then an implicit `"*": hash-pin`
+If a `#!yaml uses:` clause does not match any rules, then an implicit `"*": hash-pin`
 rule is applied. Users can override this implicit rule by adding their
 own `*` rule. For example:
 
@@ -670,7 +670,7 @@ rules:
         "*": ref-pin
 ```
 
-In plain English, this policy set says "anything that `uses: example/*` must
+In plain English, this policy set says "anything that `#!yaml uses: example/*` must
 be hash-pinned, and anything else must be at least ref-pinned."
 
 ### Remediation
@@ -856,7 +856,7 @@ intended to publish build artifacts:
 
 * Remove cache-aware actions like @actions/cache from workflows that produce
   releases, *or*
-* Disable cache-aware actions with an `if:` condition based on the trigger at
+* Disable cache-aware actions with an `#!yaml if:` condition based on the trigger at
   the step level, *or*
 * Set an action-specific input to disable cache restoration when appropriate,
   such as `lookup-only` in @Swatinem/rust-cache.
@@ -873,14 +873,14 @@ Detects excessive secret inheritance between calling workflows and reusable
 (called) workflows.
 
 [Reusable workflows] can be given secrets by their calling workflow either
-explicitly, or in a blanket fashion with `secrets: inherit`. The latter
+explicitly, or in a blanket fashion with `#!yaml secrets: inherit`. The latter
 should almost never be used, as it makes it violates the
 [Principle of Least Authority] and makes it impossible to determine which exact
 secrets a reusable workflow was executed with.
 
 ### Remediation
 
-In general, `secrets: inherit` should be replaced with a `secrets:` block
+In general, `#!yaml secrets: inherit` should be replaced with a `#!yaml secrets:` block
 that explicitly forwards each secret actually needed by the reusable workflow.
 
 === "Before :warning:"
@@ -1109,7 +1109,7 @@ individual fields as separate secrets.
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow, Action  | N/A            | v1.6.0        | ✅             | ❌                |  ✅ |
 
-An *opt-in* audit for denylisting/allowlisting specific `uses:` clauses.
+An *opt-in* audit for denylisting/allowlisting specific `#!yaml uses:` clauses.
 This is not enabled by default; you must
 [configure it](#forbidden-uses-configuration) to use it.
 
@@ -1119,11 +1119,11 @@ This is not enabled by default; you must
 
     * This audit is *opt-in*. You must configure it to use it; it
       **does nothing** by default.
-    * This audit (currently) operates on *repository* `uses:` clauses,
+    * This audit (currently) operates on *repository* `#!yaml uses:` clauses,
       e.g. `#!yaml uses: actions/checkout@v4`. It does not operate on Docker
-      `uses:` clauses, e.g. `#!yaml uses: docker://ubuntu:24.04`. This limitation
+      `#!yaml uses:` clauses, e.g. `#!yaml uses: docker://ubuntu:24.04`. This limitation
       may be lifted in the future.
-    * This audit operates on `uses:` clauses *as they appear* in the workflow
+    * This audit operates on `#!yaml uses:` clauses *as they appear* in the workflow
       and action files. In other words, in *cannot* detect
       [impostor commits](#impostor-commit) or indirect usage of actions
       via manual `git clone` and local path usage.
@@ -1137,16 +1137,16 @@ _Type_: `list`
 The `forbidden-uses` audit operates on either an allowlist or denylist
 basis:
 
-* In allowlist mode, only the listed `uses:` patterns are allowed. All
-  non-matching `uses:` clauses result in a finding.
+* In allowlist mode, only the listed `#!yaml uses:` patterns are allowed. All
+  non-matching `#!yaml uses:` clauses result in a finding.
 
     Intended use case: only allowing "known good" actions to be used,
     and forbidding everything else.
 
-* In denylist mode, only the listed `uses:` patterns are disallowed. All
-  matching `uses:` clauses result in a finding.
+* In denylist mode, only the listed `#!yaml uses:` patterns are disallowed. All
+  matching `#!yaml uses:` clauses result in a finding.
 
-    Intended use case: permitting all `uses:` by default, but explicitly
+    Intended use case: permitting all `#!yaml uses:` by default, but explicitly
     forbidding "known bad" actions.
 
 Regardless of the mode used, the patterns allowed are the same as those
@@ -1175,7 +1175,7 @@ rules:
 
 ### Remediation
 
-Either remove the offending `uses:` clause or, if intended, add it to
+Either remove the offending `#!yaml uses:` clause or, if intended, add it to
 your [configuration](#forbidden-uses-configuration).
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
