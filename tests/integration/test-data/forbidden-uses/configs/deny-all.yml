@@ -1,0 +1,11 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # just to make unrelated findings go away
+        "*": ref-pin
+
+  forbidden-uses:
+    config:
+      deny:
+        - "*"

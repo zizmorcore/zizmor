@@ -1,8 +1,75 @@
 //! Extension traits for the `Uses` APIs.
 
-use github_actions_models::common::{RepositoryUses, Uses};
+use std::{str::FromStr, sync::LazyLock};
 
-/// Useful APIs for interacting with `uses: org/repo` clauses.
+use github_actions_models::common::{RepositoryUses, Uses};
+use regex::Regex;
+use serde::Deserialize;
+
+// Matches patterns like `owner/repo` and `owner/*`.
+static REPOSITORY_USES_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?mi)^([\w-]+)/([\w\.-]+|\*)$"#).unwrap());
+
+/// Represents a pattern for matching repository `uses` references.
+/// These patterns are ordered by specificity; more specific patterns
+/// should be listed first.
+#[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+pub(crate) enum RepositoryUsesPattern {
+    // TODO: InRepoPath for `owner/repo/path`?
+    InRepo { owner: String, repo: String },
+    InOwner(String),
+    Any,
+}
+
+impl RepositoryUsesPattern {
+    pub(crate) fn matches(&self, uses: &RepositoryUses) -> bool {
+        match self {
+            RepositoryUsesPattern::InRepo { owner, repo } => {
+                uses.owner.eq_ignore_ascii_case(owner) && uses.repo.eq_ignore_ascii_case(repo)
+            }
+            RepositoryUsesPattern::InOwner(owner) => uses.owner.eq_ignore_ascii_case(owner),
+            RepositoryUsesPattern::Any => true,
+        }
+    }
+}
+
+impl FromStr for RepositoryUsesPattern {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "*" {
+            return Ok(RepositoryUsesPattern::Any);
+        }
+
+        let caps = REPOSITORY_USES_PATTERN.captures(s).ok_or_else(|| {
+            anyhow::anyhow!("invalid repository pattern: {s} (expected owner/repo or owner/*)")
+        })?;
+
+        let owner = &caps[1];
+        let repo = &caps[2];
+
+        Ok(if repo == "*" {
+            RepositoryUsesPattern::InOwner(owner.into())
+        } else {
+            RepositoryUsesPattern::InRepo {
+                owner: owner.into(),
+                repo: repo.into(),
+            }
+        })
+    }
+}
+
+impl<'de> Deserialize<'de> for RepositoryUsesPattern {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        RepositoryUsesPattern::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+/// Useful APIs for interacting with `uses: owner/repo` clauses.
 pub(crate) trait RepositoryUsesExt {
     /// Returns whether this `uses:` clause "matches" the given template.
     /// The template is itself formatted like a normal `uses:` clause.
@@ -11,6 +78,8 @@ pub(crate) trait RepositoryUsesExt {
     /// the `actions/checkout` template but not vice versa.
     ///
     /// Comparisons are case-insensitive, since GitHub's own APIs are insensitive.
+    ///
+    /// TODO: Remove this API and replace it with [`RepositoryUsesPattern`].
     fn matches(&self, template: &str) -> bool;
 
     /// Like [`RepositoryUsesExt::matches`].
@@ -107,9 +176,12 @@ impl UsesExt for Uses {
 mod tests {
     use std::str::FromStr;
 
+    use anyhow::anyhow;
     use github_actions_models::common::Uses;
 
     use crate::models::uses::RepositoryUsesExt;
+
+    use super::RepositoryUsesPattern;
 
     #[test]
     fn test_repositoryuses_matches() {
@@ -143,5 +215,41 @@ mod tests {
 
             assert_eq!(uses.matches(template), matches)
         }
+    }
+
+    #[test]
+    fn test_repositoryusespattern_matches() -> anyhow::Result<()> {
+        for (uses, pattern, matches) in [
+            // owner/repo matches regardless of ref, casing, and subpath
+            // but rejects when owner/repo diverges
+            ("actions/checkout", "actions/checkout", true),
+            ("ACTIONS/CHECKOUT", "actions/checkout", true),
+            ("actions/checkout@v3", "actions/checkout", true),
+            ("actions/checkout/foo@v3", "actions/checkout", true),
+            ("actions/somethingelse", "actions/checkout", false),
+            ("whatever/checkout", "actions/checkout", false),
+            // owner/* matches of ref, casing, and subpath
+            // but rejects when owner diverges
+            ("actions/checkout", "actions/*", true),
+            ("ACTIONS/CHECKOUT", "actions/*", true),
+            ("actions/checkout@v3", "actions/*", true),
+            ("actions/checkout/foo@v3", "actions/*", true),
+            ("someoneelse/checkout", "actions/*", false),
+            // * matches everything
+            ("actions/checkout", "*", true),
+            ("actions/checkout@v3", "*", true),
+            ("actions/checkout/foo@v3", "*", true),
+            ("whatever/checkout", "*", true),
+        ] {
+            let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
+                return Err(anyhow!("invalid uses: {uses}"));
+            };
+
+            let pattern = RepositoryUsesPattern::from_str(pattern)?;
+
+            assert_eq!(pattern.matches(&uses), matches);
+        }
+
+        Ok(())
     }
 }

@@ -632,3 +632,21 @@ fn unredacted_secrets() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn forbidden_uses() -> Result<()> {
+    for config in ["allow-all", "deny-all", "allow-some", "deny-some"] {
+        insta::assert_snapshot!(
+            zizmor()
+                .config(input_under_test(&format!(
+                    "forbidden-uses/configs/{config}.yml"
+                )))
+                .input(input_under_test(
+                    "forbidden-uses/forbidden-uses-menagerie.yml"
+                ))
+                .run()?
+        );
+    }
+
+    Ok(())
+}
