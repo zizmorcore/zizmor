@@ -1127,6 +1127,10 @@ This is not enabled by default; you must
       and action files. In other words, in *cannot* detect
       [impostor commits](#impostor-commit) or indirect usage of actions
       via manual `git clone` and local path usage.
+    * This audit's configuration operates on patterns, just like
+      [unpinned-uses](#unpinned-uses). That means that you can't (yet)
+      define *exact* matches. For example, you can't forbid `actions/checkout@v4`,
+      you have to forbid `actions/checkout`, which forbids all versions.
 
 ### Configuration { #forbidden-uses-configuration }
 
@@ -1153,7 +1157,7 @@ Regardless of the mode used, the patterns allowed are the same as those
 in [unpinned-uses](#unpinned-uses-configuration).
 
 For example, the following configuration would allow only actions owned by
-the @actions organization:
+the @actions organization, plus any actions defined in @github/codeql-action:
 
 ```yaml title="zizmor.yml"
 rules:
@@ -1161,9 +1165,11 @@ rules:
     config:
       allow:
         - actions/*
+        - github/codeql-action
 ```
 
-Whereas the following would allow all actions except for those in @actions:
+Whereas the following would allow all actions except for those in the
+@actions organization or defined in @github/codeql-action:
 
 ```yaml title="zizmor.yml"
 rules:
@@ -1171,6 +1177,7 @@ rules:
     config:
       deny:
         - actions/*
+        - github/codeql-action
 ```
 
 ### Remediation
