@@ -46,6 +46,7 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.event.number",
     "github.event.pull_request.base.sha", // hexadecimal SHA ref
     "github.event.pull_request.head.sha", // hexadecimal SHA ref
+    "github.event.pull_request.head.repo.fork", // boolean
     "github.event.pull_request.commits",  // number of commits in PR
     "github.event.pull_request.number",   // the PR's own number
     "github.event.workflow_run.id",
