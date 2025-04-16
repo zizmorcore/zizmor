@@ -1,0 +1,25 @@
+name: false-positive-menagerie
+
+on: pull_request
+
+permissions: {}
+
+jobs:
+  false-positive-menagerie:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: false-positive-menagerie
+        run: |
+          # PR#402
+          echo "${{ github.action_path }}"
+          # PR#412
+          echo "${{ github.server_url }}"
+          # PR#445
+          echo "${{ github.event.pull_request.base.sha }}"
+          # PR#636
+          echo "${{ github.event.pull_request.head.sha }}"
+          # PR#661
+          echo "${{ github.job }}"
+          # PR#675
+          echo "${{ github.event.pull_request.head.repo.fork }}"

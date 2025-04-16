@@ -329,6 +329,14 @@ fn template_injection() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "template-injection/false-positive-menagerie.yml"
+            ))
+            .run()?
+    );
+
     Ok(())
 }
 
