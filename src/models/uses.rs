@@ -40,14 +40,15 @@ impl RepositoryUsesPattern {
                 repo,
                 subpath,
             } => {
-                // TODO: Should probably normalize the subpath comparison here,
-                // e.g. so that `foo/bar/` and `foo/bar` are equivalent.
+                // TODO: Normalize the subpath here.
+                // This is nontrivial, since we need to normalize
+                // both leading slashes *and* arbitrary ./.. components.
+                // Utf8Path gets us part of the way there, but is
+                // platform dependent (i.e. will do the wrong thing
+                // if the platform separator is not /).
                 uses.owner.eq_ignore_ascii_case(owner)
                     && uses.repo.eq_ignore_ascii_case(repo)
-                    && uses
-                        .subpath
-                        .as_deref()
-                        .is_some_and(|s| s.eq_ignore_ascii_case(subpath))
+                    && uses.subpath.as_deref().is_some_and(|s| s == subpath)
             }
             RepositoryUsesPattern::ExactRepo { owner, repo } => {
                 uses.owner.eq_ignore_ascii_case(owner)
@@ -296,7 +297,7 @@ mod tests {
                     subpath: "subpath".into(),
                 }),
             ),
-            // We don't do any subpath normalization.
+            // We don't do any subpath normalization at construction time.
             (
                 "owner/repo//",
                 Some(RepositoryUsesPattern::ExactPath {
@@ -365,6 +366,19 @@ mod tests {
     #[test]
     fn test_repositoryusespattern_matches() -> anyhow::Result<()> {
         for (uses, pattern, matches) in [
+            // owner/repo/subpath matches regardless of ref and casing
+            // but only when the subpath matches.
+            // the subpath must share the same case but might not be
+            // normalized
+            ("actions/checkout/foo", "actions/checkout/foo", true),
+            ("ACTIONS/CHECKOUT/foo", "actions/checkout/foo", true),
+            ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo", true),
+            // TODO: See comment in `RepositoryUsesPattern::matches`
+            // ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo/", true),
+            // ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo//", true),
+            // ("ACTIONS/CHECKOUT//foo////@v3", "actions/checkout/foo", true),
+            ("actions/checkout/FOO", "actions/checkout/foo", false),
+            ("actions/checkout/foo/bar", "actions/checkout/foo", false),
             // owner/repo matches regardless of ref and casing
             // but does not match subpaths
             ("actions/checkout", "actions/checkout", true),
@@ -373,7 +387,16 @@ mod tests {
             ("actions/checkout/foo@v3", "actions/checkout", false),
             ("actions/somethingelse", "actions/checkout", false),
             ("whatever/checkout", "actions/checkout", false),
-            // owner/* matches of ref, casing, and subpath
+            // owner/repo/* matches regardless of ref and casing
+            // including subpaths
+            // but does not match when owner diverges
+            ("actions/checkout", "actions/checkout/*", true),
+            ("ACTIONS/CHECKOUT", "actions/checkout/*", true),
+            ("actions/checkout@v3", "actions/checkout/*", true),
+            ("actions/checkout/foo@v3", "actions/checkout/*", true),
+            ("actions/checkout/foo/bar@v3", "actions/checkout/*", true),
+            ("someoneelse/checkout", "actions/checkout/*", false),
+            // owner/* matches regardless of ref, casing, and subpath
             // but rejects when owner diverges
             ("actions/checkout", "actions/*", true),
             ("ACTIONS/CHECKOUT", "actions/*", true),
@@ -392,7 +415,11 @@ mod tests {
 
             let pattern = RepositoryUsesPattern::from_str(pattern)?;
 
-            assert_eq!(pattern.matches(&uses), matches);
+            assert_eq!(
+                pattern.matches(&uses),
+                matches,
+                "pattern: {pattern:?}, uses: {uses:?}, matches: {matches}"
+            );
         }
 
         Ok(())
