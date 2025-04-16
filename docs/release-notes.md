@@ -63,6 +63,8 @@ of `zizmor`.
   location spans for YAML inputs with comments inside block sequences (#660)
 * The [template-injection] audit no longer considers
   `github.job` dangerous (#661)
+* The [template-injection] audit no longer considers
+  `github.event.pull_request.head.repo.fork` dangerous (#675)
 
 ## v1.5.2
 
