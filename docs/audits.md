@@ -153,80 +153,80 @@ In practice, this means that workflows should almost always set
 `#!yaml permissions: {}` at the workflow level to disable all permissions
 by default, and then set specific job-level permissions as needed.
 
-For example:
+!!! example
 
-=== "Before :warning:"
+    === "Before :warning:"
 
-    ```yaml title="excessive-permissions.yml" hl_lines="8-9"
-    on:
-      release:
-        types:
-          - published
+        ```yaml title="excessive-permissions.yml" hl_lines="8-9"
+        on:
+          release:
+            types:
+              - published
 
-    name: release
+        name: release
 
-    permissions:
-      id-token: write # trusted publishing + attestations
-
-    jobs:
-      build:
-        name: Build distributions 📦
-        runs-on: ubuntu-latest
-        steps:
-          - # omitted for brevity
-
-      publish:
-        name: Publish Python 🐍 distributions 📦 to PyPI
-        runs-on: ubuntu-latest
-        needs: [build]
-
-        steps:
-          - name: Download distributions
-            uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
-            with:
-              name: distributions
-              path: dist/
-
-          - name: publish
-            uses: pypa/gh-action-pypi-publish@release/v1
-    ```
-
-=== "After :white_check_mark:"
-
-    ```yaml title="excessive-permissions.yml" hl_lines="8 21-22"
-    on:
-      release:
-        types:
-          - published
-
-    name: release
-
-    permissions: {}
-
-    jobs:
-      build:
-        name: Build distributions 📦
-        runs-on: ubuntu-latest
-        steps:
-          - # omitted for brevity
-
-      publish:
-        name: Publish Python 🐍 distributions 📦 to PyPI
-        runs-on: ubuntu-latest
-        needs: [build]
         permissions:
           id-token: write # trusted publishing + attestations
 
-        steps:
-          - name: Download distributions
-            uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
-            with:
-              name: distributions
-              path: dist/
+        jobs:
+          build:
+            name: Build distributions 📦
+            runs-on: ubuntu-latest
+            steps:
+              - # omitted for brevity
 
-          - name: publish
-            uses: pypa/gh-action-pypi-publish@release/v1
-    ```
+          publish:
+            name: Publish Python 🐍 distributions 📦 to PyPI
+            runs-on: ubuntu-latest
+            needs: [build]
+
+            steps:
+              - name: Download distributions
+                uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+                with:
+                  name: distributions
+                  path: dist/
+
+              - name: publish
+                uses: pypa/gh-action-pypi-publish@release/v1
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="excessive-permissions.yml" hl_lines="8 21-22"
+        on:
+          release:
+            types:
+              - published
+
+        name: release
+
+        permissions: {}
+
+        jobs:
+          build:
+            name: Build distributions 📦
+            runs-on: ubuntu-latest
+            steps:
+              - # omitted for brevity
+
+          publish:
+            name: Publish Python 🐍 distributions 📦 to PyPI
+            runs-on: ubuntu-latest
+            needs: [build]
+            permissions:
+              id-token: write # trusted publishing + attestations
+
+            steps:
+              - name: Download distributions
+                uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+                with:
+                  name: distributions
+                  path: dist/
+
+              - name: publish
+                uses: pypa/gh-action-pypi-publish@release/v1
+        ```
 
 ## `hardcoded-container-credentials`
 
@@ -245,55 +245,57 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 [encrypted secrets]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
 
-=== "Before :warning:"
+!!! example
 
-    ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
-    on:
-      push:
+    === "Before :warning:"
 
-    jobs:
-      test:
-        runs-on: ubuntu-latest
-        container:
-          image: fake.example.com/example
-          credentials:
-            username: user
-            password: hackme
-        services:
-          service-1:
-            image: fake.example.com/anotherexample
-            credentials:
-              username: user
-              password: hackme
-        steps:
-          - run: echo 'hello!'
-    ```
+        ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
+        on:
+          push:
 
-=== "After :white_check_mark:"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            container:
+              image: fake.example.com/example
+              credentials:
+                username: user
+                password: hackme
+            services:
+              service-1:
+                image: fake.example.com/anotherexample
+                credentials:
+                  username: user
+                  password: hackme
+            steps:
+              - run: echo 'hello!'
+        ```
 
-    ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
-    on:
-      push:
+    === "After :white_check_mark:"
 
-    jobs:
-      test:
-        runs-on: ubuntu-latest
-        container:
-          image: fake.example.com/example
-          credentials:
-            username: user
-            password: ${{ secrets.REGISTRY_PASSWORD }}
-        services:
-          service-1:
-            image: fake.example.com/anotherexample
-            credentials:
-              username: user
-              password: ${{ secrets.REGISTRY_PASSWORD }} # (1)!
-        steps:
-          - run: echo 'hello!'
-    ```
+        ```yaml title="hardcoded-container-credentials.yml" hl_lines="11 17"
+        on:
+          push:
 
-    1. This may or may not be the same credential as above, depending on your configuration.
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            container:
+              image: fake.example.com/example
+              credentials:
+                username: user
+                password: ${{ secrets.REGISTRY_PASSWORD }}
+            services:
+              service-1:
+                image: fake.example.com/anotherexample
+                credentials:
+                  username: user
+                  password: ${{ secrets.REGISTRY_PASSWORD }} # (1)!
+            steps:
+              - run: echo 'hello!'
+        ```
+
+        1. This may or may not be the same credential as above, depending on your configuration.
 
 
 ## `impostor-commit`
@@ -485,31 +487,33 @@ shell quoting/expansion rules.
     To avoid having to specialize your handling for different runners,
     you can set `#!yaml shell: sh` or `#!yaml shell: bash`.
 
-=== "Before :warning:"
+!!! example
 
-    ```yaml title="template-injection.yml" hl_lines="3"
-    - name: Check title
-      run: |
-        title="${{ github.event.issue.title }}"
-        if [[ ! $title =~ ^.*:\ .*$ ]]; then
-          echo "Bad issue title"
-          exit 1
-        fi
-    ```
+    === "Before :warning:"
 
-=== "After :white_check_mark:"
+        ```yaml title="template-injection.yml" hl_lines="3"
+        - name: Check title
+          run: |
+            title="${{ github.event.issue.title }}"
+            if [[ ! $title =~ ^.*:\ .*$ ]]; then
+              echo "Bad issue title"
+              exit 1
+            fi
+        ```
 
-    ```yaml title="template-injection.yml" hl_lines="3 8-9"
-    - name: Check title
-      run: |
-        title="${ISSUE_TITLE}"
-        if [[ ! $title =~ ^.*:\ .*$ ]]; then
-          echo "Bad issue title"
-          exit 1
-        fi
-      env:
-        ISSUE_TITLE: ${{ github.event.issue.title }}
-    ```
+    === "After :white_check_mark:"
+
+        ```yaml title="template-injection.yml" hl_lines="3 8-9"
+        - name: Check title
+          run: |
+            title="${ISSUE_TITLE}"
+            if [[ ! $title =~ ^.*:\ .*$ ]]; then
+              echo "Bad issue title"
+              exit 1
+            fi
+          env:
+            ISSUE_TITLE: ${{ github.event.issue.title }}
+        ```
 
 ## `use-trusted-publishing`
 
@@ -618,18 +622,41 @@ Each member is a `#!yaml pattern: policy` rule, where `pattern` describes which
 
 The valid patterns are (in order of specificity):
 
-* `owner/repo`: match all `#!yaml uses:` clauses that are exact matches for the
+* `owner/repo/subpath`: match all `#!yaml uses:` clauses that are **exact** matches
+  for the `owner/repo/subpath` pattern. The `subpath` can be an arbitrarily
+  deep subpath.
+
+    !!! example
+
+        `github/codeql-action/init` matches only `github/codeql-action/init`.
+
+* `owner/repo`: match all `#!yaml uses:` clauses that are **exact** matches for the
   `owner/repo` pattern.
 
-    For example, `actions/checkout` matches only @actions/checkout.
+    !!! example
+
+        `actions/cache` matches only @actions/cache,
+        **not** `actions/cache/save` or `actions/cache/restore`.
+
+* `owner/repo/*`: match all `#!yaml uses:` clauses that come from the given
+  `owner/repo` repository with *any* subpath, including the empty subpath.
+
+    !!! example
+
+        `github/codeql-action/*` matches `github/codeql-action/init`,
+        `github/codeql-action/upload-sarif`, and @github/codeql-action itself.
 
 * `owner/*`: match all `#!yaml uses:` clauses that have the given `owner`.
 
-    For example, `actions/*` matches both @actions/checkout and @actions/setup-node.
+    !!! example
+
+        `actions/*` matches both @actions/checkout and @actions/setup-node.
 
 * `*`: match all `#!yaml uses:` clauses.
 
-    For example, `*` matches @actions/checkout and @pypa/gh-action-pypi-publish.
+    !!! example
+
+        `*` matches @actions/checkout and @pypa/gh-action-pypi-publish.
 
 The valid policies are:
 
@@ -641,37 +668,42 @@ The valid policies are:
   pattern.
 
 If a `#!yaml uses:` clauses matches multiple rules, the most specific one is used
-regardless of definition order. For example, the following
-configuration contains two rules that could match @actions/checkout,
-but the first one is more specific and therefore gets applied:
+regardless of definition order.
 
-```yaml title="zizmor.yml"
-rules:
-  unpinned-uses:
-    config:
-      policies:
-        actions/checkout: hash-pin
-        actions/*: ref-pin
-```
+!!! example
 
-In plain English, this policy set says "anything that `#!yaml uses: actions/*` must
-be at least ref-pinned, but @actions/checkout in particular must be hash-pinned."
+    The following configuration contains two rules that could match
+    @actions/checkout, but the first one is more specific and therefore gets applied:
+
+    ```yaml title="zizmor.yml"
+    rules:
+      unpinned-uses:
+        config:
+          policies:
+            actions/checkout: hash-pin
+            actions/*: ref-pin
+    ```
+
+    In plain English, this policy set says "anything that `#!yaml uses: actions/*` must
+    be at least ref-pinned, but @actions/checkout in particular must be hash-pinned."
 
 If a `#!yaml uses:` clause does not match any rules, then an implicit `"*": hash-pin`
 rule is applied. Users can override this implicit rule by adding their
-own `*` rule. For example:
+own `*` rule.
 
-```yaml title="zizmor.yml"
-rules:
-  unpinned-uses:
-    config:
-      policies:
-        "example/*": hash-pin
-        "*": ref-pin
-```
+!!! example
 
-In plain English, this policy set says "anything that `#!yaml uses: example/*` must
-be hash-pinned, and anything else must be at least ref-pinned."
+    ```yaml title="zizmor.yml"
+    rules:
+      unpinned-uses:
+        config:
+          policies:
+            "example/*": hash-pin
+            "*": ref-pin
+    ```
+
+    In plain English, this policy set says "anything that `#!yaml uses: example/*` must
+    be hash-pinned, and anything else must be at least ref-pinned."
 
 ### Remediation
 
@@ -681,49 +713,49 @@ reference.
 For Docker actions (like `docker://ubuntu`): add an appropriate
 `:{version}` suffix.
 
-A before/after example is shown below.
+!!! example
 
-=== "Before :warning:"
+    === "Before :warning:"
 
-    ```yaml title="unpinned-uses.yml" hl_lines="8 12"
-    name: unpinned-uses
-    on: [push]
+        ```yaml title="unpinned-uses.yml" hl_lines="8 12"
+        name: unpinned-uses
+        on: [push]
 
-    jobs:
-    unpinned-uses:
-        runs-on: ubuntu-latest
-        steps:
-        - uses: actions/checkout
-          with:
-          persist-credentials: false
+        jobs:
+        unpinned-uses:
+            runs-on: ubuntu-latest
+            steps:
+            - uses: actions/checkout
+              with:
+              persist-credentials: false
 
-        - uses: docker://ubuntu
-          with:
-          entrypoint: /bin/echo
-          args: hello!
-    ```
+            - uses: docker://ubuntu
+              with:
+              entrypoint: /bin/echo
+              args: hello!
+        ```
 
-=== "After :white_check_mark:"
+    === "After :white_check_mark:"
 
-    ```yaml title="unpinned-uses.yml" hl_lines="8 12"
-    name: unpinned-uses
-    on: [push]
+        ```yaml title="unpinned-uses.yml" hl_lines="8 12"
+        name: unpinned-uses
+        on: [push]
 
-    jobs:
-    unpinned-uses:
-        runs-on: ubuntu-latest
-        steps:
-        - uses: actions/checkout@v4 # (1)!
-          with:
-          persist-credentials: false
+        jobs:
+        unpinned-uses:
+            runs-on: ubuntu-latest
+            steps:
+            - uses: actions/checkout@v4 # (1)!
+              with:
+              persist-credentials: false
 
-        - uses: docker://ubuntu:24.04
-          with:
-          entrypoint: /bin/echo
-          args: hello!
-    ```
+            - uses: docker://ubuntu:24.04
+              with:
+              entrypoint: /bin/echo
+              args: hello!
+        ```
 
-    1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
+        1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
 
 
 ## `insecure-commands`
@@ -754,23 +786,25 @@ Other resources:
 In general, users should use for [GitHub Actions environment files]
 (like `GITHUB_PATH` and `GITHUB_OUTPUT`) instead of using workflow commands.
 
-=== "Before :warning:"
+!!! example
 
-    ```yaml title="insecure-commands" hl_lines="3"
-    - name: Setup my-bin
-      run: |
-        echo "::add-path::$HOME/.local/my-bin"
-      env:
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-    ```
+    === "Before :warning:"
 
-=== "After :white_check_mark:"
+        ```yaml title="insecure-commands" hl_lines="3"
+        - name: Setup my-bin
+          run: |
+            echo "::add-path::$HOME/.local/my-bin"
+          env:
+            ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        ```
 
-    ```yaml title="insecure-commands" hl_lines="3"
-    - name: Setup my-bin
-      run: |
-        echo "$HOME/.local/my-bin" >> "$GITHUB_PATH"
-    ```
+    === "After :white_check_mark:"
+
+        ```yaml title="insecure-commands" hl_lines="3"
+        - name: Setup my-bin
+          run: |
+            echo "$HOME/.local/my-bin" >> "$GITHUB_PATH"
+        ```
 
 ## `github-env`
 
@@ -883,25 +917,27 @@ secrets a reusable workflow was executed with.
 In general, `#!yaml secrets: inherit` should be replaced with a `#!yaml secrets:` block
 that explicitly forwards each secret actually needed by the reusable workflow.
 
-=== "Before :warning:"
+!!! example
 
-    ```yaml title="reusable.yml" hl_lines="4"
-    jobs:
-      pass-secrets-to-workflow:
-        uses: ./.github/workflows/called-workflow.yml
-        secrets: inherit
-    ```
+    === "Before :warning:"
 
-=== "After :white_check_mark:"
+        ```yaml title="reusable.yml" hl_lines="4"
+        jobs:
+          pass-secrets-to-workflow:
+            uses: ./.github/workflows/called-workflow.yml
+            secrets: inherit
+        ```
 
-    ```yaml title="reusable.yml" hl_lines="4-6"
-    jobs:
-      pass-secrets-to-workflow:
-        uses: ./.github/workflows/called-workflow.yml
-        secrets:
-          forward-me: ${{ secrets.forward-me }}
-          me-too: ${{ secrets.me-too }}
-    ```
+    === "After :white_check_mark:"
+
+        ```yaml title="reusable.yml" hl_lines="4-6"
+        jobs:
+          pass-secrets-to-workflow:
+            uses: ./.github/workflows/called-workflow.yml
+            secrets:
+              forward-me: ${{ secrets.forward-me }}
+              me-too: ${{ secrets.me-too }}
+        ```
 
 ## `bot-conditions`
 
@@ -943,37 +979,39 @@ More generally,
 [GitHub's documentation recommends](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions)
 not using `pull_request_target` for auto-merge workflows.
 
-=== "Before :warning:"
+!!! example
 
-    ```yaml title="bot-conditions.yml" hl_lines="1 6"
-    on: pull_request_target
+    === "Before :warning:"
 
-    jobs:
-      automerge:
-        runs-on: ubuntu-latest
-        if: github.actor == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
-        steps:
-          - run: gh pr merge --auto --merge "$PR_URL"
-            env:
-              PR_URL: ${{ github.event.pull_request.html_url }}
-              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    ```
+        ```yaml title="bot-conditions.yml" hl_lines="1 6"
+        on: pull_request_target
 
-=== "After :white_check_mark:"
+        jobs:
+          automerge:
+            runs-on: ubuntu-latest
+            if: github.actor == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
+            steps:
+              - run: gh pr merge --auto --merge "$PR_URL"
+                env:
+                  PR_URL: ${{ github.event.pull_request.html_url }}
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ```
 
-    ```yaml title="bot-conditions.yml" hl_lines="1 6"
-    on: pull_request
+    === "After :white_check_mark:"
 
-    jobs:
-      automerge:
-        runs-on: ubuntu-latest
-        if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
-        steps:
-          - run: gh pr merge --auto --merge "$PR_URL"
-            env:
-              PR_URL: ${{ github.event.pull_request.html_url }}
-              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    ```
+        ```yaml title="bot-conditions.yml" hl_lines="1 6"
+        on: pull_request
+
+        jobs:
+          automerge:
+            runs-on: ubuntu-latest
+            if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
+            steps:
+              - run: gh pr merge --auto --merge "$PR_URL"
+                env:
+                  PR_URL: ${{ github.event.pull_request.html_url }}
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ```
 
 ## `overprovisioned-secrets`
 
@@ -1011,30 +1049,32 @@ only a single secret is actually needed.
 In general, users should avoid loading the entire `secrets` context.
 Secrets should be accessed individually by name.
 
-=== "Before :warning:"
+!!! example
 
-    ```yaml title="overprovisioned.yml" hl_lines="7"
-    jobs:
-      deploy:
-        runs-on: ubuntu-latest
-        steps:
-          - run: ./deploy.sh
-            env:
-              SECRETS: ${{ toJSON(secrets) }}
-    ```
+    === "Before :warning:"
 
-=== "After :white_check_mark:"
+        ```yaml title="overprovisioned.yml" hl_lines="7"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: ./deploy.sh
+                env:
+                  SECRETS: ${{ toJSON(secrets) }}
+        ```
 
-    ```yaml title="overprovisioned.yml" hl_lines="7-8"
-    jobs:
-      deploy:
-        runs-on: ubuntu-latest
-        steps:
-          - run: ./deploy.sh
-            env:
-              SECRET_ONE: ${{ secrets.SECRET_ONE }}
-              SECRET_TWO: ${{ secrets.SECRET_TWO }}
-    ```
+    === "After :white_check_mark:"
+
+        ```yaml title="overprovisioned.yml" hl_lines="7-8"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: ./deploy.sh
+                env:
+                  SECRET_ONE: ${{ secrets.SECRET_ONE }}
+                  SECRET_TWO: ${{ secrets.SECRET_TWO }}
+        ```
 
 ## `unredacted-secrets`
 
@@ -1077,31 +1117,33 @@ In general, users should avoid treating secrets as structured values.
 For example, instead of storing a JSON object in a secret, store the
 individual fields as separate secrets.
 
-=== "Before :warning:"
+!!! example
 
-    ```yaml title="unredacted-secrets.yml" hl_lines="7-8"
-    jobs:
-      deploy:
-        runs-on: ubuntu-latest
-        steps:
-          - run: ./deploy.sh
-            env:
-              USERNAME: ${{ fromJSON(secrets.MY_SECRET).username }}
-              PASSWORD: ${{ fromJSON(secrets.MY_SECRET).password }}
-    ```
+    === "Before :warning:"
 
-=== "After :white_check_mark:"
+        ```yaml title="unredacted-secrets.yml" hl_lines="7-8"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: ./deploy.sh
+                env:
+                  USERNAME: ${{ fromJSON(secrets.MY_SECRET).username }}
+                  PASSWORD: ${{ fromJSON(secrets.MY_SECRET).password }}
+        ```
 
-    ```yaml title="unredacted-secrets.yml" hl_lines="7-8"
-    jobs:
-      deploy:
-        runs-on: ubuntu-latest
-        steps:
-          - run: ./deploy.sh
-            env:
-              USERNAME: ${{ secrets.MY_SECRET_USERNAME }}
-              PASSWORD: ${{ secrets.MY_SECRET_PASSWORD }}
-    ```
+    === "After :white_check_mark:"
+
+        ```yaml title="unredacted-secrets.yml" hl_lines="7-8"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: ./deploy.sh
+                env:
+                  USERNAME: ${{ secrets.MY_SECRET_USERNAME }}
+                  PASSWORD: ${{ secrets.MY_SECRET_PASSWORD }}
+        ```
 
 ## `forbidden-uses`
 
@@ -1156,29 +1198,33 @@ basis:
 Regardless of the mode used, the patterns allowed are the same as those
 in [unpinned-uses](#unpinned-uses-configuration).
 
-For example, the following configuration would allow only actions owned by
-the @actions organization, plus any actions defined in @github/codeql-action:
+!!! example
 
-```yaml title="zizmor.yml"
-rules:
-  forbidden-uses:
-    config:
-      allow:
-        - actions/*
-        - github/codeql-action
-```
+    The following configuration would allow only actions owned by
+    the @actions organization, plus any actions defined in @github/codeql-action:
 
-Whereas the following would allow all actions except for those in the
-@actions organization or defined in @github/codeql-action:
+    ```yaml title="zizmor.yml"
+    rules:
+      forbidden-uses:
+        config:
+          allow:
+            - actions/*
+            - github/codeql-action/*
+    ```
 
-```yaml title="zizmor.yml"
-rules:
-  forbidden-uses:
-    config:
-      deny:
-        - actions/*
-        - github/codeql-action
-```
+!!! example
+
+    The following would allow all actions except for those in the
+    @actions organization or defined in @github/codeql-action:
+
+    ```yaml title="zizmor.yml"
+    rules:
+      forbidden-uses:
+        config:
+          deny:
+            - actions/*
+            - github/codeql-action/*
+    ```
 
 ### Remediation
 

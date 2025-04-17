@@ -52,7 +52,17 @@ impl UnpinnedUses {
                     Some(RepositoryUsesPattern::Any) | None => "blanket".into(),
                     Some(RepositoryUsesPattern::InOwner(owner)) => format!("{owner}/*"),
                     Some(RepositoryUsesPattern::InRepo { owner, repo }) => {
+                        format!("{owner}/{repo}/*")
+                    }
+                    Some(RepositoryUsesPattern::ExactRepo { owner, repo }) => {
                         format!("{owner}/{repo}")
+                    }
+                    Some(RepositoryUsesPattern::ExactPath {
+                        owner,
+                        repo,
+                        subpath,
+                    }) => {
+                        format!("{owner}/{repo}/{subpath}")
                     }
                 };
 
@@ -230,18 +240,8 @@ impl UnpinnedUsesPolicies {
                 // Policies are ordered by specificity, so we can
                 // iterate and return eagerly.
                 for (uses_pattern, policy) in policies {
-                    match uses_pattern {
-                        RepositoryUsesPattern::InRepo { owner: _, repo } => {
-                            if repo == &uses.repo {
-                                return (Some(uses_pattern), *policy);
-                            } else {
-                                continue;
-                            }
-                        }
-                        RepositoryUsesPattern::InOwner(_) => return (Some(uses_pattern), *policy),
-                        // NOTE: Unreachable because we only
-                        // allow `*` to configure the default policy.
-                        RepositoryUsesPattern::Any => unreachable!(),
+                    if uses_pattern.matches(uses) {
+                        return (Some(uses_pattern), *policy);
                     }
                 }
                 // The policies under `owner/` might be fully divergent
@@ -262,17 +262,29 @@ impl From<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
 
         for (pattern, policy) in config.policies {
             match pattern {
-                RepositoryUsesPattern::InRepo { owner, repo } => {
+                RepositoryUsesPattern::ExactPath { ref owner, .. } => {
                     policy_tree
                         .entry(owner.clone())
                         .or_default()
-                        .push((RepositoryUsesPattern::InRepo { owner, repo }, policy));
+                        .push((pattern, policy));
                 }
-                RepositoryUsesPattern::InOwner(owner) => {
+                RepositoryUsesPattern::ExactRepo { ref owner, .. } => {
                     policy_tree
                         .entry(owner.clone())
                         .or_default()
-                        .push((RepositoryUsesPattern::InOwner(owner), policy));
+                        .push((pattern, policy));
+                }
+                RepositoryUsesPattern::InRepo { ref owner, .. } => {
+                    policy_tree
+                        .entry(owner.clone())
+                        .or_default()
+                        .push((pattern, policy));
+                }
+                RepositoryUsesPattern::InOwner(ref owner) => {
+                    policy_tree
+                        .entry(owner.clone())
+                        .or_default()
+                        .push((pattern, policy));
                 }
                 RepositoryUsesPattern::Any => {
                     default_policy = policy;
@@ -289,36 +301,5 @@ impl From<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
             policy_tree,
             default_policy,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::models::uses::RepositoryUsesPattern;
-
-    #[test]
-    fn test_uses_pattern_ord() {
-        let mut patterns = vec![
-            RepositoryUsesPattern::Any,
-            RepositoryUsesPattern::InRepo {
-                owner: "owner".into(),
-                repo: "repo".into(),
-            },
-            RepositoryUsesPattern::InOwner("owner/*".into()),
-        ];
-
-        patterns.sort();
-
-        assert_eq!(
-            patterns,
-            vec![
-                RepositoryUsesPattern::InRepo {
-                    owner: "owner".into(),
-                    repo: "repo".into()
-                },
-                RepositoryUsesPattern::InOwner("owner/*".into()),
-                RepositoryUsesPattern::Any,
-            ]
-        );
     }
 }
