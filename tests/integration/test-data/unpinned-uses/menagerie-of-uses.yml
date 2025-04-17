@@ -23,3 +23,7 @@ jobs:
           persist-credentials: false
 
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+      - uses: github/codeql-action/init@v3
+
+      - uses: github/codeql-action/upload-sarif@v3

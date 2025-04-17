@@ -205,11 +205,19 @@ fn unpinned_uses() -> Result<()> {
             .run()?
     );
 
-    // Composite config.
+    // Composite config cases.
     insta::assert_snapshot!(
         "unpinned-uses-composite-config",
         zizmor()
             .config(input_under_test("unpinned-uses/configs/composite.yml"))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        "unpinned-uses-composite-config-2",
+        zizmor()
+            .config(input_under_test("unpinned-uses/configs/composite-2.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?
     );

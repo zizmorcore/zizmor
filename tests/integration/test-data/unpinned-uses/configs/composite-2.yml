@@ -1,0 +1,13 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Ensures that we handle overlapping patterns correctly,
+        # including with subpaths: github/codeql-action/* is shadowed by
+        # github/codeql-action/init and github/codeql-action/upload-sarif,
+        # which have stronger policies.
+        actions/*: ref-pin
+        pypa/*: ref-pin
+        github/codeql-action/*: ref-pin
+        github/codeql-action/init: hash-pin
+        github/codeql-action/upload-sarif: hash-pin
