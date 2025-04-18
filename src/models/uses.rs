@@ -195,7 +195,9 @@ impl UsesExt for Uses {
         match self {
             Uses::Docker(docker) => docker.hash.is_none() && docker.tag.is_none(),
             Uses::Repository(repo) => repo.git_ref.is_none(),
-            Uses::Local(local) => local.git_ref.is_none(),
+            // Local `uses:` are always unpinned; any `@ref` component
+            // is actually part of the path.
+            Uses::Local(_) => true,
         }
     }
 
