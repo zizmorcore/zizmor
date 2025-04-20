@@ -81,6 +81,7 @@ hynek/stamina#81
 hynek/structlog#663
 hynek/svcs#111
 icsharpcode/ILSpy#3365
+immich-app/immich#17651
 Instagram/LibCST#1262
 jj-vcs/jj#5076
 jupyterhub/jupyterhub#5049
