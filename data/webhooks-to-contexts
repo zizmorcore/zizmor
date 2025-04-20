@@ -1,0 +1,95 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# ///
+
+import json
+import sys
+from pathlib import Path
+
+_HERE = Path(__file__).parent
+_WEBHOOKS_JSON = _HERE / "api.github.com.json"
+
+assert _WEBHOOKS_JSON.is_file(), f"Missing {_WEBHOOKS_JSON}"
+
+_WEBHOOKS = json.loads(_WEBHOOKS_JSON.read_bytes())
+
+# A mapping of GitHub workflow events to their webhook event payload names.
+# These are generally 1-1, with exceptions for `pull_request_target`
+# and triggers that don't have a corresponding webhook, e.g.
+# `workflow_call` and `schedule`.
+_WORKFLOW_EVENTS: dict[str, str | None] = {
+    "branch_protection_rule": "branch_protection_rule",
+    "check_run": "check_run",
+    "check_suite": "check_suite",
+    "create": "create",
+    "delete": "delete",
+    "deployment": "deployment",
+    "deployment_status": "deployment_status",
+    "discussion": "discussion",
+    "discussion_comment": "discussion_comment",
+    "fork": "fork",
+    "gollum": "gollum",
+    "issue_comment": "issue_comment",
+    "issues": "issues",
+    "label": "label",
+    "merge_group": "merge_group",
+    "milestone": "milestone",
+    "page_build": "page_build",
+    "public": "public",
+    "pull_request": "pull_request",
+    # TODO: Documented but unclear if this is still supported?
+    # "pull_request_comment": "pull_request_comment",
+    "pull_request_review": "pull_request_review",
+    "pull_request_review_comment": "pull_request_review_comment",
+    "pull_request_target": "pull_request",
+    "push": "push",
+    "registry_package": "registry_package",
+    "release": "release",
+    "repository_dispatch": "repository_dispatch",
+    # Not a webhook.
+    # `github.event.schedule` is the only thing that comes from this.
+    "schedule": None,
+    "status": "status",
+    "watch": "watch",
+    # Inherits its webhook from the calling workflow.
+    "workflow_call": None,
+    "workflow_dispatch": "workflow_dispatch",
+    "workflow_run": "workflow_run",
+}
+
+
+def log(msg: str) -> None:
+    print(f"[*] {msg}", file=sys.stderr)
+
+
+def process_webhook(webhook: str) -> None:
+    webhook_schema_name = f"webhook-{webhook.replace('_', '-')}"
+    # GitHub groups webhooks by sub-event, e.g.
+    # `pull_request` becomes `webhook-pull-request-{event}`,
+    # where `{event}` is `opened`, `closed`, etc.
+
+    all_schemas = _WEBHOOKS["components"]["schemas"]
+    matching_schemas = [
+        schema
+        for (name, schema) in all_schemas.items()
+        if name.startswith(f"{webhook_schema_name}-")
+    ]
+
+    log(f"\t {webhook} has {len(matching_schemas)} schemas")
+
+
+if __name__ == "__main__":
+    processed_webhooks = set()
+    for name, webhook in _WORKFLOW_EVENTS.items():
+        if webhook is None:
+            continue
+
+        log(f"Processing {name} -> {webhook}")
+        if webhook in processed_webhooks:
+            log(f"\t :D Already processed {webhook} :D")
+            continue
+
+        process_webhook(webhook)
+
+        processed_webhooks.add(webhook)
