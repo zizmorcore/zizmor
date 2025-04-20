@@ -17,6 +17,9 @@ of `zizmor`.
   that allows allow- or denylisting of entire orgs, repos, or specific
   action patterns. This audit must be configured; by default it has
   no effect (#664)
+
+    Many thanks to @Holzhaus for proposing and initiating this new audit!
+
 * `zizmor` now supports `--format=github` as an output format.
   This format produces check annotations via GitHub workflow commands,
   e.g. `::warning` and `::error`. See the
