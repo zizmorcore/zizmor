@@ -666,3 +666,10 @@ fn forbidden_uses() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn obfuscation() -> Result<()> {
+    insta::assert_snapshot!(zizmor().input(input_under_test("obfuscation.yml")).run()?);
+
+    Ok(())
+}

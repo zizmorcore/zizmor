@@ -1,0 +1,22 @@
+on: pull_request
+
+name: obfuscation
+
+permissions: {}
+
+jobs:
+  obfuscated-uses:
+    runs-on: ubuntu-latest
+    steps:
+      # trailing slash
+      - uses: actions/checkout/@v4
+
+      # many trailing slashes
+      - uses: actions/checkout////@v4
+
+      # pointless use of .
+      - uses: github/codeql-action/./init@v2
+      - uses: actions/checkout/.@v4
+
+      # pointless use of ..
+      - uses: actions/cache/save/../save@v4
