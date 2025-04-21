@@ -1,6 +1,11 @@
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use crate::{Confidence, Severity, finding};
+use crate::{
+    Confidence, Severity,
+    expr::Expr,
+    finding::{self, Feature, Location},
+    utils::parse_expressions_from_input,
+};
 
 use super::{Audit, audit_meta};
 
@@ -44,6 +49,47 @@ impl Obfuscation {
 
         annotations
     }
+
+    fn obfuscated_exprs(&self, expr: &Expr) -> Vec<&str> {
+        let mut annotations = vec![];
+
+        match expr {
+            Expr::Call { func, args } => {
+                // Look for some pointless function usage in expressions.
+
+                // `format("...", exprs)` where `foldable(expr) ∀ expr : exprs`
+                if func == "format" {
+                    if expr.foldable() {
+                        annotations
+                            .push("format(fmt, ...) called with constant-foldable arguments");
+                    }
+                }
+            }
+            Expr::Index(expr) => {
+                annotations.extend(self.obfuscated_exprs(expr));
+            }
+            Expr::Context(context) => {
+                // A context can either be `foo.bar.bar` or `foo(...).baz.baz`;
+                // we recurse through the first form.
+                if let expr @ Expr::Call { .. } = &context.components()[0] {
+                    annotations.extend(self.obfuscated_exprs(expr));
+                }
+            }
+            Expr::BinOp { lhs, op: _, rhs } => {
+                annotations.extend(self.obfuscated_exprs(lhs));
+                annotations.extend(self.obfuscated_exprs(rhs));
+            }
+            Expr::UnOp { op: _, expr } => {
+                // TODO: Check for double negation here?
+                // Unclear if this ever serves a useful purpose,
+                // e.g. coercing to bool for rendering.
+                annotations.extend(self.obfuscated_exprs(expr));
+            }
+            _ => {}
+        }
+
+        annotations
+    }
 }
 
 impl Audit for Obfuscation {
@@ -52,6 +98,35 @@ impl Audit for Obfuscation {
         Self: Sized,
     {
         Ok(Self)
+    }
+
+    fn audit_raw<'w>(
+        &self,
+        input: &'w super::AuditInput,
+    ) -> anyhow::Result<Vec<finding::Finding<'w>>> {
+        let mut findings = vec![];
+
+        for (expr, span) in parse_expressions_from_input(input) {
+            let Ok(parsed) = Expr::parse(expr.as_bare()) else {
+                tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
+                continue;
+            };
+
+            for annotation in self.obfuscated_exprs(&parsed) {
+                findings.push(
+                    Self::finding()
+                        .confidence(Confidence::High)
+                        .severity(Severity::High)
+                        .add_raw_location(Location::new(
+                            input.location().annotated(annotation).primary(),
+                            Feature::from_span(&span, input),
+                        ))
+                        .build(input)?,
+                );
+            }
+        }
+
+        Ok(findings)
     }
 
     fn audit_step<'w>(

@@ -187,6 +187,36 @@ impl<'src> Expr<'src> {
         Self::Context(Context::new(r, components))
     }
 
+    /// Returns whether the expression is "foldable".
+    ///
+    /// There are three kinds of foldable expressions:
+    ///
+    /// 1. Literals, which fold to their literal value;
+    /// 2. Binops/unops with foldable subexpressions, which fold
+    ///    to their evaluation;
+    /// 3. Select function calls where the semantics of the function
+    ///    mean that foldable arguments make the call itself foldable.
+    pub(crate) fn foldable(&self) -> bool {
+        match self {
+            // Literals are always foldable.
+            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null => true,
+            // Binops are foldable if their LHS and RHS are foldable.
+            Expr::BinOp { lhs, op: _, rhs } => lhs.foldable() && rhs.foldable(),
+            // Unops are foldable if their interior expression is foldable.
+            Expr::UnOp { op: _, expr } => expr.foldable(),
+            Expr::Call { func, args } => {
+                if func == "format" {
+                    // `format` is foldable if all of its arguments are foldable.
+                    args.iter().all(Expr::foldable)
+                } else {
+                    false
+                }
+            }
+            // Everything else is presumed non-foldable.
+            _ => false,
+        }
+    }
+
     /// Returns the contexts in this expression that directly flow into the
     /// expression's evaluation.
     ///
