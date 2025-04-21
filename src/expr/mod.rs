@@ -187,7 +187,7 @@ impl<'src> Expr<'src> {
         Self::Context(Context::new(r, components))
     }
 
-    /// Returns whether the expression is "foldable".
+    /// Returns whether the expression is constant foldable.
     ///
     /// There are three kinds of foldable expressions:
     ///
@@ -196,19 +196,26 @@ impl<'src> Expr<'src> {
     ///    to their evaluation;
     /// 3. Select function calls where the semantics of the function
     ///    mean that foldable arguments make the call itself foldable.
-    pub(crate) fn foldable(&self) -> bool {
+    ///
+    /// NOTE: This implementation is sound but not complete.
+    pub(crate) fn constant_foldable(&self) -> bool {
         match self {
             // Literals are always foldable.
             Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null => true,
             // Binops are foldable if their LHS and RHS are foldable.
-            Expr::BinOp { lhs, op: _, rhs } => lhs.foldable() && rhs.foldable(),
+            Expr::BinOp { lhs, op: _, rhs } => lhs.constant_foldable() && rhs.constant_foldable(),
             // Unops are foldable if their interior expression is foldable.
-            Expr::UnOp { op: _, expr } => expr.foldable(),
+            Expr::UnOp { op: _, expr } => expr.constant_foldable(),
             Expr::Call { func, args } => {
-                if func == "format" {
-                    // `format` is foldable if all of its arguments are foldable.
-                    args.iter().all(Expr::foldable)
+                // These functions are foldable if their arguments are foldable.
+                if func == "format"
+                    || func == "contains"
+                    || func == "startsWith"
+                    || func == "endsWith"
+                {
+                    args.iter().all(Expr::constant_foldable)
                 } else {
+                    // TODO: fromJSON(toJSON(...)) and vice versa.
                     false
                 }
             }
@@ -751,6 +758,48 @@ mod tests {
         for (case, expr) in cases {
             assert_eq!(Expr::parse(case).unwrap(), *expr);
         }
+    }
+
+    #[test]
+    fn test_expr_constant_foldable() -> Result<()> {
+        for (expr, foldable) in &[
+            ("'foo'", true),
+            ("1", true),
+            ("true", true),
+            ("null", true),
+            // boolean and unary expressions of all literals are
+            // always foldable.
+            ("!true", true),
+            ("!null", true),
+            ("true && false", true),
+            ("true || false", true),
+            ("null && !null && true", true),
+            // formats/contains/startsWith/endsWith are foldable
+            // if all of their arguments are foldable.
+            ("format('{0} {1}', 'foo', 'bar')", true),
+            ("format('{0} {1}', 1, 2)", true),
+            ("format('{0} {1}', 1, '2')", true),
+            ("contains('foo', 'bar')", true),
+            ("startsWith('foo', 'bar')", true),
+            ("endsWith('foo', 'bar')", true),
+            ("startsWith(some.context, 'bar')", false),
+            ("endsWith(some.context, 'bar')", false),
+            // Nesting works as long as the nested call is also foldable.
+            ("format('{0} {1}', '1', format('{0}', null))", true),
+            ("format('{0} {1}', '1', startsWith('foo', 'foo'))", true),
+            ("format('{0} {1}', '1', startsWith(foo.bar, 'foo'))", false),
+            ("foo", false),
+            ("foo.bar", false),
+            ("foo.bar[1]", false),
+            ("foo.bar == 'bar'", false),
+            ("foo.bar || bar || baz", false),
+            ("foo.bar && bar && baz", false),
+        ] {
+            let expr = Expr::parse(expr)?;
+            assert_eq!(expr.constant_foldable(), *foldable);
+        }
+
+        Ok(())
     }
 
     #[test]

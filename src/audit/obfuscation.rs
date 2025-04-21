@@ -53,39 +53,12 @@ impl Obfuscation {
     fn obfuscated_exprs(&self, expr: &Expr) -> Vec<&str> {
         let mut annotations = vec![];
 
-        match expr {
-            Expr::Call { func, args } => {
-                // Look for some pointless function usage in expressions.
+        // Check for some common expression obfuscation patterns.
 
-                // `format("...", exprs)` where `foldable(expr) ∀ expr : exprs`
-                if func == "format" {
-                    if expr.foldable() {
-                        annotations
-                            .push("format(fmt, ...) called with constant-foldable arguments");
-                    }
-                }
-            }
-            Expr::Index(expr) => {
-                annotations.extend(self.obfuscated_exprs(expr));
-            }
-            Expr::Context(context) => {
-                // A context can either be `foo.bar.bar` or `foo(...).baz.baz`;
-                // we recurse through the first form.
-                if let expr @ Expr::Call { .. } = &context.components()[0] {
-                    annotations.extend(self.obfuscated_exprs(expr));
-                }
-            }
-            Expr::BinOp { lhs, op: _, rhs } => {
-                annotations.extend(self.obfuscated_exprs(lhs));
-                annotations.extend(self.obfuscated_exprs(rhs));
-            }
-            Expr::UnOp { op: _, expr } => {
-                // TODO: Check for double negation here?
-                // Unclear if this ever serves a useful purpose,
-                // e.g. coercing to bool for rendering.
-                annotations.extend(self.obfuscated_exprs(expr));
-            }
-            _ => {}
+        // Expressions that can be constant folded should be simplified to
+        // their evaluated form.
+        if expr.constant_foldable() {
+            annotations.push("expression can be simplified via constant folding");
         }
 
         annotations
