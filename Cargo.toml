@@ -25,7 +25,7 @@ annotate-snippets = "0.11.5"
 anstream = "0.6.18"
 anyhow = "1.0.98"
 camino = { version = "1.1.9", features = ["serde1"] }
-clap = { version = "4.5.36", features = ["derive", "env"] }
+clap = { version = "4.5.37", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
@@ -72,7 +72,7 @@ insta.opt-level = 3
 lto = true
 
 [dev-dependencies]
-assert_cmd = "2.0.16"
+assert_cmd = "2.0.17"
 insta = { version = "1.42.2" }
 pretty_assertions = "1.4.1"
 serde_json_path = "0.7.2"
