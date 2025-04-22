@@ -1,0 +1,5 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"template-injection/false-positive-menagerie.yml\")).run()?"
+---
+No findings to report. Good job!

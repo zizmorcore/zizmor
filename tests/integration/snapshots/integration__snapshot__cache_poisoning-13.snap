@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(workflow_under_test(\"cache-poisoning/workflow-release-branch-trigger.yml\")).run()?"
-snapshot_kind: text
+expression: "zizmor().input(input_under_test(\"cache-poisoning/workflow-release-branch-trigger.yml\")).run()?"
 ---
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
   --> @@INPUT@@:1:1

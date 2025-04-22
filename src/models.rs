@@ -604,7 +604,7 @@ impl<'w> Step<'w> {
     }
 
     /// Returns this step's parent [`NormalJob`].
-    pub(crate) fn job(&self) -> &'w NormalJob {
+    pub(crate) fn job(&self) -> &NormalJob<'w> {
         &self.parent
     }
 

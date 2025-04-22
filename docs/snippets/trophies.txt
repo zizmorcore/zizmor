@@ -30,10 +30,12 @@ datalens-tech/datalens-backend#777
 davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
 Diaoul/subliminal#1190
+docker/compose#12737
 earthobservations/wetterdienst#1440
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
+fatiando/harmonica#550
 foyer-rs/foyer#859
 fpgmaas/deptry#972
 freeCodeCamp/devdocs#2386
@@ -79,8 +81,10 @@ hynek/stamina#81
 hynek/structlog#663
 hynek/svcs#111
 icsharpcode/ILSpy#3365
+immich-app/immich#17651
 Instagram/LibCST#1262
 jj-vcs/jj#5076
+jupyterhub/jupyterhub#5049
 kanidm/kanidm#3430
 lmstudio-ai/venvstacks#51
 matplotlib/matplotlib#29251
@@ -98,6 +102,7 @@ maxmind/mmdbwriter#104
 maxmind/GeoIP2-node#1387
 MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
+microsoft/linux-package-repositories#208
 mkuf/prind#183
 mne-tools/mne-python#13011
 MoarVM/MoarVM#1875
@@ -108,6 +113,7 @@ mozilla/neqo#2413
 narwhals-dev/narwhals#1567
 NetApp/harvest#3247
 nextcloud/.github#477
+NixOS/infra#613
 NLnetLabs/nsd#413
 NLnetLabs/unbound#1204
 numpy/numpy#27931
@@ -147,6 +153,7 @@ python-poetry/poetry#9895
 python-poetry/poetry-core#799
 python-poetry/poetry-plugin-export#308
 python-poetry/poetry-plugin-bundle#125
+python-social-auth/social-core#1098
 python-telegram-bot/python-telegram-bot#4606
 python-telegram-bot/python-telegram-bot#4668
 python-trio/trio#3154
@@ -172,6 +179,7 @@ sigstore/gitsign#602
 sigstore/model-transparency#369
 sigstore/sigstore-rs#424
 simpeg/simpeg#1592
+TecharoHQ/anubis#188
 termcolor/termcolor#89
 termux/termux-packages#22519
 theupdateframework/python-tuf#2798
@@ -189,5 +197,6 @@ vlang/v#22681
 wagtail/wagtail-localize#843
 wntrblm/nox#925
 zcash/librustzcash#1679
+ZcashFoundation/zebra#9110
 zkonduit/ezkl#907
 zkonduit/ezkl#906

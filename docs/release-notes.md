@@ -9,15 +9,71 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## v1.6.0
+
+### New Features 🌈
+
+* **New audit**: The [forbidden-uses] audit is a configurable audit
+  that allows allow- or denylisting of entire orgs, repos, or specific
+  action patterns. This audit must be configured; by default it has
+  no effect (#664)
+
+    Many thanks to @Holzhaus for proposing and initiating this new audit!
+
+* `zizmor` now supports `--format=github` as an output format.
+  This format produces check annotations via GitHub workflow commands,
+  e.g. `::warning` and `::error`. See the
+  [Output formats](./usage.md#output-formats) documentation for more information
+  on annotations, including key limitations (#634)
+* The [unpinned-uses] audit has been completely rewritten, with two key
+  changes:
+
+    * The audit now has
+      [configurable policies](./audits.md#unpinned-uses-configuration)
+      that give users more control over the audit's behavior. In particular,
+      users can now define policies that mirror their actual threat model,
+      such as trusting their own GitHub organizations while leaving
+      others untrusted.
+    * The audit's default policy is more precise and conservative:
+      official GitHub actions (e.g. those under `actions/*` and similar)
+      are allowed to be pinned by branch or tag, but all other actions
+      are required to be pinned by SHA. This is a change from the previous
+      policy, which was to only flag completely unpinned actions by default.
+
+    Many thanks to @Holzhaus for motivating this change! (#663, #574)
+
 ### Improvements 🌱
 
 * The SARIF output format now marks each rule as a "security" rule,
   which helps GitHub's presentation of the results (#631)
+* The [template-injection] audit is now performs dataflow analysis
+  to determine whether contexts actually expand in an unsafe manner,
+  making it significantly more accurate (#640)
+* The [cache-poisoning] audit is now aware of @jdx/mise-action (#645)
+* The [cache-poisoning] audit is now significantly more accurate
+  when analyzing workflows that use @docker/setup-buildx-action (#644)
+* `--format=json` is now an alias for `--format=json-v1`, enabling
+  future JSON formats. The policy for the `--format=json` alias is
+  documented under [Output formats - JSON](./usage.md#json) (#657)
+* Configuration file loading is now stricter, and produces a more useful
+  error message when the configuration file is invalid (#663)
 
 ### Bug Fixes 🐛
 
 * The [template-injection] audit no longer considers
   `github.event.pull_request.head.sha` dangerous (#636)
+* Fixed a bug where `zizmor` would fail to parse workflows
+  with `workflow_call` triggers that specified inputs without the
+  `required` field being present (#646)
+* Fixed a bug where `zizmor` would fail to parse workflows with
+  `pull_request` or `pull_request_target` triggers that specified
+  `types` as a scalar value (#653)
+* Fixed a crash where `zizmor` would fail to generate correct concrete
+  location spans for YAML inputs with comments inside block sequences (#660)
+* The [template-injection] audit no longer considers
+  `github.job` dangerous (#661)
+* The [template-injection] audit no longer considers
+  `github.event.pull_request.head.repo.fork` dangerous (#675)
 
 ## v1.5.2
 
@@ -32,7 +88,7 @@ of `zizmor`.
 
 ### Upcoming Changes 🚧
 
-* The official [PyPI builds](./installation.md/#pypi) for `zizmor`
+* The official [PyPI builds](./installation.md#pypi) for `zizmor`
   will support fewer architectures in the next release, due to
   cross-compilation and testing difficulties. This should have
   **no effect** on the overwhelming majority of users.
@@ -644,3 +700,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [bot-conditions]: ./audits.md#bot-conditions
 [overprovisioned-secrets]: ./audits.md#overprovisioned-secrets
 [unredacted-secrets]: ./audits.md#unredacted-secrets
+[forbidden-uses]: ./audits.md#forbidden-uses

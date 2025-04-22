@@ -15,7 +15,7 @@ use github_actions_models::{
     workflow::job::Strategy,
 };
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Persona, Severity, SymbolicLocation},
@@ -46,9 +46,14 @@ const SAFE_CONTEXTS: &[&str] = &[
     "github.event.number",
     "github.event.pull_request.base.sha", // hexadecimal SHA ref
     "github.event.pull_request.head.sha", // hexadecimal SHA ref
+    "github.event.pull_request.head.repo.fork", // boolean
     "github.event.pull_request.commits",  // number of commits in PR
     "github.event.pull_request.number",   // the PR's own number
     "github.event.workflow_run.id",
+    // Corresponds to the job ID, which is workflow-controlled
+    // but can only be [A-Za-z0-9-_].
+    // See: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_id
+    "github.job",
     // Information about the GitHub repository
     "github.repository",
     "github.repository_id",
@@ -187,7 +192,7 @@ impl TemplateInjection {
                 continue;
             }
 
-            for context in parsed.contexts() {
+            for context in parsed.dataflow_contexts() {
                 if context.child_of("secrets") {
                     // While not ideal, secret expansion is typically not exploitable.
                     continue;
@@ -266,7 +271,7 @@ impl TemplateInjection {
 }
 
 impl Audit for TemplateInjection {
-    fn new(_state: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

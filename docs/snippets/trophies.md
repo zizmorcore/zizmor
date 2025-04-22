@@ -158,6 +158,14 @@
         - Diaoul/subliminal#1190
 
 
+-   ![](https://github.com/docker.png?size=40){ width="40" loading=lazy align=left } docker
+
+    ---
+
+    ??? example "Examples"
+        - docker/compose#12737
+
+
 -   ![](https://github.com/earthobservations.png?size=40){ width="40" loading=lazy align=left } earthobservations
 
     ---
@@ -188,6 +196,14 @@
 
     ??? example "Examples"
         - ethereum/hevm#615
+
+
+-   ![](https://github.com/fatiando.png?size=40){ width="40" loading=lazy align=left } fatiando
+
+    ---
+
+    ??? example "Examples"
+        - fatiando/harmonica#550
 
 
 -   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
@@ -382,6 +398,14 @@
         - icsharpcode/ILSpy#3365
 
 
+-   ![](https://github.com/immich-app.png?size=40){ width="40" loading=lazy align=left } immich-app
+
+    ---
+
+    ??? example "Examples"
+        - immich-app/immich#17651
+
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---
@@ -396,6 +420,14 @@
 
     ??? example "Examples"
         - jj-vcs/jj#5076
+
+
+-   ![](https://github.com/jupyterhub.png?size=40){ width="40" loading=lazy align=left } jupyterhub
+
+    ---
+
+    ??? example "Examples"
+        - jupyterhub/jupyterhub#5049
 
 
 -   ![](https://github.com/kanidm.png?size=40){ width="40" loading=lazy align=left } kanidm
@@ -462,6 +494,14 @@
 
     ??? example "Examples"
         - mfussenegger/nvim-lint#710
+
+
+-   ![](https://github.com/microsoft.png?size=40){ width="40" loading=lazy align=left } microsoft
+
+    ---
+
+    ??? example "Examples"
+        - microsoft/linux-package-repositories#208
 
 
 -   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf
@@ -535,6 +575,14 @@
 
     ??? example "Examples"
         - nextcloud/.github#477
+
+
+-   ![](https://github.com/NixOS.png?size=40){ width="40" loading=lazy align=left } NixOS
+
+    ---
+
+    ??? example "Examples"
+        - NixOS/infra#613
 
 
 -   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs
@@ -745,6 +793,14 @@
         - python-poetry/poetry-plugin-bundle#125
 
 
+-   ![](https://github.com/python-social-auth.png?size=40){ width="40" loading=lazy align=left } python-social-auth
+
+    ---
+
+    ??? example "Examples"
+        - python-social-auth/social-core#1098
+
+
 -   ![](https://github.com/python-telegram-bot.png?size=40){ width="40" loading=lazy align=left } python-telegram-bot
 
     ---
@@ -881,6 +937,14 @@
         - simpeg/simpeg#1592
 
 
+-   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
+
+    ---
+
+    ??? example "Examples"
+        - TecharoHQ/anubis#188
+
+
 -   ![](https://github.com/termcolor.png?size=40){ width="40" loading=lazy align=left } termcolor
 
     ---
@@ -1001,6 +1065,14 @@
 
     ??? example "Examples"
         - zcash/librustzcash#1679
+
+
+-   ![](https://github.com/ZcashFoundation.png?size=40){ width="40" loading=lazy align=left } ZcashFoundation
+
+    ---
+
+    ??? example "Examples"
+        - ZcashFoundation/zebra#9110
 
 
 -   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit

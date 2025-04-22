@@ -1,4 +1,7 @@
 //! Snapshot integration tests.
+//!
+//! TODO: This file is too big; break it into multiple
+//! modules, one per audit/conceptual group.
 
 use crate::common::{OutputMode, input_under_test, zizmor};
 use anyhow::Result;
@@ -24,6 +27,19 @@ fn test_invalid_inputs() -> Result<()> {
             .output(OutputMode::Stderr)
             .offline(true)
             .input(input_under_test("invalid/invalid-workflow.yml"))
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_github_output() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .input(input_under_test("several-vulnerabilities.yml"))
+            .args(["--persona=auditor", "--format=github"])
             .run()?
     );
 
@@ -150,6 +166,91 @@ fn unpinned_uses() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-uses/issue-659-repro.yml"))
+            .args(["--pedantic"])
+            .run()?
+    );
+
+    // Config tests for `unpinned-uses`.
+
+    // Default policies (no explicit config).
+    insta::assert_snapshot!(
+        "unpinned-uses-default-config",
+        zizmor()
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    // Require all uses to be hash-pinned.
+    insta::assert_snapshot!(
+        "unpinned-uses-hash-pin-everything-config",
+        zizmor()
+            .config(input_under_test(
+                "unpinned-uses/configs/hash-pin-everything.yml"
+            ))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    // Require all uses to be ref-pinned.
+    insta::assert_snapshot!(
+        "unpinned-uses-ref-pin-everything-config",
+        zizmor()
+            .config(input_under_test(
+                "unpinned-uses/configs/ref-pin-everything.yml"
+            ))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    // Composite config cases.
+    insta::assert_snapshot!(
+        "unpinned-uses-composite-config",
+        zizmor()
+            .config(input_under_test("unpinned-uses/configs/composite.yml"))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        "unpinned-uses-composite-config-2",
+        zizmor()
+            .config(input_under_test("unpinned-uses/configs/composite-2.yml"))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    // Empty config.
+    insta::assert_snapshot!(
+        "unpinned-uses-empty-config",
+        zizmor()
+            .config(input_under_test("unpinned-uses/configs/empty.yml"))
+            .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+            .run()?
+    );
+
+    // Invalid config: invalid policy syntax cases.
+    for tc in [
+        "invalid-wrong-policy-object",
+        "invalid-policy-syntax-1",
+        "invalid-policy-syntax-2",
+        "invalid-policy-syntax-3",
+        "invalid-policy-syntax-4",
+        "invalid-policy-syntax-5",
+    ] {
+        insta::assert_snapshot!(
+            zizmor()
+                .output(OutputMode::Stderr)
+                .config(input_under_test(
+                    &format!("unpinned-uses/configs/{tc}.yml",)
+                ))
+                .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
+                .run()?
+        );
+    }
+
     Ok(())
 }
 
@@ -232,6 +333,14 @@ fn template_injection() -> Result<()> {
         zizmor()
             .input(input_under_test(
                 "template-injection/pr-425-backstop/action.yml"
+            ))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "template-injection/false-positive-menagerie.yml"
             ))
             .run()?
     );
@@ -338,6 +447,12 @@ fn cache_poisoning() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("cache-poisoning/issue-378-repro.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("cache-poisoning/issue-642-repro.yml"))
             .run()?
     );
 
@@ -541,6 +656,22 @@ fn secrets_outside_environment() -> Result<()> {
             .input(input_under_test("secrets-outside-environment.yml"))
             .run()?
     );
+
+#[test]
+fn forbidden_uses() -> Result<()> {
+    for config in ["allow-all", "deny-all", "allow-some", "deny-some"] {
+        insta::assert_snapshot!(
+            zizmor()
+                .config(input_under_test(&format!(
+                    "forbidden-uses/configs/{config}.yml"
+                )))
+                .input(input_under_test(
+                    "forbidden-uses/forbidden-uses-menagerie.yml"
+                ))
+                .run()?
+        );
+    }
+
 
     Ok(())
 }

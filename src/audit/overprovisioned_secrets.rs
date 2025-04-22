@@ -4,7 +4,7 @@ use crate::{
     utils::parse_expressions_from_input,
 };
 
-use super::{Audit, AuditInput, audit_meta};
+use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
 
 pub(crate) struct OverprovisionedSecrets;
 
@@ -15,7 +15,7 @@ audit_meta!(
 );
 
 impl Audit for OverprovisionedSecrets {
-    fn new(_state: super::AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -65,7 +65,7 @@ impl OverprovisionedSecrets {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
                 // would plausibly call with the entire `secrets` object?
-                if func.eq_ignore_ascii_case("toJSON")
+                if func == "toJSON"
                     && args
                         .iter()
                         .any(|arg| matches!(arg, Expr::Context(ctx) if ctx == "secrets"))

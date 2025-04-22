@@ -1,0 +1,12 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().output(OutputMode::Stderr).config(input_under_test(&format!(\"unpinned-uses/configs/{tc}.yml\",))).input(input_under_test(\"unpinned-uses/menagerie-of-uses.yml\")).run()?"
+snapshot_kind: text
+---
+ INFO zizmor: skipping impostor-commit: can't run without a GitHub API token
+ INFO zizmor: skipping ref-confusion: can't run without a GitHub API token
+ INFO zizmor: skipping known-vulnerable-actions: can't run without a GitHub API token
+fatal: no audit was performed
+error: failed to load audit: unpinned-uses
+ = note: invalid configuration: unknown variant `does not exist`, expected one of `any`, `ref-pin`, `hash-pin`
+ = note: see: https://woodruffw.github.io/zizmor/audits/#unpinned-uses

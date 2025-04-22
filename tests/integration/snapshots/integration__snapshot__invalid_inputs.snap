@@ -1,8 +1,9 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().output(OutputMode::Stderr).offline(true).input(workflow_under_test(\"invalid/invalid-workflow.yml\")).run()?"
+expression: "zizmor().output(OutputMode::Stderr).offline(true).input(input_under_test(\"invalid/invalid-workflow.yml\")).run()?"
 snapshot_kind: text
 ---
+fatal: no audit was performed
 failed to register input: @@INPUT@@
 
 Caused by:
