@@ -4,7 +4,7 @@ use github_actions_models::{
 };
 
 use super::{Audit, audit_meta};
-use crate::finding::Confidence;
+use crate::{finding::Confidence, AuditState, AuditLoadError};
 
 pub(crate) struct SecretsOutsideEnvironment;
 
@@ -15,7 +15,7 @@ audit_meta!(
 );
 
 impl Audit for SecretsOutsideEnvironment {
-    fn new(_state: super::AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
