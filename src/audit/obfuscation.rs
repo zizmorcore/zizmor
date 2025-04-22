@@ -61,6 +61,8 @@ impl Obfuscation {
             annotations.push("expression can be simplified via constant folding");
         }
 
+        // TODO: calculate call breadth/depth and flag above thresholds.
+
         annotations
     }
 }
