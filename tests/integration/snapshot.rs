@@ -657,6 +657,9 @@ fn secrets_outside_environment() -> Result<()> {
             .run()?
     );
 
+    Ok(())
+}
+
 #[test]
 fn forbidden_uses() -> Result<()> {
     for config in ["allow-all", "deny-all", "allow-some", "deny-some"] {
