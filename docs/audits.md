@@ -597,6 +597,8 @@ allow symbolic references for trusted repositories or entire namespaces
 (e.g. `foocorp/*`). See
 [`unpinned-uses` - Configuration](#unpinned-uses-configuration) for details.
 
+Specifying a configuration overrides the default policy above.
+
 Other resources:
 
 * [Palo Alto Networks Unit42: tj-actions/changed-files incident]
