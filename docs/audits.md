@@ -597,6 +597,8 @@ allow symbolic references for trusted repositories or entire namespaces
 (e.g. `foocorp/*`). See
 [`unpinned-uses` - Configuration](#unpinned-uses-configuration) for details.
 
+Specifying a configuration overrides the default policy above.
+
 Other resources:
 
 * [Palo Alto Networks Unit42: tj-actions/changed-files incident]
@@ -687,10 +689,6 @@ regardless of definition order.
     In plain English, this policy set says "anything that `#!yaml uses: actions/*` must
     be at least ref-pinned, but @actions/checkout in particular must be hash-pinned."
 
-If a `#!yaml uses:` clause does not match any rules, then an implicit `"*": hash-pin`
-rule is applied. Users can override this implicit rule by adding their
-own `*` rule.
-
 !!! example
 
     ```yaml title="zizmor.yml"
@@ -704,6 +702,14 @@ own `*` rule.
 
     In plain English, this policy set says "anything that `#!yaml uses: example/*` must
     be hash-pinned, and anything else must be at least ref-pinned."
+
+
+!!! important
+
+    If a `#!yaml uses:` clause does not match any rules, then an implicit
+    `#!yaml "*": hash-pin` rule is applied. Users can override this implicit rule
+    by adding their own `*` rule or a more precise rule, e.g.
+    `#!yaml "github/*": ref-pin` for actions under the @github organization.
 
 ### Remediation
 
