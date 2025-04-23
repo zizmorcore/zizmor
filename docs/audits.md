@@ -153,8 +153,10 @@ In practice, this means that workflows should almost always set
 `#!yaml permissions: {}` at the workflow level to disable all permissions
 by default, and then set specific job-level permissions as needed.
 
-Tools such as [GitHubSecurityLab/actions-permissions](https://github.com/GitHubSecurityLab/actions-permissions)
-can help finding the minimally required permissions.
+!!! tip
+
+    @GitHubSecurityLab/actions-permissions can help find the minimally required
+    permissions.
 
 !!! example
 
