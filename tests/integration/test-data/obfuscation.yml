@@ -20,3 +20,28 @@ jobs:
 
       # pointless use of ..
       - uses: actions/cache/save/../save@v4
+
+  obfuscated-exprs:
+    runs-on: ubuntu-latest
+    steps:
+      # trivially foldable expressions
+      - run: |
+          echo ${{ '' }}
+          echo ${{ 'a' }}
+          echo ${{ true }}
+          echo ${{ true && false }}
+          echo ${{ true || false }}
+          echo ${{ 1 > 2 || true }}
+          echo ${{ 1 != 2}}
+
+      # trivially foldable functions
+      - run: |
+          echo ${{ format('{0}', 'abc') }}
+          echo ${{ format('{0} {1}', 'abc', 'def') }}
+          echo ${{ format('{0} {1}', 'abc', format('{0}', 'def')) }}
+          echo ${{ startsWith('abc', 'a') }}
+          echo ${{ ENDSWITH('abc', 'c') }}
+
+      # foldable function call within non-foldable function call
+      - run: |
+          echo ${{ format('{0}, {1}', github.event.number, format('{0}', 'abc')) }}

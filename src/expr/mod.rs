@@ -187,6 +187,13 @@ impl<'src> Expr<'src> {
         Self::Context(Context::new(r, components))
     }
 
+    fn is_literal(&self) -> bool {
+        match self {
+            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null => true,
+            _ => false,
+        }
+    }
+
     /// Returns whether the expression is constant foldable.
     ///
     /// There are three kinds of foldable expressions:
@@ -220,6 +227,32 @@ impl<'src> Expr<'src> {
                 }
             }
             // Everything else is presumed non-foldable.
+            _ => false,
+        }
+    }
+
+    /// Like [`Self::constant_foldable`], but for all subexpressions
+    /// rather than the top-level expression.
+    ///
+    /// This has slightly different semantics than `constant_foldable`:
+    /// it doesn't include "trivially" foldable expressions like literals,
+    /// since flagging these as foldable within a larger expression
+    /// would be misleading.
+    pub(crate) fn has_constant_foldable_subexpr(&self) -> bool {
+        if !self.is_literal() && self.constant_foldable() {
+            return true;
+        }
+
+        match self {
+            Expr::Call { func: _, args } => args.iter().any(|a| a.has_constant_foldable_subexpr()),
+            Expr::Context(context) => {
+                let head = &context.components()[0];
+                head.has_constant_foldable_subexpr()
+            }
+            Expr::BinOp { lhs, op: _, rhs } => {
+                lhs.has_constant_foldable_subexpr() || rhs.has_constant_foldable_subexpr()
+            }
+            Expr::UnOp { op: _, expr } => expr.has_constant_foldable_subexpr(),
             _ => false,
         }
     }

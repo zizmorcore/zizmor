@@ -59,6 +59,8 @@ impl Obfuscation {
         // their evaluated form.
         if expr.constant_foldable() {
             annotations.push("expression can be simplified via constant folding");
+        } else if expr.has_constant_foldable_subexpr() {
+            annotations.push("expression contains constant foldable subexpression");
         }
 
         // TODO: calculate call breadth/depth and flag above thresholds.
