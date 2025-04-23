@@ -93,7 +93,7 @@ impl Audit for Obfuscation {
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
-                        .severity(Severity::High)
+                        .severity(Severity::Low)
                         .add_raw_location(Location::new(
                             input.location().annotated(annotation).primary(),
                             Feature::from_span(&span, input),
@@ -117,7 +117,7 @@ impl Audit for Obfuscation {
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
-                        .severity(Severity::High)
+                        .severity(Severity::Low)
                         .add_location(
                             step.location()
                                 .primary()
@@ -143,7 +143,7 @@ impl Audit for Obfuscation {
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
-                        .severity(Severity::High)
+                        .severity(Severity::Low)
                         .add_location(
                             step.location()
                                 .primary()
