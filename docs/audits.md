@@ -1242,6 +1242,58 @@ in [unpinned-uses](#unpinned-uses-configuration).
 Either remove the offending `#!yaml uses:` clause or, if intended, add it to
 your [configuration](#forbidden-uses-configuration).
 
+## `obfuscation`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | N/A   | v1.7.0        | ✅             | ✅                 | ❌  |
+
+Checks for obfuscated usages of GitHub Actions features.
+
+This audit primarily serves to "unstick" other audits, which may fail to detect
+functioning but obfuscated usages of GitHub Actions features.
+
+This audit detects a variety of obfuscated usages, including:
+
+* Obfuscated paths within `#!yaml uses:` clauses, including redundant `/`
+  separators and uses of `.` or `..` in path segments.
+* Obfuscated GitHub expressions, including no-op patterns like
+  `fromJSON(toJSON(...))` and calls to `format(...)` where all
+  arguments are literal values.
+
+### Remediation
+
+Address the source of obfuscation by simplifying the expression,
+`#!yaml uses:` clause, or other obfuscated feature.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="obfuscation.yml" hl_lines="8"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+                with:
+                  repository: ${{ format('{0}/{1}', 'octocat', 'hello-world') }}
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="obfuscation.yml" hl_lines="8"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+                with:
+                  repository: octocat/hello-world
+        ```
+
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd

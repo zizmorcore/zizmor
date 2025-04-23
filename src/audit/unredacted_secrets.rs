@@ -35,8 +35,6 @@ impl Audit for UnredactedSecrets {
                 continue;
             };
 
-            expr.as_curly();
-
             for _ in Self::secret_leakages(&parsed) {
                 findings.push(
                     Self::finding()

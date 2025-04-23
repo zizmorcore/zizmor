@@ -1,0 +1,50 @@
+on: pull_request
+
+name: obfuscation
+
+permissions: {}
+
+jobs:
+  obfuscated-uses:
+    runs-on: ubuntu-latest
+    steps:
+      # trailing slash
+      - uses: actions/checkout/@v4
+
+      # many trailing slashes
+      - uses: actions/checkout////@v4
+
+      # pointless use of .
+      - uses: github/codeql-action/./init@v2
+      - uses: actions/checkout/.@v4
+
+      # pointless use of ..
+      - uses: actions/cache/save/../save@v4
+
+  obfuscated-exprs:
+    runs-on: ubuntu-latest
+    steps:
+      # trivially foldable expressions
+      - run: |
+          echo ${{ '' }}
+          echo ${{ 'a' }}
+          echo ${{ true }}
+          echo ${{ true && false }}
+          echo ${{ true || false }}
+          echo ${{ 1 > 2 || true }}
+          echo ${{ 1 != 2}}
+
+      # trivially foldable functions
+      - run: |
+          echo ${{ format('{0}', 'abc') }}
+          echo ${{ format('{0} {1}', 'abc', 'def') }}
+          echo ${{ format('{0} {1}', 'abc', format('{0}', 'def')) }}
+          echo ${{ startsWith('abc', 'a') }}
+          echo ${{ ENDSWITH('abc', 'c') }}
+
+      # foldable subexpressions
+      - run: |
+          # inner format(...) is foldable
+          echo ${{ format('{0}, {1}', github.event.number, format('{0}', 'abc')) }}
+          # inner || is foldable
+          echo ${{ format('{0}, {1}', github.event.number, format('{0} {1}', github.event.number, true || false)) }}
