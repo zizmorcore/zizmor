@@ -188,10 +188,10 @@ impl<'src> Expr<'src> {
     }
 
     fn is_literal(&self) -> bool {
-        match self {
-            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null
+        )
     }
 
     /// Returns whether the expression is constant foldable.
