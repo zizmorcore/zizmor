@@ -836,6 +836,26 @@ mod tests {
     }
 
     #[test]
+    fn test_expr_has_constant_foldable_subexpr() -> Result<()> {
+        for (expr, foldable) in &[
+            // Literals are not considered foldable subexpressions.
+            ("'foo'", false),
+            ("1", false),
+            ("true", false),
+            ("null", false),
+            // Non-foldable expressions with foldable subexpressions
+            (
+                "format('{0}, {1}', github.event.number, format('{0}', 'abc'))",
+                true,
+            ),
+        ] {
+            let expr = Expr::parse(expr)?;
+            assert_eq!(expr.has_constant_foldable_subexpr(), *foldable);
+        }
+        Ok(())
+    }
+
+    #[test]
     fn test_expr_dataflow_contexts() -> Result<()> {
         // Trivial cases.
         let expr = Expr::parse("foo.bar")?;
