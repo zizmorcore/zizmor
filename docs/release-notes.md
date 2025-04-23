@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: The [obfuscation] audit detects obfuscatory patterns in
+  GitHub Actions usages. These patterns are not themselves dangerous,
+  but may indicate an attempt to obscure malicious behavior (#683)
+
 ## v1.6.0
 
 ### New Features 🌈
