@@ -5,7 +5,7 @@
 
 use std::{io::Read, ops::Deref, path::Path};
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
 use github_actions_models::common::RepositoryUses;
