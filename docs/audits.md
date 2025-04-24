@@ -117,8 +117,8 @@ Some general pointers:
   need repository write permissions (e.g. to leave a comment or make
   other changes to the upstream repo).\
   `pull_request_target` is only needed to perform privileged actions on
-  pull requests on external forks. If you only expect pull requests from
-  branches within the same project, or if you are fine with some functionality
+  pull requests from external forks. If you only expect pull requests from
+  branches within the same repository, or if you are fine with some functionality
   not working for external pull requests, prefer `pull_request`.
 * Automation for Dependabot pull requests can be implemented using `pull_request`,
   but requires setting dedicated [Dependabot secrets](https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions#accessing-secrets)
@@ -133,7 +133,7 @@ Some general pointers:
   uses the workflow file of the target branch of the pull request, therefore
   restricting the target branches reduces the risk that you have a vulnerable
   `pull_request_target` workflow in some stale branch you forgot about.
-* If you have to use a dangerous trigger, consider adding a `github.repository`
+* If you have to use a dangerous trigger, consider adding a `github.repository == ...`
   check to only run for your repository but not in forks of your repository
   (in case the user has enabled Actions there). This avoids exposing forks
   to danger in case you fix a vulnerability in the workflow but the fork still
