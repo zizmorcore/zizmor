@@ -172,6 +172,8 @@ impl Client {
         match resp.status() {
             StatusCode::OK => Ok(true),
             StatusCode::NOT_FOUND => Ok(false),
+            StatusCode::FORBIDDEN => Err(anyhow::Error::from(resp.error_for_status().unwrap_err())
+                .context("request forbidden; token permissions may be insufficient")),
             s => Err(anyhow!(
                 "{owner}/{repo}: error from GitHub API while checking branch {branch}: {s}"
             )),
@@ -190,6 +192,8 @@ impl Client {
         match resp.status() {
             StatusCode::OK => Ok(true),
             StatusCode::NOT_FOUND => Ok(false),
+            StatusCode::FORBIDDEN => Err(anyhow::Error::from(resp.error_for_status().unwrap_err())
+                .context("request forbidden; token permissions may be insufficient")),
             s => Err(anyhow!(
                 "{owner}/{repo}: error from GitHub API while checking tag {tag}: {s}"
             )),
