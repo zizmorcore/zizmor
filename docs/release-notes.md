@@ -11,6 +11,21 @@ of `zizmor`.
 
 ### New Features 🌈
 
+* **New audit**: The [obfuscation] audit detects obfuscatory patterns in
+  GitHub Actions usages. These patterns are not themselves dangerous,
+  but may indicate an attempt to obscure malicious behavior (#683)
+
+## v1.6.0
+
+### New Features 🌈
+
+* **New audit**: The [forbidden-uses] audit is a configurable audit
+  that allows allow- or denylisting of entire orgs, repos, or specific
+  action patterns. This audit must be configured; by default it has
+  no effect (#664)
+
+    Many thanks to @Holzhaus for proposing and initiating this new audit!
+
 * `zizmor` now supports `--format=github` as an output format.
   This format produces check annotations via GitHub workflow commands,
   e.g. `::warning` and `::error`. See the
@@ -691,3 +706,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [bot-conditions]: ./audits.md#bot-conditions
 [overprovisioned-secrets]: ./audits.md#overprovisioned-secrets
 [unredacted-secrets]: ./audits.md#unredacted-secrets
+[forbidden-uses]: ./audits.md#forbidden-uses

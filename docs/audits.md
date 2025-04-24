@@ -153,6 +153,11 @@ In practice, this means that workflows should almost always set
 `#!yaml permissions: {}` at the workflow level to disable all permissions
 by default, and then set specific job-level permissions as needed.
 
+!!! tip
+
+    @GitHubSecurityLab/actions-permissions can help find the minimally required
+    permissions.
+
 !!! example
 
     === "Before :warning:"
@@ -597,6 +602,8 @@ allow symbolic references for trusted repositories or entire namespaces
 (e.g. `foocorp/*`). See
 [`unpinned-uses` - Configuration](#unpinned-uses-configuration) for details.
 
+Specifying a configuration overrides the default policy above.
+
 Other resources:
 
 * [Palo Alto Networks Unit42: tj-actions/changed-files incident]
@@ -687,10 +694,6 @@ regardless of definition order.
     In plain English, this policy set says "anything that `#!yaml uses: actions/*` must
     be at least ref-pinned, but @actions/checkout in particular must be hash-pinned."
 
-If a `#!yaml uses:` clause does not match any rules, then an implicit `"*": hash-pin`
-rule is applied. Users can override this implicit rule by adding their
-own `*` rule.
-
 !!! example
 
     ```yaml title="zizmor.yml"
@@ -704,6 +707,14 @@ own `*` rule.
 
     In plain English, this policy set says "anything that `#!yaml uses: example/*` must
     be hash-pinned, and anything else must be at least ref-pinned."
+
+
+!!! important
+
+    If a `#!yaml uses:` clause does not match any rules, then an implicit
+    `#!yaml "*": hash-pin` rule is applied. Users can override this implicit rule
+    by adding their own `*` rule or a more precise rule, e.g.
+    `#!yaml "github/*": ref-pin` for actions under the @github organization.
 
 ### Remediation
 
@@ -1230,6 +1241,58 @@ in [unpinned-uses](#unpinned-uses-configuration).
 
 Either remove the offending `#!yaml uses:` clause or, if intended, add it to
 your [configuration](#forbidden-uses-configuration).
+
+## `obfuscation`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | N/A   | v1.7.0        | ✅             | ✅                 | ❌  |
+
+Checks for obfuscated usages of GitHub Actions features.
+
+This audit primarily serves to "unstick" other audits, which may fail to detect
+functioning but obfuscated usages of GitHub Actions features.
+
+This audit detects a variety of obfuscated usages, including:
+
+* Obfuscated paths within `#!yaml uses:` clauses, including redundant `/`
+  separators and uses of `.` or `..` in path segments.
+* Obfuscated GitHub expressions, including no-op patterns like
+  `fromJSON(toJSON(...))` and calls to `format(...)` where all
+  arguments are literal values.
+
+### Remediation
+
+Address the source of obfuscation by simplifying the expression,
+`#!yaml uses:` clause, or other obfuscated feature.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="obfuscation.yml" hl_lines="8"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+                with:
+                  repository: ${{ format('{0}/{1}', 'octocat', 'hello-world') }}
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="obfuscation.yml" hl_lines="8"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+                with:
+                  repository: octocat/hello-world
+        ```
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/

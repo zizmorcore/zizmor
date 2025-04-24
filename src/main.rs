@@ -530,6 +530,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::overprovisioned_secrets::OverprovisionedSecrets);
     register_audit!(audit::unredacted_secrets::UnredactedSecrets);
     register_audit!(audit::forbidden_uses::ForbiddenUses);
+    register_audit!(audit::obfuscation::Obfuscation);
 
     let mut results = FindingRegistry::new(&app, &config);
     {

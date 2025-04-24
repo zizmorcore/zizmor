@@ -398,6 +398,14 @@
         - icsharpcode/ILSpy#3365
 
 
+-   ![](https://github.com/immich-app.png?size=40){ width="40" loading=lazy align=left } immich-app
+
+    ---
+
+    ??? example "Examples"
+        - immich-app/immich#17651
+
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---

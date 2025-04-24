@@ -31,8 +31,6 @@ impl Audit for OverprovisionedSecrets {
                 continue;
             };
 
-            expr.as_curly();
-
             for _ in Self::secrets_expansions(&parsed) {
                 findings.push(
                     Self::finding()
