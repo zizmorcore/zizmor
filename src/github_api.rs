@@ -5,7 +5,7 @@
 
 use std::{io::Read, ops::Deref, path::Path};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
 use github_actions_models::common::RepositoryUses;
@@ -172,6 +172,8 @@ impl Client {
         match resp.status() {
             StatusCode::OK => Ok(true),
             StatusCode::NOT_FOUND => Ok(false),
+            StatusCode::FORBIDDEN => Err(anyhow::Error::from(resp.error_for_status().unwrap_err())
+                .context("request forbidden; token permissions may be insufficient")),
             s => Err(anyhow!(
                 "{owner}/{repo}: error from GitHub API while checking branch {branch}: {s}"
             )),
@@ -190,6 +192,8 @@ impl Client {
         match resp.status() {
             StatusCode::OK => Ok(true),
             StatusCode::NOT_FOUND => Ok(false),
+            StatusCode::FORBIDDEN => Err(anyhow::Error::from(resp.error_for_status().unwrap_err())
+                .context("request forbidden; token permissions may be insufficient")),
             s => Err(anyhow!(
                 "{owner}/{repo}: error from GitHub API while checking tag {tag}: {s}"
             )),
