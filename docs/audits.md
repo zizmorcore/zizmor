@@ -115,12 +115,29 @@ Some general pointers:
   re-tooling the workflow to be a [reusable workflow].
 * Replace `pull_request_target` with `pull_request`, unless you *absolutely*
   need repository write permissions (e.g. to leave a comment or make
-  other changes to the upstream repo).
+  other changes to the upstream repo).\
+  `pull_request_target` is only needed to perform privileged actions on
+  pull requests on external forks. If you only expect pull requests from
+  branches within the same project, or if you are fine with some functionality
+  not working for external pull requests, prefer `pull_request`.
+* Automation for Dependabot pull requests can be implemented using `pull_request`,
+  but requires setting dedicated [Dependabot secrets](https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions#accessing-secrets)
+  and [explicitly specifying needed `write` permissions](https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions#changing-github_token-permissions).
 * Never run PR-controlled code in the context of a
   `pull_request_target`-triggered workflow.
 * Avoid attacker-controllable flows into `GITHUB_ENV` in both `workflow_run`
   and `pull_request_target` workflows, since these can lead to arbitrary
   code execution.
+* If you really have to use `pull_request_target`, consider adding a [`branches` filter](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#running-your-pull_request_target-workflow-based-on-the-head-or-base-branch-of-a-pull-request)
+  to only run the workflow for matching target branches. `pull_request_target`
+  uses the workflow file of the target branch of the pull request, therefore
+  restricting the target branches reduces the risk that you have a vulnerable
+  `pull_request_target` workflow in some stale branch you forgot about.
+* If you have to use a dangerous trigger, consider adding a `github.repository`
+  check to only run for your repository but not in forks of your repository
+  (in case the user has enabled Actions there). This avoids exposing forks
+  to danger in case you fix a vulnerability in the workflow but the fork still
+  contains an old vulnerable version.
 
 [reusable workflow]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 
