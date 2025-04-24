@@ -58,9 +58,36 @@ _WORKFLOW_EVENTS: dict[str, str | None] = {
     "workflow_run": "workflow_run",
 }
 
+# We'll unroll the schema for each of the webhook events above
+# into this dictionary.
+_UNROLLED_SCHEMAS = {}
+
 
 def log(msg: str) -> None:
     print(f"[*] {msg}", file=sys.stderr)
+
+
+def unroll_schema(schema: dict) -> dict:
+    unrolled = {**schema}
+    # TODO: allOf, anyOf, array, etc.
+    for prop_name, prop_body in schema.get("properties", {}).items():
+        if ref := prop_body.get("$ref"):
+            # This is a reference to another schema.
+            # We'll unroll it and replace the reference with the
+            # unrolled schema.
+            ref_name = ref.split("/")[-1]
+            inner = _WEBHOOKS["components"]["schemas"][ref_name]
+
+            # Unroll the inner schema as well.
+            inner = unroll_schema(inner)
+
+            unrolled["properties"][prop_name] = inner
+
+    return unrolled
+
+
+def process_schema(schema: dict) -> None:
+    pass
 
 
 def process_webhook(webhook: str) -> None:
@@ -70,13 +97,18 @@ def process_webhook(webhook: str) -> None:
     # where `{event}` is `opened`, `closed`, etc.
 
     all_schemas = _WEBHOOKS["components"]["schemas"]
-    matching_schemas = [
-        schema
+    matching_schemas = {
+        name: schema
         for (name, schema) in all_schemas.items()
         if name.startswith(f"{webhook_schema_name}-")
-    ]
-
+    }
     log(f"\t {webhook} has {len(matching_schemas)} schemas")
+
+    for name, schema in matching_schemas.items():
+        if name not in _UNROLLED_SCHEMAS:
+            _UNROLLED_SCHEMAS[name] = unroll_schema(schema)
+            print(json.dumps(_UNROLLED_SCHEMAS[name], indent=2))
+            assert False
 
 
 if __name__ == "__main__":
