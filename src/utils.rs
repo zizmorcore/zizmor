@@ -17,27 +17,35 @@ use std::{fmt::Write, sync::LazyLock};
 
 use crate::audit::AuditInput;
 
-static WORKFLOW_VALIDATOR: LazyLock<Option<Validator>> = LazyLock::new(
-    || match serde_json::from_str(include_str!("../github-workflow.json")) {
-        Ok(schema) => validator_for(&schema).ok(),
-        Err(_) => None,
-    },
-);
+static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+    validator_for(&serde_json::from_str(include_str!("../github-action.json")).unwrap()).unwrap()
+});
 
-pub(crate) fn validate_workflow(contents: String) -> Option<Error> {
-    match &*WORKFLOW_VALIDATOR {
-        Some(validator) => match serde_yaml::from_str(&contents) {
-            Ok(workflow) => match validator.apply(&workflow).basic() {
-                Valid(_) => Some(anyhow!("valid workflow but failed unmarshaling")),
-                Invalid(errors) => Some(parse_workflow_validation_errors(errors)),
-            },
-            Err(_) => Some(anyhow!("unable to validate contents")),
+static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+    validator_for(&serde_json::from_str(include_str!("../github-workflow.json")).unwrap()).unwrap()
+});
+
+pub(crate) fn validate_action(contents: String) -> Error {
+    match serde_yaml::from_str(&contents) {
+        Ok(workflow) => match ACTION_VALIDATOR.apply(&workflow).basic() {
+            Valid(_) => anyhow!("valid action but failed unmarshaling"),
+            Invalid(errors) => parse_validation_errors(errors),
         },
-        None => None,
+        Err(_) => anyhow!("invalid yaml"),
     }
 }
 
-fn parse_workflow_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Error {
+pub(crate) fn validate_workflow(contents: String) -> Error {
+    match serde_yaml::from_str(&contents) {
+        Ok(workflow) => match WORKFLOW_VALIDATOR.apply(&workflow).basic() {
+            Valid(_) => anyhow!("valid workflow but failed unmarshaling"),
+            Invalid(errors) => parse_validation_errors(errors),
+        },
+        Err(_) => anyhow!("invalid yaml"),
+    }
+}
+
+fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Error {
     let mut message = String::new();
 
     for error in errors {
@@ -221,7 +229,7 @@ mod tests {
         registry::InputKey,
         utils::{
             extract_expression, extract_expressions, normalize_shell, parse_expressions_from_input,
-            validate_workflow,
+            validate_action, validate_workflow,
         },
     };
 
@@ -377,6 +385,59 @@ jobs:
     }
 
     #[test]
+    fn test_action_validation_valid() {
+        let action = "name: 'Action'
+description: 'Description'
+inputs:
+  some-input:
+    description: 'Input description'
+    default: 'default'
+
+outputs:
+  some-output:
+    description: 'Output description'
+
+runs:
+  using: docker
+  image: Dockerfile
+"
+        .to_string();
+
+        let err = validate_action(action);
+
+        assert_eq!(format!("{}", err), "valid action but failed unmarshaling")
+    }
+
+    #[test]
+    fn test_action_validation_invalid() {
+        let action = "name: 'Action'
+
+inputs:
+  some-input:
+    description: 'Input description'
+    default: 'default'
+
+outputs:
+  some-output:
+    description: 'Output description'
+
+random:
+
+runs:
+  using: docker
+  image: Dockerfile
+"
+        .to_string();
+
+        let err = validate_action(action);
+
+        assert_eq!(
+            format!("{}", err),
+            "Additional properties are not allowed ('random' was unexpected)\n\"description\" is a required property\n"
+        )
+    }
+
+    #[test]
     fn test_workflow_validation_valid() {
         let workflow = "name: Valid
 
@@ -395,11 +456,7 @@ jobs:
 
         let err = validate_workflow(workflow);
 
-        assert!(err.is_some());
-        assert_eq!(
-            format!("{}", err.unwrap()),
-            "valid workflow but failed unmarshaling"
-        )
+        assert_eq!(format!("{}", err), "valid workflow but failed unmarshaling")
     }
 
     #[test]
@@ -426,9 +483,8 @@ jobs:
 
         let err = validate_workflow(workflow);
 
-        assert!(err.is_some());
         assert_eq!(
-            format!("{}", err.unwrap()),
+            format!("{}", err),
             "on.workflow_call.inputs.input: \"type\" is a required property\nAdditional properties are not allowed ('boom' was unexpected)\n"
         );
     }
