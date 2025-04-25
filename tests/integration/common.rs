@@ -1,4 +1,5 @@
 use anyhow::{Context as _, Result};
+use regex::{Captures, Regex};
 use std::{env::current_dir, io::ErrorKind};
 
 use assert_cmd::Command;
@@ -149,8 +150,16 @@ impl Zizmor {
             OutputMode::Both => [output.stderr, output.stdout].concat(),
         })?;
 
+        let input_placeholder = "@@INPUT@@";
+        let input_path_regex = Regex::new(&format!(r"{input_placeholder}[\\/\w.-]+"))?;
         for input in &self.inputs {
-            raw = raw.replace(input, "@@INPUT@@");
+            raw = raw.replace(input, input_placeholder);
+            // Normalize Windows '\' file paths to using '/'
+            raw = input_path_regex
+                .replace_all(&raw, |captures: &Captures| {
+                    captures.get(0).unwrap().as_str().replace("\\", "/")
+                })
+                .into_owned();
         }
 
         Ok(raw)
