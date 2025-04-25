@@ -35,6 +35,7 @@ pub struct Zizmor {
     inputs: Vec<String>,
     config: Option<String>,
     output: OutputMode,
+    expects_failure: bool,
 }
 
 impl Zizmor {
@@ -49,6 +50,7 @@ impl Zizmor {
             inputs: vec![],
             config: None,
             output: OutputMode::Stdout,
+            expects_failure: false,
         }
     }
 
@@ -89,6 +91,14 @@ impl Zizmor {
 
     pub fn output(mut self, output: OutputMode) -> Self {
         self.output = output;
+        self
+    }
+
+    pub fn expects_failure(mut self, flag: bool) -> Self {
+        if flag {
+            self = self.output(OutputMode::Both);
+        }
+        self.expects_failure = flag;
         self
     }
 
@@ -144,10 +154,22 @@ impl Zizmor {
         };
 
         let mut raw = String::from_utf8(match self.output {
-            OutputMode::Stdout => output.stdout,
-            OutputMode::Stderr => output.stderr,
-            OutputMode::Both => [output.stderr, output.stdout].concat(),
+            OutputMode::Stdout => output.stdout.clone(),
+            OutputMode::Stderr => output.stderr.clone(),
+            OutputMode::Both => [output.stderr.clone(), output.stdout.clone()].concat(),
         })?;
+
+        // Exit codes used by zizmor, representing no findings or finding severity
+        let success_exit_codes = vec![0, 10, 11, 12, 13, 14];
+        if let Some(exit_code) = output.status.code() {
+            let is_failure = !success_exit_codes.contains(&exit_code);
+            if is_failure != self.expects_failure {
+                anyhow::bail!(
+                    "zizmor exited with unexpected code {exit_code}:\n{}",
+                    String::from_utf8_lossy(&[output.stderr, output.stdout].concat())
+                );
+            }
+        }
 
         for input in &self.inputs {
             raw = raw.replace(input, "@@INPUT@@");
