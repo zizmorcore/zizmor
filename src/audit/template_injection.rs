@@ -18,8 +18,8 @@ use github_actions_models::{
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     expr::{BinOp, Expr, UnOp},
-    finding::{Confidence, Persona, Severity, SymbolicLocation},
-    models::{self, StepCommon, uses::RepositoryUsesExt as _},
+    finding::{Confidence, Finding, FindingBuilder, Persona, Severity, SymbolicLocation},
+    models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
     utils::extract_expressions,
 };
@@ -268,6 +268,34 @@ impl TemplateInjection {
 
         bad_expressions
     }
+
+    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Vec<FindingBuilder<'w>> {
+        let mut findings = vec![];
+
+        let Some((script, script_loc)) = Self::script_with_location(step) else {
+            return findings;
+        };
+
+        for (expr, severity, confidence, persona) in
+            self.injectable_template_expressions(&script, step)
+        {
+            findings.push(
+                Self::finding()
+                    .severity(severity)
+                    .confidence(confidence)
+                    .persona(persona)
+                    .add_location(step.location().hidden())
+                    .add_location(step.location_with_name())
+                    .add_location(
+                        script_loc.clone().primary().annotated(format!(
+                            "{expr} may expand into attacker-controllable code"
+                        )),
+                    ),
+            )
+        }
+
+        findings
+    }
 }
 
 impl Audit for TemplateInjection {
@@ -278,72 +306,27 @@ impl Audit for TemplateInjection {
         Ok(Self)
     }
 
-    fn audit_composite_step<'a>(
-        &self,
-        step: &super::CompositeStep<'a>,
-    ) -> anyhow::Result<Vec<super::Finding<'a>>> {
-        let mut findings = vec![];
-
-        let Some((script, script_loc)) = Self::script_with_location(step) else {
-            return Ok(findings);
-        };
-
-        for (expr, severity, confidence, persona) in
-            self.injectable_template_expressions(&script, step)
-        {
-            findings.push(
-                Self::finding()
-                    .severity(severity)
-                    .confidence(confidence)
-                    .persona(persona)
-                    .add_location(step.location().hidden())
-                    .add_location(step.location_with_name())
-                    .add_location(
-                        script_loc.clone().primary().annotated(format!(
-                            "{expr} may expand into attacker-controllable code"
-                        )),
-                    )
-                    .build(step.action())?,
-            )
-        }
-
-        Ok(findings)
+    fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+        self.process_step(step)
+            .into_iter()
+            .map(|f| f.build(step.workflow()))
+            .collect()
     }
 
-    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
-        let mut findings = vec![];
-
-        let Some((script, script_loc)) = Self::script_with_location(step) else {
-            return Ok(findings);
-        };
-
-        for (expr, severity, confidence, persona) in
-            self.injectable_template_expressions(&script, step)
-        {
-            findings.push(
-                Self::finding()
-                    .severity(severity)
-                    .confidence(confidence)
-                    .persona(persona)
-                    .add_location(step.location().hidden())
-                    .add_location(step.location_with_name())
-                    .add_location(
-                        script_loc.clone().primary().annotated(format!(
-                            "{expr} may expand into attacker-controllable code"
-                        )),
-                    )
-                    .build(step.workflow())?,
-            )
-        }
-
-        Ok(findings)
+    fn audit_composite_step<'a>(
+        &self,
+        step: &CompositeStep<'a>,
+    ) -> anyhow::Result<Vec<Finding<'a>>> {
+        self.process_step(step)
+            .into_iter()
+            .map(|f| f.build(step.action()))
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Expr;
-    use crate::audit::template_injection::TemplateInjection;
+    use super::{Expr, TemplateInjection};
 
     #[test]
     fn test_expr_is_safe() {

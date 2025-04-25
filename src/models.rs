@@ -45,6 +45,9 @@ pub(crate) trait StepCommon<'s> {
     /// i.e. is not influenced by another expression.
     fn env_is_static(&self, name: &str) -> bool;
 
+    /// Returns a [`common::Uses`] for this step, if it has one.
+    fn uses(&self) -> Option<&common::Uses>;
+
     /// Returns this step's job's strategy, if present.
     ///
     /// Composite action steps have no strategy.
@@ -55,6 +58,10 @@ pub(crate) trait StepCommon<'s> {
 
     /// Returns a [`SymbolicLocation`] for this step.
     fn location(&self) -> SymbolicLocation<'s>;
+
+    /// Like [`Self::location()`], except with the step's `name`
+    /// key as the final path component if present.
+    fn location_with_name(&self) -> SymbolicLocation<'s>;
 }
 
 /// Represents an entire GitHub Actions workflow.
@@ -564,6 +571,10 @@ impl<'s> StepCommon<'s> for Step<'s> {
         utils::env_is_static(name, &envs)
     }
 
+    fn uses(&self) -> Option<&common::Uses> {
+        self.uses()
+    }
+
     fn strategy(&self) -> Option<&Strategy> {
         self.job().strategy.as_ref()
     }
@@ -587,6 +598,10 @@ impl<'s> StepCommon<'s> for Step<'s> {
 
     fn location(&self) -> SymbolicLocation<'s> {
         self.location()
+    }
+
+    fn location_with_name(&self) -> SymbolicLocation<'s> {
+        self.location_with_name()
     }
 }
 
@@ -855,6 +870,10 @@ impl<'s> StepCommon<'s> for CompositeStep<'s> {
         utils::env_is_static(name, &[env])
     }
 
+    fn uses(&self) -> Option<&common::Uses> {
+        self.uses()
+    }
+
     fn strategy(&self) -> Option<&Strategy> {
         None
     }
@@ -878,6 +897,10 @@ impl<'s> StepCommon<'s> for CompositeStep<'s> {
 
     fn location(&self) -> SymbolicLocation<'s> {
         self.location()
+    }
+
+    fn location_with_name(&self) -> SymbolicLocation<'s> {
+        self.location_with_name()
     }
 }
 

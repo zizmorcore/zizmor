@@ -334,6 +334,10 @@ mod tests {
             unimplemented!()
         }
 
+        fn uses(&self) -> Option<&github_actions_models::common::Uses> {
+            unimplemented!()
+        }
+
         fn strategy(&self) -> Option<&github_actions_models::workflow::job::Strategy> {
             unimplemented!()
         }
@@ -358,6 +362,10 @@ mod tests {
         }
 
         fn location(&self) -> crate::models::SymbolicLocation<'s> {
+            unimplemented!()
+        }
+
+        fn location_with_name(&self) -> crate::finding::SymbolicLocation<'s> {
             unimplemented!()
         }
     }

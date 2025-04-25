@@ -3,11 +3,12 @@ use github_actions_models::common::{RepositoryUses, Uses};
 use crate::{
     Confidence, Severity,
     expr::Expr,
-    finding::{self, Feature, Location},
+    finding::{Feature, Finding, FindingBuilder, Location},
+    models::{CompositeStep, Step, StepCommon},
     utils::parse_expressions_from_input,
 };
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
 
 pub(crate) struct Obfuscation;
 
@@ -67,20 +68,42 @@ impl Obfuscation {
 
         annotations
     }
+
+    fn process_step<'w>(
+        &self,
+        step: &impl StepCommon<'w>,
+    ) -> anyhow::Result<Vec<FindingBuilder<'w>>> {
+        let mut findings = vec![];
+
+        if let Some(Uses::Repository(uses)) = step.uses() {
+            for annotation in self.obfuscated_repo_uses(uses) {
+                findings.push(
+                    Self::finding()
+                        .confidence(Confidence::High)
+                        .severity(Severity::Low)
+                        .add_location(
+                            step.location()
+                                .primary()
+                                .with_keys(&["uses".into()])
+                                .annotated(annotation),
+                        ),
+                );
+            }
+        }
+
+        Ok(findings)
+    }
 }
 
 impl Audit for Obfuscation {
-    fn new(_state: &crate::AuditState<'_>) -> Result<Self, super::AuditLoadError>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(
-        &self,
-        input: &'w super::AuditInput,
-    ) -> anyhow::Result<Vec<finding::Finding<'w>>> {
+    fn audit_raw<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         for (expr, span) in parse_expressions_from_input(input) {
@@ -106,56 +129,21 @@ impl Audit for Obfuscation {
         Ok(findings)
     }
 
-    fn audit_step<'w>(
-        &self,
-        step: &crate::models::Step<'w>,
-    ) -> anyhow::Result<Vec<finding::Finding<'w>>> {
-        let mut findings = vec![];
-
-        if let Some(Uses::Repository(uses)) = step.uses() {
-            for annotation in self.obfuscated_repo_uses(uses) {
-                findings.push(
-                    Self::finding()
-                        .confidence(Confidence::High)
-                        .severity(Severity::Low)
-                        .add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(&["uses".into()])
-                                .annotated(annotation),
-                        )
-                        .build(step.workflow())?,
-                );
-            }
-        }
-
-        Ok(findings)
+    fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+        self.process_step(step)?
+            .into_iter()
+            .map(|f| f.build(step.workflow()))
+            .collect()
     }
 
     fn audit_composite_step<'a>(
         &self,
-        step: &crate::models::CompositeStep<'a>,
-    ) -> anyhow::Result<Vec<finding::Finding<'a>>> {
-        let mut findings = vec![];
-
-        if let Some(Uses::Repository(uses)) = step.uses() {
-            for annotation in self.obfuscated_repo_uses(uses) {
-                findings.push(
-                    Self::finding()
-                        .confidence(Confidence::High)
-                        .severity(Severity::Low)
-                        .add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(&["uses".into()])
-                                .annotated(annotation),
-                        )
-                        .build(step.action())?,
-                );
-            }
-        }
-
-        Ok(findings)
+        step: &CompositeStep<'a>,
+    ) -> anyhow::Result<Vec<Finding<'a>>> {
+        self.process_step(step)?
+            .into_iter()
+            .map(|f| f.build(step.action()))
+            .collect()
     }
 
     // TODO: Implement obfuscation checks for expressions via audit_raw.

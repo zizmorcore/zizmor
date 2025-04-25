@@ -9,8 +9,8 @@ use anyhow::{Context, Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, audit_meta};
-use crate::finding::Finding;
-use crate::models::CompositeStep;
+use crate::finding::{Finding, FindingBuilder};
+use crate::models::{CompositeStep, Step, StepCommon};
 use crate::{
     finding::{Confidence, Severity},
     github_api,
@@ -121,6 +121,31 @@ impl KnownVulnerableActions {
 
         Ok(results)
     }
+
+    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Result<Vec<FindingBuilder<'w>>> {
+        let mut findings = vec![];
+
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
+
+        for (severity, id) in self.action_known_vulnerabilities(uses)? {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(severity)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["uses".into()])
+                            .annotated(&id)
+                            .with_url(format!("https://github.com/advisories/{id}")),
+                    ),
+            );
+        }
+
+        Ok(findings)
+    }
 }
 
 impl Audit for KnownVulnerableActions {
@@ -143,55 +168,17 @@ impl Audit for KnownVulnerableActions {
         Ok(Self { client })
     }
 
-    fn audit_step<'w>(&self, step: &super::Step<'w>) -> Result<Vec<super::Finding<'w>>> {
-        let mut findings = vec![];
-
-        let Some(Uses::Repository(uses)) = step.uses() else {
-            return Ok(findings);
-        };
-
-        for (severity, id) in self.action_known_vulnerabilities(uses)? {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["uses".into()])
-                            .annotated(&id)
-                            .with_url(format!("https://github.com/advisories/{id}")),
-                    )
-                    .build(step.workflow())?,
-            );
-        }
-
-        Ok(findings)
+    fn audit_step<'w>(&self, step: &Step<'w>) -> Result<Vec<Finding<'w>>> {
+        self.process_step(step)?
+            .into_iter()
+            .map(|f| f.build(step.workflow()))
+            .collect()
     }
 
     fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
-        let mut findings = vec![];
-
-        let Some(Uses::Repository(uses)) = step.uses() else {
-            return Ok(findings);
-        };
-
-        for (severity, id) in self.action_known_vulnerabilities(uses)? {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["uses".into()])
-                            .annotated(&id)
-                            .with_url(format!("https://github.com/advisories/{id}")),
-                    )
-                    .build(step.action())?,
-            );
-        }
-
-        Ok(findings)
+        self.process_step(step)?
+            .into_iter()
+            .map(|f| f.build(step.action()))
+            .collect()
     }
 }
