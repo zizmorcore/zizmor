@@ -36,14 +36,11 @@ impl ForbiddenUses {
         }
     }
 
-    fn process_step<'w>(
-        &self,
-        step: &impl StepCommon<'w>,
-    ) -> anyhow::Result<Vec<FindingBuilder<'w>>> {
+    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Vec<FindingBuilder<'w>> {
         let mut findings = vec![];
 
         let Some(uses) = step.uses() else {
-            return Ok(vec![]);
+            return findings;
         };
 
         if self.use_denied(uses) {
@@ -61,7 +58,7 @@ impl ForbiddenUses {
             );
         };
 
-        Ok(findings)
+        findings
     }
 }
 
@@ -83,7 +80,7 @@ impl Audit for ForbiddenUses {
     }
 
     fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
-        self.process_step(step)?
+        self.process_step(step)
             .into_iter()
             .map(|f| f.build(step.workflow()))
             .collect()
@@ -93,7 +90,7 @@ impl Audit for ForbiddenUses {
         &self,
         step: &CompositeStep<'a>,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
-        self.process_step(step)?
+        self.process_step(step)
             .into_iter()
             .map(|f| f.build(step.action()))
             .collect()
