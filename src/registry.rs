@@ -2,12 +2,12 @@
 //! audits.
 
 use std::{
-    collections::{btree_map, BTreeMap},
+    collections::{BTreeMap, btree_map},
     fmt::Display,
     process::ExitCode,
 };
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use camino::{Utf8Path, Utf8PathBuf};
 use github_actions_models::common::RepositoryUses;
 use indexmap::IndexMap;
@@ -15,11 +15,11 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::{
+    App,
     audit::{Audit, AuditInput},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{Action, Workflow},
-    App,
 };
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
@@ -92,6 +92,32 @@ impl InputKey {
             git_ref: slug.git_ref.clone(),
             path: path.into(),
         }))
+    }
+
+    /// Returns a path for this [`InputKey`] that's suitable for SARIF
+    /// outputs.
+    ///
+    /// This is similar to [`InputKey::presentation_path`] in terms of being
+    /// a relative path (if the input is relative), but it also strips
+    /// the prefix from local paths, if one is present.
+    ///
+    /// For example, if the user runs `zizmor .`, then an input at
+    /// `./.github/workflows/foo.yml` will be returned as `.github/workflows/foo.yml`,
+    /// rather than `./.github/workflows/foo.yml`.
+    ///
+    /// This is needed for GitHub's interpretation of SARIF, which is brittle
+    /// with absolute paths but _also_ doesn't like relative paths that
+    /// start with relative directory markers.
+    pub(crate) fn sarif_path(&self) -> &str {
+        match self {
+            InputKey::Local(local) => local
+                .prefix
+                .as_ref()
+                .and_then(|pfx| local.given_path.strip_prefix(pfx).ok())
+                .unwrap_or_else(|| &local.given_path)
+                .as_str(),
+            InputKey::Remote(remote) => remote.path.as_str(),
+        }
     }
 
     /// Return a "presentation" path for this [`InputKey`].
@@ -250,7 +276,7 @@ impl<'a> FindingRegistry<'a> {
             } else {
                 if self
                     .highest_seen_severity
-                    .map_or(true, |s| finding.determinations.severity > s)
+                    .is_none_or(|s| finding.determinations.severity > s)
                 {
                     self.highest_seen_severity = Some(finding.determinations.severity);
                 }
@@ -331,7 +357,7 @@ mod tests {
     }
 
     #[test]
-    fn test_input_key_local_path() {
+    fn test_input_key_local_presentation_path() {
         let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
@@ -350,5 +376,27 @@ mod tests {
             local.presentation_path(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml"
         );
+    }
+
+    #[test]
+    fn test_input_key_local_sarif_path() {
+        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
+        assert_eq!(local.sarif_path(), "/foo/bar/baz.yml");
+
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
+        assert_eq!(local.sarif_path(), "bar/baz.yml");
+
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
+        assert_eq!(local.sarif_path(), "baz.yml");
+
+        let local = InputKey::local(
+            "/home/runner/work/repo/repo/.github/workflows/baz.yml",
+            Some("/home/runner/work/repo/repo"),
+        )
+        .unwrap();
+        assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
+
+        let local = InputKey::local("./.github/workflows/baz.yml", Some(".")).unwrap();
+        assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
     }
 }

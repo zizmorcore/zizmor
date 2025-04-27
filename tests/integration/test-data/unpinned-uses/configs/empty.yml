@@ -1,0 +1,7 @@
+rules:
+  unpinned-uses:
+    config:
+      # If the user explicitly configures an empty policy set,
+      # we apply the default policy, which is to require hash-pinning
+      # for all actions.
+      policies: {}

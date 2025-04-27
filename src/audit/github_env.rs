@@ -6,10 +6,11 @@ use anyhow::{Context, Result};
 use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
 use regex::Regex;
-use streaming_iterator::StreamingIterator;
-use tree_sitter::{Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
+use tree_sitter::{
+    Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
+};
 
-use super::{audit_meta, Audit};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{JobExt as _, Step};
 use crate::state::AuditState;
@@ -339,7 +340,7 @@ impl GitHubEnv {
 }
 
 impl Audit for GitHubEnv {
-    fn new(_: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -347,13 +348,15 @@ impl Audit for GitHubEnv {
         let mut bash_parser = Parser::new();
         bash_parser
             .set_language(&bash)
-            .context("failed to load bash parser")?;
+            .context("failed to load bash parser")
+            .map_err(AuditLoadError::Skip)?;
 
-        let pwsh = tree_sitter_powershell::language();
+        let pwsh = tree_sitter_powershell::LANGUAGE.into();
         let mut pwsh_parser = Parser::new();
         pwsh_parser
             .set_language(&pwsh)
-            .context("failed to load powershell parser")?;
+            .context("failed to load powershell parser")
+            .map_err(AuditLoadError::Skip)?;
 
         Ok(Self {
             bash_parser: RefCell::new(bash_parser),
@@ -445,8 +448,8 @@ impl Audit for GitHubEnv {
 
 #[cfg(test)]
 mod tests {
-    use crate::audit::github_env::{GitHubEnv, GITHUB_ENV_WRITE_CMD};
     use crate::audit::Audit;
+    use crate::audit::github_env::{GITHUB_ENV_WRITE_CMD, GitHubEnv};
     use crate::github_api::GitHubHost;
     use crate::state::AuditState;
 
@@ -505,13 +508,14 @@ mod tests {
             ("echo \"completely-static\" >> $GITHUB_ENV", false), // LHS is completely static
         ] {
             let audit_state = AuditState {
+                config: &Default::default(),
                 no_online_audits: false,
                 cache_dir: "/tmp/zizmor".into(),
                 gh_token: None,
                 gh_hostname: GitHubHost::Standard("github.com".into()),
             };
 
-            let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
+            let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 
             let uses_github_env = sut.uses_github_env(case, "bash").unwrap();
 
@@ -563,18 +567,45 @@ mod tests {
             ("foo >> $ENV:GITHUB_ENV", true),
             ("foo >> $ENV:GitHub_Env", true),
             // Out-File cases
-            ("echo \"CUDA_PATH=$env:CUDA_PATH\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append", true),
-            ("\"PYTHON_BIN=$PYTHON_BIN\" | Out-File -FilePath $env:GITHUB_ENV -Append", true),
-            ("echo \"SOLUTION_PATH=${slnPath}\" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append", true),
+            (
+                "echo \"CUDA_PATH=$env:CUDA_PATH\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append",
+                true,
+            ),
+            (
+                "\"PYTHON_BIN=$PYTHON_BIN\" | Out-File -FilePath $env:GITHUB_ENV -Append",
+                true,
+            ),
+            (
+                "echo \"SOLUTION_PATH=${slnPath}\" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append",
+                true,
+            ),
             // // Add-Content cases
-            ("Add-Content -Path $env:GITHUB_ENV -Value \"RELEASE_VERSION=$releaseVersion\"", true),
-            ("Add-Content $env:GITHUB_ENV \"DOTNET_ROOT=$Env:USERPROFILE\\.dotnet\"", true),
+            (
+                "Add-Content -Path $env:GITHUB_ENV -Value \"RELEASE_VERSION=$releaseVersion\"",
+                true,
+            ),
+            (
+                "Add-Content $env:GITHUB_ENV \"DOTNET_ROOT=$Env:USERPROFILE\\.dotnet\"",
+                true,
+            ),
             // Set-Content cases
-            ("Set-Content -Path $env:GITHUB_ENV -Value \"tag=$tag\"", true),
-            ("[System.Text.Encoding]::UTF8.GetBytes(\"RELEASE_NOTES<<EOF`n$releaseNotes`nEOF\") |\nSet-Content -Path $Env:GITHUB_ENV -NoNewline -Encoding Byte", true),
+            (
+                "Set-Content -Path $env:GITHUB_ENV -Value \"tag=$tag\"",
+                true,
+            ),
+            (
+                "[System.Text.Encoding]::UTF8.GetBytes(\"RELEASE_NOTES<<EOF`n$releaseNotes`nEOF\") |\nSet-Content -Path $Env:GITHUB_ENV -NoNewline -Encoding Byte",
+                true,
+            ),
             // Tee-Object cases
-            ("echo \"BRANCH=${{ env.BRANCH_NAME }}\" | Tee-Object -Append -FilePath \"${env:GITHUB_ENV}\"", true),
-            ("echo \"JAVA_HOME=${Env:JAVA_HOME_11_X64}\" | Tee-Object -FilePath $env:GITHUB_ENV -Append", true),
+            (
+                "echo \"BRANCH=${{ env.BRANCH_NAME }}\" | Tee-Object -Append -FilePath \"${env:GITHUB_ENV}\"",
+                true,
+            ),
+            (
+                "echo \"JAVA_HOME=${Env:JAVA_HOME_11_X64}\" | Tee-Object -FilePath $env:GITHUB_ENV -Append",
+                true,
+            ),
             // Case insensitivity
             ("echo \"foo\" | out-file $Env:GitHub_Env -Append", true),
             ("echo \"foo\" | out-File $Env:GitHub_Env -Append", true),
@@ -588,16 +619,20 @@ mod tests {
             ),
             ("foo >> GITHUB_ENV", false), // GITHUB_ENV is not a variable
             ("foo >> $GITHUB_ENV", false), // variable but not an envvar
-            ("\"PYTHON_BIN=$PYTHON_BIN\" | Out-File -FilePath GITHUB_ENV -Append", false), // GITHUB_ENV is not a variable
+            (
+                "\"PYTHON_BIN=$PYTHON_BIN\" | Out-File -FilePath GITHUB_ENV -Append",
+                false,
+            ), // GITHUB_ENV is not a variable
         ] {
             let audit_state = AuditState {
+                config: &Default::default(),
                 no_online_audits: false,
                 cache_dir: "/tmp/zizmor".into(),
                 gh_token: None,
                 gh_hostname: GitHubHost::Standard("github.com".into()),
             };
 
-            let sut = GitHubEnv::new(audit_state).expect("failed to create audit");
+            let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 
             let uses_github_env = sut.uses_github_env(case, "pwsh").unwrap();
 

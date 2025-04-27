@@ -33,7 +33,13 @@ description: Installation instructions for zizmor.
     ![PyPI - Version](https://img.shields.io/pypi/v/zizmor)
 
     `zizmor` is available on [PyPI](https://pypi.org) and can be installed
-    with any Python package installer:
+    with any Python package installer.
+
+    !!! important
+
+        Python wheels for `zizmor` are provided on a best-effort basis,
+        with priority given to the most common architectures and host OSes.
+
 
     ```bash
     # with pip

@@ -1,0 +1,71 @@
+name: Test output formats
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+
+permissions: {}
+
+jobs:
+  test-sarif-presentation:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'test-sarif-presentation')
+    permissions:
+      pull-requests: write # for 'Leave comment' step
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2
+
+      - name: Run zizmor
+        run: |
+          cargo run -- --format sarif . > results.sarif
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@45775bd8235c68ba998cffa5171334d58593da47 # v3.28.15
+        with:
+          sarif_file: results.sarif
+          category: zizmor-test-sarif-presentation
+
+      - name: Leave comment
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            let url = `https://github.com/woodruffw/zizmor/security/code-scanning?query=pr%3A${context.issue.number}+is%3Aopen+sort%3Acreated-desc`
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `:robot: Presentation results: <${url}>`
+            })
+
+  test-github-presentation:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'test-github-presentation')
+    permissions: {}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2
+
+      - name: Run zizmor
+        run: |
+          # Normally we'd want a workflow to fail if the audit fails,
+          # but we're only testing presentation here.
+          cargo run \
+            -- \
+            --no-exit-codes \
+            --format github \
+            tests/integration/test-data/several-vulnerabilities.yml

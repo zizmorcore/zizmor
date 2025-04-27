@@ -2,11 +2,11 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
-use super::{audit_meta, Audit, Job};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::models::JobExt as _;
 use crate::{
-    finding::{Confidence, Persona, Severity, SymbolicLocation},
     AuditState,
+    finding::{Confidence, Persona, Severity, SymbolicLocation},
 };
 
 // Subjective mapping of permissions to severities, when given `write` access.
@@ -37,16 +37,14 @@ audit_meta!(
     "overly broad permissions"
 );
 
-pub(crate) struct ExcessivePermissions {
-    pub(crate) _config: AuditState,
-}
+pub(crate) struct ExcessivePermissions;
 
 impl Audit for ExcessivePermissions {
-    fn new(config: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
-        Ok(Self { _config: config })
+        Ok(Self)
     }
 
     fn audit_workflow<'w>(

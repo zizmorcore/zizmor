@@ -11,15 +11,15 @@
 //! expressions that an attacker can't control.
 
 use github_actions_models::{
-    common::{expr::LoE, Uses},
+    common::{Uses, expr::LoE},
     workflow::job::Strategy,
 };
 
-use super::{audit_meta, Audit};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Persona, Severity, SymbolicLocation},
-    models::{self, uses::RepositoryUsesExt as _, StepCommon},
+    models::{self, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
     utils::extract_expressions,
 };
@@ -39,15 +39,21 @@ const SAFE_CONTEXTS: &[&str] = &[
     // The GitHub event name (i.e. trigger) is itself safe.
     "github.event_name",
     // Safe keys within the otherwise generally unsafe github.event context.
-    "github.event.after",  // hexadecimal SHA ref
-    "github.event.before", // hexadecimal SHA ref
-    "github.event.issue.number",
-    "github.event.merge_group.base_sha",
+    "github.event.after",                // hexadecimal SHA ref
+    "github.event.before",               // hexadecimal SHA ref
+    "github.event.issue.number",         // the issue's own number
+    "github.event.merge_group.base_sha", // hexadecimal SHA ref
     "github.event.number",
-    "github.event.pull_request.base.sha",
-    "github.event.pull_request.commits", // number of commits in PR
-    "github.event.pull_request.number",  // the PR's own number
+    "github.event.pull_request.base.sha", // hexadecimal SHA ref
+    "github.event.pull_request.head.sha", // hexadecimal SHA ref
+    "github.event.pull_request.head.repo.fork", // boolean
+    "github.event.pull_request.commits",  // number of commits in PR
+    "github.event.pull_request.number",   // the PR's own number
     "github.event.workflow_run.id",
+    // Corresponds to the job ID, which is workflow-controlled
+    // but can only be [A-Za-z0-9-_].
+    // See: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_id
+    "github.job",
     // Information about the GitHub repository
     "github.repository",
     "github.repository_id",
@@ -186,7 +192,7 @@ impl TemplateInjection {
                 continue;
             }
 
-            for context in parsed.contexts() {
+            for context in parsed.dataflow_contexts() {
                 if context.child_of("secrets") {
                     // While not ideal, secret expansion is typically not exploitable.
                     continue;
@@ -265,7 +271,7 @@ impl TemplateInjection {
 }
 
 impl Audit for TemplateInjection {
-    fn new(_state: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -290,6 +296,7 @@ impl Audit for TemplateInjection {
                     .severity(severity)
                     .confidence(confidence)
                     .persona(persona)
+                    .add_location(step.location().hidden())
                     .add_location(step.location_with_name())
                     .add_location(
                         script_loc.clone().primary().annotated(format!(
@@ -318,6 +325,7 @@ impl Audit for TemplateInjection {
                     .severity(severity)
                     .confidence(confidence)
                     .persona(persona)
+                    .add_location(step.location().hidden())
                     .add_location(step.location_with_name())
                     .add_location(
                         script_loc.clone().primary().annotated(format!(

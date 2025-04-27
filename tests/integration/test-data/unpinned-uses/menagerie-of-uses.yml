@@ -1,0 +1,29 @@
+name: menagerie-of-uses
+on: [push]
+
+permissions: {}
+
+jobs:
+  menagerie:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-python@v4
+
+      - uses: actions/checkout
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+      - uses: github/codeql-action/init@v3
+
+      - uses: github/codeql-action/upload-sarif@v3

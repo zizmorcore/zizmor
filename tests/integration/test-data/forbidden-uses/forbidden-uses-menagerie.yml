@@ -1,0 +1,16 @@
+name: forbidden-uses-menagerie
+
+on: [push]
+
+permissions: {}
+
+jobs:
+  menagerie:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-python@v4
+      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false

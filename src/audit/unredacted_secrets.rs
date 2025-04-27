@@ -1,11 +1,11 @@
 use crate::{
+    Confidence, Severity,
     expr::{Context, Expr},
     finding::{Feature, Location},
-    utils::extract_expressions,
-    Confidence, Severity,
+    utils::parse_expressions_from_input,
 };
 
-use super::{audit_meta, Audit};
+use super::{Audit, AuditLoadError, AuditState, audit_meta};
 
 pub(crate) struct UnredactedSecrets;
 
@@ -16,7 +16,7 @@ audit_meta!(
 );
 
 impl Audit for UnredactedSecrets {
-    fn new(_: crate::AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -28,15 +28,12 @@ impl Audit for UnredactedSecrets {
         input: &'w super::AuditInput,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
         let mut findings = vec![];
-        let raw = input.document().source();
 
-        for (expr, span) in extract_expressions(raw) {
+        for (expr, span) in parse_expressions_from_input(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
-
-            expr.as_curly();
 
             for _ in Self::secret_leakages(&parsed) {
                 findings.push(
@@ -71,7 +68,7 @@ impl UnredactedSecrets {
 
         match expr {
             Expr::Call { func, args } => {
-                if func.eq_ignore_ascii_case("fromJSON")
+                if func == "fromJSON"
                     && args
                         .iter()
                         .any(|arg| matches!(arg, Expr::Context(ctx) if ctx.child_of("secrets")))

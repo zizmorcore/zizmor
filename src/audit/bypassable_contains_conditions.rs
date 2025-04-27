@@ -1,6 +1,6 @@
-use github_actions_models::common::{expr::ExplicitExpr, If};
+use github_actions_models::common::{If, expr::ExplicitExpr};
 
-use super::{audit_meta, Audit};
+use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     expr::{Context, Expr},
     finding::{Confidence, Severity},
@@ -34,7 +34,7 @@ audit_meta!(
 );
 
 impl Audit for BypassableContainsConditions {
-    fn new(_state: super::AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -84,7 +84,7 @@ impl BypassableContainsConditions {
         expr: &'a Expr,
     ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>)> + 'a> {
         match expr {
-            Expr::Call { func, args: exprs } if func.eq_ignore_ascii_case("contains") => {
+            Expr::Call { func, args: exprs } if func.0.eq_ignore_ascii_case("contains") => {
                 match exprs.as_slice() {
                     [Expr::String(s), Expr::Context(c)] => {
                         Box::new(std::iter::once((s.as_str(), c)))

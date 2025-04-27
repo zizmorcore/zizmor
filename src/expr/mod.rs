@@ -1,8 +1,8 @@
 //! Expression parsing and analysis.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use itertools::Itertools;
-use pest::{iterators::Pair, Parser};
+use pest::{Parser, iterators::Pair};
 use pest_derive::Parser;
 
 /// A parser for GitHub Actions' expression language.
@@ -94,6 +94,20 @@ impl PartialEq<str> for Context<'_> {
 }
 
 #[derive(Debug)]
+pub(crate) struct Function<'src>(pub(crate) &'src str);
+
+impl PartialEq for Function<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq_ignore_ascii_case(other.0)
+    }
+}
+impl PartialEq<str> for Function<'_> {
+    fn eq(&self, other: &str) -> bool {
+        self.0.eq_ignore_ascii_case(other)
+    }
+}
+
+#[derive(Debug)]
 pub(crate) struct Identifier<'src>(&'src str);
 
 impl PartialEq for Identifier<'_> {
@@ -140,7 +154,7 @@ pub(crate) enum Expr<'src> {
     Star,
     /// A function call.
     Call {
-        func: &'src str,
+        func: Function<'src>,
         args: Vec<Expr<'src>>,
     },
     /// A context identifier component, e.g. `github` in `github.actor`.
@@ -173,41 +187,118 @@ impl<'src> Expr<'src> {
         Self::Context(Context::new(r, components))
     }
 
-    /// Returns all of the contexts used in this expression, regardless
-    /// of dataflow.
+    fn is_literal(&self) -> bool {
+        matches!(
+            self,
+            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null
+        )
+    }
+
+    /// Returns whether the expression is constant foldable.
     ///
-    /// **IMPORTANT**: This only returns "well-known" contexts, i.e. ones
-    /// that are defined at the top level. In other words, if an expression
-    /// contains both `foo.bar` and `foo().bar`, only the former will be
-    /// returned, as `foo()` can be anything and thus the `bar` access against
-    /// it has no particular meaning.
-    pub(crate) fn contexts(&self) -> Vec<&Context> {
+    /// There are three kinds of foldable expressions:
+    ///
+    /// 1. Literals, which fold to their literal value;
+    /// 2. Binops/unops with foldable subexpressions, which fold
+    ///    to their evaluation;
+    /// 3. Select function calls where the semantics of the function
+    ///    mean that foldable arguments make the call itself foldable.
+    ///
+    /// NOTE: This implementation is sound but not complete.
+    pub(crate) fn constant_foldable(&self) -> bool {
+        match self {
+            // Literals are always foldable.
+            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null => true,
+            // Binops are foldable if their LHS and RHS are foldable.
+            Expr::BinOp { lhs, op: _, rhs } => lhs.constant_foldable() && rhs.constant_foldable(),
+            // Unops are foldable if their interior expression is foldable.
+            Expr::UnOp { op: _, expr } => expr.constant_foldable(),
+            Expr::Call { func, args } => {
+                // These functions are foldable if their arguments are foldable.
+                if func == "format"
+                    || func == "contains"
+                    || func == "startsWith"
+                    || func == "endsWith"
+                {
+                    args.iter().all(Expr::constant_foldable)
+                } else {
+                    // TODO: fromJSON(toJSON(...)) and vice versa.
+                    false
+                }
+            }
+            // Everything else is presumed non-foldable.
+            _ => false,
+        }
+    }
+
+    /// Like [`Self::constant_foldable`], but for all subexpressions
+    /// rather than the top-level expression.
+    ///
+    /// This has slightly different semantics than `constant_foldable`:
+    /// it doesn't include "trivially" foldable expressions like literals,
+    /// since flagging these as foldable within a larger expression
+    /// would be misleading.
+    pub(crate) fn has_constant_foldable_subexpr(&self) -> bool {
+        if !self.is_literal() && self.constant_foldable() {
+            return true;
+        }
+
+        match self {
+            Expr::Call { func: _, args } => args.iter().any(|a| a.has_constant_foldable_subexpr()),
+            Expr::Context(context) => {
+                let head = &context.components()[0];
+                head.has_constant_foldable_subexpr()
+            }
+            Expr::BinOp { lhs, op: _, rhs } => {
+                lhs.has_constant_foldable_subexpr() || rhs.has_constant_foldable_subexpr()
+            }
+            Expr::UnOp { op: _, expr } => expr.has_constant_foldable_subexpr(),
+            _ => false,
+        }
+    }
+
+    /// Returns the contexts in this expression that directly flow into the
+    /// expression's evaluation.
+    ///
+    /// For example `${{ foo.bar }}` returns `foo.bar` since the value
+    /// of `foo.bar` flows into the evaluation. On the other hand,
+    /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
+    /// since the value of `foo.bar` flows into a boolean evaluation
+    /// that gets expanded.
+    pub(crate) fn dataflow_contexts(&self) -> Vec<&Context> {
         let mut contexts = vec![];
 
         match self {
-            Expr::Call { func: _, args } => {
-                for arg in args {
-                    contexts.extend(arg.contexts());
+            Expr::Call { func, args } => {
+                // These functions, when evaluated, produce an evaluation
+                // that includes some or all of the contexts listed in
+                // their arguments.
+                if func == "toJSON" || func == "format" || func == "join" {
+                    for arg in args {
+                        contexts.extend(arg.dataflow_contexts());
+                    }
                 }
             }
-            Expr::Index(expr) => contexts.extend(expr.contexts()),
-            Expr::Context(ctx) => {
-                if matches!(ctx.components[0], Expr::Call { .. }) {
-                    // If the context looks something like `foo(args).a.b.c`, then
-                    // we need to check each of `args` for contexts but skip
-                    // the trailing identifiers, since those aren't well-known.
-                    contexts.extend(ctx.components[0].contexts());
-                } else {
-                    // Otherwise, if the context looks like a normal context,
-                    // we include it in its entirety.
-                    contexts.push(ctx)
+            // NOTE: We intentionally don't handle the `func(...).foo.bar`
+            // case differently here, since a call followed by a
+            // context access *can* flow into the evaluation.
+            // For example, `${{ fromJSON(something) }}` evaluates to
+            // `Object` but `${{ fromJSON(something).foo }}` evaluates
+            // to the contents of `something.foo`.
+            Expr::Context(ctx) => contexts.push(ctx),
+            Expr::BinOp { lhs, op, rhs } => match op {
+                // With && only the RHS can flow into the evaluation as a context
+                // (rather than a boolean).
+                BinOp::And => {
+                    contexts.extend(rhs.dataflow_contexts());
                 }
-            }
-            Expr::BinOp { lhs, op: _, rhs } => {
-                contexts.extend(lhs.contexts());
-                contexts.extend(rhs.contexts());
-            }
-            Expr::UnOp { op: _, expr } => contexts.extend(expr.contexts()),
+                // With || either the LHS or RHS can flow into the evaluation as a context.
+                BinOp::Or => {
+                    contexts.extend(lhs.dataflow_contexts());
+                    contexts.extend(rhs.dataflow_contexts());
+                }
+                _ => (),
+            },
             _ => (),
         }
 
@@ -351,7 +442,7 @@ impl<'src> Expr<'src> {
                         .collect::<Result<_, _>>()?;
 
                     Ok(Expr::Call {
-                        func: identifier.as_str(),
+                        func: Function(identifier.as_str()),
                         args,
                     }
                     .into())
@@ -391,11 +482,21 @@ mod tests {
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use super::{BinOp, Expr, ExprParser, Rule, UnOp};
+    use super::{BinOp, Context, Expr, ExprParser, Function, Rule, UnOp};
+
+    #[test]
+    fn test_function_eq() {
+        let func = Function("foo");
+        assert_eq!(&func, "foo");
+        assert_eq!(&func, "FOO");
+        assert_eq!(&func, "Foo");
+
+        assert_eq!(func, Function("FOO"));
+    }
 
     #[test]
     fn test_context_eq() {
-        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+        let ctx = Context::try_from("foo.bar.baz").unwrap();
         assert_eq!(&ctx, "foo.bar.baz");
         assert_eq!(&ctx, "FOO.BAR.BAZ");
         assert_eq!(&ctx, "Foo.Bar.Baz");
@@ -403,7 +504,7 @@ mod tests {
 
     #[test]
     fn test_context_child_of() {
-        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+        let ctx = Context::try_from("foo.bar.baz").unwrap();
 
         for (case, child) in &[
             // Trivial child cases.
@@ -432,7 +533,7 @@ mod tests {
 
     #[test]
     fn test_context_pop_if() {
-        let ctx = super::Context::try_from("foo.bar.baz").unwrap();
+        let ctx = Context::try_from("foo.bar.baz").unwrap();
 
         for (case, expected) in &[
             ("foo", Some("bar.baz")),
@@ -585,7 +686,7 @@ mod tests {
             (
                 "foo(1, 2, 3)",
                 Expr::Call {
-                    func: "foo",
+                    func: Function("foo"),
                     args: vec![Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)],
                 },
             ),
@@ -593,33 +694,19 @@ mod tests {
                 "foo.bar.baz",
                 Expr::context(
                     "foo.bar.baz",
-                    [Expr::ident("foo"), Expr::ident("bar"), Expr::ident("baz")]
-                )
+                    [Expr::ident("foo"), Expr::ident("bar"), Expr::ident("baz")],
+                ),
             ),
             (
                 "foo.bar.baz[1][2]",
                 Expr::context(
                     "foo.bar.baz[1][2]",
                     [
-                        Expr::ident(
-                            "foo",
-                        ),
-                        Expr::ident(
-                            "bar",
-                        ),
-                        Expr::ident(
-                            "baz",
-                        ),
-                        Expr::Index(
-                            Expr::Number(
-                                1.0,
-                            ).into(),
-                        ),
-                        Expr::Index(
-                            Expr::Number(
-                                2.0,
-                            ).into(),
-                        ),
+                        Expr::ident("foo"),
+                        Expr::ident("bar"),
+                        Expr::ident("baz"),
+                        Expr::Index(Expr::Number(1.0).into()),
+                        Expr::Index(Expr::Number(2.0).into()),
                     ],
                 ),
             ),
@@ -628,18 +715,10 @@ mod tests {
                 Expr::context(
                     "foo.bar.baz[*]",
                     [
-                        Expr::ident(
-                            "foo",
-                        ),
-                        Expr::ident(
-                            "bar",
-                        ),
-                        Expr::ident(
-                            "baz",
-                        ),
-                        Expr::Index(
-                            Expr::Star.into(),
-                        ),
+                        Expr::ident("foo"),
+                        Expr::ident("bar"),
+                        Expr::ident("baz"),
+                        Expr::Index(Expr::Star.into()),
                     ],
                 ),
             ),
@@ -648,13 +727,9 @@ mod tests {
                 Expr::context(
                     "vegetables.*.ediblePortions",
                     vec![
-                        Expr::ident(
-                            "vegetables",
-                        ),
+                        Expr::ident("vegetables"),
                         Expr::Star,
-                        Expr::ident(
-                            "ediblePortions",
-                        ),
+                        Expr::ident("ediblePortions"),
                     ],
                 ),
             ),
@@ -667,20 +742,20 @@ mod tests {
                         lhs: Expr::BinOp {
                             lhs: Expr::context(
                                 "github.ref",
-                                [
-                                    Expr::ident("github"),
-                                    Expr::ident("ref"),
-                                ],
-                            ).into(),
+                                [Expr::ident("github"), Expr::ident("ref")],
+                            )
+                            .into(),
                             op: BinOp::Eq,
                             rhs: Expr::string("refs/heads/main"),
-                        }.into(),
+                        }
+                        .into(),
                         op: BinOp::And,
                         rhs: Expr::string("value_for_main_branch"),
-                    }.into(),
+                    }
+                    .into(),
                     op: BinOp::Or,
                     rhs: Expr::string("value_for_other_branches"),
-                }
+                },
             ),
             (
                 "(true || false) == true",
@@ -688,11 +763,12 @@ mod tests {
                     lhs: Expr::BinOp {
                         lhs: Expr::Boolean(true).into(),
                         op: BinOp::Or,
-                        rhs: Expr::Boolean(false).into()
-                    }.into(),
+                        rhs: Expr::Boolean(false).into(),
+                    }
+                    .into(),
                     op: BinOp::Eq,
-                    rhs: Expr::Boolean(true).into()
-                }
+                    rhs: Expr::Boolean(true).into(),
+                },
             ),
             (
                 "!(!true || false)",
@@ -701,11 +777,14 @@ mod tests {
                     expr: Expr::BinOp {
                         lhs: Expr::UnOp {
                             op: UnOp::Not,
-                            expr: Expr::Boolean(true).into()
-                        }.into(),
-                    op: BinOp::Or, rhs: Expr::Boolean(false).into()
-                    }.into()
-                }
+                            expr: Expr::Boolean(true).into(),
+                        }
+                        .into(),
+                        op: BinOp::Or,
+                        rhs: Expr::Boolean(false).into(),
+                    }
+                    .into(),
+                },
             ),
         ];
 
@@ -715,16 +794,103 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_contexts() {
-        let expr = Expr::parse(
-            "foo.bar && abc && d.e.f && andThis(should.work).except.this && but().not.this",
-        )
-        .unwrap();
+    fn test_expr_constant_foldable() -> Result<()> {
+        for (expr, foldable) in &[
+            ("'foo'", true),
+            ("1", true),
+            ("true", true),
+            ("null", true),
+            // boolean and unary expressions of all literals are
+            // always foldable.
+            ("!true", true),
+            ("!null", true),
+            ("true && false", true),
+            ("true || false", true),
+            ("null && !null && true", true),
+            // formats/contains/startsWith/endsWith are foldable
+            // if all of their arguments are foldable.
+            ("format('{0} {1}', 'foo', 'bar')", true),
+            ("format('{0} {1}', 1, 2)", true),
+            ("format('{0} {1}', 1, '2')", true),
+            ("contains('foo', 'bar')", true),
+            ("startsWith('foo', 'bar')", true),
+            ("endsWith('foo', 'bar')", true),
+            ("startsWith(some.context, 'bar')", false),
+            ("endsWith(some.context, 'bar')", false),
+            // Nesting works as long as the nested call is also foldable.
+            ("format('{0} {1}', '1', format('{0}', null))", true),
+            ("format('{0} {1}', '1', startsWith('foo', 'foo'))", true),
+            ("format('{0} {1}', '1', startsWith(foo.bar, 'foo'))", false),
+            ("foo", false),
+            ("foo.bar", false),
+            ("foo.bar[1]", false),
+            ("foo.bar == 'bar'", false),
+            ("foo.bar || bar || baz", false),
+            ("foo.bar && bar && baz", false),
+        ] {
+            let expr = Expr::parse(expr)?;
+            assert_eq!(expr.constant_foldable(), *foldable);
+        }
 
-        assert_eq!(expr.contexts(), ["foo.bar", "abc", "d.e.f", "should.work"]);
+        Ok(())
+    }
 
-        let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id").unwrap();
+    #[test]
+    fn test_expr_has_constant_foldable_subexpr() -> Result<()> {
+        for (expr, foldable) in &[
+            // Literals are not considered foldable subexpressions.
+            ("'foo'", false),
+            ("1", false),
+            ("true", false),
+            ("null", false),
+            // Non-foldable expressions with foldable subexpressions
+            (
+                "format('{0}, {1}', github.event.number, format('{0}', 'abc'))",
+                true,
+            ),
+        ] {
+            let expr = Expr::parse(expr)?;
+            assert_eq!(expr.has_constant_foldable_subexpr(), *foldable);
+        }
+        Ok(())
+    }
 
-        assert_eq!(expr.contexts(), ["steps.runs.outputs.data"])
+    #[test]
+    fn test_expr_dataflow_contexts() -> Result<()> {
+        // Trivial cases.
+        let expr = Expr::parse("foo.bar")?;
+        assert_eq!(expr.dataflow_contexts(), ["foo.bar"]);
+
+        let expr = Expr::parse("foo.bar[1]")?;
+        assert_eq!(expr.dataflow_contexts(), ["foo.bar[1]"]);
+
+        // No dataflow due to a boolean expression.
+        let expr = Expr::parse("foo.bar == 'bar'")?;
+        assert!(expr.dataflow_contexts().is_empty());
+
+        // ||: all contexts potentially expand into the evaluation.
+        let expr = Expr::parse("foo.bar || abc || d.e.f")?;
+        assert_eq!(expr.dataflow_contexts(), ["foo.bar", "abc", "d.e.f"]);
+
+        // &&: only the RHS context(s) expand into the evaluation.
+        let expr = Expr::parse("foo.bar && abc && d.e.f")?;
+        assert_eq!(expr.dataflow_contexts(), ["d.e.f"]);
+
+        let expr = Expr::parse("foo.bar == 'bar' && foo.bar || 'false'")?;
+        assert_eq!(expr.dataflow_contexts(), ["foo.bar"]);
+
+        let expr = Expr::parse("foo.bar == 'bar' && foo.bar || foo.baz")?;
+        assert_eq!(expr.dataflow_contexts(), ["foo.bar", "foo.baz"]);
+
+        let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id")?;
+        assert_eq!(
+            expr.dataflow_contexts(),
+            ["fromJson(steps.runs.outputs.data).workflow_runs[0].id"]
+        );
+
+        let expr = Expr::parse("format('{0} {1} {2}', foo.bar, tojson(github), toJSON(github))")?;
+        assert_eq!(expr.dataflow_contexts(), ["foo.bar", "github", "github"]);
+
+        Ok(())
     }
 }

@@ -1,9 +1,13 @@
-use std::{io::stdout, process::ExitCode, str::FromStr};
+use std::{
+    io::{Write, stdout},
+    process::ExitCode,
+    str::FromStr,
+};
 
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, stream::IsTerminal};
-use anyhow::{anyhow, Context, Result};
-use audit::Audit;
+use anyhow::{Context, Result, anyhow};
+use audit::{Audit, AuditLoadError};
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
@@ -17,9 +21,9 @@ use models::Action;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, InputRegistry};
 use state::AuditState;
-use tracing::{info_span, instrument, Span};
-use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
-use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
+use tracing::{Span, info_span, instrument};
+use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 mod audit;
 mod config;
@@ -27,9 +31,8 @@ mod expr;
 mod finding;
 mod github_api;
 mod models;
+mod output;
 mod registry;
-mod render;
-mod sarif;
 mod state;
 mod utils;
 
@@ -73,9 +76,17 @@ struct App {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
 
-    /// The output format to emit. By default, plain text will be emitted
+    /// Don't show progress bars, even if the terminal supports them.
+    #[arg(long)]
+    no_progress: bool,
+
+    /// The output format to emit. By default, cargo-style diagnostics will be emitted.
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
+
+    /// Control the use of color in output.
+    #[arg(long, value_enum, value_name = "MODE")]
+    color: Option<ColorMode>,
 
     /// The configuration file to load. By default, any config will be
     /// discovered relative to $CWD.
@@ -125,10 +136,62 @@ struct App {
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
 pub(crate) enum OutputFormat {
+    /// cargo-style output.
     #[default]
     Plain,
+    // NOTE: clap doesn't support visible aliases for enum variants yet,
+    // so we need an explicit Json variant here.
+    // See: https://github.com/clap-rs/clap/pull/5480
+    /// JSON-formatted output (currently v1).
     Json,
+    /// "v1" JSON format.
+    JsonV1,
+    /// SARIF-formatted output.
     Sarif,
+    /// GitHub Actions workflow command-formatted output.
+    Github,
+}
+
+#[derive(Debug, Copy, Clone, ValueEnum)]
+pub(crate) enum ColorMode {
+    /// Use color output if the output supports it.
+    Auto,
+    /// Force color output, even if the output isn't a terminal.
+    Always,
+    /// Disable color output, even if the output is a compatible terminal.
+    Never,
+}
+
+impl ColorMode {
+    /// Returns a concrete (i.e. non-auto) `anstream::ColorChoice` for the given terminal.
+    ///
+    /// This is useful for passing to `anstream::AutoStream` when the underlying
+    /// stream is something that is a terminal or should be treated as such,
+    /// but can't be inferred due to type erasure (e.g. `Box<dyn Write>`).
+    fn color_choice_for_terminal(&self, io: impl IsTerminal) -> anstream::ColorChoice {
+        match self {
+            ColorMode::Auto => {
+                if io.is_terminal() {
+                    anstream::ColorChoice::Always
+                } else {
+                    anstream::ColorChoice::Never
+                }
+            }
+            ColorMode::Always => anstream::ColorChoice::Always,
+            ColorMode::Never => anstream::ColorChoice::Never,
+        }
+    }
+}
+
+impl From<ColorMode> for anstream::ColorChoice {
+    /// Maps `ColorMode` to `anstream::ColorChoice`.
+    fn from(value: ColorMode) -> Self {
+        match value {
+            ColorMode::Auto => Self::Auto,
+            ColorMode::Always => Self::Always,
+            ColorMode::Never => Self::Never,
+        }
+    }
 }
 
 /// How `zizmor` collects inputs from local and remote repository sources.
@@ -168,10 +231,11 @@ impl CollectionMode {
     }
 }
 
-fn tip(err: impl AsRef<str>, tip: impl AsRef<str>) -> String {
-    let message = Level::Error
-        .title(err.as_ref())
-        .footer(Level::Note.title(tip.as_ref()));
+fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
+    let mut message = Level::Error.title(err.as_ref());
+    for tip in tips {
+        message = message.footer(Level::Note.title(tip.as_ref()));
+    }
 
     let renderer = Renderer::styled();
     format!("{}", renderer.render(message))
@@ -191,8 +255,19 @@ fn collect_from_dir(
     // explicitly enable it. This also enables filtering by a global
     // `.gitignore` file and the `.git/info/exclude` file, since these
     // typically align with the user's expectations.
+    //
+    // We honor `.gitignore` and similar files even if `.git/` is not
+    // present, since users may retrieve or reconstruct a source archive
+    // without a `.git/` directory. In particular, this snares some
+    // zizmor integrators.
+    //
+    // See: https://github.com/woodruffw/zizmor/issues/596
     if mode.respects_gitignore() {
-        walker.git_ignore(true).git_global(true).git_exclude(true);
+        walker
+            .require_git(false)
+            .git_ignore(true)
+            .git_global(true)
+            .git_exclude(true);
     }
 
     for entry in walker.build() {
@@ -231,33 +306,33 @@ fn collect_from_repo_slug(
 ) -> Result<()> {
     // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
     let Ok(Uses::Repository(slug)) = Uses::from_str(input) else {
-        return Err(anyhow!(tip(
+        return Err(anyhow!(tips(
             format!("invalid input: {input}"),
-            format!(
+            &[format!(
                 "pass a single {file}, {directory}, or entire repo by {slug} slug",
                 file = "file".green(),
                 directory = "directory".green(),
                 slug = "owner/repo".green()
-            )
+            )]
         )));
     };
 
     // We don't expect subpaths here.
     if slug.subpath.is_some() {
-        return Err(anyhow!(tip(
+        return Err(anyhow!(tips(
             "invalid GitHub repository reference",
-            "pass owner/repo or owner/repo@ref"
+            &["pass owner/repo or owner/repo@ref"]
         )));
     }
 
     let client = state.github_client().ok_or_else(|| {
-        anyhow!(tip(
+        anyhow!(tips(
             format!("can't retrieve repository: {input}", input = input.green()),
-            format!(
+            &[format!(
                 "try removing {offline} or passing {gh_token}",
                 offline = "--offline".yellow(),
                 gh_token = "--gh-token <TOKEN>".yellow(),
-            )
+            )]
         ))
     })?;
 
@@ -270,13 +345,13 @@ fn collect_from_repo_slug(
         }
     } else {
         let inputs = client.fetch_audit_inputs(&slug).with_context(|| {
-            tip(
+            tips(
                 format!(
                     "couldn't collect inputs from https://github.com/{owner}/{repo}",
                     owner = slug.owner,
                     repo = slug.repo
                 ),
-                "confirm the repository exists and that you have access to it",
+                &["confirm the repository exists and that you have access to it"],
             )
         })?;
 
@@ -333,6 +408,35 @@ fn run() -> Result<ExitCode> {
 
     let mut app = App::parse();
 
+    let color_mode = match app.color {
+        Some(color_mode) => color_mode,
+        None => {
+            // If `--color` wasn't specified, we first check a handful
+            // of common environment variables, and then fall
+            // back to `anstream`'s auto detection.
+            if std::env::var("NO_COLOR").is_ok() {
+                ColorMode::Never
+            } else if std::env::var("FORCE_COLOR").is_ok()
+                || std::env::var("CLICOLOR_FORCE").is_ok()
+            {
+                ColorMode::Always
+            } else {
+                ColorMode::Auto
+            }
+        }
+    };
+
+    anstream::ColorChoice::write_global(color_mode.into());
+
+    // Disable progress bars if colorized output is disabled.
+    // We do this because `anstream` and `tracing_indicatif` don't
+    // compose perfectly: `anstream` wants to strip all ANSI escapes,
+    // while `tracing_indicatif` needs line control to render progress bars.
+    // TODO: In the future, perhaps we could make these work together.
+    if matches!(color_mode, ColorMode::Never) {
+        app.no_progress = true;
+    }
+
     // `--pedantic` is a shortcut for `--persona=pedantic`.
     if app.pedantic {
         app.persona = Persona::Pedantic;
@@ -348,36 +452,61 @@ fn run() -> Result<ExitCode> {
 
     let indicatif_layer = IndicatifLayer::new();
 
+    let writer = std::sync::Mutex::new(anstream::AutoStream::new(
+        Box::new(indicatif_layer.get_stderr_writer()) as Box<dyn Write + Send>,
+        color_mode.color_choice_for_terminal(std::io::stderr()),
+    ));
+
     let filter = EnvFilter::builder()
         .with_default_directive(app.verbose.tracing_level_filter().into())
         .from_env()?;
 
-    tracing_subscriber::registry()
+    let reg = tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
                 .without_time()
-                .with_ansi(std::io::stderr().is_terminal())
-                .with_writer(indicatif_layer.get_stderr_writer()),
+                // NOTE: We don't need `with_ansi` here since our writer is
+                // an `anstream::AutoStream` that handles color output for us.
+                .with_writer(writer),
         )
-        .with(filter)
-        .with(indicatif_layer)
-        .init();
+        .with(filter);
 
-    let audit_state = AuditState::new(&app);
+    if app.no_progress {
+        reg.init();
+    } else {
+        reg.with(indicatif_layer).init();
+    }
+
+    let config = Config::new(&app).map_err(|e| {
+        anyhow!(tips(
+            format!("failed to load config: {e:#}"),
+            &[
+                "check your configuration file for errors",
+                "see: https://woodruffw.github.io/zizmor/configuration/"
+            ]
+        ))
+    })?;
+
+    let audit_state = AuditState::new(&app, &config);
     let registry = collect_inputs(&app.inputs, &app.collect, &audit_state)?;
-
-    let config = Config::new(&app)?;
 
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {
         ($rule:path) => {{
             // HACK: https://github.com/rust-lang/rust/issues/48067
-            use $rule as base;
-
             use crate::audit::AuditCore as _;
-            match base::new(audit_state.clone()) {
+            use $rule as base;
+            match base::new(&audit_state) {
                 Ok(audit) => audit_registry.register_audit(base::ident(), Box::new(audit)),
-                Err(e) => tracing::info!("skipping {audit}: {e}", audit = base::ident()),
+                Err(AuditLoadError::Skip(e)) => {
+                    tracing::info!("skipping {audit}: {e}", audit = base::ident())
+                }
+                Err(AuditLoadError::Fail(e)) => {
+                    return Err(anyhow!(tips(
+                        format!("failed to load audit: {audit}", audit = base::ident()),
+                        &[format!("{e:#}"), format!("see: {url}", url = base::url())]
+                    )));
+                }
             }
         }};
     }
@@ -401,6 +530,8 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::bot_conditions::BotConditions);
     register_audit!(audit::overprovisioned_secrets::OverprovisionedSecrets);
     register_audit!(audit::unredacted_secrets::UnredactedSecrets);
+    register_audit!(audit::forbidden_uses::ForbiddenUses);
+    register_audit!(audit::obfuscation::Obfuscation);
 
     let mut results = FindingRegistry::new(&app, &config);
     {
@@ -422,18 +553,22 @@ fn run() -> Result<ExitCode> {
                 Span::current().pb_inc(1);
             }
             tracing::info!(
-                "🌈 completed {input}",
+                "🌈 {completed} {input}",
+                completed = "completed".green(),
                 input = input.key().presentation_path()
             );
         }
     }
 
     match app.format {
-        OutputFormat::Plain => render::render_findings(&app, &registry, &results),
-        OutputFormat::Json => serde_json::to_writer_pretty(stdout(), &results.findings())?,
-        OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &sarif::build(results.findings()))?
+        OutputFormat::Plain => output::plain::render_findings(&app, &registry, &results),
+        OutputFormat::Json | OutputFormat::JsonV1 => {
+            serde_json::to_writer_pretty(stdout(), &results.findings())?
         }
+        OutputFormat::Sarif => {
+            serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))?
+        }
+        OutputFormat::Github => output::github::output(stdout(), results.findings())?,
     };
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
@@ -449,6 +584,10 @@ fn main() -> ExitCode {
     match run() {
         Ok(exit) => exit,
         Err(err) => {
+            eprintln!(
+                "{fatal}: no audit was performed",
+                fatal = "fatal".red().bold()
+            );
             eprintln!("{err:?}");
             ExitCode::FAILURE
         }

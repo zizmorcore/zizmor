@@ -1,5 +1,5 @@
 use anyhow::{Context as _, Result};
-use std::env::current_dir;
+use std::{env::current_dir, io::ErrorKind};
 
 use assert_cmd::Command;
 
@@ -30,9 +30,12 @@ pub enum OutputMode {
 
 pub struct Zizmor {
     cmd: Command,
+    unbuffer: bool,
     offline: bool,
     inputs: Vec<String>,
+    config: Option<String>,
     output: OutputMode,
+    expects_failure: bool,
 }
 
 impl Zizmor {
@@ -42,9 +45,12 @@ impl Zizmor {
 
         Self {
             cmd,
+            unbuffer: false,
             offline: true,
             inputs: vec![],
+            config: None,
             output: OutputMode::Stdout,
+            expects_failure: false,
         }
     }
 
@@ -53,10 +59,10 @@ impl Zizmor {
         self
     }
 
-    // pub fn setenv(mut self, key: &str, value: &str) -> Self {
-    //     self.cmd.env(key, value);
-    //     self
-    // }
+    pub fn setenv(mut self, key: &str, value: &str) -> Self {
+        self.cmd.env(key, value);
+        self
+    }
 
     pub fn unsetenv(mut self, key: &str) -> Self {
         self.cmd.env_remove(key);
@@ -65,6 +71,16 @@ impl Zizmor {
 
     pub fn input(mut self, input: impl Into<String>) -> Self {
         self.inputs.push(input.into());
+        self
+    }
+
+    pub fn config(mut self, config: impl Into<String>) -> Self {
+        self.config = Some(config.into());
+        self
+    }
+
+    pub fn unbuffer(mut self, flag: bool) -> Self {
+        self.unbuffer = flag;
         self
     }
 
@@ -78,6 +94,14 @@ impl Zizmor {
         self
     }
 
+    pub fn expects_failure(mut self, flag: bool) -> Self {
+        if flag {
+            self = self.output(OutputMode::Both);
+        }
+        self.expects_failure = flag;
+        self
+    }
+
     pub fn run(mut self) -> Result<String> {
         if self.offline {
             self.cmd.arg("--offline");
@@ -87,17 +111,62 @@ impl Zizmor {
             std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
         }
 
+        if let Some(config) = self.config {
+            self.cmd.arg("--config").arg(config);
+        } else {
+            self.cmd.arg("--no-config");
+        }
+
         for input in &self.inputs {
             self.cmd.arg(input);
         }
 
-        let output = self.cmd.output()?;
+        let output = if self.unbuffer {
+            // If we're using unbuffer, we need to rebuild the `Command`
+            // from `zizmor args...` to `unbuffer zizmor args...`.
+            let mut cmd = Command::new("unbuffer");
+            let cmd = cmd.arg(self.cmd.get_program()).args(self.cmd.get_args());
+
+            for (env, value) in self.cmd.get_envs() {
+                match value {
+                    Some(value) => {
+                        cmd.env(env, value);
+                    }
+                    None => {
+                        cmd.env_remove(env);
+                    }
+                }
+            }
+
+            match cmd.output() {
+                Ok(output) => output,
+                Err(err) => match err.kind() {
+                    // Specialize the not found case, to make configuration failures
+                    // more obvious.
+                    ErrorKind::NotFound => {
+                        panic!("TTY tests require `unbuffer` to be installed");
+                    }
+                    _ => panic!("error running `unbuffer`: {err}"),
+                },
+            }
+        } else {
+            self.cmd.output()?
+        };
 
         let mut raw = String::from_utf8(match self.output {
             OutputMode::Stdout => output.stdout,
             OutputMode::Stderr => output.stderr,
             OutputMode::Both => [output.stderr, output.stdout].concat(),
         })?;
+
+        if let Some(exit_code) = output.status.code() {
+            // There are other nonzero exit codes that don't indicate failure;
+            // 1 is our only failure code.
+            let is_failure = exit_code == 1;
+            if is_failure != self.expects_failure {
+                anyhow::bail!("zizmor exited with unexpected code {exit_code}");
+            }
+        }
 
         for input in &self.inputs {
             raw = raw.replace(input, "@@INPUT@@");

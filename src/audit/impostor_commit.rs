@@ -5,14 +5,14 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{audit_meta, Audit, Job};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, ComparisonStatus},
-    models::{uses::RepositoryUsesExt as _, JobExt as _, Workflow},
+    models::{JobExt as _, Workflow, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 
@@ -113,13 +113,17 @@ impl ImpostorCommit {
 }
 
 impl Audit for ImpostorCommit {
-    fn new(state: AuditState) -> Result<Self> {
+    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
         if state.no_online_audits {
-            return Err(anyhow!("offline audits only requested"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "offline audits only requested"
+            )));
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't run without a GitHub API token"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "can't run without a GitHub API token"
+            )));
         };
 
         Ok(ImpostorCommit { client })

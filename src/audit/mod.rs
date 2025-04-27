@@ -1,8 +1,8 @@
 //! Core namespace for zizmor's audits.
 
-use anyhow::Result;
 use github_actions_models::action;
 use line_index::LineIndex;
+use thiserror::Error;
 use tracing::instrument;
 use yamlpath::Document;
 
@@ -19,11 +19,13 @@ pub(crate) mod bypassable_contains_conditions;
 pub(crate) mod cache_poisoning;
 pub(crate) mod dangerous_triggers;
 pub(crate) mod excessive_permissions;
+pub(crate) mod forbidden_uses;
 pub(crate) mod github_env;
 pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod insecure_commands;
 pub(crate) mod known_vulnerable_actions;
+pub(crate) mod obfuscation;
 pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
 pub(crate) mod secrets_inherit;
@@ -154,6 +156,18 @@ macro_rules! audit_meta {
 
 pub(crate) use audit_meta;
 
+#[derive(Error, Debug)]
+pub(crate) enum AuditLoadError {
+    /// The audit's initialization failed in a way that suggests it should
+    /// be skipped, rather than failing the entire run.
+    #[error("{0}")]
+    Skip(anyhow::Error),
+    /// The audit's initialization failed in a way that suggests that the
+    /// entire run should be aborted.
+    #[error("{0}")]
+    Fail(anyhow::Error),
+}
+
 /// Auditing trait.
 ///
 /// Implementors of this trait can choose the level of specificity/context
@@ -181,15 +195,15 @@ pub(crate) use audit_meta;
 /// **only** [`Audit::audit`] and not [`Audit::audit_normal_job`] or
 /// [`Audit::audit_step`].
 pub(crate) trait Audit: AuditCore {
-    fn new(state: AuditState) -> Result<Self>
+    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized;
 
-    fn audit_step<'w>(&self, _step: &Step<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_step<'w>(&self, _step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
         Ok(vec![])
     }
 
-    fn audit_normal_job<'w>(&self, job: &NormalJob<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_normal_job<'w>(&self, job: &NormalJob<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut results = vec![];
         for step in job.steps() {
             results.extend(self.audit_step(&step)?);
@@ -200,11 +214,11 @@ pub(crate) trait Audit: AuditCore {
     fn audit_reusable_job<'w>(
         &self,
         _job: &ReusableWorkflowCallJob<'w>,
-    ) -> Result<Vec<Finding<'w>>> {
+    ) -> anyhow::Result<Vec<Finding<'w>>> {
         Ok(vec![])
     }
 
-    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
@@ -221,11 +235,14 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_composite_step<'a>(&self, _step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+    fn audit_composite_step<'a>(
+        &self,
+        _step: &CompositeStep<'a>,
+    ) -> anyhow::Result<Vec<Finding<'a>>> {
         Ok(vec![])
     }
 
-    fn audit_action<'a>(&self, action: &'a Action) -> Result<Vec<Finding<'a>>> {
+    fn audit_action<'a>(&self, action: &'a Action) -> anyhow::Result<Vec<Finding<'a>>> {
         let mut results = vec![];
 
         if matches!(action.runs, action::Runs::Composite(_)) {
@@ -237,7 +254,7 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_raw<'w>(&self, _input: &'w AuditInput) -> Result<Vec<Finding<'w>>> {
+    fn audit_raw<'w>(&self, _input: &'w AuditInput) -> anyhow::Result<Vec<Finding<'w>>> {
         Ok(vec![])
     }
 
@@ -246,7 +263,7 @@ pub(crate) trait Audit: AuditCore {
     /// Implementors **should not** override this blanket implementation,
     /// since it's marked with tracing instrumentation.
     #[instrument(skip(self))]
-    fn audit<'w>(&self, input: &'w AuditInput) -> Result<Vec<Finding<'w>>> {
+    fn audit<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut results = match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow),
             AuditInput::Action(action) => self.audit_action(action),

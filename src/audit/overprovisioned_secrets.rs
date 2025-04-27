@@ -1,10 +1,10 @@
 use crate::{
     expr::Expr,
     finding::{Confidence, Feature, Location, Severity},
-    utils::extract_expressions,
+    utils::parse_expressions_from_input,
 };
 
-use super::{audit_meta, Audit, AuditInput};
+use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
 
 pub(crate) struct OverprovisionedSecrets;
 
@@ -15,7 +15,7 @@ audit_meta!(
 );
 
 impl Audit for OverprovisionedSecrets {
-    fn new(_state: super::AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -24,15 +24,12 @@ impl Audit for OverprovisionedSecrets {
 
     fn audit_raw<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let mut findings = vec![];
-        let raw = input.document().source();
 
-        for (expr, span) in extract_expressions(raw) {
+        for (expr, span) in parse_expressions_from_input(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
-
-            expr.as_curly();
 
             for _ in Self::secrets_expansions(&parsed) {
                 findings.push(
@@ -66,7 +63,7 @@ impl OverprovisionedSecrets {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
                 // would plausibly call with the entire `secrets` object?
-                if func.eq_ignore_ascii_case("toJSON")
+                if func == "toJSON"
                     && args
                         .iter()
                         .any(|arg| matches!(arg, Expr::Context(ctx) if ctx == "secrets"))

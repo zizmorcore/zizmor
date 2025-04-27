@@ -123,6 +123,7 @@
     ??? example "Examples"
         - DataDog/datadog-agent#30871
         - DataDog/dd-trace-py#11640
+        - DataDog/dd-trace-rb#4456
 
 
 -   ![](https://github.com/datalens-tech.png?size=40){ width="40" loading=lazy align=left } datalens-tech
@@ -157,6 +158,22 @@
         - Diaoul/subliminal#1190
 
 
+-   ![](https://github.com/docker.png?size=40){ width="40" loading=lazy align=left } docker
+
+    ---
+
+    ??? example "Examples"
+        - docker/compose#12737
+
+
+-   ![](https://github.com/earthobservations.png?size=40){ width="40" loading=lazy align=left } earthobservations
+
+    ---
+
+    ??? example "Examples"
+        - earthobservations/wetterdienst#1440
+
+
 -   ![](https://github.com/Electric-Coin-Company.png?size=40){ width="40" loading=lazy align=left } Electric-Coin-Company
 
     ---
@@ -179,6 +196,14 @@
 
     ??? example "Examples"
         - ethereum/hevm#615
+
+
+-   ![](https://github.com/fatiando.png?size=40){ width="40" loading=lazy align=left } fatiando
+
+    ---
+
+    ??? example "Examples"
+        - fatiando/harmonica#550
 
 
 -   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
@@ -229,6 +254,14 @@
         - gaphor/gaphor#3658
 
 
+-   ![](https://github.com/GenericMappingTools.png?size=40){ width="40" loading=lazy align=left } GenericMappingTools
+
+    ---
+
+    ??? example "Examples"
+        - GenericMappingTools/pygmt#3861
+
+
 -   ![](https://github.com/getsops.png?size=40){ width="40" loading=lazy align=left } getsops
 
     ---
@@ -267,6 +300,7 @@
 
     ??? example "Examples"
         - google/zx#1067
+        - google/zx#1126
 
 
 -   ![](https://github.com/GreptimeTeam.png?size=40){ width="40" loading=lazy align=left } GreptimeTeam
@@ -283,6 +317,14 @@
 
     ??? example "Examples"
         - guacsec/guac#2276
+
+
+-   ![](https://github.com/h2non.png?size=40){ width="40" loading=lazy align=left } h2non
+
+    ---
+
+    ??? example "Examples"
+        - h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
 
 
 -   ![](https://github.com/hellux.png?size=40){ width="40" loading=lazy align=left } hellux
@@ -356,6 +398,14 @@
         - icsharpcode/ILSpy#3365
 
 
+-   ![](https://github.com/immich-app.png?size=40){ width="40" loading=lazy align=left } immich-app
+
+    ---
+
+    ??? example "Examples"
+        - immich-app/immich#17651
+
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---
@@ -370,6 +420,14 @@
 
     ??? example "Examples"
         - jj-vcs/jj#5076
+
+
+-   ![](https://github.com/jupyterhub.png?size=40){ width="40" loading=lazy align=left } jupyterhub
+
+    ---
+
+    ??? example "Examples"
+        - jupyterhub/jupyterhub#5049
 
 
 -   ![](https://github.com/kanidm.png?size=40){ width="40" loading=lazy align=left } kanidm
@@ -438,6 +496,14 @@
         - mfussenegger/nvim-lint#710
 
 
+-   ![](https://github.com/microsoft.png?size=40){ width="40" loading=lazy align=left } microsoft
+
+    ---
+
+    ??? example "Examples"
+        - microsoft/linux-package-repositories#208
+
+
 -   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf
 
     ---
@@ -484,6 +550,7 @@
     ---
 
     ??? example "Examples"
+        - mozilla/fxa#18628
         - mozilla/neqo#2413
 
 
@@ -509,6 +576,14 @@
 
     ??? example "Examples"
         - nextcloud/.github#477
+
+
+-   ![](https://github.com/NixOS.png?size=40){ width="40" loading=lazy align=left } NixOS
+
+    ---
+
+    ??? example "Examples"
+        - NixOS/infra#613
 
 
 -   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs
@@ -538,12 +613,28 @@
         - onnx/onnx#6662
 
 
+-   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
+
+    ---
+
+    ??? example "Examples"
+        - openbao/openbao#924
+
+
 -   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource
 
     ---
 
     ??? example "Examples"
         - Orange-OpenSource/hurl#3574
+
+
+-   ![](https://github.com/orion-rs.png?size=40){ width="40" loading=lazy align=left } orion-rs
+
+    ---
+
+    ??? example "Examples"
+        - orion-rs/orion#441
 
 
 -   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
@@ -594,6 +685,14 @@
 
     ??? example "Examples"
         - pyca/service-identity#75
+
+
+-   ![](https://github.com/pydata.png?size=40){ width="40" loading=lazy align=left } pydata
+
+    ---
+
+    ??? example "Examples"
+        - pydata/pydata-sphinx-theme#2077
 
 
 -   ![](https://github.com/pylast.png?size=40){ width="40" loading=lazy align=left } pylast
@@ -695,6 +794,14 @@
         - python-poetry/poetry-plugin-bundle#125
 
 
+-   ![](https://github.com/python-social-auth.png?size=40){ width="40" loading=lazy align=left } python-social-auth
+
+    ---
+
+    ??? example "Examples"
+        - python-social-auth/social-core#1098
+
+
 -   ![](https://github.com/python-telegram-bot.png?size=40){ width="40" loading=lazy align=left } python-telegram-bot
 
     ---
@@ -734,6 +841,14 @@
 
     ??? example "Examples"
         - quarkslab/quokka#46
+
+
+-   ![](https://github.com/rolldown.png?size=40){ width="40" loading=lazy align=left } rolldown
+
+    ---
+
+    ??? example "Examples"
+        - rolldown/rolldown#3861
 
 
 -   ![](https://github.com/rubygems.png?size=40){ width="40" loading=lazy align=left } rubygems
@@ -795,6 +910,14 @@
         - scikit-image/scikit-image#7662
 
 
+-   ![](https://github.com/scroll-tech.png?size=40){ width="40" loading=lazy align=left } scroll-tech
+
+    ---
+
+    ??? example "Examples"
+        - scroll-tech/go-ethereum#1146
+
+
 -   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore
 
     ---
@@ -803,6 +926,7 @@
         - sigstore/cosign#3959
         - sigstore/fulcio#1910
         - sigstore/gitsign#602
+        - sigstore/model-transparency#369
         - sigstore/sigstore-rs#424
 
 
@@ -812,6 +936,14 @@
 
     ??? example "Examples"
         - simpeg/simpeg#1592
+
+
+-   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
+
+    ---
+
+    ??? example "Examples"
+        - TecharoHQ/anubis#188
 
 
 -   ![](https://github.com/termcolor.png?size=40){ width="40" loading=lazy align=left } termcolor
@@ -934,6 +1066,14 @@
 
     ??? example "Examples"
         - zcash/librustzcash#1679
+
+
+-   ![](https://github.com/ZcashFoundation.png?size=40){ width="40" loading=lazy align=left } ZcashFoundation
+
+    ---
+
+    ??? example "Examples"
+        - ZcashFoundation/zebra#9110
 
 
 -   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit

@@ -1,9 +1,12 @@
 use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
-use anyhow::{anyhow, Context as _, Result};
-use serde::{de, Deserialize};
+use anyhow::{Context as _, Result, anyhow};
+use serde::{
+    Deserialize,
+    de::{self, DeserializeOwned},
+};
 
-use crate::{finding::Finding, App};
+use crate::{App, finding::Finding};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct WorkflowRule {
@@ -63,12 +66,17 @@ impl<'de> Deserialize<'de> for WorkflowRule {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct AuditRuleConfig {
+    #[serde(default)]
     ignore: Vec<WorkflowRule>,
+    #[serde(default)]
+    config: Option<serde_yaml::Mapping>,
 }
 
 /// Runtime configuration, corresponding to a `zizmor.yml` file.
 #[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct Config {
     rules: HashMap<String, AuditRuleConfig>,
 }
@@ -136,7 +144,7 @@ impl Config {
                         ..
                     } => {
                         if *line == loc.concrete.location.start_point.row + 1
-                            && column.map_or(true, |col| {
+                            && column.is_none_or(|col| {
                                 col == loc.concrete.location.start_point.column + 1
                             })
                         {
@@ -157,6 +165,18 @@ impl Config {
         }
 
         false
+    }
+
+    pub(crate) fn rule_config<T>(&self, ident: &str) -> Result<Option<T>>
+    where
+        T: DeserializeOwned,
+    {
+        Ok(self
+            .rules
+            .get(ident)
+            .and_then(|rule_config| rule_config.config.as_ref())
+            .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
+            .transpose()?)
     }
 }
 

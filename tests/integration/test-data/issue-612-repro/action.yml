@@ -1,0 +1,31 @@
+# Repro case for #612.
+# Ensures that we don't unintuitively ignore ignore comments
+# when they occur on a line that's conceptually part of the finding's
+# span but is not included in the visible span rendering.
+#
+# This should emit no findings, only ignored findings.
+
+name: "Automerge dependabot and pre-commit.ci PRs"
+description: "Action merging dependabot and pre-commit.ci PRs."
+
+inputs:
+  approver:
+    description: "Approver GitHub ID."
+    required: true
+  approver-token:
+    description: "Approver GitHub token."
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Verify allowed PRs (dependabot and pre-commit.ci)
+      id: verify-allowed-prs # zizmor: ignore[template-injection] this works fine
+      shell: bash
+      run: |
+        # Check if the author is either dependabot or pre-commit.ci.
+        if [[ ${{ github.event.pull_request.user.login }} == 'dependabot[bot]' ]] || [[ ${{ github.event.pull_request.user.login }} == 'pre-commit-ci[bot]' ]]; then
+          true
+        else
+          exit 1
+        fi

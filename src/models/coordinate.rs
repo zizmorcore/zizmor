@@ -13,7 +13,10 @@
 // able to express things like
 // "match foo/bar if foo: A and not bar: B and baz: /abcd/"
 
-use github_actions_models::common::{expr::ExplicitExpr, EnvValue, Uses};
+use std::ops::{BitAnd, BitOr};
+
+use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
+use indexmap::IndexMap;
 
 use super::{StepBodyCommon, StepCommon};
 use crate::models::uses::RepositoryUsesExt as _;
@@ -22,10 +25,8 @@ pub(crate) enum ActionCoordinate {
     Configurable {
         /// The `uses:` clause of the coordinate
         uses: Uses,
-        /// The input that controls the coordinate
-        control: Control,
-        /// Whether or not the behavior is the default
-        enabled_by_default: bool,
+        /// The expression of fields that controls the coordinate
+        control: ControlExpr,
     },
     NotConfigurable(Uses),
 }
@@ -35,34 +36,6 @@ impl ActionCoordinate {
         match self {
             ActionCoordinate::Configurable { uses, .. } => uses,
             ActionCoordinate::NotConfigurable(inner) => inner,
-        }
-    }
-
-    /// Returns the "declared" usage from a `with:` field, modulo a toggle.
-    fn declared_usage(
-        &self,
-        value: &EnvValue,
-        toggle: &Toggle,
-        field_type: &ControlFieldType,
-    ) -> Option<Usage> {
-        match value.to_string().as_str() {
-            // Handle `false` specially, since we need to invert the toggle.
-            "false" if matches!(field_type, ControlFieldType::Boolean) => match toggle {
-                Toggle::OptIn => None,
-                Toggle::OptOut => Some(Usage::DirectOptIn),
-            },
-            // NOTE: We don't bother checking for string or other-typed fields here,
-            // since it's all stringly-typed under the hood.
-            other => match ExplicitExpr::from_curly(other) {
-                // If it's not an expression, all we know is that it's likely a
-                // fixed sentinel value.
-                // This catches the `true` boolean case as well.
-                None => match toggle {
-                    Toggle::OptIn => Some(Usage::DirectOptIn),
-                    Toggle::OptOut => None,
-                },
-                Some(_) => Some(Usage::ConditionalOptIn),
-            },
         }
     }
 
@@ -91,28 +64,12 @@ impl ActionCoordinate {
         }
 
         match self {
-            ActionCoordinate::Configurable {
-                uses: _,
-                control,
-                enabled_by_default,
-            } => {
-                // We need to inspect this `uses:`'s configuration to determine its semantics.
-                match with.get(control.field_name) {
-                    Some(field_value) => {
-                        // The declared usage is whatever the user explicitly configured,
-                        // which might be inverted if the toggle semantics are opt-out instead.
-                        self.declared_usage(field_value, &control.toggle, &control.field_type)
-                    }
-                    None => {
-                        // If the controlling field is not present, the default dictates the semantics.
-                        if *enabled_by_default {
-                            Some(Usage::DefaultActionBehaviour)
-                        } else {
-                            None
-                        }
-                    }
-                }
-            }
+            ActionCoordinate::Configurable { uses: _, control } => match control.eval(with) {
+                ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
+                ControlEvaluation::Satisfied => Some(Usage::DirectOptIn),
+                ControlEvaluation::NotSatisfied => None,
+                ControlEvaluation::Conditional => Some(Usage::ConditionalOptIn),
+            },
             // The mere presence of this `uses:` implies the expected usage semantics.
             ActionCoordinate::NotConfigurable(_) => Some(Usage::Always),
         }
@@ -135,26 +92,221 @@ pub(crate) enum ControlFieldType {
     String,
 }
 
-/// The input that controls the behavior of a configurable action.
-pub(crate) struct Control {
-    /// What kind of toggle the input is.
-    pub(crate) toggle: Toggle,
-    /// The field that controls the action's behavior.
-    pub(crate) field_name: &'static str,
-    /// The type of the field that controls the action's behavior.
-    pub(crate) field_type: ControlFieldType,
+/// The result of evaluating a control expression.
+#[derive(Copy, Clone, PartialEq)]
+pub(crate) enum ControlEvaluation {
+    /// The control expression is satisfied by default.
+    DefaultSatisfied,
+    /// The control expression is satisfied.
+    Satisfied,
+    /// The control expression is not satisfied.
+    NotSatisfied,
+    /// The control expression is conditionally satisfied,
+    /// i.e. depends on an actions expression or similar.
+    Conditional,
 }
 
-impl Control {
-    pub(crate) fn new(
+impl BitAnd for ControlEvaluation {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        // NOTE: This could be done less literally, but I find it easier to read.
+        match (self, rhs) {
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
+            }
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
+            }
+            (ControlEvaluation::Satisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Satisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Satisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::Satisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Conditional
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
+            }
+        }
+    }
+}
+
+impl BitOr for ControlEvaluation {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        // TODO: Does this mapping make sense?
+        match (self, rhs) {
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
+            }
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
+            }
+            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::DefaultSatisfied
+            }
+            (ControlEvaluation::Satisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Satisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Satisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Satisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::NotSatisfied
+            }
+            (ControlEvaluation::NotSatisfied, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::DefaultSatisfied) => {
+                ControlEvaluation::DefaultSatisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::Satisfied) => {
+                ControlEvaluation::Satisfied
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::NotSatisfied) => {
+                ControlEvaluation::Conditional
+            }
+            (ControlEvaluation::Conditional, ControlEvaluation::Conditional) => {
+                ControlEvaluation::Conditional
+            }
+        }
+    }
+}
+
+/// An "expression" of control fields.
+///
+/// This allows us to express basic quantified logic, such as
+/// "all/any of these fields must be satisfied".
+///
+/// This is made slightly more complicated by the fact that our logic is
+/// four-valued: control fields can be default-satisfied, explicitly satisfied,
+/// not satisfied, or conditionally satisfied.
+pub(crate) enum ControlExpr {
+    /// A single control field.
+    Single {
+        /// What kind of toggle the input is.
+        toggle: Toggle,
+        /// The field that controls the action's behavior.
+        field_name: &'static str,
+        /// The type of the field that controls the action's behavior.
+        field_type: ControlFieldType,
+        /// Whether this control is satisfied by default, if not present.
+        satisfied_by_default: bool,
+    },
+    /// Universal quantification: all of the fields must be satisfied.
+    All(Vec<ControlExpr>),
+    /// Existential quantification: any of the fields must be satisfied.
+    #[allow(dead_code)]
+    Any(Vec<ControlExpr>),
+}
+
+impl ControlExpr {
+    pub(crate) fn single(
         toggle: Toggle,
         field_name: &'static str,
         field_type: ControlFieldType,
+        enabled_by_default: bool,
     ) -> Self {
-        Self {
+        Self::Single {
             toggle,
             field_name,
             field_type,
+            satisfied_by_default: enabled_by_default,
+        }
+    }
+
+    pub(crate) fn all(exprs: impl IntoIterator<Item = ControlExpr>) -> Self {
+        Self::All(exprs.into_iter().collect())
+    }
+
+    pub(crate) fn eval(&self, with: &IndexMap<String, EnvValue>) -> ControlEvaluation {
+        match self {
+            ControlExpr::Single {
+                toggle,
+                field_name,
+                field_type,
+                satisfied_by_default: enabled_by_default,
+            } => {
+                // If the controlling field is not present, the default dictates the semantics.
+                if let Some(field_value) = with.get(*field_name) {
+                    match field_value.to_string().as_str() {
+                        "false" if matches!(field_type, ControlFieldType::Boolean) => {
+                            match toggle {
+                                Toggle::OptIn => ControlEvaluation::NotSatisfied,
+                                Toggle::OptOut => ControlEvaluation::Satisfied,
+                            }
+                        }
+                        other => match ExplicitExpr::from_curly(other) {
+                            None => match toggle {
+                                Toggle::OptIn => ControlEvaluation::Satisfied,
+                                Toggle::OptOut => ControlEvaluation::NotSatisfied,
+                            },
+                            Some(_) => ControlEvaluation::Conditional,
+                        },
+                    }
+                } else if *enabled_by_default {
+                    ControlEvaluation::DefaultSatisfied
+                } else {
+                    ControlEvaluation::NotSatisfied
+                }
+            }
+            ControlExpr::All(exprs) => exprs
+                .iter()
+                .map(|expr| expr.eval(with))
+                .fold(ControlEvaluation::Satisfied, |acc, expr| acc & expr),
+            ControlExpr::Any(exprs) => exprs
+                .iter()
+                .map(|expr| expr.eval(with))
+                .fold(ControlEvaluation::NotSatisfied, |acc, expr| acc | expr),
         }
     }
 }
@@ -174,7 +326,7 @@ mod tests {
     use github_actions_models::{common::Uses, workflow::job::Step};
 
     use super::{ActionCoordinate, StepCommon};
-    use crate::models::coordinate::{Control, ControlFieldType, Toggle, Usage};
+    use crate::models::coordinate::{ControlExpr, ControlFieldType, Toggle, Usage};
 
     // Test-only trait impl.
     impl<'s> StepCommon<'s> for Step {
@@ -228,8 +380,7 @@ mod tests {
         // missing the needed control.
         let coord = ActionCoordinate::Configurable {
             uses: Uses::from_str("foo/bar").unwrap(),
-            control: Control::new(Toggle::OptIn, "set-me", ControlFieldType::Boolean),
-            enabled_by_default: false,
+            control: ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::Boolean, false),
         };
         let step: Step = serde_yaml::from_str("uses: foo/bar").unwrap();
         assert_eq!(coord.usage(&step), None);
@@ -245,8 +396,7 @@ mod tests {
         // Coordinate `uses:` matches and is enabled by default.
         let coord = ActionCoordinate::Configurable {
             uses: Uses::from_str("foo/bar").unwrap(),
-            control: Control::new(Toggle::OptIn, "set-me", ControlFieldType::Boolean),
-            enabled_by_default: true,
+            control: ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::Boolean, true),
         };
         let step: Step = serde_yaml::from_str("uses: foo/bar").unwrap();
         assert_eq!(coord.usage(&step), Some(Usage::DefaultActionBehaviour));
@@ -263,8 +413,12 @@ mod tests {
         // the default.
         let coord = ActionCoordinate::Configurable {
             uses: Uses::from_str("foo/bar").unwrap(),
-            control: Control::new(Toggle::OptOut, "disable-cache", ControlFieldType::Boolean),
-            enabled_by_default: false,
+            control: ControlExpr::single(
+                Toggle::OptOut,
+                "disable-cache",
+                ControlFieldType::Boolean,
+                false,
+            ),
         };
         let step: Step = serde_yaml::from_str("uses: foo/bar").unwrap();
         assert_eq!(coord.usage(&step), None);

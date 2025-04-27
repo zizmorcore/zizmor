@@ -5,7 +5,7 @@
 
 use std::{io::Read, ops::Deref, path::Path};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Context, Result, anyhow};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
 use github_actions_models::common::RepositoryUses;
@@ -14,11 +14,11 @@ use http_cache_reqwest::{
 };
 use owo_colors::OwoColorize;
 use reqwest::{
-    header::{HeaderMap, ACCEPT, AUTHORIZATION, USER_AGENT},
-    StatusCode,
+    Response, StatusCode,
+    header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT},
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{Deserialize, de::DeserializeOwned};
 use tar::Archive;
 use tracing::instrument;
 
@@ -144,6 +144,21 @@ impl Client {
         Ok(dest)
     }
 
+    /// Maps the response to a `Result<bool>`, depending on whether
+    /// the response's status indicates 200 or 404.
+    ///
+    /// The error variants communicate all other status codes,
+    /// with additional context where helpful.
+    fn resp_present(resp: Response) -> Result<bool> {
+        match resp.status() {
+            StatusCode::OK => Ok(true),
+            StatusCode::NOT_FOUND => Ok(false),
+            StatusCode::FORBIDDEN => Err(anyhow::Error::from(resp.error_for_status().unwrap_err())
+                .context("request forbidden; token permissions may be insufficient")),
+            _ => Err(resp.error_for_status().unwrap_err().into()),
+        }
+    }
+
     #[instrument(skip(self))]
     #[tokio::main]
     pub(crate) async fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
@@ -169,13 +184,9 @@ impl Client {
         );
 
         let resp = self.http.get(&url).send().await?;
-        match resp.status() {
-            StatusCode::OK => Ok(true),
-            StatusCode::NOT_FOUND => Ok(false),
-            s => Err(anyhow!(
-                "{owner}/{repo}: error from GitHub API while checking branch {branch}: {s}"
-            )),
-        }
+        Client::resp_present(resp).with_context(|| {
+            format!("{owner}/{repo}: error from the GitHub APi while checking {branch}")
+        })
     }
 
     #[instrument(skip(self))]
@@ -187,13 +198,9 @@ impl Client {
         );
 
         let resp = self.http.get(&url).send().await?;
-        match resp.status() {
-            StatusCode::OK => Ok(true),
-            StatusCode::NOT_FOUND => Ok(false),
-            s => Err(anyhow!(
-                "{owner}/{repo}: error from GitHub API while checking tag {tag}: {s}"
-            )),
-        }
+        Client::resp_present(resp).with_context(|| {
+            format!("{owner}/{repo}: error from the GitHub APi while checking {tag}")
+        })
     }
 
     #[instrument(skip(self))]
