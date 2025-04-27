@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().output(OutputMode::Stderr).offline(true).input(workflow_under_test(\"invalid/invalid-workflow.yml\")).run()?"
-snapshot_kind: text
+expression: "zizmor().output(OutputMode::Stderr).offline(true).input(input_under_test(\"invalid/invalid-workflow.yml\")).run()?"
 ---
 failed to register input: @@INPUT@@
 
@@ -9,9 +8,15 @@ Caused by:
     0: invalid GitHub Actions workflow: file://@@INPUT@@
        
        Caused by:
-           jobs: data did not match any variant of untagged enum Job at line 10 column 3
+           jobs.invalid: "runs-on" is a required property
+           jobs.invalid: Additional properties are not allowed ('steps' was unexpected)
+           jobs.invalid: "uses" is a required property
+           
     1: invalid GitHub Actions definition: file://@@INPUT@@
        
        Caused by:
-           missing field `runs`
+           Additional properties are not allowed ('jobs', 'on', 'permissions' were unexpected)
+           "description" is a required property
+           "runs" is a required property
+           
     2: failed to register input as workflow or action
