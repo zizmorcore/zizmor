@@ -107,6 +107,15 @@
         - cakephp/cakephp#18081
 
 
+-   ![](https://github.com/canonical.png?size=40){ width="40" loading=lazy align=left } canonical
+
+    ---
+
+    ??? example "Examples"
+        - canonical/operator#1656
+        - canonical/testflinger#630
+
+
 -   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl
 
     ---
