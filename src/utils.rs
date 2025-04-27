@@ -385,7 +385,7 @@ jobs:
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "valid action but failed unmarshaling")]
     fn test_action_validation_valid() {
         let action = "name: 'Action'
 description: 'Description'
@@ -437,7 +437,7 @@ runs:
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "valid workflow but failed unmarshaling")]
     fn test_workflow_validation_valid() {
         let workflow = "name: Valid
 
