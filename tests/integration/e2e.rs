@@ -185,7 +185,7 @@ fn issue_612_repro() -> Result<()> {
 fn invalid_config_file() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .output(OutputMode::Stderr)
+            .expects_failure(true)
             .config("/dev/null")
             .input(input_under_test("e2e-menagerie"))
             .run()?
