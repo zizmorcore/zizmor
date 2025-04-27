@@ -21,6 +21,8 @@ bitcoindevkit/bdk#1778
 blakeblackshear/frigate#15490
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 cakephp/cakephp#18081
+canonical/operator#1656
+canonical/testflinger#630
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 danmar/cppcheck#7044
