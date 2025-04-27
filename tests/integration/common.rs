@@ -154,20 +154,17 @@ impl Zizmor {
         };
 
         let mut raw = String::from_utf8(match self.output {
-            OutputMode::Stdout => output.stdout.clone(),
-            OutputMode::Stderr => output.stderr.clone(),
-            OutputMode::Both => [output.stderr.clone(), output.stdout.clone()].concat(),
+            OutputMode::Stdout => output.stdout,
+            OutputMode::Stderr => output.stderr,
+            OutputMode::Both => [output.stderr, output.stdout].concat(),
         })?;
 
-        // Exit codes used by zizmor, representing no findings or finding severity
-        let success_exit_codes = vec![0, 10, 11, 12, 13, 14];
         if let Some(exit_code) = output.status.code() {
-            let is_failure = !success_exit_codes.contains(&exit_code);
+            // There are other nonzero exit codes that don't indicate failure;
+            // 1 is our only failure code.
+            let is_failure = exit_code == 1;
             if is_failure != self.expects_failure {
-                anyhow::bail!(
-                    "zizmor exited with unexpected code {exit_code}:\n{}",
-                    String::from_utf8_lossy(&[output.stderr, output.stdout].concat())
-                );
+                anyhow::bail!("zizmor exited with unexpected code {exit_code}");
             }
         }
 
