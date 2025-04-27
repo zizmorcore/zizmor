@@ -1,23 +1,25 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.13"
+# dependencies = [
+#     "prance[osv]",
+# ]
 # ///
 
-import json
 import sys
+from collections import defaultdict
+from email.policy import default
 from pathlib import Path
+
+from prance import ResolvingParser
 
 _HERE = Path(__file__).parent
 _WEBHOOKS_JSON = _HERE / "api.github.com.json"
 
 assert _WEBHOOKS_JSON.is_file(), f"Missing {_WEBHOOKS_JSON}"
 
-_WEBHOOKS = json.loads(_WEBHOOKS_JSON.read_bytes())
-
 # A mapping of GitHub workflow events to their webhook event payload names.
-# These are generally 1-1, with exceptions for `pull_request_target`
-# and triggers that don't have a corresponding webhook, e.g.
-# `workflow_call` and `schedule`.
+
 _WORKFLOW_EVENTS: dict[str, str | None] = {
     "branch_protection_rule": "branch_protection_rule",
     "check_run": "check_run",
@@ -58,70 +60,46 @@ _WORKFLOW_EVENTS: dict[str, str | None] = {
     "workflow_run": "workflow_run",
 }
 
-# We'll unroll the schema for each of the webhook events above
-# into this dictionary.
-_UNROLLED_SCHEMAS = {}
-
 
 def log(msg: str) -> None:
-    print(f"[*] {msg}", file=sys.stderr)
-
-
-def unroll_schema(schema: dict) -> dict:
-    unrolled = {**schema}
-    # TODO: allOf, anyOf, array, etc.
-    for prop_name, prop_body in schema.get("properties", {}).items():
-        if ref := prop_body.get("$ref"):
-            # This is a reference to another schema.
-            # We'll unroll it and replace the reference with the
-            # unrolled schema.
-            ref_name = ref.split("/")[-1]
-            inner = _WEBHOOKS["components"]["schemas"][ref_name]
-
-            # Unroll the inner schema as well.
-            inner = unroll_schema(inner)
-
-            unrolled["properties"][prop_name] = inner
-
-    return unrolled
-
-
-def process_schema(schema: dict) -> None:
-    pass
-
-
-def process_webhook(webhook: str) -> None:
-    webhook_schema_name = f"webhook-{webhook.replace('_', '-')}"
-    # GitHub groups webhooks by sub-event, e.g.
-    # `pull_request` becomes `webhook-pull-request-{event}`,
-    # where `{event}` is `opened`, `closed`, etc.
-
-    all_schemas = _WEBHOOKS["components"]["schemas"]
-    matching_schemas = {
-        name: schema
-        for (name, schema) in all_schemas.items()
-        if name.startswith(f"{webhook_schema_name}-")
-    }
-    log(f"\t {webhook} has {len(matching_schemas)} schemas")
-
-    for name, schema in matching_schemas.items():
-        if name not in _UNROLLED_SCHEMAS:
-            _UNROLLED_SCHEMAS[name] = unroll_schema(schema)
-            print(json.dumps(_UNROLLED_SCHEMAS[name], indent=2))
-            assert False
+    print(f"[+] {msg}", file=sys.stderr)
 
 
 if __name__ == "__main__":
-    processed_webhooks = set()
-    for name, webhook in _WORKFLOW_EVENTS.items():
-        if webhook is None:
+    log("resolving OpenAPI spec, this will take a moment...")
+    # TODO: Optimize; this is ridiculously slow.
+    parser = ResolvingParser(str(_WEBHOOKS_JSON))
+    spec = parser.specification
+    log("\t...done")
+
+    # We only care about webhook payload schemas.
+    schemas = {
+        name: schema
+        for (name, schema) in spec["components"]["schemas"].items()
+        if name.startswith("webhook-")
+    }
+    log(f"isolated {len(schemas)} webhook payload schemas")
+
+    schemas_for_event: dict[str, list[dict]] = defaultdict(list)
+    visited_schemas = set()
+    # We process payload names uniquely and in order of length,
+    # to avoid reprocessing e.g. `webhook-pull-request-review-comment-*`
+    # as both `pull-request` and `pull-request-review-comment`.
+    payload_names = {
+        name.replace("_", "-") for name in _WORKFLOW_EVENTS.values() if name
+    }
+    for payload_name in sorted(payload_names, key=lambda n: len(n), reverse=True):
+        if payload_name in visited_schemas:
             continue
 
-        log(f"Processing {name} -> {webhook}")
-        if webhook in processed_webhooks:
-            log(f"\t :D Already processed {webhook} :D")
-            continue
+        for schema_name, schema in schemas.items():
+            if not schema_name.startswith(f"webhook-{payload_name}-"):
+                continue
+            if schema_name in visited_schemas:
+                continue
 
-        process_webhook(webhook)
+            visited_schemas.add(schema_name)
+            schemas_for_event[payload_name].append(schema)
 
-        processed_webhooks.add(webhook)
+    for event, schemas in schemas_for_event.items():
+        log(f"\t{event} -> {len(schemas)} schemas")
