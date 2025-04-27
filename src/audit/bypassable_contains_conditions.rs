@@ -145,16 +145,40 @@ mod tests {
     fn test_bot_condition() {
         for (cond, severity) in &[
             // Vulnerable conditions
-            ("contains('refs/heads/main refs/heads/develop', github.ref)", vec![(Severity::High, String::from("github.ref"))]),
-            ("false || contains('main,develop', github.head_ref)", vec![(Severity::High, String::from("github.head_ref"))]),
-            ("!contains('main|develop', github.base_ref)", vec![(Severity::High, String::from("github.base_ref"))]),
-            ("contains(fromJSON('[true]'), contains('refs/heads/main refs/heads/develop', env.GITHUB_REF))", vec![(Severity::High, String::from("env.GITHUB_REF"))]),
-            ("contains('push pull_request', github.event_name)", vec![(Severity::Informational, String::from("github.event_name"))]),
+            (
+                "contains('refs/heads/main refs/heads/develop', github.ref)",
+                vec![(Severity::High, String::from("github.ref"))],
+            ),
+            (
+                "false || contains('main,develop', github.head_ref)",
+                vec![(Severity::High, String::from("github.head_ref"))],
+            ),
+            (
+                "!contains('main|develop', github.base_ref)",
+                vec![(Severity::High, String::from("github.base_ref"))],
+            ),
+            (
+                "contains(fromJSON('[true]'), contains('refs/heads/main refs/heads/develop', env.GITHUB_REF))",
+                vec![(Severity::High, String::from("env.GITHUB_REF"))],
+            ),
+            (
+                "contains('push pull_request', github.event_name)",
+                vec![(Severity::Informational, String::from("github.event_name"))],
+            ),
             // These are okay.
-            ("github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'", vec![]),
-            ("contains(fromJSON('[\"refs/heads/main\", \"refs/heads/develop\"]'), github.ref)", vec![]),
+            (
+                "github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'",
+                vec![],
+            ),
+            (
+                "contains(fromJSON('[\"refs/heads/main\", \"refs/heads/develop\"]'), github.ref)",
+                vec![],
+            ),
         ] {
-            assert_eq!(BypassableContainsConditions::insecure_contains(cond).as_slice(), severity.as_slice());
+            assert_eq!(
+                BypassableContainsConditions::insecure_contains(cond).as_slice(),
+                severity.as_slice()
+            );
         }
     }
 }
