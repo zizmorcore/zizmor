@@ -5,6 +5,7 @@
 # owner/repo@commit for individual commits
 
 adafruit/circuitpython#9785
+aio-libs/aiobotocore#1344
 apache/airflow#45408
 apache/opennlp#736
 artichoke/artichoke#2825
@@ -113,6 +114,7 @@ mozilla/fxa#18628
 mozilla/neqo#2413
 narwhals-dev/narwhals#1567
 NetApp/harvest#3247
+nextcloud/user_saml#947
 nextcloud/.github#477
 NixOS/infra#613
 NLnetLabs/nsd#413
