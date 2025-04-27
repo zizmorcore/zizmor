@@ -28,7 +28,7 @@ static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
 pub(crate) fn validate_action(contents: String) -> Error {
     match serde_yaml::from_str(&contents) {
         Ok(workflow) => match ACTION_VALIDATOR.apply(&workflow).basic() {
-            Valid(_) => unreachable!("valid action but failed unmarshaling"),
+            Valid(_) => unreachable!("valid action but invalid YAML"),
             Invalid(errors) => parse_validation_errors(errors),
         },
         Err(_) => anyhow!("invalid yaml"),
@@ -38,7 +38,7 @@ pub(crate) fn validate_action(contents: String) -> Error {
 pub(crate) fn validate_workflow(contents: String) -> Error {
     match serde_yaml::from_str(&contents) {
         Ok(workflow) => match WORKFLOW_VALIDATOR.apply(&workflow).basic() {
-            Valid(_) => unreachable!("valid workflow but failed unmarshaling"),
+            Valid(_) => unreachable!("valid workflow but invalid YAML"),
             Invalid(errors) => parse_validation_errors(errors),
         },
         Err(_) => anyhow!("invalid yaml"),
@@ -385,7 +385,7 @@ jobs:
     }
 
     #[test]
-    #[should_panic(expected = "valid action but failed unmarshaling")]
+    #[should_panic(expected = "valid action but invalid YAML")]
     fn test_action_validation_valid() {
         let action = "name: 'Action'
 description: 'Description'
@@ -437,7 +437,7 @@ runs:
     }
 
     #[test]
-    #[should_panic(expected = "valid workflow but failed unmarshaling")]
+    #[should_panic(expected = "valid workflow but invalid YAML")]
     fn test_workflow_validation_valid() {
         let workflow = "name: Valid
 
