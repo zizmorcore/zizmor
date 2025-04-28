@@ -5,6 +5,7 @@
 # owner/repo@commit for individual commits
 
 adafruit/circuitpython#9785
+aio-libs/aiobotocore#1344
 apache/airflow#45408
 apache/opennlp#736
 artichoke/artichoke#2825
@@ -20,6 +21,8 @@ bitcoindevkit/bdk#1778
 blakeblackshear/frigate#15490
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 cakephp/cakephp#18081
+canonical/operator#1656
+canonical/testflinger#630
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 danmar/cppcheck#7044
@@ -113,6 +116,7 @@ mozilla/fxa#18628
 mozilla/neqo#2413
 narwhals-dev/narwhals#1567
 NetApp/harvest#3247
+nextcloud/user_saml#947
 nextcloud/.github#477
 NixOS/infra#613
 NLnetLabs/nsd#413

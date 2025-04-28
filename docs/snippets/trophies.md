@@ -7,6 +7,14 @@
         - adafruit/circuitpython#9785
 
 
+-   ![](https://github.com/aio-libs.png?size=40){ width="40" loading=lazy align=left } aio-libs
+
+    ---
+
+    ??? example "Examples"
+        - aio-libs/aiobotocore#1344
+
+
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
 
     ---
@@ -97,6 +105,15 @@
 
     ??? example "Examples"
         - cakephp/cakephp#18081
+
+
+-   ![](https://github.com/canonical.png?size=40){ width="40" loading=lazy align=left } canonical
+
+    ---
+
+    ??? example "Examples"
+        - canonical/operator#1656
+        - canonical/testflinger#630
 
 
 -   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl
@@ -575,6 +592,7 @@
     ---
 
     ??? example "Examples"
+        - nextcloud/user_saml#947
         - nextcloud/.github#477
 
 
