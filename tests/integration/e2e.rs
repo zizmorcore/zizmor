@@ -186,7 +186,7 @@ fn invalid_config_file() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .expects_failure(true)
-            .config("/dev/null")
+            .config(if cfg!(windows) { "NUL" } else { "/dev/null" })
             .input(input_under_test("e2e-menagerie"))
             .run()?
     );
