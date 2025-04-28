@@ -9,7 +9,7 @@ use github_actions_models::workflow::job::StepBody;
 use super::{AuditLoadError, Job, audit_meta};
 use crate::audit::Audit;
 use crate::finding::{Confidence, Finding, Persona, Severity, SymbolicLocation};
-use crate::models::{JobExt as _, Steps, Workflow};
+use crate::models::{JobExt as _, StepCommon, Steps, Workflow};
 use crate::state::AuditState;
 
 pub(crate) struct InsecureCommands;

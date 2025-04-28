@@ -4,7 +4,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     expr::{self, Context, Expr},
     finding::{Confidence, Severity},
-    models::JobExt,
+    models::{JobExt, StepCommon},
 };
 
 pub(crate) struct BotConditions;

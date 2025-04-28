@@ -45,6 +45,9 @@ pub(crate) trait StepCommon<'s> {
     /// i.e. is not influenced by another expression.
     fn env_is_static(&self, name: &str) -> bool;
 
+    /// Returns a [`common::Uses`] for this step, if it has one.
+    fn uses(&self) -> Option<&common::Uses>;
+
     /// Returns this step's job's strategy, if present.
     ///
     /// Composite action steps have no strategy.
@@ -55,6 +58,10 @@ pub(crate) trait StepCommon<'s> {
 
     /// Returns a [`SymbolicLocation`] for this step.
     fn location(&self) -> SymbolicLocation<'s>;
+
+    /// Like [`Self::location()`], except with the step's `name`
+    /// key as the final path component if present.
+    fn location_with_name(&self) -> SymbolicLocation<'s>;
 }
 
 /// Represents an entire GitHub Actions workflow.
@@ -564,6 +571,14 @@ impl<'s> StepCommon<'s> for Step<'s> {
         utils::env_is_static(name, &envs)
     }
 
+    fn uses(&self) -> Option<&common::Uses> {
+        let StepBody::Uses { uses, .. } = &self.inner.body else {
+            return None;
+        };
+
+        Some(uses)
+    }
+
     fn strategy(&self) -> Option<&Strategy> {
         self.job().strategy.as_ref()
     }
@@ -586,7 +601,18 @@ impl<'s> StepCommon<'s> for Step<'s> {
     }
 
     fn location(&self) -> SymbolicLocation<'s> {
-        self.location()
+        self.parent
+            .location()
+            .with_step(self)
+            .annotated("this step")
+    }
+
+    fn location_with_name(&self) -> SymbolicLocation<'s> {
+        match self.inner.name {
+            Some(_) => self.location().with_keys(&["name".into()]),
+            None => self.location(),
+        }
+        .annotated("this step")
     }
 }
 
@@ -607,15 +633,6 @@ impl<'w> Step<'w> {
     /// Returns this step's (grand)parent [`Workflow`].
     pub(crate) fn workflow(&self) -> &'w Workflow {
         self.parent.parent()
-    }
-
-    /// Returns a [`common::Uses`] for this [`Step`], if it has one.
-    pub(crate) fn uses(&self) -> Option<&common::Uses> {
-        let StepBody::Uses { uses, .. } = &self.inner.body else {
-            return None;
-        };
-
-        Some(uses)
     }
 
     /// Returns the the shell used by this step, or `None`
@@ -653,24 +670,6 @@ impl<'w> Step<'w> {
             .or_else(|| self.parent.runner_default_shell());
 
         shell
-    }
-
-    /// Returns a symbolic location for this [`Step`].
-    pub(crate) fn location(&self) -> SymbolicLocation<'w> {
-        self.parent
-            .location()
-            .with_step(self)
-            .annotated("this step")
-    }
-
-    /// Like [`Step::location`], except with the step's `name`
-    /// key as the final path component if present.
-    pub(crate) fn location_with_name(&self) -> SymbolicLocation<'w> {
-        match self.inner.name {
-            Some(_) => self.location().with_keys(&["name".into()]),
-            None => self.location(),
-        }
-        .annotated("this step")
     }
 }
 
@@ -855,6 +854,14 @@ impl<'s> StepCommon<'s> for CompositeStep<'s> {
         utils::env_is_static(name, &[env])
     }
 
+    fn uses(&self) -> Option<&common::Uses> {
+        let action::StepBody::Uses { uses, .. } = &self.inner.body else {
+            return None;
+        };
+
+        Some(uses)
+    }
+
     fn strategy(&self) -> Option<&Strategy> {
         None
     }
@@ -877,7 +884,15 @@ impl<'s> StepCommon<'s> for CompositeStep<'s> {
     }
 
     fn location(&self) -> SymbolicLocation<'s> {
-        self.location()
+        self.parent.location().with_composite_step(self)
+    }
+
+    fn location_with_name(&self) -> SymbolicLocation<'s> {
+        match self.inner.name {
+            Some(_) => self.location().with_keys(&["name".into()]),
+            None => self.location(),
+        }
+        .annotated("this step")
     }
 }
 
@@ -890,32 +905,8 @@ impl<'a> CompositeStep<'a> {
         }
     }
 
-    /// Returns a symbolic location for this [`Step`].
-    pub(crate) fn location(&self) -> SymbolicLocation<'a> {
-        self.parent.location().with_composite_step(self)
-    }
-
-    /// Like [`CompositeStep::location`], except with the step's `name`
-    /// key as the final path component if present.
-    pub(crate) fn location_with_name(&self) -> SymbolicLocation<'a> {
-        match self.inner.name {
-            Some(_) => self.location().with_keys(&["name".into()]),
-            None => self.location(),
-        }
-        .annotated("this step")
-    }
-
     /// Returns this composite step's parent [`Action`].
     pub(crate) fn action(&self) -> &'a Action {
         self.parent
-    }
-
-    /// Returns a [`common::Uses`] for this [`Step`], if it has one.
-    pub(crate) fn uses(&self) -> Option<&common::Uses> {
-        let action::StepBody::Uses { uses, .. } = &self.inner.body else {
-            return None;
-        };
-
-        Some(uses)
     }
 }
