@@ -8,7 +8,6 @@
 
 import sys
 from collections import defaultdict
-from email.policy import default
 from pathlib import Path
 
 from prance import ResolvingParser
@@ -18,46 +17,149 @@ _WEBHOOKS_JSON = _HERE / "api.github.com.json"
 
 assert _WEBHOOKS_JSON.is_file(), f"Missing {_WEBHOOKS_JSON}"
 
-# A mapping of GitHub workflow events to their webhook event payload names.
-
-_WORKFLOW_EVENTS: dict[str, str | None] = {
-    "branch_protection_rule": "branch_protection_rule",
-    "check_run": "check_run",
-    "check_suite": "check_suite",
-    "create": "create",
-    "delete": "delete",
-    "deployment": "deployment",
-    "deployment_status": "deployment_status",
-    "discussion": "discussion",
-    "discussion_comment": "discussion_comment",
-    "fork": "fork",
-    "gollum": "gollum",
-    "issue_comment": "issue_comment",
-    "issues": "issues",
-    "label": "label",
-    "merge_group": "merge_group",
-    "milestone": "milestone",
-    "page_build": "page_build",
-    "public": "public",
-    "pull_request": "pull_request",
-    # TODO: Documented but unclear if this is still supported?
-    # "pull_request_comment": "pull_request_comment",
-    "pull_request_review": "pull_request_review",
-    "pull_request_review_comment": "pull_request_review_comment",
-    "pull_request_target": "pull_request",
-    "push": "push",
-    "registry_package": "registry_package",
-    "release": "release",
-    "repository_dispatch": "repository_dispatch",
+# A mapping of workflow trigger event names to subevents.
+# Keep in sync with: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows
+_WORKFLOW_TRIGGERS_TO_EVENTS: dict[str, list[str]] = {
+    "branch_protection_rule": ["created", "edited", "deleted"],
+    "check_run": [
+        "created",
+        "rerequested",
+        "completed",
+        "requested_action",
+    ],
+    "check_suite": [
+        "completed",
+    ],
+    "create": [],  # no subevents
+    "delete": [],  # no subevents
+    "deployment": [],  # no subevents
+    "deployment_status": [],  # no subevents
+    "discussion": [
+        "created",
+        "edited",
+        "deleted",
+        "transferred",
+        "pinned",
+        "unpinned",
+        "labeled",
+        "unlabeled",
+        "locked",
+        "unlocked",
+        "category_changed",
+        "answered",
+        "unanswered",
+    ],
+    "discussion_comment": [
+        "created",
+        "edited",
+        "deleted",
+    ],
+    "fork": [],  # no subevents
+    "gollum": [],  # no subevents
+    "issue_comment": [
+        "created",
+        "edited",
+        "deleted",
+    ],
+    "issues": [
+        "opened",
+        "edited",
+        "deleted",
+        "transferred",
+        "pinned",
+        "unpinned",
+        "closed",
+        "reopened",
+        "assigned",
+        "unassigned",
+        "labeled",
+        "unlabeled",
+        "locked",
+        "unlocked",
+        "milestoned",
+        "demilestoned",
+        "typed",
+        "untyped",
+    ],
+    "label": [
+        "created",
+        "edited",
+        "deleted",
+    ],
+    "merge_group": ["checks_requested"],
+    "milestone": [
+        "created",
+        "closed",
+        "opened",
+        "edited",
+        "deleted",
+    ],
+    "page_build": [],  # no subevents
+    "public": [],  # no subevents
+    "pull_request": [
+        "assigned",
+        "unassigned",
+        "labeled",
+        "unlabeled",
+        "opened",
+        "edited",
+        "closed",
+        "reopened",
+        "synchronize",
+        "converted_to_draft",
+        "locked",
+        "unlocked",
+        "enqueued",
+        "dequeued",
+        "milestoned",
+        "demilestoned",
+        "ready_for_review",
+        "review_requested",
+        "review_request_removed",
+        "auto_merge_enabled",
+        "auto_merge_disabled",
+    ],
+    # Unused.
+    # "pull_request_comment": []
+    "pull_request_review": [
+        "submitted",
+        "edited",
+        "dismissed",
+    ],
+    "pull_request_review_comment": [
+        "created",
+        "edited",
+        "deleted",
+    ],
+    # Not a real webhook; same contents as `pull_request`.
+    # "pull_request_target": [],
+    "push": [],  # no subevents
+    "registry_package": [
+        "published",
+        "updated",
+    ],
+    "release": [
+        "published",
+        "unpublished",
+        "created",
+        "edited",
+        "deleted",
+        "prereleased",
+        "released",
+    ],
+    "repository_dispatch": [],  # custom subevents
     # Not a webhook.
-    # `github.event.schedule` is the only thing that comes from this.
-    "schedule": None,
-    "status": "status",
-    "watch": "watch",
-    # Inherits its webhook from the calling workflow.
-    "workflow_call": None,
-    "workflow_dispatch": "workflow_dispatch",
-    "workflow_run": "workflow_run",
+    # "schedule": [],
+    "status": [],  # no subevents
+    "watch": ["started"],
+    # Not a webhook; inherits its payload from the calling workflow.
+    # "workflow_call": [],
+    "workflow_dispatch": [],  # no subevents
+    "workflow_run": [
+        "completed",
+        "in_progress",
+        "requested",
+    ],
 }
 
 
@@ -65,8 +167,12 @@ def log(msg: str) -> None:
     print(f"[+] {msg}", file=sys.stderr)
 
 
+def process_schemas(event: str, schemas: list[dict]) -> None:
+    pass
+
+
 if __name__ == "__main__":
-    log("resolving OpenAPI spec, this will take a moment...")
+    log("resolving refs in OpenAPI spec, this will take a moment...")
     # TODO: Optimize; this is ridiculously slow.
     parser = ResolvingParser(str(_WEBHOOKS_JSON))
     spec = parser.specification
@@ -81,25 +187,13 @@ if __name__ == "__main__":
     log(f"isolated {len(schemas)} webhook payload schemas")
 
     schemas_for_event: dict[str, list[dict]] = defaultdict(list)
-    visited_schemas = set()
-    # We process payload names uniquely and in order of length,
-    # to avoid reprocessing e.g. `webhook-pull-request-review-comment-*`
-    # as both `pull-request` and `pull-request-review-comment`.
-    payload_names = {
-        name.replace("_", "-") for name in _WORKFLOW_EVENTS.values() if name
-    }
-    for payload_name in sorted(payload_names, key=lambda n: len(n), reverse=True):
-        if payload_name in visited_schemas:
-            continue
-
-        for schema_name, schema in schemas.items():
-            if not schema_name.startswith(f"webhook-{payload_name}-"):
-                continue
-            if schema_name in visited_schemas:
-                continue
-
-            visited_schemas.add(schema_name)
-            schemas_for_event[payload_name].append(schema)
+    for event, subevents in _WORKFLOW_TRIGGERS_TO_EVENTS.items():
+        for subevent in subevents:
+            webhook_key = (
+                f"webhook-{event.replace('_', '-')}-{subevent.replace('_', '-')}"
+            )
+            schemas_for_event[event].append(schemas[webhook_key])
 
     for event, schemas in schemas_for_event.items():
         log(f"\t{event} -> {len(schemas)} schemas")
+        process_schemas(event, schemas)
