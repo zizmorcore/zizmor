@@ -170,10 +170,13 @@ impl Zizmor {
         }
 
         let input_placeholder = "@@INPUT@@";
-        let input_path_regex = Regex::new(&format!(r"{input_placeholder}[\\/\w.-]+"))?;
         for input in &self.inputs {
             raw = raw.replace(input, input_placeholder);
-            // Normalize Windows '\' file paths to using '/'
+        }
+
+        // Normalize Windows '\' file paths to using '/', to get consistent snapshot test outputs
+        if cfg!(windows) {
+            let input_path_regex = Regex::new(&format!(r"{input_placeholder}[\\/\w.-]+"))?;
             raw = input_path_regex
                 .replace_all(&raw, |captures: &Captures| {
                     captures.get(0).unwrap().as_str().replace("\\", "/")
