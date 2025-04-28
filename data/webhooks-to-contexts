@@ -32,8 +32,10 @@ _WORKFLOW_TRIGGERS_TO_EVENTS: dict[str, list[str]] = {
     ],
     "create": [],  # no subevents
     "delete": [],  # no subevents
-    "deployment": [],  # no subevents
-    "deployment_status": [],  # no subevents
+    # GitHub's doesn't specify the subevent for `deployment` or `deployment_status`,
+    # but the docs imply that the subevent is `created`.
+    "deployment": ["created"],
+    "deployment_status": ["created"],
     "discussion": [
         "created",
         "edited",
@@ -147,7 +149,8 @@ _WORKFLOW_TRIGGERS_TO_EVENTS: dict[str, list[str]] = {
         "prereleased",
         "released",
     ],
-    "repository_dispatch": [],  # custom subevents
+    # NOTE: GitHub's OpenAPI spec uses `sample` to provide an example payload.
+    "repository_dispatch": ["sample"],  # custom subevents
     # Not a webhook.
     # "schedule": [],
     "status": [],  # no subevents
@@ -188,6 +191,9 @@ if __name__ == "__main__":
 
     schemas_for_event: dict[str, list[dict]] = defaultdict(list)
     for event, subevents in _WORKFLOW_TRIGGERS_TO_EVENTS.items():
+        if not subevents:
+            webhook_key = f"webhook-{event.replace('_', '-')}"
+            schemas_for_event[event].append(schemas[webhook_key])
         for subevent in subevents:
             webhook_key = (
                 f"webhook-{event.replace('_', '-')}-{subevent.replace('_', '-')}"
