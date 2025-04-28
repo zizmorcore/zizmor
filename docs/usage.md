@@ -568,7 +568,7 @@ two primary ways to use `zizmor` in GitHub Actions:
               persist-credentials: false
 
           - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@v5
+            uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
 
           - name: Run zizmor 🌈
             run: uvx zizmor --format=sarif . > results.sarif # (2)!
