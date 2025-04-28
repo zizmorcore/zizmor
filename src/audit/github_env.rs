@@ -12,7 +12,7 @@ use tree_sitter::{
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::{JobExt as _, Step};
+use crate::models::{JobExt as _, Step, StepCommon};
 use crate::state::AuditState;
 use crate::utils;
 

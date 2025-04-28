@@ -11,7 +11,7 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::finding::Finding;
-use crate::models::{CompositeStep, JobExt as _};
+use crate::models::{CompositeStep, JobExt as _, StepCommon};
 use crate::{
     finding::{Confidence, Severity},
     github_api,

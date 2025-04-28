@@ -9,7 +9,7 @@ use indexmap::IndexMap;
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{Confidence, Severity},
-    models::uses::RepositoryUsesExt as _,
+    models::{StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 

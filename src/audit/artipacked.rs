@@ -8,11 +8,11 @@ use github_actions_models::{
 use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
-use crate::utils::split_patterns;
 use crate::{
     finding::{Confidence, Finding, Persona, Severity},
-    models::{JobExt, uses::RepositoryUsesExt as _},
+    models::{JobExt, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
+    utils::split_patterns,
 };
 
 pub(crate) struct Artipacked;
