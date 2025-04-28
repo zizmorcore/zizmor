@@ -49,6 +49,7 @@ getsops/sops#1704
 GenericMappingTools/pygmt#3861
 git-lfs/git-lfs#5930
 gitbutlerapp/gitbutler#5946
+grafana/grizzly#610
 google/zx#1067
 google/zx#1126
 guacsec/guac#2276
