@@ -3,14 +3,14 @@
 //! TODO: This file is too big; break it into multiple
 //! modules, one per audit/conceptual group.
 
-use crate::common::{OutputMode, input_under_test, zizmor};
+use crate::common::{input_under_test, zizmor};
 use anyhow::Result;
 
 #[test]
 fn test_cant_retrieve() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .output(OutputMode::Stderr)
+            .expects_failure(true)
             .offline(true)
             .unsetenv("GH_TOKEN")
             .args(["pypa/sampleproject"])
@@ -24,7 +24,7 @@ fn test_cant_retrieve() -> Result<()> {
 fn test_invalid_inputs() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .output(OutputMode::Stderr)
+            .expects_failure(true)
             .offline(true)
             .input(input_under_test("invalid/invalid-workflow.yml"))
             .run()?
@@ -242,7 +242,7 @@ fn unpinned_uses() -> Result<()> {
     ] {
         insta::assert_snapshot!(
             zizmor()
-                .output(OutputMode::Stderr)
+                .expects_failure(true)
                 .config(input_under_test(
                     &format!("unpinned-uses/configs/{tc}.yml",)
                 ))

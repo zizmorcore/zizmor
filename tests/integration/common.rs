@@ -36,6 +36,7 @@ pub struct Zizmor {
     inputs: Vec<String>,
     config: Option<String>,
     output: OutputMode,
+    expects_failure: bool,
 }
 
 impl Zizmor {
@@ -50,6 +51,7 @@ impl Zizmor {
             inputs: vec![],
             config: None,
             output: OutputMode::Stdout,
+            expects_failure: false,
         }
     }
 
@@ -90,6 +92,14 @@ impl Zizmor {
 
     pub fn output(mut self, output: OutputMode) -> Self {
         self.output = output;
+        self
+    }
+
+    pub fn expects_failure(mut self, flag: bool) -> Self {
+        if flag {
+            self = self.output(OutputMode::Both);
+        }
+        self.expects_failure = flag;
         self
     }
 
@@ -149,6 +159,15 @@ impl Zizmor {
             OutputMode::Stderr => output.stderr,
             OutputMode::Both => [output.stderr, output.stdout].concat(),
         })?;
+
+        if let Some(exit_code) = output.status.code() {
+            // There are other nonzero exit codes that don't indicate failure;
+            // 1 is our only failure code.
+            let is_failure = exit_code == 1;
+            if is_failure != self.expects_failure {
+                anyhow::bail!("zizmor exited with unexpected code {exit_code}");
+            }
+        }
 
         let input_placeholder = "@@INPUT@@";
         let input_path_regex = Regex::new(&format!(r"{input_placeholder}[\\/\w.-]+"))?;
