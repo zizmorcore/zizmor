@@ -185,12 +185,25 @@ Capability = Literal["arbitrary"] | Literal["structured"] | Literal["fixed"]
 def walk_schema(
     schema: dict,
     top: str,
+    *,
+    typ: str | None = None,
 ) -> Iterator[tuple[str, Capability]]:
     """
     Walks the schema and returns a list of tuples of the form
     (path, capability).
     """
-    # TODO: anyOf / allOf
+
+    if typ is None:
+        typ = schema.get("type")
+
+    # We might have a schema with a type like `["string", "null"]`.
+    # When this happens, we walk the schema for each type,
+    # returning capabilities for all variants for subsequent unification.
+    if isinstance(typ, list):
+        for subtype in typ:
+            yield from walk_schema(schema, top, typ=subtype)
+
+    # Similar for anyOf.
 
     match schema["type"]:
         case "object":
