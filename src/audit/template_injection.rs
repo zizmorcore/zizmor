@@ -18,7 +18,7 @@ use github_actions_models::{
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     expr::{BinOp, Expr, UnOp},
-    finding::{Confidence, Finding, FindingBuilder, Persona, Severity, SymbolicLocation},
+    finding::{Confidence, Finding, Persona, Severity, SymbolicLocation},
     models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
     utils::extract_expressions,
@@ -269,11 +269,11 @@ impl TemplateInjection {
         bad_expressions
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Vec<FindingBuilder<'w>> {
+    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         let Some((script, script_loc)) = Self::script_with_location(step) else {
-            return findings;
+            return Ok(findings);
         };
 
         for (expr, severity, confidence, persona) in
@@ -290,11 +290,12 @@ impl TemplateInjection {
                         script_loc.clone().primary().annotated(format!(
                             "{expr} may expand into attacker-controllable code"
                         )),
-                    ),
+                    )
+                    .build_with_document(step.document())?,
             )
         }
 
-        findings
+        Ok(findings)
     }
 }
 
@@ -308,9 +309,6 @@ impl Audit for TemplateInjection {
 
     fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
         self.process_step(step)
-            .into_iter()
-            .map(|f| f.build(step.workflow()))
-            .collect()
     }
 
     fn audit_composite_step<'a>(
@@ -318,9 +316,6 @@ impl Audit for TemplateInjection {
         step: &CompositeStep<'a>,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
         self.process_step(step)
-            .into_iter()
-            .map(|f| f.build(step.action()))
-            .collect()
     }
 }
 

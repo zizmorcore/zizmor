@@ -251,12 +251,7 @@ impl<'w> SymbolicLocation<'w> {
     }
 
     /// Concretize this `SymbolicLocation`, consuming it in the process.
-    pub(crate) fn concretize(
-        self,
-        document: &'w impl AsRef<yamlpath::Document>,
-    ) -> Result<Location<'w>> {
-        let document = document.as_ref();
-
+    pub(crate) fn concretize(self, document: &'w yamlpath::Document) -> Result<Location<'w>> {
         // If we don't have a path into the workflow, all
         // we have is the workflow itself.
         let feature = if self.route.components.is_empty() {
@@ -524,6 +519,13 @@ impl<'w> FindingBuilder<'w> {
     }
 
     pub(crate) fn build(self, document: &'w impl AsRef<yamlpath::Document>) -> Result<Finding<'w>> {
+        self.build_with_document(document.as_ref())
+    }
+
+    pub(crate) fn build_with_document(
+        self,
+        document: &'w yamlpath::Document,
+    ) -> Result<Finding<'w>> {
         let mut locations = self
             .locations
             .iter()

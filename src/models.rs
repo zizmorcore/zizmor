@@ -62,6 +62,9 @@ pub(crate) trait StepCommon<'s> {
     /// Like [`Self::location()`], except with the step's `name`
     /// key as the final path component if present.
     fn location_with_name(&self) -> SymbolicLocation<'s>;
+
+    /// Returns the document which contains this step.
+    fn document(&self) -> &'s yamlpath::Document;
 }
 
 /// Represents an entire GitHub Actions workflow.
@@ -614,6 +617,10 @@ impl<'s> StepCommon<'s> for Step<'s> {
         }
         .annotated("this step")
     }
+
+    fn document(&self) -> &'s yamlpath::Document {
+        self.workflow().as_ref()
+    }
 }
 
 impl<'w> Step<'w> {
@@ -893,6 +900,10 @@ impl<'s> StepCommon<'s> for CompositeStep<'s> {
             None => self.location(),
         }
         .annotated("this step")
+    }
+
+    fn document(&self) -> &'s yamlpath::Document {
+        self.action().as_ref()
     }
 }
 

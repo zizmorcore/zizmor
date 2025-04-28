@@ -9,12 +9,10 @@ use anyhow::{Context, Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, audit_meta};
-use crate::finding::{Finding, FindingBuilder};
-use crate::models::{CompositeStep, Step, StepCommon};
 use crate::{
-    finding::{Confidence, Severity},
+    finding::{Confidence, Finding, Severity},
     github_api,
-    models::uses::RepositoryUsesExt as _,
+    models::{CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 
@@ -122,7 +120,7 @@ impl KnownVulnerableActions {
         Ok(results)
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Result<Vec<FindingBuilder<'w>>> {
+    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
@@ -140,7 +138,8 @@ impl KnownVulnerableActions {
                             .with_keys(&["uses".into()])
                             .annotated(&id)
                             .with_url(format!("https://github.com/advisories/{id}")),
-                    ),
+                    )
+                    .build_with_document(step.document())?,
             );
         }
 
@@ -169,16 +168,10 @@ impl Audit for KnownVulnerableActions {
     }
 
     fn audit_step<'w>(&self, step: &Step<'w>) -> Result<Vec<Finding<'w>>> {
-        self.process_step(step)?
-            .into_iter()
-            .map(|f| f.build(step.workflow()))
-            .collect()
+        self.process_step(step)
     }
 
     fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
-        self.process_step(step)?
-            .into_iter()
-            .map(|f| f.build(step.action()))
-            .collect()
+        self.process_step(step)
     }
 }

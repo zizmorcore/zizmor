@@ -5,10 +5,9 @@ use github_actions_models::common::{RepositoryUses, Uses};
 use serde::Deserialize;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
-use crate::finding::{Confidence, Finding, FindingBuilder, Persona, Severity};
+use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::uses::RepositoryUsesPattern;
-use crate::models::{CompositeStep, uses::UsesExt as _};
-use crate::models::{Step, StepCommon};
+use crate::models::{CompositeStep, Step, StepCommon, uses::UsesExt as _};
 
 pub(crate) struct UnpinnedUses {
     policies: UnpinnedUsesPolicies,
@@ -86,11 +85,11 @@ impl UnpinnedUses {
         }
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Vec<FindingBuilder<'w>> {
+    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
         let mut findings = vec![];
 
         let Some(uses) = step.uses() else {
-            return findings;
+            return Ok(findings);
         };
 
         if let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) {
@@ -104,11 +103,12 @@ impl UnpinnedUses {
                             .primary()
                             .with_keys(&["uses".into()])
                             .annotated(annotation),
-                    ),
+                    )
+                    .build_with_document(step.document())?,
             );
         };
 
-        findings
+        Ok(findings)
     }
 }
 
@@ -131,9 +131,6 @@ impl Audit for UnpinnedUses {
 
     fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
         self.process_step(step)
-            .into_iter()
-            .map(|f| f.build(step.workflow()))
-            .collect()
     }
 
     fn audit_composite_step<'a>(
@@ -141,9 +138,6 @@ impl Audit for UnpinnedUses {
         step: &CompositeStep<'a>,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
         self.process_step(step)
-            .into_iter()
-            .map(|f| f.build(step.action()))
-            .collect()
     }
 }
 
