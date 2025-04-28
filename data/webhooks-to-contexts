@@ -8,7 +8,9 @@
 
 import sys
 from collections import defaultdict
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Literal
 
 from prance import ResolvingParser
 
@@ -170,8 +172,51 @@ def log(msg: str) -> None:
     print(f"[+] {msg}", file=sys.stderr)
 
 
-def process_schemas(event: str, schemas: list[dict]) -> None:
-    pass
+# Represents the capability of an expanded expression from a
+# webhook's payload.
+# For example, `github.pull_request.title` would be `arbitrary` because
+# it can contain arbitrary attacker-controlled content, while
+# `github.pull_request.base.sha` would be `fixed` because the attacker
+# can't influence its value in a structured manner. `structured` is a middle
+# ground where the attacker can influence the value, but only in a limited way.
+Capability = Literal["arbitrary"] | Literal["structured"] | Literal["fixed"]
+
+
+def walk_schema(
+    schema: dict,
+    top: str,
+) -> Iterator[tuple[str, Capability]]:
+    """
+    Walks the schema and returns a list of tuples of the form
+    (path, capability).
+    """
+    # TODO: anyOf / allOf
+
+    match schema["type"]:
+        case "object":
+            yield from ()
+        case "array":
+            yield from ()
+        case _:
+            assert False, f"Unknown schema type: {schema['type']}"
+
+
+def unify_capabilities(old: Capability, new: Capability) -> Capability:
+    # TODO
+    return old
+
+
+def process_schemas(event: str, schemas: list[dict]) -> dict[str, Capability]:
+    patterns_to_capabilities: dict[str, Capability] = {}
+
+    top = f"github.event.{event}"
+    for schema in schemas:
+        for pattern, cap in walk_schema(schema, top):
+            if old_cap := patterns_to_capabilities.get(pattern):
+                cap = unify_capabilities(old_cap, cap)
+            patterns_to_capabilities[pattern] = cap
+
+    return patterns_to_capabilities
 
 
 if __name__ == "__main__":
