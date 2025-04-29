@@ -15,6 +15,15 @@ of `zizmor`.
   GitHub Actions usages. These patterns are not themselves dangerous,
   but may indicate an attempt to obscure malicious behavior (#683)
 
+### Bug Fixes 🐛
+
+* The SARIF output format now uses `zizmor/{id}` for rule IDs instead
+  of bare IDs, reducing the chance of conflict or confusion with other tools
+  (#710)
+* The SARIF output format now includes a rule name for each rule descriptor,
+  which should improve rendering behavior in SARIF viewers like the
+  VS Code SARIF Viewer extension (#710)
+
 ## v1.6.0
 
 ### New Features 🌈
