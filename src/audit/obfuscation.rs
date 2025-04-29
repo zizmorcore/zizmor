@@ -84,7 +84,7 @@ impl Obfuscation {
                                 .with_keys(&["uses".into()])
                                 .annotated(annotation),
                         )
-                        .build_with_document(step.document())?,
+                        .build(step)?,
                 );
             }
         }

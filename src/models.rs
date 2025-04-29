@@ -67,6 +67,16 @@ pub(crate) trait StepCommon<'s> {
     fn document(&self) -> &'s yamlpath::Document;
 }
 
+pub(crate) trait AsDocument<'a, 'doc> {
+    fn as_document(&'a self) -> &'doc yamlpath::Document;
+}
+
+impl<'a, 'doc, T: StepCommon<'doc>> AsDocument<'a, 'doc> for T {
+    fn as_document(&'a self) -> &'doc yamlpath::Document {
+        self.document()
+    }
+}
+
 /// Represents an entire GitHub Actions workflow.
 ///
 /// This type implements [`Deref`] for [`workflow::Workflow`],
@@ -79,6 +89,12 @@ pub(crate) struct Workflow {
     pub(crate) document: yamlpath::Document,
     pub(crate) line_index: LineIndex,
     inner: workflow::Workflow,
+}
+
+impl<'a> AsDocument<'a, 'a> for Workflow {
+    fn as_document(&'a self) -> &'a yamlpath::Document {
+        &self.document
+    }
 }
 
 impl AsRef<yamlpath::Document> for Workflow {
@@ -722,8 +738,8 @@ pub(crate) struct Action {
     inner: action::Action,
 }
 
-impl AsRef<yamlpath::Document> for Action {
-    fn as_ref(&self) -> &yamlpath::Document {
+impl<'a> AsDocument<'a, 'a> for Action {
+    fn as_document(&'a self) -> &'a yamlpath::Document {
         &self.document
     }
 }
@@ -903,7 +919,7 @@ impl<'s> StepCommon<'s> for CompositeStep<'s> {
     }
 
     fn document(&self) -> &'s yamlpath::Document {
-        self.action().as_ref()
+        self.action().as_document()
     }
 }
 

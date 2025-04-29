@@ -10,6 +10,7 @@ use terminal_link::Link;
 use crate::{
     App,
     finding::{Finding, Location, Severity},
+    models::AsDocument,
     registry::{FindingRegistry, InputKey, InputRegistry},
 };
 
@@ -53,7 +54,7 @@ pub(crate) fn finding_snippet<'w>(
         let input = registry.get_input(input_key);
 
         snippets.push(
-            Snippet::source(input.document().source())
+            Snippet::source(input.as_document().source())
                 .fold(true)
                 .line_start(1)
                 .origin(input.link().unwrap_or(input_key.presentation_path()))

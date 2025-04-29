@@ -8,7 +8,7 @@ use github_actions_models::common::{
     expr::{ExplicitExpr, LoE},
 };
 
-use crate::audit::AuditInput;
+use crate::{audit::AuditInput, models::AsDocument};
 
 /// Convenience trait for inline transformations of `Self`.
 ///
@@ -100,8 +100,8 @@ pub(crate) fn extract_expressions(text: &str) -> Vec<(ExplicitExpr, Range<usize>
 pub(crate) fn parse_expressions_from_input(
     input: &AuditInput,
 ) -> Vec<(ExplicitExpr, Range<usize>)> {
-    let text = input.document().source();
-    let doc = input.document();
+    let text = input.as_document().source();
+    let doc = input.as_document();
 
     let mut exprs = vec![];
     let mut offset = 0;

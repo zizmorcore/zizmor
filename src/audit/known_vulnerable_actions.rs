@@ -139,7 +139,7 @@ impl KnownVulnerableActions {
                             .annotated(&id)
                             .with_url(format!("https://github.com/advisories/{id}")),
                     )
-                    .build_with_document(step.document())?,
+                    .build(step)?,
             );
         }
 

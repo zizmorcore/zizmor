@@ -8,7 +8,9 @@ use yamlpath::Document;
 
 use crate::{
     finding::{Finding, FindingBuilder, SymbolicLocation},
-    models::{Action, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
+    models::{
+        Action, AsDocument, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow,
+    },
     registry::InputKey,
     state::AuditState,
 };
@@ -48,13 +50,6 @@ impl AuditInput {
         }
     }
 
-    pub(crate) fn document(&self) -> &yamlpath::Document {
-        match self {
-            AuditInput::Workflow(workflow) => &workflow.document,
-            AuditInput::Action(action) => &action.document,
-        }
-    }
-
     pub(crate) fn line_index(&self) -> &LineIndex {
         match self {
             AuditInput::Workflow(workflow) => &workflow.line_index,
@@ -77,9 +72,12 @@ impl AuditInput {
     }
 }
 
-impl AsRef<Document> for AuditInput {
-    fn as_ref(&self) -> &Document {
-        self.document()
+impl<'a> AsDocument<'a, 'a> for AuditInput {
+    fn as_document(&'a self) -> &'a Document {
+        match self {
+            AuditInput::Workflow(workflow) => workflow.as_document(),
+            AuditInput::Action(action) => action.as_document(),
+        }
     }
 }
 

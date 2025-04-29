@@ -11,7 +11,7 @@ use terminal_link::Link;
 
 use crate::{
     audit::AuditInput,
-    models::{CompositeStep, JobExt, Step},
+    models::{AsDocument, CompositeStep, JobExt, Step},
     registry::InputKey,
 };
 
@@ -378,7 +378,7 @@ pub(crate) struct Feature<'w> {
 
 impl<'w> Feature<'w> {
     pub(crate) fn from_span(span: &Range<usize>, input: &'w AuditInput) -> Self {
-        let raw = input.document().source();
+        let raw = input.as_document().source();
         let start = TextSize::new(span.start as u32);
         let end = TextSize::new(span.end as u32);
 
@@ -518,18 +518,11 @@ impl<'w> FindingBuilder<'w> {
         self
     }
 
-    pub(crate) fn build(self, document: &'w impl AsRef<yamlpath::Document>) -> Result<Finding<'w>> {
-        self.build_with_document(document.as_ref())
-    }
-
-    pub(crate) fn build_with_document(
-        self,
-        document: &'w yamlpath::Document,
-    ) -> Result<Finding<'w>> {
+    pub(crate) fn build<'a>(self, document: &'a impl AsDocument<'a, 'w>) -> Result<Finding<'w>> {
         let mut locations = self
             .locations
             .iter()
-            .map(|l| l.clone().concretize(document))
+            .map(|l| l.clone().concretize(document.as_document()))
             .collect::<Result<Vec<_>>>()?;
 
         locations.extend(self.raw_locations);

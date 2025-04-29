@@ -55,7 +55,7 @@ impl ForbiddenUses {
                             .with_keys(&["uses".into()])
                             .annotated("use of this action is forbidden"),
                     )
-                    .build_with_document(step.document())?,
+                    .build(step)?,
             );
         };
 

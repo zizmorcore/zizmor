@@ -291,7 +291,7 @@ impl TemplateInjection {
                             "{expr} may expand into attacker-controllable code"
                         )),
                     )
-                    .build_with_document(step.document())?,
+                    .build(step)?,
             )
         }
 
