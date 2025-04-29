@@ -69,7 +69,10 @@ impl Obfuscation {
         annotations
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         if let Some(Uses::Repository(uses)) = step.uses() {
@@ -101,7 +104,7 @@ impl Audit for Obfuscation {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_raw<'doc>(&self, input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         for (expr, span) in parse_expressions_from_input(input) {
@@ -127,7 +130,7 @@ impl Audit for Obfuscation {
         Ok(findings)
     }
 
-    fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 

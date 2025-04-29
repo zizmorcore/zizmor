@@ -63,11 +63,11 @@ impl InsecureCommands {
         }
     }
 
-    fn audit_steps<'w>(
+    fn audit_steps<'doc>(
         &self,
-        workflow: &'w Workflow,
-        steps: Steps<'w>,
-    ) -> Result<Vec<Finding<'w>>> {
+        workflow: &'doc Workflow,
+        steps: Steps<'doc>,
+    ) -> Result<Vec<Finding<'doc>>> {
         steps
             .into_iter()
             .filter_map(|step| {
@@ -104,7 +104,7 @@ impl Audit for InsecureCommands {
         Ok(Self)
     }
 
-    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
 
         match &workflow.env {
@@ -138,10 +138,10 @@ impl Audit for InsecureCommands {
         Ok(results)
     }
 
-    fn audit_composite_step<'a>(
+    fn audit_composite_step<'doc>(
         &self,
-        step: &super::CompositeStep<'a>,
-    ) -> Result<Vec<Finding<'a>>> {
+        step: &super::CompositeStep<'doc>,
+    ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let action::StepBody::Run { env, .. } = &step.body else {

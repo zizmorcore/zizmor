@@ -269,7 +269,10 @@ impl TemplateInjection {
         bad_expressions
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some((script, script_loc)) = Self::script_with_location(step) else {
@@ -307,7 +310,7 @@ impl Audit for TemplateInjection {
         Ok(Self)
     }
 
-    fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 

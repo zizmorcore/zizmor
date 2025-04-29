@@ -120,7 +120,7 @@ impl KnownVulnerableActions {
         Ok(results)
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Result<Vec<Finding<'w>>> {
+    fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
@@ -167,11 +167,11 @@ impl Audit for KnownVulnerableActions {
         Ok(Self { client })
     }
 
-    fn audit_step<'w>(&self, step: &Step<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_step<'doc>(&self, step: &Step<'doc>) -> Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 
-    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+    fn audit_composite_step<'doc>(&self, step: &CompositeStep<'doc>) -> Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 }

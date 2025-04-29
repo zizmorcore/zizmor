@@ -85,7 +85,10 @@ impl UnpinnedUses {
         }
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some(uses) = step.uses() else {
@@ -129,7 +132,7 @@ impl Audit for UnpinnedUses {
         })
     }
 
-    fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 

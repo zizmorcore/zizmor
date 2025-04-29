@@ -50,7 +50,7 @@ impl Audit for Artipacked {
         Ok(Self)
     }
 
-    fn audit_normal_job<'w>(&self, job: &super::NormalJob<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_normal_job<'doc>(&self, job: &super::NormalJob<'doc>) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         // First, collect all vulnerable checkouts and upload steps independently.
