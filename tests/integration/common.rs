@@ -25,6 +25,7 @@ pub fn input_under_test(name: &str) -> String {
 
 pub enum OutputMode {
     Stdout,
+    #[allow(dead_code, reason = "currently not used by any integration test")]
     Stderr,
     Both,
 }
