@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(workflow_under_test(\"template-injection/pr-317-repro.yml\")).run()?"
-snapshot_kind: text
+expression: "zizmor().input(input_under_test(\"template-injection/pr-317-repro.yml\")).run()?"
 ---
 warning[template-injection]: code injection via template expansion
   --> @@INPUT@@:27:9

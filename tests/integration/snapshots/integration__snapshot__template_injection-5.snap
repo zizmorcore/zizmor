@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(workflow_under_test(\"template-injection/static-env.yml\")).run()?"
-snapshot_kind: text
+expression: "zizmor().input(input_under_test(\"template-injection/static-env.yml\")).run()?"
 ---
 help[template-injection]: code injection via template expansion
   --> @@INPUT@@:41:9

@@ -1,7 +1,6 @@
 ---
 source: tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@42064a9533f401a493c3599e56f144918f8eacfd\").run()?"
-snapshot_kind: text
 ---
  INFO collect_inputs: zizmor: collected 20 inputs from woodruffw/gha-hazmat
  INFO zizmor: skipping impostor-commit: offline audits only requested
