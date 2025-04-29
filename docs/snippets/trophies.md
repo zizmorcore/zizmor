@@ -326,6 +326,7 @@
 
     ??? example "Examples"
         - grafana/grizzly#610
+        - grafana/logs-drilldown#1222
 
 
 -   ![](https://github.com/GreptimeTeam.png?size=40){ width="40" loading=lazy align=left } GreptimeTeam
