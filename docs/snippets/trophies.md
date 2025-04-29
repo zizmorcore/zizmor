@@ -329,8 +329,10 @@
         - grafana/beyla#1868
         - grafana/carbon-relay-ng#603
         - grafana/carbon-relay-ng#601
+        - grafana/clickhouse-datasource#1231
         - grafana/grizzly#610
         - grafana/logs-drilldown#1222
+        - grafana/pyroscope#4157
         - grafana/tanka#1441
 
 
