@@ -86,7 +86,7 @@ pub(crate) struct Workflow {
     pub(crate) key: InputKey,
     /// A clickable (OSC 8) link to this workflow, if remote.
     pub(crate) link: Option<String>,
-    pub(crate) document: yamlpath::Document,
+    document: yamlpath::Document,
     pub(crate) line_index: LineIndex,
     inner: workflow::Workflow,
 }
@@ -727,7 +727,7 @@ pub(crate) struct Action {
     /// This action's unique key into zizmor's runtime registry.
     pub(crate) key: InputKey,
     pub(crate) link: Option<String>,
-    pub(crate) document: yamlpath::Document,
+    document: yamlpath::Document,
     pub(crate) line_index: LineIndex,
     inner: action::Action,
 }
