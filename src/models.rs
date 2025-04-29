@@ -97,12 +97,6 @@ impl<'a> AsDocument<'a, 'a> for Workflow {
     }
 }
 
-impl AsRef<yamlpath::Document> for Workflow {
-    fn as_ref(&self) -> &yamlpath::Document {
-        &self.document
-    }
-}
-
 impl Debug for Workflow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{key}", key = self.key)
@@ -635,7 +629,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
     }
 
     fn document(&self) -> &'doc yamlpath::Document {
-        self.workflow().as_ref()
+        self.workflow().as_document()
     }
 }
 
