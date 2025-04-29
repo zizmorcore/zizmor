@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(workflow_under_test(\"self-hosted/self-hosted-runner-group.yml\")).args([\"--persona=auditor\"]).run()?"
-snapshot_kind: text
+expression: "zizmor().input(input_under_test(\"self-hosted/self-hosted-runner-group.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 note[self-hosted-runner]: runs on a self-hosted runner
  --> @@INPUT@@:8:5

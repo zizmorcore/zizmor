@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"ref-confusion/issue-518-repro.yml\")).offline(false).run()?"
-snapshot_kind: text
 ---
 error[unpinned-uses]: unpinned action reference
   --> @@INPUT@@:12:9

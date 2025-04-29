@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(workflow_under_test(\"github-env/action.yml\")).run()?"
-snapshot_kind: text
+expression: "zizmor().input(input_under_test(\"github-env/action.yml\")).run()?"
 ---
 error[github-env]: dangerous use of environment file
   --> @@INPUT@@:10:7
