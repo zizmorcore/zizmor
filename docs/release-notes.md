@@ -16,7 +16,7 @@ of `zizmor`.
   but may indicate an attempt to obscure malicious behavior (#683)
 
 * **New audit**: The [stale-action-refs] pedantic audit detects pinned
-  action references which don't point to a Git tag (#TODO)
+  action references which don't point to a Git tag (#713)
 
 ### Bug Fixes 🐛
 
