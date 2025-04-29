@@ -62,6 +62,19 @@ pub(crate) trait StepCommon<'s> {
     /// Like [`Self::location()`], except with the step's `name`
     /// key as the final path component if present.
     fn location_with_name(&self) -> SymbolicLocation<'s>;
+
+    /// Returns the document which contains this step.
+    fn document(&self) -> &'s yamlpath::Document;
+}
+
+pub(crate) trait AsDocument<'a, 'doc> {
+    fn as_document(&'a self) -> &'doc yamlpath::Document;
+}
+
+impl<'a, 'doc, T: StepCommon<'doc>> AsDocument<'a, 'doc> for T {
+    fn as_document(&'a self) -> &'doc yamlpath::Document {
+        self.document()
+    }
 }
 
 /// Represents an entire GitHub Actions workflow.
@@ -78,8 +91,8 @@ pub(crate) struct Workflow {
     inner: workflow::Workflow,
 }
 
-impl AsRef<yamlpath::Document> for Workflow {
-    fn as_ref(&self) -> &yamlpath::Document {
+impl<'a> AsDocument<'a, 'a> for Workflow {
+    fn as_document(&'a self) -> &'a yamlpath::Document {
         &self.document
     }
 }
@@ -185,35 +198,35 @@ impl Workflow {
 }
 
 /// Common behavior across both normal and reusable jobs.
-pub(crate) trait JobExt<'w> {
+pub(crate) trait JobExt<'doc> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
-    fn id(&self) -> &'w str;
+    fn id(&self) -> &'doc str;
 
     /// The job's symbolic location.
-    fn location(&self) -> SymbolicLocation<'w>;
+    fn location(&self) -> SymbolicLocation<'doc>;
 
     /// The job's parent [`Workflow`].
-    fn parent(&self) -> &'w Workflow;
+    fn parent(&self) -> &'doc Workflow;
 }
 
 /// Represents a single "normal" GitHub Actions job.
 #[derive(Clone)]
-pub(crate) struct NormalJob<'w> {
+pub(crate) struct NormalJob<'doc> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
-    id: &'w str,
+    id: &'doc str,
     /// The underlying job.
-    inner: &'w job::NormalJob,
+    inner: &'doc job::NormalJob,
     /// The job's parent [`Workflow`].
-    parent: &'w Workflow,
+    parent: &'doc Workflow,
 }
 
-impl<'w> NormalJob<'w> {
-    pub(crate) fn new(id: &'w str, inner: &'w job::NormalJob, parent: &'w Workflow) -> Self {
+impl<'doc> NormalJob<'doc> {
+    pub(crate) fn new(id: &'doc str, inner: &'doc job::NormalJob, parent: &'doc Workflow) -> Self {
         Self { id, inner, parent }
     }
 
     /// An iterator of this job's constituent [`Step`]s.
-    pub(crate) fn steps(&self) -> Steps<'w> {
+    pub(crate) fn steps(&self) -> Steps<'doc> {
         Steps::new(self)
     }
 
@@ -248,25 +261,25 @@ impl<'w> NormalJob<'w> {
     }
 }
 
-impl<'w> JobExt<'w> for NormalJob<'w> {
-    fn id(&self) -> &'w str {
+impl<'doc> JobExt<'doc> for NormalJob<'doc> {
+    fn id(&self) -> &'doc str {
         self.id
     }
 
-    fn location(&self) -> SymbolicLocation<'w> {
+    fn location(&self) -> SymbolicLocation<'doc> {
         self.parent()
             .location()
             .annotated("this job")
             .with_job(self)
     }
 
-    fn parent(&self) -> &'w Workflow {
+    fn parent(&self) -> &'doc Workflow {
         self.parent
     }
 }
 
-impl<'w> Deref for NormalJob<'w> {
-    type Target = &'w job::NormalJob;
+impl<'doc> Deref for NormalJob<'doc> {
+    type Target = &'doc job::NormalJob;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -275,44 +288,44 @@ impl<'w> Deref for NormalJob<'w> {
 
 /// Represents a reusable workflow call job.
 #[derive(Clone)]
-pub(crate) struct ReusableWorkflowCallJob<'w> {
+pub(crate) struct ReusableWorkflowCallJob<'doc> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
-    id: &'w str,
+    id: &'doc str,
     /// The underlying job.
-    inner: &'w job::ReusableWorkflowCallJob,
+    inner: &'doc job::ReusableWorkflowCallJob,
     /// The job's parent [`Workflow`].
-    parent: &'w Workflow,
+    parent: &'doc Workflow,
 }
 
-impl<'w> ReusableWorkflowCallJob<'w> {
+impl<'doc> ReusableWorkflowCallJob<'doc> {
     pub(crate) fn new(
-        id: &'w str,
-        inner: &'w job::ReusableWorkflowCallJob,
-        parent: &'w Workflow,
+        id: &'doc str,
+        inner: &'doc job::ReusableWorkflowCallJob,
+        parent: &'doc Workflow,
     ) -> Self {
         Self { id, inner, parent }
     }
 }
 
-impl<'w> JobExt<'w> for ReusableWorkflowCallJob<'w> {
-    fn id(&self) -> &'w str {
+impl<'doc> JobExt<'doc> for ReusableWorkflowCallJob<'doc> {
+    fn id(&self) -> &'doc str {
         self.id
     }
 
-    fn location(&self) -> SymbolicLocation<'w> {
+    fn location(&self) -> SymbolicLocation<'doc> {
         self.parent()
             .location()
             .annotated("this job")
             .with_job(self)
     }
 
-    fn parent(&self) -> &'w Workflow {
+    fn parent(&self) -> &'doc Workflow {
         self.parent
     }
 }
 
-impl<'w> Deref for ReusableWorkflowCallJob<'w> {
-    type Target = &'w job::ReusableWorkflowCallJob;
+impl<'doc> Deref for ReusableWorkflowCallJob<'doc> {
+    type Target = &'doc job::ReusableWorkflowCallJob;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -321,13 +334,13 @@ impl<'w> Deref for ReusableWorkflowCallJob<'w> {
 
 /// Represents a single GitHub Actions job.
 #[derive(Clone)]
-pub(crate) enum Job<'w> {
-    NormalJob(NormalJob<'w>),
-    ReusableWorkflowCallJob(ReusableWorkflowCallJob<'w>),
+pub(crate) enum Job<'doc> {
+    NormalJob(NormalJob<'doc>),
+    ReusableWorkflowCallJob(ReusableWorkflowCallJob<'doc>),
 }
 
-impl<'w> Job<'w> {
-    fn new(id: &'w str, inner: &'w workflow::Job, parent: &'w Workflow) -> Self {
+impl<'doc> Job<'doc> {
+    fn new(id: &'doc str, inner: &'doc workflow::Job, parent: &'doc Workflow) -> Self {
         match inner {
             workflow::Job::NormalJob(normal) => Job::NormalJob(NormalJob::new(id, normal, parent)),
             workflow::Job::ReusableWorkflowCallJob(reusable) => {
@@ -338,13 +351,13 @@ impl<'w> Job<'w> {
 }
 
 /// An iterable container for jobs within a [`Workflow`].
-pub(crate) struct Jobs<'w> {
-    parent: &'w Workflow,
-    inner: indexmap::map::Iter<'w, String, workflow::Job>,
+pub(crate) struct Jobs<'doc> {
+    parent: &'doc Workflow,
+    inner: indexmap::map::Iter<'doc, String, workflow::Job>,
 }
 
-impl<'w> Jobs<'w> {
-    fn new(workflow: &'w Workflow) -> Self {
+impl<'doc> Jobs<'doc> {
+    fn new(workflow: &'doc Workflow) -> Self {
         Self {
             parent: workflow,
             inner: workflow.jobs.iter(),
@@ -352,8 +365,8 @@ impl<'w> Jobs<'w> {
     }
 }
 
-impl<'w> Iterator for Jobs<'w> {
-    type Item = Job<'w>;
+impl<'doc> Iterator for Jobs<'doc> {
+    type Item = Job<'doc>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let item = self.inner.next();
@@ -370,23 +383,23 @@ impl<'w> Iterator for Jobs<'w> {
 /// This type implements [`Deref`] for [`job::NormalJob::strategy`], providing
 /// access to the underlying data model.
 #[derive(Clone)]
-pub(crate) struct Matrix<'w> {
-    inner: &'w LoE<job::Matrix>,
+pub(crate) struct Matrix<'doc> {
+    inner: &'doc LoE<job::Matrix>,
     pub(crate) expanded_values: Vec<(String, String)>,
 }
 
-impl<'w> Deref for Matrix<'w> {
-    type Target = &'w LoE<job::Matrix>;
+impl<'doc> Deref for Matrix<'doc> {
+    type Target = &'doc LoE<job::Matrix>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<'w> TryFrom<&'w NormalJob<'w>> for Matrix<'w> {
+impl<'doc> TryFrom<&'doc NormalJob<'doc>> for Matrix<'doc> {
     type Error = anyhow::Error;
 
-    fn try_from(job: &'w NormalJob<'w>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(job: &'doc NormalJob<'doc>) -> std::result::Result<Self, Self::Error> {
         let Some(Strategy {
             matrix: Some(inner),
             ..
@@ -399,8 +412,8 @@ impl<'w> TryFrom<&'w NormalJob<'w>> for Matrix<'w> {
     }
 }
 
-impl<'w> Matrix<'w> {
-    pub(crate) fn new(inner: &'w LoE<job::Matrix>) -> Self {
+impl<'doc> Matrix<'doc> {
+    pub(crate) fn new(inner: &'doc LoE<job::Matrix>) -> Self {
         Self {
             inner,
             expanded_values: Matrix::expand_values(inner),
@@ -530,24 +543,24 @@ impl<'w> Matrix<'w> {
 /// This type implements [`Deref`] for [`workflow::job::Step`], which
 /// provides access to the step's actual fields.
 #[derive(Clone)]
-pub(crate) struct Step<'w> {
+pub(crate) struct Step<'doc> {
     /// The step's index within its parent job.
     pub(crate) index: usize,
     /// The inner step model.
-    inner: &'w workflow::job::Step,
+    inner: &'doc workflow::job::Step,
     /// The parent [`Job`].
-    pub(crate) parent: NormalJob<'w>,
+    pub(crate) parent: NormalJob<'doc>,
 }
 
-impl<'w> Deref for Step<'w> {
-    type Target = &'w workflow::job::Step;
+impl<'doc> Deref for Step<'doc> {
+    type Target = &'doc workflow::job::Step;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<'s> StepCommon<'s> for Step<'s> {
+impl<'doc> StepCommon<'doc> for Step<'doc> {
     fn env_is_static(&self, name: &str) -> bool {
         // Collect each of the step, job, and workflow-level `env` blocks
         // and check each.
@@ -600,24 +613,28 @@ impl<'s> StepCommon<'s> for Step<'s> {
         }
     }
 
-    fn location(&self) -> SymbolicLocation<'s> {
+    fn location(&self) -> SymbolicLocation<'doc> {
         self.parent
             .location()
             .with_step(self)
             .annotated("this step")
     }
 
-    fn location_with_name(&self) -> SymbolicLocation<'s> {
+    fn location_with_name(&self) -> SymbolicLocation<'doc> {
         match self.inner.name {
             Some(_) => self.location().with_keys(&["name".into()]),
             None => self.location(),
         }
         .annotated("this step")
     }
+
+    fn document(&self) -> &'doc yamlpath::Document {
+        self.workflow().as_document()
+    }
 }
 
-impl<'w> Step<'w> {
-    fn new(index: usize, inner: &'w workflow::job::Step, parent: NormalJob<'w>) -> Self {
+impl<'doc> Step<'doc> {
+    fn new(index: usize, inner: &'doc workflow::job::Step, parent: NormalJob<'doc>) -> Self {
         Self {
             index,
             inner,
@@ -626,12 +643,12 @@ impl<'w> Step<'w> {
     }
 
     /// Returns this step's parent [`NormalJob`].
-    pub(crate) fn job(&self) -> &NormalJob<'w> {
+    pub(crate) fn job(&self) -> &NormalJob<'doc> {
         &self.parent
     }
 
     /// Returns this step's (grand)parent [`Workflow`].
-    pub(crate) fn workflow(&self) -> &'w Workflow {
+    pub(crate) fn workflow(&self) -> &'doc Workflow {
         self.parent.parent()
     }
 
@@ -674,14 +691,14 @@ impl<'w> Step<'w> {
 }
 
 /// An iterable container for steps within a [`Job`].
-pub(crate) struct Steps<'w> {
-    inner: Enumerate<std::slice::Iter<'w, github_actions_models::workflow::job::Step>>,
-    parent: NormalJob<'w>,
+pub(crate) struct Steps<'doc> {
+    inner: Enumerate<std::slice::Iter<'doc, github_actions_models::workflow::job::Step>>,
+    parent: NormalJob<'doc>,
 }
 
-impl<'w> Steps<'w> {
+impl<'doc> Steps<'doc> {
     /// Create a new [`Steps`].
-    fn new(job: &NormalJob<'w>) -> Self {
+    fn new(job: &NormalJob<'doc>) -> Self {
         Self {
             inner: job.steps.iter().enumerate(),
             parent: job.clone(),
@@ -689,8 +706,8 @@ impl<'w> Steps<'w> {
     }
 }
 
-impl<'w> Iterator for Steps<'w> {
-    type Item = Step<'w>;
+impl<'doc> Iterator for Steps<'doc> {
+    type Item = Step<'doc>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let item = self.inner.next();
@@ -715,8 +732,8 @@ pub(crate) struct Action {
     inner: action::Action,
 }
 
-impl AsRef<yamlpath::Document> for Action {
-    fn as_ref(&self) -> &yamlpath::Document {
+impl<'a> AsDocument<'a, 'a> for Action {
+    fn as_document(&'a self) -> &'a yamlpath::Document {
         &self.document
     }
 }
@@ -893,6 +910,10 @@ impl<'s> StepCommon<'s> for CompositeStep<'s> {
             None => self.location(),
         }
         .annotated("this step")
+    }
+
+    fn document(&self) -> &'s yamlpath::Document {
+        self.action().as_document()
     }
 }
 

@@ -2,7 +2,7 @@ use anyhow::{Context, anyhow};
 use github_actions_models::common::Uses;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
-use crate::finding::{Confidence, Finding, FindingBuilder, Persona, Severity};
+use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::uses::RepositoryUsesPattern;
 use crate::models::{CompositeStep, Step, StepCommon};
 use serde::Deserialize;
@@ -36,11 +36,14 @@ impl ForbiddenUses {
         }
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Vec<FindingBuilder<'w>> {
+    fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some(uses) = step.uses() else {
-            return findings;
+            return Ok(findings);
         };
 
         if self.use_denied(uses) {
@@ -54,11 +57,12 @@ impl ForbiddenUses {
                             .primary()
                             .with_keys(&["uses".into()])
                             .annotated("use of this action is forbidden"),
-                    ),
+                    )
+                    .build(step)?,
             );
         };
 
-        findings
+        Ok(findings)
     }
 }
 
@@ -79,11 +83,8 @@ impl Audit for ForbiddenUses {
         Ok(Self { config })
     }
 
-    fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
-            .into_iter()
-            .map(|f| f.build(step.workflow()))
-            .collect()
     }
 
     fn audit_composite_step<'a>(
@@ -91,9 +92,6 @@ impl Audit for ForbiddenUses {
         step: &CompositeStep<'a>,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
         self.process_step(step)
-            .into_iter()
-            .map(|f| f.build(step.action()))
-            .collect()
     }
 }
 

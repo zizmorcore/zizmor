@@ -71,7 +71,10 @@ impl Audit for UseTrustedPublishing {
         Ok(Self)
     }
 
-    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &super::Step<'doc>,
+    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
         let StepBody::Uses {

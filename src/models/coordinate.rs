@@ -368,6 +368,10 @@ mod tests {
         fn location_with_name(&self) -> crate::finding::SymbolicLocation<'s> {
             unimplemented!()
         }
+
+        fn document(&self) -> &'s yamlpath::Document {
+            unimplemented!()
+        }
     }
 
     #[test]

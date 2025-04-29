@@ -11,7 +11,7 @@ use terminal_link::Link;
 
 use crate::{
     audit::AuditInput,
-    models::{CompositeStep, JobExt, Step},
+    models::{AsDocument, CompositeStep, JobExt, Step},
     registry::InputKey,
 };
 
@@ -99,14 +99,14 @@ pub(crate) enum Severity {
 }
 
 #[derive(Serialize, Clone, Debug)]
-pub(crate) struct StepLocation<'w> {
+pub(crate) struct StepLocation<'doc> {
     pub(crate) index: usize,
-    pub(crate) id: Option<&'w str>,
-    pub(crate) name: Option<&'w str>,
+    pub(crate) id: Option<&'doc str>,
+    pub(crate) name: Option<&'doc str>,
 }
 
-impl<'w> From<&Step<'w>> for StepLocation<'w> {
-    fn from(step: &Step<'w>) -> Self {
+impl<'doc> From<&Step<'doc>> for StepLocation<'doc> {
+    fn from(step: &Step<'doc>) -> Self {
         Self {
             index: step.index,
             id: step.id.as_deref(),
@@ -116,8 +116,8 @@ impl<'w> From<&Step<'w>> for StepLocation<'w> {
 }
 
 #[derive(Serialize, Clone, Debug)]
-pub(crate) enum RouteComponent<'w> {
-    Key(Cow<'w, str>),
+pub(crate) enum RouteComponent<'doc> {
+    Key(Cow<'doc, str>),
     Index(usize),
 }
 
@@ -127,25 +127,25 @@ impl From<usize> for RouteComponent<'_> {
     }
 }
 
-impl<'w> From<&'w str> for RouteComponent<'w> {
-    fn from(value: &'w str) -> Self {
+impl<'doc> From<&'doc str> for RouteComponent<'doc> {
+    fn from(value: &'doc str) -> Self {
         Self::Key(Cow::Borrowed(value))
     }
 }
 
 #[derive(Serialize, Clone, Debug)]
-pub(crate) struct Route<'w> {
-    components: Vec<RouteComponent<'w>>,
+pub(crate) struct Route<'doc> {
+    components: Vec<RouteComponent<'doc>>,
 }
 
-impl<'w> Route<'w> {
-    pub(crate) fn new() -> Route<'w> {
+impl<'doc> Route<'doc> {
+    pub(crate) fn new() -> Route<'doc> {
         Self {
             components: Default::default(),
         }
     }
 
-    fn with_keys(&self, keys: &[RouteComponent<'w>]) -> Route<'w> {
+    fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> Route<'doc> {
         let mut components = self.components.clone();
         components.extend(keys.iter().cloned());
         Route { components }
@@ -175,9 +175,9 @@ pub(crate) enum LocationKind {
 
 /// Represents a symbolic location.
 #[derive(Serialize, Clone, Debug)]
-pub(crate) struct SymbolicLocation<'w> {
+pub(crate) struct SymbolicLocation<'doc> {
     /// The unique ID of the input, as it appears in the input registry.
-    pub(crate) key: &'w InputKey,
+    pub(crate) key: &'doc InputKey,
 
     /// An annotation for this location.
     pub(crate) annotation: String,
@@ -189,14 +189,14 @@ pub(crate) struct SymbolicLocation<'w> {
     pub(crate) link: Option<String>,
 
     /// A symbolic route (of keys and indices) to the final location.
-    pub(crate) route: Route<'w>,
+    pub(crate) route: Route<'doc>,
 
     /// The kind of location.
     pub(crate) kind: LocationKind,
 }
 
-impl<'w> SymbolicLocation<'w> {
-    pub(crate) fn with_keys(&self, keys: &[RouteComponent<'w>]) -> SymbolicLocation<'w> {
+impl<'doc> SymbolicLocation<'doc> {
+    pub(crate) fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> SymbolicLocation<'doc> {
         SymbolicLocation {
             key: self.key,
             annotation: self.annotation.clone(),
@@ -206,38 +206,38 @@ impl<'w> SymbolicLocation<'w> {
         }
     }
 
-    pub(crate) fn with_job(&self, job: &impl JobExt<'w>) -> SymbolicLocation<'w> {
+    pub(crate) fn with_job(&self, job: &impl JobExt<'doc>) -> SymbolicLocation<'doc> {
         self.with_keys(&["jobs".into(), job.id().into()])
     }
 
-    pub(crate) fn with_step(&self, step: &Step<'w>) -> SymbolicLocation<'w> {
+    pub(crate) fn with_step(&self, step: &Step<'doc>) -> SymbolicLocation<'doc> {
         self.with_keys(&["steps".into(), step.index.into()])
     }
 
-    pub(crate) fn with_composite_step(&self, step: &CompositeStep<'w>) -> SymbolicLocation<'w> {
+    pub(crate) fn with_composite_step(&self, step: &CompositeStep<'doc>) -> SymbolicLocation<'doc> {
         self.with_keys(&["runs".into(), "steps".into(), step.index.into()])
     }
 
     /// Adds a human-readable annotation to the current `SymbolicLocation`.
-    pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> SymbolicLocation<'w> {
+    pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> SymbolicLocation<'doc> {
         self.annotation = annotation.into();
         self
     }
 
     /// Adds a URL to the current `SymbolicLocation`.
-    pub(crate) fn with_url(mut self, url: impl Into<String>) -> SymbolicLocation<'w> {
+    pub(crate) fn with_url(mut self, url: impl Into<String>) -> SymbolicLocation<'doc> {
         self.link = Some(Link::new(&self.annotation, &url.into()).to_string());
         self
     }
 
     /// Mark the current `SymbolicLocation` as a "primary" location.
-    pub(crate) fn primary(mut self) -> SymbolicLocation<'w> {
+    pub(crate) fn primary(mut self) -> SymbolicLocation<'doc> {
         self.kind = LocationKind::Primary;
         self
     }
 
     /// Mark the current `SymbolicLocation` as a "hidden" location.
-    pub(crate) fn hidden(mut self) -> SymbolicLocation<'w> {
+    pub(crate) fn hidden(mut self) -> SymbolicLocation<'doc> {
         self.kind = LocationKind::Hidden;
         self
     }
@@ -251,12 +251,7 @@ impl<'w> SymbolicLocation<'w> {
     }
 
     /// Concretize this `SymbolicLocation`, consuming it in the process.
-    pub(crate) fn concretize(
-        self,
-        document: &'w impl AsRef<yamlpath::Document>,
-    ) -> Result<Location<'w>> {
-        let document = document.as_ref();
-
+    pub(crate) fn concretize(self, document: &'doc yamlpath::Document) -> Result<Location<'doc>> {
         // If we don't have a path into the workflow, all
         // we have is the workflow itself.
         let feature = if self.route.components.is_empty() {
@@ -351,7 +346,7 @@ static IGNORE_EXPR: LazyLock<Regex> =
 /// Represents a single source comment.
 #[derive(Debug, Serialize)]
 #[serde(transparent)]
-pub(crate) struct Comment<'w>(&'w str);
+pub(crate) struct Comment<'doc>(&'doc str);
 
 impl Comment<'_> {
     fn ignores(&self, rule_id: &str) -> bool {
@@ -370,20 +365,20 @@ impl Comment<'_> {
 
 /// An extracted feature, along with its concrete location.
 #[derive(Serialize)]
-pub(crate) struct Feature<'w> {
+pub(crate) struct Feature<'doc> {
     /// The feature's concrete location, as both an offset range and point span.
     pub(crate) location: ConcreteLocation,
 
     /// The feature's textual content.
-    pub(crate) feature: &'w str,
+    pub(crate) feature: &'doc str,
 
     /// Any comments within the feature's line span.
-    pub(crate) comments: Vec<Comment<'w>>,
+    pub(crate) comments: Vec<Comment<'doc>>,
 }
 
-impl<'w> Feature<'w> {
-    pub(crate) fn from_span(span: &Range<usize>, input: &'w AuditInput) -> Self {
-        let raw = input.document().source();
+impl<'doc> Feature<'doc> {
+    pub(crate) fn from_span(span: &Range<usize>, input: &'doc AuditInput) -> Self {
+        let raw = input.as_document().source();
         let start = TextSize::new(span.start as u32);
         let end = TextSize::new(span.end as u32);
 
@@ -426,15 +421,15 @@ impl<'w> Feature<'w> {
 
 /// A location within a GitHub Actions workflow, with both symbolic and concrete components.
 #[derive(Serialize)]
-pub(crate) struct Location<'w> {
+pub(crate) struct Location<'doc> {
     /// The symbolic workflow location.
-    pub(crate) symbolic: SymbolicLocation<'w>,
+    pub(crate) symbolic: SymbolicLocation<'doc>,
     /// The concrete location, including extracted feature.
-    pub(crate) concrete: Feature<'w>,
+    pub(crate) concrete: Feature<'doc>,
 }
 
-impl<'w> Location<'w> {
-    pub(crate) fn new(symbolic: SymbolicLocation<'w>, concrete: Feature<'w>) -> Self {
+impl<'doc> Location<'doc> {
+    pub(crate) fn new(symbolic: SymbolicLocation<'doc>, concrete: Feature<'doc>) -> Self {
         Self { symbolic, concrete }
     }
 }
@@ -448,12 +443,12 @@ pub(crate) struct Determinations {
 }
 
 #[derive(Serialize)]
-pub(crate) struct Finding<'w> {
+pub(crate) struct Finding<'doc> {
     pub(crate) ident: &'static str,
     pub(crate) desc: &'static str,
     pub(crate) url: &'static str,
     pub(crate) determinations: Determinations,
-    pub(crate) locations: Vec<Location<'w>>,
+    pub(crate) locations: Vec<Location<'doc>>,
     pub(crate) ignored: bool,
 }
 
@@ -473,18 +468,18 @@ impl Finding<'_> {
     }
 }
 
-pub(crate) struct FindingBuilder<'w> {
+pub(crate) struct FindingBuilder<'doc> {
     ident: &'static str,
     desc: &'static str,
     url: &'static str,
     severity: Severity,
     confidence: Confidence,
     persona: Persona,
-    raw_locations: Vec<Location<'w>>,
-    locations: Vec<SymbolicLocation<'w>>,
+    raw_locations: Vec<Location<'doc>>,
+    locations: Vec<SymbolicLocation<'doc>>,
 }
 
-impl<'w> FindingBuilder<'w> {
+impl<'doc> FindingBuilder<'doc> {
     pub(crate) fn new(ident: &'static str, desc: &'static str, url: &'static str) -> Self {
         Self {
             ident,
@@ -513,21 +508,24 @@ impl<'w> FindingBuilder<'w> {
         self
     }
 
-    pub(crate) fn add_raw_location(mut self, location: Location<'w>) -> Self {
+    pub(crate) fn add_raw_location(mut self, location: Location<'doc>) -> Self {
         self.raw_locations.push(location);
         self
     }
 
-    pub(crate) fn add_location(mut self, location: SymbolicLocation<'w>) -> Self {
+    pub(crate) fn add_location(mut self, location: SymbolicLocation<'doc>) -> Self {
         self.locations.push(location);
         self
     }
 
-    pub(crate) fn build(self, document: &'w impl AsRef<yamlpath::Document>) -> Result<Finding<'w>> {
+    pub(crate) fn build<'a>(
+        self,
+        document: &'a impl AsDocument<'a, 'doc>,
+    ) -> Result<Finding<'doc>> {
         let mut locations = self
             .locations
             .iter()
-            .map(|l| l.clone().concretize(document))
+            .map(|l| l.clone().concretize(document.as_document()))
             .collect::<Result<Vec<_>>>()?;
 
         locations.extend(self.raw_locations);
