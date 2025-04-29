@@ -325,8 +325,13 @@
     ---
 
     ??? example "Examples"
+        - grafana/agent#7148
+        - grafana/beyla#1868
+        - grafana/carbon-relay-ng#603
+        - grafana/carbon-relay-ng#601
         - grafana/grizzly#610
         - grafana/logs-drilldown#1222
+        - grafana/tanka#1441
 
 
 -   ![](https://github.com/GreptimeTeam.png?size=40){ width="40" loading=lazy align=left } GreptimeTeam

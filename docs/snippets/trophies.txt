@@ -49,8 +49,13 @@ getsops/sops#1704
 GenericMappingTools/pygmt#3861
 git-lfs/git-lfs#5930
 gitbutlerapp/gitbutler#5946
+grafana/agent#7148
+grafana/beyla#1868
+grafana/carbon-relay-ng#603
+grafana/carbon-relay-ng#601
 grafana/grizzly#610
 grafana/logs-drilldown#1222
+grafana/tanka#1441
 google/zx#1067
 google/zx#1126
 guacsec/guac#2276
