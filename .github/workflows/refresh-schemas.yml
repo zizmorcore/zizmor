@@ -1,0 +1,40 @@
+name: Refresh schemas
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 12 * * 1'
+
+permissions: {}
+
+jobs:
+  refresh-schemas:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: try to refresh schemas
+        run: |
+          make refresh-schemas
+
+      - name: create PR
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          commit-message: "[BOT] update JSON schemas from SchemaStore"
+          branch: refresh-schemas
+          branch-suffix: timestamp
+          title: "[BOT] update JSON schemas from SchemaStore"
+          body: |
+            This is an automated pull request, updating `src/data`
+            after a detected change in the JSON schemas from SchemaStore.
+
+            Please review manually before merging.
+          assignees: "woodruffw"
+          reviewers: "woodruffw"
