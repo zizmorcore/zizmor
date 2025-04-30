@@ -1,14 +1,79 @@
 //! Helper routines.
 
-use std::ops::Range;
-
+use anyhow::{Error, anyhow};
 use camino::Utf8Path;
 use github_actions_models::common::{
     Env,
     expr::{ExplicitExpr, LoE},
 };
+use jsonschema::{
+    BasicOutput::{Invalid, Valid},
+    Validator,
+    output::{ErrorDescription, OutputUnit},
+    validator_for,
+};
+use std::{collections::VecDeque, ops::Range};
+use std::{fmt::Write, sync::LazyLock};
 
 use crate::{audit::AuditInput, models::AsDocument};
+
+static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+    validator_for(&serde_json::from_str(include_str!("./data/github-action.json")).unwrap())
+        .unwrap()
+});
+
+static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+    validator_for(&serde_json::from_str(include_str!("./data/github-workflow.json")).unwrap())
+        .unwrap()
+});
+
+pub(crate) fn validate_action(contents: String) -> Option<Error> {
+    match serde_yaml::from_str(&contents) {
+        Ok(workflow) => match ACTION_VALIDATOR.apply(&workflow).basic() {
+            Valid(_) => None,
+            Invalid(errors) => Some(parse_validation_errors(errors)),
+        },
+        Err(e) => Some(anyhow!("invalid YAML in action definition: {e}")),
+    }
+}
+
+pub(crate) fn validate_workflow(contents: String) -> Option<Error> {
+    match serde_yaml::from_str(&contents) {
+        Ok(workflow) => match WORKFLOW_VALIDATOR.apply(&workflow).basic() {
+            Valid(_) => None,
+            Invalid(errors) => Some(parse_validation_errors(errors)),
+        },
+        Err(_) => Some(anyhow!("invalid YAML in workflow definition")),
+    }
+}
+
+fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Error {
+    let mut message = String::new();
+
+    for error in errors {
+        let description = error.error_description().to_string();
+        // HACK: error descriptions are sometimes a long rats' nest
+        // of JSON objects. We should render this in a palatable way
+        // but doing so is nontrivial, so we just skip them for now.
+        // NOTE: Experimentally, this seems to mostly happen when
+        // the error for an unmatched "oneOf", so these errors are
+        // typically less useful anyways.
+        if !description.starts_with("{") {
+            let location = error.instance_location().as_str();
+            if location.is_empty() {
+                writeln!(message, "{description}").unwrap();
+            } else {
+                // Convert paths like `/foo/bar/baz` to `foo.bar.baz`,
+                // removing the leading separator.
+                let dotted_location = &location[1..].replace("/", ".");
+
+                writeln!(message, "{dotted_location}: {description}").unwrap();
+            }
+        }
+    }
+
+    anyhow!(message)
+}
 
 /// Convenience trait for inline transformations of `Self`.
 ///
@@ -174,6 +239,7 @@ mod tests {
         registry::InputKey,
         utils::{
             extract_expression, extract_expressions, normalize_shell, parse_expressions_from_input,
+            validate_action, validate_workflow,
         },
     };
 
@@ -326,5 +392,111 @@ jobs:
         ] {
             assert_eq!(normalize_shell(actual), *expected)
         }
+    }
+
+    #[test]
+    fn test_action_validation_valid() {
+        let action = "
+name: 'Action'
+
+description: 'Description'
+inputs:
+  some-input:
+    description: 'Input description'
+    default: 'default'
+
+outputs:
+  some-output:
+    description: 'Output description'
+
+runs:
+  using: docker
+  image: Dockerfile
+"
+        .to_string();
+
+        assert!(validate_action(action).is_none());
+    }
+
+    #[test]
+    fn test_action_validation_invalid() {
+        let action = "
+name: 'Action'
+
+inputs:
+  some-input:
+    description: 'Input description'
+    default: 'default'
+
+outputs:
+  some-output:
+    description: 'Output description'
+
+random:
+
+runs:
+  using: docker
+  image: Dockerfile
+"
+        .to_string();
+
+        let err = validate_action(action).unwrap();
+
+        assert_eq!(
+            format!("{}", err),
+            "Additional properties are not allowed ('random' was unexpected)\n\"description\" is a required property\n"
+        )
+    }
+
+    #[test]
+    fn test_workflow_validation_valid() {
+        let workflow = "
+name: Valid
+
+on:
+  push:
+
+permissions: {}
+
+jobs:
+  valid:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'valid'
+"
+        .to_string();
+
+        assert!(validate_workflow(workflow).is_none())
+    }
+
+    #[test]
+    fn test_workflow_validation_invalid() {
+        let workflow = "
+name: Invalid
+
+boom:
+
+on:
+  workflow_call:
+    inputs:
+      input:
+        description: Input
+
+permissions: {}
+
+jobs:
+  valid:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'invalid'
+"
+        .to_string();
+
+        let err = validate_workflow(workflow).unwrap();
+
+        assert_eq!(
+            format!("{}", err),
+            "on.workflow_call.inputs.input: \"type\" is a required property\nAdditional properties are not allowed ('boom' was unexpected)\n"
+        );
     }
 }

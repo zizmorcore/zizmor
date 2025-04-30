@@ -1,0 +1,22 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{tc}.yml\"))).run()?"
+---
+fatal: no audit was performed
+failed to register input: @@INPUT@@
+
+Caused by:
+    0: invalid GitHub Actions workflow: file://@@INPUT@@
+       
+       Caused by:
+           on.workflow_call.inputs.input: "type" is a required property
+           Additional properties are not allowed ('boom' was unexpected)
+           
+    1: invalid GitHub Actions definition: file://@@INPUT@@
+       
+       Caused by:
+           Additional properties are not allowed ('boom', 'jobs', 'on', 'permissions' were unexpected)
+           "description" is a required property
+           "runs" is a required property
+           
+    2: failed to register input as workflow or action

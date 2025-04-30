@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use camino::Utf8Path;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
@@ -20,7 +20,7 @@ use terminal_link::Link;
 
 use crate::finding::{Route, SymbolicLocation};
 use crate::registry::InputKey;
-use crate::utils::{self, extract_expressions};
+use crate::utils::{self, extract_expressions, validate_action, validate_workflow};
 
 pub(crate) mod coordinate;
 pub(crate) mod uses;
@@ -114,8 +114,28 @@ impl Deref for Workflow {
 impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self> {
-        let inner = serde_yaml::from_str(&contents)
-            .with_context(|| format!("invalid GitHub Actions workflow: {key}"))?;
+        let inner = match serde_yaml::from_str(&contents) {
+            Ok(workflow) => workflow,
+            Err(_) => {
+                // Our workflow can fail to parse for three reasons:
+                // - A syntax error (i.e., invalid YAML)
+                // - A semantic error (i.e., an invalid workflow definition)
+                // - A bug in `github-actions-models`
+                // We catch the first two cases with the Some(Error) variant,
+                // while the last case gets reported specially as a bug
+                // within zizmor itself
+                match validate_workflow(contents) {
+                    Some(err) => {
+                        return Err(err)
+                            .with_context(|| format!("invalid GitHub Actions workflow: {key}"));
+                    }
+                    None => {
+                        return Err(anyhow!("failed to load valid-looking workflow: {key}"))
+                            .context("this strongly suggests a bug in zizmor; please report it!");
+                    }
+                }
+            }
+        };
 
         let document = yamlpath::Document::new(&contents)?;
 
@@ -762,8 +782,22 @@ impl Action {
 
     /// Load a workflow from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self> {
-        let inner: action::Action = serde_yaml::from_str(&contents)
-            .with_context(|| format!("invalid GitHub Actions definition: {key}"))?;
+        let inner = match serde_yaml::from_str(&contents) {
+            Ok(action) => action,
+            Err(_) => {
+                // Like with `Workflow::from_string`.
+                match validate_action(contents) {
+                    Some(err) => {
+                        return Err(err)
+                            .with_context(|| format!("invalid GitHub Actions definition: {key}"));
+                    }
+                    None => {
+                        return Err(anyhow!("failed to load valid-looking action: {key}"))
+                            .context("this strongly suggests a bug in zizmor; please report it!");
+                    }
+                }
+            }
+        };
 
         let document = yamlpath::Document::new(&contents)?;
 

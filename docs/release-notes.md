@@ -20,6 +20,11 @@ of `zizmor`.
 
     Many thanks to @Marcono1234 for proposing and implementing this audit!
 
+* `zizmor` now reports much clearer error messages when auditing fails
+  due to an invalid workflow or action definition (#719)
+
+    Many thanks to @reandreev for implementing these improvements!
+
 ### Bug Fixes 🐛
 
 * The SARIF output format now uses `zizmor/{id}` for rule IDs instead
