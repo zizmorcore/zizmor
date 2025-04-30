@@ -8,11 +8,11 @@
 use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{Audit, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, ComparisonStatus},
-    models::{JobExt as _, Workflow, uses::RepositoryUsesExt as _},
+    models::{JobExt as _, StepCommon, Workflow, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 
@@ -113,19 +113,23 @@ impl ImpostorCommit {
 }
 
 impl Audit for ImpostorCommit {
-    fn new(state: AuditState) -> Result<Self> {
+    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
         if state.no_online_audits {
-            return Err(anyhow!("offline audits only requested"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "offline audits only requested"
+            )));
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't run without a GitHub API token"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "can't run without a GitHub API token"
+            )));
         };
 
         Ok(ImpostorCommit { client })
     }
 
-    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {

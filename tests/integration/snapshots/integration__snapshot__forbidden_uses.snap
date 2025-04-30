@@ -1,0 +1,5 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().config(input_under_test(&format!(\"forbidden-uses/configs/{config}.yml\"))).input(input_under_test(\"forbidden-uses/forbidden-uses-menagerie.yml\")).run()?"
+---
+No findings to report. Good job!

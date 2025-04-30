@@ -187,6 +187,76 @@ impl<'src> Expr<'src> {
         Self::Context(Context::new(r, components))
     }
 
+    fn is_literal(&self) -> bool {
+        matches!(
+            self,
+            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null
+        )
+    }
+
+    /// Returns whether the expression is constant foldable.
+    ///
+    /// There are three kinds of foldable expressions:
+    ///
+    /// 1. Literals, which fold to their literal value;
+    /// 2. Binops/unops with foldable subexpressions, which fold
+    ///    to their evaluation;
+    /// 3. Select function calls where the semantics of the function
+    ///    mean that foldable arguments make the call itself foldable.
+    ///
+    /// NOTE: This implementation is sound but not complete.
+    pub(crate) fn constant_foldable(&self) -> bool {
+        match self {
+            // Literals are always foldable.
+            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null => true,
+            // Binops are foldable if their LHS and RHS are foldable.
+            Expr::BinOp { lhs, op: _, rhs } => lhs.constant_foldable() && rhs.constant_foldable(),
+            // Unops are foldable if their interior expression is foldable.
+            Expr::UnOp { op: _, expr } => expr.constant_foldable(),
+            Expr::Call { func, args } => {
+                // These functions are foldable if their arguments are foldable.
+                if func == "format"
+                    || func == "contains"
+                    || func == "startsWith"
+                    || func == "endsWith"
+                {
+                    args.iter().all(Expr::constant_foldable)
+                } else {
+                    // TODO: fromJSON(toJSON(...)) and vice versa.
+                    false
+                }
+            }
+            // Everything else is presumed non-foldable.
+            _ => false,
+        }
+    }
+
+    /// Like [`Self::constant_foldable`], but for all subexpressions
+    /// rather than the top-level expression.
+    ///
+    /// This has slightly different semantics than `constant_foldable`:
+    /// it doesn't include "trivially" foldable expressions like literals,
+    /// since flagging these as foldable within a larger expression
+    /// would be misleading.
+    pub(crate) fn has_constant_foldable_subexpr(&self) -> bool {
+        if !self.is_literal() && self.constant_foldable() {
+            return true;
+        }
+
+        match self {
+            Expr::Call { func: _, args } => args.iter().any(|a| a.has_constant_foldable_subexpr()),
+            Expr::Context(context) => {
+                let head = &context.components()[0];
+                head.has_constant_foldable_subexpr()
+            }
+            Expr::BinOp { lhs, op: _, rhs } => {
+                lhs.has_constant_foldable_subexpr() || rhs.has_constant_foldable_subexpr()
+            }
+            Expr::UnOp { op: _, expr } => expr.has_constant_foldable_subexpr(),
+            _ => false,
+        }
+    }
+
     /// Returns the contexts in this expression that directly flow into the
     /// expression's evaluation.
     ///
@@ -721,6 +791,68 @@ mod tests {
         for (case, expr) in cases {
             assert_eq!(Expr::parse(case).unwrap(), *expr);
         }
+    }
+
+    #[test]
+    fn test_expr_constant_foldable() -> Result<()> {
+        for (expr, foldable) in &[
+            ("'foo'", true),
+            ("1", true),
+            ("true", true),
+            ("null", true),
+            // boolean and unary expressions of all literals are
+            // always foldable.
+            ("!true", true),
+            ("!null", true),
+            ("true && false", true),
+            ("true || false", true),
+            ("null && !null && true", true),
+            // formats/contains/startsWith/endsWith are foldable
+            // if all of their arguments are foldable.
+            ("format('{0} {1}', 'foo', 'bar')", true),
+            ("format('{0} {1}', 1, 2)", true),
+            ("format('{0} {1}', 1, '2')", true),
+            ("contains('foo', 'bar')", true),
+            ("startsWith('foo', 'bar')", true),
+            ("endsWith('foo', 'bar')", true),
+            ("startsWith(some.context, 'bar')", false),
+            ("endsWith(some.context, 'bar')", false),
+            // Nesting works as long as the nested call is also foldable.
+            ("format('{0} {1}', '1', format('{0}', null))", true),
+            ("format('{0} {1}', '1', startsWith('foo', 'foo'))", true),
+            ("format('{0} {1}', '1', startsWith(foo.bar, 'foo'))", false),
+            ("foo", false),
+            ("foo.bar", false),
+            ("foo.bar[1]", false),
+            ("foo.bar == 'bar'", false),
+            ("foo.bar || bar || baz", false),
+            ("foo.bar && bar && baz", false),
+        ] {
+            let expr = Expr::parse(expr)?;
+            assert_eq!(expr.constant_foldable(), *foldable);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_expr_has_constant_foldable_subexpr() -> Result<()> {
+        for (expr, foldable) in &[
+            // Literals are not considered foldable subexpressions.
+            ("'foo'", false),
+            ("1", false),
+            ("true", false),
+            ("null", false),
+            // Non-foldable expressions with foldable subexpressions
+            (
+                "format('{0}, {1}', github.event.number, format('{0}', 'abc'))",
+                true,
+            ),
+        ] {
+            let expr = Expr::parse(expr)?;
+            assert_eq!(expr.has_constant_foldable_subexpr(), *foldable);
+        }
+        Ok(())
     }
 
     #[test]

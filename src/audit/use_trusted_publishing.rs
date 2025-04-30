@@ -1,16 +1,15 @@
 use std::ops::Deref;
 
-use anyhow::Ok;
 use github_actions_models::{
     common::{EnvValue, Uses},
     workflow::job::StepBody,
 };
 use indexmap::IndexMap;
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{Confidence, Severity},
-    models::uses::RepositoryUsesExt as _,
+    models::{StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 
@@ -22,9 +21,7 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
     "https://test.pypi.org/legacy/",
 ];
 
-pub(crate) struct UseTrustedPublishing {
-    pub(crate) _state: AuditState,
-}
+pub(crate) struct UseTrustedPublishing;
 
 audit_meta!(
     UseTrustedPublishing,
@@ -70,11 +67,14 @@ impl UseTrustedPublishing {
 }
 
 impl Audit for UseTrustedPublishing {
-    fn new(state: AuditState) -> anyhow::Result<Self> {
-        Ok(Self { _state: state })
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+        Ok(Self)
     }
 
-    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &super::Step<'doc>,
+    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
         let StepBody::Uses {

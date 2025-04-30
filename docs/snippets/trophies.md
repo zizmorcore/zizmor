@@ -7,6 +7,14 @@
         - adafruit/circuitpython#9785
 
 
+-   ![](https://github.com/aio-libs.png?size=40){ width="40" loading=lazy align=left } aio-libs
+
+    ---
+
+    ??? example "Examples"
+        - aio-libs/aiobotocore#1344
+
+
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
 
     ---
@@ -99,6 +107,15 @@
         - cakephp/cakephp#18081
 
 
+-   ![](https://github.com/canonical.png?size=40){ width="40" loading=lazy align=left } canonical
+
+    ---
+
+    ??? example "Examples"
+        - canonical/operator#1656
+        - canonical/testflinger#630
+
+
 -   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl
 
     ---
@@ -156,6 +173,14 @@
 
     ??? example "Examples"
         - Diaoul/subliminal#1190
+
+
+-   ![](https://github.com/docker.png?size=40){ width="40" loading=lazy align=left } docker
+
+    ---
+
+    ??? example "Examples"
+        - docker/compose#12737
 
 
 -   ![](https://github.com/earthobservations.png?size=40){ width="40" loading=lazy align=left } earthobservations
@@ -295,6 +320,23 @@
         - google/zx#1126
 
 
+-   ![](https://github.com/grafana.png?size=40){ width="40" loading=lazy align=left } grafana
+
+    ---
+
+    ??? example "Examples"
+        - grafana/agent#7148
+        - grafana/beyla#1868
+        - grafana/carbon-relay-ng#601
+        - grafana/carbon-relay-ng#602
+        - grafana/carbon-relay-ng#603
+        - grafana/clickhouse-datasource#1231
+        - grafana/grizzly#610
+        - grafana/logs-drilldown#1222
+        - grafana/pyroscope#4157
+        - grafana/tanka#1441
+
+
 -   ![](https://github.com/GreptimeTeam.png?size=40){ width="40" loading=lazy align=left } GreptimeTeam
 
     ---
@@ -390,6 +432,14 @@
         - icsharpcode/ILSpy#3365
 
 
+-   ![](https://github.com/immich-app.png?size=40){ width="40" loading=lazy align=left } immich-app
+
+    ---
+
+    ??? example "Examples"
+        - immich-app/immich#17651
+
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---
@@ -404,6 +454,14 @@
 
     ??? example "Examples"
         - jj-vcs/jj#5076
+
+
+-   ![](https://github.com/jupyterhub.png?size=40){ width="40" loading=lazy align=left } jupyterhub
+
+    ---
+
+    ??? example "Examples"
+        - jupyterhub/jupyterhub#5049
 
 
 -   ![](https://github.com/kanidm.png?size=40){ width="40" loading=lazy align=left } kanidm
@@ -526,6 +584,7 @@
     ---
 
     ??? example "Examples"
+        - mozilla/fxa#18628
         - mozilla/neqo#2413
 
 
@@ -550,6 +609,7 @@
     ---
 
     ??? example "Examples"
+        - nextcloud/user_saml#947
         - nextcloud/.github#477
 
 

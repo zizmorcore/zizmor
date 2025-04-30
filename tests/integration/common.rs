@@ -1,4 +1,5 @@
 use anyhow::{Context as _, Result};
+use regex::{Captures, Regex};
 use std::{env::current_dir, io::ErrorKind};
 
 use assert_cmd::Command;
@@ -24,6 +25,7 @@ pub fn input_under_test(name: &str) -> String {
 
 pub enum OutputMode {
     Stdout,
+    #[allow(dead_code, reason = "currently not used by any integration test")]
     Stderr,
     Both,
 }
@@ -33,7 +35,9 @@ pub struct Zizmor {
     unbuffer: bool,
     offline: bool,
     inputs: Vec<String>,
+    config: Option<String>,
     output: OutputMode,
+    expects_failure: bool,
 }
 
 impl Zizmor {
@@ -46,7 +50,9 @@ impl Zizmor {
             unbuffer: false,
             offline: true,
             inputs: vec![],
+            config: None,
             output: OutputMode::Stdout,
+            expects_failure: false,
         }
     }
 
@@ -70,6 +76,11 @@ impl Zizmor {
         self
     }
 
+    pub fn config(mut self, config: impl Into<String>) -> Self {
+        self.config = Some(config.into());
+        self
+    }
+
     pub fn unbuffer(mut self, flag: bool) -> Self {
         self.unbuffer = flag;
         self
@@ -85,6 +96,14 @@ impl Zizmor {
         self
     }
 
+    pub fn expects_failure(mut self, flag: bool) -> Self {
+        if flag {
+            self = self.output(OutputMode::Both);
+        }
+        self.expects_failure = flag;
+        self
+    }
+
     pub fn run(mut self) -> Result<String> {
         if self.offline {
             self.cmd.arg("--offline");
@@ -92,6 +111,12 @@ impl Zizmor {
             // If we're running in online mode, we pre-assert the
             // presence of GH_TOKEN to make configuration failures more obvious.
             std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
+        }
+
+        if let Some(config) = self.config {
+            self.cmd.arg("--config").arg(config);
+        } else {
+            self.cmd.arg("--no-config");
         }
 
         for input in &self.inputs {
@@ -136,8 +161,28 @@ impl Zizmor {
             OutputMode::Both => [output.stderr, output.stdout].concat(),
         })?;
 
+        if let Some(exit_code) = output.status.code() {
+            // There are other nonzero exit codes that don't indicate failure;
+            // 1 is our only failure code.
+            let is_failure = exit_code == 1;
+            if is_failure != self.expects_failure {
+                anyhow::bail!("zizmor exited with unexpected code {exit_code}");
+            }
+        }
+
+        let input_placeholder = "@@INPUT@@";
         for input in &self.inputs {
-            raw = raw.replace(input, "@@INPUT@@");
+            raw = raw.replace(input, input_placeholder);
+        }
+
+        // Normalize Windows '\' file paths to using '/', to get consistent snapshot test outputs
+        if cfg!(windows) {
+            let input_path_regex = Regex::new(&format!(r"{input_placeholder}[\\/\w.-]+"))?;
+            raw = input_path_regex
+                .replace_all(&raw, |captures: &Captures| {
+                    captures.get(0).unwrap().as_str().replace("\\", "/")
+                })
+                .into_owned();
         }
 
         Ok(raw)

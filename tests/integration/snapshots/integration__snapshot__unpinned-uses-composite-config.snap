@@ -1,0 +1,29 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().config(input_under_test(\"unpinned-uses/configs/composite.yml\")).input(input_under_test(\"unpinned-uses/menagerie-of-uses.yml\")).run()?"
+---
+error[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:11:9
+   |
+11 |       - uses: actions/setup-python@v4
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by actions/setup-python policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:27:9
+   |
+27 |       - uses: github/codeql-action/init@v3
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:29:9
+   |
+29 |       - uses: github/codeql-action/upload-sarif@v3
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+3 findings: 0 unknown, 0 informational, 0 low, 0 medium, 3 high

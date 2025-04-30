@@ -7,12 +7,12 @@ use github_actions_models::{
 };
 use itertools::Itertools as _;
 
-use super::{Audit, audit_meta};
-use crate::utils::split_patterns;
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Persona, Severity},
-    models::{JobExt, uses::RepositoryUsesExt as _},
+    models::{JobExt, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
+    utils::split_patterns,
 };
 
 pub(crate) struct Artipacked;
@@ -46,11 +46,11 @@ impl Artipacked {
 }
 
 impl Audit for Artipacked {
-    fn new(_state: AuditState) -> Result<Self> {
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
-    fn audit_normal_job<'w>(&self, job: &super::NormalJob<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_normal_job<'doc>(&self, job: &super::NormalJob<'doc>) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         // First, collect all vulnerable checkouts and upload steps independently.

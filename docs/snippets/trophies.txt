@@ -5,6 +5,7 @@
 # owner/repo@commit for individual commits
 
 adafruit/circuitpython#9785
+aio-libs/aiobotocore#1344
 apache/airflow#45408
 apache/opennlp#736
 artichoke/artichoke#2825
@@ -20,6 +21,8 @@ bitcoindevkit/bdk#1778
 blakeblackshear/frigate#15490
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 cakephp/cakephp#18081
+canonical/operator#1656
+canonical/testflinger#630
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 danmar/cppcheck#7044
@@ -30,6 +33,7 @@ datalens-tech/datalens-backend#777
 davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
 Diaoul/subliminal#1190
+docker/compose#12737
 earthobservations/wetterdienst#1440
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
@@ -45,6 +49,16 @@ getsops/sops#1704
 GenericMappingTools/pygmt#3861
 git-lfs/git-lfs#5930
 gitbutlerapp/gitbutler#5946
+grafana/agent#7148
+grafana/beyla#1868
+grafana/carbon-relay-ng#601
+grafana/carbon-relay-ng#602
+grafana/carbon-relay-ng#603
+grafana/clickhouse-datasource#1231
+grafana/grizzly#610
+grafana/logs-drilldown#1222
+grafana/pyroscope#4157
+grafana/tanka#1441
 google/zx#1067
 google/zx#1126
 guacsec/guac#2276
@@ -80,8 +94,10 @@ hynek/stamina#81
 hynek/structlog#663
 hynek/svcs#111
 icsharpcode/ILSpy#3365
+immich-app/immich#17651
 Instagram/LibCST#1262
 jj-vcs/jj#5076
+jupyterhub/jupyterhub#5049
 kanidm/kanidm#3430
 lmstudio-ai/venvstacks#51
 matplotlib/matplotlib#29251
@@ -106,9 +122,11 @@ MoarVM/MoarVM#1875
 mongodb/motor#312
 mongodb/mongo-python-driver#2001
 mongodb-labs/flask-pymongo#170
+mozilla/fxa#18628
 mozilla/neqo#2413
 narwhals-dev/narwhals#1567
 NetApp/harvest#3247
+nextcloud/user_saml#947
 nextcloud/.github#477
 NixOS/infra#613
 NLnetLabs/nsd#413

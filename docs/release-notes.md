@@ -11,11 +11,56 @@ of `zizmor`.
 
 ### New Features 🌈
 
+* **New audit**: The [obfuscation] audit detects obfuscatory patterns in
+  GitHub Actions usages. These patterns are not themselves dangerous,
+  but may indicate an attempt to obscure malicious behavior (#683)
+
+* **New audit**: The [stale-action-refs] pedantic audit detects pinned
+  action references which don't point to a Git tag (#713)
+
+    Many thanks to @Marcono1234 for proposing and implementing this audit!
+
+### Bug Fixes 🐛
+
+* The SARIF output format now uses `zizmor/{id}` for rule IDs instead
+  of bare IDs, reducing the chance of conflict or confusion with other tools
+  (#710)
+* The SARIF output format now includes a rule name for each rule descriptor,
+  which should improve rendering behavior in SARIF viewers like the
+  VS Code SARIF Viewer extension (#710)
+
+## v1.6.0
+
+### New Features 🌈
+
+* **New audit**: The [forbidden-uses] audit is a configurable audit
+  that allows allow- or denylisting of entire orgs, repos, or specific
+  action patterns. This audit must be configured; by default it has
+  no effect (#664)
+
+    Many thanks to @Holzhaus for proposing and initiating this new audit!
+
 * `zizmor` now supports `--format=github` as an output format.
   This format produces check annotations via GitHub workflow commands,
   e.g. `::warning` and `::error`. See the
   [Output formats](./usage.md#output-formats) documentation for more information
   on annotations, including key limitations (#634)
+* The [unpinned-uses] audit has been completely rewritten, with two key
+  changes:
+
+    * The audit now has
+      [configurable policies](./audits.md#unpinned-uses-configuration)
+      that give users more control over the audit's behavior. In particular,
+      users can now define policies that mirror their actual threat model,
+      such as trusting their own GitHub organizations while leaving
+      others untrusted.
+    * The audit's default policy is more precise and conservative:
+      official GitHub actions (e.g. those under `actions/*` and similar)
+      are allowed to be pinned by branch or tag, but all other actions
+      are required to be pinned by SHA. This is a change from the previous
+      policy, which was to only flag completely unpinned actions by default.
+
+    Many thanks to @Holzhaus for motivating this change! (#663, #574)
 
 ### Improvements 🌱
 
@@ -30,6 +75,8 @@ of `zizmor`.
 * `--format=json` is now an alias for `--format=json-v1`, enabling
   future JSON formats. The policy for the `--format=json` alias is
   documented under [Output formats - JSON](./usage.md#json) (#657)
+* Configuration file loading is now stricter, and produces a more useful
+  error message when the configuration file is invalid (#663)
 
 ### Bug Fixes 🐛
 
@@ -45,6 +92,8 @@ of `zizmor`.
   location spans for YAML inputs with comments inside block sequences (#660)
 * The [template-injection] audit no longer considers
   `github.job` dangerous (#661)
+* The [template-injection] audit no longer considers
+  `github.event.pull_request.head.repo.fork` dangerous (#675)
 
 ## v1.5.2
 
@@ -671,3 +720,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [bot-conditions]: ./audits.md#bot-conditions
 [overprovisioned-secrets]: ./audits.md#overprovisioned-secrets
 [unredacted-secrets]: ./audits.md#unredacted-secrets
+[forbidden-uses]: ./audits.md#forbidden-uses
+[obfuscation]: ./audits.md#obfuscation
+[stale-action-refs]: ./audits.md#stale-action-refs

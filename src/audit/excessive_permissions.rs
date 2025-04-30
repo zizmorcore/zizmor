@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
-use super::{Audit, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::models::JobExt as _;
 use crate::{
     AuditState,
@@ -37,22 +37,20 @@ audit_meta!(
     "overly broad permissions"
 );
 
-pub(crate) struct ExcessivePermissions {
-    pub(crate) _config: AuditState,
-}
+pub(crate) struct ExcessivePermissions;
 
 impl Audit for ExcessivePermissions {
-    fn new(config: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
-        Ok(Self { _config: config })
+        Ok(Self)
     }
 
-    fn audit_workflow<'w>(
+    fn audit_workflow<'doc>(
         &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+        workflow: &'doc crate::models::Workflow,
+    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
         let all_jobs_have_permissions = workflow

@@ -1,7 +1,7 @@
 [package]
 name = "zizmor"
 description = "Static analysis for GitHub Actions"
-version = "1.5.2"
+version = "1.6.0"
 edition = "2024"
 repository = "https://github.com/woodruffw/zizmor"
 homepage = "https://github.com/woodruffw/zizmor"
@@ -23,15 +23,15 @@ tty-tests = []
 [dependencies]
 annotate-snippets = "0.11.5"
 anstream = "0.6.18"
-anyhow = "1.0.97"
+anyhow = "1.0.98"
 camino = { version = "1.1.9", features = ["serde1"] }
-clap = { version = "4.5.35", features = ["derive", "env"] }
+clap = { version = "4.5.37", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
 etcetera = "0.10.0"
 flate2 = "1.1.1"
-github-actions-models = "0.28.0"
+github-actions-models = "0.28.1"
 http-cache-reqwest = "0.15.1"
 human-panic = "2.0.1"
 ignore = "0.4.23"
@@ -49,13 +49,14 @@ reqwest = { version = "0.12.15", features = [
     "json",
     "rustls-tls",
 ], default-features = false }
-reqwest-middleware = "0.4.1"
+reqwest-middleware = "0.4.2"
 serde = { version = "1.0.219", features = ["derive"] }
 serde-sarif = "0.7.0"
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
 tar = "0.4.44"
 terminal-link = "0.1.0"
+thiserror = "2.0.12"
 tokio = { version = "1.44.2", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-indicatif = "0.3.9"
@@ -67,13 +68,12 @@ yamlpath = "0.16.0"
 
 [profile.dev.package]
 insta.opt-level = 3
-similar.opt-level = 3
 
 [profile.release]
 lto = true
 
 [dev-dependencies]
-assert_cmd = "2.0.16"
-insta = { version = "1.42.2" }
+assert_cmd = "2.0.17"
+insta = { version = "1.43.0" }
 pretty_assertions = "1.4.1"
-serde_json_path = "0.7.1"
+serde_json_path = "0.7.2"

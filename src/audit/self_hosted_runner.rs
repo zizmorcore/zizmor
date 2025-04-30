@@ -11,7 +11,7 @@ use github_actions_models::{
     workflow::job::RunsOn,
 };
 
-use super::{Audit, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::models::Matrix;
 use crate::{
     AuditState,
@@ -28,17 +28,17 @@ audit_meta!(
 );
 
 impl Audit for SelfHostedRunner {
-    fn new(_state: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_workflow<'w>(
+    fn audit_workflow<'doc>(
         &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> Result<Vec<crate::finding::Finding<'w>>> {
+        workflow: &'doc crate::models::Workflow,
+    ) -> Result<Vec<crate::finding::Finding<'doc>>> {
         let mut results = vec![];
 
         for job in workflow.jobs() {

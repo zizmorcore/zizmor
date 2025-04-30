@@ -5,7 +5,7 @@ use crate::{
     utils::parse_expressions_from_input,
 };
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditLoadError, AuditState, audit_meta};
 
 pub(crate) struct UnredactedSecrets;
 
@@ -16,17 +16,17 @@ audit_meta!(
 );
 
 impl Audit for UnredactedSecrets {
-    fn new(_: crate::AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(
+    fn audit_raw<'doc>(
         &self,
-        input: &'w super::AuditInput,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+        input: &'doc super::AuditInput,
+    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
         for (expr, span) in parse_expressions_from_input(input) {
@@ -34,8 +34,6 @@ impl Audit for UnredactedSecrets {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
-
-            expr.as_curly();
 
             for _ in Self::secret_leakages(&parsed) {
                 findings.push(

@@ -4,7 +4,7 @@ use crate::{
     utils::parse_expressions_from_input,
 };
 
-use super::{Audit, AuditInput, audit_meta};
+use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
 
 pub(crate) struct OverprovisionedSecrets;
 
@@ -15,14 +15,17 @@ audit_meta!(
 );
 
 impl Audit for OverprovisionedSecrets {
-    fn new(_state: super::AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<super::Finding<'w>>> {
+    fn audit_raw<'doc>(
+        &self,
+        input: &'doc AuditInput,
+    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
         for (expr, span) in parse_expressions_from_input(input) {
@@ -30,8 +33,6 @@ impl Audit for OverprovisionedSecrets {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
-
-            expr.as_curly();
 
             for _ in Self::secrets_expansions(&parsed) {
                 findings.push(

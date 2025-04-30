@@ -1,0 +1,29 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().config(input_under_test(&format!(\"forbidden-uses/configs/{config}.yml\"))).input(input_under_test(\"forbidden-uses/forbidden-uses-menagerie.yml\")).run()?"
+---
+error[forbidden-uses]: forbidden action used
+  --> @@INPUT@@:12:9
+   |
+12 |       - uses: actions/setup-python@v4
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+   |
+   = note: audit confidence → High
+
+error[forbidden-uses]: forbidden action used
+  --> @@INPUT@@:13:9
+   |
+13 |       - uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+   |
+   = note: audit confidence → High
+
+error[forbidden-uses]: forbidden action used
+  --> @@INPUT@@:14:9
+   |
+14 |       - uses: actions/checkout@v4
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+   |
+   = note: audit confidence → High
+
+3 findings: 0 unknown, 0 informational, 0 low, 0 medium, 3 high

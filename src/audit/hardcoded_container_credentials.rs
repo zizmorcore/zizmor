@@ -3,14 +3,14 @@ use github_actions_models::{
     workflow::job::{Container, DockerCredentials},
 };
 
-use super::{Audit, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     finding::{Confidence, Severity},
     models::JobExt as _,
     state::AuditState,
 };
 
-pub(crate) struct HardcodedContainerCredentials {}
+pub(crate) struct HardcodedContainerCredentials;
 
 audit_meta!(
     HardcodedContainerCredentials,
@@ -19,17 +19,17 @@ audit_meta!(
 );
 
 impl Audit for HardcodedContainerCredentials {
-    fn new(_state: AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
-        Ok(Self {})
+        Ok(Self)
     }
 
-    fn audit_workflow<'w>(
+    fn audit_workflow<'doc>(
         &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+        workflow: &'doc crate::models::Workflow,
+    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {

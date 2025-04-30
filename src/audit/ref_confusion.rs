@@ -9,9 +9,9 @@
 use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{Audit, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::finding::Finding;
-use crate::models::{CompositeStep, JobExt as _};
+use crate::models::{CompositeStep, JobExt as _, StepCommon};
 use crate::{
     finding::{Confidence, Severity},
     github_api,
@@ -48,25 +48,29 @@ impl RefConfusion {
 }
 
 impl Audit for RefConfusion {
-    fn new(state: AuditState) -> anyhow::Result<Self>
+    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         if state.no_online_audits {
-            return Err(anyhow!("offline audits only requested"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "offline audits only requested"
+            )));
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't run without a GitHub API token"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "can't run without a GitHub API token"
+            )));
         };
 
         Ok(Self { client })
     }
 
-    fn audit_workflow<'w>(
+    fn audit_workflow<'doc>(
         &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+        workflow: &'doc crate::models::Workflow,
+    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {

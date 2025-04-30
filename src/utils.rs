@@ -15,7 +15,7 @@ use jsonschema::{
 use std::{collections::VecDeque, ops::Range};
 use std::{fmt::Write, sync::LazyLock};
 
-use crate::audit::AuditInput;
+use crate::{audit::AuditInput, models::AsDocument};
 
 static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
     validator_for(&serde_json::from_str(include_str!("../github-action.json")).unwrap()).unwrap()
@@ -155,8 +155,8 @@ pub(crate) fn extract_expressions(text: &str) -> Vec<(ExplicitExpr, Range<usize>
 pub(crate) fn parse_expressions_from_input(
     input: &AuditInput,
 ) -> Vec<(ExplicitExpr, Range<usize>)> {
-    let text = input.document().source();
-    let doc = input.document();
+    let text = input.as_document().source();
+    let doc = input.as_document();
 
     let mut exprs = vec![];
     let mut offset = 0;

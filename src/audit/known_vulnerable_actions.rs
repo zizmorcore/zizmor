@@ -8,13 +8,11 @@
 use anyhow::{Context, Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{Audit, audit_meta};
-use crate::finding::Finding;
-use crate::models::CompositeStep;
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{Confidence, Severity},
+    finding::{Confidence, Finding, Severity},
     github_api,
-    models::uses::RepositoryUsesExt as _,
+    models::{CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 
@@ -121,73 +119,59 @@ impl KnownVulnerableActions {
 
         Ok(results)
     }
+
+    fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
+        let mut findings = vec![];
+
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
+
+        for (severity, id) in self.action_known_vulnerabilities(uses)? {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(severity)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["uses".into()])
+                            .annotated(&id)
+                            .with_url(format!("https://github.com/advisories/{id}")),
+                    )
+                    .build(step)?,
+            );
+        }
+
+        Ok(findings)
+    }
 }
 
 impl Audit for KnownVulnerableActions {
-    fn new(state: AuditState) -> anyhow::Result<Self>
+    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         if state.no_online_audits {
-            return Err(anyhow!("offline audits only requested"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "offline audits only requested"
+            )));
         }
 
         let Some(client) = state.github_client() else {
-            return Err(anyhow!("can't run without a GitHub API token"));
+            return Err(AuditLoadError::Skip(anyhow!(
+                "can't run without a GitHub API token"
+            )));
         };
 
         Ok(Self { client })
     }
 
-    fn audit_step<'w>(&self, step: &super::Step<'w>) -> Result<Vec<super::Finding<'w>>> {
-        let mut findings = vec![];
-
-        let Some(Uses::Repository(uses)) = step.uses() else {
-            return Ok(findings);
-        };
-
-        for (severity, id) in self.action_known_vulnerabilities(uses)? {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["uses".into()])
-                            .annotated(&id)
-                            .with_url(format!("https://github.com/advisories/{id}")),
-                    )
-                    .build(step.workflow())?,
-            );
-        }
-
-        Ok(findings)
+    fn audit_step<'doc>(&self, step: &Step<'doc>) -> Result<Vec<Finding<'doc>>> {
+        self.process_step(step)
     }
 
-    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
-        let mut findings = vec![];
-
-        let Some(Uses::Repository(uses)) = step.uses() else {
-            return Ok(findings);
-        };
-
-        for (severity, id) in self.action_known_vulnerabilities(uses)? {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["uses".into()])
-                            .annotated(&id)
-                            .with_url(format!("https://github.com/advisories/{id}")),
-                    )
-                    .build(step.action())?,
-            );
-        }
-
-        Ok(findings)
+    fn audit_composite_step<'doc>(&self, step: &CompositeStep<'doc>) -> Result<Vec<Finding<'doc>>> {
+        self.process_step(step)
     }
 }

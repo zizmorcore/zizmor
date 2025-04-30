@@ -1,14 +1,16 @@
 //! Core namespace for zizmor's audits.
 
-use anyhow::Result;
 use github_actions_models::action;
 use line_index::LineIndex;
+use thiserror::Error;
 use tracing::instrument;
 use yamlpath::Document;
 
 use crate::{
     finding::{Finding, FindingBuilder, SymbolicLocation},
-    models::{Action, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
+    models::{
+        Action, AsDocument, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow,
+    },
     registry::InputKey,
     state::AuditState,
 };
@@ -18,15 +20,18 @@ pub(crate) mod bot_conditions;
 pub(crate) mod cache_poisoning;
 pub(crate) mod dangerous_triggers;
 pub(crate) mod excessive_permissions;
+pub(crate) mod forbidden_uses;
 pub(crate) mod github_env;
 pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod insecure_commands;
 pub(crate) mod known_vulnerable_actions;
+pub(crate) mod obfuscation;
 pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
 pub(crate) mod secrets_inherit;
 pub(crate) mod self_hosted_runner;
+pub(crate) mod stale_action_refs;
 pub(crate) mod template_injection;
 pub(crate) mod unpinned_uses;
 pub(crate) mod unredacted_secrets;
@@ -43,13 +48,6 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => &workflow.key,
             AuditInput::Action(action) => &action.key,
-        }
-    }
-
-    pub(crate) fn document(&self) -> &yamlpath::Document {
-        match self {
-            AuditInput::Workflow(workflow) => &workflow.document,
-            AuditInput::Action(action) => &action.document,
         }
     }
 
@@ -75,9 +73,12 @@ impl AuditInput {
     }
 }
 
-impl AsRef<Document> for AuditInput {
-    fn as_ref(&self) -> &Document {
-        self.document()
+impl<'a> AsDocument<'a, 'a> for AuditInput {
+    fn as_document(&'a self) -> &'a Document {
+        match self {
+            AuditInput::Workflow(workflow) => workflow.as_document(),
+            AuditInput::Action(action) => action.as_document(),
+        }
     }
 }
 
@@ -111,7 +112,7 @@ pub(crate) trait AuditCore {
     where
         Self: Sized;
 
-    fn finding<'w>() -> FindingBuilder<'w>
+    fn finding<'doc>() -> FindingBuilder<'doc>
     where
         Self: Sized,
     {
@@ -153,6 +154,18 @@ macro_rules! audit_meta {
 
 pub(crate) use audit_meta;
 
+#[derive(Error, Debug)]
+pub(crate) enum AuditLoadError {
+    /// The audit's initialization failed in a way that suggests it should
+    /// be skipped, rather than failing the entire run.
+    #[error("{0}")]
+    Skip(anyhow::Error),
+    /// The audit's initialization failed in a way that suggests that the
+    /// entire run should be aborted.
+    #[error("{0}")]
+    Fail(anyhow::Error),
+}
+
 /// Auditing trait.
 ///
 /// Implementors of this trait can choose the level of specificity/context
@@ -180,15 +193,15 @@ pub(crate) use audit_meta;
 /// **only** [`Audit::audit`] and not [`Audit::audit_normal_job`] or
 /// [`Audit::audit_step`].
 pub(crate) trait Audit: AuditCore {
-    fn new(state: AuditState) -> Result<Self>
+    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized;
 
-    fn audit_step<'w>(&self, _step: &Step<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_step<'doc>(&self, _step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         Ok(vec![])
     }
 
-    fn audit_normal_job<'w>(&self, job: &NormalJob<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_normal_job<'doc>(&self, job: &NormalJob<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
         for step in job.steps() {
             results.extend(self.audit_step(&step)?);
@@ -196,14 +209,14 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_reusable_job<'w>(
+    fn audit_reusable_job<'doc>(
         &self,
-        _job: &ReusableWorkflowCallJob<'w>,
-    ) -> Result<Vec<Finding<'w>>> {
+        _job: &ReusableWorkflowCallJob<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         Ok(vec![])
     }
 
-    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
@@ -220,11 +233,14 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_composite_step<'a>(&self, _step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+    fn audit_composite_step<'doc>(
+        &self,
+        _step: &CompositeStep<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         Ok(vec![])
     }
 
-    fn audit_action<'a>(&self, action: &'a Action) -> Result<Vec<Finding<'a>>> {
+    fn audit_action<'doc>(&self, action: &'doc Action) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
 
         if matches!(action.runs, action::Runs::Composite(_)) {
@@ -236,7 +252,7 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_raw<'w>(&self, _input: &'w AuditInput) -> Result<Vec<Finding<'w>>> {
+    fn audit_raw<'doc>(&self, _input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
         Ok(vec![])
     }
 
@@ -245,7 +261,7 @@ pub(crate) trait Audit: AuditCore {
     /// Implementors **should not** override this blanket implementation,
     /// since it's marked with tracing instrumentation.
     #[instrument(skip(self))]
-    fn audit<'w>(&self, input: &'w AuditInput) -> Result<Vec<Finding<'w>>> {
+    fn audit<'doc>(&self, input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow),
             AuditInput::Action(action) => self.audit_action(action),

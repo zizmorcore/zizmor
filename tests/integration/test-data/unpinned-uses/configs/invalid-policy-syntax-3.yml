@@ -1,0 +1,6 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Invalid: * not allowed in owner position
+        "*/foo": "any"

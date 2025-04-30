@@ -1,6 +1,6 @@
 use github_actions_models::workflow::job::Secrets;
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{finding::Confidence, models::JobExt as _};
 
 pub(crate) struct SecretsInherit;
@@ -12,17 +12,17 @@ audit_meta!(
 );
 
 impl Audit for SecretsInherit {
-    fn new(_state: super::AuditState) -> anyhow::Result<Self>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_reusable_job<'w>(
+    fn audit_reusable_job<'doc>(
         &self,
-        job: &super::ReusableWorkflowCallJob<'w>,
-    ) -> anyhow::Result<Vec<super::Finding<'w>>> {
+        job: &super::ReusableWorkflowCallJob<'doc>,
+    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
         if matches!(job.secrets, Some(Secrets::Inherit)) {

@@ -1,12 +1,13 @@
 ---
 source: tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@42064a9533f401a493c3599e56f144918f8eacfd\").run()?"
-snapshot_kind: text
 ---
  INFO collect_inputs: zizmor: collected 20 inputs from woodruffw/gha-hazmat
  INFO zizmor: skipping impostor-commit: offline audits only requested
  INFO zizmor: skipping ref-confusion: offline audits only requested
  INFO zizmor: skipping known-vulnerable-actions: offline audits only requested
+ INFO zizmor: skipping forbidden-uses: audit not configured
+ INFO zizmor: skipping stale-action-refs: offline audits only requested
  INFO audit: zizmor: 🌈 completed .github/workflows/artipacked.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/bot-conditions.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/cache-poisoning.yml
@@ -422,6 +423,30 @@ warning[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → Medium
 
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/known-vulnerable-actions.yml:19:9
+   |
+19 |       - uses: atlassian/gajira-create@v1.0.1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/known-vulnerable-actions.yml:25:9
+   |
+25 |       - uses: rlespinasse/github-slug-action@v4
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/known-vulnerable-actions.yml:28:9
+   |
+28 |       - uses: rlespinasse/github-slug-action@4.0.1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
 warning[overprovisioned-secrets]: excessively provisioned secrets
   --> .github/workflows/overprovisioned-secrets.yml:21:18
    |
@@ -522,6 +547,86 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |
    = note: audit confidence → High
 
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:23:9
+   |
+23 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:27:9
+   |
+27 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:33:9
+   |
+33 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:39:9
+   |
+39 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:45:9
+   |
+45 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:51:9
+   |
+51 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:58:9
+   |
+58 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:66:9
+   |
+66 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:73:9
+   |
+73 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pypi-manual-credential.yml:81:9
+   |
+81 |         uses: pypa/gh-action-pypi-publish@release/v1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/ref-confusion.yml:20:3
    |
@@ -536,6 +641,14 @@ warning[excessive-permissions]: overly broad permissions
    |                                                              default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/ref-confusion.yml:24:9
+   |
+24 |       - uses: woodruffw/gha-hazmat/ref-confusion@confusable
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/secrets-inherit.yml:1:1
@@ -791,19 +904,19 @@ warning[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → Medium
 
-warning[unpinned-uses]: unpinned action reference
+error[unpinned-uses]: unpinned action reference
   --> .github/workflows/unpinned.yml:20:9
    |
 20 |       - uses: actions/checkout
-   |         ---------------------- action is not pinned to a tag, branch, or hash ref
+   |         ^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a ref or hash (required by actions/* policy)
    |
    = note: audit confidence → High
 
-warning[unpinned-uses]: unpinned action reference
+error[unpinned-uses]: unpinned action reference
   --> .github/workflows/unpinned.yml:25:9
    |
 25 |       - uses: github/codeql-action/upload-sarif
-   |         --------------------------------------- action is not pinned to a tag, branch, or hash ref
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a ref or hash (required by github/* policy)
    |
    = note: audit confidence → High
 
@@ -865,4 +978,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-105 findings (36 suppressed): 0 unknown, 5 informational, 0 low, 39 medium, 25 high
+96 findings (13 suppressed): 0 unknown, 5 informational, 0 low, 37 medium, 41 high

@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(workflow_under_test(\"excessive-permissions/jobs-broaden-permissions.yml\")).run()?"
-snapshot_kind: text
+expression: "zizmor().input(input_under_test(\"excessive-permissions/jobs-broaden-permissions.yml\")).run()?"
 ---
 warning[excessive-permissions]: overly broad permissions
   --> @@INPUT@@:6:3
