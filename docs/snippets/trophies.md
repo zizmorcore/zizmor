@@ -327,8 +327,9 @@
     ??? example "Examples"
         - grafana/agent#7148
         - grafana/beyla#1868
-        - grafana/carbon-relay-ng#603
         - grafana/carbon-relay-ng#601
+        - grafana/carbon-relay-ng#602
+        - grafana/carbon-relay-ng#603
         - grafana/clickhouse-datasource#1231
         - grafana/grizzly#610
         - grafana/logs-drilldown#1222
