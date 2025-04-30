@@ -18,6 +18,8 @@ of `zizmor`.
 * **New audit**: The [stale-action-refs] pedantic audit detects pinned
   action references which don't point to a Git tag (#713)
 
+    Many thanks to @Marcono1234 for proposing and implementing this audit!
+
 ### Bug Fixes 🐛
 
 * The SARIF output format now uses `zizmor/{id}` for rule IDs instead
