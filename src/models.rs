@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use camino::Utf8Path;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
@@ -117,8 +117,23 @@ impl Workflow {
         let inner = match serde_yaml::from_str(&contents) {
             Ok(workflow) => workflow,
             Err(_) => {
-                return Err(validate_workflow(contents))
-                    .with_context(|| format!("invalid GitHub Actions workflow: {key}"));
+                // Our workflow can fail to parse for three reasons:
+                // - A syntax error (i.e., invalid YAML)
+                // - A semantic error (i.e., an invalid workflow definition)
+                // - A bug in `github-actions-models`
+                // We catch the first two cases with the Some(Error) variant,
+                // while the last case gets reported specially as a bug
+                // within zizmor itself
+                match validate_workflow(contents) {
+                    Some(err) => {
+                        return Err(err)
+                            .with_context(|| format!("invalid GitHub Actions workflow: {key}"));
+                    }
+                    None => {
+                        return Err(anyhow!("failed to load valid-looking workflow: {key}"))
+                            .context("this strongly suggests a bug in zizmor; please report it!");
+                    }
+                }
             }
         };
 
@@ -770,8 +785,17 @@ impl Action {
         let inner = match serde_yaml::from_str(&contents) {
             Ok(action) => action,
             Err(_) => {
-                return Err(validate_action(contents))
-                    .with_context(|| format!("invalid GitHub Actions definition: {key}"));
+                // Like with `Workflow::from_string`.
+                match validate_action(contents) {
+                    Some(err) => {
+                        return Err(err)
+                            .with_context(|| format!("invalid GitHub Actions definition: {key}"));
+                    }
+                    None => {
+                        return Err(anyhow!("failed to load valid-looking action: {key}"))
+                            .context("this strongly suggests a bug in zizmor; please report it!");
+                    }
+                }
             }
         };
 

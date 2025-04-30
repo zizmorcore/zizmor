@@ -25,23 +25,23 @@ static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
     validator_for(&serde_json::from_str(include_str!("../github-workflow.json")).unwrap()).unwrap()
 });
 
-pub(crate) fn validate_action(contents: String) -> Error {
+pub(crate) fn validate_action(contents: String) -> Option<Error> {
     match serde_yaml::from_str(&contents) {
         Ok(workflow) => match ACTION_VALIDATOR.apply(&workflow).basic() {
-            Valid(_) => unreachable!("valid action but invalid YAML"),
-            Invalid(errors) => parse_validation_errors(errors),
+            Valid(_) => None,
+            Invalid(errors) => Some(parse_validation_errors(errors)),
         },
-        Err(_) => anyhow!("invalid yaml"),
+        Err(e) => Some(anyhow!("invalid YAML in action definition: {e}")),
     }
 }
 
-pub(crate) fn validate_workflow(contents: String) -> Error {
+pub(crate) fn validate_workflow(contents: String) -> Option<Error> {
     match serde_yaml::from_str(&contents) {
         Ok(workflow) => match WORKFLOW_VALIDATOR.apply(&workflow).basic() {
-            Valid(_) => unreachable!("valid workflow but invalid YAML"),
-            Invalid(errors) => parse_validation_errors(errors),
+            Valid(_) => None,
+            Invalid(errors) => Some(parse_validation_errors(errors)),
         },
-        Err(_) => anyhow!("invalid yaml"),
+        Err(_) => Some(anyhow!("invalid YAML in workflow definition")),
     }
 }
 
@@ -50,14 +50,22 @@ fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Er
 
     for error in errors {
         let description = error.error_description().to_string();
+        // HACK: error descriptions are sometimes a long rats' nest
+        // of JSON objects. We should render this in a palatable way
+        // but doing so is nontrivial, so we just skip them for now.
+        // NOTE: Experimentally, this seems to mostly happen when
+        // the error for an unmatched "oneOf", so these errors are
+        // typically less useful anyways.
         if !description.starts_with("{") {
-            let mut location = error.instance_location().to_string();
+            let location = error.instance_location().as_str();
             if location.is_empty() {
-                writeln!(message, "{}", description,).unwrap();
+                writeln!(message, "{description}").unwrap();
             } else {
-                location = location.replace("/", ".").get(1..).unwrap().to_string();
+                // Convert paths like `/foo/bar/baz` to `foo.bar.baz`,
+                // removing the leading separator.
+                let dotted_location = &location[1..].replace("/", ".");
 
-                writeln!(message, "{}: {}", location, description,).unwrap();
+                writeln!(message, "{dotted_location}: {description}").unwrap();
             }
         }
     }
@@ -385,9 +393,10 @@ jobs:
     }
 
     #[test]
-    #[should_panic(expected = "valid action but invalid YAML")]
     fn test_action_validation_valid() {
-        let action = "name: 'Action'
+        let action = "
+name: 'Action'
+
 description: 'Description'
 inputs:
   some-input:
@@ -404,12 +413,13 @@ runs:
 "
         .to_string();
 
-        validate_action(action);
+        assert!(validate_action(action).is_none());
     }
 
     #[test]
     fn test_action_validation_invalid() {
-        let action = "name: 'Action'
+        let action = "
+name: 'Action'
 
 inputs:
   some-input:
@@ -428,7 +438,7 @@ runs:
 "
         .to_string();
 
-        let err = validate_action(action);
+        let err = validate_action(action).unwrap();
 
         assert_eq!(
             format!("{}", err),
@@ -437,9 +447,9 @@ runs:
     }
 
     #[test]
-    #[should_panic(expected = "valid workflow but invalid YAML")]
     fn test_workflow_validation_valid() {
-        let workflow = "name: Valid
+        let workflow = "
+name: Valid
 
 on:
   push:
@@ -454,12 +464,13 @@ jobs:
 "
         .to_string();
 
-        validate_workflow(workflow);
+        assert!(validate_workflow(workflow).is_none())
     }
 
     #[test]
     fn test_workflow_validation_invalid() {
-        let workflow = "name: Invalid
+        let workflow = "
+name: Invalid
 
 boom:
 
@@ -479,7 +490,7 @@ jobs:
 "
         .to_string();
 
-        let err = validate_workflow(workflow);
+        let err = validate_workflow(workflow).unwrap();
 
         assert_eq!(
             format!("{}", err),

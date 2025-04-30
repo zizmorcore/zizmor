@@ -193,3 +193,17 @@ fn invalid_config_file() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn invalid_inputs() -> Result<()> {
+    for tc in ["invalid-workflow", "invalid-workflow-2"] {
+        insta::assert_snapshot!(
+            zizmor()
+                .expects_failure(true)
+                .input(input_under_test(&format!("invalid/{tc}.yml")))
+                .run()?
+        );
+    }
+
+    Ok(())
+}

@@ -21,19 +21,6 @@ fn test_cant_retrieve() -> Result<()> {
 }
 
 #[test]
-fn test_invalid_inputs() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .expects_failure(true)
-            .offline(true)
-            .input(input_under_test("invalid/invalid-workflow.yml"))
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
 fn test_github_output() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
