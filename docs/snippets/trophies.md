@@ -331,9 +331,11 @@
         - grafana/carbon-relay-ng#602
         - grafana/carbon-relay-ng#603
         - grafana/clickhouse-datasource#1231
+        - grafana/grafana-operator#1977
         - grafana/grizzly#610
         - grafana/logs-drilldown#1222
         - grafana/pyroscope#4157
+        - grafana/rollout-operator#218
         - grafana/tanka#1441
 
 
