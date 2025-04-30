@@ -1,6 +1,6 @@
 //! Detects actions pinned by commit hash, which doesn't point to a Git tag.
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, audit_meta};
@@ -25,16 +25,10 @@ audit_meta!(
 impl StaleActionRefs {
     fn is_stale_action_ref(&self, uses: &RepositoryUses) -> Result<bool> {
         let tag = match &uses.commit_ref() {
-            Some(commit_ref) => self
-                .client
-                .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
-                .with_context(|| {
-                    format!(
-                        "couldn't retrieve tag for {owner}/{repo}@{commit_ref}",
-                        owner = uses.owner,
-                        repo = uses.repo
-                    )
-                })?,
+            Some(commit_ref) => {
+                self.client
+                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)?
+            }
             None => return Ok(false),
         };
         Ok(tag.is_none())

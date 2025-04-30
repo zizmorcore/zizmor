@@ -254,7 +254,9 @@ impl Client {
         // do it for them.
         // This could be optimized in various ways, not least of which
         // is not pulling every tag eagerly before scanning them.
-        let tags = self.list_tags(owner, repo)?;
+        let tags = self
+            .list_tags(owner, repo)
+            .with_context(|| format!("couldn't retrieve tags for {owner}/{repo}@{commit}"))?;
 
         // Heuristic: there can be multiple tags for a commit, so we pick
         // the longest one. This isn't super sound, but it gets us from
