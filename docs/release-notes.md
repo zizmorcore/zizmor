@@ -15,6 +15,11 @@ of `zizmor`.
   GitHub Actions usages. These patterns are not themselves dangerous,
   but may indicate an attempt to obscure malicious behavior (#683)
 
+* **New audit**: The [stale-action-refs] pedantic audit detects pinned
+  action references which don't point to a Git tag (#713)
+
+    Many thanks to @Marcono1234 for proposing and implementing this audit!
+
 ### Bug Fixes 🐛
 
 * The SARIF output format now uses `zizmor/{id}` for rule IDs instead
@@ -716,3 +721,5 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [overprovisioned-secrets]: ./audits.md#overprovisioned-secrets
 [unredacted-secrets]: ./audits.md#unredacted-secrets
 [forbidden-uses]: ./audits.md#forbidden-uses
+[obfuscation]: ./audits.md#obfuscation
+[stale-action-refs]: ./audits.md#stale-action-refs

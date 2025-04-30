@@ -31,6 +31,7 @@ pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
 pub(crate) mod secrets_inherit;
 pub(crate) mod self_hosted_runner;
+pub(crate) mod stale_action_refs;
 pub(crate) mod template_injection;
 pub(crate) mod unpinned_uses;
 pub(crate) mod unredacted_secrets;

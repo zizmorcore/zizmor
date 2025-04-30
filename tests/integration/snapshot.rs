@@ -673,3 +673,17 @@ fn obfuscation() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn stale_action_refs() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("stale-action-refs.yml"))
+            .offline(false)
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    Ok(())
+}
