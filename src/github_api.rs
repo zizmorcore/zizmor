@@ -185,7 +185,7 @@ impl Client {
 
         let resp = self.http.get(&url).send().await?;
         Client::resp_present(resp).with_context(|| {
-            format!("{owner}/{repo}: error from the GitHub APi while checking {branch}")
+            format!("{owner}/{repo}: error from the GitHub API while checking {branch}")
         })
     }
 
@@ -199,7 +199,7 @@ impl Client {
 
         let resp = self.http.get(&url).send().await?;
         Client::resp_present(resp).with_context(|| {
-            format!("{owner}/{repo}: error from the GitHub APi while checking {tag}")
+            format!("{owner}/{repo}: error from the GitHub API while checking {tag}")
         })
     }
 

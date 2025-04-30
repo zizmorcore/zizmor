@@ -5,7 +5,7 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, audit_meta};
@@ -74,23 +74,19 @@ impl KnownVulnerableActions {
             // tag matching that ref. In theory the action's repo could do
             // something annoying like use branches for versions instead,
             // which we should also probably support.
-            Some(commit_ref) => match self
-                .client
-                .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
-                .with_context(|| {
-                    format!(
-                        "couldn't retrieve tag for {owner}/{repo}@{commit_ref}",
-                        owner = uses.owner,
-                        repo = uses.repo
-                    )
-                })? {
-                Some(tag) => tag.name,
-                // No corresponding tag means the user is maybe doing something
-                // weird, like using a commit ref off of a branch that isn't
-                // also tagged. Probably not good, but also not something
-                // we can easily discover known vulns for.
-                None => return Ok(vec![]),
-            },
+            Some(commit_ref) => {
+                match self
+                    .client
+                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)?
+                {
+                    Some(tag) => tag.name,
+                    // No corresponding tag means the user is maybe doing something
+                    // weird, like using a commit ref off of a branch that isn't
+                    // also tagged. Probably not good, but also not something
+                    // we can easily discover known vulns for.
+                    None => return Ok(vec![]),
+                }
+            }
             // No version means the action runs the latest default branch
             // version. We could in theory query GHSA for this but it's
             // unlikely to be meaningful.
