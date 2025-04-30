@@ -25,3 +25,8 @@ sponsors: docs/snippets/sponsors.html
 
 docs/snippets/sponsors.html: docs/snippets/sponsors.json docs/snippets/render-sponsors.py
 	uv run --no-project docs/snippets/render-sponsors.py > $@
+
+.PHONY: schemas
+schemas:
+	curl https://json.schemastore.org/github-workflow.json > src/data/github-workflow.json
+	curl https://json.schemastore.org/github-action.json > src/data/github-action.json

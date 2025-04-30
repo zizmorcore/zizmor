@@ -18,11 +18,13 @@ use std::{fmt::Write, sync::LazyLock};
 use crate::{audit::AuditInput, models::AsDocument};
 
 static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
-    validator_for(&serde_json::from_str(include_str!("../github-action.json")).unwrap()).unwrap()
+    validator_for(&serde_json::from_str(include_str!("./data/github-action.json")).unwrap())
+        .unwrap()
 });
 
 static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
-    validator_for(&serde_json::from_str(include_str!("../github-workflow.json")).unwrap()).unwrap()
+    validator_for(&serde_json::from_str(include_str!("./data/github-workflow.json")).unwrap())
+        .unwrap()
 });
 
 pub(crate) fn validate_action(contents: String) -> Option<Error> {
