@@ -41,6 +41,9 @@ of `zizmor`.
   which was to terminate the audit if any collected input could
   not be parsed (#734)
 
+* The [template-injection] audit has been extended to detect more
+  vulnerable action inputs (#TODO)
+
 ### Bug Fixes 🐛
 
 * The SARIF output format now uses `zizmor/{id}` for rule IDs instead
