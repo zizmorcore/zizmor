@@ -160,6 +160,14 @@ cargo insta test --review
 GH_TOKEN=$(gh auth token) cargo insta test --review --features online-tests
 ```
 
+After you accepted all snapshot differences, you can run insta with
+`--force-update-snapshots` to make sure the meta information in the snapshot
+files is up to date as well:
+
+```bash
+GH_TOKEN=$(gh auth token) cargo insta test --force-update-snapshots --features online-tests
+```
+
 See [insta's documentation] for more details.
 
 ## Building the website
