@@ -281,9 +281,15 @@ fn collect_from_dir(
                 .parent()
                 .is_some_and(|dir| dir.ends_with(".github/workflows"))
         {
-            registry
+            match registry
                 .register_by_path(entry, Some(input_path))
-                .with_context(|| format!("failed to register input: {entry}"))?;
+                .with_context(|| format!("failed to register input: {entry}"))
+            {
+                Ok(_) => (),
+                Err(_) => {
+                    tracing::warn!("failed to register workflow: {entry}.")
+                }
+            };
         }
 
         if mode.actions()
@@ -291,7 +297,12 @@ fn collect_from_dir(
             && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
         {
             let action = Action::from_file(entry, Some(input_path))?;
-            registry.register_input(action.into())?;
+            match registry.register_input(action.into()) {
+                Ok(_) => (),
+                Err(_) => {
+                    tracing::warn!("failed to register action: {entry}")
+                }
+            };
         }
     }
 
