@@ -425,6 +425,10 @@ impl Client {
         for entry in archive.entries()? {
             let mut entry = entry?;
 
+            if !entry.header().entry_type().is_file() {
+                continue;
+            }
+
             // GitHub's tarballs contain entries that are prefixed with
             // `{owner}-{repo}-{ref}`, where `{ref}` has been concretized
             // into a short hash. We strip this out to ensure that our
@@ -436,13 +440,15 @@ impl Client {
                 components.as_path().try_into()?
             };
 
-            if file_path.starts_with(".github/workflows/") {
-                if matches!(file_path.extension(), Some("yml" | "yaml")) {
-                    let key = InputKey::remote(slug, file_path.to_string())?;
-                    let mut contents = String::with_capacity(entry.size() as usize);
-                    entry.read_to_string(&mut contents)?;
-                    inputs.push(Workflow::from_string(contents, key)?.into());
-                }
+            if matches!(file_path.extension(), Some("yaml" | "yml"))
+                && file_path
+                    .parent()
+                    .is_some_and(|dir| dir.ends_with(".github/workflows"))
+            {
+                let key = InputKey::remote(slug, file_path.to_string())?;
+                let mut contents = String::with_capacity(entry.size() as usize);
+                entry.read_to_string(&mut contents)?;
+                inputs.push(Workflow::from_string(contents, key)?.into());
             } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
                 let key = InputKey::remote(slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
