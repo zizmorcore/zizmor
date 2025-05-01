@@ -207,3 +207,12 @@ fn invalid_inputs() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn empty_workflow() -> Result<()> {
+    for tc in ["empty"] {
+        insta::assert_snapshot!(zizmor().input(input_under_test(&format!("{tc}"))).run()?);
+    }
+
+    Ok(())
+}

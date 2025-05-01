@@ -1,0 +1,8 @@
+on:
+  workflow_call:
+jobs:
+  filled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: filled
+        run: echo "filled"
