@@ -33,6 +33,9 @@ of `zizmor`.
 * The SARIF output format now includes a rule name for each rule descriptor,
   which should improve rendering behavior in SARIF viewers like the
   VS Code SARIF Viewer extension (#710)
+* Fixed a bug where `zizmor` would fail to collection actions defined
+  within subdirectories of `.github/workflows` when collecting from
+  a remote source (#731)
 
 ## v1.6.0
 
