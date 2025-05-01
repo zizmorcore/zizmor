@@ -1423,6 +1423,47 @@ Other resources:
             if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
     ```
 
+## `unpinned-container-images`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  | [unpinned-container-images.yml] | v1.7.0        | ✅            | ✅                | ❌          |
+
+Checks for `container.image` values where the image is not pinned by either a tag (other than `latest`) or SHA256.
+
+When image references are unpinned or are pinned to a mutable tag, the
+workflow is at risk because the image used will be unpredictable over time.
+Changes made to the OCI registry used to source the image may result in untrusted
+images gaining access to your workflow.
+
+This can be a security risk:
+
+1. Registries may not consistently enforce immutable image tags
+2. Completely unpinned images can be changed at any time by the OCI registry.
+
+Other resources:
+
+- [Aqua: The Challenges of Uniquely Identifying Your Images]
+- [GitHub: Safeguard your containers with new container signing capability in GitHub Actions]
+
+```yaml
+container:
+  image: foo/bar
+```
+and where that version is `latest`:
+
+```yaml
+container:
+  image: foo/bar:latest
+```
+
+### Remediation
+
+Pin the `#!yaml container.image:` value to a specific SHA256 image registry hash.
+
+Many popular registries will display the hash value in their web console or you
+can use the command line to determine the hash of an image you have previously pulled
+by running `docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
@@ -1452,3 +1493,5 @@ Other resources:
 [Dependabot secrets]: https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions#accessing-secrets
 [explicitly specifying needed permissions]: https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions#changing-github_token-permissions
 [branch filter]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#running-your-pull_request_target-workflow-based-on-the-head-or-base-branch-of-a-pull-request
+[Aqua: The Challenges of Uniquely Identifying Your Images]: https://www.aquasec.com/blog/docker-image-tags/
+[GitHub: Safeguard your containers with new container signing capability in GitHub Actions]: https://github.blog/security/supply-chain-security/safeguard-container-signing-capability-actions/

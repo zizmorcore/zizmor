@@ -533,7 +533,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::forbidden_uses::ForbiddenUses);
     register_audit!(audit::obfuscation::Obfuscation);
     register_audit!(audit::stale_action_refs::StaleActionRefs);
-
+    register_audit!(audit::unpinned_container_images::UnpinnedContainerImages);
     let mut results = FindingRegistry::new(&app, &config);
     {
         // Note: block here so that we drop the span here at the right time.
