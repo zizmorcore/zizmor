@@ -1047,13 +1047,13 @@ not using `pull_request_target` for auto-merge workflows.
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         ```
 
-## `bypassable-contains-conditions`
+## `unsound-contains`
 
-| Type     | Examples                                       | Introduced in | Works offline | Enabled by default | Configurable |
-|----------|------------------------------------------------|---------------|---------------|--------------------|--------------|
-| Workflow | [bypassable-contains-conditions.yml]           | v1.6.0        | ✅            | ✅                 | ❌           |
+| Type     | Examples                            | Introduced in | Works offline | Enabled by default | Configurable |
+|----------|-------------------------------------|---------------|---------------|--------------------|--------------|
+| Workflow | [unsound-contains.yml]              | v1.6.0        | ✅            | ✅                 | ❌           |
 
-[bypassable-contains-conditions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/bypassable-contains-conditions.yml
+[unsound-contains.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unsound-contains.yml
 
 Detects conditions that use the `contains()` function in a way that can be bypassed.
 
@@ -1094,7 +1094,7 @@ Other resources:
 
 === "Before :warning:"
 
-    ```yaml title="bypassable-contains-conditions.yml" hl_lines="9 10"
+    ```yaml title="unsound-contains.yml" hl_lines="9 10"
     on: push
 
     jobs:
@@ -1109,7 +1109,7 @@ Other resources:
 
 === "After :white_check_mark:"
 
-    ```yaml title="bot-conditions.yml" hl_lines="1 6"
+    ```yaml title="unsound-contains.yml" hl_lines="9 10"
     on: push
 
     jobs:

@@ -1,9 +1,9 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(input_under_test(\"bypassable-contains-conditions.yml\")).run()?"
+expression: "zizmor().input(input_under_test(\"unsound-contains.yml\")).run()?"
 snapshot_kind: text
 ---
-error[bypassable-contains-conditions]: bypassable contains conditions checks
+error[unsound-contains]: unsound contains condition
   --> @@INPUT@@:17:9
    |
 17 |         if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}
@@ -11,7 +11,7 @@ error[bypassable-contains-conditions]: bypassable contains conditions checks
    |
    = note: audit confidence → High
 
-error[bypassable-contains-conditions]: bypassable contains conditions checks
+error[unsound-contains]: unsound contains condition
   --> @@INPUT@@:21:9
    |
 21 |         if: ${{ contains('main,develop', env.GITHUB_REF_NAME) }}
@@ -19,7 +19,7 @@ error[bypassable-contains-conditions]: bypassable contains conditions checks
    |
    = note: audit confidence → High
 
-error[bypassable-contains-conditions]: bypassable contains conditions checks
+error[unsound-contains]: unsound contains condition
   --> @@INPUT@@:25:9
    |
 25 |         if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true
@@ -27,7 +27,7 @@ error[bypassable-contains-conditions]: bypassable contains conditions checks
    |
    = note: audit confidence → High
 
-error[bypassable-contains-conditions]: bypassable contains conditions checks
+error[unsound-contains]: unsound contains condition
   --> @@INPUT@@:25:9
    |
 25 |         if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true
@@ -35,7 +35,7 @@ error[bypassable-contains-conditions]: bypassable contains conditions checks
    |
    = note: audit confidence → High
 
-info[bypassable-contains-conditions]: bypassable contains conditions checks
+info[unsound-contains]: unsound contains condition
   --> @@INPUT@@:29:9
    |
 29 |         if: contains('runner1,runner2', runner.name)

@@ -25,15 +25,15 @@ const USER_CONTROLLABLE_CONTEXTS: &[&str] = &[
     "inputs.",
 ];
 
-pub(crate) struct BypassableContainsConditions;
+pub(crate) struct UnsoundContains;
 
 audit_meta!(
-    BypassableContainsConditions,
-    "bypassable-contains-conditions",
-    "bypassable contains conditions checks"
+    UnsoundContains,
+    "unsound-contains",
+    "unsound contains condition"
 );
 
-impl Audit for BypassableContainsConditions {
+impl Audit for UnsoundContains {
     fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
@@ -63,7 +63,7 @@ impl Audit for BypassableContainsConditions {
 
         conditions
             .flat_map(|(expr, loc)| {
-                Self::insecure_contains(expr).into_iter().map(move |(severity, context)| {
+                Self::unsound_contains(expr).into_iter().map(move |(severity, context)| {
                     Self::finding()
                         .severity(severity)
                         .confidence(Confidence::High)
@@ -79,8 +79,8 @@ impl Audit for BypassableContainsConditions {
     }
 }
 
-impl BypassableContainsConditions {
-    fn walk_tree_for_insecure_contains<'a>(
+impl UnsoundContains {
+    fn walk_tree_for_unsound_contains<'a>(
         expr: &'a Expr,
     ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>)> + 'a> {
         match expr {
@@ -89,7 +89,7 @@ impl BypassableContainsConditions {
                     [Expr::String(s), Expr::Context(c)] => {
                         Box::new(std::iter::once((s.as_str(), c)))
                     }
-                    args => Box::new(args.iter().flat_map(Self::walk_tree_for_insecure_contains)),
+                    args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
                 }
             }
             Expr::Call {
@@ -99,20 +99,20 @@ impl BypassableContainsConditions {
             | Expr::Context(Context {
                 raw: _,
                 components: exprs,
-            }) => Box::new(exprs.iter().flat_map(Self::walk_tree_for_insecure_contains)),
-            Expr::Index(expr) => Self::walk_tree_for_insecure_contains(expr),
+            }) => Box::new(exprs.iter().flat_map(Self::walk_tree_for_unsound_contains)),
+            Expr::Index(expr) => Self::walk_tree_for_unsound_contains(expr),
             Expr::BinOp { lhs, rhs, .. } => {
-                let bc_lhs = Self::walk_tree_for_insecure_contains(lhs);
-                let bc_rhs = Self::walk_tree_for_insecure_contains(rhs);
+                let bc_lhs = Self::walk_tree_for_unsound_contains(lhs);
+                let bc_rhs = Self::walk_tree_for_unsound_contains(rhs);
 
                 Box::new(bc_lhs.chain(bc_rhs))
             }
-            Expr::UnOp { expr, .. } => Self::walk_tree_for_insecure_contains(expr),
+            Expr::UnOp { expr, .. } => Self::walk_tree_for_unsound_contains(expr),
             _ => Box::new(std::iter::empty()),
         }
     }
 
-    fn insecure_contains(expr: &str) -> Vec<(Severity, String)> {
+    fn unsound_contains(expr: &str) -> Vec<(Severity, String)> {
         let bare = match ExplicitExpr::from_curly(expr) {
             Some(raw_expr) => raw_expr.as_bare().to_string(),
             None => expr.to_string(),
@@ -121,7 +121,7 @@ impl BypassableContainsConditions {
         Expr::parse(&bare)
             .inspect_err(|_err| tracing::warn!("couldn't parse expression: {expr}"))
             .iter()
-            .flat_map(|expression| Self::walk_tree_for_insecure_contains(expression))
+            .flat_map(|expression| Self::walk_tree_for_unsound_contains(expression))
             .map(|(_s, ctx)| {
                 let severity = if USER_CONTROLLABLE_CONTEXTS.iter().any(|item| {
                     let context = &ctx.as_str();
@@ -176,7 +176,7 @@ mod tests {
             ),
         ] {
             assert_eq!(
-                BypassableContainsConditions::insecure_contains(cond).as_slice(),
+                UnsoundContains::unsound_contains(cond).as_slice(),
                 severity.as_slice()
             );
         }
