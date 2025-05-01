@@ -7,11 +7,12 @@ use std::{
     process::ExitCode,
 };
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, anyhow};
 use camino::{Utf8Path, Utf8PathBuf};
 use github_actions_models::common::RepositoryUses;
 use indexmap::IndexMap;
 use serde::Serialize;
+use thiserror::Error;
 use tracing::instrument;
 
 use crate::{
@@ -21,6 +22,22 @@ use crate::{
     finding::{Confidence, Finding, Persona, Severity},
     models::{Action, Workflow},
 };
+
+#[derive(Error, Debug)]
+pub(crate) enum InputError {
+    /// The input's syntax is invalid.
+    #[error("invalid YAML syntax: {0}")]
+    Syntax(#[source] anyhow::Error),
+    /// The input's semantic structure is invalid.
+    #[error("invalid input structure")]
+    Sema(#[source] anyhow::Error),
+    /// An I/O error occurred while loading the input.
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    /// The input's name is missing.
+    #[error("invalid input: no filename component")]
+    MissingName,
+}
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct LocalKey {
@@ -69,10 +86,13 @@ impl Display for InputKey {
 }
 
 impl InputKey {
-    pub(crate) fn local<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
+    pub(crate) fn local<P: AsRef<Utf8Path>>(
+        path: P,
+        prefix: Option<P>,
+    ) -> Result<Self, InputError> {
         // All keys must have a filename component.
         if path.as_ref().file_name().is_none() {
-            return Err(anyhow!("invalid local input: no filename component"));
+            return Err(InputError::MissingName);
         }
 
         Ok(Self::Local(LocalKey {
@@ -81,9 +101,9 @@ impl InputKey {
         }))
     }
 
-    pub(crate) fn remote(slug: &RepositoryUses, path: String) -> Result<Self> {
+    pub(crate) fn remote(slug: &RepositoryUses, path: String) -> Result<Self, InputError> {
         if Utf8Path::new(&path).file_name().is_none() {
-            return Err(anyhow!("invalid remote input: no filename component"));
+            return Err(InputError::MissingName);
         }
 
         Ok(Self::Remote(RemoteKey {
@@ -163,7 +183,7 @@ impl InputRegistry {
 
     /// Registers an already-loaded workflow or action definition.
     #[instrument(skip(self))]
-    pub(crate) fn register_input(&mut self, input: AuditInput) -> Result<()> {
+    pub(crate) fn register_input(&mut self, input: AuditInput) -> anyhow::Result<()> {
         if self.inputs.contains_key(input.key()) {
             return Err(anyhow!(
                 "can't register {key} more than once",
@@ -182,14 +202,14 @@ impl InputRegistry {
         &mut self,
         path: &Utf8Path,
         prefix: Option<&Utf8Path>,
-    ) -> Result<()> {
+    ) -> anyhow::Result<()> {
         match Workflow::from_file(path, prefix) {
             Ok(workflow) => self.register_input(workflow.into()),
             Err(we) => match Action::from_file(path, prefix) {
                 Ok(action) => self.register_input(action.into()),
                 Err(ae) => Err(anyhow!("failed to register input as workflow or action"))
                     .with_context(|| format!("{ae:?}"))
-                    .with_context(|| format!("{we:?}")),
+                    .with_context(|| format!("{we:?}", we = anyhow!(we))),
             },
         }
     }

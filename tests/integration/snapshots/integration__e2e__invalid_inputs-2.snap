@@ -6,12 +6,13 @@ fatal: no audit was performed
 failed to register input: @@INPUT@@
 
 Caused by:
-    0: invalid GitHub Actions workflow: file://@@INPUT@@
+    0: invalid input structure
        
        Caused by:
-           on.workflow_call.inputs.input: "type" is a required property
-           Additional properties are not allowed ('boom' was unexpected)
-           
+           0: invalid GitHub Actions workflow: file://@@INPUT@@
+           1: on.workflow_call.inputs.input: "type" is a required property
+              Additional properties are not allowed ('boom' was unexpected)
+              
     1: invalid GitHub Actions definition: file://@@INPUT@@
        
        Caused by:

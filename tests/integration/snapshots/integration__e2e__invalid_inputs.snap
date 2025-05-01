@@ -6,13 +6,14 @@ fatal: no audit was performed
 failed to register input: @@INPUT@@
 
 Caused by:
-    0: invalid GitHub Actions workflow: file://@@INPUT@@
+    0: invalid input structure
        
        Caused by:
-           jobs.invalid: "runs-on" is a required property
-           jobs.invalid: Additional properties are not allowed ('steps' was unexpected)
-           jobs.invalid: "uses" is a required property
-           
+           0: invalid GitHub Actions workflow: file://@@INPUT@@
+           1: jobs.invalid: "runs-on" is a required property
+              jobs.invalid: Additional properties are not allowed ('steps' was unexpected)
+              jobs.invalid: "uses" is a required property
+              
     1: invalid GitHub Actions definition: file://@@INPUT@@
        
        Caused by:
