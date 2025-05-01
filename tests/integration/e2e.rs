@@ -38,6 +38,23 @@ fn issue_569() -> Result<()> {
     Ok(())
 }
 
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_726() -> Result<()> {
+    // Regression test for #726.
+    // See: https://github.com/woodruffw/zizmor/issues/726
+    // See: https://github.com/woodruffw-experiments/zizmor-bug-726
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(OutputMode::Both)
+            .args(["--no-online-audits"])
+            .input("woodruffw-experiments/zizmor-bug-726@a038d1a35")
+            .run()?
+    );
+    Ok(())
+}
+
 #[test]
 fn menagerie() -> Result<()> {
     // Respects .gitignore by default.
