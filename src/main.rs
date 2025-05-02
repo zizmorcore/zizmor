@@ -17,9 +17,8 @@ use github_actions_models::common::Uses;
 use github_api::GitHubHost;
 use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
-use models::{Action, Workflow};
 use owo_colors::OwoColorize;
-use registry::{AuditRegistry, FindingRegistry, InputRegistry};
+use registry::{AuditRegistry, FindingRegistry, InputKey, InputKind, InputRegistry};
 use state::AuditState;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
@@ -120,6 +119,11 @@ struct App {
     /// while honoring `.gitignore` files.
     #[arg(long, value_enum, default_value_t)]
     collect: CollectionMode,
+
+    /// Fail instead of warning on syntax and schema errors
+    /// in collected inputs.
+    #[arg(long)]
+    strict_inputs: bool,
 
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
@@ -282,16 +286,18 @@ fn collect_from_dir(
                 .parent()
                 .is_some_and(|dir| dir.ends_with(".github/workflows"))
         {
-            let workflow = Workflow::from_file(entry, Some(input_path))?;
-            registry.register_input(workflow.into())?;
+            let key = InputKey::local(entry, Some(input_path), InputKind::Workflow)?;
+            let contents = std::fs::read_to_string(entry)?;
+            registry.register(contents, key)?;
         }
 
         if mode.actions()
             && entry.is_file()
             && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
         {
-            let action = Action::from_file(entry, Some(input_path))?;
-            registry.register_input(action.into())?;
+            let key = InputKey::local(entry, Some(input_path), InputKind::Action)?;
+            let contents = std::fs::read_to_string(entry)?;
+            registry.register(contents, key)?;
         }
     }
 
@@ -340,31 +346,29 @@ fn collect_from_repo_slug(
         // Performance: if we're *only* collecting workflows, then we
         // can save ourselves a full repo download and only fetch the
         // repo's workflow files.
-        for workflow in client.fetch_workflows(&slug)? {
-            registry.register_input(workflow.into())?;
-        }
+        client.fetch_workflows(&slug, registry)?;
     } else {
-        let inputs = client.fetch_audit_inputs(&slug).with_context(|| {
-            tips(
-                format!(
-                    "couldn't collect inputs from https://github.com/{owner}/{repo}",
-                    owner = slug.owner,
-                    repo = slug.repo
-                ),
-                &["confirm the repository exists and that you have access to it"],
-            )
-        })?;
+        let before = registry.len();
+        client
+            .fetch_audit_inputs(&slug, registry)
+            .with_context(|| {
+                tips(
+                    format!(
+                        "couldn't collect inputs from https://github.com/{owner}/{repo}",
+                        owner = slug.owner,
+                        repo = slug.repo
+                    ),
+                    &["confirm the repository exists and that you have access to it"],
+                )
+            })?;
+        let after = registry.len();
+        let len = after - before;
 
         tracing::info!(
             "collected {len} inputs from {owner}/{repo}",
-            len = inputs.len(),
             owner = slug.owner,
             repo = slug.repo
         );
-
-        for input in inputs {
-            registry.register_input(input)?;
-        }
     }
 
     Ok(())
@@ -374,9 +378,10 @@ fn collect_from_repo_slug(
 fn collect_inputs(
     inputs: &[String],
     mode: &CollectionMode,
+    strict: bool,
     state: &AuditState,
 ) -> Result<InputRegistry> {
-    let mut registry = InputRegistry::new();
+    let mut registry = InputRegistry::new(strict);
 
     for input in inputs {
         let input_path = Utf8Path::new(input);
@@ -488,7 +493,7 @@ fn run() -> Result<ExitCode> {
     })?;
 
     let audit_state = AuditState::new(&app, &config);
-    let registry = collect_inputs(&app.inputs, &app.collect, &audit_state)?;
+    let registry = collect_inputs(&app.inputs, &app.collect, app.strict_inputs, &audit_state)?;
 
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {

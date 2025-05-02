@@ -42,6 +42,8 @@ Options:
           The directory to use for HTTP caching. By default, a host-appropriate user-caching directory will be used
       --collect <COLLECT>
           Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows-only, actions-only]
+      --strict-inputs
+          Fail instead of warning on syntax and schema errors in collected inputs
   -h, --help
           Print help (see more with '--help')
   -V, --version

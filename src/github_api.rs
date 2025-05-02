@@ -23,9 +23,8 @@ use tar::Archive;
 use tracing::instrument;
 
 use crate::{
-    audit::AuditInput,
-    models::{Action, Workflow},
-    registry::InputKey,
+    InputRegistry,
+    registry::{InputKey, InputKind},
     utils::PipeSelf,
 };
 
@@ -319,13 +318,17 @@ impl Client {
     }
 
     /// Collect all workflows (and only workflows) defined in the given remote
-    /// repository slug.
+    /// repository slug into the given input registry.
     ///
     /// This is an optimized variant of `fetch_audit_inputs` for the workflow-only
     /// collection case.
-    #[instrument(skip(self))]
+    #[instrument(skip(self, registry))]
     #[tokio::main]
-    pub(crate) async fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
+    pub(crate) async fn fetch_workflows(
+        &self,
+        slug: &RepositoryUses,
+        registry: &mut InputRegistry,
+    ) -> Result<()> {
         let owner = &slug.owner;
         let repo = &slug.repo;
         let git_ref = &slug.git_ref;
@@ -353,7 +356,6 @@ impl Client {
             .json()
             .await?;
 
-        let mut workflows = vec![];
         for file in resp
             .into_iter()
             .filter(|file| file.name.ends_with(".yml") || file.name.ends_with(".yaml"))
@@ -375,13 +377,11 @@ impl Client {
                 .text()
                 .await?;
 
-            workflows.push(Workflow::from_string(
-                contents,
-                InputKey::remote(slug, file.path)?,
-            )?);
+            let key = InputKey::remote(slug, file.path, InputKind::Workflow)?;
+            registry.register(contents, key)?;
         }
 
-        Ok(workflows)
+        Ok(())
     }
 
     /// Fetch all auditable inputs (both workflows and actions)
@@ -389,14 +389,13 @@ impl Client {
     ///
     /// This is much slower than `fetch_workflows`, since it involves
     /// retrieving the entire repository archive and decompressing it.
-    #[instrument(skip(self))]
+    #[instrument(skip(self, registry))]
     #[tokio::main]
     pub(crate) async fn fetch_audit_inputs(
         &self,
         slug: &RepositoryUses,
-    ) -> Result<Vec<AuditInput>> {
-        let mut inputs = vec![];
-
+        registry: &mut InputRegistry,
+    ) -> Result<()> {
         let url = format!(
             "{api_base}/repos/{owner}/{repo}/tarball/{git_ref}",
             api_base = self.api_base,
@@ -445,19 +444,19 @@ impl Client {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug, file_path.to_string(), InputKind::Workflow)?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
-                inputs.push(Workflow::from_string(contents, key)?.into());
+                registry.register(contents, key)?;
             } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug, file_path.to_string(), InputKind::Action)?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
-                inputs.push(Action::from_string(contents, key)?.into());
+                registry.register(contents, key)?;
             }
         }
 
-        Ok(inputs)
+        Ok(())
     }
 }
 

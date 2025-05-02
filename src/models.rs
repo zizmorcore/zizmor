@@ -19,7 +19,7 @@ use serde_json::json;
 use terminal_link::Link;
 
 use crate::finding::{Route, SymbolicLocation};
-use crate::registry::{InputError, InputKey};
+use crate::registry::{InputError, InputKey, InputKind};
 use crate::utils::{
     self, ACTION_VALIDATOR, WORKFLOW_VALIDATOR, extract_expressions, from_str_with_validation,
 };
@@ -146,7 +146,10 @@ impl Workflow {
         prefix: Option<P>,
     ) -> Result<Self, InputError> {
         let contents = std::fs::read_to_string(path.as_ref())?;
-        Self::from_string(contents, InputKey::local(path, prefix)?)
+        Self::from_string(
+            contents,
+            InputKey::local(path, prefix, InputKind::Workflow)?,
+        )
     }
 
     /// This workflow's [`SymbolicLocation`].
@@ -764,7 +767,10 @@ impl Action {
         prefix: Option<P>,
     ) -> Result<Self, InputError> {
         let contents = std::fs::read_to_string(path.as_ref())?;
-        Self::from_string(contents, InputKey::local(path, prefix)?)
+        Self::from_string(
+            contents,
+            InputKey::local(path, prefix, crate::registry::InputKind::Action)?,
+        )
     }
 
     /// Load an action from a buffer, with an assigned name.
