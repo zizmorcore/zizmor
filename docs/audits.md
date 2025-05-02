@@ -1393,35 +1393,37 @@ Other resources:
 
 * [GitHub Docs: Evaluate expressions in workflows and actions - Example matching an array of strings]
 
-=== "Before :warning:"
+!!! example
 
-    ```yaml title="unsound-contains.yml" hl_lines="9 10"
-    on: push
+    === "Before :warning:"
 
-    jobs:
-      tf-deploy:
-        runs-on: ubuntu-latest
-        steps:
-          - run: terraform init -input=false
-          - run: terraform plan -out=tfplan -input=false
-          - run: terraform apply -input=false tfplan
-            if: contains('refs/heads/main refs/heads/develop', github.ref)
-    ```
+        ```yaml title="unsound-contains.yml" hl_lines="9 10"
+        on: push
 
-=== "After :white_check_mark:"
+        jobs:
+          tf-deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: terraform init -input=false
+              - run: terraform plan -out=tfplan -input=false
+              - run: terraform apply -input=false tfplan
+                if: contains('refs/heads/main refs/heads/develop', github.ref)
+        ```
 
-    ```yaml title="unsound-contains.yml" hl_lines="9 10"
-    on: push
+    === "After :white_check_mark:"
 
-    jobs:
-      tf-deploy:
-        runs-on: ubuntu-latest
-        steps:
-          - run: terraform init -input=false
-          - run: terraform plan -out=tfplan -input=false
-          - run: terraform apply -input=false tfplan
-            if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
-    ```
+        ```yaml title="unsound-contains.yml" hl_lines="9 10"
+        on: push
+
+        jobs:
+          tf-deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: terraform init -input=false
+              - run: terraform plan -out=tfplan -input=false
+              - run: terraform apply -input=false tfplan
+                if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
+        ```
 
 ## `unpinned-images`
 
@@ -1467,35 +1469,37 @@ Many popular registries will display the hash value in their web console or you
 can use the command line to determine the hash of an image you have previously pulled
 by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
 
-=== "Before :warning:"
+!!! example
 
-    ```yaml title="unpinned-images.yml" hl_lines="7-8"
-    name: unpinned-images
-    on: [push]
+    === "Before :warning:"
 
-    jobs:
-      unpinned-image:
-        runs-on: ubuntu-latest
-        container:
-          image: fake.example.com/example
-        steps:
-          - run: "echo unpinned container!"
-    ```
+        ```yaml title="unpinned-images.yml" hl_lines="7-8"
+        name: unpinned-images
+        on: [push]
 
-=== "After :white_check_mark:"
+        jobs:
+          unpinned-image:
+            runs-on: ubuntu-latest
+            container:
+              image: fake.example.com/example
+            steps:
+              - run: "echo unpinned container!"
+        ```
 
-    ```yaml title="unpinned-images.yml" hl_lines="7-8"
-    name: unpinned-images
-    on: [push]
+    === "After :white_check_mark:"
 
-    jobs:
-      unpinned-image:
-        runs-on: ubuntu-latest
-        container:
-          image: fake.example.com/example@sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
-        steps:
-          - run: "echo pinned container!"
-    ```
+        ```yaml title="unpinned-images.yml" hl_lines="7-8"
+        name: unpinned-images
+        on: [push]
+
+        jobs:
+          unpinned-image:
+            runs-on: ubuntu-latest
+            container:
+              image: fake.example.com/example@sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+            steps:
+              - run: "echo pinned container!"
+        ```
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
