@@ -1427,7 +1427,9 @@ Other resources:
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action  | [unpinned-container-images.yml] | v1.7.0        | ✅            | ✅                | ❌          |
+| Workflow, Action  | [unpinned-images.yml] | v1.7.0        | ✅            | ✅                | ❌          |
+
+[unpinned-images.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned-images.yml
 
 Checks for `container.image` values where the image is not pinned by either a tag (other than `latest`) or SHA256.
 
