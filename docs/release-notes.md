@@ -20,6 +20,11 @@ of `zizmor`.
 
     Many thanks to @Marcono1234 for proposing and implementing this audit!
 
+* **New audit**: The [unsound-contains] audit detects uses of
+  the `contains()` function that can be bypassed (#577)
+
+    Many thanks to @Holzhaus for proposing and implementing this audit!
+
 * `zizmor` now reports much clearer error messages when auditing fails
   due to an invalid workflow or action definition (#719)
 
@@ -731,3 +736,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [forbidden-uses]: ./audits.md#forbidden-uses
 [obfuscation]: ./audits.md#obfuscation
 [stale-action-refs]: ./audits.md#stale-action-refs
+[unsound-contains]: ./audits.md#unsound-contains

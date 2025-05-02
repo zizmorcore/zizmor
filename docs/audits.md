@@ -1343,6 +1343,11 @@ tell which changes of the subsequent release the pinned commit includes.
     all commits on a certain branch are considered releases. In such a case
     findings of this audit can likely be ignored.
 
+### Remediation
+
+Change the `#!yaml uses:` clause to pin the action using a SHA reference
+which points to a Git tag.
+
 ## `unsound-contains`
 
 | Type     | Examples                            | Introduced in | Works offline | Enabled by default | Configurable |
@@ -1418,10 +1423,6 @@ Other resources:
             if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
     ```
 
-### Remediation
-
-Change the `#!yaml uses:` clause to pin the action using a SHA reference
-which points to a Git tag.
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
