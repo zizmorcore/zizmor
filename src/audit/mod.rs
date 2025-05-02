@@ -35,6 +35,7 @@ pub(crate) mod stale_action_refs;
 pub(crate) mod template_injection;
 pub(crate) mod unpinned_uses;
 pub(crate) mod unredacted_secrets;
+pub(crate) mod unsound_contains;
 pub(crate) mod use_trusted_publishing;
 
 #[derive(Debug)]
