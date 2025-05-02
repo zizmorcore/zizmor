@@ -4,7 +4,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     expr::{Context, Expr},
     finding::{Confidence, Severity},
-    models::JobExt,
+    models::{JobExt, StepCommon as _},
 };
 
 const USER_CONTROLLABLE_CONTEXTS: &[&str] = &[
@@ -84,14 +84,10 @@ impl UnsoundContains {
         expr: &'a Expr,
     ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>)> + 'a> {
         match expr {
-            Expr::Call { func, args: exprs } if func == "contains" => {
-                match exprs.as_slice() {
-                    [Expr::String(s), Expr::Context(c)] => {
-                        Box::new(std::iter::once((s.as_str(), c)))
-                    }
-                    args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
-                }
-            }
+            Expr::Call { func, args: exprs } if func == "contains" => match exprs.as_slice() {
+                [Expr::String(s), Expr::Context(c)] => Box::new(std::iter::once((s.as_str(), c))),
+                args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
+            },
             Expr::Call {
                 func: _,
                 args: exprs,

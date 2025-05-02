@@ -27,3 +27,7 @@ jobs:
       - name: probably-not-vulnerable-but-still-bad
         run: echo hello
         if: contains('runner1,runner2', runner.name)
+
+      - name: not-vulnerable
+        run: echo hello
+        if: contains(some.context.*.foo, github.ref_name)
