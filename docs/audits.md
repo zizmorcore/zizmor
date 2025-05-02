@@ -1449,24 +1449,24 @@ By default, this audit applies the following policy:
 
 * Regular findings are created for all image references missing a tag
 
-```yaml
-container:
-  image: foo/bar
-```
+    ```yaml
+    container:
+      image: foo/bar
+    ```
 
-or using the `latest` tag:
+    or using the `latest` tag:
 
-```yaml
-container:
-  image: foo/bar:latest
-```
+    ```yaml
+    container:
+      image: foo/bar:latest
+    ```
 
 * Pedantic findings are created for all image references using a tag (`!= latest`) rather than SHA256 hash.
 
-```yaml
-container:
-  image: foo/bar:not-a-sha256
-```
+    ```yaml
+    container:
+      image: foo/bar:not-a-sha256
+    ```
 
 Other resources:
 
