@@ -756,17 +756,17 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
         on: [push]
 
         jobs:
-        unpinned-uses:
-            runs-on: ubuntu-latest
-            steps:
-            - uses: actions/checkout
-              with:
-              persist-credentials: false
+          unpinned-uses:
+              runs-on: ubuntu-latest
+              steps:
+              - uses: actions/checkout
+                with:
+                persist-credentials: false
 
-            - uses: docker://ubuntu
-              with:
-              entrypoint: /bin/echo
-              args: hello!
+              - uses: docker://ubuntu
+                with:
+                entrypoint: /bin/echo
+                args: hello!
         ```
 
     === "After :white_check_mark:"
@@ -776,17 +776,17 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
         on: [push]
 
         jobs:
-        unpinned-uses:
-            runs-on: ubuntu-latest
-            steps:
-            - uses: actions/checkout@v4 # (1)!
-              with:
-              persist-credentials: false
+          unpinned-uses:
+              runs-on: ubuntu-latest
+              steps:
+              - uses: actions/checkout@v4 # (1)!
+                with:
+                persist-credentials: false
 
-            - uses: docker://ubuntu:24.04
-              with:
-              entrypoint: /bin/echo
-              args: hello!
+              - uses: docker://ubuntu:24.04
+                with:
+                entrypoint: /bin/echo
+                args: hello!
         ```
 
         1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
@@ -1423,6 +1423,79 @@ Other resources:
             if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
     ```
 
+## `unpinned-images`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  | [unpinned-images.yml] | v1.7.0        | ✅            | ✅                | ❌          |
+
+[unpinned-images.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned-images.yml
+
+Checks for `container.image` values where the image is not pinned by either a tag (other than `latest`) or SHA256.
+
+When image references are unpinned or are pinned to a mutable tag, the
+workflow is at risk because the image used will be unpredictable over time.
+Changes made to the OCI registry used to source the image may result in untrusted
+images gaining access to your workflow.
+
+This can be a security risk:
+
+1. Registries may not consistently enforce immutable image tags
+2. Completely unpinned images can be changed at any time by the OCI registry.
+
+Other resources:
+
+- [Aqua: The Challenges of Uniquely Identifying Your Images]
+- [GitHub: Safeguard your containers with new container signing capability in GitHub Actions]
+
+```yaml
+container:
+  image: foo/bar
+```
+and where that version is `latest`:
+
+```yaml
+container:
+  image: foo/bar:latest
+```
+
+### Remediation
+
+Pin the `#!yaml container.image:` value to a specific SHA256 image registry hash.
+
+Many popular registries will display the hash value in their web console or you
+can use the command line to determine the hash of an image you have previously pulled
+by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
+
+=== "Before :warning:"
+
+    ```yaml title="unpinned-images.yml" hl_lines="7-8"
+    name: unpinned-images
+    on: [push]
+
+    jobs:
+      unpinned-image:
+        runs-on: ubuntu-latest
+        container:
+          image: fake.example.com/example
+        steps:
+          - run: "echo unpinned container!"
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="unpinned-images.yml" hl_lines="7-8"
+    name: unpinned-images
+    on: [push]
+
+    jobs:
+      unpinned-image:
+        runs-on: ubuntu-latest
+        container:
+          image: fake.example.com/example@sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+        steps:
+          - run: "echo pinned container!"
+    ```
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
@@ -1452,3 +1525,5 @@ Other resources:
 [Dependabot secrets]: https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions#accessing-secrets
 [explicitly specifying needed permissions]: https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions#changing-github_token-permissions
 [branch filter]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#running-your-pull_request_target-workflow-based-on-the-head-or-base-branch-of-a-pull-request
+[Aqua: The Challenges of Uniquely Identifying Your Images]: https://www.aquasec.com/blog/docker-image-tags/
+[GitHub: Safeguard your containers with new container signing capability in GitHub Actions]: https://github.blog/security/supply-chain-security/safeguard-container-signing-capability-actions/

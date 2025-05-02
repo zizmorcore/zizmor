@@ -685,3 +685,14 @@ fn stale_action_refs() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn unpinned_images() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-images.yml"))
+            .run()?
+    );
+
+    Ok(())
+}

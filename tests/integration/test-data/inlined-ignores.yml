@@ -22,7 +22,7 @@ jobs:
   hardcoded-credentials-ignored:
     runs-on: ubuntu-latest
     container:
-      image: fake.example.com/example
+      image: fake.example.com/example # zizmor: ignore[unpinned-images]
       credentials:
         username: user
         password: hackme # zizmor: ignore[hardcoded-container-credentials]
