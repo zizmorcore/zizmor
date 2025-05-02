@@ -65,7 +65,7 @@ pub(crate) fn from_str_with_validation<'de, T>(
 where
     T: serde::Deserialize<'de>,
 {
-    match serde_yaml::from_str::<T>(&contents) {
+    match serde_yaml::from_str::<T>(contents) {
         Ok(value) => Ok(value),
         Err(e) => {
             // Something a little wonky happens here: we want
@@ -85,7 +85,7 @@ where
             // See: https://github.com/dtolnay/serde-yaml/issues/170
             // See: https://github.com/dtolnay/serde-yaml/issues/395
 
-            match serde_yaml::from_str(&contents) {
+            match serde_yaml::from_str(contents) {
                 // We know we have valid YAML, so one of two things happened here:
                 // 1. The input is semantically valid, but we have a bug in
                 //    `github-actions-models`.
@@ -95,11 +95,9 @@ where
                 Ok(raw_value) => match validator.apply(&raw_value).basic() {
                     Valid(_) => Err(e)
                         .context("this strongly suggests a bug in zizmor; please report it!")
-                        .with_context(|| format!("failed to load valid-looking input"))
+                        .with_context(|| "failed to load valid-looking input".to_string())
                         .map_err(InputError::Sema),
-                    Invalid(errors) => {
-                        Err(parse_validation_errors(errors)).map_err(InputError::Sema)
-                    }
+                    Invalid(errors) => Err(InputError::Sema(parse_validation_errors(errors))),
                 },
                 // Syntax error.
                 Err(e) => Err(InputError::Syntax(e.into())),
