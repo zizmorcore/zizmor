@@ -756,17 +756,17 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
         on: [push]
 
         jobs:
-        unpinned-uses:
-            runs-on: ubuntu-latest
-            steps:
-            - uses: actions/checkout
-              with:
-              persist-credentials: false
+          unpinned-uses:
+              runs-on: ubuntu-latest
+              steps:
+              - uses: actions/checkout
+                with:
+                persist-credentials: false
 
-            - uses: docker://ubuntu
-              with:
-              entrypoint: /bin/echo
-              args: hello!
+              - uses: docker://ubuntu
+                with:
+                entrypoint: /bin/echo
+                args: hello!
         ```
 
     === "After :white_check_mark:"
@@ -776,17 +776,17 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
         on: [push]
 
         jobs:
-        unpinned-uses:
-            runs-on: ubuntu-latest
-            steps:
-            - uses: actions/checkout@v4 # (1)!
-              with:
-              persist-credentials: false
+          unpinned-uses:
+              runs-on: ubuntu-latest
+              steps:
+              - uses: actions/checkout@v4 # (1)!
+                with:
+                persist-credentials: false
 
-            - uses: docker://ubuntu:24.04
-              with:
-              entrypoint: /bin/echo
-              args: hello!
+              - uses: docker://ubuntu:24.04
+                with:
+                entrypoint: /bin/echo
+                args: hello!
         ```
 
         1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
@@ -1465,7 +1465,37 @@ Pin the `#!yaml container.image:` value to a specific SHA256 image registry hash
 
 Many popular registries will display the hash value in their web console or you
 can use the command line to determine the hash of an image you have previously pulled
-by running `docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
+by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
+
+=== "Before :warning:"
+
+    ```yaml title="unpinned-images.yml" hl_lines="7-8"
+    name: unpinned-images
+    on: [push]
+
+    jobs:
+      unpinned-image:
+        runs-on: ubuntu-latest
+        container:
+          image: fake.example.com/example
+        steps:
+          - run: "echo unpinned container!"
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="unpinned-images.yml" hl_lines="7-8"
+    name: unpinned-images
+    on: [push]
+
+    jobs:
+      unpinned-image:
+        runs-on: ubuntu-latest
+        container:
+          image: fake.example.com/example@sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+        steps:
+          - run: "echo pinned container!"
+    ```
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
