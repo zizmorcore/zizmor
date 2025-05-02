@@ -7,14 +7,10 @@ use crate::{
     models::{JobExt, StepCommon as _},
 };
 
+// TODO: Merge this with the list in `template_injection.rs`?
+// See also #674.
 const USER_CONTROLLABLE_CONTEXTS: &[&str] = &[
-    "env.GITHUB_ACTOR",
-    "env.GITHUB_BASE_REF",
-    "env.GITHUB_HEAD_REF",
-    "env.GITHUB_REF",
-    "env.GITHUB_REF_NAME",
-    "env.GITHUB_SHA",
-    "env.GITHUB_TRIGGERING_ACTOR",
+    "env",
     "github.actor",
     "github.base_ref",
     "github.head_ref",
@@ -22,7 +18,7 @@ const USER_CONTROLLABLE_CONTEXTS: &[&str] = &[
     "github.ref_name",
     "github.sha",
     "github.triggering_actor",
-    "inputs.",
+    "inputs",
 ];
 
 pub(crate) struct UnsoundContains;
@@ -119,10 +115,10 @@ impl UnsoundContains {
             .iter()
             .flat_map(|expression| Self::walk_tree_for_unsound_contains(expression))
             .map(|(_s, ctx)| {
-                let severity = if USER_CONTROLLABLE_CONTEXTS.iter().any(|item| {
-                    let context = &ctx.as_str();
-                    item == context || (item.ends_with(".") && context.starts_with(item))
-                }) {
+                let severity = if USER_CONTROLLABLE_CONTEXTS
+                    .iter()
+                    .any(|item| ctx.child_of(*item))
+                {
                     Severity::High
                 } else {
                     Severity::Informational
@@ -146,6 +142,10 @@ mod tests {
                 vec![(Severity::High, String::from("github.ref"))],
             ),
             (
+                "contains('refs/heads/main refs/heads/develop', github.REF)",
+                vec![(Severity::High, String::from("github.REF"))], // case insensitive
+            ),
+            (
                 "false || contains('main,develop', github.head_ref)",
                 vec![(Severity::High, String::from("github.head_ref"))],
             ),
@@ -156,6 +156,14 @@ mod tests {
             (
                 "contains(fromJSON('[true]'), contains('refs/heads/main refs/heads/develop', env.GITHUB_REF))",
                 vec![(Severity::High, String::from("env.GITHUB_REF"))],
+            ),
+            (
+                "contains(fromJSON('[true]'), contains('refs/heads/main refs/heads/develop', env.github_ref))",
+                vec![(Severity::High, String::from("env.github_ref"))],
+            ),
+            (
+                "contains(fromJSON('[true]'), contains('refs/heads/main refs/heads/develop', env.SOMETHING_RANDOM))",
+                vec![(Severity::High, String::from("env.SOMETHING_RANDOM"))],
             ),
             (
                 "contains('push pull_request', github.event_name)",
