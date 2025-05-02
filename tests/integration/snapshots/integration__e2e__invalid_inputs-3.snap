@@ -10,16 +10,12 @@ Caused by:
        
        Caused by:
            0: couldn't parse input as workflow: file://@@INPUT@@
-           1: jobs.invalid: "runs-on" is a required property
-              jobs.invalid: Additional properties are not allowed ('steps' was unexpected)
-              jobs.invalid: "uses" is a required property
+           1: null is not of type "object"
               
     1: invalid input structure
        
        Caused by:
            0: couldn't parse input as action: file://@@INPUT@@
-           1: Additional properties are not allowed ('jobs', 'on', 'permissions' were unexpected)
-              "description" is a required property
-              "runs" is a required property
+           1: null is not of type "object"
               
     2: failed to register input as workflow or action

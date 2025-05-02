@@ -9,15 +9,16 @@ Caused by:
     0: invalid input structure
        
        Caused by:
-           0: invalid GitHub Actions workflow: file://@@INPUT@@
+           0: couldn't parse input as workflow: file://@@INPUT@@
            1: on.workflow_call.inputs.input: "type" is a required property
               Additional properties are not allowed ('boom' was unexpected)
               
-    1: invalid GitHub Actions definition: file://@@INPUT@@
+    1: invalid input structure
        
        Caused by:
-           Additional properties are not allowed ('boom', 'jobs', 'on', 'permissions' were unexpected)
-           "description" is a required property
-           "runs" is a required property
-           
+           0: couldn't parse input as action: file://@@INPUT@@
+           1: Additional properties are not allowed ('boom', 'jobs', 'on', 'permissions' were unexpected)
+              "description" is a required property
+              "runs" is a required property
+              
     2: failed to register input as workflow or action

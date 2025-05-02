@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 
-use anyhow::{Context, anyhow, bail};
+use anyhow::{Context, bail};
 use camino::Utf8Path;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
@@ -16,12 +16,13 @@ use github_actions_models::{action, common};
 use indexmap::IndexMap;
 use line_index::LineIndex;
 use serde_json::json;
-use serde_yaml::Value;
 use terminal_link::Link;
 
 use crate::finding::{Route, SymbolicLocation};
 use crate::registry::{InputError, InputKey};
-use crate::utils::{self, extract_expressions, validate_action, validate_workflow};
+use crate::utils::{
+    self, ACTION_VALIDATOR, WORKFLOW_VALIDATOR, extract_expressions, from_str_with_validation,
+};
 
 pub(crate) mod coordinate;
 pub(crate) mod uses;
@@ -115,54 +116,19 @@ impl Deref for Workflow {
 impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
-        let inner = match serde_yaml::from_str(&contents) {
+        let inner = match from_str_with_validation(&contents, &WORKFLOW_VALIDATOR) {
             Ok(workflow) => workflow,
-            Err(e) => {
-                // Something a little wonky happens here: we want
-                // to distinguish between syntax and semantic errors,
-                // but serde-yaml doesn't give us an API to do that.
-                // To approximate it, we re-parse the input as a
-                // `Value` and use that as an oracle -- a successful
-                // re-parse indicates that the input is valid YAML and
-                // that our error is semantic, while a failed re-parse
-                // indicates a syntax error.
-                //
-                // We do this in a nested fashion to avoid re-parsing
-                // the input twice if we can help it, and because the
-                // more obvious trick (`serde_yaml::from_value`) doesn't
-                // work due to a lack of referential transparency.
-                //
-                // See: https://github.com/dtolnay/serde-yaml/issues/170
-                // See: https://github.com/dtolnay/serde-yaml/issues/395
-
-                match serde_yaml::from_str::<Value>(&contents) {
-                    // We know we have valid YAML, so one of two things happened here:
-                    // 1. The workflow is semantically valid, but we have a bug in
-                    //    `github-actions-models`.
-                    // 2. The workflow is semantically invalid, and the user
-                    //    need to fix it.
-                    // We use `validate_workflow` to separate these.
-                    Ok(_) => match validate_workflow(contents) {
-                        Some(err) => {
-                            return Err(err)
-                                .with_context(|| format!("invalid GitHub Actions workflow: {key}"))
-                                .map_err(InputError::Sema);
-                        }
-                        None => {
-                            return Err(e)
-                                .context(
-                                    "this strongly suggests a bug in zizmor; please report it!",
-                                )
-                                .with_context(|| {
-                                    format!("failed to load valid-looking workflow: {key}")
-                                })
-                                .map_err(InputError::Sema);
-                        }
-                    },
-                    // Syntax error.
-                    Err(e) => return Err(InputError::Syntax(e.into())),
-                }
+            Err(InputError::Syntax(e)) => {
+                return Err(e)
+                    .with_context(|| format!("invalid YAML syntax in workflow: {key}"))
+                    .map_err(InputError::Sema);
             }
+            Err(InputError::Sema(e)) => {
+                return Err(e)
+                    .with_context(|| format!("couldn't parse input as workflow: {key}"))
+                    .map_err(InputError::Sema);
+            }
+            Err(e) => return Err(e),
         };
 
         let document = yamlpath::Document::new(&contents)
@@ -810,32 +776,31 @@ impl Action {
     pub(crate) fn from_file<P: AsRef<Utf8Path>>(
         path: P,
         prefix: Option<P>,
-    ) -> anyhow::Result<Self> {
-        let contents =
-            std::fs::read_to_string(path.as_ref()).with_context(|| "couldn't read action file")?;
+    ) -> Result<Self, InputError> {
+        let contents = std::fs::read_to_string(path.as_ref())?;
         Self::from_string(contents, InputKey::local(path, prefix)?)
     }
 
-    /// Load a workflow from a buffer, with an assigned name.
-    pub(crate) fn from_string(contents: String, key: InputKey) -> anyhow::Result<Self> {
-        let inner = match serde_yaml::from_str(&contents) {
-            Ok(action) => action,
-            Err(_) => {
-                // Like with `Workflow::from_string`.
-                match validate_action(contents) {
-                    Some(err) => {
-                        return Err(err)
-                            .with_context(|| format!("invalid GitHub Actions definition: {key}"));
-                    }
-                    None => {
-                        return Err(anyhow!("failed to load valid-looking action: {key}"))
-                            .context("this strongly suggests a bug in zizmor; please report it!");
-                    }
-                }
+    /// Load an action from a buffer, with an assigned name.
+    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
+        let inner = match from_str_with_validation(&contents, &ACTION_VALIDATOR) {
+            Ok(workflow) => workflow,
+            Err(InputError::Syntax(e)) => {
+                return Err(e)
+                    .with_context(|| format!("invalid YAML syntax in action: {key}"))
+                    .map_err(InputError::Sema);
             }
+            Err(InputError::Sema(e)) => {
+                return Err(e)
+                    .with_context(|| format!("couldn't parse input as action: {key}"))
+                    .map_err(InputError::Sema);
+            }
+            Err(e) => return Err(e),
         };
 
-        let document = yamlpath::Document::new(&contents)?;
+        let document = yamlpath::Document::new(&contents)
+            .context("failed to load internal pathing document")
+            .map_err(InputError::Sema)?;
 
         let line_index = LineIndex::new(&contents);
 

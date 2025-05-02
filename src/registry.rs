@@ -208,7 +208,7 @@ impl InputRegistry {
             Err(we) => match Action::from_file(path, prefix) {
                 Ok(action) => self.register_input(action.into()),
                 Err(ae) => Err(anyhow!("failed to register input as workflow or action"))
-                    .with_context(|| format!("{ae:?}"))
+                    .with_context(|| format!("{ae:?}", ae = anyhow!(ae)))
                     .with_context(|| format!("{we:?}", we = anyhow!(we))),
             },
         }
