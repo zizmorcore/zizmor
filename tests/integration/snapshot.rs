@@ -584,6 +584,17 @@ fn secrets_inherit() -> Result<()> {
 }
 
 #[test]
+fn unsound_contains() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unsound-contains.yml"))
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
 fn bot_conditions() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
