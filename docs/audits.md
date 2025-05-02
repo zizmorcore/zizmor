@@ -1445,21 +1445,35 @@ This can be a security risk:
 1. Registries may not consistently enforce immutable image tags
 2. Completely unpinned images can be changed at any time by the OCI registry.
 
+By default, this audit applies the following policy:
+
+* Regular findings are created for all image references missing a tag
+
+    ```yaml
+    container:
+      image: foo/bar
+    ```
+
+    or using the `latest` tag:
+
+    ```yaml
+    container:
+      image: foo/bar:latest
+    ```
+
+* Pedantic findings are created for all image references using a tag (`!= latest`) rather than SHA256 hash.
+
+    ```yaml
+    container:
+      image: foo/bar:not-a-sha256
+    ```
+
 Other resources:
 
 - [Aqua: The Challenges of Uniquely Identifying Your Images]
 - [GitHub: Safeguard your containers with new container signing capability in GitHub Actions]
 
-```yaml
-container:
-  image: foo/bar
-```
-and where that version is `latest`:
 
-```yaml
-container:
-  image: foo/bar:latest
-```
 
 ### Remediation
 

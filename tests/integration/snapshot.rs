@@ -691,6 +691,7 @@ fn unpinned_images() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("unpinned-images.yml"))
+            .args(["--persona=pedantic"])
             .run()?
     );
 
