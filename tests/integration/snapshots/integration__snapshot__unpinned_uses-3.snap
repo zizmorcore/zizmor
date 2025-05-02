@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"unpinned-uses/action.yml\")).args([\"--pedantic\"]).run()?"
-snapshot_kind: text
 ---
 error[unpinned-uses]: unpinned action reference
  --> @@INPUT@@:8:7

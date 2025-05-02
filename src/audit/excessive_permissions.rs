@@ -47,10 +47,10 @@ impl Audit for ExcessivePermissions {
         Ok(Self)
     }
 
-    fn audit_workflow<'w>(
+    fn audit_workflow<'doc>(
         &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+        workflow: &'doc crate::models::Workflow,
+    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
         let all_jobs_have_permissions = workflow

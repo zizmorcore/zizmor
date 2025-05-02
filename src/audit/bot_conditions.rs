@@ -4,7 +4,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     expr::{self, Context, Expr},
     finding::{Confidence, Severity},
-    models::JobExt,
+    models::{JobExt, StepCommon},
 };
 
 pub(crate) struct BotConditions;
@@ -21,10 +21,10 @@ impl Audit for BotConditions {
         Ok(Self)
     }
 
-    fn audit_normal_job<'w>(
+    fn audit_normal_job<'doc>(
         &self,
-        job: &super::NormalJob<'w>,
-    ) -> anyhow::Result<Vec<super::Finding<'w>>> {
+        job: &super::NormalJob<'doc>,
+    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
         // TODO: Consider other triggers as well?

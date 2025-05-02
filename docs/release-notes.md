@@ -15,6 +15,28 @@ of `zizmor`.
   GitHub Actions usages. These patterns are not themselves dangerous,
   but may indicate an attempt to obscure malicious behavior (#683)
 
+* **New audit**: The [stale-action-refs] pedantic audit detects pinned
+  action references which don't point to a Git tag (#713)
+
+    Many thanks to @Marcono1234 for proposing and implementing this audit!
+
+* `zizmor` now reports much clearer error messages when auditing fails
+  due to an invalid workflow or action definition (#719)
+
+    Many thanks to @reandreev for implementing these improvements!
+
+### Bug Fixes 🐛
+
+* The SARIF output format now uses `zizmor/{id}` for rule IDs instead
+  of bare IDs, reducing the chance of conflict or confusion with other tools
+  (#710)
+* The SARIF output format now includes a rule name for each rule descriptor,
+  which should improve rendering behavior in SARIF viewers like the
+  VS Code SARIF Viewer extension (#710)
+* Fixed a bug where `zizmor` would fail to collection actions defined
+  within subdirectories of `.github/workflows` when collecting from
+  a remote source (#731)
+
 ## v1.6.0
 
 ### New Features 🌈
@@ -707,3 +729,5 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [overprovisioned-secrets]: ./audits.md#overprovisioned-secrets
 [unredacted-secrets]: ./audits.md#unredacted-secrets
 [forbidden-uses]: ./audits.md#forbidden-uses
+[obfuscation]: ./audits.md#obfuscation
+[stale-action-refs]: ./audits.md#stale-action-refs

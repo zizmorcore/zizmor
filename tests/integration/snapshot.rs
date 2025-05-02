@@ -21,19 +21,6 @@ fn test_cant_retrieve() -> Result<()> {
 }
 
 #[test]
-fn test_invalid_inputs() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .expects_failure(true)
-            .offline(true)
-            .input(input_under_test("invalid/invalid-workflow.yml"))
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
 fn test_github_output() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
@@ -681,6 +668,20 @@ fn forbidden_uses() -> Result<()> {
 #[test]
 fn obfuscation() -> Result<()> {
     insta::assert_snapshot!(zizmor().input(input_under_test("obfuscation.yml")).run()?);
+
+    Ok(())
+}
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn stale_action_refs() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("stale-action-refs.yml"))
+            .offline(false)
+            .args(["--persona=pedantic"])
+            .run()?
+    );
 
     Ok(())
 }

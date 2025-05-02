@@ -23,10 +23,10 @@ impl Audit for UnredactedSecrets {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(
+    fn audit_raw<'doc>(
         &self,
-        input: &'w super::AuditInput,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+        input: &'doc super::AuditInput,
+    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
         for (expr, span) in parse_expressions_from_input(input) {

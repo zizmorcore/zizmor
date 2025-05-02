@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(workflow_under_test(\"artipacked.yml\")).args([\"--persona=auditor\"]).run()?"
-snapshot_kind: text
+expression: "zizmor().input(input_under_test(\"artipacked.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 warning[artipacked]: credential persistence through GitHub Actions artifacts
   --> @@INPUT@@:15:9

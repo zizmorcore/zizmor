@@ -1,0 +1,17 @@
+name: Invalid
+
+boom:
+
+on:
+  workflow_call:
+    inputs:
+      input:
+        description: Input
+
+permissions: {}
+
+jobs:
+  valid:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'invalid'

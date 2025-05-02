@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(workflow_under_test(\"insecure-commands.yml\")).args([\"--persona=auditor\"]).run()?"
-snapshot_kind: text
+expression: "zizmor().input(input_under_test(\"insecure-commands.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 error[insecure-commands]: execution of insecure workflow commands is enabled
   --> @@INPUT@@:10:5

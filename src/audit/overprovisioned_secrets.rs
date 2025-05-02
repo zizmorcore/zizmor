@@ -22,7 +22,10 @@ impl Audit for OverprovisionedSecrets {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<super::Finding<'w>>> {
+    fn audit_raw<'doc>(
+        &self,
+        input: &'doc AuditInput,
+    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
         for (expr, span) in parse_expressions_from_input(input) {

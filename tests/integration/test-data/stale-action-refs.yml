@@ -1,0 +1,30 @@
+on: pull_request
+
+name: stale-actions-refs
+permissions: {}
+
+jobs:
+  non-stale:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@main
+      with:
+        persist-credentials: false
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - uses: actions/checkout@v4.2.2
+      with:
+        persist-credentials: false
+    # v4.2.2 commit
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        persist-credentials: false
+
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+    # non-tagged commit
+    - uses: actions/checkout@009b9ae9e446ad8d9b8c809870b0fbcc5e03573e
+      with:
+        persist-credentials: false

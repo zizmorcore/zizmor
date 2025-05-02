@@ -1392,6 +1392,37 @@ Address the source of obfuscation by simplifying the expression,
                   repository: octocat/hello-world
         ```
 
+## `stale-action-refs`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  | N/A            | v1.7.0        | ❌            | ✅                | ❌          |
+
+Checks for `#!yaml uses:` clauses which pin an action using a SHA reference,
+but where that reference does not point to a Git tag.
+
+When using an action commit which is not a Git tag / release version, that commit
+might contain bugs or vulnerabilities which have not been publicly documented
+because they might have been fixed before the subsequent release. Additionally,
+because changelogs are usually only published for releases, it is difficult to
+tell which changes of the subsequent release the pinned commit includes.
+
+!!! note
+
+    This is a `--pedantic` only audit because the detected situation is not
+    a vulnerability per se. But it might be worth investigating which commit
+    the SHA reference points to, and why not a SHA reference pointing to a
+    Git tag is used.
+
+    Some action repositories use a "rolling release branch" strategy where
+    all commits on a certain branch are considered releases. In such a case
+    findings of this audit can likely be ignored.
+
+### Remediation
+
+Change the `#!yaml uses:` clause to pin the action using a SHA reference
+which points to a Git tag.
+
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
