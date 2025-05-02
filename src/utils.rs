@@ -65,14 +65,6 @@ pub(crate) fn from_str_with_validation<'de, T>(
 where
     T: serde::Deserialize<'de>,
 {
-    // Special case: consider empty or all whitespace input to be
-    // a syntax error. This is technically incorrect since YAML considers
-    // a blank document/scalar to be valid syntax for a null value,
-    // but treating it as a syntax error is more useful in terms of skippability.
-    if contents.chars().all(|c| c.is_whitespace()) {
-        return Err(InputError::Syntax(anyhow!("empty input")));
-    }
-
     match serde_yaml::from_str::<T>(contents) {
         Ok(value) => Ok(value),
         Err(e) => {
@@ -103,9 +95,14 @@ where
                 Ok(raw_value) => match validator.apply(&raw_value).basic() {
                     Valid(_) => Err(e)
                         .context("this strongly suggests a bug in zizmor; please report it!")
-                        .with_context(|| "failed to load valid-looking input".to_string())
-                        .map_err(InputError::Sema),
-                    Invalid(errors) => Err(InputError::Sema(parse_validation_errors(errors))),
+                        .map_err(|e| InputError::Model {
+                            source: e,
+                            model: std::any::type_name::<T>(),
+                        }),
+                    Invalid(errors) => Err(InputError::Schema {
+                        source: parse_validation_errors(errors),
+                        model: std::any::type_name::<T>(),
+                    }),
                 },
                 // Syntax error.
                 Err(e) => Err(InputError::Syntax(e.into())),

@@ -116,7 +116,8 @@ struct App {
 
     /// Control which kinds of inputs are collected for auditing.
     ///
-    /// By default, all workflows and composite actions are collected.
+    /// By default, all workflows and composite actions are collected,
+    /// while honoring `.gitignore` files.
     #[arg(long, value_enum, default_value_t)]
     collect: CollectionMode,
 

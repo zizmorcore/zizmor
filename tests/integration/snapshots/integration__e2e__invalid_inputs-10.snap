@@ -1,19 +1,19 @@
 ---
 source: tests/integration/e2e.rs
-expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{action_tc}/action.yml\"))).run()?"
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).run()?"
 ---
 fatal: no audit was performed
 failed to register input: @@INPUT@@
 
 Caused by:
-    0: invalid input structure
+    0: input does not match github_actions_models::workflow::Workflow validation schema
        
        Caused by:
-           0: invalid YAML syntax in workflow: file://@@INPUT@@
-           1: empty input
-    1: invalid input structure
+           null is not of type "object"
+           
+    1: input does not match github_actions_models::action::Action validation schema
        
        Caused by:
-           0: invalid YAML syntax in action: file://@@INPUT@@
-           1: empty input
+           null is not of type "object"
+           
     2: failed to register input as workflow or action

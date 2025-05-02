@@ -116,24 +116,10 @@ impl Deref for Workflow {
 impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
-        let inner = match from_str_with_validation(&contents, &WORKFLOW_VALIDATOR) {
-            Ok(workflow) => workflow,
-            Err(InputError::Syntax(e)) => {
-                return Err(e)
-                    .with_context(|| format!("invalid YAML syntax in workflow: {key}"))
-                    .map_err(InputError::Sema);
-            }
-            Err(InputError::Sema(e)) => {
-                return Err(e)
-                    .with_context(|| format!("couldn't parse input as workflow: {key}"))
-                    .map_err(InputError::Sema);
-            }
-            Err(e) => return Err(e),
-        };
+        let inner = from_str_with_validation(&contents, &WORKFLOW_VALIDATOR)?;
 
         let document = yamlpath::Document::new(&contents)
-            .context("failed to load internal pathing document")
-            .map_err(InputError::Sema)?;
+            .context("failed to load internal pathing document")?;
 
         let line_index = LineIndex::new(&contents);
 
@@ -783,24 +769,10 @@ impl Action {
 
     /// Load an action from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
-        let inner = match from_str_with_validation(&contents, &ACTION_VALIDATOR) {
-            Ok(workflow) => workflow,
-            Err(InputError::Syntax(e)) => {
-                return Err(e)
-                    .with_context(|| format!("invalid YAML syntax in action: {key}"))
-                    .map_err(InputError::Sema);
-            }
-            Err(InputError::Sema(e)) => {
-                return Err(e)
-                    .with_context(|| format!("couldn't parse input as action: {key}"))
-                    .map_err(InputError::Sema);
-            }
-            Err(e) => return Err(e),
-        };
+        let inner = from_str_with_validation(&contents, &ACTION_VALIDATOR)?;
 
         let document = yamlpath::Document::new(&contents)
-            .context("failed to load internal pathing document")
-            .map_err(InputError::Sema)?;
+            .context("failed to load internal pathing document")?;
 
         let line_index = LineIndex::new(&contents);
 

@@ -26,17 +26,31 @@ use crate::{
 #[derive(Error, Debug)]
 pub(crate) enum InputError {
     /// The input's syntax is invalid.
+    /// This typically indicates a user error.
     #[error("invalid YAML syntax: {0}")]
     Syntax(#[source] anyhow::Error),
-    /// The input's semantic structure is invalid.
-    #[error("invalid input structure")]
-    Sema(#[source] anyhow::Error),
+    /// The input couldn't be converted into the expected model.
+    /// This typically indicates a bug in `github-actions-models`.
+    #[error("couldn't turn input into a {model} definition")]
+    Model {
+        source: anyhow::Error,
+        model: &'static str,
+    },
+    /// The input doesn't match the schema for the expected model.
+    /// This typically indicates a user error.
+    #[error("input does not match {model} validation schema")]
+    Schema {
+        source: anyhow::Error,
+        model: &'static str,
+    },
     /// An I/O error occurred while loading the input.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
     /// The input's name is missing.
     #[error("invalid input: no filename component")]
     MissingName,
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
