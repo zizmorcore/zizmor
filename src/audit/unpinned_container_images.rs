@@ -73,8 +73,8 @@ impl Audit for UnpinnedContainerImages {
         for (image, location) in image_refs_with_locations {
             match image.hash {
                 Some(_) => continue,
-                None => match image.tag {
-                    Some(tag) if tag == "latest" => {
+                None => match image.tag.as_deref() {
+                    Some("latest") => {
                         findings.push(self.build_finding(
                             location,
                             "container image is pinned to latest",
