@@ -348,6 +348,30 @@ error[hardcoded-container-credentials]: hardcoded credential in GitHub Actions c
    |
    = note: audit confidence → High
 
+error[unpinned-container-images]: unpinned container image references
+  --> .github/workflows/hardcoded-credentials.yml:26:7
+   |
+26 |       image: fake.example.com/example
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |
+   = note: audit confidence → High
+
+error[unpinned-container-images]: unpinned container image references
+  --> .github/workflows/hardcoded-credentials.yml:33:9
+   |
+33 |         image: fake.example.com/anotherexample
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |
+   = note: audit confidence → High
+
+error[unpinned-container-images]: unpinned container image references
+  --> .github/workflows/hardcoded-credentials.yml:39:9
+   |
+39 |         image: fake.example.com/yetanotherexample
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |
+   = note: audit confidence → High
+
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/impostor-commit.yml:22:2
    |
@@ -978,4 +1002,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-96 findings (13 suppressed): 0 unknown, 5 informational, 0 low, 37 medium, 41 high
+99 findings (13 suppressed): 0 unknown, 5 informational, 0 low, 37 medium, 44 high
