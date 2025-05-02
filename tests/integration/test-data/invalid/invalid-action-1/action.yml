@@ -1,0 +1,11 @@
+name: "Action"
+inputs:
+  some-input:
+    description: "Input description"
+    default: "default"
+outputs:
+  some-output:
+    description: "Output description"
+runs:
+  # using: docker
+  image: Dockerfile
