@@ -1,0 +1,31 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{action_tc}/action.yml\"))).run()?"
+---
+fatal: no audit was performed
+failed to register input: @@INPUT@@
+
+Caused by:
+    0: invalid input structure
+       
+       Caused by:
+           0: couldn't parse input as workflow: file://@@INPUT@@
+           1: Additional properties are not allowed ('inputs', 'outputs', 'runs' were unexpected)
+              "on" is a required property
+              "jobs" is a required property
+              
+    1: invalid input structure
+       
+       Caused by:
+           0: couldn't parse input as action: file://@@INPUT@@
+           1: runs: Additional properties are not allowed ('image' was unexpected)
+              runs: "using" is a required property
+              runs: "main" is a required property
+              runs: Additional properties are not allowed ('image' was unexpected)
+              runs: "using" is a required property
+              runs: "steps" is a required property
+              runs: "using" is a required property
+              outputs.some-output: "value" is a required property
+              "description" is a required property
+              
+    2: failed to register input as workflow or action

@@ -1,6 +1,6 @@
 ---
 source: tests/integration/e2e.rs
-expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{action_tc}/action.yml\"))).run()?"
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).run()?"
 ---
 fatal: no audit was performed
 failed to register input: @@INPUT@@
@@ -9,11 +9,13 @@ Caused by:
     0: invalid input structure
        
        Caused by:
-           0: invalid YAML syntax in workflow: file://@@INPUT@@
-           1: mapping values are not allowed in this context at line 3 column 8
+           0: couldn't parse input as workflow: file://@@INPUT@@
+           1: null is not of type "object"
+              
     1: invalid input structure
        
        Caused by:
-           0: invalid YAML syntax in action: file://@@INPUT@@
-           1: mapping values are not allowed in this context at line 3 column 8
+           0: couldn't parse input as action: file://@@INPUT@@
+           1: null is not of type "object"
+              
     2: failed to register input as workflow or action

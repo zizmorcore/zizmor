@@ -1,6 +1,6 @@
 ---
 source: tests/integration/e2e.rs
-expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).run()?"
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{action_tc}/action.yml\"))).run()?"
 ---
 fatal: no audit was performed
 failed to register input: @@INPUT@@

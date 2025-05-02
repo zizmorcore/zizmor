@@ -219,20 +219,16 @@ fn invalid_inputs() -> Result<()> {
         "empty",
         "bad-yaml-1",
         "bad-yaml-2",
+        "blank",
+        "comment-only",
+        "invalid-action-1/action",
+        "invalid-action-2/action",
+        "empty-action/action",
     ] {
         insta::assert_snapshot!(
             zizmor()
                 .expects_failure(true)
                 .input(input_under_test(&format!("invalid/{workflow_tc}.yml")))
-                .run()?
-        );
-    }
-
-    for action_tc in ["invalid-action-1", "invalid-action-2"] {
-        insta::assert_snapshot!(
-            zizmor()
-                .expects_failure(true)
-                .input(input_under_test(&format!("invalid/{action_tc}/action.yml")))
                 .run()?
         );
     }

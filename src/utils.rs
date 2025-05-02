@@ -65,6 +65,14 @@ pub(crate) fn from_str_with_validation<'de, T>(
 where
     T: serde::Deserialize<'de>,
 {
+    // Special case: consider empty or all whitespace input to be
+    // a syntax error. This is technically incorrect since YAML considers
+    // a blank document/scalar to be valid syntax for a null value,
+    // but treating it as a syntax error is more useful in terms of skippability.
+    if contents.chars().all(|c| c.is_whitespace()) {
+        return Err(InputError::Syntax(anyhow!("empty input")));
+    }
+
     match serde_yaml::from_str::<T>(contents) {
         Ok(value) => Ok(value),
         Err(e) => {
