@@ -348,7 +348,7 @@ error[hardcoded-container-credentials]: hardcoded credential in GitHub Actions c
    |
    = note: audit confidence → High
 
-error[unpinned-container-images]: unpinned container image references
+error[unpinned-images]: unpinned image references
   --> .github/workflows/hardcoded-credentials.yml:26:7
    |
 26 |       image: fake.example.com/example
@@ -356,7 +356,7 @@ error[unpinned-container-images]: unpinned container image references
    |
    = note: audit confidence → High
 
-error[unpinned-container-images]: unpinned container image references
+error[unpinned-images]: unpinned image references
   --> .github/workflows/hardcoded-credentials.yml:33:9
    |
 33 |         image: fake.example.com/anotherexample
@@ -364,7 +364,7 @@ error[unpinned-container-images]: unpinned container image references
    |
    = note: audit confidence → High
 
-error[unpinned-container-images]: unpinned container image references
+error[unpinned-images]: unpinned image references
   --> .github/workflows/hardcoded-credentials.yml:39:9
    |
 39 |         image: fake.example.com/yetanotherexample

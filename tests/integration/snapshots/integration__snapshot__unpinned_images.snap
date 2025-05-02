@@ -1,8 +1,8 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(input_under_test(\"unpinned-container-images.yml\")).run()?"
+expression: "zizmor().input(input_under_test(\"unpinned-images.yml\")).run()?"
 ---
-error[unpinned-container-images]: unpinned container image references
+error[unpinned-images]: unpinned image references
   --> @@INPUT@@:16:7
    |
 16 |       image: fake.example.com/example
@@ -10,7 +10,7 @@ error[unpinned-container-images]: unpinned container image references
    |
    = note: audit confidence → High
 
-error[unpinned-container-images]: unpinned container image references
+error[unpinned-images]: unpinned image references
   --> @@INPUT@@:24:9
    |
 24 |         image: fake.example.com/redis
@@ -18,7 +18,7 @@ error[unpinned-container-images]: unpinned container image references
    |
    = note: audit confidence → High
 
-error[unpinned-container-images]: unpinned container image references
+error[unpinned-images]: unpinned image references
   --> @@INPUT@@:31:7
    |
 31 |       image: fake.example.com/example:latest
@@ -26,7 +26,7 @@ error[unpinned-container-images]: unpinned container image references
    |
    = note: audit confidence → High
 
-error[unpinned-container-images]: unpinned container image references
+error[unpinned-images]: unpinned image references
   --> @@INPUT@@:39:9
    |
 39 |         image: fake.example.com/redis:latest

@@ -268,8 +268,8 @@ fn audit_cache_poisoning() -> anyhow::Result<()> {
 }
 
 #[test]
-fn audit_unpinned_container_images() -> anyhow::Result<()> {
-    let auditable = input_under_test("unpinned-container-images.yml");
+fn audit_unpinned_images() -> anyhow::Result<()> {
+    let auditable = input_under_test("unpinned-images.yml");
     let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).output()?;

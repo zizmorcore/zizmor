@@ -1423,7 +1423,7 @@ Other resources:
             if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
     ```
 
-## `unpinned-container-images`
+## `unpinned-images`
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------|--------------|

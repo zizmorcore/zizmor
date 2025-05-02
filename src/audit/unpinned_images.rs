@@ -11,9 +11,9 @@ use github_actions_models::workflow::job::Container;
 
 use super::{Audit, AuditLoadError, audit_meta};
 
-pub(crate) struct UnpinnedContainerImages;
+pub(crate) struct UnpinnedImages;
 
-impl UnpinnedContainerImages {
+impl UnpinnedImages {
     fn build_finding<'doc>(
         &self,
         location: SymbolicLocation<'doc>,
@@ -31,12 +31,12 @@ impl UnpinnedContainerImages {
 }
 
 audit_meta!(
-    UnpinnedContainerImages,
-    "unpinned-container-images",
-    "unpinned container image references"
+    UnpinnedImages,
+    "unpinned-images",
+    "unpinned image references"
 );
 
-impl Audit for UnpinnedContainerImages {
+impl Audit for UnpinnedImages {
     fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }

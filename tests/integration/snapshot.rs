@@ -687,10 +687,10 @@ fn stale_action_refs() -> Result<()> {
 }
 
 #[test]
-fn unpinned_container_images() -> Result<()> {
+fn unpinned_images() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .input(input_under_test("unpinned-container-images.yml"))
+            .input(input_under_test("unpinned-images.yml"))
             .run()?
     );
 
