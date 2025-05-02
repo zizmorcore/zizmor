@@ -17,7 +17,7 @@ use github_actions_models::common::Uses;
 use github_api::GitHubHost;
 use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
-use models::Action;
+use models::{Action, Workflow};
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, InputRegistry};
 use state::AuditState;
@@ -281,9 +281,8 @@ fn collect_from_dir(
                 .parent()
                 .is_some_and(|dir| dir.ends_with(".github/workflows"))
         {
-            registry
-                .register_by_path(entry, Some(input_path))
-                .with_context(|| format!("failed to register input: {entry}"))?;
+            let workflow = Workflow::from_file(entry, Some(input_path))?;
+            registry.register_input(workflow.into())?;
         }
 
         if mode.actions()
