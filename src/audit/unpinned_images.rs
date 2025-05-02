@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::{
-    finding::{Confidence, Finding, Severity, SymbolicLocation},
+    finding::{Confidence, Finding, Persona, Severity, SymbolicLocation},
     models::JobExt as _,
     state::AuditState,
 };
@@ -18,6 +18,7 @@ impl UnpinnedImages {
         &self,
         location: SymbolicLocation<'doc>,
         annotation: &str,
+        persona: Persona,
         job: &super::NormalJob<'doc>,
     ) -> Result<Finding<'doc>> {
         let mut annotated_location = location;
@@ -26,6 +27,7 @@ impl UnpinnedImages {
             .severity(Severity::High)
             .confidence(Confidence::High)
             .add_location(annotated_location)
+            .persona(persona)
             .build(job.parent())
     }
 }
@@ -78,6 +80,7 @@ impl Audit for UnpinnedImages {
                         findings.push(self.build_finding(
                             location,
                             "container image is pinned to latest",
+                            Persona::Regular,
                             job,
                         )?);
                     }
@@ -85,10 +88,18 @@ impl Audit for UnpinnedImages {
                         findings.push(self.build_finding(
                             location,
                             "container image is unpinned",
+                            Persona::Regular,
                             job,
                         )?);
                     }
-                    Some(_) => continue,
+                    Some(_) => {
+                        findings.push(self.build_finding(
+                            location,
+                            "container image is not pinned to a SHA256 hash",
+                            Persona::Pedantic,
+                            job,
+                        )?);
+                    }
                 },
             }
         }
