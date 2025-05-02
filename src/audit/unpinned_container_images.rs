@@ -73,25 +73,23 @@ impl Audit for UnpinnedContainerImages {
         for (image, location) in image_refs_with_locations {
             match image.hash {
                 Some(_) => continue,
-                None => {
-                    match image.tag {
-                        Some(tag) if tag == "latest" => {
-                            findings.push(self.build_finding(
-                                location,
-                                "container image is pinned to latest",
-                                job,
-                            )?);
-                        }
-                        None => {
-                            findings.push(self.build_finding(
-                                location,
-                                "container image is unpinned",
-                                job,
-                            )?);
-                        }
-                        Some(_) => continue,
+                None => match image.tag {
+                    Some(tag) if tag == "latest" => {
+                        findings.push(self.build_finding(
+                            location,
+                            "container image is pinned to latest",
+                            job,
+                        )?);
                     }
-                }
+                    None => {
+                        findings.push(self.build_finding(
+                            location,
+                            "container image is unpinned",
+                            job,
+                        )?);
+                    }
+                    Some(_) => continue,
+                },
             }
         }
 

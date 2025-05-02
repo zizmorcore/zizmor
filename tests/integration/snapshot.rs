@@ -686,7 +686,6 @@ fn stale_action_refs() -> Result<()> {
     Ok(())
 }
 
-
 #[test]
 fn unpinned_container_images() -> Result<()> {
     insta::assert_snapshot!(
