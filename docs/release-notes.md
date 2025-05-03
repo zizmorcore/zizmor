@@ -35,6 +35,12 @@ of `zizmor`.
 
     Many thanks to @reandreev for implementing these improvements!
 
+* `zizmor` now has a `--strict-collection` flag that turns skipped
+  workflow or action definition warnings into errors. Passing this
+  flag changes `zizmor`'s behavior back to the default in v1.6.0 and earlier,
+  which was to terminate the audit if any collected input could
+  not be parsed (#734)
+
 ### Bug Fixes 🐛
 
 * The SARIF output format now uses `zizmor/{id}` for rule IDs instead
