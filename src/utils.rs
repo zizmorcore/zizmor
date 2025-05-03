@@ -95,7 +95,7 @@ where
                 Ok(raw_value) => match validator.apply(&raw_value).basic() {
                     Valid(_) => Err(e)
                         .context("this strongly suggests a bug in zizmor; please report it!")
-                        .map_err(|e| InputError::Model(e)),
+                        .map_err(InputError::Model),
                     Invalid(errors) => Err(InputError::Schema(parse_validation_errors(errors))),
                 },
                 // Syntax error.
