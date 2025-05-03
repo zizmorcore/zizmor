@@ -265,26 +265,26 @@ impl InputRegistry {
 }
 
 pub(crate) struct AuditRegistry {
-    pub(crate) workflow_audits: IndexMap<&'static str, Box<dyn Audit>>,
+    pub(crate) audits: IndexMap<&'static str, Box<dyn Audit>>,
 }
 
 impl AuditRegistry {
     pub(crate) fn new() -> Self {
         Self {
-            workflow_audits: Default::default(),
+            audits: Default::default(),
         }
     }
 
     pub(crate) fn len(&self) -> usize {
-        self.workflow_audits.len()
+        self.audits.len()
     }
 
     pub(crate) fn register_audit(&mut self, ident: &'static str, audit: Box<dyn Audit>) {
-        self.workflow_audits.insert(ident, audit);
+        self.audits.insert(ident, audit);
     }
 
     pub(crate) fn iter_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit>> {
-        self.workflow_audits.iter()
+        self.audits.iter()
     }
 }
 
