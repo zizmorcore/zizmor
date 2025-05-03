@@ -229,7 +229,7 @@ fn invalid_inputs() -> Result<()> {
             zizmor()
                 .expects_failure(true)
                 .input(input_under_test(&format!("invalid/{workflow_tc}.yml")))
-                .args(["--strict-inputs"])
+                .args(["--strict-collection"])
                 .run()?
         );
     }
