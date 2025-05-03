@@ -213,11 +213,23 @@ fn invalid_config_file() -> Result<()> {
 
 #[test]
 fn invalid_inputs() -> Result<()> {
-    for tc in ["invalid-workflow", "invalid-workflow-2"] {
+    for workflow_tc in [
+        "invalid-workflow",
+        "invalid-workflow-2",
+        "empty",
+        "bad-yaml-1",
+        "bad-yaml-2",
+        "blank",
+        "comment-only",
+        "invalid-action-1/action",
+        "invalid-action-2/action",
+        "empty-action/action",
+    ] {
         insta::assert_snapshot!(
             zizmor()
                 .expects_failure(true)
-                .input(input_under_test(&format!("invalid/{tc}.yml")))
+                .input(input_under_test(&format!("invalid/{workflow_tc}.yml")))
+                .args(["--strict-collection"])
                 .run()?
         );
     }

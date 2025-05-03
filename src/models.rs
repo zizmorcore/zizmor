@@ -5,8 +5,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 
-use anyhow::{Context, Result, anyhow, bail};
-use camino::Utf8Path;
+use anyhow::{Context, bail};
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
@@ -15,12 +14,14 @@ use github_actions_models::workflow::{self, Trigger, job, job::StepBody};
 use github_actions_models::{action, common};
 use indexmap::IndexMap;
 use line_index::LineIndex;
-use serde_json::{Value, json};
+use serde_json::json;
 use terminal_link::Link;
 
 use crate::finding::{Route, SymbolicLocation};
-use crate::registry::InputKey;
-use crate::utils::{self, extract_expressions, validate_action, validate_workflow};
+use crate::registry::{InputError, InputKey};
+use crate::utils::{
+    self, ACTION_VALIDATOR, WORKFLOW_VALIDATOR, extract_expressions, from_str_with_validation,
+};
 
 pub(crate) mod coordinate;
 pub(crate) mod uses;
@@ -113,31 +114,11 @@ impl Deref for Workflow {
 
 impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
-    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self> {
-        let inner = match serde_yaml::from_str(&contents) {
-            Ok(workflow) => workflow,
-            Err(_) => {
-                // Our workflow can fail to parse for three reasons:
-                // - A syntax error (i.e., invalid YAML)
-                // - A semantic error (i.e., an invalid workflow definition)
-                // - A bug in `github-actions-models`
-                // We catch the first two cases with the Some(Error) variant,
-                // while the last case gets reported specially as a bug
-                // within zizmor itself
-                match validate_workflow(contents) {
-                    Some(err) => {
-                        return Err(err)
-                            .with_context(|| format!("invalid GitHub Actions workflow: {key}"));
-                    }
-                    None => {
-                        return Err(anyhow!("failed to load valid-looking workflow: {key}"))
-                            .context("this strongly suggests a bug in zizmor; please report it!");
-                    }
-                }
-            }
-        };
+    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
+        let inner = from_str_with_validation(&contents, &WORKFLOW_VALIDATOR)?;
 
-        let document = yamlpath::Document::new(&contents)?;
+        let document = yamlpath::Document::new(&contents)
+            .context("failed to load internal pathing document")?;
 
         let line_index = LineIndex::new(&contents);
 
@@ -156,12 +137,6 @@ impl Workflow {
             line_index,
             inner,
         })
-    }
-
-    /// Load a workflow from the given file on disk.
-    pub(crate) fn from_file<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
-        let contents = std::fs::read_to_string(path.as_ref())?;
-        Self::from_string(contents, InputKey::local(path, prefix)?)
     }
 
     /// This workflow's [`SymbolicLocation`].
@@ -419,7 +394,7 @@ impl<'doc> Deref for Matrix<'doc> {
 impl<'doc> TryFrom<&'doc NormalJob<'doc>> for Matrix<'doc> {
     type Error = anyhow::Error;
 
-    fn try_from(job: &'doc NormalJob<'doc>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(job: &'doc NormalJob<'doc>) -> Result<Self, Self::Error> {
         let Some(Strategy {
             matrix: Some(inner),
             ..
@@ -529,15 +504,15 @@ impl<'doc> Matrix<'doc> {
     // according to the inner value of each node
     fn walk_path(tree: &serde_json::Value, current_path: String) -> Vec<(String, String)> {
         match tree {
-            Value::Null => vec![],
+            serde_json::Value::Null => vec![],
 
             // In the case of scalars, we just convert the value to a string
-            Value::Bool(inner) => vec![(current_path, inner.to_string())],
-            Value::Number(inner) => vec![(current_path, inner.to_string())],
-            Value::String(inner) => vec![(current_path, inner.to_string())],
+            serde_json::Value::Bool(inner) => vec![(current_path, inner.to_string())],
+            serde_json::Value::Number(inner) => vec![(current_path, inner.to_string())],
+            serde_json::Value::String(inner) => vec![(current_path, inner.to_string())],
 
             // In the case of an array, we recursively create on expansion pair for each item
-            Value::Array(inner) => inner
+            serde_json::Value::Array(inner) => inner
                 .iter()
                 .flat_map(|value| Matrix::walk_path(value, current_path.clone()))
                 .collect(),
@@ -545,7 +520,7 @@ impl<'doc> Matrix<'doc> {
             // In the case of an object, we recursively create on expansion pair for each
             // value in the key/value set, using the key to form the expanded path using
             // the dot notation
-            Value::Object(inner) => inner
+            serde_json::Value::Object(inner) => inner
                 .iter()
                 .flat_map(|(key, value)| {
                     let mut new_path = current_path.clone();
@@ -773,33 +748,12 @@ impl Debug for Action {
 }
 
 impl Action {
-    /// Load an action from the given file on disk.
-    pub(crate) fn from_file<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
-        let contents =
-            std::fs::read_to_string(path.as_ref()).with_context(|| "couldn't read action file")?;
-        Self::from_string(contents, InputKey::local(path, prefix)?)
-    }
+    /// Load an action from a buffer, with an assigned name.
+    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
+        let inner = from_str_with_validation(&contents, &ACTION_VALIDATOR)?;
 
-    /// Load a workflow from a buffer, with an assigned name.
-    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self> {
-        let inner = match serde_yaml::from_str(&contents) {
-            Ok(action) => action,
-            Err(_) => {
-                // Like with `Workflow::from_string`.
-                match validate_action(contents) {
-                    Some(err) => {
-                        return Err(err)
-                            .with_context(|| format!("invalid GitHub Actions definition: {key}"));
-                    }
-                    None => {
-                        return Err(anyhow!("failed to load valid-looking action: {key}"))
-                            .context("this strongly suggests a bug in zizmor; please report it!");
-                    }
-                }
-            }
-        };
-
-        let document = yamlpath::Document::new(&contents)?;
+        let document = yamlpath::Document::new(&contents)
+            .context("failed to load internal pathing document")?;
 
         let line_index = LineIndex::new(&contents);
 

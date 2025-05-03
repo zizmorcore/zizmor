@@ -7,12 +7,12 @@ use std::{
     process::ExitCode,
 };
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, anyhow};
 use camino::{Utf8Path, Utf8PathBuf};
 use github_actions_models::common::RepositoryUses;
 use indexmap::IndexMap;
 use serde::Serialize;
-use tracing::instrument;
+use thiserror::Error;
 
 use crate::{
     App,
@@ -21,6 +21,38 @@ use crate::{
     finding::{Confidence, Finding, Persona, Severity},
     models::{Action, Workflow},
 };
+
+#[derive(Error, Debug)]
+pub(crate) enum InputError {
+    /// The input's syntax is invalid.
+    /// This typically indicates a user error.
+    #[error("invalid YAML syntax: {0}")]
+    Syntax(#[source] anyhow::Error),
+    /// The input couldn't be converted into the expected model.
+    /// This typically indicates a bug in `github-actions-models`.
+    #[error("couldn't turn input into a an appropriate model")]
+    Model(#[source] anyhow::Error),
+    /// The input doesn't match the schema for the expected model.
+    /// This typically indicates a user error.
+    #[error("input does not match expected validation schema")]
+    Schema(#[source] anyhow::Error),
+    /// An I/O error occurred while loading the input.
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    /// The input's name is missing.
+    #[error("invalid input: no filename component")]
+    MissingName,
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
+pub(crate) enum InputKind {
+    /// A workflow file.
+    Workflow,
+    /// An action definition.
+    Action,
+}
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct LocalKey {
@@ -69,10 +101,13 @@ impl Display for InputKey {
 }
 
 impl InputKey {
-    pub(crate) fn local<P: AsRef<Utf8Path>>(path: P, prefix: Option<P>) -> Result<Self> {
+    pub(crate) fn local<P: AsRef<Utf8Path>>(
+        path: P,
+        prefix: Option<P>,
+    ) -> Result<Self, InputError> {
         // All keys must have a filename component.
         if path.as_ref().file_name().is_none() {
-            return Err(anyhow!("invalid local input: no filename component"));
+            return Err(InputError::MissingName);
         }
 
         Ok(Self::Local(LocalKey {
@@ -81,9 +116,9 @@ impl InputKey {
         }))
     }
 
-    pub(crate) fn remote(slug: &RepositoryUses, path: String) -> Result<Self> {
+    pub(crate) fn remote(slug: &RepositoryUses, path: String) -> Result<Self, InputError> {
         if Utf8Path::new(&path).file_name().is_none() {
-            return Err(anyhow!("invalid remote input: no filename component"));
+            return Err(InputError::MissingName);
         }
 
         Ok(Self::Remote(RemoteKey {
@@ -143,6 +178,7 @@ impl InputKey {
 }
 
 pub(crate) struct InputRegistry {
+    strict: bool,
     // NOTE: We use a BTreeMap here to ensure that registered inputs
     // iterate in a deterministic order. This saves us a lot of pain
     // while snapshot testing across multiple input files, and makes
@@ -151,8 +187,9 @@ pub(crate) struct InputRegistry {
 }
 
 impl InputRegistry {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(strict: bool) -> Self {
         Self {
+            strict,
             inputs: Default::default(),
         }
     }
@@ -161,9 +198,33 @@ impl InputRegistry {
         self.inputs.len()
     }
 
+    pub(crate) fn register(
+        &mut self,
+        kind: InputKind,
+        contents: String,
+        key: InputKey,
+    ) -> anyhow::Result<()> {
+        let input: Result<AuditInput, InputError> = match kind {
+            InputKind::Workflow => Workflow::from_string(contents, key).map(|wf| wf.into()),
+            InputKind::Action => Action::from_string(contents, key).map(|a| a.into()),
+        };
+
+        match input {
+            Ok(input) => self.register_input(input),
+            Err(InputError::Syntax(e)) if !self.strict => {
+                tracing::warn!("failed to parse input: {e}");
+                Ok(())
+            }
+            Err(e @ InputError::Schema { .. }) if !self.strict => {
+                tracing::warn!("failed to validate input as {kind:?}: {e}");
+                Ok(())
+            }
+            Err(e) => Err(anyhow!(e)).with_context(|| format!("failed to load input as {kind:?}")),
+        }
+    }
+
     /// Registers an already-loaded workflow or action definition.
-    #[instrument(skip(self))]
-    pub(crate) fn register_input(&mut self, input: AuditInput) -> Result<()> {
+    fn register_input(&mut self, input: AuditInput) -> anyhow::Result<()> {
         if self.inputs.contains_key(input.key()) {
             return Err(anyhow!(
                 "can't register {key} more than once",
@@ -174,24 +235,6 @@ impl InputRegistry {
         self.inputs.insert(input.key().clone(), input);
 
         Ok(())
-    }
-
-    /// Registers a workflow or action definition from its path on disk.
-    #[instrument(skip(self))]
-    pub(crate) fn register_by_path(
-        &mut self,
-        path: &Utf8Path,
-        prefix: Option<&Utf8Path>,
-    ) -> Result<()> {
-        match Workflow::from_file(path, prefix) {
-            Ok(workflow) => self.register_input(workflow.into()),
-            Err(we) => match Action::from_file(path, prefix) {
-                Ok(action) => self.register_input(action.into()),
-                Err(ae) => Err(anyhow!("failed to register input as workflow or action"))
-                    .with_context(|| format!("{ae:?}"))
-                    .with_context(|| format!("{we:?}")),
-            },
-        }
     }
 
     pub(crate) fn iter_inputs(&self) -> btree_map::Iter<'_, InputKey, AuditInput> {
@@ -206,26 +249,26 @@ impl InputRegistry {
 }
 
 pub(crate) struct AuditRegistry {
-    pub(crate) workflow_audits: IndexMap<&'static str, Box<dyn Audit>>,
+    pub(crate) audits: IndexMap<&'static str, Box<dyn Audit>>,
 }
 
 impl AuditRegistry {
     pub(crate) fn new() -> Self {
         Self {
-            workflow_audits: Default::default(),
+            audits: Default::default(),
         }
     }
 
     pub(crate) fn len(&self) -> usize {
-        self.workflow_audits.len()
+        self.audits.len()
     }
 
     pub(crate) fn register_audit(&mut self, ident: &'static str, audit: Box<dyn Audit>) {
-        self.workflow_audits.insert(ident, audit);
+        self.audits.insert(ident, audit);
     }
 
     pub(crate) fn iter_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit>> {
-        self.workflow_audits.iter()
+        self.audits.iter()
     }
 }
 

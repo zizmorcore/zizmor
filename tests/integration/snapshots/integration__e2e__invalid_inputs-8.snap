@@ -1,0 +1,19 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-inputs\"]).run()?"
+snapshot_kind: text
+---
+fatal: no audit was performed
+failed to load input as Action
+
+Caused by:
+    0: input does not match expected validation schema
+    1: runs: Additional properties are not allowed ('image' was unexpected)
+       runs: "using" is a required property
+       runs: "main" is a required property
+       runs: Additional properties are not allowed ('image' was unexpected)
+       runs: "using" is a required property
+       runs: "steps" is a required property
+       runs: "using" is a required property
+       outputs.some-output: "value" is a required property
+       "description" is a required property
