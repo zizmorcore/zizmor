@@ -264,7 +264,6 @@ mod tests {
     use anyhow::Result;
 
     use crate::{
-        InputKind,
         models::{Action, Workflow},
         registry::InputKey,
         utils::{
@@ -368,10 +367,7 @@ runs:
       shell: bash
 "#;
 
-        let action = Action::from_string(
-            action.into(),
-            InputKey::local("fake", None, InputKind::Action)?,
-        )?;
+        let action = Action::from_string(action.into(), InputKey::local("fake", None)?)?;
 
         let exprs = parse_expressions_from_input(&action.into());
         assert_eq!(exprs.len(), 1);
@@ -399,10 +395,7 @@ jobs:
       - run: echo hello from ${{ github.actor }}
 "#;
 
-        let workflow = Workflow::from_string(
-            workflow.into(),
-            InputKey::local("fake", None, InputKind::Workflow)?,
-        )?;
+        let workflow = Workflow::from_string(workflow.into(), InputKey::local("fake", None)?)?;
 
         let exprs = parse_expressions_from_input(&workflow.into())
             .into_iter()

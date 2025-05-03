@@ -286,18 +286,18 @@ fn collect_from_dir(
                 .parent()
                 .is_some_and(|dir| dir.ends_with(".github/workflows"))
         {
-            let key = InputKey::local(entry, Some(input_path), InputKind::Workflow)?;
+            let key = InputKey::local(entry, Some(input_path))?;
             let contents = std::fs::read_to_string(entry)?;
-            registry.register(contents, key)?;
+            registry.register(InputKind::Workflow, contents, key)?;
         }
 
         if mode.actions()
             && entry.is_file()
             && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
         {
-            let key = InputKey::local(entry, Some(input_path), InputKind::Action)?;
+            let key = InputKey::local(entry, Some(input_path))?;
             let contents = std::fs::read_to_string(entry)?;
-            registry.register(contents, key)?;
+            registry.register(InputKind::Action, contents, key)?;
         }
     }
 
@@ -388,18 +388,18 @@ fn collect_inputs(
         if input_path.is_file() {
             // When collecting individual files, we don't know which part
             // of the input path is the prefix.
-            let key = match (input_path.file_stem(), input_path.extension()) {
+            let (key, kind) = match (input_path.file_stem(), input_path.extension()) {
                 (Some("action"), Some("yml" | "yaml")) => {
-                    InputKey::local(input_path, None, InputKind::Action)?
+                    (InputKey::local(input_path, None)?, InputKind::Action)
                 }
                 (Some(_), Some("yml" | "yaml")) => {
-                    InputKey::local(input_path, None, InputKind::Workflow)?
+                    (InputKey::local(input_path, None)?, InputKind::Workflow)
                 }
                 _ => return Err(anyhow!("invalid input: {input}")),
             };
 
             let contents = std::fs::read_to_string(input_path)?;
-            registry.register(contents, key)?;
+            registry.register(kind, contents, key)?;
         } else if input_path.is_dir() {
             collect_from_dir(input_path, mode, &mut registry)?;
             // collect_from_repo_dir(input_path, input_path, mode, &mut registry)?;

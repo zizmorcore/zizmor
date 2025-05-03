@@ -60,11 +60,6 @@ pub(crate) struct LocalKey {
     prefix: Option<Utf8PathBuf>,
     /// The given path to the input. This can be absolute or relative.
     given_path: Utf8PathBuf,
-    /// The kind of input behind this key.
-    ///
-    /// This is inferrable from the path, but we store it here
-    /// to avoid re-parses.
-    kind: InputKind,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
@@ -73,7 +68,6 @@ pub(crate) struct RemoteKey {
     repo: String,
     git_ref: Option<String>,
     path: Utf8PathBuf,
-    kind: InputKind,
 }
 
 /// A unique identifying "key" for a workflow file in a given run of zizmor.
@@ -110,7 +104,6 @@ impl InputKey {
     pub(crate) fn local<P: AsRef<Utf8Path>>(
         path: P,
         prefix: Option<P>,
-        kind: InputKind,
     ) -> Result<Self, InputError> {
         // All keys must have a filename component.
         if path.as_ref().file_name().is_none() {
@@ -120,15 +113,10 @@ impl InputKey {
         Ok(Self::Local(LocalKey {
             prefix: prefix.map(|p| p.as_ref().to_path_buf()),
             given_path: path.as_ref().to_path_buf(),
-            kind,
         }))
     }
 
-    pub(crate) fn remote(
-        slug: &RepositoryUses,
-        path: String,
-        kind: InputKind,
-    ) -> Result<Self, InputError> {
+    pub(crate) fn remote(slug: &RepositoryUses, path: String) -> Result<Self, InputError> {
         if Utf8Path::new(&path).file_name().is_none() {
             return Err(InputError::MissingName);
         }
@@ -138,7 +126,6 @@ impl InputKey {
             repo: slug.repo.clone(),
             git_ref: slug.git_ref.clone(),
             path: path.into(),
-            kind,
         }))
     }
 
@@ -188,13 +175,6 @@ impl InputKey {
             InputKey::Remote(remote) => remote.path.file_name().unwrap(),
         }
     }
-
-    pub(crate) fn kind(&self) -> InputKind {
-        match self {
-            InputKey::Local(local) => local.kind,
-            InputKey::Remote(remote) => remote.kind,
-        }
-    }
 }
 
 pub(crate) struct InputRegistry {
@@ -218,8 +198,12 @@ impl InputRegistry {
         self.inputs.len()
     }
 
-    pub(crate) fn register(&mut self, contents: String, key: InputKey) -> anyhow::Result<()> {
-        let kind = key.kind();
+    pub(crate) fn register(
+        &mut self,
+        kind: InputKind,
+        contents: String,
+        key: InputKey,
+    ) -> anyhow::Result<()> {
         let input: Result<AuditInput, InputError> = match kind {
             InputKind::Workflow => Workflow::from_string(contents, key).map(|wf| wf.into()),
             InputKind::Action => Action::from_string(contents, key).map(|a| a.into()),
@@ -387,25 +371,18 @@ mod tests {
 
     use github_actions_models::common::Uses;
 
-    use crate::InputKind;
-
     use super::InputKey;
 
     #[test]
     fn test_input_key_display() {
-        let local = InputKey::local("/foo/bar/baz.yml", None, InputKind::Workflow).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
         let Uses::Repository(slug) = Uses::from_str("foo/bar").unwrap() else {
             panic!()
         };
-        let remote = InputKey::remote(
-            &slug,
-            ".github/workflows/baz.yml".into(),
-            InputKind::Workflow,
-        )
-        .unwrap();
+        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/HEAD/.github/workflows/baz.yml"
@@ -415,12 +392,7 @@ mod tests {
         let Uses::Repository(slug) = Uses::from_str("foo/bar@v1").unwrap() else {
             panic!()
         };
-        let remote = InputKey::remote(
-            &slug,
-            ".github/workflows/baz.yml".into(),
-            InputKind::Workflow,
-        )
-        .unwrap();
+        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/v1/.github/workflows/baz.yml"
@@ -429,20 +401,18 @@ mod tests {
 
     #[test]
     fn test_input_key_local_presentation_path() {
-        let local = InputKey::local("/foo/bar/baz.yml", None, InputKind::Workflow).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo"), InputKind::Workflow).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local =
-            InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/"), InputKind::Workflow).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
         let local = InputKey::local(
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
-            InputKind::Workflow,
         )
         .unwrap();
         assert_eq!(
@@ -453,30 +423,23 @@ mod tests {
 
     #[test]
     fn test_input_key_local_sarif_path() {
-        let local = InputKey::local("/foo/bar/baz.yml", None, InputKind::Workflow).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.sarif_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo"), InputKind::Workflow).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
         assert_eq!(local.sarif_path(), "bar/baz.yml");
 
-        let local =
-            InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/"), InputKind::Workflow).unwrap();
+        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
         assert_eq!(local.sarif_path(), "baz.yml");
 
         let local = InputKey::local(
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
-            InputKind::Workflow,
         )
         .unwrap();
         assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
 
-        let local = InputKey::local(
-            "./.github/workflows/baz.yml",
-            Some("."),
-            InputKind::Workflow,
-        )
-        .unwrap();
+        let local = InputKey::local("./.github/workflows/baz.yml", Some(".")).unwrap();
         assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
     }
 }

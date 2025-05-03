@@ -377,8 +377,8 @@ impl Client {
                 .text()
                 .await?;
 
-            let key = InputKey::remote(slug, file.path, InputKind::Workflow)?;
-            registry.register(contents, key)?;
+            let key = InputKey::remote(slug, file.path)?;
+            registry.register(InputKind::Workflow, contents, key)?;
         }
 
         Ok(())
@@ -444,15 +444,15 @@ impl Client {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = InputKey::remote(slug, file_path.to_string(), InputKind::Workflow)?;
+                let key = InputKey::remote(slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
-                registry.register(contents, key)?;
+                registry.register(InputKind::Workflow, contents, key)?;
             } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
-                let key = InputKey::remote(slug, file_path.to_string(), InputKind::Action)?;
+                let key = InputKey::remote(slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
-                registry.register(contents, key)?;
+                registry.register(InputKind::Action, contents, key)?;
             }
         }
 
