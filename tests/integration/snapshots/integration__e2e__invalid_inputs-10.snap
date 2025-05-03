@@ -1,19 +1,11 @@
 ---
 source: tests/integration/e2e.rs
-expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).run()?"
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-inputs\"]).run()?"
+snapshot_kind: text
 ---
 fatal: no audit was performed
-failed to register input: @@INPUT@@
+failed to load input as Action
 
 Caused by:
-    0: input does not match github_actions_models::workflow::Workflow validation schema
-       
-       Caused by:
-           null is not of type "object"
-           
-    1: input does not match github_actions_models::action::Action validation schema
-       
-       Caused by:
-           null is not of type "object"
-           
-    2: failed to register input as workflow or action
+    0: input does not match expected validation schema
+    1: null is not of type "object"

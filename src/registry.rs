@@ -13,7 +13,6 @@ use github_actions_models::common::RepositoryUses;
 use indexmap::IndexMap;
 use serde::Serialize;
 use thiserror::Error;
-use tracing::instrument;
 
 use crate::{
     App,
@@ -31,18 +30,12 @@ pub(crate) enum InputError {
     Syntax(#[source] anyhow::Error),
     /// The input couldn't be converted into the expected model.
     /// This typically indicates a bug in `github-actions-models`.
-    #[error("couldn't turn input into a {model} definition")]
-    Model {
-        source: anyhow::Error,
-        model: &'static str,
-    },
+    #[error("couldn't turn input into a an appropriate model")]
+    Model(#[source] anyhow::Error),
     /// The input doesn't match the schema for the expected model.
     /// This typically indicates a user error.
-    #[error("input does not match {model} validation schema")]
-    Schema {
-        source: anyhow::Error,
-        model: &'static str,
-    },
+    #[error("input does not match expected validation schema")]
+    Schema(#[source] anyhow::Error),
     /// An I/O error occurred while loading the input.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
@@ -242,7 +235,7 @@ impl InputRegistry {
                 tracing::warn!("failed to validate input as {kind:?}: {e}");
                 Ok(())
             }
-            Err(e) => Err(anyhow!(e)),
+            Err(e) => Err(anyhow!(e)).with_context(|| format!("failed to load input as {kind:?}")),
         }
     }
 
@@ -258,24 +251,6 @@ impl InputRegistry {
         self.inputs.insert(input.key().clone(), input);
 
         Ok(())
-    }
-
-    /// Registers a workflow or action definition from its path on disk.
-    #[instrument(skip(self))]
-    pub(crate) fn register_by_path(
-        &mut self,
-        path: &Utf8Path,
-        prefix: Option<&Utf8Path>,
-    ) -> anyhow::Result<()> {
-        match Workflow::from_file(path, prefix) {
-            Ok(workflow) => self.register_input(workflow.into()),
-            Err(we) => match Action::from_file(path, prefix) {
-                Ok(action) => self.register_input(action.into()),
-                Err(ae) => Err(anyhow!("failed to register input as workflow or action"))
-                    .with_context(|| format!("{ae:?}", ae = anyhow!(ae)))
-                    .with_context(|| format!("{we:?}", we = anyhow!(we))),
-            },
-        }
     }
 
     pub(crate) fn iter_inputs(&self) -> btree_map::Iter<'_, InputKey, AuditInput> {

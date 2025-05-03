@@ -6,7 +6,6 @@ use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 
 use anyhow::{Context, bail};
-use camino::Utf8Path;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
@@ -19,7 +18,7 @@ use serde_json::json;
 use terminal_link::Link;
 
 use crate::finding::{Route, SymbolicLocation};
-use crate::registry::{InputError, InputKey, InputKind};
+use crate::registry::{InputError, InputKey};
 use crate::utils::{
     self, ACTION_VALIDATOR, WORKFLOW_VALIDATOR, extract_expressions, from_str_with_validation,
 };
@@ -138,18 +137,6 @@ impl Workflow {
             line_index,
             inner,
         })
-    }
-
-    /// Load a workflow from the given file on disk.
-    pub(crate) fn from_file<P: AsRef<Utf8Path>>(
-        path: P,
-        prefix: Option<P>,
-    ) -> Result<Self, InputError> {
-        let contents = std::fs::read_to_string(path.as_ref())?;
-        Self::from_string(
-            contents,
-            InputKey::local(path, prefix, InputKind::Workflow)?,
-        )
     }
 
     /// This workflow's [`SymbolicLocation`].
@@ -761,18 +748,6 @@ impl Debug for Action {
 }
 
 impl Action {
-    /// Load an action from the given file on disk.
-    pub(crate) fn from_file<P: AsRef<Utf8Path>>(
-        path: P,
-        prefix: Option<P>,
-    ) -> Result<Self, InputError> {
-        let contents = std::fs::read_to_string(path.as_ref())?;
-        Self::from_string(
-            contents,
-            InputKey::local(path, prefix, crate::registry::InputKind::Action)?,
-        )
-    }
-
     /// Load an action from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
         let inner = from_str_with_validation(&contents, &ACTION_VALIDATOR)?;

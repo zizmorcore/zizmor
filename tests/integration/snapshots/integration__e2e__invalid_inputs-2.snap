@@ -1,22 +1,12 @@
 ---
 source: tests/integration/e2e.rs
-expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).run()?"
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-inputs\"]).run()?"
+snapshot_kind: text
 ---
 fatal: no audit was performed
-failed to register input: @@INPUT@@
+failed to load input as Workflow
 
 Caused by:
-    0: input does not match github_actions_models::workflow::Workflow validation schema
-       
-       Caused by:
-           on.workflow_call.inputs.input: "type" is a required property
-           Additional properties are not allowed ('boom' was unexpected)
-           
-    1: input does not match github_actions_models::action::Action validation schema
-       
-       Caused by:
-           Additional properties are not allowed ('boom', 'jobs', 'on', 'permissions' were unexpected)
-           "description" is a required property
-           "runs" is a required property
-           
-    2: failed to register input as workflow or action
+    0: input does not match expected validation schema
+    1: on.workflow_call.inputs.input: "type" is a required property
+       Additional properties are not allowed ('boom' was unexpected)

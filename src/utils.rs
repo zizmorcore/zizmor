@@ -95,14 +95,8 @@ where
                 Ok(raw_value) => match validator.apply(&raw_value).basic() {
                     Valid(_) => Err(e)
                         .context("this strongly suggests a bug in zizmor; please report it!")
-                        .map_err(|e| InputError::Model {
-                            source: e,
-                            model: std::any::type_name::<T>(),
-                        }),
-                    Invalid(errors) => Err(InputError::Schema {
-                        source: parse_validation_errors(errors),
-                        model: std::any::type_name::<T>(),
-                    }),
+                        .map_err(|e| InputError::Model(e)),
+                    Invalid(errors) => Err(InputError::Schema(parse_validation_errors(errors))),
                 },
                 // Syntax error.
                 Err(e) => Err(InputError::Syntax(e.into())),
