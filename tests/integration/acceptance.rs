@@ -31,11 +31,9 @@ fn catches_inlined_ignore() -> anyhow::Result<()> {
     let cli_args = [&auditable];
 
     let execution = zizmor().args(cli_args).output()?;
-
     assert_eq!(execution.status.code(), Some(0));
 
     let findings = String::from_utf8(execution.stdout)?;
-
     assert_eq!(&findings, "[]");
 
     Ok(())
@@ -265,6 +263,43 @@ fn audit_cache_poisoning() -> anyhow::Result<()> {
 
     assert_value_match(&findings, "$[0].determinations.confidence", "Low");
     assert_value_match(&findings, "$[0].locations[0].concrete.feature", "release");
+
+    Ok(())
+}
+
+#[test]
+fn audit_unpinned_images() -> anyhow::Result<()> {
+    let auditable = input_under_test("unpinned-images.yml");
+    let cli_args = [&auditable];
+
+    let execution = zizmor().args(cli_args).output()?;
+
+    assert_eq!(execution.status.code(), Some(14));
+
+    let findings = serde_json::from_slice(&execution.stdout)?;
+
+    assert_value_match(&findings, "$[0].determinations.confidence", "High");
+    assert_value_match(&findings, "$[0].determinations.severity", "High");
+    assert_value_match(
+        &findings,
+        "$[0].locations[0].concrete.feature",
+        "image: fake.example.com/example",
+    );
+    assert_value_match(
+        &findings,
+        "$[1].locations[0].concrete.feature",
+        "image: fake.example.com/redis",
+    );
+    assert_value_match(
+        &findings,
+        "$[2].locations[0].concrete.feature",
+        "image: fake.example.com/example:latest",
+    );
+    assert_value_match(
+        &findings,
+        "$[3].locations[0].concrete.feature",
+        "image: fake.example.com/redis:latest",
+    );
 
     Ok(())
 }

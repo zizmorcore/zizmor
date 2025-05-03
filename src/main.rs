@@ -547,6 +547,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::forbidden_uses::ForbiddenUses);
     register_audit!(audit::obfuscation::Obfuscation);
     register_audit!(audit::stale_action_refs::StaleActionRefs);
+    register_audit!(audit::unpinned_images::UnpinnedImages);
 
     let mut results = FindingRegistry::new(&app, &config);
     {

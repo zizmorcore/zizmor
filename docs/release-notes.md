@@ -25,6 +25,11 @@ of `zizmor`.
 
     Many thanks to @Holzhaus for proposing and implementing this audit!
 
+* **New audit**: The [unpinned-images] audit detects uses of
+  Docker images that are unpinned or pinned to `:latest` (#733)
+
+    Many thanks to @trumant for proposing and implementing this audit!
+
 * `zizmor` now reports much clearer error messages when auditing fails
   due to an invalid workflow or action definition (#719)
 
@@ -737,3 +742,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [obfuscation]: ./audits.md#obfuscation
 [stale-action-refs]: ./audits.md#stale-action-refs
 [unsound-contains]: ./audits.md#unsound-contains
+[unpinned-images]: ./audits.md#unpinned-images
