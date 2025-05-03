@@ -79,6 +79,19 @@ zizmor --collect=actions-only example/example
     *will* audit `workflow.yml`, since it was passed explicitly and not
     collected indirectly.
 
+By default, `zizmor` will warn (but not fail) if it fails to parse a
+workflow or action definition. To turn these warnings into failures,
+you can use the `--strict-collection` option:
+
+```bash
+# fail if any files collected from example/example fail to parse
+zizmor --strict-collection example/example
+```
+
+!!! important
+
+    `--strict-collection` is available in `v1.7.0` and later.
+
 ## Operating Modes
 
 Some of `zizmor`'s audits require access to GitHub's API.

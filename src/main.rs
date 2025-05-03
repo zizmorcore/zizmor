@@ -123,7 +123,7 @@ struct App {
     /// Fail instead of warning on syntax and schema errors
     /// in collected inputs.
     #[arg(long)]
-    strict_inputs: bool,
+    strict_collection: bool,
 
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
@@ -502,7 +502,12 @@ fn run() -> Result<ExitCode> {
     })?;
 
     let audit_state = AuditState::new(&app, &config);
-    let registry = collect_inputs(&app.inputs, &app.collect, app.strict_inputs, &audit_state)?;
+    let registry = collect_inputs(
+        &app.inputs,
+        &app.collect,
+        app.strict_collection,
+        &audit_state,
+    )?;
 
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {
