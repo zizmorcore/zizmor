@@ -140,7 +140,4 @@ impl Audit for Obfuscation {
     ) -> anyhow::Result<Vec<Finding<'a>>> {
         self.process_step(step)
     }
-
-    // TODO: Implement obfuscation checks for expressions via audit_raw.
-    // See: https://github.com/woodruffw/zizmor/issues/458
 }
