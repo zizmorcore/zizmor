@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: 22
 
+      # Use custom working dir for downloading npm packages and cloning the CodeQL repo
       - name: Create working dir
         run: |
           mkdir codeql-models-working-dir

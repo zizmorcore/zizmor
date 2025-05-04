@@ -42,7 +42,7 @@ of `zizmor`.
   not be parsed (#734)
 
 * The [template-injection] audit has been extended to detect more
-  vulnerable action inputs (#TODO)
+  vulnerable action inputs (#743)
 
 ### Bug Fixes 🐛
 

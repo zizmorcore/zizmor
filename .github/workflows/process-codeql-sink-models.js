@@ -1,5 +1,5 @@
 /*
- * Processes the CodeQL models from https://github.com/github/codeql/blob/codeql-cli/v2.21.2/actions/ql/lib/ext
+ * Processes the CodeQL models from https://github.com/github/codeql/tree/main/actions/ql/lib/ext
  * and extracts the information needed by zizmor
  */
 
@@ -64,7 +64,7 @@ function processYamlFile(filePath, relevantKinds, onlyManualModels) {
                 continue
             }
 
-            // Ignore 'on: workflow_call' inputs seem to be mostly for for 'generated' models
+            // Ignore 'on: workflow_call' inputs; seems to be mostly for for 'generated' models
             if (action.includes('/.github/workflows/')) {
                 continue
             }
