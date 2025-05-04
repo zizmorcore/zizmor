@@ -1,5 +1,16 @@
 #!/usr/bin/env -S uv run --script --only-group codegen
 
+# Retrieves the latest OpenAPI spec for GitHub's webhooks from
+# @octokit/openapi-webhooks and walks the schemas to produce a
+# mapping of context patterns to their expected expansion capabilities.
+#
+# For example, `github.event.pull_request.title` would be `arbitrary`
+# because it can contain arbitrary attacker-controlled content, while
+# `github.event.pull_request.user.id` would be `fixed` because `id`
+# is a fixed numeric value. These patterns can include wildcards
+# for arrays, e.g. `github.event.pull_request.labels.*.name`
+# matches any context that indexes through the `labels` array.
+
 import json
 import os
 import sys
@@ -25,7 +36,7 @@ _HERE = Path(__file__).parent
 _SRC = _HERE.parent / "src"
 assert _SRC.is_dir(), f"Missing {_SRC}"
 
-_OUT = _SRC / "data" / "template-injection-contexts.json"
+_OUT = _SRC / "data" / "context-capabilities.json"
 
 # A mapping of workflow trigger event names to subevents.
 # Keep in sync with: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows
