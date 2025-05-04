@@ -1,0 +1,71 @@
+# Adapted from
+# https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/hardcoded-credentials.yml
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  unpinned-container-image:
+    runs-on: ubuntu-latest
+    container:
+      image: fake.example.com/example
+    steps:
+      - run: echo 'vulnerable!'
+
+  unpinned-service-container-image:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: fake.example.com/redis
+    steps:
+      - run: echo 'vulnerable!'
+
+  unpinned-container-image-latest:
+    runs-on: ubuntu-latest
+    container:
+      image: fake.example.com/example:latest
+    steps:
+      - run: echo 'vulnerable!'
+
+  unpinned-service-container-image-latest:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: fake.example.com/redis:latest
+    steps:
+      - run: echo 'vulnerable!'
+
+  tag-pinned-container-image:
+    runs-on: ubuntu-latest
+    container:
+      image: fake.example.com/example:0.0.348
+    steps:
+      - run: echo 'not vulnerable!'
+
+  tag-pinned-service-container-image:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: fake.example.com/redis:7.4.3
+    steps:
+      - run: echo 'not vulnerable!'
+
+  hash-pinned-container-image:
+    runs-on: ubuntu-latest
+    container:
+      image: fake.example.com/example@sha256:bfadbbcb25fd75c30c295843f1a861414f46c080f0f1d0c5cd93843c88edabcf
+    steps:
+      - run: echo 'not vulnerable!'
+
+  hash-pinned-service-container-image:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: fake.example.com/redis@sha256:7df1eeff67eb0ba84f6b9d2940765a6bb1158081426745c185a03b1507de6a09
+    steps:
+      - run: echo 'not vulnerable!'

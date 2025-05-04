@@ -4,10 +4,10 @@ use anyhow::Context;
 use github_actions_models::common::{RepositoryUses, Uses};
 use serde::Deserialize;
 
-use super::{Audit, AuditLoadError, AuditState, Finding, Step, audit_meta};
-use crate::finding::{Confidence, Persona, Severity};
+use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::uses::RepositoryUsesPattern;
-use crate::models::{CompositeStep, uses::UsesExt as _};
+use crate::models::{CompositeStep, Step, StepCommon, uses::UsesExt as _};
 
 pub(crate) struct UnpinnedUses {
     policies: UnpinnedUsesPolicies,
@@ -84,6 +84,35 @@ impl UnpinnedUses {
             }
         }
     }
+
+    fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        let mut findings = vec![];
+
+        let Some(uses) = step.uses() else {
+            return Ok(findings);
+        };
+
+        if let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(severity)
+                    .persona(persona)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["uses".into()])
+                            .annotated(annotation),
+                    )
+                    .build(step)?,
+            );
+        };
+
+        Ok(findings)
+    }
 }
 
 impl Audit for UnpinnedUses {
@@ -103,59 +132,15 @@ impl Audit for UnpinnedUses {
         })
     }
 
-    fn audit_step<'w>(&self, step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
-        let mut findings = vec![];
-
-        let Some(uses) = step.uses() else {
-            return Ok(vec![]);
-        };
-
-        if let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .persona(persona)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["uses".into()])
-                            .annotated(annotation),
-                    )
-                    .build(step.workflow())?,
-            );
-        };
-
-        Ok(findings)
+    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+        self.process_step(step)
     }
 
     fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
-        let mut findings = vec![];
-
-        let Some(uses) = step.uses() else {
-            return Ok(vec![]);
-        };
-
-        if let Some((annotation, severity, persona)) = self.evaluate_pinning(uses) {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .persona(persona)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["uses".into()])
-                            .annotated(annotation),
-                    )
-                    .build(step.action())?,
-            );
-        };
-
-        Ok(findings)
+        self.process_step(step)
     }
 }
 

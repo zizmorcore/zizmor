@@ -9,7 +9,7 @@ use indexmap::IndexMap;
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{Confidence, Severity},
-    models::uses::RepositoryUsesExt as _,
+    models::{StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 
@@ -71,7 +71,10 @@ impl Audit for UseTrustedPublishing {
         Ok(Self)
     }
 
-    fn audit_step<'w>(&self, step: &super::Step<'w>) -> anyhow::Result<Vec<super::Finding<'w>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &super::Step<'doc>,
+    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
         let StepBody::Uses {

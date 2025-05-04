@@ -1,0 +1,53 @@
+---
+source: tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"unpinned-images.yml\")).args([\"--persona=pedantic\"]).run()?"
+---
+error[unpinned-images]: unpinned image references
+  --> @@INPUT@@:16:7
+   |
+16 |       image: fake.example.com/example
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> @@INPUT@@:24:9
+   |
+24 |         image: fake.example.com/redis
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> @@INPUT@@:31:7
+   |
+31 |       image: fake.example.com/example:latest
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> @@INPUT@@:39:9
+   |
+39 |         image: fake.example.com/redis:latest
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> @@INPUT@@:46:7
+   |
+46 |       image: fake.example.com/example:0.0.348
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> @@INPUT@@:54:9
+   |
+54 |         image: fake.example.com/redis:7.4.3
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |
+   = note: audit confidence → High
+
+6 findings: 0 unknown, 0 informational, 0 low, 0 medium, 6 high

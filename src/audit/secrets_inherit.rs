@@ -19,10 +19,10 @@ impl Audit for SecretsInherit {
         Ok(Self)
     }
 
-    fn audit_reusable_job<'w>(
+    fn audit_reusable_job<'doc>(
         &self,
-        job: &super::ReusableWorkflowCallJob<'w>,
-    ) -> anyhow::Result<Vec<super::Finding<'w>>> {
+        job: &super::ReusableWorkflowCallJob<'doc>,
+    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
         if matches!(job.secrets, Some(Secrets::Inherit)) {

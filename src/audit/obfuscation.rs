@@ -3,11 +3,12 @@ use github_actions_models::common::{RepositoryUses, Uses};
 use crate::{
     Confidence, Severity,
     expr::Expr,
-    finding::{self, Feature, Location},
+    finding::{Feature, Finding, Location},
+    models::{CompositeStep, Step, StepCommon},
     utils::parse_expressions_from_input,
 };
 
-use super::{Audit, audit_meta};
+use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
 
 pub(crate) struct Obfuscation;
 
@@ -67,20 +68,43 @@ impl Obfuscation {
 
         annotations
     }
+
+    fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        let mut findings = vec![];
+
+        if let Some(Uses::Repository(uses)) = step.uses() {
+            for annotation in self.obfuscated_repo_uses(uses) {
+                findings.push(
+                    Self::finding()
+                        .confidence(Confidence::High)
+                        .severity(Severity::Low)
+                        .add_location(
+                            step.location()
+                                .primary()
+                                .with_keys(&["uses".into()])
+                                .annotated(annotation),
+                        )
+                        .build(step)?,
+                );
+            }
+        }
+
+        Ok(findings)
+    }
 }
 
 impl Audit for Obfuscation {
-    fn new(_state: &crate::AuditState<'_>) -> Result<Self, super::AuditLoadError>
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(
-        &self,
-        input: &'w super::AuditInput,
-    ) -> anyhow::Result<Vec<finding::Finding<'w>>> {
+    fn audit_raw<'doc>(&self, input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         for (expr, span) in parse_expressions_from_input(input) {
@@ -106,58 +130,14 @@ impl Audit for Obfuscation {
         Ok(findings)
     }
 
-    fn audit_step<'w>(
-        &self,
-        step: &crate::models::Step<'w>,
-    ) -> anyhow::Result<Vec<finding::Finding<'w>>> {
-        let mut findings = vec![];
-
-        if let Some(Uses::Repository(uses)) = step.uses() {
-            for annotation in self.obfuscated_repo_uses(uses) {
-                findings.push(
-                    Self::finding()
-                        .confidence(Confidence::High)
-                        .severity(Severity::Low)
-                        .add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(&["uses".into()])
-                                .annotated(annotation),
-                        )
-                        .build(step.workflow())?,
-                );
-            }
-        }
-
-        Ok(findings)
+    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+        self.process_step(step)
     }
 
     fn audit_composite_step<'a>(
         &self,
-        step: &crate::models::CompositeStep<'a>,
-    ) -> anyhow::Result<Vec<finding::Finding<'a>>> {
-        let mut findings = vec![];
-
-        if let Some(Uses::Repository(uses)) = step.uses() {
-            for annotation in self.obfuscated_repo_uses(uses) {
-                findings.push(
-                    Self::finding()
-                        .confidence(Confidence::High)
-                        .severity(Severity::Low)
-                        .add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(&["uses".into()])
-                                .annotated(annotation),
-                        )
-                        .build(step.action())?,
-                );
-            }
-        }
-
-        Ok(findings)
+        step: &CompositeStep<'a>,
+    ) -> anyhow::Result<Vec<Finding<'a>>> {
+        self.process_step(step)
     }
-
-    // TODO: Implement obfuscation checks for expressions via audit_raw.
-    // See: https://github.com/woodruffw/zizmor/issues/458
 }

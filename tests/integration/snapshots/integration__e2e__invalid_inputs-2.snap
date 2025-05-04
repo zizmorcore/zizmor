@@ -1,0 +1,12 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-inputs\"]).run()?"
+snapshot_kind: text
+---
+fatal: no audit was performed
+failed to load input as Workflow
+
+Caused by:
+    0: input does not match expected validation schema
+    1: on.workflow_call.inputs.input: "type" is a required property
+       Additional properties are not allowed ('boom' was unexpected)

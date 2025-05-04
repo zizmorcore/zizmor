@@ -5,7 +5,7 @@
 
 use std::{io::Read, ops::Deref, path::Path};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
 use github_actions_models::common::RepositoryUses;
@@ -14,7 +14,7 @@ use http_cache_reqwest::{
 };
 use owo_colors::OwoColorize;
 use reqwest::{
-    StatusCode,
+    Response, StatusCode,
     header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT},
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -23,9 +23,8 @@ use tar::Archive;
 use tracing::instrument;
 
 use crate::{
-    audit::AuditInput,
-    models::{Action, Workflow},
-    registry::InputKey,
+    InputRegistry,
+    registry::{InputKey, InputKind},
     utils::PipeSelf,
 };
 
@@ -144,6 +143,21 @@ impl Client {
         Ok(dest)
     }
 
+    /// Maps the response to a `Result<bool>`, depending on whether
+    /// the response's status indicates 200 or 404.
+    ///
+    /// The error variants communicate all other status codes,
+    /// with additional context where helpful.
+    fn resp_present(resp: Response) -> Result<bool> {
+        match resp.status() {
+            StatusCode::OK => Ok(true),
+            StatusCode::NOT_FOUND => Ok(false),
+            StatusCode::FORBIDDEN => Err(anyhow::Error::from(resp.error_for_status().unwrap_err())
+                .context("request forbidden; token permissions may be insufficient")),
+            _ => Err(resp.error_for_status().unwrap_err().into()),
+        }
+    }
+
     #[instrument(skip(self))]
     #[tokio::main]
     pub(crate) async fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
@@ -169,13 +183,9 @@ impl Client {
         );
 
         let resp = self.http.get(&url).send().await?;
-        match resp.status() {
-            StatusCode::OK => Ok(true),
-            StatusCode::NOT_FOUND => Ok(false),
-            s => Err(anyhow!(
-                "{owner}/{repo}: error from GitHub API while checking branch {branch}: {s}"
-            )),
-        }
+        Client::resp_present(resp).with_context(|| {
+            format!("{owner}/{repo}: error from the GitHub API while checking {branch}")
+        })
     }
 
     #[instrument(skip(self))]
@@ -187,13 +197,9 @@ impl Client {
         );
 
         let resp = self.http.get(&url).send().await?;
-        match resp.status() {
-            StatusCode::OK => Ok(true),
-            StatusCode::NOT_FOUND => Ok(false),
-            s => Err(anyhow!(
-                "{owner}/{repo}: error from GitHub API while checking tag {tag}: {s}"
-            )),
-        }
+        Client::resp_present(resp).with_context(|| {
+            format!("{owner}/{repo}: error from the GitHub API while checking {tag}")
+        })
     }
 
     #[instrument(skip(self))]
@@ -247,7 +253,9 @@ impl Client {
         // do it for them.
         // This could be optimized in various ways, not least of which
         // is not pulling every tag eagerly before scanning them.
-        let tags = self.list_tags(owner, repo)?;
+        let tags = self
+            .list_tags(owner, repo)
+            .with_context(|| format!("couldn't retrieve tags for {owner}/{repo}@{commit}"))?;
 
         // Heuristic: there can be multiple tags for a commit, so we pick
         // the longest one. This isn't super sound, but it gets us from
@@ -310,13 +318,17 @@ impl Client {
     }
 
     /// Collect all workflows (and only workflows) defined in the given remote
-    /// repository slug.
+    /// repository slug into the given input registry.
     ///
     /// This is an optimized variant of `fetch_audit_inputs` for the workflow-only
     /// collection case.
-    #[instrument(skip(self))]
+    #[instrument(skip(self, registry))]
     #[tokio::main]
-    pub(crate) async fn fetch_workflows(&self, slug: &RepositoryUses) -> Result<Vec<Workflow>> {
+    pub(crate) async fn fetch_workflows(
+        &self,
+        slug: &RepositoryUses,
+        registry: &mut InputRegistry,
+    ) -> Result<()> {
         let owner = &slug.owner;
         let repo = &slug.repo;
         let git_ref = &slug.git_ref;
@@ -344,7 +356,6 @@ impl Client {
             .json()
             .await?;
 
-        let mut workflows = vec![];
         for file in resp
             .into_iter()
             .filter(|file| file.name.ends_with(".yml") || file.name.ends_with(".yaml"))
@@ -366,13 +377,11 @@ impl Client {
                 .text()
                 .await?;
 
-            workflows.push(Workflow::from_string(
-                contents,
-                InputKey::remote(slug, file.path)?,
-            )?);
+            let key = InputKey::remote(slug, file.path)?;
+            registry.register(InputKind::Workflow, contents, key)?;
         }
 
-        Ok(workflows)
+        Ok(())
     }
 
     /// Fetch all auditable inputs (both workflows and actions)
@@ -380,14 +389,13 @@ impl Client {
     ///
     /// This is much slower than `fetch_workflows`, since it involves
     /// retrieving the entire repository archive and decompressing it.
-    #[instrument(skip(self))]
+    #[instrument(skip(self, registry))]
     #[tokio::main]
     pub(crate) async fn fetch_audit_inputs(
         &self,
         slug: &RepositoryUses,
-    ) -> Result<Vec<AuditInput>> {
-        let mut inputs = vec![];
-
+        registry: &mut InputRegistry,
+    ) -> Result<()> {
         let url = format!(
             "{api_base}/repos/{owner}/{repo}/tarball/{git_ref}",
             api_base = self.api_base,
@@ -416,6 +424,10 @@ impl Client {
         for entry in archive.entries()? {
             let mut entry = entry?;
 
+            if !entry.header().entry_type().is_file() {
+                continue;
+            }
+
             // GitHub's tarballs contain entries that are prefixed with
             // `{owner}-{repo}-{ref}`, where `{ref}` has been concretized
             // into a short hash. We strip this out to ensure that our
@@ -427,22 +439,24 @@ impl Client {
                 components.as_path().try_into()?
             };
 
-            if file_path.starts_with(".github/workflows/") {
-                if matches!(file_path.extension(), Some("yml" | "yaml")) {
-                    let key = InputKey::remote(slug, file_path.to_string())?;
-                    let mut contents = String::with_capacity(entry.size() as usize);
-                    entry.read_to_string(&mut contents)?;
-                    inputs.push(Workflow::from_string(contents, key)?.into());
-                }
+            if matches!(file_path.extension(), Some("yaml" | "yml"))
+                && file_path
+                    .parent()
+                    .is_some_and(|dir| dir.ends_with(".github/workflows"))
+            {
+                let key = InputKey::remote(slug, file_path.to_string())?;
+                let mut contents = String::with_capacity(entry.size() as usize);
+                entry.read_to_string(&mut contents)?;
+                registry.register(InputKind::Workflow, contents, key)?;
             } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
                 let key = InputKey::remote(slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
-                inputs.push(Action::from_string(contents, key)?.into());
+                registry.register(InputKind::Action, contents, key)?;
             }
         }
 
-        Ok(inputs)
+        Ok(())
     }
 }
 

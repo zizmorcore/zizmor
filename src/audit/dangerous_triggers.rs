@@ -18,7 +18,7 @@ impl Audit for DangerousTriggers {
         Ok(Self)
     }
 
-    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
         if workflow.has_pull_request_target() {
             findings.push(

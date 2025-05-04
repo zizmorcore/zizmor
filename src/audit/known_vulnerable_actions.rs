@@ -5,16 +5,14 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, audit_meta};
-use crate::finding::Finding;
-use crate::models::CompositeStep;
 use crate::{
-    finding::{Confidence, Severity},
+    finding::{Confidence, Finding, Severity},
     github_api,
-    models::uses::RepositoryUsesExt as _,
+    models::{CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 
@@ -76,23 +74,19 @@ impl KnownVulnerableActions {
             // tag matching that ref. In theory the action's repo could do
             // something annoying like use branches for versions instead,
             // which we should also probably support.
-            Some(commit_ref) => match self
-                .client
-                .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
-                .with_context(|| {
-                    format!(
-                        "couldn't retrieve tag for {owner}/{repo}@{commit_ref}",
-                        owner = uses.owner,
-                        repo = uses.repo
-                    )
-                })? {
-                Some(tag) => tag.name,
-                // No corresponding tag means the user is maybe doing something
-                // weird, like using a commit ref off of a branch that isn't
-                // also tagged. Probably not good, but also not something
-                // we can easily discover known vulns for.
-                None => return Ok(vec![]),
-            },
+            Some(commit_ref) => {
+                match self
+                    .client
+                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)?
+                {
+                    Some(tag) => tag.name,
+                    // No corresponding tag means the user is maybe doing something
+                    // weird, like using a commit ref off of a branch that isn't
+                    // also tagged. Probably not good, but also not something
+                    // we can easily discover known vulns for.
+                    None => return Ok(vec![]),
+                }
+            }
             // No version means the action runs the latest default branch
             // version. We could in theory query GHSA for this but it's
             // unlikely to be meaningful.
@@ -121,6 +115,32 @@ impl KnownVulnerableActions {
 
         Ok(results)
     }
+
+    fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
+        let mut findings = vec![];
+
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
+
+        for (severity, id) in self.action_known_vulnerabilities(uses)? {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(severity)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["uses".into()])
+                            .annotated(&id)
+                            .with_url(format!("https://github.com/advisories/{id}")),
+                    )
+                    .build(step)?,
+            );
+        }
+
+        Ok(findings)
+    }
 }
 
 impl Audit for KnownVulnerableActions {
@@ -143,55 +163,11 @@ impl Audit for KnownVulnerableActions {
         Ok(Self { client })
     }
 
-    fn audit_step<'w>(&self, step: &super::Step<'w>) -> Result<Vec<super::Finding<'w>>> {
-        let mut findings = vec![];
-
-        let Some(Uses::Repository(uses)) = step.uses() else {
-            return Ok(findings);
-        };
-
-        for (severity, id) in self.action_known_vulnerabilities(uses)? {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["uses".into()])
-                            .annotated(&id)
-                            .with_url(format!("https://github.com/advisories/{id}")),
-                    )
-                    .build(step.workflow())?,
-            );
-        }
-
-        Ok(findings)
+    fn audit_step<'doc>(&self, step: &Step<'doc>) -> Result<Vec<Finding<'doc>>> {
+        self.process_step(step)
     }
 
-    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
-        let mut findings = vec![];
-
-        let Some(Uses::Repository(uses)) = step.uses() else {
-            return Ok(findings);
-        };
-
-        for (severity, id) in self.action_known_vulnerabilities(uses)? {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["uses".into()])
-                            .annotated(&id)
-                            .with_url(format!("https://github.com/advisories/{id}")),
-                    )
-                    .build(step.action())?,
-            );
-        }
-
-        Ok(findings)
+    fn audit_composite_step<'doc>(&self, step: &CompositeStep<'doc>) -> Result<Vec<Finding<'doc>>> {
+        self.process_step(step)
     }
 }

@@ -8,7 +8,9 @@ use yamlpath::Document;
 
 use crate::{
     finding::{Finding, FindingBuilder, SymbolicLocation},
-    models::{Action, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
+    models::{
+        Action, AsDocument, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow,
+    },
     registry::InputKey,
     state::AuditState,
 };
@@ -29,9 +31,12 @@ pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
 pub(crate) mod secrets_inherit;
 pub(crate) mod self_hosted_runner;
+pub(crate) mod stale_action_refs;
 pub(crate) mod template_injection;
+pub(crate) mod unpinned_images;
 pub(crate) mod unpinned_uses;
 pub(crate) mod unredacted_secrets;
+pub(crate) mod unsound_contains;
 pub(crate) mod use_trusted_publishing;
 
 #[derive(Debug)]
@@ -45,13 +50,6 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => &workflow.key,
             AuditInput::Action(action) => &action.key,
-        }
-    }
-
-    pub(crate) fn document(&self) -> &yamlpath::Document {
-        match self {
-            AuditInput::Workflow(workflow) => &workflow.document,
-            AuditInput::Action(action) => &action.document,
         }
     }
 
@@ -77,9 +75,12 @@ impl AuditInput {
     }
 }
 
-impl AsRef<Document> for AuditInput {
-    fn as_ref(&self) -> &Document {
-        self.document()
+impl<'a> AsDocument<'a, 'a> for AuditInput {
+    fn as_document(&'a self) -> &'a Document {
+        match self {
+            AuditInput::Workflow(workflow) => workflow.as_document(),
+            AuditInput::Action(action) => action.as_document(),
+        }
     }
 }
 
@@ -113,7 +114,7 @@ pub(crate) trait AuditCore {
     where
         Self: Sized;
 
-    fn finding<'w>() -> FindingBuilder<'w>
+    fn finding<'doc>() -> FindingBuilder<'doc>
     where
         Self: Sized,
     {
@@ -198,11 +199,11 @@ pub(crate) trait Audit: AuditCore {
     where
         Self: Sized;
 
-    fn audit_step<'w>(&self, _step: &Step<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_step<'doc>(&self, _step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         Ok(vec![])
     }
 
-    fn audit_normal_job<'w>(&self, job: &NormalJob<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_normal_job<'doc>(&self, job: &NormalJob<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
         for step in job.steps() {
             results.extend(self.audit_step(&step)?);
@@ -210,14 +211,14 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_reusable_job<'w>(
+    fn audit_reusable_job<'doc>(
         &self,
-        _job: &ReusableWorkflowCallJob<'w>,
-    ) -> anyhow::Result<Vec<Finding<'w>>> {
+        _job: &ReusableWorkflowCallJob<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         Ok(vec![])
     }
 
-    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
@@ -234,14 +235,14 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_composite_step<'a>(
+    fn audit_composite_step<'doc>(
         &self,
-        _step: &CompositeStep<'a>,
-    ) -> anyhow::Result<Vec<Finding<'a>>> {
+        _step: &CompositeStep<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         Ok(vec![])
     }
 
-    fn audit_action<'a>(&self, action: &'a Action) -> anyhow::Result<Vec<Finding<'a>>> {
+    fn audit_action<'doc>(&self, action: &'doc Action) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
 
         if matches!(action.runs, action::Runs::Composite(_)) {
@@ -253,7 +254,7 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_raw<'w>(&self, _input: &'w AuditInput) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_raw<'doc>(&self, _input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
         Ok(vec![])
     }
 
@@ -262,7 +263,7 @@ pub(crate) trait Audit: AuditCore {
     /// Implementors **should not** override this blanket implementation,
     /// since it's marked with tracing instrumentation.
     #[instrument(skip(self))]
-    fn audit<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit<'doc>(&self, input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow),
             AuditInput::Action(action) => self.audit_action(action),

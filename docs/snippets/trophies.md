@@ -7,6 +7,14 @@
         - adafruit/circuitpython#9785
 
 
+-   ![](https://github.com/aio-libs.png?size=40){ width="40" loading=lazy align=left } aio-libs
+
+    ---
+
+    ??? example "Examples"
+        - aio-libs/aiobotocore#1344
+
+
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
 
     ---
@@ -97,6 +105,15 @@
 
     ??? example "Examples"
         - cakephp/cakephp#18081
+
+
+-   ![](https://github.com/canonical.png?size=40){ width="40" loading=lazy align=left } canonical
+
+    ---
+
+    ??? example "Examples"
+        - canonical/operator#1656
+        - canonical/testflinger#630
 
 
 -   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl
@@ -301,6 +318,25 @@
     ??? example "Examples"
         - google/zx#1067
         - google/zx#1126
+
+
+-   ![](https://github.com/grafana.png?size=40){ width="40" loading=lazy align=left } grafana
+
+    ---
+
+    ??? example "Examples"
+        - grafana/agent#7148
+        - grafana/beyla#1868
+        - grafana/carbon-relay-ng#601
+        - grafana/carbon-relay-ng#602
+        - grafana/carbon-relay-ng#603
+        - grafana/clickhouse-datasource#1231
+        - grafana/grafana-operator#1977
+        - grafana/grizzly#610
+        - grafana/logs-drilldown#1222
+        - grafana/pyroscope#4157
+        - grafana/rollout-operator#218
+        - grafana/tanka#1441
 
 
 -   ![](https://github.com/GreptimeTeam.png?size=40){ width="40" loading=lazy align=left } GreptimeTeam
@@ -550,6 +586,7 @@
     ---
 
     ??? example "Examples"
+        - mozilla/fxa#18628
         - mozilla/neqo#2413
 
 
@@ -574,6 +611,7 @@
     ---
 
     ??? example "Examples"
+        - nextcloud/user_saml#947
         - nextcloud/.github#477
 
 

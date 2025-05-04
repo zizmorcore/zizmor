@@ -1,0 +1,13 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-inputs\"]).run()?"
+snapshot_kind: text
+---
+fatal: no audit was performed
+failed to load input as Workflow
+
+Caused by:
+    0: input does not match expected validation schema
+    1: jobs.invalid: "runs-on" is a required property
+       jobs.invalid: Additional properties are not allowed ('steps' was unexpected)
+       jobs.invalid: "uses" is a required property

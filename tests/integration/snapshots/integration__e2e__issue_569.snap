@@ -6,6 +6,7 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-onlin
  INFO zizmor: skipping ref-confusion: offline audits only requested
  INFO zizmor: skipping known-vulnerable-actions: offline audits only requested
  INFO zizmor: skipping forbidden-uses: audit not configured
+ INFO zizmor: skipping stale-action-refs: offline audits only requested
  INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/documentation-links.yml
@@ -182,4 +183,4 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
 
-47 findings (28 suppressed): 0 unknown, 0 informational, 1 low, 0 medium, 18 high
+48 findings (29 suppressed): 0 unknown, 0 informational, 1 low, 0 medium, 18 high

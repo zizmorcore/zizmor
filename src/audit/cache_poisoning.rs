@@ -223,9 +223,9 @@ static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(
     ]
 });
 
-enum PublishingArtifactsScenario<'w> {
+enum PublishingArtifactsScenario<'doc> {
     UsingTypicalWorkflowTrigger,
-    UsingWellKnowPublisherAction(Step<'w>),
+    UsingWellKnowPublisherAction(Step<'doc>),
 }
 
 pub(crate) struct CachePoisoning;
@@ -270,11 +270,11 @@ impl CachePoisoning {
         })
     }
 
-    fn is_job_publishing_artifacts<'w>(
+    fn is_job_publishing_artifacts<'doc>(
         &self,
         trigger: &Trigger,
-        steps: Steps<'w>,
-    ) -> Option<PublishingArtifactsScenario<'w>> {
+        steps: Steps<'doc>,
+    ) -> Option<PublishingArtifactsScenario<'doc>> {
         if self.trigger_used_when_publishing_artifacts(trigger) {
             return Some(PublishingArtifactsScenario::UsingTypicalWorkflowTrigger);
         };
@@ -286,17 +286,17 @@ impl CachePoisoning {
         ))
     }
 
-    fn evaluate_cache_usage<'s>(&self, step: &impl StepCommon<'s>) -> Option<Usage> {
+    fn evaluate_cache_usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
         KNOWN_CACHE_AWARE_ACTIONS
             .iter()
             .find_map(|coord| coord.usage(step))
     }
 
-    fn uses_cache_aware_step<'w>(
+    fn uses_cache_aware_step<'doc>(
         &self,
-        step: &Step<'w>,
-        scenario: &PublishingArtifactsScenario<'w>,
-    ) -> Option<Finding<'w>> {
+        step: &Step<'doc>,
+        scenario: &PublishingArtifactsScenario<'doc>,
+    ) -> Option<Finding<'doc>> {
         let cache_usage = self.evaluate_cache_usage(step)?;
 
         let (yaml_key, annotation) = match cache_usage {
@@ -353,7 +353,7 @@ impl Audit for CachePoisoning {
         Ok(Self)
     }
 
-    fn audit_normal_job<'w>(&self, job: &NormalJob<'w>) -> anyhow::Result<Vec<Finding<'w>>> {
+    fn audit_normal_job<'doc>(&self, job: &NormalJob<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
         let steps = job.steps();
         let trigger = &job.parent().on;

@@ -12,7 +12,7 @@ use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Severity},
     github_api::{self, ComparisonStatus},
-    models::{JobExt as _, Workflow, uses::RepositoryUsesExt as _},
+    models::{JobExt as _, StepCommon, Workflow, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 
@@ -129,7 +129,7 @@ impl Audit for ImpostorCommit {
         Ok(ImpostorCommit { client })
     }
 
-    fn audit_workflow<'w>(&self, workflow: &'w Workflow) -> Result<Vec<Finding<'w>>> {
+    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
