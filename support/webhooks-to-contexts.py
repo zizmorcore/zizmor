@@ -243,6 +243,22 @@ def walk_schema(
                         prop_schema,
                         f"{top}.{prop}",
                     )
+
+            additional_properties = schema.get("additionalProperties")
+            match additional_properties:
+                case True | {}:
+                    yield f"{top}.*", "arbitrary"
+                case False | None:
+                    pass
+                case _:
+                    # TODO: In principle additionalProperties can be a schema,
+                    # which we should handle. However GitHub's OpenAPI spec
+                    # doesn't appear to do this at the moment, so we
+                    # churlishly ignore it.
+                    assert False, (
+                        f"Unknown additionalProperties: {additional_properties}"
+                    )
+
         case "array":
             items = schema.get("items", {})
             if not items:
