@@ -1356,6 +1356,7 @@ source = { editable = "." }
 codegen = [
     { name = "prance", version = "23.6.21.0", source = { registry = "https://pypi.org/simple" }, extra = ["osv"], marker = "python_full_version < '3.10'" },
     { name = "prance", version = "25.4.8.0", source = { registry = "https://pypi.org/simple" }, extra = ["osv"], marker = "python_full_version >= '3.10'" },
+    { name = "requests" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -1365,7 +1366,10 @@ docs = [
 [package.metadata]
 
 [package.metadata.requires-dev]
-codegen = [{ name = "prance", extras = ["osv"] }]
+codegen = [
+    { name = "prance", extras = ["osv"] },
+    { name = "requests" },
+]
 docs = [
     { name = "mkdocs", specifier = "~=1.6" },
     { name = "mkdocs-material", extras = ["imaging"], specifier = "~=9.5" },

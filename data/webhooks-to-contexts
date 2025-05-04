@@ -1,17 +1,26 @@
 #!/usr/bin/env -S uv run --script --only-group codegen
 
 import json
+import os
 import sys
 from collections import defaultdict
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal
 
+import requests
 from prance import ResolvingParser
 
+_REF = os.environ.get("WEBHOOKS_REF", "main")
+
+if _REF.startswith("v"):
+    _REF = f"refs/tags/{_REF}"
+else:
+    _REF = f"refs/heads/{_REF}"
+
+_WEBHOOKS_JSON_URL = f"https://github.com/octokit/openapi-webhooks/raw/{_REF}/packages/openapi-webhooks/generated/api.github.com.json"
+
 _HERE = Path(__file__).parent
-_WEBHOOKS_JSON = _HERE / "api.github.com.json"
-assert _WEBHOOKS_JSON.is_file(), f"Missing {_WEBHOOKS_JSON}"
 
 _SRC = _HERE.parent / "src"
 assert _SRC.is_dir(), f"Missing {_SRC}"
@@ -279,9 +288,12 @@ def process_schemas(
 
 
 if __name__ == "__main__":
+    log(f"downloading OpenAPI spec (ref={_REF})...")
+    webhooks_json = requests.get(_WEBHOOKS_JSON_URL).text
+
     log("resolving refs in OpenAPI spec, this will take a moment...")
     # TODO: Optimize; this is ridiculously slow.
-    parser = ResolvingParser(str(_WEBHOOKS_JSON))
+    parser = ResolvingParser(spec_string=webhooks_json)
     spec = parser.specification
     log("  ...done")
 
