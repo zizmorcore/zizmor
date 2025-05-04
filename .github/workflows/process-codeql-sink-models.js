@@ -64,7 +64,7 @@ function processYamlFile(filePath, relevantKinds, onlyManualModels) {
                 continue
             }
 
-            // Ignore 'on: workflow_call' inputs; seems to be mostly for for 'generated' models
+            // Ignore 'on: workflow_call' inputs; seems to be mostly for 'generated' models
             if (action.includes('/.github/workflows/')) {
                 continue
             }
