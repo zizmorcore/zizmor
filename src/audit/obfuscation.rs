@@ -56,12 +56,12 @@ impl Obfuscation {
 
         // Check for some common expression obfuscation patterns.
 
-        // Expressions that can be constant folded should be simplified to
+        // Expressions that can be constant reduced should be simplified to
         // their evaluated form.
-        if expr.constant_foldable() {
-            annotations.push("expression can be simplified via constant folding");
-        } else if expr.has_constant_foldable_subexpr() {
-            annotations.push("expression contains constant foldable subexpression");
+        if expr.constant_reducible() {
+            annotations.push("expression can be replaced by its static evaluation");
+        } else if expr.has_constant_reducible_subexpr() {
+            annotations.push("expression contains constant-reducible subexpression");
         }
 
         // TODO: calculate call breadth/depth and flag above thresholds.

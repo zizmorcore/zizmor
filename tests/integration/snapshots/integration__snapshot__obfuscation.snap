@@ -71,7 +71,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:29:16
    |
 29 |           echo ${{ '' }}
-   |                --------- help: expression can be simplified via constant folding
+   |                --------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -79,7 +79,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:30:16
    |
 30 |           echo ${{ 'a' }}
-   |                ---------- help: expression can be simplified via constant folding
+   |                ---------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -87,7 +87,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:31:16
    |
 31 |           echo ${{ true }}
-   |                ----------- help: expression can be simplified via constant folding
+   |                ----------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -95,7 +95,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:32:16
    |
 32 |           echo ${{ true && false }}
-   |                -------------------- help: expression can be simplified via constant folding
+   |                -------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -103,7 +103,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:33:16
    |
 33 |           echo ${{ true || false }}
-   |                -------------------- help: expression can be simplified via constant folding
+   |                -------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -111,7 +111,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:34:16
    |
 34 |           echo ${{ 1 > 2 || true }}
-   |                -------------------- help: expression can be simplified via constant folding
+   |                -------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -119,7 +119,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:35:16
    |
 35 |           echo ${{ 1 != 2}}
-   |                ------------ help: expression can be simplified via constant folding
+   |                ------------ help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -127,7 +127,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:39:16
    |
 39 |           echo ${{ format('{0}', 'abc') }}
-   |                --------------------------- help: expression can be simplified via constant folding
+   |                --------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -135,7 +135,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:40:16
    |
 40 |           echo ${{ format('{0} {1}', 'abc', 'def') }}
-   |                -------------------------------------- help: expression can be simplified via constant folding
+   |                -------------------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -143,7 +143,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:41:16
    |
 41 |           echo ${{ format('{0} {1}', 'abc', format('{0}', 'def')) }}
-   |                ----------------------------------------------------- help: expression can be simplified via constant folding
+   |                ----------------------------------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -151,7 +151,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:42:16
    |
 42 |           echo ${{ startsWith('abc', 'a') }}
-   |                ----------------------------- help: expression can be simplified via constant folding
+   |                ----------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -159,7 +159,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:43:16
    |
 43 |           echo ${{ ENDSWITH('abc', 'c') }}
-   |                --------------------------- help: expression can be simplified via constant folding
+   |                --------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -167,7 +167,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:48:16
    |
 48 |           echo ${{ format('{0}, {1}', github.event.number, format('{0}', 'abc')) }}
-   |                -------------------------------------------------------------------- help: expression contains constant foldable subexpression
+   |                -------------------------------------------------------------------- help: expression contains constant-reducible subexpression
    |
    = note: audit confidence → High
 
@@ -175,7 +175,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:50:16
    |
 50 |           echo ${{ format('{0}, {1}', github.event.number, format('{0} {1}', github.event.number, true || false)) }}
-   |                ----------------------------------------------------------------------------------------------------- help: expression contains constant foldable subexpression
+   |                ----------------------------------------------------------------------------------------------------- help: expression contains constant-reducible subexpression
    |
    = note: audit confidence → High
 
@@ -183,7 +183,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:52:16
    |
 52 |           echo ${{ foobar[format('{0}', 'event')]}}
-   |                ------------------------------------ help: expression contains constant foldable subexpression
+   |                ------------------------------------ help: expression contains constant-reducible subexpression
    |
    = note: audit confidence → High
 
