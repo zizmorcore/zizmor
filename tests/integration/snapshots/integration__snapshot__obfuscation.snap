@@ -1,6 +1,7 @@
 ---
 source: tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"obfuscation.yml\")).run()?"
+snapshot_kind: text
 ---
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:12:9
@@ -178,4 +179,12 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |
    = note: audit confidence → High
 
-29 findings (7 suppressed): 0 unknown, 0 informational, 22 low, 0 medium, 0 high
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:52:16
+   |
+52 |           echo ${{ foobar[format('{0}', 'event')]}}
+   |                ------------------------------------ help: expression contains constant foldable subexpression
+   |
+   = note: audit confidence → High
+
+31 findings (1 ignored, 7 suppressed): 0 unknown, 0 informational, 23 low, 0 medium, 0 high

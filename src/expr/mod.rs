@@ -245,14 +245,19 @@ impl<'src> Expr<'src> {
 
         match self {
             Expr::Call { func: _, args } => args.iter().any(|a| a.has_constant_foldable_subexpr()),
-            Expr::Context(context) => {
-                let head = &context.components()[0];
-                head.has_constant_foldable_subexpr()
+            Expr::Context(ctx) => {
+                // contexts themselves are never reducible, but they might
+                // contains reducible index subexpressions.
+                ctx.components
+                    .iter()
+                    .any(|c| c.has_constant_foldable_subexpr())
             }
             Expr::BinOp { lhs, op: _, rhs } => {
                 lhs.has_constant_foldable_subexpr() || rhs.has_constant_foldable_subexpr()
             }
             Expr::UnOp { op: _, expr } => expr.has_constant_foldable_subexpr(),
+
+            Expr::Index(expr) => expr.has_constant_foldable_subexpr(),
             _ => false,
         }
     }
@@ -645,6 +650,8 @@ mod tests {
             "github.event['a']",
             "github.event['a' == 'b']",
             "github.event['a' == 'b' && 'c' || 'd']",
+            "github['event']['inputs']['dry-run']",
+            "github[format('{0}', 'event')]",
         ];
 
         for case in cases {
@@ -786,6 +793,22 @@ mod tests {
                     .into(),
                 },
             ),
+            (
+                "foobar[format('{0}', 'event')]",
+                Expr::context(
+                    "foobar[format('{0}', 'event')]",
+                    [
+                        Expr::ident("foobar"),
+                        Expr::Index(
+                            Expr::Call {
+                                func: Function("format"),
+                                args: vec![*Expr::string("{0}"), *Expr::string("event")],
+                            }
+                            .into(),
+                        ),
+                    ],
+                ),
+            ),
         ];
 
         for (case, expr) in cases {
@@ -848,6 +871,7 @@ mod tests {
                 "format('{0}, {1}', github.event.number, format('{0}', 'abc'))",
                 true,
             ),
+            ("foobar[format('{0}', 'event')]", true),
         ] {
             let expr = Expr::parse(expr)?;
             assert_eq!(expr.has_constant_foldable_subexpr(), *foldable);

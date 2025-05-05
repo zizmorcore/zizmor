@@ -43,8 +43,10 @@ jobs:
           echo ${{ ENDSWITH('abc', 'c') }}
 
       # foldable subexpressions
-      - run: |
+      - run: | # zizmor: ignore[template-injection] not this test
           # inner format(...) is foldable
           echo ${{ format('{0}, {1}', github.event.number, format('{0}', 'abc')) }}
           # inner || is foldable
           echo ${{ format('{0}, {1}', github.event.number, format('{0} {1}', github.event.number, true || false)) }}
+          # inner [...] is foldable
+          echo ${{ foobar[format('{0}', 'event')]}}
