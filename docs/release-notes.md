@@ -9,6 +9,50 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: The [obfuscation] audit detects obfuscatory patterns in
+  GitHub Actions usages. These patterns are not themselves dangerous,
+  but may indicate an attempt to obscure malicious behavior (#683)
+
+* **New audit**: The [stale-action-refs] pedantic audit detects pinned
+  action references which don't point to a Git tag (#713)
+
+    Many thanks to @Marcono1234 for proposing and implementing this audit!
+
+* **New audit**: The [unsound-contains] audit detects uses of
+  the `contains()` function that can be bypassed (#577)
+
+    Many thanks to @Holzhaus for proposing and implementing this audit!
+
+* **New audit**: The [unpinned-images] audit detects uses of
+  Docker images that are unpinned or pinned to `:latest` (#733)
+
+    Many thanks to @trumant for proposing and implementing this audit!
+
+* `zizmor` now reports much clearer error messages when auditing fails
+  due to an invalid workflow or action definition (#719)
+
+    Many thanks to @reandreev for implementing these improvements!
+
+* `zizmor` now has a `--strict-collection` flag that turns skipped
+  workflow or action definition warnings into errors. Passing this
+  flag changes `zizmor`'s behavior back to the default in v1.6.0 and earlier,
+  which was to terminate the audit if any collected input could
+  not be parsed (#734)
+
+### Bug Fixes 🐛
+
+* The SARIF output format now uses `zizmor/{id}` for rule IDs instead
+  of bare IDs, reducing the chance of conflict or confusion with other tools
+  (#710)
+* The SARIF output format now includes a rule name for each rule descriptor,
+  which should improve rendering behavior in SARIF viewers like the
+  VS Code SARIF Viewer extension (#710)
+* Fixed a bug where `zizmor` would fail to collection actions defined
+  within subdirectories of `.github/workflows` when collecting from
+  a remote source (#731)
+
 ## v1.6.0
 
 ### New Features 🌈
@@ -701,3 +745,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [overprovisioned-secrets]: ./audits.md#overprovisioned-secrets
 [unredacted-secrets]: ./audits.md#unredacted-secrets
 [forbidden-uses]: ./audits.md#forbidden-uses
+[obfuscation]: ./audits.md#obfuscation
+[stale-action-refs]: ./audits.md#stale-action-refs
+[unsound-contains]: ./audits.md#unsound-contains
+[unpinned-images]: ./audits.md#unpinned-images

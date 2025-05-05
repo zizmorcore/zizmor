@@ -10,6 +10,7 @@ use terminal_link::Link;
 use crate::{
     App,
     finding::{Finding, Location, Severity},
+    models::AsDocument,
     registry::{FindingRegistry, InputKey, InputRegistry},
 };
 
@@ -25,13 +26,13 @@ impl From<&Severity> for Level {
     }
 }
 
-pub(crate) fn finding_snippet<'w>(
-    registry: &'w InputRegistry,
-    finding: &'w Finding<'w>,
-) -> Vec<Snippet<'w>> {
+pub(crate) fn finding_snippet<'doc>(
+    registry: &'doc InputRegistry,
+    finding: &'doc Finding<'doc>,
+) -> Vec<Snippet<'doc>> {
     // Our finding might span multiple workflows, so we need to group locations
     // by their enclosing workflow to generate each snippet correctly.
-    let mut locations_by_workflow: HashMap<&InputKey, Vec<&Location<'w>>> = HashMap::new();
+    let mut locations_by_workflow: HashMap<&InputKey, Vec<&Location<'doc>>> = HashMap::new();
     for location in &finding.locations {
         // Never include hidden locations in the output.
         if location.symbolic.is_hidden() {
@@ -53,7 +54,7 @@ pub(crate) fn finding_snippet<'w>(
         let input = registry.get_input(input_key);
 
         snippets.push(
-            Snippet::source(input.document().source())
+            Snippet::source(input.as_document().source())
                 .fold(true)
                 .line_start(1)
                 .origin(input.link().unwrap_or(input_key.presentation_path()))

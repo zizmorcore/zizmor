@@ -38,6 +38,23 @@ fn issue_569() -> Result<()> {
     Ok(())
 }
 
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_726() -> Result<()> {
+    // Regression test for #726.
+    // See: https://github.com/woodruffw/zizmor/issues/726
+    // See: https://github.com/woodruffw-experiments/zizmor-bug-726
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(OutputMode::Both)
+            .args(["--no-online-audits"])
+            .input("woodruffw-experiments/zizmor-bug-726@a038d1a35")
+            .run()?
+    );
+    Ok(())
+}
+
 #[test]
 fn menagerie() -> Result<()> {
     // Respects .gitignore by default.
@@ -185,11 +202,37 @@ fn issue_612_repro() -> Result<()> {
 fn invalid_config_file() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .output(OutputMode::Stderr)
-            .config("/dev/null")
+            .expects_failure(true)
+            .config(if cfg!(windows) { "NUL" } else { "/dev/null" })
             .input(input_under_test("e2e-menagerie"))
             .run()?
     );
+
+    Ok(())
+}
+
+#[test]
+fn invalid_inputs() -> Result<()> {
+    for workflow_tc in [
+        "invalid-workflow",
+        "invalid-workflow-2",
+        "empty",
+        "bad-yaml-1",
+        "bad-yaml-2",
+        "blank",
+        "comment-only",
+        "invalid-action-1/action",
+        "invalid-action-2/action",
+        "empty-action/action",
+    ] {
+        insta::assert_snapshot!(
+            zizmor()
+                .expects_failure(true)
+                .input(input_under_test(&format!("invalid/{workflow_tc}.yml")))
+                .args(["--strict-collection"])
+                .run()?
+        );
+    }
 
     Ok(())
 }

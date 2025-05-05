@@ -17,9 +17,8 @@ use github_actions_models::common::Uses;
 use github_api::GitHubHost;
 use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
-use models::Action;
 use owo_colors::OwoColorize;
-use registry::{AuditRegistry, FindingRegistry, InputRegistry};
+use registry::{AuditRegistry, FindingRegistry, InputKey, InputKind, InputRegistry};
 use state::AuditState;
 use tracing::{info_span, instrument, Span};
 use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
@@ -116,9 +115,15 @@ struct App {
 
     /// Control which kinds of inputs are collected for auditing.
     ///
-    /// By default, all workflows and composite actions are collected.
+    /// By default, all workflows and composite actions are collected,
+    /// while honoring `.gitignore` files.
     #[arg(long, value_enum, default_value_t)]
     collect: CollectionMode,
+
+    /// Fail instead of warning on syntax and schema errors
+    /// in collected inputs.
+    #[arg(long)]
+    strict_collection: bool,
 
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
@@ -281,17 +286,18 @@ fn collect_from_dir(
                 .parent()
                 .is_some_and(|dir| dir.ends_with(".github/workflows"))
         {
-            registry
-                .register_by_path(entry, Some(input_path))
-                .with_context(|| format!("failed to register input: {entry}"))?;
+            let key = InputKey::local(entry, Some(input_path))?;
+            let contents = std::fs::read_to_string(entry)?;
+            registry.register(InputKind::Workflow, contents, key)?;
         }
 
         if mode.actions()
             && entry.is_file()
             && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
         {
-            let action = Action::from_file(entry, Some(input_path))?;
-            registry.register_input(action.into())?;
+            let key = InputKey::local(entry, Some(input_path))?;
+            let contents = std::fs::read_to_string(entry)?;
+            registry.register(InputKind::Action, contents, key)?;
         }
     }
 
@@ -340,31 +346,29 @@ fn collect_from_repo_slug(
         // Performance: if we're *only* collecting workflows, then we
         // can save ourselves a full repo download and only fetch the
         // repo's workflow files.
-        for workflow in client.fetch_workflows(&slug)? {
-            registry.register_input(workflow.into())?;
-        }
+        client.fetch_workflows(&slug, registry)?;
     } else {
-        let inputs = client.fetch_audit_inputs(&slug).with_context(|| {
-            tips(
-                format!(
-                    "couldn't collect inputs from https://github.com/{owner}/{repo}",
-                    owner = slug.owner,
-                    repo = slug.repo
-                ),
-                &["confirm the repository exists and that you have access to it"],
-            )
-        })?;
+        let before = registry.len();
+        client
+            .fetch_audit_inputs(&slug, registry)
+            .with_context(|| {
+                tips(
+                    format!(
+                        "couldn't collect inputs from https://github.com/{owner}/{repo}",
+                        owner = slug.owner,
+                        repo = slug.repo
+                    ),
+                    &["confirm the repository exists and that you have access to it"],
+                )
+            })?;
+        let after = registry.len();
+        let len = after - before;
 
         tracing::info!(
             "collected {len} inputs from {owner}/{repo}",
-            len = inputs.len(),
             owner = slug.owner,
             repo = slug.repo
         );
-
-        for input in inputs {
-            registry.register_input(input)?;
-        }
     }
 
     Ok(())
@@ -374,18 +378,28 @@ fn collect_from_repo_slug(
 fn collect_inputs(
     inputs: &[String],
     mode: &CollectionMode,
+    strict: bool,
     state: &AuditState,
 ) -> Result<InputRegistry> {
-    let mut registry = InputRegistry::new();
+    let mut registry = InputRegistry::new(strict);
 
     for input in inputs {
         let input_path = Utf8Path::new(input);
         if input_path.is_file() {
             // When collecting individual files, we don't know which part
             // of the input path is the prefix.
-            registry
-                .register_by_path(input_path, None)
-                .with_context(|| format!("failed to register input: {input_path}"))?;
+            let (key, kind) = match (input_path.file_stem(), input_path.extension()) {
+                (Some("action"), Some("yml" | "yaml")) => {
+                    (InputKey::local(input_path, None)?, InputKind::Action)
+                }
+                (Some(_), Some("yml" | "yaml")) => {
+                    (InputKey::local(input_path, None)?, InputKind::Workflow)
+                }
+                _ => return Err(anyhow!("invalid input: {input}")),
+            };
+
+            let contents = std::fs::read_to_string(input_path)?;
+            registry.register(kind, contents, key)?;
         } else if input_path.is_dir() {
             collect_from_dir(input_path, mode, &mut registry)?;
             // collect_from_repo_dir(input_path, input_path, mode, &mut registry)?;
@@ -488,7 +502,12 @@ fn run() -> Result<ExitCode> {
     })?;
 
     let audit_state = AuditState::new(&app, &config);
-    let registry = collect_inputs(&app.inputs, &app.collect, &audit_state)?;
+    let registry = collect_inputs(
+        &app.inputs,
+        &app.collect,
+        app.strict_collection,
+        &audit_state,
+    )?;
 
     let mut audit_registry = AuditRegistry::new();
     macro_rules! register_audit {
@@ -512,6 +531,7 @@ fn run() -> Result<ExitCode> {
     }
 
     register_audit!(audit::artipacked::Artipacked);
+    register_audit!(audit::unsound_contains::UnsoundContains);
     register_audit!(audit::excessive_permissions::ExcessivePermissions);
     register_audit!(audit::dangerous_triggers::DangerousTriggers);
     register_audit!(audit::impostor_commit::ImpostorCommit);
@@ -531,6 +551,9 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::overprovisioned_secrets::OverprovisionedSecrets);
     register_audit!(audit::unredacted_secrets::UnredactedSecrets);
     register_audit!(audit::forbidden_uses::ForbiddenUses);
+    register_audit!(audit::obfuscation::Obfuscation);
+    register_audit!(audit::stale_action_refs::StaleActionRefs);
+    register_audit!(audit::unpinned_images::UnpinnedImages);
 
     let mut results = FindingRegistry::new(&app, &config);
     {

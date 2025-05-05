@@ -22,7 +22,10 @@ impl Audit for OverprovisionedSecrets {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(&self, input: &'w AuditInput) -> anyhow::Result<Vec<super::Finding<'w>>> {
+    fn audit_raw<'doc>(
+        &self,
+        input: &'doc AuditInput,
+    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
         for (expr, span) in parse_expressions_from_input(input) {
@@ -30,8 +33,6 @@ impl Audit for OverprovisionedSecrets {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
-
-            expr.as_curly();
 
             for _ in Self::secrets_expansions(&parsed) {
                 findings.push(

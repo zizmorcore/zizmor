@@ -35,10 +35,10 @@ impl Audit for SelfHostedRunner {
         Ok(Self)
     }
 
-    fn audit_workflow<'w>(
+    fn audit_workflow<'doc>(
         &self,
-        workflow: &'w crate::models::Workflow,
-    ) -> Result<Vec<crate::finding::Finding<'w>>> {
+        workflow: &'doc crate::models::Workflow,
+    ) -> Result<Vec<crate::finding::Finding<'doc>>> {
         let mut results = vec![];
 
         for job in workflow.jobs() {

@@ -1,12 +1,12 @@
 ---
 source: tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\",\n\"--collect=workflows-only\"]).input(\"python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6\").run()?"
-snapshot_kind: text
 ---
  INFO zizmor: skipping impostor-commit: offline audits only requested
  INFO zizmor: skipping ref-confusion: offline audits only requested
  INFO zizmor: skipping known-vulnerable-actions: offline audits only requested
  INFO zizmor: skipping forbidden-uses: audit not configured
+ INFO zizmor: skipping stale-action-refs: offline audits only requested
  INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/documentation-links.yml
@@ -80,6 +80,14 @@ error[unpinned-uses]: unpinned action reference
     |
 588 |         uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+   --> .github/workflows/build.yml:184:18
+    |
+184 |       Windows MSI${{ '' }}
+    |                  --------- help: expression can be simplified via constant folding
     |
     = note: audit confidence → High
 
@@ -175,4 +183,4 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
 
-46 findings (28 suppressed): 0 unknown, 0 informational, 0 low, 0 medium, 18 high
+48 findings (29 suppressed): 0 unknown, 0 informational, 1 low, 0 medium, 18 high

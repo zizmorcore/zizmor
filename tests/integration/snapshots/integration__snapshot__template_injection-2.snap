@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
-expression: "zizmor().input(workflow_under_test(\"template-injection/template-injection-dynamic-matrix.yml\")).args([\"--persona=auditor\"]).run()?"
-snapshot_kind: text
+expression: "zizmor().input(input_under_test(\"template-injection/template-injection-dynamic-matrix.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 warning[template-injection]: code injection via template expansion
   --> @@INPUT@@:19:9

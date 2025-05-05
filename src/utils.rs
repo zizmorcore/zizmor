@@ -1,14 +1,109 @@
 //! Helper routines.
 
-use std::ops::Range;
-
+use anyhow::{Context as _, Error, anyhow};
 use camino::Utf8Path;
 use github_actions_models::common::{
     Env,
     expr::{ExplicitExpr, LoE},
 };
+use jsonschema::{
+    BasicOutput::{Invalid, Valid},
+    Validator,
+    output::{ErrorDescription, OutputUnit},
+    validator_for,
+};
+use std::{collections::VecDeque, ops::Range};
+use std::{fmt::Write, sync::LazyLock};
 
-use crate::audit::AuditInput;
+use crate::{audit::AuditInput, models::AsDocument, registry::InputError};
+
+pub(crate) static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+    validator_for(&serde_json::from_str(include_str!("./data/github-action.json")).unwrap())
+        .unwrap()
+});
+
+pub(crate) static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+    validator_for(&serde_json::from_str(include_str!("./data/github-workflow.json")).unwrap())
+        .unwrap()
+});
+
+fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Error {
+    let mut message = String::new();
+
+    for error in errors {
+        let description = error.error_description().to_string();
+        // HACK: error descriptions are sometimes a long rats' nest
+        // of JSON objects. We should render this in a palatable way
+        // but doing so is nontrivial, so we just skip them for now.
+        // NOTE: Experimentally, this seems to mostly happen when
+        // the error for an unmatched "oneOf", so these errors are
+        // typically less useful anyways.
+        if !description.starts_with("{") {
+            let location = error.instance_location().as_str();
+            if location.is_empty() {
+                writeln!(message, "{description}").unwrap();
+            } else {
+                // Convert paths like `/foo/bar/baz` to `foo.bar.baz`,
+                // removing the leading separator.
+                let dotted_location = &location[1..].replace("/", ".");
+
+                writeln!(message, "{dotted_location}: {description}").unwrap();
+            }
+        }
+    }
+
+    anyhow!(message)
+}
+
+/// Like `serde_yaml::from_str`, but with a JSON schema validator
+/// and an error type that distinguishes between syntax and semantic
+/// errors.
+pub(crate) fn from_str_with_validation<'de, T>(
+    contents: &'de str,
+    validator: &'static Validator,
+) -> Result<T, InputError>
+where
+    T: serde::Deserialize<'de>,
+{
+    match serde_yaml::from_str::<T>(contents) {
+        Ok(value) => Ok(value),
+        Err(e) => {
+            // Something a little wonky happens here: we want
+            // to distinguish between syntax and semantic errors,
+            // but serde-yaml doesn't give us an API to do that.
+            // To approximate it, we re-parse the input as a
+            // `Value` and use that as an oracle -- a successful
+            // re-parse indicates that the input is valid YAML and
+            // that our error is semantic, while a failed re-parse
+            // indicates a syntax error.
+            //
+            // We do this in a nested fashion to avoid re-parsing
+            // the input twice if we can help it, and because the
+            // more obvious trick (`serde_yaml::from_value`) doesn't
+            // work due to a lack of referential transparency.
+            //
+            // See: https://github.com/dtolnay/serde-yaml/issues/170
+            // See: https://github.com/dtolnay/serde-yaml/issues/395
+
+            match serde_yaml::from_str(contents) {
+                // We know we have valid YAML, so one of two things happened here:
+                // 1. The input is semantically valid, but we have a bug in
+                //    `github-actions-models`.
+                // 2. The input is semantically invalid, and the user
+                //    needs to fix it.
+                // We the JSON schema `validator` to separate these.
+                Ok(raw_value) => match validator.apply(&raw_value).basic() {
+                    Valid(_) => Err(e)
+                        .context("this strongly suggests a bug in zizmor; please report it!")
+                        .map_err(InputError::Model),
+                    Invalid(errors) => Err(InputError::Schema(parse_validation_errors(errors))),
+                },
+                // Syntax error.
+                Err(e) => Err(InputError::Syntax(e.into())),
+            }
+        }
+    }
+}
 
 /// Convenience trait for inline transformations of `Self`.
 ///
@@ -100,8 +195,8 @@ pub(crate) fn extract_expressions(text: &str) -> Vec<(ExplicitExpr, Range<usize>
 pub(crate) fn parse_expressions_from_input(
     input: &AuditInput,
 ) -> Vec<(ExplicitExpr, Range<usize>)> {
-    let text = input.document().source();
-    let doc = input.document();
+    let text = input.as_document().source();
+    let doc = input.as_document();
 
     let mut exprs = vec![];
     let mut offset = 0;
@@ -169,8 +264,7 @@ mod tests {
     use anyhow::Result;
 
     use crate::{
-        Action,
-        models::Workflow,
+        models::{Action, Workflow},
         registry::InputKey,
         utils::{
             extract_expression, extract_expressions, normalize_shell, parse_expressions_from_input,

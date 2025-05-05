@@ -23,10 +23,10 @@ impl Audit for UnredactedSecrets {
         Ok(Self)
     }
 
-    fn audit_raw<'w>(
+    fn audit_raw<'doc>(
         &self,
-        input: &'w super::AuditInput,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'w>>> {
+        input: &'doc super::AuditInput,
+    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
         for (expr, span) in parse_expressions_from_input(input) {
@@ -34,8 +34,6 @@ impl Audit for UnredactedSecrets {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
-
-            expr.as_curly();
 
             for _ in Self::secret_leakages(&parsed) {
                 findings.push(

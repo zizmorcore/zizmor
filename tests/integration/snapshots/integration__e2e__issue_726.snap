@@ -1,0 +1,17 @@
+---
+source: tests/integration/e2e.rs
+expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw-experiments/zizmor-bug-726@a038d1a35\").run()?"
+---
+ INFO collect_inputs: zizmor: collected 6 inputs from woodruffw-experiments/zizmor-bug-726
+ INFO zizmor: skipping impostor-commit: offline audits only requested
+ INFO zizmor: skipping ref-confusion: offline audits only requested
+ INFO zizmor: skipping known-vulnerable-actions: offline audits only requested
+ INFO zizmor: skipping forbidden-uses: audit not configured
+ INFO zizmor: skipping stale-action-refs: offline audits only requested
+ INFO audit: zizmor: 🌈 completed .github/actions/custom-action/action.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/actions/custom-action/action.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/custom-action/action.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/hello.yml
+ INFO audit: zizmor: 🌈 completed arbitrary/subdir/.github/workflows/hello.yml
+ INFO audit: zizmor: 🌈 completed arbitrary/subdir/custom-action/action.yml
+No findings to report. Good job!

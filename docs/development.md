@@ -160,6 +160,14 @@ cargo insta test --review
 GH_TOKEN=$(gh auth token) cargo insta test --review --features online-tests
 ```
 
+After you accepted all snapshot differences, you can run insta with
+`--force-update-snapshots` to make sure the meta information in the snapshot
+files is up to date as well:
+
+```bash
+GH_TOKEN=$(gh auth token) cargo insta test --force-update-snapshots --features online-tests
+```
+
 See [insta's documentation] for more details.
 
 ## Building the website
@@ -287,8 +295,9 @@ The general procedure for adding a new audit can be described as:
   proper `Workflow`, `Job` or `Step` instance
 - Register `MyNewAudit` in the known audits at `src/main.rs`
 - Add proper integration tests covering some scenarios at `tests/acceptance.rs`
-- Add proper docs for this new audit at `docs/audits`. Please add related public
-  information about the underlying vulnerability
+- Add proper docs for this new audit at `docs/audits`. Take care to add your new
+  heading in alpha order relative to the other audit headings. Please include
+  relevant public information about the underlying vulnerability
 - Open your Pull Request!
 
 #### Adding locations to an audit

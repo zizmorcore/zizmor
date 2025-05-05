@@ -1,7 +1,6 @@
 ---
 source: tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"template-injection/pr-425-backstop/action.yml\")).run()?"
-snapshot_kind: text
 ---
 error[template-injection]: code injection via template expansion
   --> @@INPUT@@:12:7

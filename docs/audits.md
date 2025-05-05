@@ -73,6 +73,133 @@ with `#!yaml persist-credentials: true`.
               persist-credentials: false
     ```
 
+
+## `bot-conditions`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [bot-conditions.yml]   | v1.2.0      | ✅             | ✅                 | ❌  |
+
+[bot-conditions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/bot-conditions.yml
+
+Detects potentially spoofable bot conditions.
+
+Many workflows allow trustworthy bots (such as [Dependabot](https://github.com/dependabot))
+to bypass checks or otherwise perform privileged actions. This is often done
+with a `github.actor` check, e.g.:
+
+```yaml
+if: github.actor == 'dependabot[bot]'
+```
+
+However, this condition is spoofable: `github.actor` refers to the *last* actor
+to perform an "action" on the triggering context, and not necessarily
+the actor actually causing the trigger. An attacker can take
+advantage of this discrepancy to create a PR where the `HEAD` commit
+has `github.actor == 'dependabot[bot]'` but the rest of the branch history
+contains attacker-controlled code, bypassing the actor check.
+
+Other resources:
+
+* [GitHub Actions exploitations: Dependabot]
+
+### Remediation
+
+In general, checking a trigger's authenticity via `github.actor` is
+insufficient. Instead, most users should use `github.event.pull_request.user.login`
+or similar, since that context refers to the actor that *created* the Pull Request
+rather than the last one to modify it.
+
+More generally,
+[GitHub's documentation recommends](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions)
+not using `pull_request_target` for auto-merge workflows.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="bot-conditions.yml" hl_lines="1 6"
+        on: pull_request_target
+
+        jobs:
+          automerge:
+            runs-on: ubuntu-latest
+            if: github.actor == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
+            steps:
+              - run: gh pr merge --auto --merge "$PR_URL"
+                env:
+                  PR_URL: ${{ github.event.pull_request.html_url }}
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="bot-conditions.yml" hl_lines="1 6"
+        on: pull_request
+
+        jobs:
+          automerge:
+            runs-on: ubuntu-latest
+            if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
+            steps:
+              - run: gh pr merge --auto --merge "$PR_URL"
+                env:
+                  PR_URL: ${{ github.event.pull_request.html_url }}
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ```
+
+
+## `cache-poisoning`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ✅               | ❌  |
+
+[cache-poisoning.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/cache-poisoning.yml
+
+Detects potential cache-poisoning scenarios in release workflows.
+
+Caching and restoring build state is a process eased by utilities provided
+by GitHub, in particular @actions/cache and its "save" and "restore"
+sub-actions. In addition, many of the setup-like actions provided
+by GitHub come with built-in caching functionality, like @actions/setup-node,
+@actions/setup-java and others.
+
+Furthermore, there are many examples of community-driven Actions with built-in
+caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
+@Swatinem/rust-cache. In general, most of them build on top of @actions/toolkit
+for the sake of easily integrate with GitHub cache server at Workflow runtime.
+
+This vulnerability happens when release workflows leverage build state cached
+from previous workflow executions, in general on top of the aforementioned
+actions or  similar ones. The publication of artifacts usually happens driven
+by trigger events like `release` or events with path filters like `push`
+(e.g. for tags).
+
+In such scenarios, an attacker with access to a valid `GITHUB_TOKEN` can use it
+to poison the repository's GitHub Actions caches. That compounds with the
+default behavior of @actions/toolkit during cache restorations, allowing an
+attacker to retrieve payloads from poisoned cache entries, hence achieving code
+execution at Workflow runtime, potentially compromising ready-to-publish
+artifacts.
+
+Other resources:
+
+* [The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]
+* [Cacheract: The Monster in your Build Cache]
+
+### Remediation
+
+In general, you should avoid using previously cached CI state within workflows
+intended to publish build artifacts:
+
+* Remove cache-aware actions like @actions/cache from workflows that produce
+  releases, *or*
+* Disable cache-aware actions with an `#!yaml if:` condition based on the trigger at
+  the step level, *or*
+* Set an action-specific input to disable cache restoration when appropriate,
+  such as `lookup-only` in @Swatinem/rust-cache.
+
 ## `dangerous-triggers`
 
 | Type     | Examples                  | Introduced in | Works offline  | Enabled by default | Configurable |
@@ -116,11 +243,34 @@ Some general pointers:
 * Replace `pull_request_target` with `pull_request`, unless you *absolutely*
   need repository write permissions (e.g. to leave a comment or make
   other changes to the upstream repo).
-* Never run PR-controlled code in the context of a
+
+    `pull_request_target` is only needed to perform privileged actions on
+    pull requests from external forks. If you only expect pull requests from
+    branches within the same repository, or if you are fine with some functionality
+    not working for external pull requests, prefer `pull_request`.
+
+* Automation for Dependabot pull requests can be implemented using `pull_request`,
+  but requires setting dedicated [Dependabot secrets]
+  and [explicitly specifying needed permissions].
+
+* **Never** run PR-controlled code in the context of a
   `pull_request_target`-triggered workflow.
+
 * Avoid attacker-controllable flows into `GITHUB_ENV` in both `workflow_run`
   and `pull_request_target` workflows, since these can lead to arbitrary
   code execution.
+
+* If you really have to use `pull_request_target`, consider adding a
+  [branch filter] to only run the workflow for matching target branches.
+  `pull_request_target` uses the workflow file of the target branch of the pull
+  request, therefore restricting the target branches reduces the risk of
+  a vulnerable `pull_request_target` in a stale or abandoned branch.
+
+* If you have to use a dangerous trigger, consider adding a `github.repository == ...`
+  check to only run for your repository but not in forks of your repository
+  (in case the user has enabled Actions there). This avoids exposing forks
+  to danger in case you fix a vulnerability in the workflow but the fork still
+  contains an old vulnerable version.
 
 [reusable workflow]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 
@@ -152,6 +302,11 @@ as close to their usage site as possible.
 In practice, this means that workflows should almost always set
 `#!yaml permissions: {}` at the workflow level to disable all permissions
 by default, and then set specific job-level permissions as needed.
+
+!!! tip
+
+    @GitHubSecurityLab/actions-permissions can help find the minimally required
+    permissions.
 
 !!! example
 
@@ -227,6 +382,131 @@ by default, and then set specific job-level permissions as needed.
               - name: publish
                 uses: pypa/gh-action-pypi-publish@release/v1
         ```
+
+## `forbidden-uses`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | N/A            | v1.6.0        | ✅             | ❌                |  ✅ |
+
+An *opt-in* audit for denylisting/allowlisting specific `#!yaml uses:` clauses.
+This is not enabled by default; you must
+[configure it](#forbidden-uses-configuration) to use it.
+
+!!! warning
+
+    This audit comes with several limitations that are important to understand:
+
+    * This audit is *opt-in*. You must configure it to use it; it
+      **does nothing** by default.
+    * This audit (currently) operates on *repository* `#!yaml uses:` clauses,
+      e.g. `#!yaml uses: actions/checkout@v4`. It does not operate on Docker
+      `#!yaml uses:` clauses, e.g. `#!yaml uses: docker://ubuntu:24.04`. This limitation
+      may be lifted in the future.
+    * This audit operates on `#!yaml uses:` clauses *as they appear* in the workflow
+      and action files. In other words, in *cannot* detect
+      [impostor commits](#impostor-commit) or indirect usage of actions
+      via manual `git clone` and local path usage.
+    * This audit's configuration operates on patterns, just like
+      [unpinned-uses](#unpinned-uses). That means that you can't (yet)
+      define *exact* matches. For example, you can't forbid `actions/checkout@v4`,
+      you have to forbid `actions/checkout`, which forbids all versions.
+
+### Configuration { #forbidden-uses-configuration }
+
+#### `rules.forbidden-uses.config.<allow|deny>`
+
+_Type_: `list`
+
+The `forbidden-uses` audit operates on either an allowlist or denylist
+basis:
+
+* In allowlist mode, only the listed `#!yaml uses:` patterns are allowed. All
+  non-matching `#!yaml uses:` clauses result in a finding.
+
+    Intended use case: only allowing "known good" actions to be used,
+    and forbidding everything else.
+
+* In denylist mode, only the listed `#!yaml uses:` patterns are disallowed. All
+  matching `#!yaml uses:` clauses result in a finding.
+
+    Intended use case: permitting all `#!yaml uses:` by default, but explicitly
+    forbidding "known bad" actions.
+
+Regardless of the mode used, the patterns allowed are the same as those
+in [unpinned-uses](#unpinned-uses-configuration).
+
+!!! example
+
+    The following configuration would allow only actions owned by
+    the @actions organization, plus any actions defined in @github/codeql-action:
+
+    ```yaml title="zizmor.yml"
+    rules:
+      forbidden-uses:
+        config:
+          allow:
+            - actions/*
+            - github/codeql-action/*
+    ```
+
+!!! example
+
+    The following would allow all actions except for those in the
+    @actions organization or defined in @github/codeql-action:
+
+    ```yaml title="zizmor.yml"
+    rules:
+      forbidden-uses:
+        config:
+          deny:
+            - actions/*
+            - github/codeql-action/*
+    ```
+
+### Remediation
+
+Either remove the offending `#!yaml uses:` clause or, if intended, add it to
+your [configuration](#forbidden-uses-configuration).
+
+## `github-env`
+
+| Type     | Examples           | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|--------------------|---------------|----------------|--------------------| --------------|
+| Workflow, Action  | [github-env.yml]   | v0.6.0        | ✅             | ✅       | ❌  |
+
+[github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
+
+Detects dangerous writes to the `GITHUB_ENV` and `GITHUB_PATH` environment variables.
+
+When used in workflows with dangerous triggers (such as `pull_request_target` and `workflow_run`),
+`GITHUB_ENV` and `GITHUB_PATH` can be an arbitrary code execution risk:
+
+* If the attacker is able to set arbitrary variables or variable contents via
+  `GITHUB_ENV`, they may be able to set `LD_PRELOAD` or otherwise induce code
+  execution implicitly within subsequent steps.
+* If the attacker is able to add an arbitrary directory to the `$PATH` via
+  `GITHUB_PATH`, they may be able to execute arbitrary code by shadowing
+  ordinary system executables (such as `ssh`).
+
+Other resources:
+
+* [GitHub Actions exploitation: environment manipulation]
+* [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]
+* [Google & Apache Found Vulnerable to GitHub Environment Injection]
+* [Hacking with Environment Variables]
+
+### Remediation
+
+In general, you should avoid modifying `GITHUB_ENV` and `GITHUB_PATH` within
+sensitive workflows that are attacker-triggered, like `pull_request_target`.
+
+If you absolutely must use `GITHUB_ENV` or `GITHUB_PATH`, avoid passing
+attacker-controlled values into either. Stick with literal strings and
+values computed solely from trusted sources.
+
+If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
+
 
 ## `hardcoded-container-credentials`
 
@@ -338,6 +618,54 @@ the commit actually exists within it.
 The only remediation, once discovered, is to replace the impostor commit
 within an authentic commit (or an authentic tag/branch reference).
 
+## `insecure-commands`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅       | ❌  |
+
+[insecure-commands.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/insecure-commands.yml
+
+Detects opt-in for executing insecure workflow commands.
+
+Workflow commands (like `::set-env` and `::add-path`)
+[were deprecated by GitHub] in 2020 due to their inherent weaknesses
+(e.g., allowing any command with the ability to emit to `stdout`
+to inject environment variables and therefore obtain code execution).
+
+However, users can explicitly re-enable them by setting the
+`ACTIONS_ALLOW_UNSECURE_COMMANDS` environment variable at the workflow,
+job, or step level.
+
+Other resources:
+
+* [Semgrep audit]
+
+### Remediation
+
+In general, users should use for [GitHub Actions environment files]
+(like `GITHUB_PATH` and `GITHUB_OUTPUT`) instead of using workflow commands.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="insecure-commands" hl_lines="3"
+        - name: Setup my-bin
+          run: |
+            echo "::add-path::$HOME/.local/my-bin"
+          env:
+            ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="insecure-commands" hl_lines="3"
+        - name: Setup my-bin
+          run: |
+            echo "$HOME/.local/my-bin" >> "$GITHUB_PATH"
+        ```
+
 ## `known-vulnerable-actions`
 
 | Type             | Examples                       | Introduced in | Works offline  | Enabled by default | Configurable |
@@ -361,6 +689,123 @@ injection via [template injection].
 
 If the vulnerability is applicable to your use: upgrade to a fixed version of
 the action if one is available, or remove the action's usage entirely.
+
+## `obfuscation`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | N/A   | v1.7.0        | ✅             | ✅                 | ❌  |
+
+Checks for obfuscated usages of GitHub Actions features.
+
+This audit primarily serves to "unstick" other audits, which may fail to detect
+functioning but obfuscated usages of GitHub Actions features.
+
+This audit detects a variety of obfuscated usages, including:
+
+* Obfuscated paths within `#!yaml uses:` clauses, including redundant `/`
+  separators and uses of `.` or `..` in path segments.
+* Obfuscated GitHub expressions, including no-op patterns like
+  `fromJSON(toJSON(...))` and calls to `format(...)` where all
+  arguments are literal values.
+
+### Remediation
+
+Address the source of obfuscation by simplifying the expression,
+`#!yaml uses:` clause, or other obfuscated feature.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="obfuscation.yml" hl_lines="8"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+                with:
+                  repository: ${{ format('{0}/{1}', 'octocat', 'hello-world') }}
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="obfuscation.yml" hl_lines="8"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+                with:
+                  repository: octocat/hello-world
+        ```
+
+
+## `overprovisioned-secrets`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅     | ✅         | ❌  |
+
+[overprovisioned-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/overprovisioned-secrets.yml
+
+Detects excessive sharing of the `secrets` context.
+
+Typically, users access the `secrets` context via its individual members:
+
+```yaml
+env:
+  SECRET_ONE: ${{ secrets.SECRET_ONE }}
+  SECRET_TWO: ${{ secrets.SECRET_TWO }}
+```
+
+This allows the Actions runner to only expose the secrets actually used by
+the workflow to the job environment.
+
+However, if the user instead accesses the *entire* `secrets` context:
+
+```yaml
+env:
+  SECRETS: ${{ toJson(secrets) }}
+```
+
+...then the entire `secrets` context is exposed to the runner, even if
+only a single secret is actually needed.
+
+### Remediation
+
+In general, users should avoid loading the entire `secrets` context.
+Secrets should be accessed individually by name.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="overprovisioned.yml" hl_lines="7"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: ./deploy.sh
+                env:
+                  SECRETS: ${{ toJSON(secrets) }}
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="overprovisioned.yml" hl_lines="7-8"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: ./deploy.sh
+                env:
+                  SECRET_ONE: ${{ secrets.SECRET_ONE }}
+                  SECRET_TWO: ${{ secrets.SECRET_TWO }}
+        ```
+
 
 ## `ref-confusion`
 
@@ -387,6 +832,52 @@ pre-existing consumers of that action without having to modify those consumers.
 ### Remediation
 
 Switch to hash-pinned actions.
+
+## `secrets-inherit`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [secrets-inherit.yml]   | v1.1.0      | ✅             | ✅                 | ❌  |
+
+[secrets-inherit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/secrets-inherit.yml
+
+Detects excessive secret inheritance between calling workflows and reusable
+(called) workflows.
+
+[Reusable workflows] can be given secrets by their calling workflow either
+explicitly, or in a blanket fashion with `#!yaml secrets: inherit`. The latter
+should almost never be used, as it makes it violates the
+[Principle of Least Authority] and makes it impossible to determine which exact
+secrets a reusable workflow was executed with.
+
+### Remediation
+
+In general, `#!yaml secrets: inherit` should be replaced with a `#!yaml secrets:` block
+that explicitly forwards each secret actually needed by the reusable workflow.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="reusable.yml" hl_lines="4"
+        jobs:
+          pass-secrets-to-workflow:
+            uses: ./.github/workflows/called-workflow.yml
+            secrets: inherit
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="reusable.yml" hl_lines="4-6"
+        jobs:
+          pass-secrets-to-workflow:
+            uses: ./.github/workflows/called-workflow.yml
+            secrets:
+              forward-me: ${{ secrets.forward-me }}
+              me-too: ${{ secrets.me-too }}
+        ```
+
+
 
 ## `self-hosted-runner`
 
@@ -434,6 +925,38 @@ there are steps you can take to minimize their risk:
 [GitHub's docs]: https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/approving-workflow-runs-from-public-forks
 
 [ephemeral ("just-in-time") runners]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-just-in-time-runners
+
+## `stale-action-refs`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  | N/A            | v1.7.0        | ❌            | ✅                | ❌          |
+
+Checks for `#!yaml uses:` clauses which pin an action using a SHA reference,
+but where that reference does not point to a Git tag.
+
+When using an action commit which is not a Git tag / release version, that commit
+might contain bugs or vulnerabilities which have not been publicly documented
+because they might have been fixed before the subsequent release. Additionally,
+because changelogs are usually only published for releases, it is difficult to
+tell which changes of the subsequent release the pinned commit includes.
+
+!!! note
+
+    This is a `--pedantic` only audit because the detected situation is not
+    a vulnerability per se. But it might be worth investigating which commit
+    the SHA reference points to, and why not a SHA reference pointing to a
+    Git tag is used.
+
+    Some action repositories use a "rolling release branch" strategy where
+    all commits on a certain branch are considered releases. In such a case
+    findings of this audit can likely be ignored.
+
+### Remediation
+
+Change the `#!yaml uses:` clause to pin the action using a SHA reference
+which points to a Git tag.
+
 
 ## `template-injection`
 
@@ -515,44 +1038,95 @@ shell quoting/expansion rules.
             ISSUE_TITLE: ${{ github.event.issue.title }}
         ```
 
-## `use-trusted-publishing`
+## `unpinned-images`
 
-| Type     | Examples                     | Introduced in | Works offline  | Enabled by default | Configurable |
-|----------|------------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow  | [pypi-manual-credential.yml] | v0.1.0        | ✅             | ✅                 | ❌  |
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  | [unpinned-images.yml] | v1.7.0        | ✅            | ✅                | ❌          |
 
-[pypi-manual-credential.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pypi-manual-credential.yml
+[unpinned-images.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned-images.yml
 
-Detects packaging workflows that could use [Trusted Publishing].
+Checks for `container.image` values where the image is not pinned by either a tag (other than `latest`) or SHA256.
 
-Some packaging ecosystems/indices (like [PyPI] and [RubyGems]) support
-"Trusted Publishing," which is an OIDC-based "tokenless" authentication
-mechanism for uploading to the index from within a CI/CD workflow.
+When image references are unpinned or are pinned to a mutable tag, the
+workflow is at risk because the image used will be unpredictable over time.
+Changes made to the OCI registry used to source the image may result in untrusted
+images gaining access to your workflow.
 
-This "tokenless" flow has significant security benefits over a traditional
-manually configured API token, and should be preferred wherever supported
-and possible.
+This can be a security risk:
 
-[Trusted Publishing]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
+1. Registries may not consistently enforce immutable image tags
+2. Completely unpinned images can be changed at any time by the OCI registry.
 
-[PyPI]: https://pypi.org
+By default, this audit applies the following policy:
 
-[RubyGems]: https://rubygems.org
+* Regular findings are created for all image references missing a tag
+
+    ```yaml
+    container:
+      image: foo/bar
+    ```
+
+    or using the `latest` tag:
+
+    ```yaml
+    container:
+      image: foo/bar:latest
+    ```
+
+* Pedantic findings are created for all image references using a tag (`!= latest`) rather than SHA256 hash.
+
+    ```yaml
+    container:
+      image: foo/bar:not-a-sha256
+    ```
 
 Other resources:
 
-* [Trusted Publishers for All Package Repositories]
-* [Publishing to PyPI with a Trusted Publisher]
-* [Trusted Publishing - RubyGems Guides]
-* [Trusted publishing: a new benchmark for packaging security]
+- [Aqua: The Challenges of Uniquely Identifying Your Images]
+- [GitHub: Safeguard your containers with new container signing capability in GitHub Actions]
+
+
 
 ### Remediation
 
-In general, enabling Trusted Publishing requires a one-time change to your
-package's configuration on its associated index (e.g. PyPI or RubyGems).
+Pin the `#!yaml container.image:` value to a specific SHA256 image registry hash.
 
-Once your Trusted Publisher is registered, see @pypa/gh-action-pypi-publish
-or @rubygems/release-gem for canonical examples of using it.
+Many popular registries will display the hash value in their web console or you
+can use the command line to determine the hash of an image you have previously pulled
+by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="unpinned-images.yml" hl_lines="7-8"
+        name: unpinned-images
+        on: [push]
+
+        jobs:
+          unpinned-image:
+            runs-on: ubuntu-latest
+            container:
+              image: fake.example.com/example
+            steps:
+              - run: "echo unpinned container!"
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="unpinned-images.yml" hl_lines="7-8"
+        name: unpinned-images
+        on: [push]
+
+        jobs:
+          unpinned-image:
+            runs-on: ubuntu-latest
+            container:
+              image: fake.example.com/example@sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+            steps:
+              - run: "echo pinned container!"
+        ```
 
 ## `unpinned-uses`
 
@@ -596,6 +1170,8 @@ This audit can be configured with a custom set of rules, e.g. to
 allow symbolic references for trusted repositories or entire namespaces
 (e.g. `foocorp/*`). See
 [`unpinned-uses` - Configuration](#unpinned-uses-configuration) for details.
+
+Specifying a configuration overrides the default policy above.
 
 Other resources:
 
@@ -687,10 +1263,6 @@ regardless of definition order.
     In plain English, this policy set says "anything that `#!yaml uses: actions/*` must
     be at least ref-pinned, but @actions/checkout in particular must be hash-pinned."
 
-If a `#!yaml uses:` clause does not match any rules, then an implicit `"*": hash-pin`
-rule is applied. Users can override this implicit rule by adding their
-own `*` rule.
-
 !!! example
 
     ```yaml title="zizmor.yml"
@@ -704,6 +1276,14 @@ own `*` rule.
 
     In plain English, this policy set says "anything that `#!yaml uses: example/*` must
     be hash-pinned, and anything else must be at least ref-pinned."
+
+
+!!! important
+
+    If a `#!yaml uses:` clause does not match any rules, then an implicit
+    `#!yaml "*": hash-pin` rule is applied. Users can override this implicit rule
+    by adding their own `*` rule or a more precise rule, e.g.
+    `#!yaml "github/*": ref-pin` for actions under the @github organization.
 
 ### Remediation
 
@@ -722,17 +1302,17 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
         on: [push]
 
         jobs:
-        unpinned-uses:
-            runs-on: ubuntu-latest
-            steps:
-            - uses: actions/checkout
-              with:
-              persist-credentials: false
+          unpinned-uses:
+              runs-on: ubuntu-latest
+              steps:
+              - uses: actions/checkout
+                with:
+                persist-credentials: false
 
-            - uses: docker://ubuntu
-              with:
-              entrypoint: /bin/echo
-              args: hello!
+              - uses: docker://ubuntu
+                with:
+                entrypoint: /bin/echo
+                args: hello!
         ```
 
     === "After :white_check_mark:"
@@ -742,339 +1322,23 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
         on: [push]
 
         jobs:
-        unpinned-uses:
-            runs-on: ubuntu-latest
-            steps:
-            - uses: actions/checkout@v4 # (1)!
-              with:
-              persist-credentials: false
+          unpinned-uses:
+              runs-on: ubuntu-latest
+              steps:
+              - uses: actions/checkout@v4 # (1)!
+                with:
+                persist-credentials: false
 
-            - uses: docker://ubuntu:24.04
-              with:
-              entrypoint: /bin/echo
-              args: hello!
+              - uses: docker://ubuntu:24.04
+                with:
+                entrypoint: /bin/echo
+                args: hello!
         ```
 
         1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
 
 
-## `insecure-commands`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
-|----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅       | ❌  |
-
-[insecure-commands.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/insecure-commands.yml
-
-Detects opt-in for executing insecure workflow commands.
-
-Workflow commands (like `::set-env` and `::add-path`)
-[were deprecated by GitHub] in 2020 due to their inherent weaknesses
-(e.g., allowing any command with the ability to emit to `stdout`
-to inject environment variables and therefore obtain code execution).
-
-However, users can explicitly re-enable them by setting the
-`ACTIONS_ALLOW_UNSECURE_COMMANDS` environment variable at the workflow,
-job, or step level.
-
-Other resources:
-
-* [Semgrep audit]
-
-### Remediation
-
-In general, users should use for [GitHub Actions environment files]
-(like `GITHUB_PATH` and `GITHUB_OUTPUT`) instead of using workflow commands.
-
-!!! example
-
-    === "Before :warning:"
-
-        ```yaml title="insecure-commands" hl_lines="3"
-        - name: Setup my-bin
-          run: |
-            echo "::add-path::$HOME/.local/my-bin"
-          env:
-            ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-        ```
-
-    === "After :white_check_mark:"
-
-        ```yaml title="insecure-commands" hl_lines="3"
-        - name: Setup my-bin
-          run: |
-            echo "$HOME/.local/my-bin" >> "$GITHUB_PATH"
-        ```
-
-## `github-env`
-
-| Type     | Examples           | Introduced in | Works offline  | Enabled by default | Configurable |
-|----------|--------------------|---------------|----------------|--------------------| --------------|
-| Workflow, Action  | [github-env.yml]   | v0.6.0        | ✅             | ✅       | ❌  |
-
-[github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
-
-Detects dangerous writes to the `GITHUB_ENV` and `GITHUB_PATH` environment variables.
-
-When used in workflows with dangerous triggers (such as `pull_request_target` and `workflow_run`),
-`GITHUB_ENV` and `GITHUB_PATH` can be an arbitrary code execution risk:
-
-* If the attacker is able to set arbitrary variables or variable contents via
-  `GITHUB_ENV`, they may be able to set `LD_PRELOAD` or otherwise induce code
-  execution implicitly within subsequent steps.
-* If the attacker is able to add an arbitrary directory to the `$PATH` via
-  `GITHUB_PATH`, they may be able to execute arbitrary code by shadowing
-  ordinary system executables (such as `ssh`).
-
-Other resources:
-
-* [GitHub Actions exploitation: environment manipulation]
-* [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]
-* [Google & Apache Found Vulnerable to GitHub Environment Injection]
-* [Hacking with Environment Variables]
-
-### Remediation
-
-In general, you should avoid modifying `GITHUB_ENV` and `GITHUB_PATH` within
-sensitive workflows that are attacker-triggered, like `pull_request_target`.
-
-If you absolutely must use `GITHUB_ENV` or `GITHUB_PATH`, avoid passing
-attacker-controlled values into either. Stick with literal strings and
-values computed solely from trusted sources.
-
-If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
-
-## `cache-poisoning`
-
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
-|----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ✅               | ❌  |
-
-[cache-poisoning.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/cache-poisoning.yml
-
-Detects potential cache-poisoning scenarios in release workflows.
-
-Caching and restoring build state is a process eased by utilities provided
-by GitHub, in particular @actions/cache and its "save" and "restore"
-sub-actions. In addition, many of the setup-like actions provided
-by GitHub come with built-in caching functionality, like @actions/setup-node,
-@actions/setup-java and others.
-
-Furthermore, there are many examples of community-driven Actions with built-in
-caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
-@Swatinem/rust-cache. In general, most of them build on top of @actions/toolkit
-for the sake of easily integrate with GitHub cache server at Workflow runtime.
-
-This vulnerability happens when release workflows leverage build state cached
-from previous workflow executions, in general on top of the aforementioned
-actions or  similar ones. The publication of artifacts usually happens driven
-by trigger events like `release` or events with path filters like `push`
-(e.g. for tags).
-
-In such scenarios, an attacker with access to a valid `GITHUB_TOKEN` can use it
-to poison the repository's GitHub Actions caches. That compounds with the
-default behavior of @actions/toolkit during cache restorations, allowing an
-attacker to retrieve payloads from poisoned cache entries, hence achieving code
-execution at Workflow runtime, potentially compromising ready-to-publish
-artifacts.
-
-Other resources:
-
-* [The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]
-* [Cacheract: The Monster in your Build Cache]
-
-### Remediation
-
-In general, you should avoid using previously cached CI state within workflows
-intended to publish build artifacts:
-
-* Remove cache-aware actions like @actions/cache from workflows that produce
-  releases, *or*
-* Disable cache-aware actions with an `#!yaml if:` condition based on the trigger at
-  the step level, *or*
-* Set an action-specific input to disable cache restoration when appropriate,
-  such as `lookup-only` in @Swatinem/rust-cache.
-
-## `secrets-inherit`
-
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
-|----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow  | [secrets-inherit.yml]   | v1.1.0      | ✅             | ✅                 | ❌  |
-
-[secrets-inherit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/secrets-inherit.yml
-
-Detects excessive secret inheritance between calling workflows and reusable
-(called) workflows.
-
-[Reusable workflows] can be given secrets by their calling workflow either
-explicitly, or in a blanket fashion with `#!yaml secrets: inherit`. The latter
-should almost never be used, as it makes it violates the
-[Principle of Least Authority] and makes it impossible to determine which exact
-secrets a reusable workflow was executed with.
-
-### Remediation
-
-In general, `#!yaml secrets: inherit` should be replaced with a `#!yaml secrets:` block
-that explicitly forwards each secret actually needed by the reusable workflow.
-
-!!! example
-
-    === "Before :warning:"
-
-        ```yaml title="reusable.yml" hl_lines="4"
-        jobs:
-          pass-secrets-to-workflow:
-            uses: ./.github/workflows/called-workflow.yml
-            secrets: inherit
-        ```
-
-    === "After :white_check_mark:"
-
-        ```yaml title="reusable.yml" hl_lines="4-6"
-        jobs:
-          pass-secrets-to-workflow:
-            uses: ./.github/workflows/called-workflow.yml
-            secrets:
-              forward-me: ${{ secrets.forward-me }}
-              me-too: ${{ secrets.me-too }}
-        ```
-
-## `bot-conditions`
-
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
-|----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow  | [bot-conditions.yml]   | v1.2.0      | ✅             | ✅                 | ❌  |
-
-[bot-conditions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/bot-conditions.yml
-
-Detects potentially spoofable bot conditions.
-
-Many workflows allow trustworthy bots (such as [Dependabot](https://github.com/dependabot))
-to bypass checks or otherwise perform privileged actions. This is often done
-with a `github.actor` check, e.g.:
-
-```yaml
-if: github.actor == 'dependabot[bot]'
-```
-
-However, this condition is spoofable: `github.actor` refers to the *last* actor
-to perform an "action" on the triggering context, and not necessarily
-the actor actually causing the trigger. An attacker can take
-advantage of this discrepancy to create a PR where the `HEAD` commit
-has `github.actor == 'dependabot[bot]'` but the rest of the branch history
-contains attacker-controlled code, bypassing the actor check.
-
-Other resources:
-
-* [GitHub Actions exploitations: Dependabot]
-
-### Remediation
-
-In general, checking a trigger's authenticity via `github.actor` is
-insufficient. Instead, most users should use `github.event.pull_request.user.login`
-or similar, since that context refers to the actor that *created* the Pull Request
-rather than the last one to modify it.
-
-More generally,
-[GitHub's documentation recommends](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions)
-not using `pull_request_target` for auto-merge workflows.
-
-!!! example
-
-    === "Before :warning:"
-
-        ```yaml title="bot-conditions.yml" hl_lines="1 6"
-        on: pull_request_target
-
-        jobs:
-          automerge:
-            runs-on: ubuntu-latest
-            if: github.actor == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
-            steps:
-              - run: gh pr merge --auto --merge "$PR_URL"
-                env:
-                  PR_URL: ${{ github.event.pull_request.html_url }}
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        ```
-
-    === "After :white_check_mark:"
-
-        ```yaml title="bot-conditions.yml" hl_lines="1 6"
-        on: pull_request
-
-        jobs:
-          automerge:
-            runs-on: ubuntu-latest
-            if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
-            steps:
-              - run: gh pr merge --auto --merge "$PR_URL"
-                env:
-                  PR_URL: ${{ github.event.pull_request.html_url }}
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        ```
-
-## `overprovisioned-secrets`
-
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
-|----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅     | ✅         | ❌  |
-
-[overprovisioned-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/overprovisioned-secrets.yml
-
-Detects excessive sharing of the `secrets` context.
-
-Typically, users access the `secrets` context via its individual members:
-
-```yaml
-env:
-  SECRET_ONE: ${{ secrets.SECRET_ONE }}
-  SECRET_TWO: ${{ secrets.SECRET_TWO }}
-```
-
-This allows the Actions runner to only expose the secrets actually used by
-the workflow to the job environment.
-
-However, if the user instead accesses the *entire* `secrets` context:
-
-```yaml
-env:
-  SECRETS: ${{ toJson(secrets) }}
-```
-
-...then the entire `secrets` context is exposed to the runner, even if
-only a single secret is actually needed.
-
-### Remediation
-
-In general, users should avoid loading the entire `secrets` context.
-Secrets should be accessed individually by name.
-
-!!! example
-
-    === "Before :warning:"
-
-        ```yaml title="overprovisioned.yml" hl_lines="7"
-        jobs:
-          deploy:
-            runs-on: ubuntu-latest
-            steps:
-              - run: ./deploy.sh
-                env:
-                  SECRETS: ${{ toJSON(secrets) }}
-        ```
-
-    === "After :white_check_mark:"
-
-        ```yaml title="overprovisioned.yml" hl_lines="7-8"
-        jobs:
-          deploy:
-            runs-on: ubuntu-latest
-            steps:
-              - run: ./deploy.sh
-                env:
-                  SECRET_ONE: ${{ secrets.SECRET_ONE }}
-                  SECRET_TWO: ${{ secrets.SECRET_TWO }}
-        ```
 
 ## `unredacted-secrets`
 
@@ -1145,91 +1409,124 @@ individual fields as separate secrets.
                   PASSWORD: ${{ secrets.MY_SECRET_PASSWORD }}
         ```
 
-## `forbidden-uses`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
-|----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | N/A            | v1.6.0        | ✅             | ❌                |  ✅ |
+## `unsound-contains`
 
-An *opt-in* audit for denylisting/allowlisting specific `#!yaml uses:` clauses.
-This is not enabled by default; you must
-[configure it](#forbidden-uses-configuration) to use it.
+| Type     | Examples                            | Introduced in | Works offline | Enabled by default | Configurable |
+|----------|-------------------------------------|---------------|---------------|--------------------|--------------|
+| Workflow | [unsound-contains.yml]              | v1.7.0        | ✅            | ✅                 | ❌           |
 
-!!! warning
+[unsound-contains.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unsound-contains.yml
 
-    This audit comes with several limitations that are important to understand:
+Detects conditions that use the `contains()` function in a way that can be bypassed.
 
-    * This audit is *opt-in*. You must configure it to use it; it
-      **does nothing** by default.
-    * This audit (currently) operates on *repository* `#!yaml uses:` clauses,
-      e.g. `#!yaml uses: actions/checkout@v4`. It does not operate on Docker
-      `#!yaml uses:` clauses, e.g. `#!yaml uses: docker://ubuntu:24.04`. This limitation
-      may be lifted in the future.
-    * This audit operates on `#!yaml uses:` clauses *as they appear* in the workflow
-      and action files. In other words, in *cannot* detect
-      [impostor commits](#impostor-commit) or indirect usage of actions
-      via manual `git clone` and local path usage.
-    * This audit's configuration operates on patterns, just like
-      [unpinned-uses](#unpinned-uses). That means that you can't (yet)
-      define *exact* matches. For example, you can't forbid `actions/checkout@v4`,
-      you have to forbid `actions/checkout`, which forbids all versions.
+Some workflows use `contains()` to check if a context variable is in a list of
+values (e.g., if the the `push` that triggered the job targeted a certain
+branch), and then bypass checks or otherwise perform privileged actions:
 
-### Configuration { #forbidden-uses-configuration }
+```yaml
+if: contains('refs/heads/main refs/heads/develop', github.ref)
+```
 
-#### `rules.forbidden-uses.config.<allow|deny>`
-
-_Type_: `list`
-
-The `forbidden-uses` audit operates on either an allowlist or denylist
-basis:
-
-* In allowlist mode, only the listed `#!yaml uses:` patterns are allowed. All
-  non-matching `#!yaml uses:` clauses result in a finding.
-
-    Intended use case: only allowing "known good" actions to be used,
-    and forbidding everything else.
-
-* In denylist mode, only the listed `#!yaml uses:` patterns are disallowed. All
-  matching `#!yaml uses:` clauses result in a finding.
-
-    Intended use case: permitting all `#!yaml uses:` by default, but explicitly
-    forbidding "known bad" actions.
-
-Regardless of the mode used, the patterns allowed are the same as those
-in [unpinned-uses](#unpinned-uses-configuration).
-
-!!! example
-
-    The following configuration would allow only actions owned by
-    the @actions organization, plus any actions defined in @github/codeql-action:
-
-    ```yaml title="zizmor.yml"
-    rules:
-      forbidden-uses:
-        config:
-          allow:
-            - actions/*
-            - github/codeql-action/*
-    ```
-
-!!! example
-
-    The following would allow all actions except for those in the
-    @actions organization or defined in @github/codeql-action:
-
-    ```yaml title="zizmor.yml"
-    rules:
-      forbidden-uses:
-        config:
-          deny:
-            - actions/*
-            - github/codeql-action/*
-    ```
+However, this condition will not only evaluate to `true` if either
+`refs/heads/main` or `refs/heads/develop` is passed, but also for substrings of
+those values. For example, if someone pushes to a branch named `mai`, then
+`github.ref` would contain the string `refs/heads/mai` and the job would also
+execute.
 
 ### Remediation
 
-Either remove the offending `#!yaml uses:` clause or, if intended, add it to
-your [configuration](#forbidden-uses-configuration).
+To check if a value is contained in a list of strings, the first argument to
+`contains()` should be an actual list, not a string. This can be done by using
+the `fromJSON()` function:
+
+```yaml
+if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
+```
+
+Alternatively, it's possible to check for equality individually and combine the
+results using the logical "or" operator:
+
+```yaml
+if: github.ref == "refs/heads/main" || github.ref == "refs/heads/develop"
+```
+
+Other resources:
+
+* [GitHub Docs: Evaluate expressions in workflows and actions - Example matching an array of strings]
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="unsound-contains.yml" hl_lines="9 10"
+        on: push
+
+        jobs:
+          tf-deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: terraform init -input=false
+              - run: terraform plan -out=tfplan -input=false
+              - run: terraform apply -input=false tfplan
+                if: contains('refs/heads/main refs/heads/develop', github.ref)
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="unsound-contains.yml" hl_lines="9 10"
+        on: push
+
+        jobs:
+          tf-deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: terraform init -input=false
+              - run: terraform plan -out=tfplan -input=false
+              - run: terraform apply -input=false tfplan
+                if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
+        ```
+
+
+## `use-trusted-publishing`
+
+| Type     | Examples                     | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|------------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [pypi-manual-credential.yml] | v0.1.0        | ✅             | ✅                 | ❌  |
+
+[pypi-manual-credential.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pypi-manual-credential.yml
+
+Detects packaging workflows that could use [Trusted Publishing].
+
+Some packaging ecosystems/indices (like [PyPI] and [RubyGems]) support
+"Trusted Publishing," which is an OIDC-based "tokenless" authentication
+mechanism for uploading to the index from within a CI/CD workflow.
+
+This "tokenless" flow has significant security benefits over a traditional
+manually configured API token, and should be preferred wherever supported
+and possible.
+
+[Trusted Publishing]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
+
+[PyPI]: https://pypi.org
+
+[RubyGems]: https://rubygems.org
+
+Other resources:
+
+* [Trusted Publishers for All Package Repositories]
+* [Publishing to PyPI with a Trusted Publisher]
+* [Trusted Publishing - RubyGems Guides]
+* [Trusted publishing: a new benchmark for packaging security]
+
+### Remediation
+
+In general, enabling Trusted Publishing requires a one-time change to your
+package's configuration on its associated index (e.g. PyPI or RubyGems).
+
+Once your Trusted Publisher is registered, see @pypa/gh-action-pypi-publish
+or @rubygems/release-gem for canonical examples of using it.
+
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
@@ -1244,6 +1541,7 @@ your [configuration](#forbidden-uses-configuration).
 [GitHub Actions environment files]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#environment-files
 [Semgrep audit]: https://semgrep.dev/r?q=yaml.github-actions.security.allowed-unsecure-commands.allowed-unsecure-commands
 [GitHub Actions exploitation: environment manipulation]: https://www.synacktiv.com/en/publications/github-actions-exploitation-repo-jacking-and-environment-manipulation
+[GitHub Docs: Evaluate expressions in workflows and actions - Example matching an array of strings]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/evaluate-expressions-in-workflows-and-actions#example-matching-an-array-of-strings
 [GHSL-2024-177: Environment Variable injection in an Actions workflow of Litestar]: https://securitylab.github.com/advisories/GHSL-2024-177_Litestar/
 [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability
 [Google & Apache Found Vulnerable to GitHub Environment Injection]: https://www.legitsecurity.com/blog/github-privilege-escalation-vulnerability-0
@@ -1255,5 +1553,8 @@ your [configuration](#forbidden-uses-configuration).
 [GitHub Actions exploitations: Dependabot]: https://www.synacktiv.com/publications/github-actions-exploitation-dependabot
 [Using secrets in GitHub Actions]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
 [Palo Alto Networks Unit42: tj-actions/changed-files incident]: https://unit42.paloaltonetworks.com/github-actions-supply-chain-attack/
-
-
+[Dependabot secrets]: https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions#accessing-secrets
+[explicitly specifying needed permissions]: https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions#changing-github_token-permissions
+[branch filter]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#running-your-pull_request_target-workflow-based-on-the-head-or-base-branch-of-a-pull-request
+[Aqua: The Challenges of Uniquely Identifying Your Images]: https://www.aquasec.com/blog/docker-image-tags/
+[GitHub: Safeguard your containers with new container signing capability in GitHub Actions]: https://github.blog/security/supply-chain-security/safeguard-container-signing-capability-actions/
