@@ -652,6 +652,7 @@ fn secrets_outside_environment() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("secrets-outside-environment.yml"))
+            .args(["--persona=pedantic"])
             .run()?
     );
 

@@ -4,7 +4,7 @@ use github_actions_models::{
 };
 
 use super::{Audit, audit_meta};
-use crate::{finding::Confidence, AuditState, AuditLoadError};
+use crate::{finding::Confidence, models::StepCommon, AuditState, AuditLoadError, Persona};
 
 pub(crate) struct SecretsOutsideEnvironment;
 
@@ -73,6 +73,7 @@ impl SecretsOutsideEnvironment {
                     .add_location(step.location().primary())
                     .confidence(Confidence::High)
                     .severity(crate::finding::Severity::High)
+                    .persona(Persona::Pedantic)
                     .build(step.workflow())?,
             );
         }

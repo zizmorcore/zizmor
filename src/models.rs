@@ -8,7 +8,6 @@ use std::{iter::Enumerate, ops::Deref};
 use anyhow::{Context, bail};
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
-use github_actions_models::common::Env;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
 use github_actions_models::workflow::job::{DeploymentEnvironment, RunsOn, Strategy};
 use github_actions_models::workflow::{self, job, job::StepBody, Trigger};
