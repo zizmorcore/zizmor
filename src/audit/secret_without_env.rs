@@ -1,10 +1,13 @@
 use github_actions_models::{
-    common::{Env, EnvValue, expr::LoE},
+    common::{
+        Env, EnvValue,
+        expr::{ExplicitExpr, LoE},
+    },
     workflow::job::StepBody,
 };
 
 use super::{Audit, audit_meta};
-use crate::{finding::Confidence, models::StepCommon, AuditState, AuditLoadError, Persona};
+use crate::{AuditLoadError, AuditState, Persona, finding::Confidence, models::StepCommon};
 
 pub(crate) struct SecretWithoutEnv;
 
@@ -53,7 +56,11 @@ impl Audit for SecretWithoutEnv {
 
         for v in eenv.values() {
             if let EnvValue::String(s) = v {
-                Self::check_secrets_access(s, step, &mut findings)?
+                if let Some(expr) = ExplicitExpr::from_curly(s) {
+                    Self::check_secrets_access(expr.as_bare(), step, &mut findings)?;
+                } else {
+                    Self::check_secrets_access(s, step, &mut findings)?
+                }
             }
         }
 
@@ -67,7 +74,9 @@ impl SecretWithoutEnv {
         step: &crate::models::Step<'w>,
         findings: &mut Vec<crate::finding::Finding<'w>>,
     ) -> anyhow::Result<()> {
-        if s.contains("secrets") {
+        // See https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication
+        // for `secrets.github_token`
+        if s.contains("secrets") && s.trim() != "secrets.github_token" {
             findings.push(
                 Self::finding()
                     .add_location(step.location().primary())
