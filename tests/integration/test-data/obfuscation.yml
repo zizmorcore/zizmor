@@ -24,7 +24,7 @@ jobs:
   obfuscated-exprs:
     runs-on: ubuntu-latest
     steps:
-      # trivially foldable expressions
+      # trivially reducible expressions
       - run: |
           echo ${{ '' }}
           echo ${{ 'a' }}
@@ -34,7 +34,7 @@ jobs:
           echo ${{ 1 > 2 || true }}
           echo ${{ 1 != 2}}
 
-      # trivially foldable functions
+      # trivially reducible functions
       - run: |
           echo ${{ format('{0}', 'abc') }}
           echo ${{ format('{0} {1}', 'abc', 'def') }}
@@ -42,9 +42,11 @@ jobs:
           echo ${{ startsWith('abc', 'a') }}
           echo ${{ ENDSWITH('abc', 'c') }}
 
-      # foldable subexpressions
-      - run: |
-          # inner format(...) is foldable
+      # reducible subexpressions
+      - run: | # zizmor: ignore[template-injection] not this test
+          # inner format(...) is reducible
           echo ${{ format('{0}, {1}', github.event.number, format('{0}', 'abc')) }}
-          # inner || is foldable
+          # inner || is reducible
           echo ${{ format('{0}, {1}', github.event.number, format('{0} {1}', github.event.number, true || false)) }}
+          # inner [...] is reducible
+          echo ${{ foobar[format('{0}', 'event')]}}

@@ -226,6 +226,7 @@ fn unpinned_uses() -> Result<()> {
         "invalid-policy-syntax-3",
         "invalid-policy-syntax-4",
         "invalid-policy-syntax-5",
+        "invalid-policy-syntax-6",
     ] {
         insta::assert_snapshot!(
             zizmor()
@@ -649,7 +650,14 @@ fn unredacted_secrets() -> Result<()> {
 
 #[test]
 fn forbidden_uses() -> Result<()> {
-    for config in ["allow-all", "deny-all", "allow-some", "deny-some"] {
+    for config in [
+        "allow-all",
+        "deny-all",
+        "allow-some",
+        "deny-some",
+        "deny-some-refs",
+        "allow-some-refs",
+    ] {
         insta::assert_snapshot!(
             zizmor()
                 .config(input_under_test(&format!(

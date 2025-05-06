@@ -7,14 +7,45 @@ use regex::Regex;
 use serde::Deserialize;
 
 /// Matches all variants of [`RepositoryUsesPattern`] except `*`.
-static REPOSITORY_USES_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"(?mi)^([\w-]+)/([\w\.-]+|\*)(?:/(.+))?$"#).unwrap());
+///
+/// TODO: Replace this with a real parser; this is ridiculous.
+static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
+        ^                           # start of line
+        ([\w-]+)                    # (1) owner
+        /                           # /
+        ([\w\.-]+|\*)               # (2) repo or *
+        (?:                         # non-capturing group for optional subpath
+          /                         # /
+          (                         # (3) subpath
+            [[[:graph:]]&&[^@\*]]+  # any non-space, non-@, non-* characters
+            |                       # OR
+            \*                      # *
+          )                         # end of (3) subpath
+        )?                          # end of non-capturing group for optional subpath
+        (?:                         # non-capturing group for optional git ref
+          @                         # @
+          ([[[:graph:]]&&[^\*]]+)   # (4) git ref (any non-space, non-* characters)
+        )?                          # end of non-capturing group for optional git ref
+        $                           # end of line
+        "#,
+    )
+    .unwrap()
+});
 
 /// Represents a pattern for matching repository `uses` references.
 /// These patterns are ordered by specificity; more specific patterns
 /// should be listed first.
 #[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub(crate) enum RepositoryUsesPattern {
+    /// Matches exactly `owner/repo/subpath@ref`.
+    ExactWithRef {
+        owner: String,
+        repo: String,
+        subpath: Option<String>,
+        git_ref: String,
+    },
     /// Matches exactly `owner/repo/subpath`.
     ExactPath {
         owner: String,
@@ -35,6 +66,17 @@ pub(crate) enum RepositoryUsesPattern {
 impl RepositoryUsesPattern {
     pub(crate) fn matches(&self, uses: &RepositoryUses) -> bool {
         match self {
+            RepositoryUsesPattern::ExactWithRef {
+                owner,
+                repo,
+                subpath,
+                git_ref,
+            } => {
+                uses.owner.eq_ignore_ascii_case(owner)
+                    && uses.repo.eq_ignore_ascii_case(repo)
+                    && uses.subpath == *subpath
+                    && uses.git_ref.as_deref().is_some_and(|s| s == git_ref)
+            }
             RepositoryUsesPattern::ExactPath {
                 owner,
                 repo,
@@ -79,22 +121,30 @@ impl FromStr for RepositoryUsesPattern {
         let owner = &caps[1];
         let repo = &caps[2];
         let subpath = caps.get(3).map(|m| m.as_str());
+        let git_ref = caps.get(4).map(|m| m.as_str());
 
-        match (owner, repo, subpath) {
-            (owner, "*", None) => Ok(RepositoryUsesPattern::InOwner(owner.into())),
-            (owner, repo, None) => Ok(RepositoryUsesPattern::ExactRepo {
+        match (owner, repo, subpath, git_ref) {
+            (owner, "*", None, None) => Ok(RepositoryUsesPattern::InOwner(owner.into())),
+            (owner, repo, None, None) => Ok(RepositoryUsesPattern::ExactRepo {
                 owner: owner.into(),
                 repo: repo.into(),
             }),
-            (_, "*", Some(_)) => Err(anyhow::anyhow!("invalid pattern: {s}")),
-            (owner, repo, Some("*")) => Ok(RepositoryUsesPattern::InRepo {
+            (_, "*", Some(_), _) => Err(anyhow::anyhow!("invalid pattern: {s}")),
+            (owner, repo, Some("*"), None) => Ok(RepositoryUsesPattern::InRepo {
                 owner: owner.into(),
                 repo: repo.into(),
             }),
-            (owner, repo, Some(subpath)) => Ok(RepositoryUsesPattern::ExactPath {
+            (owner, repo, Some(subpath), None) => Ok(RepositoryUsesPattern::ExactPath {
                 owner: owner.into(),
                 repo: repo.into(),
                 subpath: subpath.into(),
+            }),
+            (_, _, Some("*"), Some(_)) => Err(anyhow::anyhow!("invalid pattern: {s}")),
+            (owner, repo, subpath, Some(git_ref)) => Ok(RepositoryUsesPattern::ExactWithRef {
+                owner: owner.into(),
+                repo: repo.into(),
+                subpath: subpath.map(|s| s.into()),
+                git_ref: git_ref.into(),
             }),
         }
     }
@@ -112,19 +162,11 @@ impl<'de> Deserialize<'de> for RepositoryUsesPattern {
 
 /// Useful APIs for interacting with `uses: owner/repo` clauses.
 pub(crate) trait RepositoryUsesExt {
-    /// Returns whether this `uses:` clause "matches" the given template.
-    /// The template is itself formatted like a normal `uses:` clause.
+    /// Returns whether this `uses:` clause matches the given pattern.
     ///
-    /// This is an asymmetrical match: `actions/checkout@v3` "matches"
-    /// the `actions/checkout` template but not vice versa.
-    ///
-    /// Comparisons are case-insensitive, since GitHub's own APIs are insensitive.
-    ///
-    /// TODO: Remove this API and replace it with [`RepositoryUsesPattern`].
-    fn matches(&self, template: &str) -> bool;
-
-    /// Like [`RepositoryUsesExt::matches`].
-    fn matches_uses(&self, template: &RepositoryUses) -> bool;
+    /// This uses [`RepositoryUsesPattern`] under the hood, and follows the
+    /// same matching rules.
+    fn matches(&self, pattern: &str) -> bool;
 
     /// Returns whether this `uses:` clause has a `git` ref and, if so,
     /// whether that ref is a commit ref.
@@ -144,21 +186,11 @@ pub(crate) trait RepositoryUsesExt {
 
 impl RepositoryUsesExt for RepositoryUses {
     fn matches(&self, template: &str) -> bool {
-        let Ok(other) = template.parse::<RepositoryUses>() else {
+        let Ok(pat) = template.parse::<RepositoryUsesPattern>() else {
             return false;
         };
 
-        self.matches_uses(&other)
-    }
-
-    fn matches_uses(&self, template: &RepositoryUses) -> bool {
-        self.owner.eq_ignore_ascii_case(&template.owner)
-            && (template.repo == "*" || self.repo.eq_ignore_ascii_case(&template.repo))
-            && self.subpath.as_ref().map(|s| s.to_lowercase())
-                == template.subpath.as_ref().map(|s| s.to_lowercase())
-            && template.git_ref.as_ref().is_none_or(|git_ref| {
-                Some(git_ref.to_lowercase()) == self.git_ref.as_ref().map(|r| r.to_lowercase())
-            })
+        pat.matches(self)
     }
 
     fn ref_is_commit(&self) -> bool {
@@ -222,43 +254,7 @@ mod tests {
     use anyhow::anyhow;
     use github_actions_models::common::Uses;
 
-    use crate::models::uses::RepositoryUsesExt;
-
     use super::RepositoryUsesPattern;
-
-    #[test]
-    fn test_repositoryuses_matches() {
-        for (uses, template, matches) in [
-            // OK: `uses:` is more specific than template
-            ("actions/checkout@v3", "actions/checkout", true),
-            ("actions/checkout/foo@v3", "actions/checkout/foo", true),
-            // OK: equally specific
-            ("actions/checkout@v3", "actions/checkout@v3", true),
-            ("actions/checkout", "actions/checkout", true),
-            ("actions/checkout/foo", "actions/checkout/foo", true),
-            ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
-            // OK: case-insensitive
-            ("actions/checkout@v3", "Actions/Checkout@v3", true),
-            ("actions/checkout/foo", "actions/checkout/Foo", true),
-            ("actions/checkout/foo@v3", "Actions/Checkout/Foo", true),
-            ("actions/checkout@v3", "actions/checkout@V3", true),
-            // NOT OK: owner/repo do not match
-            ("actions/checkout@v3", "foo/checkout", false),
-            ("actions/checkout@v3", "actions/bar", false),
-            // NOT OK: subpath does not match
-            ("actions/checkout/foo", "actions/checkout", false),
-            ("actions/checkout/foo@v3", "actions/checkout@v3", false),
-            // NOT OK: template is more specific than `uses:`
-            ("actions/checkout", "actions/checkout@v3", false),
-            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
-        ] {
-            let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
-                panic!();
-            };
-
-            assert_eq!(uses.matches(template), matches)
-        }
-    }
 
     #[test]
     fn test_repositoryusespattern_parse() {
@@ -267,16 +263,18 @@ mod tests {
             ("/", None),     // Invalid, not well formed
             ("//", None),    // Invalid, not well formed
             ("///", None),   // Invalid, not well formed
-            ("owner", None), // Invalid, should be owner/*
+            ("owner", None), // Invalid, sho,uld be owner/*
             ("**", None),    // Invalid, should be *
             ("*", Some(RepositoryUsesPattern::Any)),
             (
                 "owner/*",
                 Some(RepositoryUsesPattern::InOwner("owner".into())),
             ),
-            ("owner/*/", None),    // Invalid, should be owner/*
-            ("owner/*/foo", None), // Invalid, not well formed
-            ("owner/*/*", None),   // Invalid, not well formed
+            ("owner/*/", None),      // Invalid, should be owner/*
+            ("owner/*/foo", None),   // Invalid, not well formed
+            ("owner/*/*", None),     // Invalid, not well formed
+            ("*/foo", None),         // Invalid, not well formed
+            ("owner/repo/**", None), // Invalid, not well formed.
             (
                 "owner/repo/*",
                 Some(RepositoryUsesPattern::InRepo {
@@ -308,15 +306,6 @@ mod tests {
                     subpath: "/".into(),
                 }),
             ),
-            // Weird, but we allow it (for now).
-            (
-                "owner/repo/**",
-                Some(RepositoryUsesPattern::ExactPath {
-                    owner: "owner".into(),
-                    repo: "repo".into(),
-                    subpath: "**".into(),
-                }),
-            ),
             (
                 "owner/repo/subpath/",
                 Some(RepositoryUsesPattern::ExactPath {
@@ -333,6 +322,54 @@ mod tests {
                     subpath: "subpath/very/nested////and/literal".into(),
                 }),
             ),
+            (
+                "owner/repo@v1",
+                Some(RepositoryUsesPattern::ExactWithRef {
+                    owner: "owner".into(),
+                    repo: "repo".into(),
+                    subpath: None,
+                    git_ref: "v1".into(),
+                }),
+            ),
+            (
+                "owner/repo/subpath@v1",
+                Some(RepositoryUsesPattern::ExactWithRef {
+                    owner: "owner".into(),
+                    repo: "repo".into(),
+                    subpath: Some("subpath".into()),
+                    git_ref: "v1".into(),
+                }),
+            ),
+            (
+                "owner/repo@172239021f7ba04fe7327647b213799853a9eb89",
+                Some(RepositoryUsesPattern::ExactWithRef {
+                    owner: "owner".into(),
+                    repo: "repo".into(),
+                    subpath: None,
+                    git_ref: "172239021f7ba04fe7327647b213799853a9eb89".into(),
+                }),
+            ),
+            (
+                "pypa/gh-action-pypi-publish@release/v1",
+                Some(RepositoryUsesPattern::ExactWithRef {
+                    owner: "pypa".into(),
+                    repo: "gh-action-pypi-publish".into(),
+                    subpath: None,
+                    git_ref: "release/v1".into(),
+                }),
+            ),
+            // Invalid: no wildcards allowed when refs are present.
+            ("owner/repo/*@v1", None),
+            ("owner/repo/*/subpath@v1", None),
+            ("owner/*/subpath@v1", None),
+            ("*/*/subpath@v1", None),
+            // Ref also cannot be a wildcard.
+            ("owner/repo@*", None),
+            ("owner/repo@**", None),
+            ("owner/repo@***", None),
+            ("owner/repo/subpath@*", None),
+            ("owner/*@*", None),
+            ("*@*", None),
         ] {
             let pattern = RepositoryUsesPattern::from_str(pattern).ok();
             assert_eq!(pattern, expected);
@@ -368,12 +405,27 @@ mod tests {
     #[test]
     fn test_repositoryusespattern_matches() -> anyhow::Result<()> {
         for (uses, pattern, matches) in [
+            // OK: case-insensitive, except subpath and tag
+            ("actions/checkout@v3", "Actions/Checkout@v3", true),
+            ("actions/checkout/foo", "actions/checkout/Foo", false),
+            ("actions/checkout/foo@v3", "Actions/Checkout/foo", true),
+            ("actions/checkout@v3", "actions/checkout@V3", false),
+            // NOT OK: owner/repo do not match
+            ("actions/checkout@v3", "foo/checkout", false),
+            ("actions/checkout@v3", "actions/bar", false),
+            // NOT OK: subpath does not match
+            ("actions/checkout/foo", "actions/checkout", false),
+            ("actions/checkout/foo@v3", "actions/checkout@v3", false),
+            // NOT OK: template is more specific than `uses:`
+            ("actions/checkout", "actions/checkout@v3", false),
+            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
             // owner/repo/subpath matches regardless of ref and casing
             // but only when the subpath matches.
             // the subpath must share the same case but might not be
             // normalized
             ("actions/checkout/foo", "actions/checkout/foo", true),
             ("ACTIONS/CHECKOUT/foo", "actions/checkout/foo", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo", true),
             ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo", true),
             // TODO: See comment in `RepositoryUsesPattern::matches`
             // ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo/", true),
@@ -410,6 +462,10 @@ mod tests {
             ("actions/checkout@v3", "*", true),
             ("actions/checkout/foo@v3", "*", true),
             ("whatever/checkout", "*", true),
+            // exact matches
+            ("actions/checkout@v3", "actions/checkout@v3", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
+            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
         ] {
             let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
                 return Err(anyhow!("invalid uses: {uses}"));

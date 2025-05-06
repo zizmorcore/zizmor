@@ -88,3 +88,69 @@ Per-audit configuration, where `id` is the audit's name, e.g.
 [`unpinned-uses`](./audits.md#unpinned-uses).
 
 Not all audits are configurable. See each audit's documentation for details.
+
+## Patterns
+
+Several audits support being configured with _patterns_, which can be used
+to match things like `#!yaml uses:` clauses. These patterns share
+common syntaxes, and are described here.
+
+### Repository patterns
+
+Repository patterns are used to match `#!yaml uses:` clauses.
+
+The following patterns are supported, in order of specificity:
+
+* `owner/repo/subpath@ref`: matches the exact repository, including
+  subpath (if given) and ref. The subpath is optional.
+
+    !!! example
+
+        `github/codeql-action/init@v2` matches
+        `#!yaml uses: github/codeql-action/init@v2`, but **not**
+        `#!yaml uses: github/codeql-action/init@main`.
+
+* `owner/repo/subpath`: match all `#!yaml uses:` clauses that are **exact** matches
+  for the `owner/repo/subpath` pattern. The `subpath` can be an arbitrarily
+  deep subpath, but is not optional. Any ref is matched.
+
+    !!! example
+
+        `github/codeql-action/init` matches
+        `#!yaml uses: github/codeql-action/init@v2`,
+        but **not** `#!yaml uses: github/codeql-action@v2`.
+
+* `owner/repo`: match all `#!yaml uses:` clauses that are **exact** matches for the
+  `owner/repo` pattern. Any ref is matched.
+
+    !!! example
+
+        `actions/cache` matches `#!yaml uses: actions/cache@v3`,
+        but **not** `#!yaml uses: actions/cache/save@v3` or
+        `#!yaml uses: actions/cache/restore@v3`.
+
+* `owner/repo/*`: match all `#!yaml uses:` clauses that come from the given
+  `owner/repo`. Any subpath or ref is matched.
+
+    !!! example
+
+        `github/codeql-action/*` matches
+        `#!yaml uses: github/codeql-action/init@v2`,
+        `#!yaml uses: github/codeql-action/upload-sarif@v2`, and
+        `#!yaml uses: github/codeql-action@v2` itself.
+
+* `owner/*`: match all `#!yaml uses:` clauses that have the given `owner`.
+  Any repo, subpath, or ref is matched.
+
+    !!! example
+
+        `actions/*` matches both `#!yaml uses: actions/checkout@v4` and
+        `#!yaml uses: actions/setup-node@v4`, but **not**
+        `#!yaml uses: pypa/gh-action-pypi-publish@release/v1`.
+
+* `*`: match all `#!yaml uses:` clauses.
+
+    !!! example
+
+        `*` matches `#!yaml uses: actions/checkout` and
+        `#!yaml uses: pypa/gh-action-pypi-publish@release/v1`.
