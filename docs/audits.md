@@ -433,8 +433,9 @@ basis:
     Intended use case: permitting all `#!yaml uses:` by default, but explicitly
     forbidding "known bad" actions.
 
-Regardless of the mode used, the patterns allowed are the same as those
-in [unpinned-uses](#unpinned-uses-configuration).
+Regardless of the mode, the patterns used are repository patterns.
+See [Configuration - Repository patterns](./configuration.md#repository-patterns)
+for details.
 
 !!! example
 
@@ -1196,43 +1197,9 @@ policies.
 Each member is a `#!yaml pattern: policy` rule, where `pattern` describes which
 `#!yaml uses:` clauses to match and `policy` describes how to treat them.
 
-The valid patterns are (in order of specificity):
-
-* `owner/repo/subpath`: match all `#!yaml uses:` clauses that are **exact** matches
-  for the `owner/repo/subpath` pattern. The `subpath` can be an arbitrarily
-  deep subpath.
-
-    !!! example
-
-        `github/codeql-action/init` matches only `github/codeql-action/init`.
-
-* `owner/repo`: match all `#!yaml uses:` clauses that are **exact** matches for the
-  `owner/repo` pattern.
-
-    !!! example
-
-        `actions/cache` matches only @actions/cache,
-        **not** `actions/cache/save` or `actions/cache/restore`.
-
-* `owner/repo/*`: match all `#!yaml uses:` clauses that come from the given
-  `owner/repo` repository with *any* subpath, including the empty subpath.
-
-    !!! example
-
-        `github/codeql-action/*` matches `github/codeql-action/init`,
-        `github/codeql-action/upload-sarif`, and @github/codeql-action itself.
-
-* `owner/*`: match all `#!yaml uses:` clauses that have the given `owner`.
-
-    !!! example
-
-        `actions/*` matches both @actions/checkout and @actions/setup-node.
-
-* `*`: match all `#!yaml uses:` clauses.
-
-    !!! example
-
-        `*` matches @actions/checkout and @pypa/gh-action-pypi-publish.
+The `pattern` is a repository pattern; see
+[Configuration - Repository patterns](./configuration.md#repository-patterns)
+for details.
 
 The valid policies are:
 
