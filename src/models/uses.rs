@@ -190,7 +190,7 @@ impl RepositoryUsesExt for RepositoryUses {
             return false;
         };
 
-        pat.matches(&self)
+        pat.matches(self)
     }
 
     fn ref_is_commit(&self) -> bool {
