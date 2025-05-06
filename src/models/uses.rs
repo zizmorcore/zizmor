@@ -252,47 +252,7 @@ mod tests {
     use anyhow::anyhow;
     use github_actions_models::common::Uses;
 
-    use crate::models::uses::RepositoryUsesExt;
-
     use super::RepositoryUsesPattern;
-
-    #[test]
-    fn test_repositoryuses_matches() {
-        for (uses, template, matches) in [
-            // OK: `uses:` is more specific than template
-            ("actions/checkout@v3", "actions/checkout", true),
-            ("actions/checkout/foo@v3", "actions/checkout/foo", true),
-            // OK: equally specific
-            ("actions/checkout@v3", "actions/checkout@v3", true),
-            ("actions/checkout", "actions/checkout", true),
-            ("actions/checkout/foo", "actions/checkout/foo", true),
-            ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
-            // OK: case-insensitive, except subpath and tag
-            ("actions/checkout@v3", "Actions/Checkout@v3", true),
-            ("actions/checkout/foo", "actions/checkout/Foo", false),
-            ("actions/checkout/foo@v3", "Actions/Checkout/foo", true),
-            ("actions/checkout@v3", "actions/checkout@V3", false),
-            // NOT OK: owner/repo do not match
-            ("actions/checkout@v3", "foo/checkout", false),
-            ("actions/checkout@v3", "actions/bar", false),
-            // NOT OK: subpath does not match
-            ("actions/checkout/foo", "actions/checkout", false),
-            ("actions/checkout/foo@v3", "actions/checkout@v3", false),
-            // NOT OK: template is more specific than `uses:`
-            ("actions/checkout", "actions/checkout@v3", false),
-            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
-        ] {
-            let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
-                panic!();
-            };
-
-            assert_eq!(
-                uses.matches(template),
-                matches,
-                "uses: {uses:?}, template: {template:?}, matches: {matches}"
-            );
-        }
-    }
 
     #[test]
     fn test_repositoryusespattern_parse() {
@@ -443,12 +403,27 @@ mod tests {
     #[test]
     fn test_repositoryusespattern_matches() -> anyhow::Result<()> {
         for (uses, pattern, matches) in [
+            // OK: case-insensitive, except subpath and tag
+            ("actions/checkout@v3", "Actions/Checkout@v3", true),
+            ("actions/checkout/foo", "actions/checkout/Foo", false),
+            ("actions/checkout/foo@v3", "Actions/Checkout/foo", true),
+            ("actions/checkout@v3", "actions/checkout@V3", false),
+            // NOT OK: owner/repo do not match
+            ("actions/checkout@v3", "foo/checkout", false),
+            ("actions/checkout@v3", "actions/bar", false),
+            // NOT OK: subpath does not match
+            ("actions/checkout/foo", "actions/checkout", false),
+            ("actions/checkout/foo@v3", "actions/checkout@v3", false),
+            // NOT OK: template is more specific than `uses:`
+            ("actions/checkout", "actions/checkout@v3", false),
+            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
             // owner/repo/subpath matches regardless of ref and casing
             // but only when the subpath matches.
             // the subpath must share the same case but might not be
             // normalized
             ("actions/checkout/foo", "actions/checkout/foo", true),
             ("ACTIONS/CHECKOUT/foo", "actions/checkout/foo", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo", true),
             ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo", true),
             // TODO: See comment in `RepositoryUsesPattern::matches`
             // ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo/", true),
