@@ -7,14 +7,43 @@ use regex::Regex;
 use serde::Deserialize;
 
 /// Matches all variants of [`RepositoryUsesPattern`] except `*`.
-static REPOSITORY_USES_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"(?mi)^([\w-]+)/([\w\.-]+|\*)(?:/(.+))?$"#).unwrap());
+static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
+        ^                           # start of line
+        ([\w-]+)                    # (1) owner
+        /                           # /
+        ([\w\.-]+|\*)               # (2) repo or *
+        (?:                         # non-capturing group for optional subpath
+          /                         # /
+          (                         # (3) subpath
+            [[[:graph:]]&&[^@\*]]+  # any non-space, non-@, non-* characters
+            |                       # OR
+            \*                      # *
+          )                         # end of (3) subpath
+        )?                          # end of non-capturing group for optional subpath
+        (?:                         # non-capturing group for optional git ref
+          @                         # @
+          (\w+)                     # (4) git ref
+        )?                          # end of non-capturing group for optional git ref
+        $                           # end of line
+        "#,
+    )
+    .unwrap()
+});
 
 /// Represents a pattern for matching repository `uses` references.
 /// These patterns are ordered by specificity; more specific patterns
 /// should be listed first.
 #[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub(crate) enum RepositoryUsesPattern {
+    /// Matches exactly `owner/repo/subpath@ref`.
+    ExactWithRef {
+        owner: String,
+        repo: String,
+        subpath: Option<String>,
+        git_ref: String,
+    },
     /// Matches exactly `owner/repo/subpath`.
     ExactPath {
         owner: String,
@@ -35,6 +64,17 @@ pub(crate) enum RepositoryUsesPattern {
 impl RepositoryUsesPattern {
     pub(crate) fn matches(&self, uses: &RepositoryUses) -> bool {
         match self {
+            RepositoryUsesPattern::ExactWithRef {
+                owner,
+                repo,
+                subpath,
+                git_ref,
+            } => {
+                uses.owner.eq_ignore_ascii_case(owner)
+                    && uses.repo.eq_ignore_ascii_case(repo)
+                    && uses.subpath == *subpath
+                    && uses.git_ref.as_deref().is_some_and(|s| s == git_ref)
+            }
             RepositoryUsesPattern::ExactPath {
                 owner,
                 repo,
@@ -79,22 +119,30 @@ impl FromStr for RepositoryUsesPattern {
         let owner = &caps[1];
         let repo = &caps[2];
         let subpath = caps.get(3).map(|m| m.as_str());
+        let git_ref = caps.get(4).map(|m| m.as_str());
 
-        match (owner, repo, subpath) {
-            (owner, "*", None) => Ok(RepositoryUsesPattern::InOwner(owner.into())),
-            (owner, repo, None) => Ok(RepositoryUsesPattern::ExactRepo {
+        match (owner, repo, subpath, git_ref) {
+            (owner, "*", None, None) => Ok(RepositoryUsesPattern::InOwner(owner.into())),
+            (owner, repo, None, None) => Ok(RepositoryUsesPattern::ExactRepo {
                 owner: owner.into(),
                 repo: repo.into(),
             }),
-            (_, "*", Some(_)) => Err(anyhow::anyhow!("invalid pattern: {s}")),
-            (owner, repo, Some("*")) => Ok(RepositoryUsesPattern::InRepo {
+            (_, "*", Some(_), _) => Err(anyhow::anyhow!("invalid pattern: {s}")),
+            (owner, repo, Some("*"), None) => Ok(RepositoryUsesPattern::InRepo {
                 owner: owner.into(),
                 repo: repo.into(),
             }),
-            (owner, repo, Some(subpath)) => Ok(RepositoryUsesPattern::ExactPath {
+            (owner, repo, Some(subpath), None) => Ok(RepositoryUsesPattern::ExactPath {
                 owner: owner.into(),
                 repo: repo.into(),
                 subpath: subpath.into(),
+            }),
+            (_, _, Some("*"), Some(_)) => Err(anyhow::anyhow!("invalid pattern: {s}")),
+            (owner, repo, subpath, Some(git_ref)) => Ok(RepositoryUsesPattern::ExactWithRef {
+                owner: owner.into(),
+                repo: repo.into(),
+                subpath: subpath.map(|s| s.into()),
+                git_ref: git_ref.into(),
             }),
         }
     }
@@ -274,9 +322,11 @@ mod tests {
                 "owner/*",
                 Some(RepositoryUsesPattern::InOwner("owner".into())),
             ),
-            ("owner/*/", None),    // Invalid, should be owner/*
-            ("owner/*/foo", None), // Invalid, not well formed
-            ("owner/*/*", None),   // Invalid, not well formed
+            ("owner/*/", None),      // Invalid, should be owner/*
+            ("owner/*/foo", None),   // Invalid, not well formed
+            ("owner/*/*", None),     // Invalid, not well formed
+            ("*/foo", None),         // Invalid, not well formed
+            ("owner/repo/**", None), // Invalid, not well formed.
             (
                 "owner/repo/*",
                 Some(RepositoryUsesPattern::InRepo {
@@ -308,15 +358,6 @@ mod tests {
                     subpath: "/".into(),
                 }),
             ),
-            // Weird, but we allow it (for now).
-            (
-                "owner/repo/**",
-                Some(RepositoryUsesPattern::ExactPath {
-                    owner: "owner".into(),
-                    repo: "repo".into(),
-                    subpath: "**".into(),
-                }),
-            ),
             (
                 "owner/repo/subpath/",
                 Some(RepositoryUsesPattern::ExactPath {
@@ -333,6 +374,38 @@ mod tests {
                     subpath: "subpath/very/nested////and/literal".into(),
                 }),
             ),
+            (
+                "owner/repo@v1",
+                Some(RepositoryUsesPattern::ExactWithRef {
+                    owner: "owner".into(),
+                    repo: "repo".into(),
+                    subpath: None,
+                    git_ref: "v1".into(),
+                }),
+            ),
+            (
+                "owner/repo/subpath@v1",
+                Some(RepositoryUsesPattern::ExactWithRef {
+                    owner: "owner".into(),
+                    repo: "repo".into(),
+                    subpath: Some("subpath".into()),
+                    git_ref: "v1".into(),
+                }),
+            ),
+            (
+                "owner/repo@172239021f7ba04fe7327647b213799853a9eb89",
+                Some(RepositoryUsesPattern::ExactWithRef {
+                    owner: "owner".into(),
+                    repo: "repo".into(),
+                    subpath: None,
+                    git_ref: "172239021f7ba04fe7327647b213799853a9eb89".into(),
+                }),
+            ),
+            // Invalid: no wildcards allowed when refs are present.
+            ("owner/repo/*@v1", None),
+            ("owner/repo/*/subpath@v1", None),
+            ("owner/*/subpath@v1", None),
+            ("*/*/subpath@v1", None),
         ] {
             let pattern = RepositoryUsesPattern::from_str(pattern).ok();
             assert_eq!(pattern, expected);
@@ -410,6 +483,10 @@ mod tests {
             ("actions/checkout@v3", "*", true),
             ("actions/checkout/foo@v3", "*", true),
             ("whatever/checkout", "*", true),
+            // exact matches
+            ("actions/checkout@v3", "actions/checkout@v3", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
+            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
         ] {
             let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
                 return Err(anyhow!("invalid uses: {uses}"));

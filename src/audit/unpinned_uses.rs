@@ -64,6 +64,8 @@ impl UnpinnedUses {
                     }) => {
                         format!("{owner}/{repo}/{subpath}")
                     }
+                    // Not allowed in this audit.
+                    Some(RepositoryUsesPattern::ExactWithRef { .. }) => unreachable!(),
                 };
 
                 match policy {
@@ -127,9 +129,11 @@ impl Audit for UnpinnedUses {
             .map_err(AuditLoadError::Fail)?
             .unwrap_or_default();
 
-        Ok(Self {
-            policies: config.into(),
-        })
+        let policies = UnpinnedUsesPolicies::try_from(config)
+            .context("invalid configuration")
+            .map_err(AuditLoadError::Fail)?;
+
+        Ok(Self { policies })
     }
 
     fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
@@ -239,14 +243,21 @@ impl UnpinnedUsesPolicies {
     }
 }
 
-impl From<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
-    fn from(config: UnpinnedUsesConfig) -> Self {
+impl TryFrom<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
+    type Error = anyhow::Error;
+
+    fn try_from(config: UnpinnedUsesConfig) -> Result<Self, Self::Error> {
         let mut policy_tree: HashMap<String, Vec<(RepositoryUsesPattern, UsesPolicy)>> =
             HashMap::new();
         let mut default_policy = UsesPolicy::HashPin;
 
         for (pattern, policy) in config.policies {
             match pattern {
+                // Patterns with refs don't make sense in this context, since
+                // we're establishing policies for the refs themselves.
+                RepositoryUsesPattern::ExactWithRef { .. } => {
+                    return Err(anyhow::anyhow!("can't use exact ref patterns here"));
+                }
                 RepositoryUsesPattern::ExactPath { ref owner, .. } => {
                     policy_tree
                         .entry(owner.clone())
@@ -282,9 +293,9 @@ impl From<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
             policies.sort_by(|a, b| a.0.cmp(&b.0));
         }
 
-        Self {
+        Ok(Self {
             policy_tree,
             default_policy,
-        }
+        })
     }
 }

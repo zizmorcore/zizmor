@@ -1,0 +1,7 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # valid pattern, but not allowed in this context
+        # because it makes no sense
+        "foo/bar@v1": "hash-pin"

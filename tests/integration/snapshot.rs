@@ -226,6 +226,7 @@ fn unpinned_uses() -> Result<()> {
         "invalid-policy-syntax-3",
         "invalid-policy-syntax-4",
         "invalid-policy-syntax-5",
+        "invalid-policy-syntax-6",
     ] {
         insta::assert_snapshot!(
             zizmor()
