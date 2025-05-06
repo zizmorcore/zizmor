@@ -18,23 +18,22 @@ use std::ops::{BitAnd, BitOr};
 use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
 use indexmap::IndexMap;
 
-use super::{StepBodyCommon, StepCommon};
-use crate::models::uses::RepositoryUsesExt as _;
+use super::{StepBodyCommon, StepCommon, uses::RepositoryUsesPattern};
 
 pub(crate) enum ActionCoordinate {
     Configurable {
-        /// The `uses:` clause of the coordinate
-        uses: Uses,
+        /// The `uses:` pattern of the coordinate
+        uses_pattern: RepositoryUsesPattern,
         /// The expression of fields that controls the coordinate
         control: ControlExpr,
     },
-    NotConfigurable(Uses),
+    NotConfigurable(RepositoryUsesPattern),
 }
 
 impl ActionCoordinate {
-    pub(crate) fn uses(&self) -> &Uses {
+    pub(crate) fn uses_pattern(&self) -> &RepositoryUsesPattern {
         match self {
-            ActionCoordinate::Configurable { uses, .. } => uses,
+            ActionCoordinate::Configurable { uses_pattern, .. } => uses_pattern,
             ActionCoordinate::NotConfigurable(inner) => inner,
         }
     }
@@ -46,9 +45,8 @@ impl ActionCoordinate {
     /// enabled, or explicitly enabled, or potentially enabled by a template expansion that
     /// can't be directly analyzed).
     pub(crate) fn usage<'s>(&self, step: &impl StepCommon<'s>) -> Option<Usage> {
-        let Uses::Repository(template) = self.uses() else {
-            return None;
-        };
+        let uses_pattern = self.uses_pattern();
+
         let StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
             with,
@@ -59,12 +57,15 @@ impl ActionCoordinate {
 
         // If our coordinate's `uses:` template doesn't match the step's `uses:`,
         // then no usage semantics are possible.
-        if !uses.matches_uses(template) {
+        if !uses_pattern.matches(uses) {
             return None;
         }
 
         match self {
-            ActionCoordinate::Configurable { uses: _, control } => match control.eval(with) {
+            ActionCoordinate::Configurable {
+                uses_pattern: _,
+                control,
+            } => match control.eval(with) {
                 ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
                 ControlEvaluation::Satisfied => Some(Usage::DirectOptIn),
                 ControlEvaluation::NotSatisfied => None,
@@ -323,10 +324,13 @@ pub(crate) enum Usage {
 mod tests {
     use std::str::FromStr;
 
-    use github_actions_models::{common::Uses, workflow::job::Step};
+    use github_actions_models::workflow::job::Step;
 
     use super::{ActionCoordinate, StepCommon};
-    use crate::models::coordinate::{ControlExpr, ControlFieldType, Toggle, Usage};
+    use crate::models::{
+        coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
+        uses::RepositoryUsesPattern,
+    };
 
     // Test-only trait impl.
     impl<'s> StepCommon<'s> for Step {
@@ -378,7 +382,8 @@ mod tests {
     fn test_usage() {
         // Trivial case: no usage is possible, since the coordinate's `uses:`
         // does not match the step.
-        let coord = ActionCoordinate::NotConfigurable(Uses::from_str("foo/bar").unwrap());
+        let coord =
+            ActionCoordinate::NotConfigurable(RepositoryUsesPattern::from_str("foo/bar").unwrap());
         let step: Step = serde_yaml::from_str("uses: not/thesame").unwrap();
         assert_eq!(coord.usage(&step), None);
 
@@ -391,7 +396,7 @@ mod tests {
         // Coordinate `uses:` matches but is not enabled by default and is
         // missing the needed control.
         let coord = ActionCoordinate::Configurable {
-            uses: Uses::from_str("foo/bar").unwrap(),
+            uses_pattern: RepositoryUsesPattern::from_str("foo/bar").unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::Boolean, false),
         };
         let step: Step = serde_yaml::from_str("uses: foo/bar").unwrap();
@@ -407,7 +412,7 @@ mod tests {
 
         // Coordinate `uses:` matches and is enabled by default.
         let coord = ActionCoordinate::Configurable {
-            uses: Uses::from_str("foo/bar").unwrap(),
+            uses_pattern: RepositoryUsesPattern::from_str("foo/bar").unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::Boolean, true),
         };
         let step: Step = serde_yaml::from_str("uses: foo/bar").unwrap();
@@ -424,7 +429,7 @@ mod tests {
         // Coordinate `uses:` matches and has an opt-out toggle, which does not affect
         // the default.
         let coord = ActionCoordinate::Configurable {
-            uses: Uses::from_str("foo/bar").unwrap(),
+            uses_pattern: RepositoryUsesPattern::from_str("foo/bar").unwrap(),
             control: ControlExpr::single(
                 Toggle::OptOut,
                 "disable-cache",
