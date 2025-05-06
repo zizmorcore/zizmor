@@ -7,6 +7,8 @@ use regex::Regex;
 use serde::Deserialize;
 
 /// Matches all variants of [`RepositoryUsesPattern`] except `*`.
+///
+/// TODO: Replace this with a real parser; this is ridiculous.
 static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
