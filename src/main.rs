@@ -546,7 +546,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::github_env::GitHubEnv);
     register_audit!(audit::cache_poisoning::CachePoisoning);
     register_audit!(audit::secrets_inherit::SecretsInherit);
-    register_audit!(audit::secrets_outside_environment::SecretsOutsideEnvironment);
+    register_audit!(audit::secret_without_env::SecretWithoutEnv);
     register_audit!(audit::bot_conditions::BotConditions);
     register_audit!(audit::overprovisioned_secrets::OverprovisionedSecrets);
     register_audit!(audit::unredacted_secrets::UnredactedSecrets);

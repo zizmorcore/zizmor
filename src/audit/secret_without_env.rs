@@ -6,15 +6,15 @@ use github_actions_models::{
 use super::{Audit, audit_meta};
 use crate::{finding::Confidence, models::StepCommon, AuditState, AuditLoadError, Persona};
 
-pub(crate) struct SecretsOutsideEnvironment;
+pub(crate) struct SecretWithoutEnv;
 
 audit_meta!(
-    SecretsOutsideEnvironment,
-    "secrets-outside-environment",
-    "secrets used without an environment to gate them"
+    SecretWithoutEnv,
+    "secret-without-env",
+    "secret used without an environment to gate it"
 );
 
-impl Audit for SecretsOutsideEnvironment {
+impl Audit for SecretWithoutEnv {
     fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
@@ -61,7 +61,7 @@ impl Audit for SecretsOutsideEnvironment {
     }
 }
 
-impl SecretsOutsideEnvironment {
+impl SecretWithoutEnv {
     fn check_secrets_access<'w>(
         s: &str,
         step: &crate::models::Step<'w>,

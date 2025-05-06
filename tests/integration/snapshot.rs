@@ -651,7 +651,7 @@ fn unredacted_secrets() -> Result<()> {
 fn secrets_outside_environment() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .input(input_under_test("secrets-outside-environment.yml"))
+            .input(input_under_test("secret-without-env.yml"))
             .args(["--persona=pedantic"])
             .run()?
     );
