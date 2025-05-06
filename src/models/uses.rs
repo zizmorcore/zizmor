@@ -7,6 +7,8 @@ use regex::Regex;
 use serde::Deserialize;
 
 /// Matches all variants of [`RepositoryUsesPattern`] except `*`.
+///
+/// TODO: Replace this with a real parser; this is ridiculous.
 static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
@@ -160,19 +162,11 @@ impl<'de> Deserialize<'de> for RepositoryUsesPattern {
 
 /// Useful APIs for interacting with `uses: owner/repo` clauses.
 pub(crate) trait RepositoryUsesExt {
-    /// Returns whether this `uses:` clause "matches" the given template.
-    /// The template is itself formatted like a normal `uses:` clause.
+    /// Returns whether this `uses:` clause matches the given pattern.
     ///
-    /// This is an asymmetrical match: `actions/checkout@v3` "matches"
-    /// the `actions/checkout` template but not vice versa.
-    ///
-    /// Comparisons are case-insensitive, since GitHub's own APIs are insensitive.
-    ///
-    /// TODO: Remove this API and replace it with [`RepositoryUsesPattern`].
-    fn matches(&self, template: &str) -> bool;
-
-    /// Like [`RepositoryUsesExt::matches`].
-    fn matches_uses(&self, template: &RepositoryUses) -> bool;
+    /// This uses [`RepositoryUsesPattern`] under the hood, and follows the
+    /// same matching rules.
+    fn matches(&self, pattern: &str) -> bool;
 
     /// Returns whether this `uses:` clause has a `git` ref and, if so,
     /// whether that ref is a commit ref.
@@ -192,21 +186,11 @@ pub(crate) trait RepositoryUsesExt {
 
 impl RepositoryUsesExt for RepositoryUses {
     fn matches(&self, template: &str) -> bool {
-        let Ok(other) = template.parse::<RepositoryUses>() else {
+        let Ok(pat) = template.parse::<RepositoryUsesPattern>() else {
             return false;
         };
 
-        self.matches_uses(&other)
-    }
-
-    fn matches_uses(&self, template: &RepositoryUses) -> bool {
-        self.owner.eq_ignore_ascii_case(&template.owner)
-            && (template.repo == "*" || self.repo.eq_ignore_ascii_case(&template.repo))
-            && self.subpath.as_ref().map(|s| s.to_lowercase())
-                == template.subpath.as_ref().map(|s| s.to_lowercase())
-            && template.git_ref.as_ref().is_none_or(|git_ref| {
-                Some(git_ref.to_lowercase()) == self.git_ref.as_ref().map(|r| r.to_lowercase())
-            })
+        pat.matches(self)
     }
 
     fn ref_is_commit(&self) -> bool {
@@ -270,43 +254,7 @@ mod tests {
     use anyhow::anyhow;
     use github_actions_models::common::Uses;
 
-    use crate::models::uses::RepositoryUsesExt;
-
     use super::RepositoryUsesPattern;
-
-    #[test]
-    fn test_repositoryuses_matches() {
-        for (uses, template, matches) in [
-            // OK: `uses:` is more specific than template
-            ("actions/checkout@v3", "actions/checkout", true),
-            ("actions/checkout/foo@v3", "actions/checkout/foo", true),
-            // OK: equally specific
-            ("actions/checkout@v3", "actions/checkout@v3", true),
-            ("actions/checkout", "actions/checkout", true),
-            ("actions/checkout/foo", "actions/checkout/foo", true),
-            ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
-            // OK: case-insensitive
-            ("actions/checkout@v3", "Actions/Checkout@v3", true),
-            ("actions/checkout/foo", "actions/checkout/Foo", true),
-            ("actions/checkout/foo@v3", "Actions/Checkout/Foo", true),
-            ("actions/checkout@v3", "actions/checkout@V3", true),
-            // NOT OK: owner/repo do not match
-            ("actions/checkout@v3", "foo/checkout", false),
-            ("actions/checkout@v3", "actions/bar", false),
-            // NOT OK: subpath does not match
-            ("actions/checkout/foo", "actions/checkout", false),
-            ("actions/checkout/foo@v3", "actions/checkout@v3", false),
-            // NOT OK: template is more specific than `uses:`
-            ("actions/checkout", "actions/checkout@v3", false),
-            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
-        ] {
-            let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
-                panic!();
-            };
-
-            assert_eq!(uses.matches(template), matches)
-        }
-    }
 
     #[test]
     fn test_repositoryusespattern_parse() {
@@ -457,12 +405,27 @@ mod tests {
     #[test]
     fn test_repositoryusespattern_matches() -> anyhow::Result<()> {
         for (uses, pattern, matches) in [
+            // OK: case-insensitive, except subpath and tag
+            ("actions/checkout@v3", "Actions/Checkout@v3", true),
+            ("actions/checkout/foo", "actions/checkout/Foo", false),
+            ("actions/checkout/foo@v3", "Actions/Checkout/foo", true),
+            ("actions/checkout@v3", "actions/checkout@V3", false),
+            // NOT OK: owner/repo do not match
+            ("actions/checkout@v3", "foo/checkout", false),
+            ("actions/checkout@v3", "actions/bar", false),
+            // NOT OK: subpath does not match
+            ("actions/checkout/foo", "actions/checkout", false),
+            ("actions/checkout/foo@v3", "actions/checkout@v3", false),
+            // NOT OK: template is more specific than `uses:`
+            ("actions/checkout", "actions/checkout@v3", false),
+            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
             // owner/repo/subpath matches regardless of ref and casing
             // but only when the subpath matches.
             // the subpath must share the same case but might not be
             // normalized
             ("actions/checkout/foo", "actions/checkout/foo", true),
             ("ACTIONS/CHECKOUT/foo", "actions/checkout/foo", true),
+            ("actions/checkout/foo@v3", "actions/checkout/foo", true),
             ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo", true),
             // TODO: See comment in `RepositoryUsesPattern::matches`
             // ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo/", true),

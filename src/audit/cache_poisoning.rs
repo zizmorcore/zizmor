@@ -1,7 +1,5 @@
-use std::str::FromStr;
 use std::sync::LazyLock;
 
-use github_actions_models::common::Uses;
 use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 
@@ -20,7 +18,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
     vec![
         // https://github.com/actions/cache/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("actions/cache").unwrap(),
+            uses_pattern: "actions/cache".parse().unwrap(),
             control: ControlExpr::single(
                 Toggle::OptOut,
                 "lookup-only",
@@ -30,32 +28,32 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/actions/setup-java/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("actions/setup-java").unwrap(),
+            uses_pattern: "actions/setup-java".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::String, false),
         },
         // https://github.com/actions/setup-go/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("actions/setup-go").unwrap(),
+            uses_pattern: "actions/setup-go".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
         },
         // https://github.com/actions/setup-node/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("actions/setup-node").unwrap(),
+            uses_pattern: "actions/setup-node".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::String, false),
         },
         // https://github.com/actions/setup-python/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("actions/setup-python").unwrap(),
+            uses_pattern: "actions/setup-python".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::String, false),
         },
         // https://github.com/actions/setup-dotnet/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("actions/setup-dotnet").unwrap(),
+            uses_pattern: "actions/setup-dotnet".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::Boolean, false),
         },
         // https://github.com/astral-sh/setup-uv/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("astral-sh/setup-uv").unwrap(),
+            uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
             control: ControlExpr::single(
                 Toggle::OptOut,
                 "enable-cache",
@@ -65,7 +63,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/Swatinem/rust-cache/blob/master/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("Swatinem/rust-cache").unwrap(),
+            uses_pattern: "Swatinem/rust-cache".parse().unwrap(),
             control: ControlExpr::single(
                 Toggle::OptOut,
                 "lookup-only",
@@ -75,7 +73,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/ruby/setup-ruby/blob/master/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("ruby/setup-ruby").unwrap(),
+            uses_pattern: "ruby/setup-ruby".parse().unwrap(),
             control: ControlExpr::single(
                 Toggle::OptIn,
                 "bundler-cache",
@@ -85,7 +83,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/PyO3/maturin-action/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("PyO3/maturin-action").unwrap(),
+            uses_pattern: "PyO3/maturin-action".parse().unwrap(),
             control: ControlExpr::single(
                 Toggle::OptIn,
                 "sccache",
@@ -95,7 +93,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/mlugg/setup-zig/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("mlugg/setup-zig").unwrap(),
+            uses_pattern: "mlugg/setup-zig".parse().unwrap(),
             control: ControlExpr::single(
                 Toggle::OptIn,
                 "use-cache",
@@ -105,7 +103,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/oven-sh/setup-bun/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("oven-sh/setup-bun").unwrap(),
+            uses_pattern: "oven-sh/setup-bun".parse().unwrap(),
             control: ControlExpr::single(
                 Toggle::OptOut,
                 "no-cache",
@@ -115,7 +113,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/DeterminateSystems/magic-nix-cache-action/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("DeterminateSystems/magic-nix-cache-action").unwrap(),
+            uses_pattern: "DeterminateSystems/magic-nix-cache-action".parse().unwrap(),
             control: ControlExpr::single(
                 Toggle::OptIn,
                 "use-gha-cache",
@@ -125,12 +123,12 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/graalvm/setup-graalvm/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("graalvm/setup-graalvm").unwrap(),
+            uses_pattern: "graalvm/setup-graalvm".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::String, false),
         },
         // https://github.com/gradle/actions/blob/main/setup-gradle/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("gradle/actions/setup-gradle").unwrap(),
+            uses_pattern: "gradle/actions/setup-gradle".parse().unwrap(),
             control: ControlExpr::single(
                 Toggle::OptOut,
                 "cache-disabled",
@@ -140,7 +138,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/docker/setup-buildx-action/blob/master/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("docker/setup-buildx-action").unwrap(),
+            uses_pattern: "docker/setup-buildx-action".parse().unwrap(),
             control: ControlExpr::all([
                 ControlExpr::single(
                     Toggle::OptIn,
@@ -153,20 +151,16 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         },
         // https://github.com/actions-rust-lang/setup-rust-toolchain/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("actions-rust-lang/setup-rust-toolchain").unwrap(),
+            uses_pattern: "actions-rust-lang/setup-rust-toolchain".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
         },
         // https://github.com/Mozilla-Actions/sccache-action/blob/main/action.yml
-        ActionCoordinate::NotConfigurable(
-            Uses::from_str("Mozilla-Actions/sccache-action").unwrap(),
-        ),
+        ActionCoordinate::NotConfigurable("Mozilla-Actions/sccache-action".parse().unwrap()),
         // https://github.com/nix-community/cache-nix-action/blob/main/action.yml
-        ActionCoordinate::NotConfigurable(
-            Uses::from_str("nix-community/cache-nix-action").unwrap(),
-        ),
+        ActionCoordinate::NotConfigurable("nix-community/cache-nix-action".parse().unwrap()),
         // https://github.com/jdx/mise-action/blob/main/action.yml
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("jdx/mise-action").unwrap(),
+            uses_pattern: "jdx/mise-action".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
         },
     ]
@@ -177,48 +171,44 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
 static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(|| {
     vec![
         // Public packages and/or binary distribution channels
-        ActionCoordinate::NotConfigurable(Uses::from_str("pypa/gh-action-pypi-publish").unwrap()),
-        ActionCoordinate::NotConfigurable(Uses::from_str("rubygems/release-gem").unwrap()),
-        ActionCoordinate::NotConfigurable(Uses::from_str("jreleaser/release-action").unwrap()),
-        ActionCoordinate::NotConfigurable(Uses::from_str("goreleaser/goreleaser-action").unwrap()),
+        ActionCoordinate::NotConfigurable("pypa/gh-action-pypi-publish".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("rubygems/release-gem".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("jreleaser/release-action".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("goreleaser/goreleaser-action".parse().unwrap()),
         // Github releases
-        ActionCoordinate::NotConfigurable(Uses::from_str("softprops/action-gh-release").unwrap()),
-        ActionCoordinate::NotConfigurable(
-            Uses::from_str("release-drafter/release-drafter").unwrap(),
-        ),
-        ActionCoordinate::NotConfigurable(
-            Uses::from_str("googleapis/release-please-action").unwrap(),
-        ),
+        ActionCoordinate::NotConfigurable("softprops/action-gh-release".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("release-drafter/release-drafter".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("googleapis/release-please-action".parse().unwrap()),
         // Container registries
         ActionCoordinate::Configurable {
-            uses: Uses::from_str("docker/build-push-action").unwrap(),
+            uses_pattern: "docker/build-push-action".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "push", ControlFieldType::Boolean, true),
         },
-        ActionCoordinate::NotConfigurable(
-            Uses::from_str("redhat-actions/push-to-registry").unwrap(),
-        ),
+        ActionCoordinate::NotConfigurable("redhat-actions/push-to-registry".parse().unwrap()),
         // Cloud + Edge providers
         ActionCoordinate::NotConfigurable(
-            Uses::from_str("aws-actions/amazon-ecs-deploy-task-definition ").unwrap(),
+            "aws-actions/amazon-ecs-deploy-task-definition"
+                .parse()
+                .unwrap(),
         ),
         ActionCoordinate::NotConfigurable(
-            Uses::from_str("aws-actions/aws-cloudformation-github-deploy").unwrap(),
+            "aws-actions/aws-cloudformation-github-deploy"
+                .parse()
+                .unwrap(),
         ),
-        ActionCoordinate::NotConfigurable(Uses::from_str("Azure/aci-deploy").unwrap()),
+        ActionCoordinate::NotConfigurable("Azure/aci-deploy".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("Azure/container-apps-deploy-action".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("Azure/functions-action".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("Azure/sql-action".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("cloudflare/wrangler-action".parse().unwrap()),
         ActionCoordinate::NotConfigurable(
-            Uses::from_str("Azure/container-apps-deploy-action").unwrap(),
+            "google-github-actions/deploy-appengine".parse().unwrap(),
         ),
-        ActionCoordinate::NotConfigurable(Uses::from_str("Azure/functions-action").unwrap()),
-        ActionCoordinate::NotConfigurable(Uses::from_str("Azure/sql-action").unwrap()),
-        ActionCoordinate::NotConfigurable(Uses::from_str("cloudflare/wrangler-action").unwrap()),
+        ActionCoordinate::NotConfigurable("google-github-actions/deploy-cloudrun".parse().unwrap()),
         ActionCoordinate::NotConfigurable(
-            Uses::from_str("google-github-actions/deploy-appengine").unwrap(),
-        ),
-        ActionCoordinate::NotConfigurable(
-            Uses::from_str("google-github-actions/deploy-cloudrun").unwrap(),
-        ),
-        ActionCoordinate::NotConfigurable(
-            Uses::from_str("google-github-actions/deploy-cloud-functions").unwrap(),
+            "google-github-actions/deploy-cloud-functions"
+                .parse()
+                .unwrap(),
         ),
     ]
 });
