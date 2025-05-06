@@ -1,0 +1,13 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # just to make unrelated findings go away
+        "*": ref-pin
+
+  forbidden-uses:
+    config:
+      deny:
+        - actions/setup-python@v4
+        - actions/checkout@v3 # workflow actually uses v4
+        - pypa/gh-action-pypi-publish@release/v1

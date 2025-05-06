@@ -650,7 +650,14 @@ fn unredacted_secrets() -> Result<()> {
 
 #[test]
 fn forbidden_uses() -> Result<()> {
-    for config in ["allow-all", "deny-all", "allow-some", "deny-some"] {
+    for config in [
+        "allow-all",
+        "deny-all",
+        "allow-some",
+        "deny-some",
+        "deny-some-refs",
+        "allow-some-refs",
+    ] {
         insta::assert_snapshot!(
             zizmor()
                 .config(input_under_test(&format!(

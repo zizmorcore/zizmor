@@ -24,7 +24,7 @@ static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         )?                          # end of non-capturing group for optional subpath
         (?:                         # non-capturing group for optional git ref
           @                         # @
-          (\w+)                     # (4) git ref
+          ([[[:graph:]]&&[^\*]]+)   # (4) git ref (any non-space, non-* characters)
         )?                          # end of non-capturing group for optional git ref
         $                           # end of line
         "#,
@@ -315,7 +315,7 @@ mod tests {
             ("/", None),     // Invalid, not well formed
             ("//", None),    // Invalid, not well formed
             ("///", None),   // Invalid, not well formed
-            ("owner", None), // Invalid, should be owner/*
+            ("owner", None), // Invalid, sho,uld be owner/*
             ("**", None),    // Invalid, should be *
             ("*", Some(RepositoryUsesPattern::Any)),
             (
@@ -401,11 +401,27 @@ mod tests {
                     git_ref: "172239021f7ba04fe7327647b213799853a9eb89".into(),
                 }),
             ),
+            (
+                "pypa/gh-action-pypi-publish@release/v1",
+                Some(RepositoryUsesPattern::ExactWithRef {
+                    owner: "pypa".into(),
+                    repo: "gh-action-pypi-publish".into(),
+                    subpath: None,
+                    git_ref: "release/v1".into(),
+                }),
+            ),
             // Invalid: no wildcards allowed when refs are present.
             ("owner/repo/*@v1", None),
             ("owner/repo/*/subpath@v1", None),
             ("owner/*/subpath@v1", None),
             ("*/*/subpath@v1", None),
+            // Ref also cannot be a wildcard.
+            ("owner/repo@*", None),
+            ("owner/repo@**", None),
+            ("owner/repo@***", None),
+            ("owner/repo/subpath@*", None),
+            ("owner/*@*", None),
+            ("*@*", None),
         ] {
             let pattern = RepositoryUsesPattern::from_str(pattern).ok();
             assert_eq!(pattern, expected);
