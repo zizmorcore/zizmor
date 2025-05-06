@@ -12,7 +12,7 @@ struct ExprParser;
 
 #[derive(Debug)]
 pub(crate) struct Context<'src> {
-    pub(crate) raw: &'src str,
+    raw: &'src str,
     pub(crate) components: Vec<Expr<'src>>,
 }
 
@@ -28,7 +28,7 @@ impl<'src> Context<'src> {
         self.raw
     }
 
-    pub(crate) fn components(&self) -> &[Expr] {
+    pub(crate) fn components(&self) -> &[Expr<'src>] {
         &self.components
     }
 
@@ -659,6 +659,8 @@ mod tests {
             "github.event['a' == 'b' && 'c' || 'd']",
             "github['event']['inputs']['dry-run']",
             "github[format('{0}', 'event')]",
+            "github['event']['inputs'][github.event.inputs.magic]",
+            "github['event']['inputs'].*",
         ];
 
         for case in cases {

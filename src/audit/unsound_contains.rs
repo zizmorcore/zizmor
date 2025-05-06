@@ -89,8 +89,7 @@ impl UnsoundContains {
                 args: exprs,
             }
             | Expr::Context(Context {
-                raw: _,
-                components: exprs,
+                components: exprs, ..
             }) => Box::new(exprs.iter().flat_map(Self::walk_tree_for_unsound_contains)),
             Expr::Index(expr) => Self::walk_tree_for_unsound_contains(expr),
             Expr::BinOp { lhs, rhs, .. } => {
