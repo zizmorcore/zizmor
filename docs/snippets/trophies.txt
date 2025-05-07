@@ -213,6 +213,7 @@ ViaVersion/ViaVersion#4315
 vlang/v#22681
 wagtail/wagtail-localize#843
 wntrblm/nox#925
+zama-ai/tfhe-rs#2292
 zcash/librustzcash#1679
 ZcashFoundation/zebra#9110
 zkonduit/ezkl#907
