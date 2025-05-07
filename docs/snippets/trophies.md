@@ -122,6 +122,7 @@
 
     ??? example "Examples"
         - curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
+        - curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
         - curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 
 
@@ -648,6 +649,14 @@
     ??? example "Examples"
         - onnx/onnx#6661
         - onnx/onnx#6662
+
+
+-   ![](https://github.com/open-edge-platform.png?size=40){ width="40" loading=lazy align=left } open-edge-platform
+
+    ---
+
+    ??? example "Examples"
+        - open-edge-platform/geti#162
 
 
 -   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
