@@ -60,6 +60,14 @@ of `zizmor`.
   within subdirectories of `.github/workflows` when collecting from
   a remote source (#731)
 
+### Upcoming Changes 🚧
+
+* Starting with v1.8.0, `zizmor` will migrate from @woodruffw
+  on GitHub to @zizmorcore. This should not cause any breakage
+  as GitHub will handle redirects, but users who explicitly reference
+  @woodruffw/zizmor should consider updating their references to
+  @zizmorcore/zizmor once the migration occurs. See #758 for details.
+
 ## v1.6.0
 
 ### New Features 🌈
