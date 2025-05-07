@@ -1097,6 +1097,14 @@
         - wntrblm/nox#925
 
 
+-   ![](https://github.com/zama-ai.png?size=40){ width="40" loading=lazy align=left } zama-ai
+
+    ---
+
+    ??? example "Examples"
+        - zama-ai/tfhe-rs#2292
+
+
 -   ![](https://github.com/zcash.png?size=40){ width="40" loading=lazy align=left } zcash
 
     ---
