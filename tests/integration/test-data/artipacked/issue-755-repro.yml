@@ -1,0 +1,16 @@
+# see https://github.com/woodruffw/zizmor/issues/755
+
+name: ISSUE-755-REPRO
+on: push
+
+permissions: {}
+
+jobs:
+  issue-755-repro:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
