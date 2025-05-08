@@ -9,7 +9,7 @@ use anstream::{eprintln, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
 use audit::{Audit, AuditLoadError};
 use camino::{Utf8Path, Utf8PathBuf};
-use clap::{Parser, ValueEnum};
+use clap::{CommandFactory, Parser, ValueEnum};
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
@@ -124,6 +124,10 @@ struct App {
     /// in collected inputs.
     #[arg(long)]
     strict_collection: bool,
+
+    /// Generate tab completion scripts for the specified shell.
+    #[arg(long, value_enum, value_name = "SHELL", exclusive = true)]
+    completions: Option<clap_complete::Shell>,
 
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
@@ -417,10 +421,25 @@ fn collect_inputs(
     Ok(registry)
 }
 
+fn completions<G: clap_complete::Generator>(generator: G, cmd: &mut clap::Command) {
+    clap_complete::generate(
+        generator,
+        cmd,
+        cmd.get_name().to_string(),
+        &mut std::io::stdout(),
+    );
+}
+
 fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
     let mut app = App::parse();
+
+    if let Some(shell) = app.completions {
+        let mut cmd = App::command();
+        completions(shell, &mut cmd);
+        return Ok(ExitCode::SUCCESS);
+    }
 
     let color_mode = match app.color {
         Some(color_mode) => color_mode,
