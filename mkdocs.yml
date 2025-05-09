@@ -1,7 +1,7 @@
 strict: true
 site_name: "zizmor"
 site_description: Static analysis for GitHub Actions
-site_url: https://woodruffw.github.io/zizmor
+site_url: https://docs.zizmor.sh/
 docs_dir: docs
 site_dir: site_html
 dev_addr: "127.0.0.1:9999"

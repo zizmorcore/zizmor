@@ -9,6 +9,14 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Announcements 📣
+
+* `zizmor`'s website has changed! The new website is hosted at
+  [docs.zizmor.sh](https://docs.zizmor.sh/). The old website will
+  redirect to the new one for a while, but users should update any
+  old links in preparation for the v1.8.0 release, which will likely
+  remove the redirects entirely (#769)
+
 ## v1.7.0
 
 This release comes with **four** new audits: [obfuscation], [stale-action-refs],
