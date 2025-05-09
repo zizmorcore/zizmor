@@ -515,7 +515,7 @@ fn run() -> Result<ExitCode> {
             format!("failed to load config: {e:#}"),
             &[
                 "check your configuration file for errors",
-                "see: https://woodruffw.github.io/zizmor/configuration/"
+                "see: https://docs.zizmor.sh/configuration/"
             ]
         ))
     })?;
