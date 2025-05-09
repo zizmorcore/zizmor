@@ -47,9 +47,9 @@ documentation!
 
 Here are some things we could use help with:
 
-* Improving our [CLI usage recipes](https://woodruffw.github.io/zizmor/usage/).
+* Improving our [CLI usage recipes](https://docs.zizmor.sh/usage/).
 * Improving the detail in our
-  [audit documentation pages](https://woodruffw.github.io/zizmor/audits/).
+  [audit documentation pages](https://docs.zizmor.sh/audits/).
 * Improving our internal (Rust API) documentation, especially in conjunction
   with more unit tests.
 
@@ -80,5 +80,5 @@ beginning a pull request.
 
 ["false negative"]: https://github.com/woodruffw/zizmor/issues?q=is%3Aopen+label%3Afalse-negative
 
-[development docs]: https://woodruffw.github.io/zizmor/development/
+[development docs]: https://docs.zizmor.sh/development/
 

@@ -9,6 +9,25 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Announcements 📣
+
+* `zizmor`'s website has changed! The new website is hosted at
+  [docs.zizmor.sh](https://docs.zizmor.sh/). The old website will
+  redirect to the new one for a while, but users should update any
+  old links in preparation for the v1.8.0 release, which will likely
+  remove the redirects entirely (#769)
+
+## v1.7.0
+
+This release comes with **four** new audits: [obfuscation], [stale-action-refs],
+[unsound-contains], and [unpinned-images]. It also includes several
+improvements to existing audits and zizmor's output formats and error
+reporting behavior.
+
+Additionally, this release comes with bugfixes for the SARIF output format
+as well as input collection in some edge cases when collecting
+from remote repositories.
+
 ### New Features 🌈
 
 * **New audit**: The [obfuscation] audit detects obfuscatory patterns in
@@ -41,12 +60,13 @@ of `zizmor`.
   which was to terminate the audit if any collected input could
   not be parsed (#734)
 
-### Enhancements 🌱
-
 * The [forbidden-uses] audit can now be configured with patterns that
   match exact `uses:` clauses, including refs. For example,
   exactly `actions/checkout@v4` can now be explicitly allowed or forbidden,
   rather than every ref that matches `actions/checkout` (#750)
+
+* `zizmor` now has a `--completions=<shell>` flag that generates
+  shell completion scripts (#765)
 
 ### Bug Fixes 🐛
 
@@ -59,6 +79,14 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would fail to collection actions defined
   within subdirectories of `.github/workflows` when collecting from
   a remote source (#731)
+
+### Upcoming Changes 🚧
+
+* Starting with v1.8.0, `zizmor` will migrate from @woodruffw
+  on GitHub to @zizmorcore. This should not cause any breakage
+  as GitHub will handle redirects, but users who explicitly reference
+  @woodruffw/zizmor should consider updating their references to
+  @zizmorcore/zizmor once the migration occurs. See #758 for details.
 
 ## v1.6.0
 

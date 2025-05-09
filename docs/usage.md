@@ -182,7 +182,7 @@ zizmor --format=json . | jq .[0]
     {
       "ident": "github-env",
       "desc": "dangerous use of environment file",
-      "url": "https://woodruffw.github.io/zizmor/audits/#github-env",
+      "url": "https://docs.zizmor.sh/audits/#github-env",
       "determinations": {
         "confidence": "Low",
         "severity": "High",
@@ -711,7 +711,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 - repo: https://github.com/woodruffw/zizmor-pre-commit
-  rev: v1.6.0 # (1)!
+  rev: v1.7.0 # (1)!
   hooks:
   - id: zizmor
 ```
@@ -758,6 +758,28 @@ zizmor --color=never ...
 * [`NO_COLOR`](https://no-color.org/): if set to any value, disables colorization
 * [`FORCE_COLOR`](https://force-color.org/): if set to any value, enables colorization
 * [`CLICOLOR_FORCE`](https://bixense.com/clicolors/): if set to any value, enables colorization
+
+### Tab completion
+
+!!! note
+
+    Tab completion is available in `v1.7.0` and later.
+
+`zizmor` comes with built-in tab completion. It supports all of the
+shells supported by [`clap_complete`](https://crates.io/crates/clap_complete),
+which includes popular shells like `bash`, `zsh`, and `fish`.
+
+To enable tab completion, you can use the `--completions=<shell>` flag
+to emit a completion script for the specified shell. For example,
+to enable tab completion for `bash`, you can run:
+
+```bash
+zizmor --completions=bash > ~/.bash_completion.d/zizmor # (1)!
+```
+
+1. The correct location of your completion script will depend on your
+   shell and its configuration. Consult your shell's documentation
+   for more information.
 
 ## Limitations
 

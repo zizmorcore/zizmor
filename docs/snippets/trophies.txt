@@ -24,6 +24,8 @@ cakephp/cakephp#18081
 canonical/operator#1656
 canonical/testflinger#630
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
+curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
+curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
 curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 danmar/cppcheck#7044
 DataDog/datadog-agent#30871
@@ -138,6 +140,7 @@ numpy/numpy.org#797
 onnx/onnx#6661
 onnx/onnx#6662
 openbao/openbao#924
+open-edge-platform/geti#162
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
 orion-rs/orion#441
@@ -213,6 +216,7 @@ ViaVersion/ViaVersion#4315
 vlang/v#22681
 wagtail/wagtail-localize#843
 wntrblm/nox#925
+zama-ai/tfhe-rs#2292
 zcash/librustzcash#1679
 ZcashFoundation/zebra#9110
 zkonduit/ezkl#907

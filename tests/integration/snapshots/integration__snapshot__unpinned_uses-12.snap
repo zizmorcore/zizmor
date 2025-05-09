@@ -9,4 +9,4 @@ snapshot_kind: text
 fatal: no audit was performed
 error: failed to load audit: unpinned-uses
  = note: invalid configuration: can't use exact ref patterns here
- = note: see: https://woodruffw.github.io/zizmor/audits/#unpinned-uses
+ = note: see: https://docs.zizmor.sh/audits/#unpinned-uses
