@@ -182,7 +182,7 @@ zizmor --format=json . | jq .[0]
     {
       "ident": "github-env",
       "desc": "dangerous use of environment file",
-      "url": "https://woodruffw.github.io/zizmor/audits/#github-env",
+      "url": "https://docs.zizmor.sh/audits/#github-env",
       "determinations": {
         "confidence": "Low",
         "severity": "High",
