@@ -9,6 +9,17 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## v1.7.0
+
+This release comes with **four** new audits: [obfuscation], [stale-action-refs],
+[unsound-contains], and [unpinned-images]. It also includes several
+improvements to existing audits and zizmor's output formats and error
+reporting behavior.
+
+Additionally, this release comes with bugfixes for the SARIF output format
+as well as input collection in some edge cases when collecting
+from remote repositories.
+
 ### New Features 🌈
 
 * **New audit**: The [obfuscation] audit detects obfuscatory patterns in
