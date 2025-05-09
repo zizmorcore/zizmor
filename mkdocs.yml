@@ -118,5 +118,11 @@ extra:
     - icon: fontawesome/brands/bluesky
       link: https://bsky.app/profile/yossarian.net
       name: "@yossarian.net on Bluesky"
+    - icon: fontawesome/brands/discord
+      link: https://discord.com/invite/PGU3zGZuGG
+      name: "Join the Zizmor Discord"
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/zizmor/
+      name: "Zizmor on PyPI"
 
 copyright: "&copy; 2024 William Woodruff"
