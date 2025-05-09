@@ -41,12 +41,13 @@ of `zizmor`.
   which was to terminate the audit if any collected input could
   not be parsed (#734)
 
-### Enhancements 🌱
-
 * The [forbidden-uses] audit can now be configured with patterns that
   match exact `uses:` clauses, including refs. For example,
   exactly `actions/checkout@v4` can now be explicitly allowed or forbidden,
   rather than every ref that matches `actions/checkout` (#750)
+
+* `zizmor` now has a `--completions=<shell>` flag that generates
+  shell completion scripts (#765)
 
 ### Bug Fixes 🐛
 
