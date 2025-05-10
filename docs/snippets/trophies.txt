@@ -121,6 +121,7 @@ MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
 microsoft/linux-package-repositories#208
 microsoft/vscode-python#25047
+microsoft/vscode-python-debugger#709
 microsoft/vscode-jupyter#16622
 mkuf/prind#183
 mne-tools/mne-python#13011
