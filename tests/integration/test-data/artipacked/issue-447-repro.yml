@@ -1,4 +1,4 @@
-# see https://github.com/woodruffw/zizmor/issues/447
+# see https://github.com/zizmorcore/zizmor/issues/447
 
 name: ISSUE-447-REPRO
 on: push

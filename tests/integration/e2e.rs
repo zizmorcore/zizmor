@@ -42,7 +42,7 @@ fn issue_569() -> Result<()> {
 #[test]
 fn issue_726() -> Result<()> {
     // Regression test for #726.
-    // See: https://github.com/woodruffw/zizmor/issues/726
+    // See: https://github.com/zizmorcore/zizmor/issues/726
     // See: https://github.com/woodruffw-experiments/zizmor-bug-726
     insta::assert_snapshot!(
         zizmor()

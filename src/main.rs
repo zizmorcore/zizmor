@@ -270,7 +270,7 @@ fn collect_from_dir(
     // without a `.git/` directory. In particular, this snares some
     // zizmor integrators.
     //
-    // See: https://github.com/woodruffw/zizmor/issues/596
+    // See: https://github.com/zizmorcore/zizmor/issues/596
     if mode.respects_gitignore() {
         walker
             .require_git(false)
