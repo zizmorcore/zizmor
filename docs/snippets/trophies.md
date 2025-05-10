@@ -541,6 +541,7 @@
     ??? example "Examples"
         - microsoft/linux-package-repositories#208
         - microsoft/vscode-python#25047
+        - microsoft/vscode-python-debugger#709
         - microsoft/vscode-jupyter#16622
 
 
