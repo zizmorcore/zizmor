@@ -1,6 +1,6 @@
 # Welcome to `zizmor`'s documentation!
 
-[![CI](https://github.com/woodruffw/zizmor/actions/workflows/ci.yml/badge.svg)](https://github.com/woodruffw/zizmor/actions/workflows/ci.yml)
+[![CI](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml/badge.svg)](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/zizmor)](https://crates.io/crates/zizmor)
 [![Packaging status](https://repology.org/badge/tiny-repos/zizmor.svg)](https://repology.org/project/zizmor/versions)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/woodruffw?style=flat&logo=githubsponsors&labelColor=white&color=white)](https://github.com/sponsors/woodruffw)

@@ -57,10 +57,10 @@ description: Installation instructions for zizmor.
 
 === ":simple-docker: Docker"
 
-    An official `zizmor` image is available from the [GitHub Container Registry](https://ghcr.io/woodruffw/zizmor):
+    An official `zizmor` image is available from the [GitHub Container Registry](https://ghcr.io/zizmorcore/zizmor):
 
     ```bash
-    docker pull ghcr.io/woodruffw/zizmor:latest
+    docker pull ghcr.io/zizmorcore/zizmor:latest
     ```
 
 === ":simple-anaconda: Conda"
@@ -117,7 +117,7 @@ description: Installation instructions for zizmor.
     !!! info
 
         Are you interested in packaging `zizmor` for another ecosystem?
-        Let us know by [filing an issue](https://github.com/woodruffw/zizmor/issues/new)!
+        Let us know by [filing an issue](https://github.com/zizmorcore/zizmor/issues/new)!
 
     The badge below tracks `zizmor`'s overall packaging status.
 
@@ -136,5 +136,5 @@ description: Installation instructions for zizmor.
 You can install the latest unstable `zizmor` directly from GitHub with `cargo`:
 
 ```bash
-cargo install --git https://github.com/woodruffw/zizmor
+cargo install --git https://github.com/zizmorcore/zizmor
 ```
