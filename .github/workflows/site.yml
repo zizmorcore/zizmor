@@ -36,7 +36,7 @@ jobs:
         run: make site
 
       - name: Setup Pages
-        if: github.repository_owner == 'woodruffw'
+        if: github.repository_owner == 'zizmorcore'
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
 
       - name: Upload artifact
@@ -45,6 +45,6 @@ jobs:
           path: site_html
 
       - name: Deploy to GitHub Pages
-        if: github.repository_owner == 'woodruffw'
+        if: github.repository_owner == 'zizmorcore'
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

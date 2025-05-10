@@ -38,7 +38,7 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
         with:
           script: |
-            let url = `https://github.com/woodruffw/zizmor/security/code-scanning?query=pr%3A${context.issue.number}+is%3Aopen+sort%3Acreated-desc`
+            let url = `https://github.com/zizmorcore/zizmor/security/code-scanning?query=pr%3A${context.issue.number}+is%3Aopen+sort%3Acreated-desc`
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

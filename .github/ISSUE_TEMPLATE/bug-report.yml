@@ -28,7 +28,7 @@ body:
           required: true
         - label: >-
             I have looked through the
-            [open issues](https://github.com/woodruffw/zizmor/issues?q=is%3Aissue+is%3Aopen+)
+            [open issues](https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue+is%3Aopen+)
             for a duplicate report.
           required: true
 
