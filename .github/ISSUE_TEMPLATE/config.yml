@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Discussions Forum
-    url: https://github.com/woodruffw/zizmor/discussions
+    url: https://github.com/zizmorcore/zizmor/discussions
     about: Please ask and answer questions here.
   - name: Security Reports
-    url: https://github.com/woodruffw/zizmor/security/advisories
+    url: https://github.com/zizmorcore/zizmor/security/advisories
     about: Please report potential security vulnerabilities here.

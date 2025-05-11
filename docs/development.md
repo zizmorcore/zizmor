@@ -10,7 +10,7 @@ description: Development tasks and processes.
     For more general information on *how and what* to contribute to `zizmor`,
     see our [CONTRIBUTING.md].
 
-[CONTRIBUTING.md]: https://github.com/woodruffw/zizmor/blob/main/CONTRIBUTING.md
+[CONTRIBUTING.md]: https://github.com/zizmorcore/zizmor/blob/main/CONTRIBUTING.md
 
 ## General development practices
 
@@ -45,7 +45,7 @@ You can install Rust by following the steps on [Rust's official website].
 `zizmor` is a pure Rust codebase, and can be built with a single `cargo build`:
 
 ```bash
-git clone https://github.com/woodruffw/zizmor && cd zizmor
+git clone https://github.com/zizmorcore/zizmor && cd zizmor
 cargo build
 # cargo run -- --help also works
 ./target/debug/zizmor --help

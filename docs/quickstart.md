@@ -74,15 +74,15 @@ Here are some different ways you can run `zizmor` locally:
     given a GitHub API token via `GH_TOKEN` or `--gh-token`:
 
     ```bash
-    # audit all workflows and composite actions in woodruffw/zizmor
+    # audit all workflows and composite actions in zizmorcore/zizmor
     # assumes you have `gh` installed
-    zizmor --gh-token=$(gh auth token) woodruffw/zizmor
+    zizmor --gh-token=$(gh auth token) zizmorcore/zizmor
     ```
 
     Multiple repositories will also work:
 
     ```bash
-    zizmor --gh-token=$(gh auth token) woodruffw/zizmor woodruffw/gha-hazmat
+    zizmor --gh-token=$(gh auth token) zizmorcore/zizmor zizmorcore/gha-hazmat
     ```
 
 See [Usage](./usage.md) for more examples, including examples of configuration.

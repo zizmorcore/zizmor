@@ -1,4 +1,4 @@
-# reproduction case for https://github.com/woodruffw/zizmor/pull/317
+# reproduction case for https://github.com/zizmorcore/zizmor/pull/317
 
 name: PR-317-REPRO
 on:

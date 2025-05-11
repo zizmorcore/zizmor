@@ -120,6 +120,9 @@ maxmind/GeoIP2-node#1387
 MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
 microsoft/linux-package-repositories#208
+microsoft/vscode-python#25047
+microsoft/vscode-python-debugger#709
+microsoft/vscode-jupyter#16622
 mkuf/prind#183
 mne-tools/mne-python#13011
 MoarVM/MoarVM#1875
@@ -157,6 +160,7 @@ pypa/packaging.python.org#1765
 pypa/pip-audit#851
 pypi/stdlib-list#138
 pypi/warehouse#16996
+pypi/warehouse#18103
 pymc-devs/pymc#7624
 pymc-devs/pytensor#1136
 pytest-dev/pytest#13062

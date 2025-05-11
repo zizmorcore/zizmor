@@ -566,6 +566,8 @@ two primary ways to use `zizmor` in GitHub Actions:
       pull_request:
         branches: ["**"]
 
+    permissions: {}
+
     jobs:
       zizmor:
         name: zizmor latest via PyPI
@@ -680,7 +682,7 @@ two primary ways to use `zizmor` in GitHub Actions:
 
 [code scanning functionality]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
 
-[repository workflow scan]: https://github.com/woodruffw/zizmor/blob/main/.github/workflows/zizmor.yml
+[repository workflow scan]: https://github.com/zizmorcore/zizmor/blob/main/.github/workflows/zizmor.yml
 
 [running ESLint]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github#example-workflow-that-runs-the-eslint-analysis-tool
 
@@ -710,7 +712,7 @@ GH_HOST=custom.ghe.com zizmor ...
 To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
-- repo: https://github.com/woodruffw/zizmor-pre-commit
+- repo: https://github.com/zizmorcore/zizmor-pre-commit
   rev: v1.7.0 # (1)!
   hooks:
   - id: zizmor

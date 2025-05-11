@@ -5,7 +5,7 @@ site_url: https://docs.zizmor.sh/
 docs_dir: docs
 site_dir: site_html
 dev_addr: "127.0.0.1:9999"
-repo_url: https://github.com/woodruffw/zizmor
+repo_url: https://github.com/zizmorcore/zizmor
 edit_uri: edit/main/docs
 
 nav:
@@ -110,8 +110,8 @@ exclude_docs: |
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/woodruffw/zizmor
-      name: "woodruffw/zizmor on GitHub"
+      link: https://github.com/zizmorcore/zizmor
+      name: "zizmorcore/zizmor on GitHub"
     - icon: fontawesome/brands/mastodon
       link: https://infosec.exchange/@yossarian
       name: "@yossarian@infosec.exchange on Mastodon"

@@ -1,6 +1,6 @@
 # Adapted from :
 # https://github.com/python/cpython/blob/e2325c9db0650fc06d909eb2b5930c0573f24f71/.github/workflows/jit.yml
-# See also https://github.com/woodruffw/zizmor/issues/22#issuecomment-2543128489
+# See also https://github.com/zizmorcore/zizmor/issues/22#issuecomment-2543128489
 
 name: JIT
 on:

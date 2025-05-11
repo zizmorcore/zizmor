@@ -16,7 +16,7 @@ on:
 permissions: {}
 
 env:
-  ZIZMOR_IMAGE: ghcr.io/woodruffw/zizmor
+  ZIZMOR_IMAGE: ghcr.io/zizmorcore/zizmor
 
 jobs:
   build:
@@ -60,7 +60,7 @@ jobs:
 
       - name: Login to GHCR
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v6
-        if: github.repository_owner == 'woodruffw'
+        if: github.repository_owner == 'zizmorcore'
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}"
@@ -113,7 +113,7 @@ jobs:
 
       - name: Login to GHCR
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v6
-        if: github.repository_owner == 'woodruffw'
+        if: github.repository_owner == 'zizmorcore'
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}

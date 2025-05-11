@@ -540,6 +540,9 @@
 
     ??? example "Examples"
         - microsoft/linux-package-repositories#208
+        - microsoft/vscode-python#25047
+        - microsoft/vscode-python-debugger#709
+        - microsoft/vscode-jupyter#16622
 
 
 -   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf
@@ -783,6 +786,7 @@
     ??? example "Examples"
         - pypi/stdlib-list#138
         - pypi/warehouse#16996
+        - pypi/warehouse#18103
 
 
 -   ![](https://github.com/pytest-dev.png?size=40){ width="40" loading=lazy align=left } pytest-dev
