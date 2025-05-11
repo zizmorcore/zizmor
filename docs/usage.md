@@ -566,6 +566,8 @@ two primary ways to use `zizmor` in GitHub Actions:
       pull_request:
         branches: ["**"]
 
+    permissions: {}
+
     jobs:
       zizmor:
         name: zizmor latest via PyPI
