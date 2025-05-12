@@ -266,7 +266,7 @@ def walk_schema(
             else:
                 yield from walk_schema(
                     items,
-                    f"{top}.[*]",
+                    f"{top}.*",
                 )
         case "boolean" | "integer" | "number" | "null":
             yield (top, "fixed")
