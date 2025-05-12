@@ -2,7 +2,7 @@ use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    expr::{self, Context, Expr},
+    expr::{self, Expr, context::Context},
     finding::{Confidence, Severity},
     models::{JobExt, StepCommon},
 };

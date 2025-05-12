@@ -1,97 +1,17 @@
 //! Expression parsing and analysis.
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
+use context::Context;
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 use pest_derive::Parser;
+
+pub(crate) mod context;
 
 /// A parser for GitHub Actions' expression language.
 #[derive(Parser)]
 #[grammar = "expr/expr.pest"]
 struct ExprParser;
-
-#[derive(Debug)]
-pub(crate) struct Context<'src> {
-    raw: &'src str,
-    pub(crate) components: Vec<Expr<'src>>,
-}
-
-impl<'src> Context<'src> {
-    pub(crate) fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
-        Self {
-            raw,
-            components: components.into(),
-        }
-    }
-
-    pub(crate) fn as_str(&self) -> &str {
-        self.raw
-    }
-
-    pub(crate) fn components(&self) -> &[Expr<'src>] {
-        &self.components
-    }
-
-    pub(crate) fn child_of(&self, parent: impl TryInto<Context<'src>>) -> bool {
-        let Ok(parent) = parent.try_into() else {
-            return false;
-        };
-
-        let mut parent_components = parent.components().iter().peekable();
-        let mut child_components = self.components().iter().peekable();
-
-        while let (Some(parent), Some(child)) = (parent_components.peek(), child_components.peek())
-        {
-            match (parent, child) {
-                (Expr::Identifier(parent), Expr::Identifier(child)) => {
-                    if parent != child {
-                        return false;
-                    }
-                }
-                _ => return false,
-            }
-
-            parent_components.next();
-            child_components.next();
-        }
-
-        // If we've exhausted the parent, then the child is a true child.
-        parent_components.next().is_none()
-    }
-
-    /// Returns the tail of the context if the head matches the given string.
-    pub(crate) fn pop_if(&self, head: &str) -> Option<&str> {
-        match self.components().first()? {
-            Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
-            _ => None,
-        }
-    }
-}
-
-impl<'a> TryFrom<&'a str> for Context<'a> {
-    type Error = anyhow::Error;
-
-    fn try_from(val: &'a str) -> Result<Self> {
-        let expr = Expr::parse(val)?;
-
-        match expr {
-            Expr::Context(ctx) => Ok(ctx),
-            _ => Err(anyhow!("expected context, found {:?}", expr)),
-        }
-    }
-}
-
-impl PartialEq for Context<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.raw.eq_ignore_ascii_case(other.raw)
-    }
-}
-
-impl PartialEq<str> for Context<'_> {
-    fn eq(&self, other: &str) -> bool {
-        self.raw.eq_ignore_ascii_case(other)
-    }
-}
 
 #[derive(Debug)]
 pub(crate) struct Function<'src>(pub(crate) &'src str);
@@ -494,7 +414,7 @@ mod tests {
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use super::{BinOp, Context, Expr, ExprParser, Function, Rule, UnOp};
+    use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
     #[test]
     fn test_function_eq() {
@@ -504,58 +424,6 @@ mod tests {
         assert_eq!(&func, "Foo");
 
         assert_eq!(func, Function("FOO"));
-    }
-
-    #[test]
-    fn test_context_eq() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
-        assert_eq!(&ctx, "foo.bar.baz");
-        assert_eq!(&ctx, "FOO.BAR.BAZ");
-        assert_eq!(&ctx, "Foo.Bar.Baz");
-    }
-
-    #[test]
-    fn test_context_child_of() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
-
-        for (case, child) in &[
-            // Trivial child cases.
-            ("foo", true),
-            ("foo.bar", true),
-            // Case-insensitive cases.
-            ("FOO", true),
-            ("FOO.BAR", true),
-            ("Foo", true),
-            ("Foo.Bar", true),
-            // We consider a context to be a child of itself.
-            ("foo.bar.baz", true),
-            // Trivial non-child cases.
-            ("foo.bar.baz.qux", false),
-            ("foo.bar.qux", false),
-            ("foo.qux", false),
-            ("qux", false),
-            // Invalid cases.
-            ("foo.", false),
-            (".", false),
-            ("", false),
-        ] {
-            assert_eq!(ctx.child_of(*case), *child);
-        }
-    }
-
-    #[test]
-    fn test_context_pop_if() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
-
-        for (case, expected) in &[
-            ("foo", Some("bar.baz")),
-            ("Foo", Some("bar.baz")),
-            ("FOO", Some("bar.baz")),
-            ("foo.", None),
-            ("bar", None),
-        ] {
-            assert_eq!(ctx.pop_if(case), *expected);
-        }
     }
 
     #[test]

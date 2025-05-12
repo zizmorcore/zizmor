@@ -1,6 +1,6 @@
 use crate::{
     Confidence, Severity,
-    expr::{Context, Expr},
+    expr::{Expr, context::Context},
     finding::{Feature, Location},
     utils::parse_expressions_from_input,
 };
