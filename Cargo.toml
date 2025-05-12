@@ -25,14 +25,14 @@ annotate-snippets = "0.11.5"
 anstream = "0.6.18"
 anyhow = "1.0.98"
 camino = { version = "1.1.9", features = ["serde1"] }
-clap = { version = "4.5.37", features = ["derive", "env"] }
+clap = { version = "4.5.38", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.2", features = [
     "tracing",
 ], default-features = false }
 clap_complete = "4.5.50"
 etcetera = "0.10.0"
 flate2 = "1.1.1"
-github-actions-models = "0.28.1"
+github-actions-models = "0.28.2"
 http-cache-reqwest = "0.15.1"
 human-panic = "2.0.1"
 ignore = "0.4.23"
@@ -52,17 +52,17 @@ reqwest = { version = "0.12.15", features = [
 ], default-features = false }
 reqwest-middleware = "0.4.2"
 serde = { version = "1.0.219", features = ["derive"] }
-serde-sarif = "0.7.0"
+serde-sarif = "0.8.0"
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
 tar = "0.4.44"
 terminal-link = "0.1.0"
 thiserror = "2.0.12"
-tokio = { version = "1.44.2", features = ["rt-multi-thread"] }
+tokio = { version = "1.45.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-indicatif = "0.3.9"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-tree-sitter = "0.25.2"
+tree-sitter = "0.25.4"
 tree-sitter-bash = "0.23.3"
 tree-sitter-powershell = "0.25.2"
 yamlpath = "0.16.0"
