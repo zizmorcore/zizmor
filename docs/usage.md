@@ -502,6 +502,14 @@ the `--config` argument. With `--config`, the file can be named anything:
 zizmor --config my-zizmor-config.yml /dir/to/audit
 ```
 
+!!! tip
+
+    Starting with `v1.8.0`, you can use the `ZIZMOR_CONFIG` environment
+    variable to specify a configuration file.
+
+    `ZIZMOR_CONFIG=my-config.yml` is equivalent to
+    `--config my-config.yml`.
+
 [will discover it]: ./configuration.md#precedence
 
 See [Configuration: `rules.<id>.ignore`](./configuration.md#rulesidignore) for
