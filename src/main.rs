@@ -89,7 +89,7 @@ struct App {
 
     /// The configuration file to load. By default, any config will be
     /// discovered relative to $CWD.
-    #[arg(short, long, group = "conf")]
+    #[arg(short, long, env = "ZIZMOR_CONFIG", group = "conf")]
     config: Option<Utf8PathBuf>,
 
     /// Disable all configuration loading.

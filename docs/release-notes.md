@@ -22,6 +22,11 @@ of `zizmor`.
   will redirect to the new one, but users should update any old
   links to limit confusion
 
+### New Features 🌈
+
+* `zizmor` now supports the `ZIZMOR_CONFIG` environment variable as an
+  alternative to `--config`
+
 ## v1.7.0
 
 This release comes with **four** new audits: [obfuscation], [stale-action-refs],
