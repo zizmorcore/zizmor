@@ -44,6 +44,8 @@ Options:
           Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows-only, actions-only]
       --strict-collection
           Fail instead of warning on syntax and schema errors in collected inputs
+      --completions <SHELL>
+          Generate tab completion scripts for the specified shell [possible values: bash, elvish, fish, powershell, zsh]
   -h, --help
           Print help (see more with '--help')
   -V, --version

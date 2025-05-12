@@ -38,7 +38,7 @@ early contribution.
 To work on one of these, **please leave a comment** on its issue before opening
 a pull request to make sure nobody else duplicates your work!
 
-["good first issue"]: https://github.com/woodruffw/zizmor/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
+["good first issue"]: https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
 
 ### Writing documentation
 
@@ -47,16 +47,16 @@ documentation!
 
 Here are some things we could use help with:
 
-* Improving our [CLI usage recipes](https://woodruffw.github.io/zizmor/usage/).
+* Improving our [CLI usage recipes](https://docs.zizmor.sh/usage/).
 * Improving the detail in our
-  [audit documentation pages](https://woodruffw.github.io/zizmor/audits/).
+  [audit documentation pages](https://docs.zizmor.sh/audits/).
 * Improving our internal (Rust API) documentation, especially in conjunction
   with more unit tests.
 
 More generally, see [issues labeled with `documentation`] for a potential
 list of documentation efforts to contribute on.
 
-[issues labeled with `documentation`]: https://github.com/woodruffw/zizmor/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation
+[issues labeled with `documentation`]: https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation
 
 ### Writing unit tests
 
@@ -76,9 +76,9 @@ labels. These can sometimes be tricky to address, so we recommend
 (but don't require) leaving an explanatory comment on the issue before
 beginning a pull request.
 
-["false positive"]: https://github.com/woodruffw/zizmor/issues?q=is%3Aopen+label%3Afalse-positive
+["false positive"]: https://github.com/zizmorcore/zizmor/issues?q=is%3Aopen+label%3Afalse-positive
 
-["false negative"]: https://github.com/woodruffw/zizmor/issues?q=is%3Aopen+label%3Afalse-negative
+["false negative"]: https://github.com/zizmorcore/zizmor/issues?q=is%3Aopen+label%3Afalse-negative
 
-[development docs]: https://woodruffw.github.io/zizmor/development/
+[development docs]: https://docs.zizmor.sh/development/
 

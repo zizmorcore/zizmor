@@ -113,7 +113,7 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         // to ensure something reasonable is presented.
         // This ends up being OK since the only other thing we'd put here
         // is the finding's description, which is already in the rule's help message.
-        // See https://github.com/woodruffw/zizmor/issues/526 for context.
+        // See https://github.com/zizmorcore/zizmor/issues/526 for context.
         .message(&primary.symbolic.annotation)
         .locations(build_locations(std::iter::once(primary)))
         .related_locations(build_locations(
@@ -121,15 +121,8 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
                 .visible_locations()
                 .filter(|l| !l.symbolic.is_primary()),
         ))
-        // TODO: https://github.com/psastras/sarif-rs/pull/770
-        .level(
-            serde_json::to_value(ResultLevel::from(finding.determinations.severity))
-                .expect("failed to serialize SARIF result level"),
-        )
-        .kind(
-            serde_json::to_value(ResultKind::from(finding.determinations.severity))
-                .expect("failed to serialize SARIF result kind"),
-        )
+        .level(ResultLevel::from(finding.determinations.severity))
+        .kind(ResultKind::from(finding.determinations.severity))
         .build()
 }
 

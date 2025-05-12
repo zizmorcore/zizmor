@@ -9,6 +9,30 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Announcements 📣
+
+* `zizmor`'s website has changed! The new website is hosted at
+  [docs.zizmor.sh](https://docs.zizmor.sh/). The old website will
+  redirect to the new one for a while, but users should update any
+  old links in preparation for the v1.8.0 release, which will likely
+  remove the redirects entirely (#769)
+
+* `zizmor` is now hosted under the @zizmorcore GitHub organization
+  as @zizmorcore/zizmor. The old repository at @woodruffw/zizmor
+  will redirect to the new one, but users should update any old
+  links to limit confusion
+
+## v1.7.0
+
+This release comes with **four** new audits: [obfuscation], [stale-action-refs],
+[unsound-contains], and [unpinned-images]. It also includes several
+improvements to existing audits and zizmor's output formats and error
+reporting behavior.
+
+Additionally, this release comes with bugfixes for the SARIF output format
+as well as input collection in some edge cases when collecting
+from remote repositories.
+
 ### New Features 🌈
 
 * **New audit**: The [obfuscation] audit detects obfuscatory patterns in
@@ -41,12 +65,13 @@ of `zizmor`.
   which was to terminate the audit if any collected input could
   not be parsed (#734)
 
-### Enhancements 🌱
-
 * The [forbidden-uses] audit can now be configured with patterns that
   match exact `uses:` clauses, including refs. For example,
   exactly `actions/checkout@v4` can now be explicitly allowed or forbidden,
   rather than every ref that matches `actions/checkout` (#750)
+
+* `zizmor` now has a `--completions=<shell>` flag that generates
+  shell completion scripts (#765)
 
 ### Bug Fixes 🐛
 
@@ -59,6 +84,14 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would fail to collection actions defined
   within subdirectories of `.github/workflows` when collecting from
   a remote source (#731)
+
+### Upcoming Changes 🚧
+
+* Starting with v1.8.0, `zizmor` will migrate from @woodruffw
+  on GitHub to @zizmorcore. This should not cause any breakage
+  as GitHub will handle redirects, but users who explicitly reference
+  @woodruffw/zizmor should consider updating their references to
+  @zizmorcore/zizmor once the migration occurs. See #758 for details.
 
 ## v1.6.0
 
@@ -190,13 +223,13 @@ This is a small corrective release for v1.4.0.
 This release comes with one new audit ([unredacted-secrets]), plus a handful
 of bugfixes and analysis improvements to existing audits. It also comes
 with improvements to SARIF presentation, ignore comments, as well as an
-[official Docker image](https://ghcr.io/woodruffw/zizmor)!
+[official Docker image](https://ghcr.io/zizmorcore/zizmor)!
 
 ### New Features 🌈
 
 * `zizmor` now has official Docker images! You can find them on the
   GitHub Container Registry under
-  [`ghcr.io/woodruffw/zizmor`](https://ghcr.io/woodruffw/zizmor) (#532)
+  [`ghcr.io/zizmorcore/zizmor`](https://ghcr.io/zizmorcore/zizmor) (#532)
 * **New audit**: [unredacted-secrets] detects secret accesses that
   are not redacted in logs (#549)
 
@@ -300,7 +333,7 @@ One bugfix in this release is also a slight behavior change: `zizmor`
 now emits SARIF outputs with absolute paths. This should not affect most
 users, but may make it slightly harder to share SARIF outputs between
 machines without fully reproducing exact file paths. If this affects
-you, [please let us know](https://github.com/woodruffw/zizmor/issues/new?template=bug-report.yml)!
+you, [please let us know](https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml)!
 
 ### New Features 🌈
 
@@ -435,7 +468,7 @@ as stability commitments for existing features; read more below!
 
 ## v0.10.0
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.9.2...v0.10.0
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.9.2...v0.10.0
 
 ### New Features 🌈
 * feat: handle powershell in github-env audit by @woodruffw in #227
@@ -464,7 +497,7 @@ as stability commitments for existing features; read more below!
 
 ## v0.9.2
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.9.1...v0.9.2
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.9.1...v0.9.2
 
 ### Bug Fixes 🐛
 * fix: template-injection: consider runner.tool_cache safe by @woodruffw in #297
@@ -474,7 +507,7 @@ as stability commitments for existing features; read more below!
 
 ## v0.9.1
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.9.0...v0.9.1
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.9.0...v0.9.1
 
 ### Bug Fixes 🐛
 
@@ -482,7 +515,7 @@ as stability commitments for existing features; read more below!
 
 ## v0.9.0
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.8.0...v0.9.0
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.8.0...v0.9.0
 
 ### New Features 🌈
 * refactor: experiment with tracing by @woodruffw in #232
@@ -515,7 +548,7 @@ as stability commitments for existing features; read more below!
 
 ## v0.8.0
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.7.0...v0.8.0
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.7.0...v0.8.0
 
 ### New Features 🌈
 * feat: remote auditing by @woodruffw in #230
@@ -531,7 +564,7 @@ as stability commitments for existing features; read more below!
 
 ## v0.7.0
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.6.0...v0.7.0
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.6.0...v0.7.0
 
 ### New Features 🌈
 * Split unpinned-uses into two separate checks by @funnelfiasco in #205
@@ -550,7 +583,7 @@ as stability commitments for existing features; read more below!
 
 ## v0.6.0
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.5.0...v0.6.0
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.5.0...v0.6.0
 
 This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
@@ -582,7 +615,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.5,0
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.4.0...v0.5.0
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.4.0...v0.5.0
 
 ### New Features 🌈
 * feat: improve workflow registry error by @woodruffw in #172
@@ -599,7 +632,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.4.0
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.3.2...v0.4.0
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.3.2...v0.4.0
 
 ### New Features 🌈
 * Fix singular and plural for 'findings' by @hugovk in #162
@@ -610,7 +643,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.3.2
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.3.1...v0.3.2
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.3.1...v0.3.2
 
 ### What's Changed
 * fix(cli): remove '0 ignored' from another place by @woodruffw in #157
@@ -619,7 +652,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.3.1
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.3.0...v0.3.1
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.3.0...v0.3.1
 
 ### What's Changed
 * feat(cli): don't render "0 ignored" by @woodruffw in #148
@@ -630,7 +663,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.3.0
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.2.1...v0.3.0
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.2.1...v0.3.0
 
 ### What's Changed
 
@@ -641,7 +674,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.2.1
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.2.0...v0.2.1
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.2.0...v0.2.1
 
 ### What's Changed
 * refactor: clean up expr APIs slightly by @woodruffw in #126
@@ -651,7 +684,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.2.0
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.1.6...v0.2.0
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.1.6...v0.2.0
 
 ### What's Changed
 * chore: add description to `--help` by @woodruffw in #111
@@ -667,14 +700,14 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.1.6
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.1.5...v0.1.6
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.1.5...v0.1.6
 
 ### What's Changed
 * feat: accept multiple arguments as inputs by @miketheman in #104
 
 ## v0.1.5
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.1.4...v0.1.5
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.1.4...v0.1.5
 
 ### What's Changed
 * Exclude `github.run_*` from template injection check by @funnelfiasco in #92
@@ -692,7 +725,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.1.4
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.1.3...v0.1.4
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.1.3...v0.1.4
 
 ### What's Changed
 * perf: Enable Link-Time Optimization (LTO) by @zamazan4ik in #81
@@ -708,14 +741,14 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.1.3
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.1.2...v0.1.3
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.1.2...v0.1.3
 
 ### What's Changed
 * fix: use relative workflow paths in SARIF output by @woodruffw in #77
 
 ## v0.1.2
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.1.1...v0.1.2
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.1.1...v0.1.2
 
 ### What's Changed
 * feat: github.ref_name is always an injection risk by @woodruffw in #67
@@ -730,7 +763,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ## v0.1.1
 
-**Full Changelog**: https://github.com/woodruffw/zizmor/compare/v0.1.0...v0.1.1
+**Full Changelog**: https://github.com/zizmorcore/zizmor/compare/v0.1.0...v0.1.1
 
 ### What's Changed
 * Fix typo: security -> securely by @hugovk in #61

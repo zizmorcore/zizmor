@@ -122,6 +122,8 @@
 
     ??? example "Examples"
         - curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
+        - curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
+        - curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
         - curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 
 
@@ -538,6 +540,9 @@
 
     ??? example "Examples"
         - microsoft/linux-package-repositories#208
+        - microsoft/vscode-python#25047
+        - microsoft/vscode-python-debugger#709
+        - microsoft/vscode-jupyter#16622
 
 
 -   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf
@@ -648,6 +653,14 @@
     ??? example "Examples"
         - onnx/onnx#6661
         - onnx/onnx#6662
+
+
+-   ![](https://github.com/open-edge-platform.png?size=40){ width="40" loading=lazy align=left } open-edge-platform
+
+    ---
+
+    ??? example "Examples"
+        - open-edge-platform/geti#162
 
 
 -   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
@@ -773,6 +786,7 @@
     ??? example "Examples"
         - pypi/stdlib-list#138
         - pypi/warehouse#16996
+        - pypi/warehouse#18103
 
 
 -   ![](https://github.com/pytest-dev.png?size=40){ width="40" loading=lazy align=left } pytest-dev
@@ -1095,6 +1109,14 @@
 
     ??? example "Examples"
         - wntrblm/nox#925
+
+
+-   ![](https://github.com/zama-ai.png?size=40){ width="40" loading=lazy align=left } zama-ai
+
+    ---
+
+    ??? example "Examples"
+        - zama-ai/tfhe-rs#2292
 
 
 -   ![](https://github.com/zcash.png?size=40){ width="40" loading=lazy align=left } zcash
