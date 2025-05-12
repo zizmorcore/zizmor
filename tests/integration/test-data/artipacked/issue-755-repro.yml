@@ -1,14 +1,20 @@
 # see https://github.com/woodruffw/zizmor/issues/755
 
-name: ISSUE-755-REPRO
-on: push
-
-permissions: {}
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  issue-755-repro:
+  deploy:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        include:
+          - project_name: fake-vm
+            manifests: |
+              kubernetes/fake-vm
+    name: Deploy to Cluster
     steps:
       - name: Checkout
         uses: actions/checkout@v4
