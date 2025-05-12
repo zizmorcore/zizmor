@@ -25,7 +25,7 @@ of `zizmor`.
 ### New Features 🌈
 
 * `zizmor` now supports the `ZIZMOR_CONFIG` environment variable as an
-  alternative to `--config`
+  alternative to `--config` (#789)
 
 ## v1.7.0
 
