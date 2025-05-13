@@ -27,6 +27,14 @@ of `zizmor`.
 * `zizmor` now supports the `ZIZMOR_CONFIG` environment variable as an
   alternative to `--config` (#789)
 
+### Bug Fixes 🐛
+
+* The [template-injection] audit no longer produces false positive findings
+  on alternative representations of the same context pattern.
+  For example, `github.event.pull_request.head.sha` is considered safe
+  but `github['event']['pull_request']['head']['sha']` was not previously
+  detected as equivalent to it (#745)
+
 ## v1.7.0
 
 This release comes with **four** new audits: [obfuscation], [stale-action-refs],
