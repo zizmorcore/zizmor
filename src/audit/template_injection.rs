@@ -10,6 +10,8 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
+use std::sync::LazyLock;
+
 use github_actions_models::{
     common::{Uses, expr::LoE},
     workflow::job::Strategy,
@@ -17,7 +19,7 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    expr::{BinOp, Expr, UnOp},
+    expr::{BinOp, Expr, UnOp, context::ContextPattern},
     finding::{Confidence, Finding, Persona, Severity, SymbolicLocation},
     models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
@@ -32,59 +34,64 @@ audit_meta!(
     "code injection via template expansion"
 );
 
-/// Contexts that are believed to be always safe.
-const SAFE_CONTEXTS: &[&str] = &[
-    // The action path is always safe.
-    "github.action_path",
-    // The GitHub event name (i.e. trigger) is itself safe.
-    "github.event_name",
-    // Safe keys within the otherwise generally unsafe github.event context.
-    "github.event.after",                // hexadecimal SHA ref
-    "github.event.before",               // hexadecimal SHA ref
-    "github.event.issue.number",         // the issue's own number
-    "github.event.merge_group.base_sha", // hexadecimal SHA ref
-    "github.event.number",
-    "github.event.pull_request.base.sha", // hexadecimal SHA ref
-    "github.event.pull_request.head.sha", // hexadecimal SHA ref
-    "github.event.pull_request.head.repo.fork", // boolean
-    "github.event.pull_request.commits",  // number of commits in PR
-    "github.event.pull_request.number",   // the PR's own number
-    "github.event.workflow_run.id",
-    // Corresponds to the job ID, which is workflow-controlled
-    // but can only be [A-Za-z0-9-_].
-    // See: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_id
-    "github.job",
-    // Information about the GitHub repository
-    "github.repository",
-    "github.repository_id",
-    "github.repositoryUrl",
-    // Information about the GitHub repository owner (account/org or ID)
-    "github.repository_owner",
-    "github.repository_owner_id",
-    // Unique numbers assigned by GitHub for workflow runs
-    "github.run_attempt",
-    "github.run_id",
-    "github.run_number",
-    // Typically something like `https://github.com`; you have bigger problems if
-    // this is attacker-controlled.
-    "github.server_url",
-    // Always a 40-char SHA-1 reference.
-    "github.sha",
-    // Like `secrets.*`: not safe to expose, but safe to interpolate.
-    "github.token",
-    // GitHub Actions-controlled local directory.
-    "github.workspace",
-    // GitHub Actions-controller runner architecture.
-    "runner.arch",
-    // Debug logging is (1) or is not (0) enabled on GitHub Actions runner.
-    "runner.debug",
-    // GitHub Actions runner operating system.
-    "runner.os",
-    // GitHub Actions temporary directory, value controlled by the runner itself.
-    "runner.temp",
-    // GitHub Actions cached tool directory, value controlled by the runner itself.
-    "runner.tool_cache",
-];
+/// Context patterns that are believed to be always safe.
+static SAFE_CONTEXT_PATTERNS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    [
+        // The action path is always safe.
+        "github.action_path",
+        // The GitHub event name (i.e. trigger) is itself safe.
+        "github.event_name",
+        // Safe keys within the otherwise generally unsafe github.event context.
+        "github.event.after",                // hexadecimal SHA ref
+        "github.event.before",               // hexadecimal SHA ref
+        "github.event.issue.number",         // the issue's own number
+        "github.event.merge_group.base_sha", // hexadecimal SHA ref
+        "github.event.number",
+        "github.event.pull_request.base.sha", // hexadecimal SHA ref
+        "github.event.pull_request.head.sha", // hexadecimal SHA ref
+        "github.event.pull_request.head.repo.fork", // boolean
+        "github.event.pull_request.commits",  // number of commits in PR
+        "github.event.pull_request.number",   // the PR's own number
+        "github.event.workflow_run.id",
+        // Corresponds to the job ID, which is workflow-controlled
+        // but can only be [A-Za-z0-9-_].
+        // See: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_id
+        "github.job",
+        // Information about the GitHub repository
+        "github.repository",
+        "github.repository_id",
+        "github.repositoryUrl",
+        // Information about the GitHub repository owner (account/org or ID)
+        "github.repository_owner",
+        "github.repository_owner_id",
+        // Unique numbers assigned by GitHub for workflow runs
+        "github.run_attempt",
+        "github.run_id",
+        "github.run_number",
+        // Typically something like `https://github.com`; you have bigger problems if
+        // this is attacker-controlled.
+        "github.server_url",
+        // Always a 40-char SHA-1 reference.
+        "github.sha",
+        // Like `secrets.*`: not safe to expose, but safe to interpolate.
+        "github.token",
+        // GitHub Actions-controlled local directory.
+        "github.workspace",
+        // GitHub Actions-controller runner architecture.
+        "runner.arch",
+        // Debug logging is (1) or is not (0) enabled on GitHub Actions runner.
+        "runner.debug",
+        // GitHub Actions runner operating system.
+        "runner.os",
+        // GitHub Actions temporary directory, value controlled by the runner itself.
+        "runner.temp",
+        // GitHub Actions cached tool directory, value controlled by the runner itself.
+        "runner.tool_cache",
+    ]
+    .iter()
+    .map(|s| ContextPattern::new(s).unwrap())
+    .collect()
+});
 
 impl TemplateInjection {
     fn script_with_location<'s>(
@@ -196,7 +203,7 @@ impl TemplateInjection {
                 if context.child_of("secrets") {
                     // While not ideal, secret expansion is typically not exploitable.
                     continue;
-                } else if SAFE_CONTEXTS.iter().any(|safe| *context == **safe) {
+                } else if SAFE_CONTEXT_PATTERNS.iter().any(|pat| pat.matches(context)) {
                     continue;
                 } else if context.child_of("inputs") {
                     // TODO: Currently low confidence because we don't check the

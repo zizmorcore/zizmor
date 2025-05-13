@@ -1,0 +1,20 @@
+# see https://github.com/zizmorcore/zizmor/issues/749
+
+name: issue-749-repro
+
+on: push
+
+permissions: {}
+
+jobs:
+  inject-me:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # tag=v7.0.1
+        with:
+          # checks that we don't flag known-safe contexts as a finding
+          # just because they're expressed through indices rather than
+          # the normal dotted notation
+          script: |
+            return "doing a thing: ${{ github['event']['issue']['number'] }}"

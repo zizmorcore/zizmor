@@ -25,30 +25,12 @@ impl<'src> Context<'src> {
         &self.parts
     }
 
-    pub(crate) fn child_of(&self, parent: impl TryInto<Context<'src>>) -> bool {
+    pub(crate) fn child_of(&self, parent: impl TryInto<ContextPattern<'src>>) -> bool {
         let Ok(parent) = parent.try_into() else {
             return false;
         };
 
-        let mut parent_parts = parent.parts().iter().peekable();
-        let mut child_parts = self.parts().iter().peekable();
-
-        while let (Some(parent), Some(child)) = (parent_parts.peek(), child_parts.peek()) {
-            match (parent, child) {
-                (Expr::Identifier(parent), Expr::Identifier(child)) => {
-                    if parent != child {
-                        return false;
-                    }
-                }
-                _ => return false,
-            }
-
-            parent_parts.next();
-            child_parts.next();
-        }
-
-        // If we've exhausted the parent, then the child is a true child.
-        parent_parts.next().is_none()
+        parent.parent_of(self)
     }
 
     /// Returns the tail of the context if the head matches the given string.
@@ -56,19 +38,6 @@ impl<'src> Context<'src> {
         match self.parts().first()? {
             Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
             _ => None,
-        }
-    }
-}
-
-impl<'a> TryFrom<&'a str> for Context<'a> {
-    type Error = anyhow::Error;
-
-    fn try_from(val: &'a str) -> anyhow::Result<Self> {
-        let expr = Expr::parse(val)?;
-
-        match expr {
-            Expr::Context(ctx) => Ok(ctx),
-            _ => Err(anyhow::anyhow!("expected context, found {:?}", expr)),
         }
     }
 }
@@ -83,6 +52,11 @@ impl PartialEq<str> for Context<'_> {
     fn eq(&self, other: &str) -> bool {
         self.raw.eq_ignore_ascii_case(other)
     }
+}
+
+enum Comparison {
+    Child,
+    Match,
 }
 
 /// A `ContextPattern` is a pattern that matches one or more contexts.
@@ -101,6 +75,14 @@ pub(crate) struct ContextPattern<'src>(
     // TODO: Vec instead?
     &'src str,
 );
+
+impl<'src> TryFrom<&'src str> for ContextPattern<'src> {
+    type Error = anyhow::Error;
+
+    fn try_from(val: &'src str) -> anyhow::Result<Self> {
+        Self::new(val).ok_or_else(|| anyhow::anyhow!("invalid context pattern"))
+    }
+}
 
 impl<'src> ContextPattern<'src> {
     pub(crate) fn new(pattern: &'src str) -> Option<Self> {
@@ -128,26 +110,30 @@ impl<'src> ContextPattern<'src> {
         }
     }
 
-    pub(crate) fn matches(&self, ctx: &Context<'src>) -> bool {
+    fn compare(&self, ctx: &Context<'src>) -> Option<Comparison> {
         let mut pattern_parts = self.0.split('.').peekable();
         let mut ctx_parts = ctx.parts().iter().peekable();
 
         while let (Some(pattern), Some(part)) = (pattern_parts.peek(), ctx_parts.peek()) {
+            // TODO: Refactor this; it's way too hard to read.
             match (*pattern, part) {
+                // Calls can't be compared to patterns.
+                (_, Expr::Call { .. }) => return None,
                 // "*" matches any part.
                 ("*", _) => {}
+                (_, Expr::Star) => return None,
                 (pattern, Expr::Identifier(part)) if !pattern.eq_ignore_ascii_case(part.0) => {
-                    return false;
+                    return None;
                 }
                 (pattern, Expr::Index(idx)) => {
                     // Anything other than a string index is invalid
                     // for part-wise comparison.
                     let Expr::String(part) = idx.as_ref() else {
-                        return false;
+                        return None;
                     };
 
-                    if pattern != part {
-                        return false;
+                    if !pattern.eq_ignore_ascii_case(part) {
+                        return None;
                     }
                 }
                 _ => {}
@@ -157,14 +143,53 @@ impl<'src> ContextPattern<'src> {
             ctx_parts.next();
         }
 
-        // Both should be exhausted.
-        pattern_parts.next().is_none() && ctx_parts.next().is_none()
+        match (pattern_parts.next(), ctx_parts.next()) {
+            // If both are exhausted, we have an exact match.
+            (None, None) => Some(Comparison::Match),
+            // If the pattern is exhausted but the context isn't, then
+            // the context is a child of the pattern.
+            (None, Some(_)) => Some(Comparison::Child),
+            _ => None,
+        }
+    }
+
+    /// Returns true if the given context is a child of the pattern.
+    ///
+    /// This is a loose parent-child relationship; for example, `foo` is its
+    /// own parent, as well as the parent of `foo.bar` and `foo.bar.baz`.
+    pub(crate) fn parent_of(&self, ctx: &Context<'src>) -> bool {
+        matches!(
+            self.compare(ctx),
+            Some(Comparison::Child | Comparison::Match)
+        )
+    }
+
+    /// Returns true if the given context exactly matches the pattern.
+    ///
+    /// See [`ContextPattern`] for a description of the matching rules.
+    pub(crate) fn matches(&self, ctx: &Context<'src>) -> bool {
+        matches!(self.compare(ctx), Some(Comparison::Match))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::expr::Expr;
+
     use super::{Context, ContextPattern};
+
+    impl<'a> TryFrom<&'a str> for Context<'a> {
+        type Error = anyhow::Error;
+
+        fn try_from(val: &'a str) -> anyhow::Result<Self> {
+            let expr = Expr::parse(val)?;
+
+            match expr {
+                Expr::Context(ctx) => Ok(ctx),
+                _ => Err(anyhow::anyhow!("expected context, found {:?}", expr)),
+            }
+        }
+    }
 
     #[test]
     fn test_context_eq() {
@@ -250,6 +275,34 @@ mod tests {
     }
 
     #[test]
+    fn test_contextpattern_parent_of() {
+        for (pattern, ctx, expected) in &[
+            // Exact contains.
+            ("foo", "foo", true),
+            ("foo.bar", "foo.bar", true),
+            ("foo.bar", "foo['bar']", true),
+            ("foo.bar", "foo['BAR']", true),
+            // Parent relationships
+            ("foo", "foo.bar", true),
+            ("foo.bar", "foo.bar.baz", true),
+            ("foo.*", "foo.bar", true),
+            ("foo.*.baz", "foo.bar.baz", true),
+            ("foo.*.*", "foo.bar.baz.qux", true),
+            ("foo", "foo.bar.baz.qux", true),
+            ("foo.*", "foo.bar.baz.qux", true),
+            (
+                "secrets",
+                "fromJson(steps.runs.outputs.data).workflow_runs[0].id",
+                false,
+            ),
+        ] {
+            let pattern = ContextPattern::new(pattern).unwrap();
+            let ctx = Context::try_from(*ctx).unwrap();
+            assert_eq!(pattern.parent_of(&ctx), *expected);
+        }
+    }
+
+    #[test]
     fn test_context_pattern_matches() {
         for (pattern, ctx, expected) in &[
             // Normal matches.
@@ -274,17 +327,25 @@ mod tests {
             ("FOO.*.*", "foo.bar.baz", true),
             // Indices also match correctly.
             ("foo.bar.baz.*", "foo.bar.baz[0]", true),
+            ("foo.bar.baz.*", "foo.bar.baz[123]", true),
             ("foo.bar.baz.*", "foo.bar.baz['abc']", true),
             ("foo.bar.baz.*", "foo['bar']['baz']['abc']", true),
+            ("foo.bar.baz.*", "foo['bar']['BAZ']['abc']", true),
+            // Contexts containing stars match correctly.
+            ("foo.bar.baz.*", "foo.bar.baz.*", true),
+            ("foo.bar.*.*", "foo.bar.*.*", true),
+            ("foo.bar.baz.qux", "foo.bar.baz.*", false), // patterns are one way
+            ("foo.bar.baz.qux", "foo.bar.baz[*]", false), // patterns are one way
             // False normal matches.
-            ("foo.bar", "foo.baz", false),    // different identifier
-            ("foo.bar", "foo['baz']", false), // different index
+            ("foo", "bar", false),                     // different identifier
+            ("foo.bar", "foo.baz", false),             // different identifier
+            ("foo.bar", "foo['baz']", false),          // different index
             ("foo.bar.baz", "foo.bar.baz.qux", false), // pattern too short
-            ("foo.bar.baz", "foo.bar", false), // context too short
-            ("foo.*.baz", "foo.bar.baz.qux", false), // pattern too short
-            ("foo.*.qux", "foo.bar.baz.qux", false), // * does not match multiple parts
-            ("foo.*.*", "foo.bar.baz.qux", false), // pattern too short
-            ("foo.1", "foo[1]", false),       // .1 means a string key, not an index
+            ("foo.bar.baz", "foo.bar", false),         // context too short
+            ("foo.*.baz", "foo.bar.baz.qux", false),   // pattern too short
+            ("foo.*.qux", "foo.bar.baz.qux", false),   // * does not match multiple parts
+            ("foo.*.*", "foo.bar.baz.qux", false),     // pattern too short
+            ("foo.1", "foo[1]", false),                // .1 means a string key, not an index
         ] {
             let pattern = ContextPattern::new(pattern).unwrap();
             let ctx = Context::try_from(*ctx).unwrap();
