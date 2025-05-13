@@ -75,9 +75,7 @@ impl BotConditions {
                 func: _,
                 args: exprs,
             }
-            | Expr::Context(Context {
-                components: exprs, ..
-            }) => exprs
+            | Expr::Context(Context { parts: exprs, .. }) => exprs
                 .iter()
                 .map(|arg| Self::walk_tree_for_bot_condition(arg, false))
                 .reduce(|(bc, _), (bc_next, _)| (bc || bc_next, false))

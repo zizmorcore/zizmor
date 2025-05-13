@@ -6,14 +6,14 @@ use super::Expr;
 #[derive(Debug)]
 pub(crate) struct Context<'src> {
     raw: &'src str,
-    pub(crate) components: Vec<Expr<'src>>,
+    pub(crate) parts: Vec<Expr<'src>>,
 }
 
 impl<'src> Context<'src> {
-    pub(crate) fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
+    pub(crate) fn new(raw: &'src str, parts: impl Into<Vec<Expr<'src>>>) -> Self {
         Self {
             raw,
-            components: components.into(),
+            parts: parts.into(),
         }
     }
 
@@ -21,8 +21,8 @@ impl<'src> Context<'src> {
         self.raw
     }
 
-    pub(crate) fn components(&self) -> &[Expr<'src>] {
-        &self.components
+    pub(crate) fn parts(&self) -> &[Expr<'src>] {
+        &self.parts
     }
 
     pub(crate) fn child_of(&self, parent: impl TryInto<Context<'src>>) -> bool {
@@ -30,11 +30,10 @@ impl<'src> Context<'src> {
             return false;
         };
 
-        let mut parent_components = parent.components().iter().peekable();
-        let mut child_components = self.components().iter().peekable();
+        let mut parent_parts = parent.parts().iter().peekable();
+        let mut child_parts = self.parts().iter().peekable();
 
-        while let (Some(parent), Some(child)) = (parent_components.peek(), child_components.peek())
-        {
+        while let (Some(parent), Some(child)) = (parent_parts.peek(), child_parts.peek()) {
             match (parent, child) {
                 (Expr::Identifier(parent), Expr::Identifier(child)) => {
                     if parent != child {
@@ -44,17 +43,17 @@ impl<'src> Context<'src> {
                 _ => return false,
             }
 
-            parent_components.next();
-            child_components.next();
+            parent_parts.next();
+            child_parts.next();
         }
 
         // If we've exhausted the parent, then the child is a true child.
-        parent_components.next().is_none()
+        parent_parts.next().is_none()
     }
 
     /// Returns the tail of the context if the head matches the given string.
     pub(crate) fn pop_if(&self, head: &str) -> Option<&str> {
-        match self.components().first()? {
+        match self.parts().first()? {
             Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
             _ => None,
         }
@@ -105,16 +104,17 @@ pub(crate) struct ContextPattern<'src>(
 
 impl<'src> ContextPattern<'src> {
     pub(crate) fn new(pattern: &'src str) -> Option<Self> {
-        let components = pattern.split('.');
+        let parts = pattern.split('.');
         let mut count = 0;
-        for component in components {
-            if component.is_empty() {
+        for part in parts {
+            if part.is_empty() {
                 return None;
             }
 
-            match component {
+            match part {
                 "*" => {}
-                _ if component
+                // TODO: `bytes()` is probably a little faster.
+                _ if part
                     .chars()
                     .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') => {}
                 _ => return None,
@@ -126,6 +126,39 @@ impl<'src> ContextPattern<'src> {
             0 => None,
             _ => Some(Self(pattern)),
         }
+    }
+
+    pub(crate) fn matches(&self, ctx: &Context<'src>) -> bool {
+        let mut pattern_parts = self.0.split('.').peekable();
+        let mut ctx_parts = ctx.parts().iter().peekable();
+
+        while let (Some(pattern), Some(part)) = (pattern_parts.peek(), ctx_parts.peek()) {
+            match (*pattern, part) {
+                // "*" matches any part.
+                ("*", _) => {}
+                (pattern, Expr::Identifier(part)) if !pattern.eq_ignore_ascii_case(part.0) => {
+                    return false;
+                }
+                (pattern, Expr::Index(idx)) => {
+                    // Anything other than a string index is invalid
+                    // for part-wise comparison.
+                    let Expr::String(part) = idx.as_ref() else {
+                        return false;
+                    };
+
+                    if pattern != part {
+                        return false;
+                    }
+                }
+                _ => {}
+            }
+
+            pattern_parts.next();
+            ctx_parts.next();
+        }
+
+        // Both should be exhausted.
+        pattern_parts.next().is_none() && ctx_parts.next().is_none()
     }
 }
 
@@ -213,6 +246,49 @@ mod tests {
             ("❤.*", None),
         ] {
             assert_eq!(ContextPattern::new(case).map(|p| p.0), *expected);
+        }
+    }
+
+    #[test]
+    fn test_context_pattern_matches() {
+        for (pattern, ctx, expected) in &[
+            // Normal matches.
+            ("foo", "foo", true),
+            ("*", "foo", true),
+            ("foo.bar", "foo.bar", true),
+            ("foo.bar.baz", "foo.bar.baz", true),
+            ("foo.*", "foo.bar", true),
+            ("foo.*.baz", "foo.bar.baz", true),
+            ("foo.*.*", "foo.bar.baz", true),
+            ("foo.*.*.*", "foo.bar.baz.qux", true),
+            // Case-insensitive matches.
+            ("foo.bar", "FOO.BAR", true),
+            ("foo.bar.baz", "Foo.Bar.Baz", true),
+            ("foo.*", "FOO.BAR", true),
+            ("foo.*.baz", "Foo.Bar.Baz", true),
+            ("foo.*.*", "FOO.BAR.BAZ", true),
+            ("FOO.BAR", "foo.bar", true),
+            ("FOO.BAR.BAZ", "foo.bar.baz", true),
+            ("FOO.*", "foo.bar", true),
+            ("FOO.*.BAZ", "foo.bar.baz", true),
+            ("FOO.*.*", "foo.bar.baz", true),
+            // Indices also match correctly.
+            ("foo.bar.baz.*", "foo.bar.baz[0]", true),
+            ("foo.bar.baz.*", "foo.bar.baz['abc']", true),
+            ("foo.bar.baz.*", "foo['bar']['baz']['abc']", true),
+            // False normal matches.
+            ("foo.bar", "foo.baz", false),    // different identifier
+            ("foo.bar", "foo['baz']", false), // different index
+            ("foo.bar.baz", "foo.bar.baz.qux", false), // pattern too short
+            ("foo.bar.baz", "foo.bar", false), // context too short
+            ("foo.*.baz", "foo.bar.baz.qux", false), // pattern too short
+            ("foo.*.qux", "foo.bar.baz.qux", false), // * does not match multiple parts
+            ("foo.*.*", "foo.bar.baz.qux", false), // pattern too short
+            ("foo.1", "foo[1]", false),       // .1 means a string key, not an index
+        ] {
+            let pattern = ContextPattern::new(pattern).unwrap();
+            let ctx = Context::try_from(*ctx).unwrap();
+            assert_eq!(pattern.matches(&ctx), *expected);
         }
     }
 }

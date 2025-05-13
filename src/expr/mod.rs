@@ -175,9 +175,7 @@ impl<'src> Expr<'src> {
             Expr::Context(ctx) => {
                 // contexts themselves are never reducible, but they might
                 // contains reducible index subexpressions.
-                ctx.components
-                    .iter()
-                    .any(|c| c.has_constant_reducible_subexpr())
+                ctx.parts.iter().any(|c| c.has_constant_reducible_subexpr())
             }
             Expr::BinOp { lhs, op: _, rhs } => {
                 lhs.has_constant_reducible_subexpr() || rhs.has_constant_reducible_subexpr()
