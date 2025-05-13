@@ -121,15 +121,8 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
                 .visible_locations()
                 .filter(|l| !l.symbolic.is_primary()),
         ))
-        // TODO: https://github.com/psastras/sarif-rs/pull/770
-        .level(
-            serde_json::to_value(ResultLevel::from(finding.determinations.severity))
-                .expect("failed to serialize SARIF result level"),
-        )
-        .kind(
-            serde_json::to_value(ResultKind::from(finding.determinations.severity))
-                .expect("failed to serialize SARIF result kind"),
-        )
+        .level(ResultLevel::from(finding.determinations.severity))
+        .kind(ResultKind::from(finding.determinations.severity))
         .build()
 }
 

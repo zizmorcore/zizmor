@@ -1254,6 +1254,20 @@ regardless of definition order.
 
 ### Remediation
 
+!!! tip
+
+    There are several third-party tools that can automatically hash-pin
+    your workflows and actions for you:
+
+    - :simple-go: @suzuki-shunsuke/pinact: supports updating and hash-pinning
+      workflows, actions, and arbitrary inputs.
+    - :simple-python: @davidism/gha-update: supports updating and hash-pinning
+      workflow definitions.
+    - :simple-go: @stacklok/frizbee: supports hash-pinning (but not updating)
+      workflow definitions.
+
+        See also @stacklok/frizbee#184 for current usage caveats.
+
 For repository actions (like @actions/checkout): add a branch, tag, or SHA
 reference.
 
@@ -1303,8 +1317,6 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
         ```
 
         1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
-
-
 
 
 ## `unredacted-secrets`

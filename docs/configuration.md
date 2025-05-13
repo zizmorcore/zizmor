@@ -23,8 +23,12 @@ typically named `zizmor.yml`.
 `zizmor` will discover and load
 configuration files in the following order of precedence:
 
-1. Passed explicitly via `--config`, e.g. `--config my-config.yml`. When passed
-   explicitly, the config file does *not* need to be named `zizmor.yml`.
+1. Passed explicitly via `--config` on the command line, e.g. `--config
+   my-config.yml`. When passed explicitly, the file does *not* need to be
+   named `zizmor.yml`.
+1. Passed explicitly via `ZIZMOR_CONFIG` in the environment, e.g.
+   `ZIZMOR_CONFIG=my-config.yml`. When passed explicitly, the file does
+   *not* need to be named `zizmor.yml`.
 1. `${CWD}/.github/zizmor.yml`
 1. `${CWD}/zizmor.yml`
 

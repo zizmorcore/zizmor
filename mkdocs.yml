@@ -102,7 +102,7 @@ validation:
   unrecognized_links: warn
 
 extra_css:
-  - magiclink.css
+  - assets/magiclink.css
 
 exclude_docs: |
   snippets/
