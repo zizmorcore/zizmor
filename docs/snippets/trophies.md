@@ -13,6 +13,7 @@
 
     ??? example "Examples"
         - aio-libs/aiobotocore#1344
+        - aio-libs/aiobotocore#1355
 
 
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
@@ -113,6 +114,7 @@
 
     ??? example "Examples"
         - canonical/operator#1656
+        - canonical/operator#1721
         - canonical/testflinger#630
 
 
@@ -338,6 +340,7 @@
         - grafana/logs-drilldown#1222
         - grafana/pyroscope#4157
         - grafana/rollout-operator#218
+        - grafana/synthetic-monitoring-app#1126
         - grafana/tanka#1441
 
 
