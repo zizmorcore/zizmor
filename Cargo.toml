@@ -1,80 +1,15 @@
-[package]
-name = "zizmor"
-description = "Static analysis for GitHub Actions"
-version = "1.7.0"
-edition = "2024"
-repository = "https://github.com/zizmorcore/zizmor"
-homepage = "https://docs.zizmor.sh"
-documentation = "https://docs.zizmor.sh"
+[workspace]
+resolver = "2"
+members = ["crates/zizmor"]
+
+[workspace.package]
 authors = ["William Woodruff <william@yossarian.net>"]
+readme = "README.md"
+edition = "2024"
 license = "MIT"
-keywords = ["cli", "github-actions", "static-analysis", "security"]
-categories = ["command-line-utilities"]
-rust-version = "1.85.0"
-
-[features]
-# Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
-gh-token-tests = []
-# Test-only: enable all online audits.
-online-tests = ["gh-token-tests"]
-# Test-only: enable tests that require `unbuffer` for TTY behavior.
-tty-tests = []
-
-[dependencies]
-annotate-snippets = "0.11.5"
-anstream = "0.6.18"
-anyhow = "1.0.98"
-camino = { version = "1.1.9", features = ["serde1"] }
-clap = { version = "4.5.38", features = ["derive", "env"] }
-clap-verbosity-flag = { version = "3.0.2", features = [
-    "tracing",
-], default-features = false }
-clap_complete = "4.5.50"
-etcetera = "0.10.0"
-flate2 = "1.1.1"
-github-actions-models = "0.28.2"
-http-cache-reqwest = "0.15.1"
-human-panic = "2.0.1"
-ignore = "0.4.23"
-indexmap = "2.9.0"
-indicatif = "0.17.11"
-itertools = "0.14.0"
-jsonschema = "0.30.0"
-line-index = "0.1.2"
-owo-colors = "4.2.0"
-pest = "2.8.0"
-pest_derive = "2.8.0"
-regex = "1.11.1"
-reqwest = { version = "0.12.15", features = [
-    "blocking",
-    "json",
-    "rustls-tls",
-], default-features = false }
-reqwest-middleware = "0.4.2"
-serde = { version = "1.0.219", features = ["derive"] }
-serde-sarif = "0.8.0"
-serde_json = "1.0.140"
-serde_yaml = "0.9.34"
-tar = "0.4.44"
-terminal-link = "0.1.0"
-thiserror = "2.0.12"
-tokio = { version = "1.45.0", features = ["rt-multi-thread"] }
-tracing = "0.1.41"
-tracing-indicatif = "0.3.9"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-tree-sitter = "0.25.4"
-tree-sitter-bash = "0.23.3"
-tree-sitter-powershell = "0.25.2"
-yamlpath = "0.16.0"
 
 [profile.dev.package]
 insta.opt-level = 3
 
 [profile.release]
 lto = true
-
-[dev-dependencies]
-assert_cmd = "2.0.17"
-insta = { version = "1.43.0" }
-pretty_assertions = "1.4.1"
-serde_json_path = "0.7.2"
