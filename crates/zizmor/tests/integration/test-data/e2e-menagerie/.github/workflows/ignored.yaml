@@ -1,0 +1,12 @@
+# this file _should_ be ignored due to a .gitignore in the root
+# of the e2e-menagerie directory
+
+on: pull_request_target
+name: Ignored
+permissions: {}
+
+jobs:
+  dummy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'ignored'
