@@ -26,7 +26,6 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 
 mod audit;
 mod config;
-mod expr;
 mod finding;
 mod github_api;
 mod models;

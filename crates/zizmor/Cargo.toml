@@ -25,7 +25,7 @@ tty-tests = []
 [dependencies]
 annotate-snippets = "0.11.5"
 anstream = "0.6.18"
-anyhow = "1.0.98"
+anyhow.workspace = true
 camino = { version = "1.1.9", features = ["serde1"] }
 clap = { version = "4.5.38", features = ["derive", "env"] }
 clap-verbosity-flag = { version = "3.0.2", features = [
@@ -34,18 +34,17 @@ clap-verbosity-flag = { version = "3.0.2", features = [
 clap_complete = "4.5.50"
 etcetera = "0.10.0"
 flate2 = "1.1.1"
+github-actions-expressions.workspace = true
 github-actions-models = "0.28.2"
 http-cache-reqwest = "0.15.1"
 human-panic = "2.0.1"
 ignore = "0.4.23"
 indexmap = "2.9.0"
 indicatif = "0.17.11"
-itertools = "0.14.0"
+itertools.workspace = true
 jsonschema = "0.30.0"
 line-index = "0.1.2"
 owo-colors = "4.2.0"
-pest = "2.8.0"
-pest_derive = "2.8.0"
 regex = "1.11.1"
 reqwest = { version = "0.12.15", features = [
     "blocking",
@@ -73,5 +72,4 @@ yamlpath = "0.16.0"
 [dev-dependencies]
 assert_cmd = "2.0.17"
 insta = { version = "1.43.0" }
-pretty_assertions = "1.4.1"
 serde_json_path = "0.7.2"

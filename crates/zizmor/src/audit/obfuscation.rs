@@ -1,8 +1,8 @@
+use github_actions_expressions::Expr;
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use crate::{
     Confidence, Severity,
-    expr::Expr,
     finding::{Feature, Finding, Location},
     models::{CompositeStep, Step, StepCommon},
     utils::parse_expressions_from_input,

@@ -1,6 +1,7 @@
+use github_actions_expressions::{Context, Expr};
+
 use crate::{
     Confidence, Severity,
-    expr::{Context, Expr},
     finding::{Feature, Location},
     utils::parse_expressions_from_input,
 };
@@ -96,6 +97,8 @@ impl UnredactedSecrets {
 
 #[cfg(test)]
 mod tests {
+    use github_actions_expressions::Expr;
+
     use crate::audit::unredacted_secrets;
 
     #[test]
@@ -112,7 +115,7 @@ mod tests {
             ("fromJSON(secrets.foo).bar.baz", 1),
             ("fromJSON(secrets.foo) && fromJSON(secrets.bar)", 2),
         ] {
-            let expr = crate::expr::Expr::parse(expr).unwrap();
+            let expr = Expr::parse(expr).unwrap();
             assert_eq!(
                 unredacted_secrets::UnredactedSecrets::secret_leakages(&expr).len(),
                 *count

@@ -1,0 +1,17 @@
+[package]
+name = "github-actions-expressions"
+description = "GitHub Actions expression parser and data types"
+version = "0.0.1"
+authors.workspace = true
+readme.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+pest.workspace = true
+pest_derive.workspace = true
+itertools.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true

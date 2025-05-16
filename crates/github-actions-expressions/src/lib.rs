@@ -1,5 +1,7 @@
 //! Expression parsing and analysis.
 
+#![forbid(unsafe_code)]
+
 use anyhow::{Result, anyhow};
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
@@ -7,38 +9,34 @@ use pest_derive::Parser;
 
 /// A parser for GitHub Actions' expression language.
 #[derive(Parser)]
-#[grammar = "expr/expr.pest"]
+#[grammar = "expr.pest"]
 struct ExprParser;
 
 #[derive(Debug)]
-pub(crate) struct Context<'src> {
+pub struct Context<'src> {
     raw: &'src str,
-    pub(crate) components: Vec<Expr<'src>>,
+    pub components: Vec<Expr<'src>>,
 }
 
 impl<'src> Context<'src> {
-    pub(crate) fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
+    pub fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
         Self {
             raw,
             components: components.into(),
         }
     }
 
-    pub(crate) fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         self.raw
     }
 
-    pub(crate) fn components(&self) -> &[Expr<'src>] {
-        &self.components
-    }
-
-    pub(crate) fn child_of(&self, parent: impl TryInto<Context<'src>>) -> bool {
+    pub fn child_of(&self, parent: impl TryInto<Context<'src>>) -> bool {
         let Ok(parent) = parent.try_into() else {
             return false;
         };
 
-        let mut parent_components = parent.components().iter().peekable();
-        let mut child_components = self.components().iter().peekable();
+        let mut parent_components = parent.components.iter().peekable();
+        let mut child_components = self.components.iter().peekable();
 
         while let (Some(parent), Some(child)) = (parent_components.peek(), child_components.peek())
         {
@@ -60,8 +58,8 @@ impl<'src> Context<'src> {
     }
 
     /// Returns the tail of the context if the head matches the given string.
-    pub(crate) fn pop_if(&self, head: &str) -> Option<&str> {
-        match self.components().first()? {
+    pub fn pop_if(&self, head: &str) -> Option<&str> {
+        match self.components.first()? {
             Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
             _ => None,
         }
@@ -94,7 +92,7 @@ impl PartialEq<str> for Context<'_> {
 }
 
 #[derive(Debug)]
-pub(crate) struct Function<'src>(pub(crate) &'src str);
+pub struct Function<'src>(&'src str);
 
 impl PartialEq for Function<'_> {
     fn eq(&self, other: &Self) -> bool {
@@ -108,7 +106,7 @@ impl PartialEq<str> for Function<'_> {
 }
 
 #[derive(Debug)]
-pub(crate) struct Identifier<'src>(&'src str);
+pub struct Identifier<'src>(&'src str);
 
 impl PartialEq for Identifier<'_> {
     fn eq(&self, other: &Self) -> bool {
@@ -123,7 +121,7 @@ impl PartialEq<str> for Identifier<'_> {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum BinOp {
+pub enum BinOp {
     And,
     Or,
     Eq,
@@ -135,13 +133,13 @@ pub(crate) enum BinOp {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum UnOp {
+pub enum UnOp {
     Not,
 }
 
 /// Represents a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
-pub(crate) enum Expr<'src> {
+pub enum Expr<'src> {
     /// A number literal.
     Number(f64),
     /// A string literal.
@@ -175,15 +173,15 @@ pub(crate) enum Expr<'src> {
 
 impl<'src> Expr<'src> {
     /// Convenience API for making a boxed `Expr::String`.
-    pub(crate) fn string(s: impl Into<String>) -> Box<Self> {
+    fn string(s: impl Into<String>) -> Box<Self> {
         Self::String(s.into()).into()
     }
 
-    pub(crate) fn ident(i: &'src str) -> Self {
+    fn ident(i: &'src str) -> Self {
         Self::Identifier(Identifier(i))
     }
 
-    pub(crate) fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
+    fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
         Self::Context(Context::new(r, components))
     }
 
@@ -212,7 +210,7 @@ impl<'src> Expr<'src> {
     ///    mean that reducible arguments make the call itself reducible.
     ///
     /// NOTE: This implementation is sound but not complete.
-    pub(crate) fn constant_reducible(&self) -> bool {
+    pub fn constant_reducible(&self) -> bool {
         match self {
             // Literals are always reducible.
             Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null => true,
@@ -245,7 +243,7 @@ impl<'src> Expr<'src> {
     /// it doesn't include "trivially" reducible expressions like literals,
     /// since flagging these as reducible within a larger expression
     /// would be misleading.
-    pub(crate) fn has_constant_reducible_subexpr(&self) -> bool {
+    pub fn has_constant_reducible_subexpr(&self) -> bool {
         if !self.is_literal() && self.constant_reducible() {
             return true;
         }
@@ -277,7 +275,7 @@ impl<'src> Expr<'src> {
     /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
     /// since the value of `foo.bar` flows into a boolean evaluation
     /// that gets expanded.
-    pub(crate) fn dataflow_contexts(&self) -> Vec<&Context> {
+    pub fn dataflow_contexts(&self) -> Vec<&Context> {
         let mut contexts = vec![];
 
         match self {
@@ -317,7 +315,7 @@ impl<'src> Expr<'src> {
         contexts
     }
 
-    pub(crate) fn parse(expr: &str) -> Result<Expr> {
+    pub fn parse(expr: &str) -> Result<Expr> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?
             .next()

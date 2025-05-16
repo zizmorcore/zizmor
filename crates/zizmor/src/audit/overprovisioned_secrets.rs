@@ -1,5 +1,6 @@
+use github_actions_expressions::Expr;
+
 use crate::{
-    expr::Expr,
     finding::{Confidence, Feature, Location, Severity},
     utils::parse_expressions_from_input,
 };
@@ -78,7 +79,7 @@ impl OverprovisionedSecrets {
             }
             Expr::Index(expr) => results.extend(Self::secrets_expansions(expr)),
             Expr::Context(ctx) => {
-                match (ctx.components().first(), ctx.components().get(1)) {
+                match (ctx.components.first(), ctx.components.get(1)) {
                     // Look for `secrets[...]` accesses where the index component
                     // is not a string literal.
                     (Some(Expr::Identifier(ident)), Some(Expr::Index(idx)))
@@ -103,6 +104,8 @@ impl OverprovisionedSecrets {
 
 #[cfg(test)]
 mod tests {
+    use github_actions_expressions::Expr;
+
     #[test]
     fn test_secrets_expansions() {
         for (expr, count) in &[
@@ -120,7 +123,7 @@ mod tests {
             ("SECRETS[something.else]", 1),
             ("SECRETS['literal']", 0),
         ] {
-            let expr = crate::expr::Expr::parse(expr).unwrap();
+            let expr = Expr::parse(expr).unwrap();
             assert_eq!(
                 super::OverprovisionedSecrets::secrets_expansions(&expr).len(),
                 *count

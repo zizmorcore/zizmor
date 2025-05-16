@@ -748,6 +748,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
+name = "github-actions-expressions"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "pest",
+ "pest_derive",
+ "pretty_assertions",
+]
+
+[[package]]
 name = "github-actions-models"
 version = "0.28.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3597,6 +3608,7 @@ dependencies = [
  "clap_complete",
  "etcetera",
  "flate2",
+ "github-actions-expressions",
  "github-actions-models",
  "http-cache-reqwest",
  "human-panic",
@@ -3608,9 +3620,6 @@ dependencies = [
  "jsonschema",
  "line-index",
  "owo-colors",
- "pest",
- "pest_derive",
- "pretty_assertions",
  "regex",
  "reqwest",
  "reqwest-middleware",
