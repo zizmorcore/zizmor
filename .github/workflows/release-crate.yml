@@ -28,7 +28,9 @@ jobs:
           echo PACKAGE_NAME="$(echo ${GITHUB_REF_NAME} | cut -d/ -f1)" >> ${GITHUB_OUTPUT}
 
       - name: publish to crates.io
-        run: cargo publish ${DRY_RUN} -p ${PACKAGE_NAME}
+        run: |
+          echo "::notice::Publishing package ${PACKAGE_NAME} (dry-run: ${DRY_RUN})"
+          cargo publish ${DRY_RUN} -p ${PACKAGE_NAME}
         env:
           CARGO_REGISTRY_TOKEN: "${{ secrets.CARGO_REGISTRY_TOKEN }}"
           # workflow_dispatch always causes a dry run
