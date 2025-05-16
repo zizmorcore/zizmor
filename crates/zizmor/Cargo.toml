@@ -45,7 +45,7 @@ itertools.workspace = true
 jsonschema = "0.30.0"
 line-index = "0.1.2"
 owo-colors = "4.2.0"
-regex = "1.11.1"
+regex.workspace = true
 reqwest = { version = "0.12.15", features = [
     "blocking",
     "json",
@@ -70,6 +70,12 @@ yamlpath = "0.16.0"
 
 
 [dev-dependencies]
-assert_cmd = "2.0.17"
+assert_cmd.workspace = true
+criterion.workspace = true
 insta = { version = "1.43.0" }
 serde_json_path = "0.7.2"
+test-support.workspace = true
+
+[[bench]]
+name = "bench_e2e"
+harness = false

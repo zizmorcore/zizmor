@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 
-use crate::common::{OutputMode, input_under_test, zizmor};
+use test_support::{OutputMode, input_under_test, zizmor};
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]

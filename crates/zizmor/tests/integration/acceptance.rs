@@ -1,7 +1,7 @@
-use crate::common::input_under_test;
 use assert_cmd::Command;
 use serde_json::Value;
 use serde_json_path::JsonPath;
+use test_support::input_under_test;
 
 // Acceptance tests for zizmor, on top of Json output
 // For now we don't cover tests that depends on GitHub API under the hood

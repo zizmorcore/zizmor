@@ -1,0 +1,13 @@
+[package]
+name = "test-support"
+version = "0.1.0"
+authors.workspace = true
+readme.workspace = true
+homepage.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+assert_cmd.workspace = true
+anyhow.workspace = true
+regex.workspace = true

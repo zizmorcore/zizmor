@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["crates/github-actions-expressions", "crates/zizmor"]
+members = [
+    "crates/github-actions-expressions",
+    "crates/test-support",
+    "crates/zizmor",
+]
 
 [workspace.package]
 authors = ["William Woodruff <william@yossarian.net>"]
@@ -15,9 +19,13 @@ github-actions-expressions = { path = "crates/github-actions-expressions", versi
 itertools = "0.14.0"
 pest = "2.8.0"
 pest_derive = "2.8.0"
+regex = "1.11.1"
 
-# dev-dep
+# dev-deps
+assert_cmd = "2.0.17"
+criterion = "0.5.1"
 pretty_assertions = "1.4.1"
+test-support = { path = "crates/test-support", version = "*" }
 
 
 [profile.dev.package]

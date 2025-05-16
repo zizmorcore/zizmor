@@ -3,8 +3,8 @@
 //! TODO: This file is too big; break it into multiple
 //! modules, one per audit/conceptual group.
 
-use crate::common::{input_under_test, zizmor};
 use anyhow::Result;
+use test_support::{input_under_test, zizmor};
 
 #[test]
 fn test_cant_retrieve() -> Result<()> {
