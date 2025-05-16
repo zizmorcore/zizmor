@@ -1,6 +1,5 @@
 //! Parsing and matching APIs for GitHub Actions expressions
 //! contexts (e.g. `github.event.name`).
-
 use super::Expr;
 
 /// Represents a context in a GitHub Actions expression.
