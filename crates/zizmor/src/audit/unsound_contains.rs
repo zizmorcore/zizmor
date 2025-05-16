@@ -1,8 +1,8 @@
+use github_actions_expressions::{Context, Expr};
 use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    expr::{Context, Expr},
     finding::{Confidence, Severity},
     models::{JobExt, StepCommon as _},
 };

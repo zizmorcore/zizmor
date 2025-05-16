@@ -1,11 +1,11 @@
-name: zizmor wheel builds for PyPI
+name: zizmor wheel builds for PyPI 🐍
 
 on:
   push:
     branches:
       - main
     tags:
-      - '*'
+      - 'v*'
   workflow_dispatch:
 
 permissions:

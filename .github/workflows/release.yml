@@ -1,9 +1,9 @@
+name: Release zizmor to crates.io 📦
+
 on:
   release:
     types:
       - published
-
-name: release
 
 permissions: {}
 
@@ -16,6 +16,6 @@ jobs:
           persist-credentials: false
 
       - name: publish to crates.io
-        run: cargo publish
+        run: cargo publish -p zizmor
         env:
           CARGO_REGISTRY_TOKEN: "${{ secrets.CARGO_REGISTRY_TOKEN }}"

@@ -10,6 +10,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
+use github_actions_expressions::{BinOp, Expr, UnOp};
 use github_actions_models::{
     common::{Uses, expr::LoE},
     workflow::job::Strategy,
@@ -17,7 +18,6 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    expr::{BinOp, Expr, UnOp},
     finding::{Confidence, Finding, Persona, Severity, SymbolicLocation},
     models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,

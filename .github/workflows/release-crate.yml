@@ -1,0 +1,36 @@
+name: Release support crates to crates.io 📦
+
+on:
+  push:
+    tags:
+      # NOTE: additional non-zizmor crate tag patterns get added here
+      - 'github-actions-expressions/v*'
+  workflow_dispatch:
+    inputs:
+      package-name:
+        description: 'The name of the package to publish'
+        required: true
+
+permissions: {}
+
+jobs:
+  crates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - name: Get package name from tag
+        if: ${{ github.event_name == 'push' }}
+        id: get-package-name
+        run: |
+          echo PACKAGE_NAME="$(echo ${GITHUB_REF_NAME} | cut -d/ -f1)" >> ${GITHUB_OUTPUT}
+
+      - name: publish to crates.io
+        run: cargo publish ${DRY_RUN} -p ${PACKAGE_NAME}
+        env:
+          CARGO_REGISTRY_TOKEN: "${{ secrets.CARGO_REGISTRY_TOKEN }}"
+          # workflow_dispatch always causes a dry run
+          DRY_RUN: "${{ github.event_name == 'workflow_dispatch' && '--dry-run' || '' }}"
+          PACKAGE_NAME: "${{ steps.get-package-name.outputs.PACKAGE_NAME || github.event.inputs.package-name }}"

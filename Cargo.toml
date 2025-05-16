@@ -1,12 +1,24 @@
 [workspace]
 resolver = "2"
-members = ["crates/zizmor"]
+members = ["crates/github-actions-expressions", "crates/zizmor"]
 
 [workspace.package]
 authors = ["William Woodruff <william@yossarian.net>"]
 readme = "README.md"
+homepage = "https://docs.zizmor.sh"
 edition = "2024"
 license = "MIT"
+
+[workspace.dependencies]
+anyhow = "1.0.98"
+github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.1" }
+itertools = "0.14.0"
+pest = "2.8.0"
+pest_derive = "2.8.0"
+
+# dev-dep
+pretty_assertions = "1.4.1"
+
 
 [profile.dev.package]
 insta.opt-level = 3
