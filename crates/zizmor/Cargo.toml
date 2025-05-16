@@ -3,12 +3,12 @@ name = "zizmor"
 description = "Static analysis for GitHub Actions"
 version = "1.7.0"
 repository = "https://github.com/zizmorcore/zizmor"
-homepage = "https://docs.zizmor.sh"
 documentation = "https://docs.zizmor.sh"
 keywords = ["cli", "github-actions", "static-analysis", "security"]
 categories = ["command-line-utilities"]
 rust-version = "1.85.0"
 
+homepage.workspace = true
 license.workspace = true
 readme.workspace = true
 authors.workspace = true

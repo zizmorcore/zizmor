@@ -5,6 +5,7 @@ members = ["crates/github-actions-expressions", "crates/zizmor"]
 [workspace.package]
 authors = ["William Woodruff <william@yossarian.net>"]
 readme = "README.md"
+homepage = "https://docs.zizmor.sh"
 edition = "2024"
 license = "MIT"
 

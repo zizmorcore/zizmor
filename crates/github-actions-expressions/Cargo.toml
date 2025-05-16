@@ -2,10 +2,13 @@
 name = "github-actions-expressions"
 description = "GitHub Actions expression parser and data types"
 version = "0.0.1"
-authors.workspace = true
-readme.workspace = true
-edition.workspace = true
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-expressions"
+
+homepage.workspace = true
 license.workspace = true
+readme.workspace = true
+authors.workspace = true
+edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
