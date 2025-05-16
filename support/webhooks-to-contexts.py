@@ -11,11 +11,11 @@
 # for arrays, e.g. `github.event.pull_request.labels.*.name`
 # matches any context that indexes through the `labels` array.
 
-import json
 import os
 import sys
 from collections import defaultdict
 from collections.abc import Iterator
+from operator import itemgetter
 from pathlib import Path
 from typing import Literal
 
@@ -33,10 +33,10 @@ _WEBHOOKS_JSON_URL = f"https://github.com/octokit/openapi-webhooks/raw/{_REF}/pa
 
 _HERE = Path(__file__).parent
 
-_SRC = _HERE.parent / "src"
+_SRC = _HERE.parent / "crates/zizmor/src"
 assert _SRC.is_dir(), f"Missing {_SRC}"
 
-_OUT = _SRC / "data" / "context-capabilities.json"
+_OUT = _SRC / "data" / "context-capabilities.dat"
 
 # A mapping of workflow trigger event names to subevents.
 # Keep in sync with: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows
@@ -349,8 +349,5 @@ if __name__ == "__main__":
         process_schemas(event, schemas, patterns_to_capabilities)
 
     with _OUT.open("w") as io:
-        json.dump(
-            patterns_to_capabilities,
-            io,
-            indent=2,
-        )
+        for pattern, cap in sorted(patterns_to_capabilities.items(), key=itemgetter(0)):
+            print(f"{pattern}\t{cap}", file=io)
