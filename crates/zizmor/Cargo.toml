@@ -23,53 +23,47 @@ online-tests = ["gh-token-tests"]
 tty-tests = []
 
 [dependencies]
-annotate-snippets = "0.11.5"
-anstream = "0.6.18"
+annotate-snippets = { workspace = true }
+anstream = { workspace = true }
 anyhow.workspace = true
-camino = { version = "1.1.9", features = ["serde1"] }
-clap = { version = "4.5.38", features = ["derive", "env"] }
-clap-verbosity-flag = { version = "3.0.2", features = [
-    "tracing",
-], default-features = false }
-clap_complete = "4.5.50"
-etcetera = "0.10.0"
-flate2 = "1.1.1"
+camino = { workspace = true, features = ["serde1"] }
+clap = { workspace = true, features = ["derive", "env"] }
+clap-verbosity-flag = { workspace = true, features = ["tracing"] }
+clap_complete = { workspace = true }
+etcetera = { workspace = true }
+flate2 = { workspace = true }
 github-actions-expressions.workspace = true
-github-actions-models = "0.28.2"
-http-cache-reqwest = "0.15.1"
-human-panic = "2.0.1"
-ignore = "0.4.23"
-indexmap = "2.9.0"
-indicatif = "0.17.11"
+github-actions-models = { workspace = true }
+http-cache-reqwest = { workspace = true }
+human-panic = { workspace = true }
+ignore = { workspace = true }
+indexmap = { workspace = true }
+indicatif = { workspace = true }
 itertools.workspace = true
-jsonschema = "0.30.0"
-line-index = "0.1.2"
-owo-colors = "4.2.0"
-regex = "1.11.1"
-reqwest = { version = "0.12.15", features = [
-    "blocking",
-    "json",
-    "rustls-tls",
-], default-features = false }
-reqwest-middleware = "0.4.2"
-serde = { version = "1.0.219", features = ["derive"] }
-serde-sarif = "0.8.0"
-serde_json = "1.0.140"
-serde_yaml = "0.9.34"
-tar = "0.4.44"
-terminal-link = "0.1.0"
-thiserror = "2.0.12"
-tokio = { version = "1.45.0", features = ["rt-multi-thread"] }
-tracing = "0.1.41"
-tracing-indicatif = "0.3.9"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-tree-sitter = "0.25.4"
-tree-sitter-bash = "0.23.3"
-tree-sitter-powershell = "0.25.2"
-yamlpath = "0.16.0"
+jsonschema = { workspace = true }
+line-index = { workspace = true }
+owo-colors = { workspace = true }
+regex = { workspace = true }
+reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls"] }
+reqwest-middleware = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde-sarif = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+tar = { workspace = true }
+terminal-link = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+tracing = { workspace = true }
+tracing-indicatif = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+tree-sitter = { workspace = true }
+tree-sitter-bash = { workspace = true }
+tree-sitter-powershell = { workspace = true }
+yamlpath = { workspace = true }
 
 
 [dev-dependencies]
-assert_cmd = "2.0.17"
-insta = { version = "1.43.0" }
-serde_json_path = "0.7.2"
+assert_cmd = { workspace = true }
+insta = { workspace = true }
+serde_json_path = { workspace = true }
