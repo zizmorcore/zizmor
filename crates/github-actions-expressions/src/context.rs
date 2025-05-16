@@ -27,10 +27,6 @@ impl<'src> Context<'src> {
         self.raw
     }
 
-    pub fn parts(&self) -> &[Expr<'src>] {
-        &self.parts
-    }
-
     pub fn child_of(&self, parent: impl TryInto<ContextPattern<'src>>) -> bool {
         let Ok(parent) = parent.try_into() else {
             return false;
@@ -41,7 +37,7 @@ impl<'src> Context<'src> {
 
     /// Returns the tail of the context if the head matches the given string.
     pub fn pop_if(&self, head: &str) -> Option<&str> {
-        match self.parts().first()? {
+        match self.parts.first()? {
             Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
             _ => None,
         }
@@ -118,7 +114,7 @@ impl<'src> ContextPattern<'src> {
 
     fn compare(&self, ctx: &Context<'src>) -> Option<Comparison> {
         let mut pattern_parts = self.0.split('.').peekable();
-        let mut ctx_parts = ctx.parts().iter().peekable();
+        let mut ctx_parts = ctx.parts.iter().peekable();
 
         while let (Some(pattern), Some(part)) = (pattern_parts.peek(), ctx_parts.peek()) {
             // TODO: Refactor this; it's way too hard to read.
