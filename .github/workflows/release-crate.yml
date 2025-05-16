@@ -25,7 +25,7 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         id: get-package-name
         run: |
-          echo "PACKAGE_NAME=$(echo ${GITHUB_REF} | cut -d '/' -f 3 | cut -d '-' -f 1)" >> ${GITHUB_OUTPUT}
+          echo PACKAGE_NAME="$(echo ${GITHUB_REF_NAME} | cut -d/ -f1)" >> ${GITHUB_OUTPUT}
 
       - name: publish to crates.io
         run: cargo publish ${DRY_RUN} -p ${PACKAGE_NAME}
