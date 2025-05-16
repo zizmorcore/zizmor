@@ -6,107 +6,19 @@
 // See: https://github.com/pest-parser/pest/issues/326
 // #![deny(missing_docs)]
 
-use anyhow::{Result, anyhow};
+use crate::context::Context;
+
+use anyhow::Result;
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 use pest_derive::Parser;
+
+pub mod context;
 
 /// A parser for GitHub Actions' expression language.
 #[derive(Parser)]
 #[grammar = "expr.pest"]
 struct ExprParser;
-
-/// Represents a context in a GitHub Actions expression.
-///
-/// These typically look something like `github.actor` or `inputs.foo`,
-/// although they can also be a "call" context like `fromJSON(...).foo.bar`,
-/// i.e. where the head of the context is a function call rather than an
-/// identifier.
-#[derive(Debug)]
-pub struct Context<'src> {
-    raw: &'src str,
-    /// The inner components of the context.
-    pub components: Vec<Expr<'src>>,
-}
-
-impl<'src> Context<'src> {
-    /// Create a new [`Context`] from a raw string and a list of components.
-    fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
-        Self {
-            raw,
-            components: components.into(),
-        }
-    }
-
-    /// Return the underlying raw context string.
-    pub fn as_str(&self) -> &str {
-        self.raw
-    }
-
-    /// Returns whether this context is a child of the given parent context.
-    ///
-    /// This considers a context its own child, i.e. `foo.bar` is a child
-    /// of `foo.bar`, not just `foo`.
-    pub fn child_of(&self, parent: impl TryInto<Context<'src>>) -> bool {
-        let Ok(parent) = parent.try_into() else {
-            return false;
-        };
-
-        let mut parent_components = parent.components.iter().peekable();
-        let mut child_components = self.components.iter().peekable();
-
-        while let (Some(parent), Some(child)) = (parent_components.peek(), child_components.peek())
-        {
-            match (parent, child) {
-                (Expr::Identifier(parent), Expr::Identifier(child)) => {
-                    if parent != child {
-                        return false;
-                    }
-                }
-                _ => return false,
-            }
-
-            parent_components.next();
-            child_components.next();
-        }
-
-        // If we've exhausted the parent, then the child is a true child.
-        parent_components.next().is_none()
-    }
-
-    /// Returns the tail of the context if the head matches the given string.
-    pub fn pop_if(&self, head: &str) -> Option<&str> {
-        match self.components.first()? {
-            Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
-            _ => None,
-        }
-    }
-}
-
-impl<'a> TryFrom<&'a str> for Context<'a> {
-    type Error = anyhow::Error;
-
-    fn try_from(val: &'a str) -> Result<Self> {
-        let expr = Expr::parse(val)?;
-
-        match expr {
-            Expr::Context(ctx) => Ok(ctx),
-            _ => Err(anyhow!("expected context, found {:?}", expr)),
-        }
-    }
-}
-
-impl PartialEq for Context<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.raw.eq_ignore_ascii_case(other.raw)
-    }
-}
-
-impl PartialEq<str> for Context<'_> {
-    fn eq(&self, other: &str) -> bool {
-        self.raw.eq_ignore_ascii_case(other)
-    }
-}
 
 /// Represents a function in a GitHub Actions expression.
 ///
@@ -290,9 +202,7 @@ impl<'src> Expr<'src> {
             Expr::Context(ctx) => {
                 // contexts themselves are never reducible, but they might
                 // contains reducible index subexpressions.
-                ctx.components
-                    .iter()
-                    .any(|c| c.has_constant_reducible_subexpr())
+                ctx.parts.iter().any(|c| c.has_constant_reducible_subexpr())
             }
             Expr::BinOp { lhs, op: _, rhs } => {
                 lhs.has_constant_reducible_subexpr() || rhs.has_constant_reducible_subexpr()

@@ -1,4 +1,4 @@
-use github_actions_expressions::{Context, Expr};
+use github_actions_expressions::{Expr, context::Context};
 
 use crate::{
     Confidence, Severity,
@@ -80,8 +80,8 @@ impl UnredactedSecrets {
                 }
             }
             Expr::Index(expr) => results.extend(Self::secret_leakages(expr)),
-            Expr::Context(Context { components, .. }) => {
-                results.extend(components.iter().flat_map(Self::secret_leakages))
+            Expr::Context(Context { parts, .. }) => {
+                results.extend(parts.iter().flat_map(Self::secret_leakages))
             }
             Expr::BinOp { lhs, op: _, rhs } => {
                 results.extend(Self::secret_leakages(lhs));

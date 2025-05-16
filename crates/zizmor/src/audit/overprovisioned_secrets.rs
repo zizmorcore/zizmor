@@ -79,7 +79,7 @@ impl OverprovisionedSecrets {
             }
             Expr::Index(expr) => results.extend(Self::secrets_expansions(expr)),
             Expr::Context(ctx) => {
-                match (ctx.components.first(), ctx.components.get(1)) {
+                match (ctx.parts.first(), ctx.parts.get(1)) {
                     // Look for `secrets[...]` accesses where the index component
                     // is not a string literal.
                     (Some(Expr::Identifier(ident)), Some(Expr::Index(idx)))
@@ -87,7 +87,7 @@ impl OverprovisionedSecrets {
                     {
                         results.push(())
                     }
-                    _ => results.extend(ctx.components.iter().flat_map(Self::secrets_expansions)),
+                    _ => results.extend(ctx.parts.iter().flat_map(Self::secrets_expansions)),
                 }
             }
             Expr::BinOp { lhs, op: _, rhs } => {
