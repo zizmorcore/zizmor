@@ -11,6 +11,7 @@ use super::Expr;
 #[derive(Debug)]
 pub struct Context<'src> {
     raw: &'src str,
+    /// The individual parts of the context.
     pub parts: Vec<Expr<'src>>,
 }
 
@@ -22,10 +23,15 @@ impl<'src> Context<'src> {
         }
     }
 
+    /// Returns the raw string representation of the context.
     pub fn as_str(&self) -> &str {
         self.raw
     }
 
+    /// Returns whether the context is a child of the given pattern.
+    ///
+    /// A context is considered its own child, i.e. `foo.bar` is a child of
+    /// `foo.bar`.
     pub fn child_of(&self, parent: impl TryInto<ContextPattern<'src>>) -> bool {
         let Ok(parent) = parent.try_into() else {
             return false;
@@ -86,6 +92,9 @@ impl<'src> TryFrom<&'src str> for ContextPattern<'src> {
 }
 
 impl<'src> ContextPattern<'src> {
+    /// Creates a new `ContextPattern` from the given string.
+    ///
+    /// Returns `None` if the pattern is invalid.
     pub fn new(pattern: &'src str) -> Option<Self> {
         let parts = pattern.split('.');
         let mut count = 0;
