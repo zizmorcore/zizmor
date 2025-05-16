@@ -1,6 +1,10 @@
-//! Expression parsing and analysis.
+//! GitHub Actions expression parsing and analysis.
 
 #![forbid(unsafe_code)]
+
+// TODO: Re-enable when #[derive(Parser)] doesn't break this.
+// See: https://github.com/pest-parser/pest/issues/326
+// #![deny(missing_docs)]
 
 use anyhow::{Result, anyhow};
 use itertools::Itertools;
@@ -12,24 +16,37 @@ use pest_derive::Parser;
 #[grammar = "expr.pest"]
 struct ExprParser;
 
+/// Represents a context in a GitHub Actions expression.
+///
+/// These typically look something like `github.actor` or `inputs.foo`,
+/// although they can also be a "call" context like `fromJSON(...).foo.bar`,
+/// i.e. where the head of the context is a function call rather than an
+/// identifier.
 #[derive(Debug)]
 pub struct Context<'src> {
     raw: &'src str,
+    /// The inner components of the context.
     pub components: Vec<Expr<'src>>,
 }
 
 impl<'src> Context<'src> {
-    pub fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
+    /// Create a new [`Context`] from a raw string and a list of components.
+    fn new(raw: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
         Self {
             raw,
             components: components.into(),
         }
     }
 
+    /// Return the underlying raw context string.
     pub fn as_str(&self) -> &str {
         self.raw
     }
 
+    /// Returns whether this context is a child of the given parent context.
+    ///
+    /// This considers a context its own child, i.e. `foo.bar` is a child
+    /// of `foo.bar`, not just `foo`.
     pub fn child_of(&self, parent: impl TryInto<Context<'src>>) -> bool {
         let Ok(parent) = parent.try_into() else {
             return false;
@@ -91,6 +108,9 @@ impl PartialEq<str> for Context<'_> {
     }
 }
 
+/// Represents a function in a GitHub Actions expression.
+///
+/// Function names are case-insensitive.
 #[derive(Debug)]
 pub struct Function<'src>(&'src str);
 
@@ -105,6 +125,10 @@ impl PartialEq<str> for Function<'_> {
     }
 }
 
+/// Represents a single identifier in a GitHub Actions expression,
+/// i.e. a single context component.
+///
+/// Identifiers are case-insensitive.
 #[derive(Debug)]
 pub struct Identifier<'src>(&'src str);
 
@@ -120,18 +144,28 @@ impl PartialEq<str> for Identifier<'_> {
     }
 }
 
+/// Binary operations allowed in an expression.
 #[derive(Debug, PartialEq)]
 pub enum BinOp {
+    /// `expr && expr`
     And,
+    /// `expr || expr`
     Or,
+    /// `expr == expr`
     Eq,
+    /// `expr != expr`
     Neq,
+    /// `expr > expr`
     Gt,
+    /// `expr >= expr`
     Ge,
+    /// `expr < expr`
     Lt,
+    /// `expr <= expr`
     Le,
 }
 
+/// Unary operations allowed in an expression.
 #[derive(Debug, PartialEq)]
 pub enum UnOp {
     Not,
@@ -172,19 +206,22 @@ pub enum Expr<'src> {
 }
 
 impl<'src> Expr<'src> {
-    /// Convenience API for making a boxed `Expr::String`.
+    /// Convenience API for making a boxed [`Expr::String`].
     fn string(s: impl Into<String>) -> Box<Self> {
         Self::String(s.into()).into()
     }
 
+    /// Convenience API for making an [`Expr::Identifier`].
     fn ident(i: &'src str) -> Self {
         Self::Identifier(Identifier(i))
     }
 
+    /// Convenience API for making an [`Expr::Context`].
     fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
         Self::Context(Context::new(r, components))
     }
 
+    /// Returns whether the expression is a literal.
     fn is_literal(&self) -> bool {
         matches!(
             self,
@@ -315,6 +352,7 @@ impl<'src> Expr<'src> {
         contexts
     }
 
+    /// Parses the given string into an expression.
     pub fn parse(expr: &str) -> Result<Expr> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?
