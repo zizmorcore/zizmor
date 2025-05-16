@@ -1,12 +1,12 @@
 [package]
 name = "github-actions-expressions"
 description = "GitHub Actions expression parser and data types"
-version = "0.0.1"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-expressions"
+version = "0.0.2"
+readme = "README.md"
 
 homepage.workspace = true
 license.workspace = true
-readme.workspace = true
 authors.workspace = true
 edition.workspace = true
 
