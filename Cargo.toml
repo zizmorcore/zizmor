@@ -12,6 +12,7 @@ license = "MIT"
 [workspace.dependencies]
 anyhow = "1.0.98"
 github-actions-expressions = { path = "crates/github-actions-expressions", version = "*" }
+git2 = "0.20.2"
 itertools = "0.14.0"
 pest = "2.8.0"
 pest_derive = "2.8.0"
