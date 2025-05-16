@@ -1,4 +1,4 @@
-use github_actions_expressions::{Context, Expr};
+use github_actions_expressions::{Expr, context::Context};
 use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
@@ -88,9 +88,9 @@ impl UnsoundContains {
                 func: _,
                 args: exprs,
             }
-            | Expr::Context(Context {
-                components: exprs, ..
-            }) => Box::new(exprs.iter().flat_map(Self::walk_tree_for_unsound_contains)),
+            | Expr::Context(Context { parts: exprs, .. }) => {
+                Box::new(exprs.iter().flat_map(Self::walk_tree_for_unsound_contains))
+            }
             Expr::Index(expr) => Self::walk_tree_for_unsound_contains(expr),
             Expr::BinOp { lhs, rhs, .. } => {
                 let bc_lhs = Self::walk_tree_for_unsound_contains(lhs);
