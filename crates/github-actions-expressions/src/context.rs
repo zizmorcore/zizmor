@@ -3,10 +3,16 @@
 
 use super::Expr;
 
+/// Represents a context in a GitHub Actions expression.
+///
+/// These typically look something like `github.actor` or `inputs.foo`,
+/// although they can also be a "call" context like `fromJSON(...).foo.bar`,
+/// i.e. where the head of the context is a function call rather than an
+/// identifier.
 #[derive(Debug)]
-pub(crate) struct Context<'src> {
+pub struct Context<'src> {
     raw: &'src str,
-    pub(crate) parts: Vec<Expr<'src>>,
+    pub parts: Vec<Expr<'src>>,
 }
 
 impl<'src> Context<'src> {
@@ -17,15 +23,15 @@ impl<'src> Context<'src> {
         }
     }
 
-    pub(crate) fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         self.raw
     }
 
-    pub(crate) fn parts(&self) -> &[Expr<'src>] {
+    pub fn parts(&self) -> &[Expr<'src>] {
         &self.parts
     }
 
-    pub(crate) fn child_of(&self, parent: impl TryInto<ContextPattern<'src>>) -> bool {
+    pub fn child_of(&self, parent: impl TryInto<ContextPattern<'src>>) -> bool {
         let Ok(parent) = parent.try_into() else {
             return false;
         };
@@ -34,7 +40,7 @@ impl<'src> Context<'src> {
     }
 
     /// Returns the tail of the context if the head matches the given string.
-    pub(crate) fn pop_if(&self, head: &str) -> Option<&str> {
+    pub fn pop_if(&self, head: &str) -> Option<&str> {
         match self.parts().first()? {
             Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
             _ => None,
@@ -69,7 +75,7 @@ enum Comparison {
 /// that contain indices can be matched against patterns. For example,
 /// `github.event.pull_request.assignees.*.name` will match the context
 /// `github.event.pull_request.assignees[0].name`.
-pub(crate) struct ContextPattern<'src>(
+pub struct ContextPattern<'src>(
     // NOTE: Kept as a string as a potentially premature optimization;
     // re-parsing should be faster in terms of locality.
     // TODO: Vec instead?
@@ -85,7 +91,7 @@ impl<'src> TryFrom<&'src str> for ContextPattern<'src> {
 }
 
 impl<'src> ContextPattern<'src> {
-    pub(crate) fn new(pattern: &'src str) -> Option<Self> {
+    pub fn new(pattern: &'src str) -> Option<Self> {
         let parts = pattern.split('.');
         let mut count = 0;
         for part in parts {
@@ -157,7 +163,7 @@ impl<'src> ContextPattern<'src> {
     ///
     /// This is a loose parent-child relationship; for example, `foo` is its
     /// own parent, as well as the parent of `foo.bar` and `foo.bar.baz`.
-    pub(crate) fn parent_of(&self, ctx: &Context<'src>) -> bool {
+    pub fn parent_of(&self, ctx: &Context<'src>) -> bool {
         matches!(
             self.compare(ctx),
             Some(Comparison::Child | Comparison::Match)
@@ -167,14 +173,14 @@ impl<'src> ContextPattern<'src> {
     /// Returns true if the given context exactly matches the pattern.
     ///
     /// See [`ContextPattern`] for a description of the matching rules.
-    pub(crate) fn matches(&self, ctx: &Context<'src>) -> bool {
+    pub fn matches(&self, ctx: &Context<'src>) -> bool {
         matches!(self.compare(ctx), Some(Comparison::Match))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::expr::Expr;
+    use crate::Expr;
 
     use super::{Context, ContextPattern};
 

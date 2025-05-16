@@ -32,6 +32,14 @@ body:
             for a duplicate report.
           required: true
 
+  - type: input
+    attributes:
+      label: zizmor version
+      description: |
+        Please use `zizmor --version` to get your current version of `zizmor`.
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Expected behavior

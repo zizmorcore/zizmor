@@ -12,6 +12,7 @@
 
 use std::sync::LazyLock;
 
+use github_actions_expressions::{BinOp, Expr, UnOp, context::ContextPattern};
 use github_actions_models::{
     common::{Uses, expr::LoE},
     workflow::job::Strategy,
@@ -19,7 +20,6 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    expr::{BinOp, Expr, UnOp, context::ContextPattern},
     finding::{Confidence, Finding, Persona, Severity, SymbolicLocation},
     models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,

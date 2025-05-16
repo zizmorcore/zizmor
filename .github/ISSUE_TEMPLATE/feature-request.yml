@@ -3,6 +3,7 @@ description: Suggest an idea or enhancement for zizmor
 title: "Feature: "
 labels:
   - enhancement
+  - triage
 body:
   - type: markdown
     attributes:

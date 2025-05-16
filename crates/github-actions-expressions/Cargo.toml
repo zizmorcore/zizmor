@@ -1,0 +1,20 @@
+[package]
+name = "github-actions-expressions"
+description = "GitHub Actions expression parser and data types"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-expressions"
+version = "0.0.2"
+readme = "README.md"
+
+homepage.workspace = true
+license.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+pest.workspace = true
+pest_derive.workspace = true
+itertools.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true

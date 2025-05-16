@@ -468,6 +468,14 @@ mod tests {
             ("echo FOO=`bar` >> $GITHUB_ENV", true),
             ("echo $(bar) >> $GITHUB_ENV", true),
             ("echo `bar` >> $GITHUB_ENV", true),
+            (
+                "echo \"PACKAGE_NAME=$(echo ${GITHUB_REF} | cut -d '/' -f 3 | cut -d '-' -f 1)\" >> ${GITHUB_ENV}",
+                true,
+            ),
+            (
+                "echo PACKAGE_NAME=\"$(echo ${GITHUB_REF} | cut -d '/' -f 3 | cut -d '-' -f 1)\" >> ${GITHUB_ENV}",
+                true,
+            ),
             // We consider these unsafe because we don't know what
             // unknown-command produces, unlike echo.
             ("unknown-command >> $GITHUB_ENV", true),

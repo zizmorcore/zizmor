@@ -644,7 +644,7 @@ Other resources:
 
 ### Remediation
 
-In general, users should use for [GitHub Actions environment files]
+In general, users should use [GitHub Actions environment files]
 (like `GITHUB_PATH` and `GITHUB_OUTPUT`) instead of using workflow commands.
 
 !!! example

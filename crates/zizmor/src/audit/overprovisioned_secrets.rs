@@ -1,5 +1,6 @@
+use github_actions_expressions::Expr;
+
 use crate::{
-    expr::Expr,
     finding::{Confidence, Feature, Location, Severity},
     utils::parse_expressions_from_input,
 };
@@ -103,6 +104,8 @@ impl OverprovisionedSecrets {
 
 #[cfg(test)]
 mod tests {
+    use github_actions_expressions::Expr;
+
     #[test]
     fn test_secrets_expansions() {
         for (expr, count) in &[
@@ -120,7 +123,7 @@ mod tests {
             ("SECRETS[something.else]", 1),
             ("SECRETS['literal']", 0),
         ] {
-            let expr = crate::expr::Expr::parse(expr).unwrap();
+            let expr = Expr::parse(expr).unwrap();
             assert_eq!(
                 super::OverprovisionedSecrets::secrets_expansions(&expr).len(),
                 *count

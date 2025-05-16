@@ -1,8 +1,8 @@
+use github_actions_expressions::{BinOp, Expr, UnOp, context::Context};
 use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    expr::{self, Expr, context::Context},
     finding::{Confidence, Severity},
     models::{JobExt, StepCommon},
 };
@@ -83,14 +83,14 @@ impl BotConditions {
             Expr::Index(expr) => Self::walk_tree_for_bot_condition(expr, dominating),
             Expr::BinOp { lhs, op, rhs } => match op {
                 // || is dominating.
-                expr::BinOp::Or => {
+                BinOp::Or => {
                     let (bc_lhs, _) = Self::walk_tree_for_bot_condition(lhs, true);
                     let (bc_rhs, _) = Self::walk_tree_for_bot_condition(rhs, true);
 
                     (bc_lhs || bc_rhs, true)
                 }
                 // == is trivially dominating.
-                expr::BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
+                BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
                     (Expr::Context(ctx), Expr::String(s))
                     | (Expr::String(s), Expr::Context(ctx)) => {
                         // NOTE: Can't use `contains` here because we need
@@ -128,7 +128,7 @@ impl BotConditions {
                 // However, to model this correctly we need to go from a
                 // boolean condition to a three-state: `Some(bool)` for
                 // an explicitly toggled condition, and `None` for no condition.
-                expr::UnOp::Not => Self::walk_tree_for_bot_condition(expr, false),
+                UnOp::Not => Self::walk_tree_for_bot_condition(expr, false),
             },
             _ => (false, dominating),
         }

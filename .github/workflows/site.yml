@@ -1,4 +1,4 @@
-name: Deploy zizmor site
+name: Deploy zizmor site 🌐
 
 on:
   push:

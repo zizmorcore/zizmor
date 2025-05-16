@@ -1,4 +1,10 @@
-//! Expression parsing and analysis.
+//! GitHub Actions expression parsing and analysis.
+
+#![forbid(unsafe_code)]
+
+// TODO: Re-enable when #[derive(Parser)] doesn't break this.
+// See: https://github.com/pest-parser/pest/issues/326
+// #![deny(missing_docs)]
 
 use anyhow::Result;
 use context::Context;
@@ -6,15 +12,18 @@ use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 use pest_derive::Parser;
 
-pub(crate) mod context;
+pub mod context;
 
 /// A parser for GitHub Actions' expression language.
 #[derive(Parser)]
-#[grammar = "expr/expr.pest"]
+#[grammar = "expr.pest"]
 struct ExprParser;
 
+/// Represents a function in a GitHub Actions expression.
+///
+/// Function names are case-insensitive.
 #[derive(Debug)]
-pub(crate) struct Function<'src>(pub(crate) &'src str);
+pub struct Function<'src>(pub(crate) &'src str);
 
 impl PartialEq for Function<'_> {
     fn eq(&self, other: &Self) -> bool {
@@ -27,8 +36,12 @@ impl PartialEq<str> for Function<'_> {
     }
 }
 
+/// Represents a single identifier in a GitHub Actions expression,
+/// i.e. a single context component.
+///
+/// Identifiers are case-insensitive.
 #[derive(Debug)]
-pub(crate) struct Identifier<'src>(&'src str);
+pub struct Identifier<'src>(&'src str);
 
 impl PartialEq for Identifier<'_> {
     fn eq(&self, other: &Self) -> bool {
@@ -42,26 +55,36 @@ impl PartialEq<str> for Identifier<'_> {
     }
 }
 
+/// Binary operations allowed in an expression.
 #[derive(Debug, PartialEq)]
-pub(crate) enum BinOp {
+pub enum BinOp {
+    /// `expr && expr`
     And,
+    /// `expr || expr`
     Or,
+    /// `expr == expr`
     Eq,
+    /// `expr != expr`
     Neq,
+    /// `expr > expr`
     Gt,
+    /// `expr >= expr`
     Ge,
+    /// `expr < expr`
     Lt,
+    /// `expr <= expr`
     Le,
 }
 
+/// Unary operations allowed in an expression.
 #[derive(Debug, PartialEq)]
-pub(crate) enum UnOp {
+pub enum UnOp {
     Not,
 }
 
 /// Represents a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
-pub(crate) enum Expr<'src> {
+pub enum Expr<'src> {
     /// A number literal.
     Number(f64),
     /// A string literal.
@@ -94,19 +117,22 @@ pub(crate) enum Expr<'src> {
 }
 
 impl<'src> Expr<'src> {
-    /// Convenience API for making a boxed `Expr::String`.
-    pub(crate) fn string(s: impl Into<String>) -> Box<Self> {
+    /// Convenience API for making a boxed [`Expr::String`].
+    fn string(s: impl Into<String>) -> Box<Self> {
         Self::String(s.into()).into()
     }
 
-    pub(crate) fn ident(i: &'src str) -> Self {
+    /// Convenience API for making an [`Expr::Identifier`].
+    fn ident(i: &'src str) -> Self {
         Self::Identifier(Identifier(i))
     }
 
-    pub(crate) fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
+    /// Convenience API for making an [`Expr::Context`].
+    fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
         Self::Context(Context::new(r, components))
     }
 
+    /// Returns whether the expression is a literal.
     fn is_literal(&self) -> bool {
         matches!(
             self,
@@ -132,7 +158,7 @@ impl<'src> Expr<'src> {
     ///    mean that reducible arguments make the call itself reducible.
     ///
     /// NOTE: This implementation is sound but not complete.
-    pub(crate) fn constant_reducible(&self) -> bool {
+    pub fn constant_reducible(&self) -> bool {
         match self {
             // Literals are always reducible.
             Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null => true,
@@ -165,7 +191,7 @@ impl<'src> Expr<'src> {
     /// it doesn't include "trivially" reducible expressions like literals,
     /// since flagging these as reducible within a larger expression
     /// would be misleading.
-    pub(crate) fn has_constant_reducible_subexpr(&self) -> bool {
+    pub fn has_constant_reducible_subexpr(&self) -> bool {
         if !self.is_literal() && self.constant_reducible() {
             return true;
         }
@@ -195,7 +221,7 @@ impl<'src> Expr<'src> {
     /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
     /// since the value of `foo.bar` flows into a boolean evaluation
     /// that gets expanded.
-    pub(crate) fn dataflow_contexts(&self) -> Vec<&Context> {
+    pub fn dataflow_contexts(&self) -> Vec<&Context> {
         let mut contexts = vec![];
 
         match self {
@@ -235,7 +261,8 @@ impl<'src> Expr<'src> {
         contexts
     }
 
-    pub(crate) fn parse(expr: &str) -> Result<Expr> {
+    /// Parses the given string into an expression.
+    pub fn parse(expr: &str) -> Result<Expr> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?
             .next()
