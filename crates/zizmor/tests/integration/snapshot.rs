@@ -333,6 +333,12 @@ fn template_injection() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("template-injection/issue-749-repro.yml"))
+            .run()?
+    );
+
     Ok(())
 }
 

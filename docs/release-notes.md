@@ -27,6 +27,11 @@ of `zizmor`.
 * `zizmor` now supports the `ZIZMOR_CONFIG` environment variable as an
   alternative to `--config` (#789)
 
+### Bug Fixes 🐛
+
+* `zizmor` now correctly handles index-style contexts in the
+  [template-injection] audit (#800, #806)
+
 ## v1.7.0
 
 This release comes with **four** new audits: [obfuscation], [stale-action-refs],
