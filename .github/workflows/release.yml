@@ -1,9 +1,9 @@
+name: Release zizmor to crates.io 📦
+
 on:
   release:
     types:
       - published
-
-name: release
 
 permissions: {}
 

@@ -1,4 +1,4 @@
-name: zizmor wheel builds for PyPI
+name: zizmor wheel builds for PyPI 🐍
 
 on:
   push:
