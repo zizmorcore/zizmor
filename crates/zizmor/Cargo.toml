@@ -23,47 +23,47 @@ online-tests = ["gh-token-tests"]
 tty-tests = []
 
 [dependencies]
-annotate-snippets = { workspace = true }
-anstream = { workspace = true }
+annotate-snippets.workspace = true
+anstream.workspace = true
 anyhow.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 clap = { workspace = true, features = ["derive", "env"] }
 clap-verbosity-flag = { workspace = true, features = ["tracing"] }
-clap_complete = { workspace = true }
-etcetera = { workspace = true }
-flate2 = { workspace = true }
+clap_complete.workspace = true
+etcetera.workspace = true
+flate2.workspace = true
 github-actions-expressions.workspace = true
-github-actions-models = { workspace = true }
-http-cache-reqwest = { workspace = true }
-human-panic = { workspace = true }
-ignore = { workspace = true }
-indexmap = { workspace = true }
-indicatif = { workspace = true }
+github-actions-models.workspace = true
+http-cache-reqwest.workspace = true
+human-panic.workspace = true
+ignore.workspace = true
+indexmap.workspace = true
+indicatif.workspace = true
 itertools.workspace = true
-jsonschema = { workspace = true }
-line-index = { workspace = true }
-owo-colors = { workspace = true }
-regex = { workspace = true }
+jsonschema.workspace = true
+line-index.workspace = true
+owo-colors.workspace = true
+regex.workspace = true
 reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls"] }
-reqwest-middleware = { workspace = true }
+reqwest-middleware.workspace = true
 serde = { workspace = true, features = ["derive"] }
-serde-sarif = { workspace = true }
-serde_json = { workspace = true }
-serde_yaml = { workspace = true }
-tar = { workspace = true }
-terminal-link = { workspace = true }
-thiserror = { workspace = true }
+serde-sarif.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+tar.workspace = true
+terminal-link.workspace = true
+thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
-tracing = { workspace = true }
-tracing-indicatif = { workspace = true }
+tracing.workspace = true
+tracing-indicatif.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
-tree-sitter = { workspace = true }
-tree-sitter-bash = { workspace = true }
-tree-sitter-powershell = { workspace = true }
-yamlpath = { workspace = true }
+tree-sitter.workspace = true
+tree-sitter-bash.workspace = true
+tree-sitter-powershell.workspace = true
+yamlpath.workspace = true
 
 
 [dev-dependencies]
-assert_cmd = { workspace = true }
-insta = { workspace = true }
-serde_json_path = { workspace = true }
+assert_cmd.workspace = true
+insta.workspace = true
+serde_json_path.workspace = true
