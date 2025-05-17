@@ -70,10 +70,16 @@ boolean = { "true" | "false" }
 null = { "null" }
 
 /// Context references (e.g., github.event.issue.number)
-context    = ${ (function_call | identifier) ~ (("." ~ (identifier | star)) | index)* }
-star       =  { "*" }
+context = ${ (function_call | identifier) ~ (("." ~ (identifier | star)) | index)* }
+
+/// A star within a context component.
+star = { "*" }
+
+/// A single identifier within a context component.
 identifier = @{ (ASCII_ALPHA | "_" | "-") ~ (ASCII_ALPHANUMERIC | "_" | "-")* }
-index      = !{ ("[" ~ (or_expr | star) ~ "]") }
+
+/// An index within a context component.
+index = !{ ("[" ~ (or_expr | star) ~ "]") }
 
 /// Function calls
 function_call = !{ identifier ~ "(" ~ (or_expr ~ ("," ~ or_expr)*)? ~ ")" }

@@ -33,7 +33,7 @@ of `zizmor`.
   on alternative representations of the same context pattern.
   For example, `github.event.pull_request.head.sha` is considered safe
   but `github['event']['pull_request']['head']['sha']` was not previously
-  detected as equivalent to it (#745)
+  detected as equivalent to it (#800, #806)
 
 ## v1.7.0
 
