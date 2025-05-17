@@ -1,24 +1,28 @@
 //! GitHub Actions expression parsing and analysis.
 
 #![forbid(unsafe_code)]
-
-// TODO: Re-enable when #[derive(Parser)] doesn't break this.
-// See: https://github.com/pest-parser/pest/issues/326
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 use crate::context::Context;
 
+use self::parser::{ExprParser, Rule};
 use anyhow::Result;
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
-use pest_derive::Parser;
 
 pub mod context;
 
-/// A parser for GitHub Actions' expression language.
-#[derive(Parser)]
-#[grammar = "expr.pest"]
-struct ExprParser;
+// Isolates the ExprParser, Rule and other generated types
+// so that we can do `missing_docs` at the top-level.
+// See: https://github.com/pest-parser/pest/issues/326
+mod parser {
+    use pest_derive::Parser;
+
+    /// A parser for GitHub Actions' expression language.
+    #[derive(Parser)]
+    #[grammar = "expr.pest"]
+    pub struct ExprParser;
+}
 
 /// Represents a function in a GitHub Actions expression.
 ///
@@ -80,6 +84,7 @@ pub enum BinOp {
 /// Unary operations allowed in an expression.
 #[derive(Debug, PartialEq)]
 pub enum UnOp {
+    /// `!expr`
     Not,
 }
 
@@ -98,7 +103,9 @@ pub enum Expr<'src> {
     Star,
     /// A function call.
     Call {
+        /// The function name, e.g. `foo` in `foo()`.
         func: Function<'src>,
+        /// The function's arguments.
         args: Vec<Expr<'src>>,
     },
     /// A context identifier component, e.g. `github` in `github.actor`.
@@ -109,12 +116,20 @@ pub enum Expr<'src> {
     Context(Context<'src>),
     /// A binary operation, either logical or arithmetic.
     BinOp {
+        /// The LHS of the binop.
         lhs: Box<Expr<'src>>,
+        /// The binary operator.
         op: BinOp,
+        /// The RHS of the binop.
         rhs: Box<Expr<'src>>,
     },
     /// A unary operation. Negation (`!`) is currently the only `UnOp`.
-    UnOp { op: UnOp, expr: Box<Expr<'src>> },
+    UnOp {
+        /// The unary operator.
+        op: UnOp,
+        /// The expression to apply the operator to.
+        expr: Box<Expr<'src>>,
+    },
 }
 
 impl<'src> Expr<'src> {
