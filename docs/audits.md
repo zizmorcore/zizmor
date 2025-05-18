@@ -343,7 +343,7 @@ by default, and then set specific job-level permissions as needed.
                   path: dist/
 
               - name: publish
-                uses: pypa/gh-action-pypi-publish@release/v1
+                uses: pypa/gh-action-pypi-publish@v1.12.4
         ```
 
     === "After :white_check_mark:"
@@ -380,7 +380,7 @@ by default, and then set specific job-level permissions as needed.
                   path: dist/
 
               - name: publish
-                uses: pypa/gh-action-pypi-publish@release/v1
+                uses: pypa/gh-action-pypi-publish@v1.12.4
         ```
 
 ## `forbidden-uses`
