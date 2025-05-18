@@ -14,7 +14,6 @@ jobs:
       pull-requests: write # for pull request creation
     uses: zizmorcore/.github/.github/workflows/pinact-reusable.yml@1f08e4c16ea12a8372b10d32c9e83814e28585a4
     with:
-      dry-run: true
       extra-inputs: >-
         docs/usage.md
         docs/audits.md
