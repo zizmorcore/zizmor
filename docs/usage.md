@@ -570,9 +570,7 @@ two primary ways to use `zizmor` in GitHub Actions:
 
     on:
       push:
-        branches: ["main"]
       pull_request:
-        branches: ["**"]
 
     permissions: {}
 
@@ -644,9 +642,7 @@ two primary ways to use `zizmor` in GitHub Actions:
 
     on:
       push:
-        branches: ["main"]
       pull_request:
-        branches: ["**"]
 
     jobs:
       zizmor:
