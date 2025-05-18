@@ -1,0 +1,23 @@
+name: Update use pins with pinact
+
+on:
+  schedule:
+    - cron: "0 16 * * *"
+  workflow_dispatch:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  call-pinact:
+    permissions:
+      contents: write # for branch creation
+      pull-requests: write # for pull request creation
+    uses: zizmorcore/.github/.github/workflows/pinact-reusable.yml@98563e15293546f024fc295f62071c80c05b1a49
+    with:
+      dry-run: true
+      extra-inputs: |
+        docs/usage.md
+        docs/audits.md
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
