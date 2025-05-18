@@ -1,6 +1,6 @@
 version: 3
 
 files:
-  - pattern: workflows/*.yml
-  - pattern: ../docs/usage.md
-  - pattern: ../docs/audits.md
+  # NOTE: we intentionally only update docs with pinact.
+  # All non-doc workflows and actions are updated through Dependabot.
+  - pattern: ../docs/*.md

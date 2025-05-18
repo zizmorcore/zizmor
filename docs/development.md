@@ -344,3 +344,27 @@ you may need to [update the snippets](#updating-the-snippets).
 [clap-derive]: https://docs.rs/clap/latest/clap/_derive/index.html
 
 [insta's documentation]: https://insta.rs/docs/
+
+## Repository maintenance tasks
+
+### Dependabot
+
+`zizmor` uses Dependabot to update dependencies in various ecosystems,
+including Rust and GitHub Actions.
+
+Dependencies are updated once weekly and in per-ecosystem batches to
+keep PR volumes down.
+
+### Updating actions documentation with `pinact`
+
+`zizmor` uses [pinact] to update `uses:` clauses in its documentation.
+
+You can install `pinact` locally via `brew`:
+
+```bash
+brew install pinact
+```
+
+Then, run `make pinact` to update the `uses:` clauses in the documentation.
+
+[pinact]: https://github.com/suzuki-shunsuke/pinact
