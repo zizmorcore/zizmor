@@ -434,16 +434,18 @@ Multiple different audits can be ignored with a single comment by
 separating each rule with a comma, e.g.
 `# zizmor: ignore[artipacked,ref-confusion]`.
 
-To ignore a single `artipacked` finding:
+To ignore a single `template-injection` finding:
 
 ```yaml title="example.yml"
-uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+run: | # zizmor: ignore[template-injection]
+  echo "${{ github.event.issue.title }}"
 ```
 
 Ignore comments can also have a trailing explanation:
 
 ```yaml title="example.yml"
-uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+run: | # zizmor: ignore[template-injection] i promise this is safe
+  echo "${{ github.event.issue.title }}"
 ```
 
 !!! important
