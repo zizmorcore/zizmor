@@ -1,0 +1,6 @@
+version: 3
+
+files:
+  - pattern: workflows/*.yml
+  - pattern: ../docs/usage.md
+  - pattern: ../docs/audits.md

@@ -327,7 +327,7 @@ sensitive `zizmor`'s analyses are:
     as its pin instead of a hashed pin:
 
     ```yaml
-    uses: actions/checkout@v3
+    uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     ```
 
     produces:
@@ -437,13 +437,13 @@ separating each rule with a comma, e.g.
 To ignore a single `artipacked` finding:
 
 ```yaml title="example.yml"
-uses: actions/checkout@v3 # zizmor: ignore[artipacked]
+uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 ```
 
 Ignore comments can also have a trailing explanation:
 
 ```yaml title="example.yml"
-uses: actions/checkout@v3 # zizmor: ignore[artipacked] this is actually fine
+uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 ```
 
 !!! important
@@ -586,12 +586,12 @@ two primary ways to use `zizmor` in GitHub Actions:
           actions: read # only needed for private repos
         steps:
           - name: Checkout repository
-            uses: actions/checkout@v4
+            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
             with:
               persist-credentials: false
 
           - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
+            uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
 
           - name: Run zizmor 🌈
             run: uvx zizmor --format=sarif . > results.sarif # (2)!
@@ -599,7 +599,7 @@ two primary ways to use `zizmor` in GitHub Actions:
               GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
 
           - name: Upload SARIF file
-            uses: github/codeql-action/upload-sarif@v3
+            uses: github/codeql-action/upload-sarif@ff0a06e83cb2de871e5a09832bc6a81e7276941f # v3.28.18
             with:
               sarif_file: results.sarif
               category: zizmor
@@ -657,10 +657,10 @@ two primary ways to use `zizmor` in GitHub Actions:
           actions: read # only needed for private repos
         steps:
           - name: Checkout repository
-            uses: actions/checkout@v4
+            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
           - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@v5
+            uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
 
           - name: Run zizmor 🌈
             run: uvx zizmor --format=github . # (2)!
