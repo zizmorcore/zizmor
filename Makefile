@@ -30,3 +30,7 @@ docs/snippets/sponsors.html: docs/snippets/sponsors.json docs/snippets/render-sp
 refresh-schemas:
 	curl https://json.schemastore.org/github-workflow.json > crates/zizmor/src/data/github-workflow.json
 	curl https://json.schemastore.org/github-action.json > crates/zizmor/src/data/github-action.json
+
+.PHONY: pinact
+pinact:
+	pinact run --update --verify
