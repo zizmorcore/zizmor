@@ -16,7 +16,7 @@ jobs:
     uses: zizmorcore/.github/.github/workflows/pinact-reusable.yml@98563e15293546f024fc295f62071c80c05b1a49
     with:
       dry-run: true
-      extra-inputs: |
+      extra-inputs: >-
         docs/usage.md
         docs/audits.md
     secrets:
