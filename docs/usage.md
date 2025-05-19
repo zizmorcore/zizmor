@@ -408,7 +408,7 @@ There are two straightforward ways to filter `zizmor`'s results:
      JSON output to only results that are marked as "high confidence":
 
      ```bash
-     zizmor --format=json ... | jq 'map(select(.determinations.confidence == "High"))'
+     zizmor --format=json-v1 ... | jq 'map(select(.determinations.confidence == "High"))'
      ```
 
 ## Ignoring results
