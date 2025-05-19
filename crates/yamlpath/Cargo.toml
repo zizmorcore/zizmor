@@ -14,7 +14,7 @@ license.workspace = true
 [dependencies]
 thiserror.workspace = true
 tree-sitter.workspace = true
-tree-sitter-yaml = "0.7.0"
+tree-sitter-yaml = { workspace = true }
 
 [dev-dependencies]
 serde.workspace = true
