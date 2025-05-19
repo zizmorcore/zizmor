@@ -3,13 +3,15 @@
 //! Build on synchronous reqwest to avoid octocrab's need to taint
 //! the whole codebase with async.
 
-use std::{collections::HashMap, io::Read, path::Path, sync::RwLock};
+use std::{
+    collections::HashMap,
+    io::Read,
+    path::{Path, PathBuf},
+    sync::RwLock,
+};
 
 use anyhow::{Context, Result};
-use git2::{
-    Direction, ObjectType, Oid, Remote, Repository, TreeWalkMode, TreeWalkResult,
-    build::RepoBuilder,
-};
+use git2::{ObjectType, Oid, Repository, TreeWalkMode, TreeWalkResult, build::RepoBuilder};
 use github_actions_models::common::RepositoryUses;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
@@ -75,7 +77,8 @@ pub(crate) struct Client {
     http: ClientWithMiddleware,
     host: GitHubHost,
     token: Option<String>,
-    fetched_repos: RwLock<HashMap<String, bool>>,
+    cache_dir: PathBuf,
+    fetched_repos: RwLock<HashMap<String, PathBuf>>,
 }
 
 impl Client {
@@ -124,33 +127,39 @@ impl Client {
                 0 => None,
                 _ => Some(token.to_string()),
             },
+            cache_dir: cache_dir.to_path_buf(),
             fetched_repos: RwLock::new(HashMap::new()),
         }
     }
 
     #[instrument(skip(self))]
     pub(crate) async fn list_refs(&self, owner: &str, repo: &str) -> Result<Vec<Ref>> {
-        let mut remote =
-            Remote::create_detached(self.host.to_repo_url(owner, repo, self.token.clone()))?;
-        let connection = remote.connect_auth(Direction::Fetch, None, None)?;
-        let refs = connection.list()?;
+        let repository = self.get_repo(owner, repo).await?;
+        let refs = repository.references()?;
 
         Ok(refs
-            .iter()
+            .enumerate()
+            .filter_map(|(_, r)| match r {
+                Ok(r) => Some(r),
+                Err(_) => None,
+            })
             .map(|r| {
-                if r.name().starts_with("refs/heads/") {
+                let name = r.name().unwrap_or("");
+                let oid = r.peel_to_commit().unwrap().id().to_string();
+                if name.starts_with("refs/heads/") {
                     Ref::Branch(Branch {
-                        name: r.name().to_string().replace("refs/heads/", ""),
-                        commit: Object {
-                            sha: r.oid().to_string(),
-                        },
+                        name: name.replace("refs/heads/", ""),
+                        commit: Object { sha: oid },
+                    })
+                } else if name.starts_with("refs/remotes/origin/") {
+                    Ref::Branch(Branch {
+                        name: name.replace("refs/remotes/origin/", ""),
+                        commit: Object { sha: oid },
                     })
                 } else {
                     Ref::Tag(Tag {
-                        name: r.name().to_string().replace("refs/tags/", ""),
-                        commit: Object {
-                            sha: r.oid().to_string(),
-                        },
+                        name: name.replace("refs/tags/", ""),
+                        commit: Object { sha: oid },
                     })
                 }
             })
@@ -159,55 +168,51 @@ impl Client {
 
     #[instrument(skip(self))]
     pub(crate) async fn get_repo(&self, owner: &str, repo: &str) -> Result<Repository> {
-        let tmp = std::env::temp_dir().join(format!("zizmor/{owner}-{repo}"));
-        if !tmp.exists() {
-            let repository = RepoBuilder::new()
-                .bare(true)
-                .clone(
-                    &self.host.to_repo_url(owner, repo, self.token.clone()),
-                    &tmp,
-                )
-                .with_context(|| format!("couldn't clone repo {owner}/{repo}"))?;
+        let path = self.cache_dir.join(format!("repositories/{owner}/{repo}"));
 
-            self.fetched_repos
-                .write()
-                .unwrap()
-                .insert(format!("{owner}/{repo}"), true);
-            return Ok(repository);
-        }
+        let repository = match self
+            .fetched_repos
+            .read()
+            .unwrap()
+            .get(&format!("{owner}/{repo}"))
+        {
+            Some(path) => {
+                let repository = Repository::open(path)?;
+                repository
+            }
+            None => match path.exists() {
+                true => {
+                    self.run_fetch(&path).await?;
+                    let repository = Repository::open(&path)?;
+                    repository
+                }
+                false => {
+                    let repository = RepoBuilder::new()
+                        .bare(true)
+                        .clone(
+                            &self.host.to_repo_url(owner, repo, self.token.clone()),
+                            &path,
+                        )
+                        .with_context(|| format!("couldn't clone repo {owner}/{repo}"))?;
+                    repository
+                }
+            },
+        };
 
-        let repository =
-            Repository::open(tmp).with_context(|| format!("couldn't open repo {owner}/{repo}"))?;
-
-        self.run_fetch(owner, repo).await?;
+        self.fetched_repos
+            .write()
+            .unwrap()
+            .insert(format!("{owner}/{repo}"), path.clone());
 
         Ok(repository)
     }
 
     #[instrument(skip(self))]
-    pub(crate) async fn run_fetch(&self, owner: &str, repo: &str) -> Result<()> {
-        if self
-            .fetched_repos
-            .read()
-            .unwrap()
-            .contains_key(&format!("{owner}/{repo}"))
-        {
-            return Ok(());
-        }
-
-        let tmp = std::env::temp_dir().join(format!("zizmor/{owner}-{repo}"));
-        if !tmp.exists() {
-            tracing::error!("couldn't find repo {owner}/{repo} in cache");
-            return Ok(());
-        }
-
-        let repository = Repository::open(tmp)?;
+    pub(crate) async fn run_fetch(&self, path: &PathBuf) -> Result<()> {
+        let repository = Repository::open(path)?;
         let mut remote = match repository.find_remote("origin") {
             Ok(r) => r,
-            Err(_) => repository.remote(
-                "origin",
-                &self.host.to_repo_url(owner, repo, self.token.clone()),
-            )?,
+            Err(_) => return Err(anyhow::anyhow!("couldn't find remote for {path:?}")),
         };
 
         let refspecs = remote.fetch_refspecs()?;
@@ -216,12 +221,6 @@ impl Client {
             normalized_refspecs.push(spec);
         }
         remote.fetch(&normalized_refspecs, None, None)?;
-
-        self.fetched_repos
-            .write()
-            .unwrap()
-            .insert(format!("{owner}/{repo}"), true);
-
         Ok(())
     }
 
