@@ -1,0 +1,21 @@
+testcase:
+  flow1: { foo: [1, 2, 3: [4, 5, { a: b }]] }
+  flow2: { foo: [1, { a }] }
+  flow3: { foo: [1, { a: }] }
+
+queries:
+  - query: [flow1, foo]
+    expected: "foo: [1, 2, 3: [4, 5, { a: b }]]"
+
+  - query: [flow1, foo, 2]
+    # TODO: ideally would be `3: [4, 5, { a: b }]`
+    expected: "[4, 5, { a: b }]"
+
+  - query: [flow1, foo, 2, 2]
+    expected: "{ a: b }"
+
+  - query: [flow2, foo, 1]
+    expected: "{ a }"
+
+  - query: [flow3, foo, 1]
+    expected: "{ a: }"
