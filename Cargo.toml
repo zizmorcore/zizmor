@@ -58,6 +58,7 @@ tree-sitter = "0.25.4"
 tree-sitter-bash = "0.23.3"
 tree-sitter-powershell = "0.25.2"
 yamlpath = { path = "crates/yamlpath", version = "*" }
+tree-sitter-yaml = "0.7.0"
 
 
 [profile.dev.package]
