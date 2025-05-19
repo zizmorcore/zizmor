@@ -8,6 +8,7 @@ adafruit/circuitpython#9785
 aio-libs/aiobotocore#1344
 aio-libs/aiobotocore#1355
 apache/airflow#45408
+apache/airflow#50749
 apache/opennlp#736
 artichoke/artichoke#2825
 artichoke/boba#265
@@ -147,6 +148,7 @@ onnx/onnx#6661
 onnx/onnx#6662
 openbao/openbao#924
 open-edge-platform/geti#162
+openpubkey/opkssh#198
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
 orion-rs/orion#441
