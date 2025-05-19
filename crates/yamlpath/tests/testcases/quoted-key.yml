@@ -1,0 +1,21 @@
+testcase:
+  'on': test
+
+  "on1": test
+
+  on2: test
+
+  5: test
+
+queries:
+  - query: [on]
+    expected: "  'on': test"
+
+  - query: [on1]
+    expected: '  "on1": test'
+
+  - query: [on2]
+    expected: "  on2: test"
+
+  - query: ["5"]
+    expected: "  5: test"

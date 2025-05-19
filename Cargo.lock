@@ -3466,10 +3466,10 @@ checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
 
 [[package]]
 name = "yamlpath"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87c585ad15cb2a723978a39719af264133486ee68bd980e214ff43402e7b674a"
+version = "0.17.0"
 dependencies = [
+ "serde",
+ "serde_yaml",
  "thiserror 2.0.12",
  "tree-sitter",
  "tree-sitter-yaml",
