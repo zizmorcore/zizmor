@@ -5,6 +5,7 @@ on:
     tags:
       # NOTE: additional non-zizmor crate tag patterns get added here
       - 'github-actions-expressions/v*'
+      - 'yamlpath/v*'
   workflow_dispatch:
     inputs:
       package-name:
