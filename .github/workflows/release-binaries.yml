@@ -19,7 +19,6 @@ jobs:
             target: aarch64-unknown-linux-gnu
           - runner: macos-latest
             target: x86_64-apple-darwin
-            install: true
           - runner: macos-latest
             target: aarch64-apple-darwin
           - runner: windows-latest
@@ -41,13 +40,14 @@ jobs:
           rustup show
 
       - name: Install Rust target for ${{ matrix.target }}
-        if: ${{ matrix.install }}
         run: rustup target add "${TARGET}"
         env:
           TARGET: ${{ matrix.target }}
+        shell: bash
 
       - name: Build release
         run: cargo build --release --target "${TARGET}"
         env:
           TARGET: ${{ matrix.target }}
+        shell: bash
 
