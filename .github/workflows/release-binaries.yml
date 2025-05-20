@@ -67,12 +67,12 @@ jobs:
 
       - name: Smoke test
         run: |
-          ./target/release/zizmor --version
+          ./target/${TARGET}/release/zizmor --version
         shell: bash
 
       - name: Rename binary
         run: |
-          mv ./target/release/zizmor ./target/release/zizmor-${TARGET}
+          mv ./target/${TARGET}/release/zizmor ./target/${TARGET}/release/zizmor-${TARGET}
         env:
           TARGET: ${{ matrix.target }}
         shell: bash
@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: artifacts-${{ matrix.target }}
-          path: ./target/release/zizmor-${TARGET}
+          path: ./target/${{ matrix.target }}/release/zizmor-${TARGET}
 
       # - name: Upload to release
       #   if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
