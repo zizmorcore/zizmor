@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## v1.8.0
+
 ### Announcements 📣
 
 * `zizmor`'s website has changed! The new website is hosted at
