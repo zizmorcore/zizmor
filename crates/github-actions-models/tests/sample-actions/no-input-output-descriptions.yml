@@ -1,0 +1,16 @@
+# ensures that we parse actions without input/output descriptions correctly
+# see: https://github.com/woodruffw/zizmor/issues/501
+
+inputs:
+  foo:
+    default: "lol"
+outputs:
+  bar:
+    value: "hmm"
+
+runs:
+  using: "composite"
+  steps:
+    - name: say hello
+      run: echo hello
+      shell: bash

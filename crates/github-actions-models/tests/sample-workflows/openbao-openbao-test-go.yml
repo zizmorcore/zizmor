@@ -1,0 +1,313 @@
+# https://github.com/openbao/openbao/blob/76c9470e8d03fce343f38854d10727775d571519/.github/workflows/test-go.yml
+
+# Copyright (c) 2015 HashiCorp, Inc.
+# Licensed under MPL 2.0:
+# https://github.com/openbao/openbao/blob/76c9470e8d03fce343f38854d10727775d571519/LICENSE
+
+on:
+  workflow_call:
+    inputs:
+      go-arch:
+        description: The execution architecture (arm, amd64, etc.)
+        required: true
+        type: string
+      total-runners:
+        description: Number of runners to use for executing non-binary tests.
+        required: true
+        type: string
+      binary-tests:
+        description: Whether to run the binary tests.
+        required: false
+        default: false
+        type: boolean
+      env-vars:
+        description: A map of environment variables as JSON.
+        required: false
+        type: string
+        default: "{}"
+      extra-flags:
+        description: A space-separated list of additional build flags.
+        required: false
+        type: string
+        default: ""
+      runs-on:
+        description: An expression indicating which kind of runners to use.
+        required: false
+        type: string
+        default: ubuntu-latest
+      go-tags:
+        description: A comma-separated list of additional build tags to consider satisfied during the build.
+        required: false
+        type: string
+      name:
+        description: A suffix to append to archived test results
+        required: false
+        default: ""
+        type: string
+      go-test-parallelism:
+        description: The parallelism parameter for Go tests
+        required: false
+        default: 20
+        type: number
+      timeout-minutes:
+        description: The maximum number of minutes that this workflow should run
+        required: false
+        default: 60
+        type: number
+      testonly:
+        description: Whether to run the tests tagged with testonly.
+        required: false
+        default: false
+        type: boolean
+      checkout-ref:
+        description: The ref to use for checkout.
+        required: false
+        default: ${{ github.ref }}
+        type: string
+
+env: ${{ fromJSON(inputs.env-vars) }}
+
+jobs:
+  test-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          ref: ${{ inputs.checkout-ref }}
+      - uses: ./.github/actions/set-up-go
+        name: Setup Git configuration (public)
+      - uses: ./.github/actions/set-up-gotestsum
+      - run: mkdir -p test-results/go-test
+      - uses: actions/cache/restore@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
+        with:
+          path: test-results/go-test
+          key: go-test-reports-${{ github.run_number }}
+          restore-keys: go-test-reports-
+      - name: List cached results
+        id: list-cached-results
+        run: ls -lhR test-results/go-test
+      - name: Build matrix excluding binary, integration, and testonly tests
+        id: build-non-binary
+        if: ${{ !inputs.testonly }}
+        run: |
+          # testonly tests need additional build tag though let's exclude them anyway for clarity
+          (
+            go list ./... github.com/openbao/openbao/api/v2/... github.com/openbao/openbao/sdk/v2/... | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
+              --partitions "${{ inputs.total-runners }}" \
+              --timing-files 'test-results/go-test/*.json' > matrix.json
+          )
+      - name: Build matrix for tests tagged with testonly
+        if: ${{ inputs.testonly }}
+        run: |
+          set -exo pipefail
+          # enable glob expansion
+          shopt -s nullglob
+          # testonly tagged tests need an additional tag to be included
+          # also running some extra tests for sanity checking with the testonly build tag
+          (
+            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./vault/ | gotestsum tool ci-matrix --debug \
+              --partitions "${{ inputs.total-runners }}" \
+              --timing-files 'test-results/go-test/*.json' > matrix.json
+          )
+          # disable glob expansion
+          shopt -u nullglob
+      - name: Capture list of binary tests
+        if: inputs.binary-tests
+        id: list-binary-tests
+        run: |
+          LIST="$(go list ./... github.com/openbao/openbao/api/v2/... github.com/openbao/openbao/sdk/v2/... | grep "_binary" | xargs)"
+          echo "list=$LIST" >> "$GITHUB_OUTPUT"
+      - name: Build complete matrix
+        id: build
+        run: |
+          set -exo pipefail
+          matrix_file="matrix.json"
+          if [ "${{ inputs.binary-tests}}" == "true" ] && [ -n "${{ steps.list-binary-tests.outputs.list }}" ]; then
+            export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
+            jq --arg BINARY "${BINARY_TESTS}" --arg BINARY_INDEX "${{ inputs.total-runners }}" \
+              '.include += [{
+                "id": $BINARY_INDEX,
+                "estimatedRuntime": "N/A",
+                "packages": $BINARY,
+                "description": "partition $BINARY_INDEX - binary test packages"
+            }]' matrix.json > new-matrix.json
+            matrix_file="new-matrix.json"
+          fi
+          # convert the json to a map keyed by id
+          (
+            echo -n "matrix="
+              jq -c \
+              '.include | map( { (.id|tostring): . } ) | add' "$matrix_file"
+          ) >> "$GITHUB_OUTPUT"
+          # extract an array of ids from the json
+          (
+            echo -n "matrix_ids="
+            jq -c \
+              '[ .include[].id | tostring ]' "$matrix_file"
+          ) >> "$GITHUB_OUTPUT"
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+      matrix_ids: ${{ steps.build.outputs.matrix_ids }}
+
+  test-go:
+    needs: test-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
+    env:
+      TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          ref: ${{ inputs.checkout-ref }}
+      - uses: ./.github/actions/set-up-go
+      - id: setup-git-public
+        name: Setup Git configuration (public)
+        run: |
+          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - id: build
+        if: inputs.binary-tests && matrix.id == inputs.total-runners
+        run: time make ci-bootstrap dev
+      - uses: ./.github/actions/set-up-gotestsum
+      - id: run-go-tests
+        name: Run Go tests
+        timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -exo pipefail
+
+          # Build the dynamically generated source files.
+          make prep
+
+          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
+
+          if [ -z "$packages" ]; then
+            echo "no test packages to run"
+            exit 1
+          fi
+
+          # shellcheck disable=SC2034
+          if [ -f bin/bao ]; then
+            BAO_BINARY="$(pwd)/bin/bao"
+            export BAO_BINARY
+          fi
+
+          # On a release branch, add a flag to rerun failed tests
+          # shellcheck disable=SC2193 # can get false positive for this comparision
+          if [[  "${{ github.base_ref }}" == release/* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" == release/* ]]
+          then
+           RERUN_FAILS="--rerun-fails"
+          fi
+
+          # shellcheck disable=SC2086 # can't quote RERUN_FAILS
+          GOARCH=${{ inputs.go-arch }} \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
+              --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
+              --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
+              $RERUN_FAILS \
+              --packages "$packages" \
+              -- \
+              -tags "${{ inputs.go-tags }}" \
+              -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
+              -parallel=${{ inputs.go-test-parallelism }} \
+              ${{ inputs.extra-flags }} \
+      - name: Archive test results
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: test-results-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}
+          path: test-results/go-test-${{ matrix.id }}
+        if: success() || failure()
+      # GitHub Actions doesn't expose the job ID or the URL to the job execution,
+      # so we have to fetch it from the API
+      - name: Fetch job logs URL
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        if: success() || failure()
+        continue-on-error: true
+        with:
+          retries: 3
+          script: |
+            // We surround the whole script with a try-catch block, to avoid each of the matrix jobs
+            // displaying an error in the GHA workflow run annotations, which gets very noisy.
+            // If an error occurs, it will be logged so that we don't lose any information about the reason for failure.
+            try {
+              const fs = require("fs");
+              const result = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                per_page: 100,
+                repo: context.repo.repo,
+                run_id: context.runId,
+              });
+
+              // Determine what job name to use for the query. These values are hardcoded, because GHA doesn't
+              // expose them in any of the contexts available within a workflow run.
+              let prefixToSearchFor;
+              switch ("${{ inputs.name }}") {
+                case "race":
+                  prefixToSearchFor = 'Run Go tests with data race detection / test-go (${{ matrix.id }})'
+                  break
+                case "fips":
+                  prefixToSearchFor = 'Run Go tests with FIPS configuration / test-go (${{ matrix.id }})'
+                  break
+                default:
+                  prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }})'
+              }
+
+              const jobData = result.data.jobs.filter(
+                (job) => job.name.startsWith(prefixToSearchFor)
+              );
+              const url = jobData[0].html_url;
+              const envVarName = "GH_JOB_URL";
+              const envVar = envVarName + "=" + url;
+              const envFile = process.env.GITHUB_ENV;
+
+              fs.appendFile(envFile, envVar, (err) => {
+                if (err) throw err;
+                console.log("Successfully set " + envVarName + " to: " + url);
+              });
+            } catch (error) {
+              console.log("Error: " + error);
+              return
+            }
+      - name: Prepare failure summary
+        if: success() || failure()
+        continue-on-error: true
+        run: |
+          # This jq query filters out successful tests, leaving only the failures.
+          # Then, it formats the results into rows of a Markdown table.
+          # An example row will resemble this:
+          # | github.com/openbao/openbao/package | TestName | fips | 0 | 2 | [view results](github.com/link-to-logs) |
+          jq -r -n 'inputs
+          | select(.Action == "fail")
+          | "| ${{inputs.name}} | \(.Package) | \(.Test // "-") | \(.Elapsed) | ${{ matrix.id }} | [view test results :scroll:](${{ env.GH_JOB_URL }}) |"' \
+          failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.json \
+          >> failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
+      - name: Upload failure summary
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        if: success() || failure()
+        with:
+          name: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}
+          path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
+
+  test-collect-reports:
+    if: ${{ ! cancelled() }}
+    needs: test-go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
+        with:
+          path: test-results/go-test
+          key: go-test-reports-${{ github.run_number }}
+          restore-keys: go-test-reports-
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          path: test-results/go-test
+          pattern: test-results-*
+          merge-multiple: true
+      - run: |
+          ls -lhR test-results/go-test
+          find test-results/go-test -type f -mindepth 1 -mtime +3 -delete
+          ls -lhR test-results/go-test

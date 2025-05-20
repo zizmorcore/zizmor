@@ -761,8 +761,6 @@ dependencies = [
 [[package]]
 name = "github-actions-models"
 version = "0.28.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f97053a0b03d9cd4ec5c56f1b2e7bc97ae0e66d1f78778acee61a9100cb2181"
 dependencies = [
  "indexmap",
  "serde",

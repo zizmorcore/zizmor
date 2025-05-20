@@ -1,0 +1,503 @@
+# https://github.com/rnpgp/rnp/blob/ddcbaa932f01a349969e9689de5bccd485090d02/.github/workflows/centos-and-fedora.yml
+
+# Copyright:
+#  2017-2024, Ribose Inc.
+#  2009-2010, The NetBSD Foundation, Inc.
+# License: BSD-2-clause
+
+name: centos-and-fedora
+on:
+  push:
+    branches:
+      - main
+      - "release/**"
+    paths-ignore:
+      - "/*.sh"
+      - "/.*"
+      - "/_*"
+      - "Brewfile"
+      - "docs/**"
+      - "**.adoc"
+      - "**.md"
+      - "**.nix"
+      - "flake.lock"
+      - "version.txt"
+      - ".github/workflows/*.yml"
+      - "!.github/workflows/centos-and-fedora.yml"
+  pull_request:
+    paths-ignore:
+      - "/*.sh"
+      - "/.*"
+      - "/_*"
+      - "Brewfile"
+      - "docs/**"
+      - "**.adoc"
+      - "**.md"
+      - "**.nix"
+      - "flake.lock"
+      - "version.txt"
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.ref_name }}"
+  cancel-in-progress: true
+
+env:
+  CORES: 2
+  RNP_LOG_CONSOLE: 1
+  CODECOV_TOKEN: dbecf176-ea3f-4832-b743-295fd71d0fad
+
+jobs:
+  tests:
+    name: ${{ matrix.image.name }} [CC ${{ matrix.env.CC }}; backend ${{ matrix.image.backend }} ${{ matrix.image.botan_ver }}; gpg ${{ matrix.image.gpg_ver }}; build ${{ matrix.env.BUILD_MODE }}; SM2 ${{ matrix.image.sm2 }}; IDEA ${{ matrix.image.idea }}]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - { CC: gcc, CXX: g++, BUILD_MODE: normal, SHARED_LIBS: on }
+          #   normal --> Release build; sanitize --> Debug build so theoretically test conditions are different
+          #         - { CC: clang, CXX: clang++, BUILD_MODE: normal   }
+          - { CC: clang, CXX: clang++, BUILD_MODE: sanitize, SHARED_LIBS: on }
+
+        # All cotainers have gpg stable and lts installed
+        # centos-9-amd64 has botan 2.19.3 installed
+        # fedora-39-amd64 has botan 2.19.4  installed
+        # Any other version has to be built explicitly !
+        # Pls refer to https://github.com/rnpgp/rnp-ci-containers#readme for more image details
+        image:
+          - {
+              name: "CentOS 9",
+              container: "centos-9-amd64",
+              backend: "Botan",
+              botan_ver: "system",
+              gpg_ver: "system",
+            }
+          - {
+              name: "CentOS 9",
+              container: "centos-9-amd64",
+              backend: "Botan",
+              botan_ver: "system",
+              sm2: Off,
+              gpg_ver: "lts",
+            }
+          - {
+              name: "Fedora 39",
+              container: "fedora-39-amd64",
+              backend: "Botan",
+              botan_ver: "system",
+              gpg_ver: "system",
+            }
+          - {
+              name: "Fedora 40",
+              container: "fedora-40-amd64",
+              backend: "Botan",
+              botan_ver: "system",
+              gpg_ver: "system",
+            }
+          - {
+              name: "Fedora 40",
+              container: "fedora-40-amd64",
+              backend: "Botan",
+              botan_ver: "3.1.1",
+              gpg_ver: "system",
+            }
+          - {
+              name: "Fedora 40",
+              container: "fedora-40-amd64",
+              backend: "Botan",
+              botan_ver: "head",
+              gpg_ver: "system",
+            }
+          - {
+              name: "Fedora 40",
+              container: "fedora-40-amd64",
+              backend: "Botan",
+              botan_ver: "3.3.0",
+              pqc: On,
+              gpg_ver: "system",
+            }
+          - {
+              name: "CentOS 9",
+              container: "centos-9-amd64",
+              backend: "OpenSSL",
+              gpg_ver: "lts",
+            }
+          - {
+              name: "Fedora 39",
+              container: "fedora-39-amd64",
+              backend: "OpenSSL",
+              gpg_ver: "system",
+            }
+          - {
+              name: "Fedora 40",
+              container: "fedora-40-amd64",
+              backend: "OpenSSL",
+              gpg_ver: "system",
+            }
+          - {
+              name: "RHEL 8",
+              container: "redhat-8-ubi",
+              backend: "OpenSSL",
+              gpg_ver: "system",
+            }
+          - {
+              name: "RHEL 9",
+              container: "redhat-9-ubi",
+              backend: "OpenSSL",
+              gpg_ver: "system",
+            }
+
+        include:
+          # Coverage report for Botan 2.x backend
+          - image:
+              {
+                name: "CentOS 9 Coverage",
+                container: "centos-9-amd64",
+                gpg_ver: stable,
+                backend: Botan,
+                botan_ver: "system",
+              }
+            env: { CC: gcc, CXX: g++, BUILD_MODE: coverage, SHARED_LIBS: on }
+          # Coverage report for Botan 3.x backend
+          - image:
+              {
+                name: "Fedora 40 Coverage",
+                container: "fedora-40-amd64",
+                gpg_ver: stable,
+                backend: Botan,
+                botan_ver: "3.3.0",
+              }
+            env: { CC: gcc, CXX: g++, BUILD_MODE: coverage, SHARED_LIBS: on }
+          # Coverage report for OpenSSL 3.0 backend
+          - image:
+              {
+                name: "Fedora 40 Coverage",
+                container: "fedora-40-amd64",
+                gpg_ver: stable,
+                backend: OpenSSL,
+              }
+            env: { CC: gcc, CXX: g++, BUILD_MODE: coverage, SHARED_LIBS: on }
+          # Coverage report for OpenSSL 3.0 backend with disabled algos
+          - image:
+              {
+                name: "Fedora 40 Coverage",
+                container: "fedora-40-amd64",
+                gpg_ver: stable,
+                backend: OpenSSL,
+                idea: Off,
+                sm2: Off,
+                two: Off,
+                blow: Off,
+                rmd: Off,
+                bp: Off,
+              }
+            env: { CC: gcc, CXX: g++, BUILD_MODE: coverage, SHARED_LIBS: on }
+          # Coverage report for Botan backend with disabled algos
+          - image:
+              {
+                name: "Fedora 40 Coverage",
+                container: "fedora-40-amd64",
+                gpg_ver: stable,
+                backend: Botan,
+                idea: Off,
+                sm2: Off,
+                two: Off,
+                blow: Off,
+                rmd: Off,
+                bp: Off,
+              }
+            env: { CC: gcc, CXX: g++, BUILD_MODE: coverage, SHARED_LIBS: on }
+          # Coverage report for OpenSSL 1.1.1 backend within RHEL 8
+          - image:
+              {
+                name: "RHEL 8 Coverage",
+                container: "redhat-8-ubi",
+                gpg_ver: stable,
+                backend: OpenSSL,
+              }
+            env: { CC: gcc, CXX: g++, BUILD_MODE: coverage, SHARED_LIBS: on }
+          # Coverage report for PQC - not running yet due to very low coverage
+          #- image: { name: 'Fedora 40 PQC Coverage', container: 'fedora-40-amd64', gpg_ver: stable, backend: Botan, botan_ver: '3.3.0', pqc: On }
+          #  env:   { CC: gcc, CXX: g++, BUILD_MODE: coverage,   SHARED_LIBS: off }
+
+    container: ghcr.io/rnpgp/ci-rnp-${{ matrix.image.container }}
+
+    env: ${{ matrix.env }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup environment
+        run: |
+          set -o errexit -o pipefail -o noclobber -o nounset
+
+          /opt/tools/tools.sh select_crypto_backend_for_gha ${{ matrix.image.backend }}
+          /opt/tools/tools.sh select_gpg_version_for_gha ${{ matrix.image.gpg_ver }}
+          /opt/tools/tools.sh select_botan_version_for_gha ${{ matrix.image.botan_ver }}
+
+          echo "ENABLE_SM2=${{ matrix.image.sm2 }}" >> $GITHUB_ENV
+          echo "ENABLE_IDEA=${{ matrix.image.idea }}" >> $GITHUB_ENV
+          echo "ENABLE_TWOFISH=${{ matrix.image.two }}" >> $GITHUB_ENV
+          echo "ENABLE_BLOWFISH=${{ matrix.image.blow }}" >> $GITHUB_ENV
+          echo "ENABLE_RIPEMD160=${{ matrix.image.rmd }}" >> $GITHUB_ENV
+          echo "ENABLE_BRAINPOOL=${{ matrix.image.bp }}" >> $GITHUB_ENV
+          echo "ENABLE_PQC=${{ matrix.image.pqc }}" >> $GITHUB_ENV
+
+          echo CORES="$(nproc --all)" >> $GITHUB_ENV
+
+          useradd rnpuser
+          printf "\nrnpuser\tALL=(ALL)\tNOPASSWD:\tALL" > /etc/sudoers.d/rnpuser
+          printf "\nrnpuser\tsoft\tnproc\tunlimited\n" > /etc/security/limits.d/30-rnpuser.conf
+
+      # Need to build HEAD version since it is always different
+      - name: Build gpg head
+        if: matrix.image.gpg_ver == 'head'
+        run: /opt/tools/tools.sh build_and_install_gpg head
+
+      - name: Build botan head
+        if: matrix.image.botan_ver == 'head'
+        # Botan's head renamed curve25519 module to x25519, however this didn't get to 3.5.0 release yet
+        run: |
+          sed -i 's/curve25519/x25519/g' /opt/tools/botan3-modules /opt/tools/botan3-pqc-modules
+          /opt/tools/tools.sh build_and_install_botan head
+
+      - name: Configure
+        run: |
+          set -o errexit -o pipefail -o noclobber -o nounset
+
+          [[ "${{ env.BUILD_MODE }}" = "coverage" ]] && cov_opt=(-DENABLE_COVERAGE=yes)
+          [[ "${{ env.BUILD_MODE }}" = "sanitize" ]] && san_opt=(-DENABLE_SANITIZERS=yes)
+
+          [ -n "$ENABLE_SM2" ] && sm2_opt=(-DENABLE_SM2="$ENABLE_SM2")
+          [ -n "$ENABLE_IDEA" ] && idea_opt=(-DENABLE_IDEA="$ENABLE_IDEA")
+          [ -n "$ENABLE_TWOFISH" ] && two_opt=(-DENABLE_TWOFISH="$ENABLE_TWOFISH")
+          [ -n "$ENABLE_BLOWFISH" ] && blow_opt=(-DENABLE_BLOWFISH="$ENABLE_BLOWFISH")
+          [ -n "$ENABLE_RIPEMD160" ] && rmd_opt=(-DENABLE_RIPEMD160="$ENABLE_RIPEMD160")
+          [ -n "$ENABLE_BRAINPOOL" ] && bp_opt=(-DENABLE_BRAINPOOL="$ENABLE_BRAINPOOL")
+          [ -n "$ENABLE_PQC" ] && pqc_opt=(-DENABLE_PQC="$ENABLE_PQC" -DENABLE_CRYPTO_REFRESH="$ENABLE_PQC")
+
+          cmake -B build                                           \
+                -DBUILD_SHARED_LIBS=${{ env.SHARED_LIBS }}         \
+                -DDOWNLOAD_GTEST=ON                                \
+                -DCMAKE_BUILD_TYPE=Release                         \
+                -DCRYPTO_BACKEND=${{ matrix.image.backend }}       \
+                ${sm2_opt:-} ${idea_opt:-} ${two_opt:-} ${blow_opt:-} ${rmd_opt:-} ${bp_opt:-} ${pqc_opt[@]:-} ${cov_opt:-} ${san_opt:-} .
+
+      - name: Build
+        run: cmake --build build --parallel ${{ env.CORES }}
+
+      - name: Test
+        run: |
+          mkdir -p "build/Testing/Temporary"
+          cp "cmake/CTestCostData.txt" "build/Testing/Temporary"
+          export PATH="$PWD/build/src/lib:$PATH"
+          chown -R rnpuser:rnpuser $PWD
+          exec su rnpuser -c "ctest --parallel ${{ env.CORES }} --test-dir build --output-on-failure"
+
+      - name: Coverage
+        if: env.BUILD_MODE == 'coverage'
+        run: |
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import # One-time step
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          find "build" -type f -name '*.gcno' -exec gcov -p {} +
+          ./codecov
+
+      - name: Install
+        if: env.BUILD_MODE != 'coverage' && env.SHARED_LIBS == 'on'
+        run: cmake --install build
+
+      - name: Checkout shell test framework
+        if: env.BUILD_MODE != 'coverage' && env.SHARED_LIBS == 'on'
+        uses: actions/checkout@v4
+        with:
+          repository: kward/shunit2
+          path: ci/tests/shunit2
+
+      - name: Run additional ci tests
+        if: env.BUILD_MODE != 'coverage' && env.SHARED_LIBS == 'on'
+        run: RNP_INSTALL=/usr/local ci/tests/ci-tests.sh
+
+  package-source:
+    runs-on: ubuntu-latest
+    container: ghcr.io/rnpgp/ci-rnp-${{ matrix.image.container }}
+    timeout-minutes: 30
+    #    needs: tests
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - { name: "CentOS 9", container: "centos-9-amd64" }
+          - { name: "Fedora 39", container: "fedora-39-amd64" }
+          - { name: "Fedora 40", container: "fedora-40-amd64" }
+
+    name: Package ${{ matrix.image.name }} SRPM
+
+    steps:
+      - name: Install rpm tools
+        run: yum -y install rpm-build
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Configure
+        run: cmake -B build -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF
+
+      - name: Package SRPM
+        run: cpack -B build/SRPM -G RPM --config build/CPackSourceConfig.cmake
+
+      - name: Upload SRPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: "SRPM ${{ matrix.image.name }}"
+          path: "build/SRPM/*.src.rpm"
+          retention-days: 5
+
+      - name: Stash packaging tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: "tests-${{ matrix.image.name }}"
+          path: "ci/tests/**"
+          retention-days: 1
+
+  package:
+    runs-on: ubuntu-latest
+    container: ghcr.io/rnpgp/ci-rnp-${{ matrix.image.container }}
+    timeout-minutes: 30
+    needs: package-source
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - { name: "CentOS 9", container: "centos-9-amd64" }
+          - { name: "Fedora 39", container: "fedora-39-amd64" }
+          - { name: "Fedora 40", container: "fedora-40-amd64" }
+
+    name: Package ${{ matrix.image.name }} RPM
+    steps:
+      - name: Install rpm tools
+        run: yum -y install rpm-build
+
+      - name: Download SRPM
+        uses: actions/download-artifact@v4
+        with:
+          name: "SRPM ${{ matrix.image.name }}"
+          path: ~/rpmbuild/SRPMS
+
+      - name: Extract SRPM
+        run: |
+          rpm -i -v ~/rpmbuild/SRPMS/*.src.rpm
+          tar xzf ~/rpmbuild/SOURCES/*.tar.gz --strip 1 -C ~/rpmbuild/SOURCES
+
+      - name: Build rnp
+        run: |
+          cmake ~/rpmbuild/SOURCES -B ~/rpmbuild/SOURCES/BUILD -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF \
+                                   -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build ~/rpmbuild/SOURCES/BUILD --config Release
+
+      - name: Package rpm
+        run: cpack -G RPM -B ~/rpmbuild/SOURCES/RPMS --config ~/rpmbuild/SOURCES/BUILD/CPackConfig.cmake
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "RPM ${{ matrix.image.name}}"
+          path: "~/rpmbuild/SOURCES/RPMS/*.rpm"
+          retention-days: 5
+
+  # The main purpose of this step is to test the RPMS in a pristine environment (as for the end user).
+  # ci-scripts are deliberately not used, as they recreate the development environment,
+  # and this is something we proudly reject here
+
+  rpm-tests:
+    runs-on: ubuntu-latest
+    needs: package
+    container: ${{ matrix.image.container }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - { name: "CentOS 9", container: "quay.io/centos/centos:stream9" }
+          # Fedora 39 is disabled since it has cmake issue which prevents man pages to be packaged.
+          # Please see package step for error message.
+          #- { name: 'Fedora 39', container: 'fedora:39'                     }
+          - { name: "Fedora 40", container: "fedora:40" }
+    name: RPM test on ${{ matrix.image.name }}
+
+    steps:
+      - name: Install prerequisites
+        run: yum -y install sudo wget binutils
+
+      #   Fedora 39/40 packages depend on botan.so.19 that comes Fedora package, that is available by default
+      #   CentOS 9 depend on botan.so.19 and needs EPEL9 repo that needs to be installed
+
+      - name: Install epel-release
+        if: matrix.image.container == 'quay.io/centos/centos:stream9'
+        run: |
+          sudo dnf -y install 'dnf-command(config-manager)'
+          sudo dnf config-manager --set-enabled crb
+          sudo dnf -y install epel-release
+
+      - name: Install xargs
+        if: matrix.image.container == 'fedora:39'
+        run: sudo yum -y install findutils
+
+      - name: Download rnp rpms
+        uses: actions/download-artifact@v4
+        with:
+          name: "RPM ${{ matrix.image.name}}"
+
+      - name: Checkout shell test framework
+        uses: actions/checkout@v4
+        with:
+          repository: kward/shunit2
+          path: ci/tests/shunit2
+
+      - name: Unstash tests
+        if: matrix.image.container != 'centos:7'
+        uses: actions/download-artifact@v4
+        with:
+          name: tests-${{ matrix.image.name }}
+          path: ci/tests
+
+      - name: Run rpm tests
+        #  RPM tests
+        #  - no source checkout or upload [we get only test scripts from the previous step using GHA artifacts]
+        #  - no environment set up with rnp scripts
+        #  - no dependencies setup, we test that yum can install whatever is required
+        run: |
+          chmod +x ci/tests/rpm-tests.sh
+          ci/tests/rpm-tests.sh
+
+      - name: Run symbol visibility tests
+        run: |
+          chmod +x ci/tests/ci-tests.sh
+          sudo yum -y localinstall librnp0-0*.*.rpm librnp0-devel-0*.*.rpm rnp0-0*.*.rpm
+          ci/tests/ci-tests.sh
+          sudo yum -y erase $(rpm -qa  | grep rnp)
+
+      - name: Setup minimalistic build environment
+        run: |
+          sudo yum -y install make gcc gcc-c++ zlib-devel bzip2-devel botan2-devel
+          mkdir cmake
+          wget https://github.com/Kitware/CMake/releases/download/v3.12.0/cmake-3.12.0-Linux-x86_64.sh -O cmake/cmake.sh
+          sudo sh cmake/cmake.sh --skip-license --prefix=/usr/local
+
+      # el8, el9, fr35, fr36 provide json-c-devel (version 12+)
+      - name: Setup json-c
+        run: sudo yum -y install json-c-devel
+
+      - name: Run packaging tests
+        run: |
+          chmod +x ci/tests/pk-tests.sh
+          ci/tests/pk-tests.sh

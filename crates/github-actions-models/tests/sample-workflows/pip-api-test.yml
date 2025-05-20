@@ -1,0 +1,123 @@
+# https://github.com/di/pip-api/blob/60691ed6bdc0c213253593de869bff1cf9195b81/.github/workflows/test.yml
+
+# Copyright: 2018-2024 Dustin Ingram
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Test
+on: [push, pull_request]
+concurrency:
+  group: >-
+    ${{
+        github.workflow
+    }}-${{
+        github.ref_type
+    }}-${{
+        github.event.pull_request.number || github.sha
+    }}
+  cancel-in-progress: true
+env:
+  dists-artifact-name: python-package-distributions
+  sdist-artifact-name-wildcard: pip-api-*.tar.gz
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v5
+      - name: Install tox
+        run: python -m pip install tox
+      - name: Run linting
+        run: python -m tox -e lint
+
+  build-sdist:
+    name: 📦 Build the source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Grab the src from GH
+        uses: actions/checkout@v4
+
+      - name: Install `pypa/build` PEP 517 front-end
+        run: python -m pip install 'build ~= 0.10.0'
+
+      - name: 📦 Build an sdist
+        run: python -m build --sdist
+
+      - name: Verify that the artifact with expected name got created
+        run: >-
+          ls -1
+          dist/${{ env.sdist-artifact-name-wildcard }}
+
+      - name: Store the distribution package
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.dists-artifact-name }}
+          # NOTE: Exact expected file names are specified here
+          # NOTE: as a safety measure — if anything weird ends
+          # NOTE: up being in this dir or not all dists will be
+          # NOTE: produced, this will fail the workflow.
+          path: |
+            dist/${{ env.sdist-artifact-name-wildcard }}
+          retention-days: 15
+
+  build-matrix:
+    name: Build the test matrix
+    needs: lint
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v5
+      - name: Install tox
+        run: python -m pip install tox
+      - id: set-matrix
+        run: >-
+          echo "matrix=$(python generate_matrix.py)" >> "${GITHUB_OUTPUT}"
+
+  test:
+    name: ${{ matrix.toxenv }}
+    needs:
+      - build-matrix
+      - build-sdist
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
+    steps:
+      - name: Retrieve the project source from an sdist inside the GHA artifact
+        uses: re-actors/checkout-python-sdist@release/v1
+        with:
+          source-tarball-name: ${{ env.sdist-artifact-name-wildcard }}
+          workflow-artifact-name: ${{ env.dists-artifact-name }}
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install tox
+        run: python -m pip install tox
+      - name: Run tests
+        run: python -m tox -e ${{ matrix.toxenv }}
+
+  check:
+    if: always()
+    needs:
+      - test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
