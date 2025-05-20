@@ -1,7 +1,7 @@
 [package]
 name = "zizmor"
 description = "Static analysis for GitHub Actions"
-version = "1.7.0"
+version = "1.8.0-rc0"
 repository = "https://github.com/zizmorcore/zizmor"
 documentation = "https://docs.zizmor.sh"
 keywords = ["cli", "github-actions", "static-analysis", "security"]
