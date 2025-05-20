@@ -928,6 +928,7 @@
 
     ??? example "Examples"
         - rust-lang/crates.io#10176
+        - rust-lang/crates.io#11203
         - rust-lang/rust-clippy#13933
 
 
