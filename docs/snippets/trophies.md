@@ -83,6 +83,7 @@
 
     ??? example "Examples"
         - bitcoindevkit/bdk#1778
+        - bitcoindevkit/bdk#1813
 
 
 -   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear
@@ -928,6 +929,7 @@
 
     ??? example "Examples"
         - rust-lang/crates.io#10176
+        - rust-lang/crates.io#11203
         - rust-lang/rust-clippy#13933
 
 
