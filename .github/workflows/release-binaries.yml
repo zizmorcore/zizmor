@@ -22,6 +22,9 @@ on:
 
 permissions: {}
 
+env:
+  DRY_RUN: "${{ github.event_name == 'pull_request' || github.event.inputs.dry-run }}"
+
 jobs:
   build:
     strategy:
@@ -79,6 +82,21 @@ jobs:
           name: artifacts-${{ matrix.target }}
           path: ${{ steps.archive-release.outputs.filename }}
           if-no-files-found: error
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: artifacts-*
+          path: distrib/
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -l distrib/
 
       # - name: Upload to release
       #   if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
