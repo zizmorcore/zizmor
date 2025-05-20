@@ -1,29 +1,10 @@
 name: zizmor binary releases for GitHub 🐙
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "The release to attach binaries to"
-        required: true
-      clobber:
-        description: "Whether to clobber existing files"
-        required: true
-        default: false
-        type: boolean
-      dry-run:
-        description: "Whether to perform a dry run"
-        required: true
-        default: false
-        type: boolean
   release:
     types: [published]
-  pull_request:
 
 permissions: {}
-
-env:
-  DRY_RUN: "${{ github.event_name == 'pull_request' || github.event.inputs.dry-run }}"
 
 jobs:
   build:
@@ -90,6 +71,7 @@ jobs:
     permissions:
       id-token: write # for attestations
       attestations: write # for attestations
+      contents: write # for release artifacts
 
     steps:
       - name: Download artifacts
@@ -107,12 +89,9 @@ jobs:
         with:
           subject-path: "distrib/*"
 
-      # - name: Upload to release
-      #   if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
-      #   run: |
-      #     gh release upload ${CLOBBER} "${RELEASE_TAG}"
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
-      #     CLOBBER: ${{ github.event.inputs.clobber && '--clobber' || '' }}
-      #   shell: bash
+      - name: Upload to release
+        run: |
+          gh release upload "${GITHUB_REF_NAME}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
