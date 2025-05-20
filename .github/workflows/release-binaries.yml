@@ -37,8 +37,7 @@ jobs:
 
       - name: Rust toolchain and target information
         run: |
-          rustup toolchain list
-          rustup target list
+          rustup show
 
       - name: Install Rust target for ${{ matrix.target }}
         run: rustup target add "${TARGET}"
