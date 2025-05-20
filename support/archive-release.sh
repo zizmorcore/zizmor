@@ -25,10 +25,10 @@ mkdir -p "${ARCHIVE_DIR}"
 cp "${RELEASE_DIR}/zizmor" "${ARCHIVE_DIR}/zizmor"
 
 if [[ "${TARGET}" == *"windows"* ]]; then
-  ARCHIVE_FILE="${TARGET_DIR}/archive/zizmor-${TARGET}.tar.gz"
+  ARCHIVE_FILE="${TARGET_DIR}/archive/zizmor-${TARGET}.zip"
   7z a "${ARCHIVE_FILE}" "${ARCHIVE_DIR}"/*
 else
-  ARCHIVE_FILE="${TARGET_DIR}/archive/zizmor-${TARGET}.zip"
+  ARCHIVE_FILE="${TARGET_DIR}/archive/zizmor-${TARGET}.tar.gz"
   tar -C "${ARCHIVE_DIR}" -czf "${ARCHIVE_FILE}" .
 fi
 
