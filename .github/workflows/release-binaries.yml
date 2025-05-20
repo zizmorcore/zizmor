@@ -65,9 +65,11 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
 
-      - name: Rename binary
+      - name: Archive release
+        id: archive-release
         run: |
-          mv ./target/${TARGET}/release/zizmor ./target/${TARGET}/release/zizmor-${TARGET}
+          filename=$(./support/archive-release.sh)
+          echo "filename=${filename}" >> "${GITHUB_OUTPUT}"
         env:
           TARGET: ${{ matrix.target }}
         shell: bash
@@ -76,7 +78,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: artifacts-${{ matrix.target }}
-          path: ./target/${{ matrix.target }}/release/zizmor-${{ matrix.target }}
+          path: ${{ steps.archive-release.outputs.filename }}
+          if-no-files-found: error
 
       # - name: Upload to release
       #   if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
