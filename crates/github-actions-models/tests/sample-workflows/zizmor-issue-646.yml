@@ -1,0 +1,15 @@
+# https://github.com/woodruffw/zizmor/issues/646
+
+name: Test
+
+on:
+  workflow_call:
+    secrets:
+      my-secret:
+        description: My secret
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ${{ secrets.my-secret }}

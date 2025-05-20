@@ -1,0 +1,13 @@
+# https://github.com/pypa/pip-audit/blob/cea0e0276f1208cfcbda0c5d69b4fc0c084747b2/.github/dependabot.yml
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily

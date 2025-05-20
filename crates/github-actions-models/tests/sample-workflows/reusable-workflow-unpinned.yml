@@ -1,0 +1,11 @@
+# see https://github.com/woodruffw/zizmor/issues/431
+
+name: "reusable-workflow-unpinned"
+
+on:
+  push:
+
+jobs:
+  testcase:
+    name: "testcase"
+    uses: ./.github/workflows/reusable.yml

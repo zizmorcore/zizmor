@@ -1,0 +1,21 @@
+# https://github.com/zizmorcore/github-actions-models/issues/35
+
+name: Test Workflow
+permissions: {}
+
+on: ["push"]
+
+# LIMIT = true|false
+
+jobs:
+  test:
+    name: Test job
+    runs-on: ubuntu-24.04
+    strategy:
+      # max-parallel: 1
+      max-parallel: ${{ vars.LIMIT && 1 || 8 }}
+    steps:
+      - name: Test step
+        shell: bash
+        run: |
+          echo "Hello World!"

@@ -1,0 +1,12 @@
+# https://github.com/woodruffw/zizmor/issues/209
+name: Name
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Step
+        if: false
+        run: echo

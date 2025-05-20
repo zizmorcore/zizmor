@@ -1,0 +1,10 @@
+# repro case for https://github.com/zizmorcore/github-actions-models/issues/12
+name: issue-12
+on:
+  repository_dispatch:
+    types: some-external-type
+jobs:
+  dummy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
