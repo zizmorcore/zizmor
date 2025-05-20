@@ -91,7 +91,7 @@ jobs:
 
       - name: Upload to release
         run: |
-          gh release upload "${GITHUB_REF_NAME}"
+          gh release upload "${GITHUB_REF_NAME}" distrib/*
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
