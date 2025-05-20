@@ -1,0 +1,457 @@
+# https://github.com/datalad/git-annex/blob/58898b7a9185a94852ac059c3ff1cc3f2fd6deef/.github/workflows/build-windows.yaml
+
+# Copyright 2022 The Sigstore Authors
+#
+# Licensed under the GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+#
+#      https://git-annex.branchable.com/license/AGPL
+#
+
+name: Build git-annex on Windows
+
+on:
+  # Trigger the workflow on pull requests
+  pull_request:
+    paths:
+      - ".github/workflows/build-windows.yaml"
+      - "patches/*.patch"
+  schedule:
+    - cron: "30 03 * * *"
+  workflow_dispatch:
+    inputs:
+      commitish:
+        description: The upstream commitish to build
+      pr:
+        description: The number of the PR to build
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  LANG: C.utf-8
+
+jobs:
+  build-package:
+    runs-on: windows-2019
+    outputs:
+      build-version: ${{ steps.build-version.outputs.version }}
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create pending PR status
+        if: github.event.inputs.pr != ''
+        run: |
+          .github/workflows/tools/set-pr-status \
+            "${{ github.event.inputs.pr }}" \
+            Windows \
+            build-package \
+            pending
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Haskell
+        uses: haskell/actions/setup@v2
+        with:
+          enable-stack: true
+          stack-no-global: true
+
+      - name: Handle long filenames
+        run: git config --system core.longpaths true
+
+      - name: Determine git-annex ref to build
+        run: |
+          . .github/workflows/tools/set-build-commit
+          echo "BUILD_COMMIT=$BUILD_COMMIT" >> "$GITHUB_ENV"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_PR: ${{ github.event.inputs.pr }}
+          INPUT_COMMITISH: ${{ github.event.inputs.commitish }}
+
+      - name: Check out source files
+        run: |
+          # The goal here is for $BUILD_COMMIT to be the HEAD (necessary for
+          # git-annex's version detection to use the correct git commit) with
+          # the .github/, clients/, and patches/ trees from master — or
+          # whatever ref is being used as the workflow source — also available.
+          git reset --soft "$BUILD_COMMIT"
+          # Avoid checking out unnecessary files with paths that are invalid on
+          # Windows.
+          git ls-tree --name-only HEAD | grep -v '^doc$' | xargs git checkout HEAD
+          git checkout HEAD doc/license ':(glob)doc/*.mdwn' ':(glob)doc/logo*'
+          git checkout "$GITHUB_SHA" -- .github clients patches
+
+      - name: Get build version
+        id: build-version
+        run: |
+          version="$(git describe "$BUILD_COMMIT" | sed -e 's/-/+git/')"
+          arch=x64
+          echo "Building $version"
+          echo "version=${version}_$arch" >> "$GITHUB_OUTPUT"
+
+      - name: Apply local patches
+        run: |
+          .github/workflows/tools/apply-patches patches ${{ github.event_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download and "install" libmagic for windows
+        run: |
+          gh release download -R datalad/file-windows -p file-windows-dist.zip
+          unzip file-windows-dist.zip
+          cp libmagic-1.dll libmagic.dll
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Choose stack config and enable building with magic
+        run: |
+          # Need to use that LTS ATM on Windows
+          # ref: https://github.com/datalad/git-annex/issues/168#issuecomment-1665910564
+          cp stack-lts-18.13.yaml stack.yaml
+          perl -pli -e 's/magicmime: false/magicmime: true/' stack.yaml
+
+      - name: Set UPGRADE_LOCATION
+        run: |
+          # This tells git-annex where to upgrade itself from.
+          echo "UPGRADE_LOCATION=http://downloads.kitenet.net/git-annex/windows/current/git-annex-installer.exe" >> "$GITHUB_ENV"
+
+      - name: Run stack --version
+        run: stack --version
+
+      - name: stack setup
+        run: stack setup
+
+      # At this point, stack.yaml.lock exists, so we can activate the cache
+
+      - name: Enable Stack cache
+        uses: actions/cache@v4
+        with:
+          path: 'C:\sr\snapshots'
+          key: cache-stack-windows-${{ hashFiles('stack.yaml.lock') }}-${{ hashFiles('git-annex.cabal') }}
+          restore-keys: |
+            cache-stack-windows-
+
+      - name: Build dependencies
+        run: stack build --only-dependencies --extra-include-dirs=$PWD --extra-lib-dirs=$PWD
+
+      - name: Update version info for git rev being built.
+        run: |
+          mkdir -p dist
+          stack ghc --no-haddock Build/BuildVersion.hs
+          ./Build/BuildVersion > dist/build-version
+
+      - name: Build git-annex
+        run: stack install --no-haddock --local-bin-path .
+
+      - name: Build the installer
+        run: |
+          stack ghc --no-haddock --package nsis Build/NullSoftInstaller.hs
+          TMP="$PWD" ./Build/NullSoftInstaller
+
+      - name: Add version to installer name
+        run: |
+          mv git-annex-installer.exe \
+             git-annex-installer_"${{ steps.build-version.outputs.version }}".exe
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: git-annex-windows-installer_${{ steps.build-version.outputs.version }}
+          path: |
+            git-annex[-_]*.*
+            dist/build-version
+
+      - name: Create new release
+        if: github.event.inputs.commitish != ''
+        run: |
+          printf '[DEBUG] INPUT_COMMITISH=%b\n' "$INPUT_COMMITISH"
+          if git rev-parse refs/tags/"$INPUT_COMMITISH" &> /dev/null
+          then
+              echo "[INFO] Building a tag; uploading assets to release ..."
+              echo '[DEBUG] BEGIN gh release list'
+              gh release list | tee releases.txt | cat -v
+              echo '[DEBUG] END gh release list'
+              if grep -q "^$INPUT_COMMITISH\b" releases.txt
+              then
+                  echo "[INFO] Release already exists; uploading assets"
+                  gh release upload "$INPUT_COMMITISH" git-annex[-_]*.*
+              else
+                  echo "[INFO] Creating release"
+                  gh release create \
+                    --notes "This is an unofficial release build provided by the DataLad team." \
+                    "$INPUT_COMMITISH" git-annex[-_]*.*
+              fi
+          else
+              echo "[INFO] Not building a tag; no release to make"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_COMMITISH: ${{ github.event.inputs.commitish }}
+
+      - name: Set final PR status
+        if: always() && github.event.inputs.pr != ''
+        run: |
+          .github/workflows/tools/set-pr-status \
+            "${{ github.event.inputs.pr }}" \
+            Windows \
+            build-package \
+            "${{ job.status }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send e-mail on failed run
+        if: failure() && contains(fromJSON('["schedule", "workflow_dispatch"]'), github.event_name)
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.NOTIFY_SMTP_HOST }}
+          server_port: ${{ secrets.NOTIFY_SMTP_PORT }}
+          username: ${{ secrets.NOTIFY_SMTP_USERNAME }}
+          password: ${{ secrets.NOTIFY_SMTP_PASSWORD }}
+          from: GitHub Actions Notifications
+          to: ${{ secrets.NOTIFY_RECIPIENT }}
+          subject: "[${{ github.repository }}] Build on Windows failed!"
+          body: |
+            A build (via ${{ github.event_name }}) of git-annex for Windows failed!
+
+            See <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}> for more information.
+
+  test-annex:
+    runs-on: ${{ matrix.os }}
+    needs: build-package
+    strategy:
+      matrix:
+        flavor: ["normal", "custom-config1"]
+        os: [windows-2019]
+      fail-fast: false
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
+      - name: Create pending PR status
+        if: github.event.inputs.pr != ''
+        run: |
+          .github/workflows/tools/set-pr-status \
+            "${{ github.event.inputs.pr }}" \
+            Windows \
+            "test-annex (${{ matrix.flavor }}, ${{ matrix.os }})" \
+            pending
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download git-annex package
+        uses: actions/download-artifact@v4
+        with:
+          name: git-annex-windows-installer_${{ needs.build-package.outputs.build-version }}
+
+      - name: Install git-annex package
+        shell: powershell
+        run: |
+          ./git-annex-installer_*.exe /S
+
+      - name: Check that magic files are installed
+        run: |
+          GIT_ANNEX_PATH="$(type -p git-annex)"
+          echo "git-annex is at $GIT_ANNEX_PATH"
+          GIT_ANNEX_DIR="$(dirname "$GIT_ANNEX_PATH")"
+          ls "$GIT_ANNEX_DIR"/*magic* "$GIT_ANNEX_DIR"/*gnurx*
+          ls "$GIT_ANNEX_DIR"/../share/misc/*magic*
+
+      - name: Check git-annex version for MagicMime flag
+        run: |
+          git annex version | grep 'build flags:.*MagicMime'
+
+      - name: Print git-annex version
+        run: git annex version
+
+      - name: Run tests
+        run: |
+          # Do it after we possibly setup HOME
+          git config --global user.email "test@github.land"
+          git config --global user.name "GitHub Almighty"
+          test_opts=( )
+
+          case "${{ matrix.flavor }}" in
+            # For git-annex it causes only few temporary directories to be on the crippled FS,
+            # while the main ones produced by git annex test  reside in CWD, for which we use
+            # $HOME
+            custom-config1)
+              test_opts=( --test-git-config annex.stalldetection=1KB/120s )
+              ;;
+            *)
+              ;;
+          esac
+
+          cd $HOME
+          export | grep -e crippledfs || :
+
+          timeout 3600 git annex test "${test_opts[@]:-}"
+
+      - name: Set final PR status
+        if: always() && github.event.inputs.pr != ''
+        run: |
+          .github/workflows/tools/set-pr-status \
+            "${{ github.event.inputs.pr }}" \
+            Windows \
+            "test-annex (${{ matrix.flavor }}, ${{ matrix.os }})" \
+            "${{ job.status }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send e-mail on failed run
+        if: failure() && contains(fromJSON('["schedule", "workflow_dispatch"]'), github.event_name)
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.NOTIFY_SMTP_HOST }}
+          server_port: ${{ secrets.NOTIFY_SMTP_PORT }}
+          username: ${{ secrets.NOTIFY_SMTP_USERNAME }}
+          password: ${{ secrets.NOTIFY_SMTP_PASSWORD }}
+          from: GitHub Actions Notifications
+          to: ${{ secrets.NOTIFY_RECIPIENT }}
+          subject: "[${{ github.repository }}] Tests of Windows build failed!"
+          body: |
+            The tests for a build (via ${{ github.event_name }}) of git-annex for Windows (flavor: ${{ matrix.flavor }}, OS: ${{ matrix.os }}) failed!
+
+            See <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}> for more information.
+
+  test-datalad:
+    runs-on: windows-2019
+    needs: build-package
+    strategy:
+      matrix:
+        version: [master, maint, release]
+      fail-fast: false
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
+      - name: Create pending PR status
+        if: github.event.inputs.pr != ''
+        run: |
+          .github/workflows/tools/set-pr-status \
+            "${{ github.event.inputs.pr }}" \
+            Windows \
+            "test-datalad (${{ matrix.version }})" \
+            pending
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download git-annex package
+        uses: actions/download-artifact@v4
+        with:
+          name: git-annex-windows-installer_${{ needs.build-package.outputs.build-version }}
+
+      - name: Install git-annex package
+        shell: powershell
+        run: |
+          ./git-annex-installer_*.exe /S
+
+      - name: Define test host alias
+        shell: cmd
+        run: |
+          echo. >> %SYSTEMROOT%\System32\drivers\etc\hosts
+          echo.127.0.0.1  datalad-test >> %SYSTEMROOT%\System32\drivers\etc\hosts
+          echo.127.0.0.1  datalad-test2 >> %SYSTEMROOT%\System32\drivers\etc\hosts
+
+      - name: OpenSSH server setup
+        shell: powershell
+        run: |
+          mkdir downloads
+          Invoke-WebRequest -Uri https://github.com/PowerShell/Win32-OpenSSH/releases/download/v7.6.1.0p1-Beta/OpenSSH-Win32.zip -OutFile downloads\openssh.zip
+          7z x -o"downloads" downloads\openssh.zip
+
+      - name: Install
+        shell: cmd
+        run: powershell.exe -ExecutionPolicy Bypass -File downloads\OpenSSH-Win32\install-sshd.ps1
+
+      - name: Configure service
+        shell: cmd
+        run: powershell.exe New-NetFirewallRule -Name sshd -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+
+      - name: Keys in default place
+        run: ssh-keygen -f ~/.ssh/id_rsa -N ""
+
+      - name: Authorize access with these keys
+        shell: cmd
+        run: |
+          copy %USERPROFILE%\.ssh\id_rsa.pub %USERPROFILE%\.ssh\authorized_keys
+
+      - name: Configure SSH
+        run: |
+          (
+            echo Host localhost
+            echo StrictHostKeyChecking no
+            echo Host datalad-test
+            echo StrictHostKeyChecking no
+            echo Host datalad-test2
+            echo StrictHostKeyChecking no
+          ) > "$USERPROFILE"/.ssh/config
+
+      - name: Fire up service
+        run: net start sshd
+
+      - name: Test login
+        run: |
+          ssh -v localhost exit
+          ssh datalad-test exit
+          ssh datalad-test2 exit
+
+      - name: Enable SSH tests
+        run: echo DATALAD_TESTS_SSH=1 >> "$GITHUB_ENV"
+
+      - name: Set up environment
+        run: |
+          git config --global user.email "test@github.land"
+          git config --global user.name "GitHub Almighty"
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.8
+
+      - name: Install ${{ matrix.version }} Datalad
+        run: |
+          if [ "${{ matrix.version }}" = "release" ]; then
+            commitish="$(gh api --jq .tag_name repos/datalad/datalad/releases/latest)"
+          else
+            commitish="${{ matrix.version }}"
+          fi
+          python -m pip install --upgrade pip
+          pip install git+https://github.com/datalad/datalad@${commitish}
+        env:
+          # Authorize so that we don't run up against low API rate limits
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install nose et al (just in case!)
+        run: pip install nose pytest vcrpy mock
+
+      - name: WTF!?
+        run: datalad wtf
+
+      # needed for ssh certs under ubuntu and tox.ini everywhere
+      - name: Checkout datalad
+        uses: actions/checkout@v4
+        with:
+          repository: datalad/datalad
+          path: datalad
+          fetch-depth: 1
+
+      - name: Run datalad tests
+        run: |
+          mkdir -p __testhome__
+          cd __testhome__
+          python -m pytest -c ../datalad/tox.ini -s -v --pyargs datalad
+
+      - name: Set final PR status
+        if: always() && github.event.inputs.pr != ''
+        run: |
+          .github/workflows/tools/set-pr-status \
+            "${{ github.event.inputs.pr }}" \
+            Windows \
+            "test-datalad (${{ matrix.version }})" \
+            "${{ job.status }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+# vim:set et sts=2:

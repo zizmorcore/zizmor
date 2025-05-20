@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/github-actions-expressions",
+    "crates/github-actions-models",
     "crates/yamlpath",
     "crates/zizmor",
 ]
@@ -15,7 +16,8 @@ license = "MIT"
 
 [workspace.dependencies]
 anyhow = "1.0.98"
-github-actions-expressions = { path = "crates/github-actions-expressions", version = "*" }
+github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.3" }
+github-actions-models = { path = "crates/github-actions-models", version = "0.28.3" }
 itertools = "0.14.0"
 pest = "2.8.0"
 pest_derive = "2.8.0"
@@ -29,11 +31,10 @@ clap-verbosity-flag = { version = "3.0.2", default-features = false }
 clap_complete = "4.5.50"
 etcetera = "0.10.0"
 flate2 = "1.1.1"
-github-actions-models = "0.28.2"
 http-cache-reqwest = "0.15.1"
 human-panic = "2.0.1"
 ignore = "0.4.23"
-indexmap = "2.9.0"
+indexmap = { version = "2.9.0", features = ["serde"] }
 indicatif = "0.17.11"
 insta = "1.43.0"
 jsonschema = "0.30.0"
@@ -57,7 +58,7 @@ tracing-subscriber = "0.3.19"
 tree-sitter = "0.25.4"
 tree-sitter-bash = "0.23.3"
 tree-sitter-powershell = "0.25.2"
-yamlpath = { path = "crates/yamlpath", version = "*" }
+yamlpath = { path = "crates/yamlpath", version = "0.18.0" }
 tree-sitter-yaml = "0.7.0"
 
 

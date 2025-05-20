@@ -1,0 +1,20 @@
+[package]
+name = "github-actions-models"
+version = "0.28.3"
+description = "Unofficial, high-quality data models for GitHub Actions workflows, actions, and related components"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-models"
+keywords = ["github", "ci"]
+categories = ["api-bindings"]
+readme = "README.md"
+
+authors.workspace = true
+homepage.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+indexmap.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+
+[dev-dependencies]

@@ -1,0 +1,47 @@
+# https://github.com/trailofbits/pypi-attestations/blob/b5920dee025c93b2bfefbcccc6acc7eab7b8a18e/.github/workflows/release.yml
+
+# Copyright 2024 Trail of Bits
+# License: Apache-2.0
+
+on:
+  release:
+    types:
+      - published
+
+name: release
+
+permissions:
+  # Trusted Publishing + attestations
+  id-token: write
+  attestations: write
+
+jobs:
+  pypi:
+    name: upload release to PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: pyproject.toml
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: deps
+        run: python -m pip install -U setuptools build wheel
+
+      - name: build
+        run: python -m build
+
+      - name: publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: attest
+        uses: actions/attest@v1
+        with:
+          subject-path: |
+            ./dist/*.tar.gz
+            ./dist/*.whl
+          predicate-type: "https://docs.pypi.org/attestations/publish/v1"
+          predicate: "{}"

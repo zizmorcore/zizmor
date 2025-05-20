@@ -1,0 +1,128 @@
+# https://github.com/pypa/gh-action-pypi-publish/blob/2f6f737ca5f74c637829c0f5c3acd0e29ea5e8bf/action.yml
+
+# Copyright 2019 Sviatoslav Sydorenko
+#
+# Licensed under the BSD-3-Clause License
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice, this
+# list of conditions and the following disclaimer in the documentation and/or other
+# materials provided with the distribution.
+#
+# 3. Neither the name of gh-action-pypi-publish nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+# OF THE POSSIBILITY OF SUCH DAMAGE.
+
+---
+name: pypi-publish
+description: Upload Python distribution packages to PyPI
+inputs:
+  user:
+    description: PyPI user
+    required: false
+    default: __token__
+  password:
+    description: Password for your PyPI user or an access token
+    required: false
+  repository-url: # Canonical alias for `repository_url`
+    description: The repository URL to use
+    required: false
+  repository_url: # DEPRECATED ALIAS; TODO: Remove in v3+
+    description: >-
+      [DEPRECATED]
+      The repository URL to use
+    deprecationMessage: >-
+      The inputs have been normalized to use kebab-case.
+      Use `repository-url` instead.
+    required: false
+    default: https://upload.pypi.org/legacy/
+  packages-dir: # Canonical alias for `packages_dir`
+    description: The target directory for distribution
+    required: false
+    # default: dist  # TODO: uncomment once alias removed
+  packages_dir: # DEPRECATED ALIAS; TODO: Remove in v3+
+    description: >-
+      [DEPRECATED]
+      The target directory for distribution
+    deprecationMessage: >-
+      The inputs have been normalized to use kebab-case.
+      Use `packages-dir` instead.
+    required: false
+    default: dist
+  verify-metadata: # Canonical alias for `verify_metadata`
+    description: Check metadata before uploading
+    required: false
+    # default: 'true'  # TODO: uncomment once alias removed
+  verify_metadata: # DEPRECATED ALIAS; TODO: Remove in v3+
+    description: >-
+      [DEPRECATED]
+      Check metadata before uploading
+    deprecationMessage: >-
+      The inputs have been normalized to use kebab-case.
+      Use `verify-metadata` instead.
+    required: false
+    default: "true"
+  skip-existing: # Canonical alias for `skip_existing`
+    description: >-
+      Do not fail if a Python package distribution
+      exists in the target package index
+    required: false
+    # default: 'false'  # TODO: uncomment once alias removed
+  skip_existing: # DEPRECATED ALIAS; TODO: Remove in v3+
+    description: >-
+      [DEPRECATED]
+      Do not fail if a Python package distribution
+      exists in the target package index
+    deprecationMessage: >-
+      The inputs have been normalized to use kebab-case.
+      Use `skip-existing` instead.
+    required: false
+    default: "false"
+  verbose:
+    description: Show verbose output.
+    required: false
+    default: "false"
+  print-hash: # Canonical alias for `print_hash`
+    description: Show hash values of files to be uploaded
+    required: false
+    # default: 'false'  # TODO: uncomment once alias removed
+  print_hash: # DEPRECATED ALIAS; TODO: Remove in v3+
+    description: >-
+      [DEPRECATED]
+      Show hash values of files to be uploaded
+    deprecationMessage: >-
+      The inputs have been normalized to use kebab-case.
+      Use `print-hash` instead.
+    required: false
+    default: "false"
+branding:
+  color: yellow
+  icon: upload-cloud
+runs:
+  using: docker
+  image: Dockerfile
+  args:
+    - ${{ inputs.user }}
+    - ${{ inputs.password }}
+    - ${{ inputs.repository-url }}
+    - ${{ inputs.packages-dir }}
+    - ${{ inputs.verify-metadata }}
+    - ${{ inputs.skip-existing }}
+    - ${{ inputs.verbose }}
+    - ${{ inputs.print-hash }}
