@@ -83,6 +83,7 @@
 
     ??? example "Examples"
         - bitcoindevkit/bdk#1778
+        - bitcoindevkit/bdk#1813
 
 
 -   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear
