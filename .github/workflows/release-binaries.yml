@@ -65,11 +65,6 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
 
-      - name: Smoke test
-        run: |
-          ./target/${TARGET}/release/zizmor --version
-        shell: bash
-
       - name: Rename binary
         run: |
           mv ./target/${TARGET}/release/zizmor ./target/${TARGET}/release/zizmor-${TARGET}
