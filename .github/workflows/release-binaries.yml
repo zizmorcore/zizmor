@@ -2,6 +2,20 @@ name: zizmor binary releases for GitHub 🐙
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "The release to attach binaries to"
+        required: true
+      clobber:
+        description: "Whether to clobber existing files"
+        required: true
+        default: false
+        type: boolean
+      dry-run:
+        description: "Whether to perform a dry run"
+        required: true
+        default: false
+        type: boolean
   release:
     types: [published]
   pull_request:
@@ -51,3 +65,30 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
 
+      - name: Smoke test
+        run: |
+          ./target/release/zizmor --version
+        shell: bash
+
+      - name: Rename binary
+        run: |
+          mv ./target/release/zizmor ./target/release/zizmor-${TARGET}
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: artifacts-${{ matrix.target }}
+          path: ./target/release/zizmor-${TARGET}
+
+      # - name: Upload to release
+      #   if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
+      #   run: |
+      #     gh release upload ${CLOBBER} "${RELEASE_TAG}"
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      #     CLOBBER: ${{ github.event.inputs.clobber && '--clobber' || '' }}
+      #   shell: bash
