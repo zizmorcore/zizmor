@@ -8,6 +8,7 @@ adafruit/circuitpython#9785
 aio-libs/aiobotocore#1344
 aio-libs/aiobotocore#1355
 apache/airflow#45408
+apache/airflow#50749
 apache/opennlp#736
 artichoke/artichoke#2825
 artichoke/boba#265
@@ -19,6 +20,7 @@ astropy/astropy#17315
 autotag-dev/autotag#142
 BerkeleyLearnVerify/Scenic#320
 bitcoindevkit/bdk#1778
+bitcoindevkit/bdk#1813
 blakeblackshear/frigate#15490
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 cakephp/cakephp#18081
@@ -147,6 +149,7 @@ onnx/onnx#6661
 onnx/onnx#6662
 openbao/openbao#924
 open-edge-platform/geti#162
+openpubkey/opkssh#198
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
 orion-rs/orion#441
@@ -191,6 +194,7 @@ quarkslab/quokka#46
 rolldown/rolldown#3861
 rubygems/rubygems.org#5350
 rust-lang/crates.io#10176
+rust-lang/crates.io#11203
 rust-lang/rust-clippy#13933
 rustls/rustls#2261
 rustls/tokio-rustls#96

@@ -1,0 +1,18 @@
+# https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#choosing-runners-in-a-group
+
+# Copyright: 2024 GitHub, Inc.
+# License: Creative Commons Attribution 4.0 International
+
+name: learn-github-actions
+on: [push]
+jobs:
+  check-bats-version:
+    runs-on:
+      group: ubuntu-runners
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "14"
+      - run: npm install -g bats
+      - run: bats -v

@@ -1,0 +1,88 @@
+# https://github.com/pypa/gh-action-pip-audit/blob/530374b67a3e8b3972d2caae7ee9a1d3dd486329/action.yml
+name: "gh-action-pip-audit"
+author: "William Woodruff <william@trailofbits.com>"
+description: "Use pip-audit to scan Python dependencies for known vulnerabilities"
+inputs:
+  summary:
+    description: "render a Markdown summary of the audit (default true)"
+    required: false
+    default: true
+  no-deps:
+    description: "don't do any dependency resolution (requires fully pinned requirements) (default false)"
+    required: false
+    default: false
+  require-hashes:
+    description: "enforce hashes (requirements-style inputs only) (default false)"
+    required: false
+    default: false
+  vulnerability-service:
+    description: "the vulnerability service to use (PyPI or OSV, defaults to PyPI)"
+    required: false
+    default: "PyPI"
+  inputs:
+    description: "the inputs to audit, whitespace separated (defaults to current path)"
+    required: false
+    default: ""
+  virtual-environment:
+    description: "the virtual environment to audit within (default none)"
+    required: false
+    default: ""
+  local:
+    description: "for environmental audits, consider only packages marked local (default false)"
+    required: false
+    default: false
+  index-url:
+    description: "the base URL for the PEP 503-compatible package index to use"
+    required: false
+    default: ""
+  extra-index-urls:
+    description: "extra PEP 503-compatible indexes to use, whitespace separated"
+    required: false
+    default: ""
+  ignore-vulns:
+    description: "vulnerabilities to explicitly exclude, if present (whitespace separated)"
+    required: false
+    default: ""
+  internal-be-careful-allow-failure:
+    description: "don't fail the job if the audit fails (default false)"
+    required: false
+    default: false
+  internal-be-careful-extra-flags:
+    description: "extra flags to be passed in to pip-audit"
+    required: false
+    default: ""
+outputs:
+  internal-be-careful-output:
+    description: "the column-formatted output from pip-audit, wrapped as base64"
+    value: "${{ steps.pip-audit.outputs.output }}"
+runs:
+  using: "composite"
+  steps:
+    - name: Set up pip-audit
+      run: |
+        # NOTE: Sourced, not executed as a script.
+        source "${{ github.action_path }}/setup/setup.bash"
+      env:
+        GHA_PIP_AUDIT_VIRTUAL_ENVIRONMENT: "${{ inputs.virtual-environment }}"
+      shell: bash
+
+    - name: Run pip-audit
+      id: pip-audit
+      run: |
+        # NOTE: Sourced, not executed as a script.
+        source "${{ github.action_path }}/setup/venv.bash"
+
+        python "${{ github.action_path }}/action.py" "${{ inputs.inputs }}"
+      env:
+        GHA_PIP_AUDIT_SUMMARY: "${{ inputs.summary }}"
+        GHA_PIP_AUDIT_NO_DEPS: "${{ inputs.no-deps }}"
+        GHA_PIP_AUDIT_REQUIRE_HASHES: "${{ inputs.require-hashes }}"
+        GHA_PIP_AUDIT_VULNERABILITY_SERVICE: "${{ inputs.vulnerability-service }}"
+        GHA_PIP_AUDIT_VIRTUAL_ENVIRONMENT: "${{ inputs.virtual-environment }}"
+        GHA_PIP_AUDIT_LOCAL: "${{ inputs.local }}"
+        GHA_PIP_AUDIT_INDEX_URL: "${{ inputs.index-url }}"
+        GHA_PIP_AUDIT_EXTRA_INDEX_URLS: "${{ inputs.extra-index-urls }}"
+        GHA_PIP_AUDIT_IGNORE_VULNS: "${{ inputs.ignore-vulns }}"
+        GHA_PIP_AUDIT_INTERNAL_BE_CAREFUL_ALLOW_FAILURE: "${{ inputs.internal-be-careful-allow-failure }}"
+        GHA_PIP_AUDIT_INTERNAL_BE_CAREFUL_EXTRA_FLAGS: "${{ inputs.internal-be-careful-extra-flags }}"
+      shell: bash

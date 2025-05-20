@@ -1,0 +1,67 @@
+# https://github.com/actions/setup-python/blob/e9d6f990972a57673cdb72ec29e19d42ba28880f/action.yml
+
+# Copyright 2018 GitHub, Inc. and contributors
+#
+# Licensed under the MIT License
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+---
+name: "Setup Python"
+description: "Set up a specific version of Python and add the command-line tools to the PATH."
+author: "GitHub"
+inputs:
+  python-version:
+    description: "Version range or exact version of Python or PyPy to use, using SemVer's version range syntax. Reads from .python-version if unset."
+  python-version-file:
+    description: "File containing the Python version to use. Example: .python-version"
+  cache:
+    description: "Used to specify a package manager for caching in the default directory. Supported values: pip, pipenv, poetry."
+    required: false
+  architecture:
+    description: "The target architecture (x86, x64) of the Python or PyPy interpreter."
+  check-latest:
+    description: "Set this option if you want the action to check for the latest available version that satisfies the version spec."
+    default: false
+  token:
+    description: "The token used to authenticate when fetching Python distributions from https://github.com/actions/python-versions. When running this action on github.com, the default value is sufficient. When running on GHES, you can pass a personal access token for github.com if you are experiencing rate limiting."
+    default: ${{ github.server_url == 'https://github.com' && github.token || '' }}
+  cache-dependency-path:
+    description: "Used to specify the path to dependency files. Supports wildcards or a list of file names for caching multiple dependencies."
+  update-environment:
+    description: "Set this option if you want the action to update environment variables."
+    default: true
+  allow-prereleases:
+    description: "When 'true', a version range passed to 'python-version' input will match prerelease versions if no GA versions are found. Only 'x.y' version range is supported for CPython."
+    default: false
+outputs:
+  python-version:
+    description: "The installed Python or PyPy version. Useful when given a version range as input."
+  cache-hit:
+    description: "A boolean value to indicate a cache entry was found"
+  python-path:
+    description: "The absolute path to the Python or PyPy executable."
+runs:
+  using: "node20"
+  main: "dist/setup/index.js"
+  post: "dist/cache-save/index.js"
+  post-if: success()
+branding:
+  icon: "code"
+  color: "yellow"

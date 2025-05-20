@@ -1,0 +1,6 @@
+version: 3
+
+files:
+  # NOTE: we intentionally only update docs with pinact.
+  # All non-doc workflows and actions are updated through Dependabot.
+  - pattern: ../docs/*.md

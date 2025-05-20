@@ -22,6 +22,7 @@
 
     ??? example "Examples"
         - apache/airflow#45408
+        - apache/airflow#50749
         - apache/opennlp#736
 
 
@@ -82,6 +83,7 @@
 
     ??? example "Examples"
         - bitcoindevkit/bdk#1778
+        - bitcoindevkit/bdk#1813
 
 
 -   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear
@@ -674,6 +676,14 @@
         - openbao/openbao#924
 
 
+-   ![](https://github.com/openpubkey.png?size=40){ width="40" loading=lazy align=left } openpubkey
+
+    ---
+
+    ??? example "Examples"
+        - openpubkey/opkssh#198
+
+
 -   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource
 
     ---
@@ -919,6 +929,7 @@
 
     ??? example "Examples"
         - rust-lang/crates.io#10176
+        - rust-lang/crates.io#11203
         - rust-lang/rust-clippy#13933
 
 

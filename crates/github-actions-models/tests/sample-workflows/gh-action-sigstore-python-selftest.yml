@@ -1,0 +1,351 @@
+# https://github.com/sigstore/gh-action-sigstore-python/blob/b3690e3a279c94669b1e9e4e1e29317cdc7a52d5/.github/workflows/selftest.yml
+
+# Copyright 2022 The Sigstore Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Self-test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  id-token: write
+
+jobs:
+  selftest:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        if: ${{ matrix.os != 'ubuntu-latest' }}
+        with:
+          python-version: "3.x"
+      - name: Sign artifact and publish signature
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/artifact.txt
+          internal-be-careful-debug: true
+      - name: Check outputs
+        shell: bash
+        run: |
+          [[ -f ./test/artifact.txt.sigstore ]] || exit 1
+
+  selftest-release-signing-artifacts-no-op:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        if: ${{ matrix.os != 'ubuntu-latest' }}
+        with:
+          python-version: "3.x"
+      - name: Sign artifact and publish signature
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/artifact.txt
+          # The trigger for this test is not a release, so this has no effect
+          # (but does not break the workflow either).
+          release-signing-artifacts: true
+          internal-be-careful-debug: true
+      - name: Check outputs
+        shell: bash
+        run: |
+          [[ -f ./test/artifact.txt.sigstore ]] || exit 1
+
+  selftest-xfail-invalid-inputs:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        input:
+          # We forbid inputs that look like flags
+          - "--this-should-not-work"
+          # We fail if the input doesn't exist
+          - "/tmp/extremely-nonexistent-file"
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign artifact and publish signature
+        continue-on-error: true
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ${{ matrix.input }}
+          internal-be-careful-debug: true
+      - name: Check failure
+        env:
+          XFAIL: ${{ steps.sigstore-python.outcome == 'failure' }}
+          JOB_NAME: ${{ github.job }}
+        run: |
+          echo "xfail ${JOB_NAME}: ${XFAIL}"
+
+          [[ "${XFAIL}" == "true" ]] || { >&2 echo "expected step to fail"; exit 1; }
+
+  selftest-staging:
+    runs-on: ubuntu-latest
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign artifact and publish signature
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/artifact.txt
+          staging: true
+          internal-be-careful-debug: true
+      - name: Check outputs
+        run: |
+          [[ -f ./test/artifact.txt.sigstore ]] || exit 1
+
+  selftest-glob:
+    runs-on: ubuntu-latest
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign artifacts and publish signatures
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/*.txt
+          staging: true
+          internal-be-careful-debug: true
+      - name: Check outputs
+        run: |
+          [[ -f ./test/artifact.txt.sigstore ]] || exit 1
+          [[ -f ./test/artifact1.txt.sigstore ]] || exit 1
+          [[ -f ./test/artifact2.txt.sigstore ]] || exit 1
+
+  selftest-xfail-glob-input-expansion:
+    runs-on: ubuntu-latest
+    env:
+      TEST_DIR: test
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign artifacts and publish signatures
+        continue-on-error: true
+        uses: ./
+        id: sigstore-python
+        with:
+          # This should fail since we should never directly expand ${TEST_DIR};
+          # the user should have to pre-expand it for us.
+          inputs: ./${TEST_DIR}/*.txt
+          staging: true
+          internal-be-careful-debug: true
+      - name: Check failure
+        env:
+          XFAIL: ${{ steps.sigstore-python.outcome == 'failure' }}
+          JOB_NAME: ${{ github.job }}
+        run: |
+          echo "xfail ${JOB_NAME}: ${XFAIL}"
+
+          [[ "${XFAIL}" == "true" ]] || { >&2 echo "expected step to fail"; exit 1; }
+
+  selftest-glob-multiple:
+    runs-on: ubuntu-latest
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign artifacts and publish signatures
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/artifact*.txt ./test/another*.txt ./test/subdir/*.txt
+          staging: true
+          internal-be-careful-debug: true
+      - name: Check outputs
+        run: |
+          [[ -f ./test/artifact.txt.sigstore ]] || exit 1
+          [[ -f ./test/artifact1.txt.sigstore ]] || exit 1
+          [[ -f ./test/artifact2.txt.sigstore ]] || exit 1
+          [[ -f ./test/another1.txt.sigstore ]] || exit 1
+          [[ -f ./test/another2.txt.sigstore ]] || exit 1
+          [[ -f ./test/subdir/hello1.txt.sigstore ]] || exit 1
+          [[ -f ./test/subdir/hello2.txt.sigstore ]] || exit 1
+          [[ -f ./test/subdir/hello3.txt.sigstore ]] || exit 1
+
+  selftest-upload-artifacts:
+    runs-on: ubuntu-latest
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign artifact and publish signature
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/artifact.txt
+          staging: true
+          upload-signing-artifacts: true
+          internal-be-careful-debug: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: "signing-artifacts-${{ github.job }}"
+          path: ./test/uploaded
+      - name: Verify presence of uploaded files
+        run: |
+          [[ -f ./artifact.txt ]] || exit 1
+          [[ -f ./artifact.txt.sigstore ]] || exit 1
+        working-directory: ./test/uploaded
+
+  selftest-custom-paths:
+    runs-on: ubuntu-latest
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign artifact and publish signature
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/artifact.txt
+          signature: ./test/custom_signature.sig
+          certificate: ./test/custom_certificate.crt
+          bundle: ./test/custom_bundle.sigstore
+          staging: true
+          internal-be-careful-debug: true
+      - name: Check outputs
+        run: |
+          [[ -f ./test/custom_signature.sig ]] || exit 1
+          [[ -f ./test/custom_certificate.crt ]] || exit 1
+          [[ -f ./test/custom_bundle.sigstore ]] || exit 1
+
+  selftest-verify:
+    runs-on: ubuntu-latest
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign artifact and publish signature
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/artifact.txt
+          verify: true
+          verify-cert-identity: https://github.com/sigstore/gh-action-sigstore-python/.github/workflows/selftest.yml@${{ github.ref }}
+          verify-oidc-issuer: https://token.actions.githubusercontent.com
+          staging: true
+          internal-be-careful-debug: true
+
+  selftest-xfail-verify-missing-options:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config:
+          # fails if both verify-cert-identity and verify-oidc-issuer are missing
+          - verify: true
+
+          # fails if either is missing
+          - verify: true
+            verify-oidc-issuer: https://token.actions.githubusercontent.com
+
+          - verify: true
+            verify-cert-identity: https://github.com/sigstore/gh-action-sigstore-python/.github/workflows/selftest.yml@${{ github.ref }}
+
+          # fails if either option is passed while verification is disabled
+          - verify: false
+            verify-oidc-issuer: https://token.actions.githubusercontent.com
+
+          - verify: false
+            verify-cert-identity: https://github.com/sigstore/gh-action-sigstore-python/.github/workflows/selftest.yml@${{ github.ref }}
+
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign artifact and publish signature
+        continue-on-error: true
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/artifact.txt
+          verify: ${{ matrix.config.verify }}
+          verify-oidc-issuer: ${{ matrix.config.verify-oidc-issuer }}
+          verify-cert-identity: ${{ matrix.config.verify-cert-identity }}
+          staging: true
+          internal-be-careful-debug: true
+
+      - name: Check failure
+        env:
+          XFAIL: ${{ steps.sigstore-python.outcome == 'failure' }}
+          JOB_NAME: ${{ github.job }}
+        run: |
+          echo "xfail ${JOB_NAME}: ${XFAIL}"
+
+          [[ "${XFAIL}" == "true" ]] || { >&2 echo "expected step to fail"; exit 1; }
+
+  selftest-identity-token:
+    runs-on: ubuntu-latest
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get OIDC token
+        id: get-oidc-token
+        run: |
+          identity_token=$( \
+            curl -H \
+              "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sigstore" \
+            | jq -r .value \
+          )
+          echo "identity-token=$identity_token" >> $GITHUB_OUTPUT
+        shell: bash
+      - name: Sign artifact and publish signature
+        uses: ./
+        id: sigstore-python
+        with:
+          inputs: ./test/artifact.txt
+          identity-token: ${{ steps.get-oidc-token.outputs.identity-token }}
+          staging: true
+          internal-be-careful-debug: true
+
+  all-selftests-pass:
+    if: always()
+
+    needs:
+      - selftest
+      - selftest-release-signing-artifacts-no-op
+      - selftest-xfail-invalid-inputs
+      - selftest-staging
+      - selftest-glob
+      - selftest-glob-multiple
+      - selftest-upload-artifacts
+      - selftest-custom-paths
+      - selftest-verify
+      - selftest-xfail-verify-missing-options
+      - selftest-identity-token
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: check test jobs
+        if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}

@@ -34,3 +34,7 @@ refresh-schemas:
 .PHONY: webhooks-to-contexts
 webhooks-to-contexts:
 	uv run --script --only-group codegen ./support/webhooks-to-contexts.py
+
+.PHONY: pinact
+pinact:
+	pinact run --update --verify

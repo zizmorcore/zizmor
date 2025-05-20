@@ -1,0 +1,73 @@
+# https://raw.githubusercontent.com/mhils/workflows/0d7c124ffff22d26be111477a3ed9fadd853a6db/.github/workflows/python-deploy.yml
+
+# MIT License
+
+# Copyright (c) 2022 Maximilian Hils
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# Usage:
+#
+# deploy:
+#   uses: mhils/workflows/.github/workflows/python-deploy.yml@main
+#   needs: check
+#   if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+#   secrets:
+#     password: ${{ secrets.PYPI_TOKEN }}
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+      artifact-name:
+        type: string
+      artifact-pattern:
+        type: string
+      artifact-merge-multiple:
+        type: boolean
+      repository:
+        type: string
+    secrets:
+      username:
+      password:
+        required: true
+
+jobs:
+  deploy:
+    environment: ${{ inputs.environment || 'deploy' }}
+    env:
+      TWINE_USERNAME: ${{ secrets.username || '__token__' }}
+      TWINE_PASSWORD: ${{ secrets.password }}
+      TWINE_REPOSITORY: ${{ inputs.repository || 'pypi' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install twine from PyPI
+        uses: install-pinned/twine@6aec23fc537538d8e480e593660afa49a377c224 # 5.0.0
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          pattern: ${{ inputs.artifact-pattern }}
+          merge-multiple: ${{ inputs.artifact-merge-multiple }}
+          path: dist/
+      - run: twine check dist/*
+      - run: twine upload dist/*

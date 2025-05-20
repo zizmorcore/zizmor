@@ -1,0 +1,29 @@
+testcase:
+  # block layout
+  # not captured
+  foo: # comment here
+    bar:
+      - 123 # another comment
+
+  flow: [1, 2, 3] # another comment
+
+  indexing:
+    - abc
+    - def
+    # comment doesn't interfere with indexing
+    - ghi
+
+queries:
+  - query: [foo]
+    expected: "  foo: # comment here\n    bar:\n      - 123 # another comment"
+
+  - query: [foo, bar, 0]
+    # TODO: ideally would be "- 123 # another comment"
+    expected: "123"
+
+  - query: [flow]
+    # TODO: ideally would be "flow: [1, 2, 3] # another comment"
+    expected: "  flow: [1, 2, 3]"
+
+  - query: [indexing, 2]
+    expected: "ghi"

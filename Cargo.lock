@@ -749,7 +749,7 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "github-actions-expressions"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "anyhow",
  "itertools",
@@ -760,9 +760,7 @@ dependencies = [
 
 [[package]]
 name = "github-actions-models"
-version = "0.28.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f97053a0b03d9cd4ec5c56f1b2e7bc97ae0e66d1f78778acee61a9100cb2181"
+version = "0.28.3"
 dependencies = [
  "indexmap",
  "serde",
@@ -1544,9 +1542,9 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
 name = "owo-colors"
-version = "4.2.0"
+version = "4.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1036865bb9422d3300cf723f657c2851d0e9ab12567854b1f4eba3d77decf564"
+checksum = "26995317201fa17f3656c36716aed4a7c81743a9634ac4c99c0eeda495db0cec"
 
 [[package]]
 name = "parking_lot"
@@ -3466,10 +3464,10 @@ checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
 
 [[package]]
 name = "yamlpath"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87c585ad15cb2a723978a39719af264133486ee68bd980e214ff43402e7b674a"
+version = "0.18.0"
 dependencies = [
+ "serde",
+ "serde_yaml",
  "thiserror 2.0.12",
  "tree-sitter",
  "tree-sitter-yaml",
@@ -3596,7 +3594,7 @@ dependencies = [
 
 [[package]]
 name = "zizmor"
-version = "1.7.0"
+version = "1.8.0"
 dependencies = [
  "annotate-snippets",
  "anstream",

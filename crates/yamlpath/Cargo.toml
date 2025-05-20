@@ -1,0 +1,21 @@
+[package]
+name = "yamlpath"
+version = "0.18.0"
+description = "Format-preserving YAML feature extraction"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/yamlpath"
+readme = "README.md"
+keywords = ["yaml"]
+
+authors.workspace = true
+homepage.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+tree-sitter.workspace = true
+tree-sitter-yaml = { workspace = true }
+
+[dev-dependencies]
+serde.workspace = true
+serde_yaml.workspace = true

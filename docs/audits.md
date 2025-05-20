@@ -56,7 +56,7 @@ with `#!yaml persist-credentials: true`.
       artipacked:
         runs-on: ubuntu-latest
         steps:
-          - uses: actions/checkout@v4
+          - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     ```
 
 === "After :white_check_mark:"
@@ -68,7 +68,7 @@ with `#!yaml persist-credentials: true`.
       artipacked:
         runs-on: ubuntu-latest
         steps:
-          - uses: actions/checkout@v4
+          - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
             with:
               persist-credentials: false
     ```
@@ -337,13 +337,13 @@ by default, and then set specific job-level permissions as needed.
 
             steps:
               - name: Download distributions
-                uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+                uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
                 with:
                   name: distributions
                   path: dist/
 
               - name: publish
-                uses: pypa/gh-action-pypi-publish@release/v1
+                uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         ```
 
     === "After :white_check_mark:"
@@ -374,13 +374,13 @@ by default, and then set specific job-level permissions as needed.
 
             steps:
               - name: Download distributions
-                uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+                uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
                 with:
                   name: distributions
                   path: dist/
 
               - name: publish
-                uses: pypa/gh-action-pypi-publish@release/v1
+                uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         ```
 
 ## `forbidden-uses`
@@ -725,7 +725,7 @@ Address the source of obfuscation by simplifying the expression,
             runs-on: ubuntu-latest
             steps:
               - name: Checkout
-                uses: actions/checkout@v4
+                uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
                 with:
                   repository: ${{ format('{0}/{1}', 'octocat', 'hello-world') }}
         ```
@@ -738,7 +738,7 @@ Address the source of obfuscation by simplifying the expression,
             runs-on: ubuntu-latest
             steps:
               - name: Checkout
-                uses: actions/checkout@v4
+                uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
                 with:
                   repository: octocat/hello-world
         ```
@@ -1306,7 +1306,7 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
           unpinned-uses:
               runs-on: ubuntu-latest
               steps:
-              - uses: actions/checkout@v4 # (1)!
+              - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
                 with:
                 persist-credentials: false
 
@@ -1315,9 +1315,6 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
                 entrypoint: /bin/echo
                 args: hello!
         ```
-
-        1. Or `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` for a SHA-pinned action.
-
 
 ## `unredacted-secrets`
 

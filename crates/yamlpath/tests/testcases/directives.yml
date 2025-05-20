@@ -1,0 +1,12 @@
+# presence of a directives block doesn't change anything.
+%YAML 1.2
+---
+testcase:
+  foo:
+    bar:
+      baz: hello!
+
+queries:
+  - query: [foo, bar, baz]
+    expected: |2-
+            baz: hello!
