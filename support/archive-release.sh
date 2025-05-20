@@ -5,7 +5,7 @@
 #
 # Expects to be run from the root of the repository.
 
-set -euo pipefail
+set -eo pipefail
 
 if [[ -z "${TARGET}" ]]; then
   >&2 echo "Error: TARGET environment variable not set"
@@ -32,4 +32,8 @@ else
   tar -C "${ARCHIVE_DIR}" -czf "${ARCHIVE_FILE}" .
 fi
 
-echo "${ARCHIVE_FILE}"
+if [[ -z "${GITHUB_OUTPUT}" ]]; then
+  echo "${ARCHIVE_FILE}"
+else
+  echo "filename=${ARCHIVE_FILE}" >> "${GITHUB_OUTPUT}"
+fi

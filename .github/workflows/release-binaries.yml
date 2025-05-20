@@ -68,8 +68,7 @@ jobs:
       - name: Archive release
         id: archive-release
         run: |
-          filename=$(./support/archive-release.sh)
-          echo "filename=${filename}" >> "${GITHUB_OUTPUT}"
+          ./support/archive-release.sh
         env:
           TARGET: ${{ matrix.target }}
         shell: bash
