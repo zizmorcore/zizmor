@@ -39,11 +39,6 @@ jobs:
         run: |
           rustup show
 
-      - name: Install Rust target for ${{ matrix.target }}
-        run: rustup target add "${TARGET}"
-        env:
-          TARGET: ${{ matrix.target }}
-
       - name: Build release
         run: cargo build --release --target "${TARGET}"
         env:
