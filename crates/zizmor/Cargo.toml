@@ -30,6 +30,7 @@ camino = { workspace = true, features = ["serde1"] }
 clap = { workspace = true, features = ["derive", "env"] }
 clap-verbosity-flag = { workspace = true, features = ["tracing"] }
 clap_complete.workspace = true
+clap_complete_nushell.workspace = true
 etcetera.workspace = true
 flate2.workspace = true
 github-actions-expressions.workspace = true
