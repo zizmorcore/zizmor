@@ -1003,6 +1003,21 @@
         - simpeg/simpeg#1592
 
 
+-   ![](https://github.com/slackapi.png?size=40){ width="40" loading=lazy align=left } slackapi
+
+    ---
+
+    ??? example "Examples"
+        - slackapi/python-slack-hooks#58
+        - slackapi/bolt-python#1303
+        - slackapi/python-slack-sdk#1691
+        - slackapi/bolt-js#2537
+        - slackapi/java-slack-sdk#1474
+        - slackapi/node-slack-sdk#2246
+        - slackapi/manifest-schema#14
+        - slackapi/slack-cli#100
+
+
 -   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
 
     ---
