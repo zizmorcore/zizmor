@@ -123,8 +123,6 @@ description: Installation instructions for zizmor.
 
     [![Packaging status](https://repology.org/badge/vertical-allrepos/zizmor.svg)](https://repology.org/project/zizmor/versions)
 
-
-
 ## From source
 
 !!! warning
@@ -138,3 +136,15 @@ You can install the latest unstable `zizmor` directly from GitHub with `cargo`:
 ```bash
 cargo install --git https://github.com/zizmorcore/zizmor
 ```
+
+## From GitHub release binaries
+
+!!! warning
+
+    Most ordinary users **should not** install the binaries from
+    `zizmor`'s GitHub releases. Binaries are provided on a best-effort basis,
+    and may be subject to libc and other compatibility issues.
+
+`zizmor`'s GitHub releases contain pre-built binaries for several platforms
+and architectures. You can find them at
+<https://github.com/zizmorcore/zizmor/releases/latest>.
