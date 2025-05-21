@@ -120,33 +120,28 @@ impl<'src> ContextPattern<'src> {
         }
     }
 
+    fn compare_part(pattern: &str, part: &Expr<'src>) -> bool {
+        if pattern == "*" {
+            true
+        } else {
+            match part {
+                Expr::Identifier(part) => pattern.eq_ignore_ascii_case(part.0),
+                Expr::Index(part) => match part.as_ref() {
+                    Expr::String(part) => pattern.eq_ignore_ascii_case(&part),
+                    _ => false,
+                },
+                _ => false,
+            }
+        }
+    }
+
     fn compare(&self, ctx: &Context<'src>) -> Option<Comparison> {
         let mut pattern_parts = self.0.split('.').peekable();
         let mut ctx_parts = ctx.parts.iter().peekable();
 
         while let (Some(pattern), Some(part)) = (pattern_parts.peek(), ctx_parts.peek()) {
-            // TODO: Refactor this; it's way too hard to read.
-            match (*pattern, part) {
-                // Calls can't be compared to patterns.
-                (_, Expr::Call { .. }) => return None,
-                // "*" matches any part.
-                ("*", _) => {}
-                (_, Expr::Star) => return None,
-                (pattern, Expr::Identifier(part)) if !pattern.eq_ignore_ascii_case(part.0) => {
-                    return None;
-                }
-                (pattern, Expr::Index(idx)) => {
-                    // Anything other than a string index is invalid
-                    // for part-wise comparison.
-                    let Expr::String(part) = idx.as_ref() else {
-                        return None;
-                    };
-
-                    if !pattern.eq_ignore_ascii_case(part) {
-                        return None;
-                    }
-                }
-                _ => {}
+            if !Self::compare_part(pattern, part) {
+                return None;
             }
 
             pattern_parts.next();
