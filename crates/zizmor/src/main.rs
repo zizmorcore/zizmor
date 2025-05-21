@@ -156,7 +156,7 @@ enum Shell {
     /// Nushell
     Nushell,
     /// `PowerShell`
-    PowerShell,
+    Powershell,
     /// Z `SHell` (zsh)
     Zsh,
 }
