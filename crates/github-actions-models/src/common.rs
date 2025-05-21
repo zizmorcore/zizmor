@@ -88,6 +88,22 @@ impl Display for EnvValue {
     }
 }
 
+impl EnvValue {
+    /// Returns whether this [`EnvValue`] is a "trueish" value
+    /// per C#'s `Boolean.TryParse`.
+    ///
+    /// This follows the semantics of C#'s `Boolean.TryParse`, where
+    /// the case-insensitive string "true" is considered true, but
+    /// "1", "yes", etc. are not.
+    pub fn csharp_trueish(&self) -> bool {
+        match self {
+            EnvValue::Boolean(true) => true,
+            EnvValue::String(maybe) => maybe.trim().eq_ignore_ascii_case("true"),
+            _ => false,
+        }
+    }
+}
+
 /// A "scalar or vector" type, for places in GitHub Actions where a
 /// key can have either a scalar value or an array of values.
 ///
@@ -403,6 +419,31 @@ mod tests {
             serde_yaml::from_str::<Env>(env).unwrap()["foo"],
             EnvValue::String("".into())
         );
+    }
+
+    #[test]
+    fn test_env_value_csharp_trueish() {
+        let vectors = [
+            (EnvValue::Boolean(true), true),
+            (EnvValue::Boolean(false), false),
+            (EnvValue::String("true".to_string()), true),
+            (EnvValue::String("TRUE".to_string()), true),
+            (EnvValue::String("TrUe".to_string()), true),
+            (EnvValue::String(" true ".to_string()), true),
+            (EnvValue::String("   \n\r\t True\n\n".to_string()), true),
+            (EnvValue::String("false".to_string()), false),
+            (EnvValue::String("1".to_string()), false),
+            (EnvValue::String("yes".to_string()), false),
+            (EnvValue::String("on".to_string()), false),
+            (EnvValue::String("random".to_string()), false),
+            (EnvValue::Number(1.0), false),
+            (EnvValue::Number(0.0), false),
+            (EnvValue::Number(666.0), false),
+        ];
+
+        for (val, expected) in vectors {
+            assert_eq!(val.csharp_trueish(), expected, "failed for {:?}", val);
+        }
     }
 
     #[test]
