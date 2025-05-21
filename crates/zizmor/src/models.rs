@@ -665,7 +665,7 @@ impl<'doc> Step<'doc> {
         // The steps's own `shell:` takes precedence, followed by the
         // job's default, followed by the entire workflow's default,
         // followed by the runner's default.
-        let shell = shell
+        shell
             .as_deref()
             .or_else(|| {
                 self.job()
@@ -679,9 +679,7 @@ impl<'doc> Step<'doc> {
                     .as_ref()
                     .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_deref()))
             })
-            .or_else(|| self.parent.runner_default_shell());
-
-        shell
+            .or_else(|| self.parent.runner_default_shell())
     }
 }
 

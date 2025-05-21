@@ -9,6 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* `zizmor` now supports generating completions for Nushell (#838)
+
 ## v1.8.0
 
 ### Announcements 📣
