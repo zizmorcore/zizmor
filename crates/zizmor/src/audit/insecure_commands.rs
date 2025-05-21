@@ -2,8 +2,8 @@ use std::ops::Deref;
 
 use anyhow::Result;
 use github_actions_models::action;
+use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
-use github_actions_models::common::{Env, EnvValue};
 use github_actions_models::workflow::job::StepBody;
 
 use super::{AuditLoadError, Job, audit_meta};
@@ -56,10 +56,9 @@ impl InsecureCommands {
     }
 
     fn has_insecure_commands_enabled(&self, env: &Env) -> bool {
-        if let Some(EnvValue::String(value)) = env.get("ACTIONS_ALLOW_UNSECURE_COMMANDS") {
-            !value.is_empty()
-        } else {
-            false
+        match env.get("ACTIONS_ALLOW_UNSECURE_COMMANDS") {
+            Some(value) => value.csharp_trueish(),
+            None => false,
         }
     }
 

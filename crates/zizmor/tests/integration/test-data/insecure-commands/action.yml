@@ -16,14 +16,14 @@ runs:
         echo "hello!"
       shell: bash
       env:
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
     - name: true-positive-2
       run: |
         echo "hello!"
       shell: bash
       env:
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: anything
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
     - name: true-positive-3
       run: |
