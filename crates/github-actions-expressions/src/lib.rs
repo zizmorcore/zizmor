@@ -7,7 +7,6 @@ use crate::context::Context;
 
 use self::parser::{ExprParser, Rule};
 use anyhow::Result;
-use context::Context;
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 
