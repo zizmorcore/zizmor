@@ -168,7 +168,7 @@ impl Generator for Shell {
             Shell::Elvish => clap_complete::shells::Elvish.file_name(name),
             Shell::Fish => clap_complete::shells::Fish.file_name(name),
             Shell::Nushell => clap_complete_nushell::Nushell.file_name(name),
-            Shell::PowerShell => clap_complete::shells::PowerShell.file_name(name),
+            Shell::Powershell => clap_complete::shells::PowerShell.file_name(name),
             Shell::Zsh => clap_complete::shells::Zsh.file_name(name),
         }
     }
@@ -179,7 +179,7 @@ impl Generator for Shell {
             Shell::Elvish => clap_complete::shells::Elvish.generate(cmd, buf),
             Shell::Fish => clap_complete::shells::Fish.generate(cmd, buf),
             Shell::Nushell => clap_complete_nushell::Nushell.generate(cmd, buf),
-            Shell::PowerShell => clap_complete::shells::PowerShell.generate(cmd, buf),
+            Shell::Powershell => clap_complete::shells::PowerShell.generate(cmd, buf),
             Shell::Zsh => clap_complete::shells::Zsh.generate(cmd, buf),
         }
     }
