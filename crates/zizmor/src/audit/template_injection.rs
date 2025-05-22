@@ -12,7 +12,8 @@
 
 use std::sync::LazyLock;
 
-use github_actions_expressions::{BinOp, Expr, UnOp, context::ContextPattern};
+use fst::Map;
+use github_actions_expressions::{BinOp, Expr, UnOp};
 use github_actions_models::{
     common::{Uses, expr::LoE},
     workflow::job::Strategy,
@@ -34,64 +35,28 @@ audit_meta!(
     "code injection via template expansion"
 );
 
-/// Context patterns that are believed to be always safe.
-static SAFE_CONTEXT_PATTERNS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
-    [
-        // The action path is always safe.
-        "github.action_path",
-        // The GitHub event name (i.e. trigger) is itself safe.
-        "github.event_name",
-        // Safe keys within the otherwise generally unsafe github.event context.
-        "github.event.after",                // hexadecimal SHA ref
-        "github.event.before",               // hexadecimal SHA ref
-        "github.event.issue.number",         // the issue's own number
-        "github.event.merge_group.base_sha", // hexadecimal SHA ref
-        "github.event.number",
-        "github.event.pull_request.base.sha", // hexadecimal SHA ref
-        "github.event.pull_request.head.sha", // hexadecimal SHA ref
-        "github.event.pull_request.head.repo.fork", // boolean
-        "github.event.pull_request.commits",  // number of commits in PR
-        "github.event.pull_request.number",   // the PR's own number
-        "github.event.workflow_run.id",
-        // Corresponds to the job ID, which is workflow-controlled
-        // but can only be [A-Za-z0-9-_].
-        // See: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_id
-        "github.job",
-        // Information about the GitHub repository
-        "github.repository",
-        "github.repository_id",
-        "github.repositoryUrl",
-        // Information about the GitHub repository owner (account/org or ID)
-        "github.repository_owner",
-        "github.repository_owner_id",
-        // Unique numbers assigned by GitHub for workflow runs
-        "github.run_attempt",
-        "github.run_id",
-        "github.run_number",
-        // Typically something like `https://github.com`; you have bigger problems if
-        // this is attacker-controlled.
-        "github.server_url",
-        // Always a 40-char SHA-1 reference.
-        "github.sha",
-        // Like `secrets.*`: not safe to expose, but safe to interpolate.
-        "github.token",
-        // GitHub Actions-controlled local directory.
-        "github.workspace",
-        // GitHub Actions-controller runner architecture.
-        "runner.arch",
-        // Debug logging is (1) or is not (0) enabled on GitHub Actions runner.
-        "runner.debug",
-        // GitHub Actions runner operating system.
-        "runner.os",
-        // GitHub Actions temporary directory, value controlled by the runner itself.
-        "runner.temp",
-        // GitHub Actions cached tool directory, value controlled by the runner itself.
-        "runner.tool_cache",
-    ]
-    .iter()
-    .map(|s| ContextPattern::new(s).unwrap())
-    .collect()
+static CONTEXT_CAPABILITIES_FST: LazyLock<Map<&[u8]>> = LazyLock::new(|| {
+    fst::Map::new(include_bytes!(concat!(env!("OUT_DIR"), "/context-capabilities.fst")).as_slice())
+        .expect("couldn't initialize context capabilities FST")
 });
+
+enum Capability {
+    Arbitrary,
+    Structured,
+    Fixed,
+}
+
+impl Capability {
+    fn from_context(context: &str) -> Option<Self> {
+        match CONTEXT_CAPABILITIES_FST.get(context) {
+            Some(0) => Some(Capability::Arbitrary),
+            Some(1) => Some(Capability::Structured),
+            Some(2) => Some(Capability::Fixed),
+            Some(_) => unreachable!("unexpected context capability"),
+            _ => None,
+        }
+    }
+}
 
 impl TemplateInjection {
     fn script_with_location<'s>(
@@ -200,75 +165,118 @@ impl TemplateInjection {
             }
 
             for context in parsed.dataflow_contexts() {
-                if context.child_of("secrets") {
-                    // While not ideal, secret expansion is typically not exploitable.
-                    continue;
-                } else if SAFE_CONTEXT_PATTERNS.iter().any(|pat| pat.matches(context)) {
-                    continue;
-                } else if context.child_of("inputs") {
-                    // TODO: Currently low confidence because we don't check the
-                    // input's type. In the future, we should index back into
-                    // the workflow's triggers and exclude input expansions
-                    // from innocuous types, e.g. booleans.
-                    bad_expressions.push((
-                        context.as_str().into(),
-                        Severity::High,
-                        Confidence::Low,
-                        Persona::default(),
-                    ));
-                } else if let Some(env) = context.pop_if("env") {
-                    let env_is_static = step.env_is_static(env);
+                // Try and turn our context into a pattern for
+                // matching against the FST.
+                match context.as_pattern().as_deref() {
+                    Some(context_pattern) => {
+                        // Try and get the pattern's capability from our FST.
+                        match Capability::from_context(context_pattern) {
+                            // Fixed means no meaningful injectable structure.
+                            Some(Capability::Fixed) => continue,
+                            // Structured means some attacker-controllable
+                            // structure, but not fully arbitrary.
+                            Some(Capability::Structured) => {
+                                bad_expressions.push((
+                                    context.as_str().into(),
+                                    Severity::Medium,
+                                    Confidence::High,
+                                    Persona::default(),
+                                ));
+                            }
+                            // Arbitrary means the context's expansion is
+                            // fully attacker-controllable.
+                            Some(Capability::Arbitrary) => {
+                                bad_expressions.push((
+                                    context.as_str().into(),
+                                    Severity::High,
+                                    Confidence::High,
+                                    Persona::default(),
+                                ));
+                            }
+                            None => {
+                                // Without a FST match, we fall back on heuristics.
+                                if context.child_of("secrets") {
+                                    // While not ideal, secret expansion is typically not exploitable.
+                                    continue;
+                                } else if context.child_of("inputs") {
+                                    // TODO: Currently low confidence because we don't check the
+                                    // input's type. In the future, we should index back into
+                                    // the workflow's triggers and exclude input expansions
+                                    // from innocuous types, e.g. booleans.
+                                    bad_expressions.push((
+                                        context.as_str().into(),
+                                        Severity::High,
+                                        Confidence::Low,
+                                        Persona::default(),
+                                    ));
+                                } else if let Some(env) = context.pop_if("env") {
+                                    let env_is_static = step.env_is_static(env);
 
-                    if !env_is_static {
+                                    if !env_is_static {
+                                        bad_expressions.push((
+                                            context.as_str().into(),
+                                            Severity::Low,
+                                            Confidence::High,
+                                            Persona::default(),
+                                        ));
+                                    }
+                                } else if context.child_of("github") {
+                                    // TODO: Filter these more finely; not everything in the event
+                                    // context is actually attacker-controllable.
+                                    bad_expressions.push((
+                                        context.as_str().into(),
+                                        Severity::High,
+                                        Confidence::High,
+                                        Persona::default(),
+                                    ));
+                                } else if context.child_of("matrix") || context == "matrix" {
+                                    if let Some(Strategy { matrix, .. }) = step.strategy() {
+                                        let matrix_is_static = match matrix {
+                                            // The matrix is generated by an expression, meaning
+                                            // that it's trivially not static.
+                                            Some(LoE::Expr(_)) => false,
+                                            // The matrix may expand to static values according to the context
+                                            Some(inner) => models::Matrix::new(inner)
+                                                .expands_to_static_values(context.as_str()),
+                                            // Context specifies a matrix, but there is no matrix defined.
+                                            // This is an invalid workflow so there's no point in flagging it.
+                                            None => continue,
+                                        };
+
+                                        if !matrix_is_static {
+                                            bad_expressions.push((
+                                                context.as_str().into(),
+                                                Severity::Medium,
+                                                Confidence::Medium,
+                                                Persona::default(),
+                                            ));
+                                        }
+                                    }
+                                    continue;
+                                } else {
+                                    // All other contexts are typically not attacker controllable,
+                                    // but may be in obscure cases.
+                                    bad_expressions.push((
+                                        context.as_str().into(),
+                                        Severity::Informational,
+                                        Confidence::Low,
+                                        Persona::default(),
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    None => {
+                        // If we couldn't turn the context into a pattern,
+                        // we almost certainly have something like
+                        // `call(...).foo.bar`.
                         bad_expressions.push((
                             context.as_str().into(),
-                            Severity::Low,
-                            Confidence::High,
+                            Severity::Informational,
+                            Confidence::Low,
                             Persona::default(),
                         ));
                     }
-                } else if context.child_of("github") {
-                    // TODO: Filter these more finely; not everything in the event
-                    // context is actually attacker-controllable.
-                    bad_expressions.push((
-                        context.as_str().into(),
-                        Severity::High,
-                        Confidence::High,
-                        Persona::default(),
-                    ));
-                } else if context.child_of("matrix") || context == "matrix" {
-                    if let Some(Strategy { matrix, .. }) = step.strategy() {
-                        let matrix_is_static = match matrix {
-                            // The matrix is generated by an expression, meaning
-                            // that it's trivially not static.
-                            Some(LoE::Expr(_)) => false,
-                            // The matrix may expand to static values according to the context
-                            Some(inner) => models::Matrix::new(inner)
-                                .expands_to_static_values(context.as_str()),
-                            // Context specifies a matrix, but there is no matrix defined.
-                            // This is an invalid workflow so there's no point in flagging it.
-                            None => continue,
-                        };
-
-                        if !matrix_is_static {
-                            bad_expressions.push((
-                                context.as_str().into(),
-                                Severity::Medium,
-                                Confidence::Medium,
-                                Persona::default(),
-                            ));
-                        }
-                    }
-                    continue;
-                } else {
-                    // All other contexts are typically not attacker controllable,
-                    // but may be in obscure cases.
-                    bad_expressions.push((
-                        context.as_str().into(),
-                        Severity::Informational,
-                        Confidence::Low,
-                        Persona::default(),
-                    ));
                 }
             }
         }
@@ -331,7 +339,7 @@ impl Audit for TemplateInjection {
 
 #[cfg(test)]
 mod tests {
-    use super::{Expr, TemplateInjection};
+    use super::{CONTEXT_CAPABILITIES_FST, Expr, TemplateInjection};
 
     #[test]
     fn test_expr_is_safe() {
@@ -382,5 +390,22 @@ mod tests {
             let expr = Expr::parse(case).unwrap();
             assert_eq!(TemplateInjection::expr_is_safe(&expr), *safe, "{expr:#?}");
         }
+    }
+
+    #[test]
+    fn test_fst_basic() {
+        assert_eq!(
+            CONTEXT_CAPABILITIES_FST.get("github.event.workflow_run.triggering_actor.login"),
+            Some(0) // arbitrary
+        );
+        assert_eq!(
+            CONTEXT_CAPABILITIES_FST
+                .get("github.event.workflow_run.triggering_actor.organizations_url"),
+            Some(1) // structured
+        );
+        assert_eq!(
+            CONTEXT_CAPABILITIES_FST.get("github.event.type.is_enabled"),
+            Some(2) // fixed
+        );
     }
 }

@@ -1,5 +1,6 @@
+github.action_path,fixed
 github.event.action,arbitrary
-github.event.after,arbitrary
+github.event.after,fixed
 github.event.answer.author_association,fixed
 github.event.answer.body,arbitrary
 github.event.answer.child_comment_count,fixed
@@ -67,7 +68,7 @@ github.event.assignee.url,structured
 github.event.assignee.user_view_type,arbitrary
 github.event.avatar_url,structured
 github.event.base_ref,arbitrary
-github.event.before,arbitrary
+github.event.before,fixed
 github.event.branch,arbitrary
 github.event.branches.*.commit.sha,arbitrary
 github.event.branches.*.commit.url,structured
@@ -2382,7 +2383,7 @@ github.event.label.node_id,arbitrary
 github.event.label.url,structured
 github.event.master_branch,arbitrary
 github.event.merge_group.base_ref,arbitrary
-github.event.merge_group.base_sha,arbitrary
+github.event.merge_group.base_sha,fixed
 github.event.merge_group.head_commit.author.email,structured
 github.event.merge_group.head_commit.author.name,arbitrary
 github.event.merge_group.head_commit.committer.email,structured
@@ -2714,7 +2715,7 @@ github.event.pull_request.base.repo.visibility,arbitrary
 github.event.pull_request.base.repo.watchers,fixed
 github.event.pull_request.base.repo.watchers_count,fixed
 github.event.pull_request.base.repo.web_commit_signoff_required,fixed
-github.event.pull_request.base.sha,arbitrary
+github.event.pull_request.base.sha,fixed
 github.event.pull_request.base.user.avatar_url,structured
 github.event.pull_request.base.user.deleted,fixed
 github.event.pull_request.base.user.email,arbitrary
@@ -2883,7 +2884,7 @@ github.event.pull_request.head.repo.visibility,arbitrary
 github.event.pull_request.head.repo.watchers,fixed
 github.event.pull_request.head.repo.watchers_count,fixed
 github.event.pull_request.head.repo.web_commit_signoff_required,fixed
-github.event.pull_request.head.sha,arbitrary
+github.event.pull_request.head.sha,fixed
 github.event.pull_request.head.user.avatar_url,structured
 github.event.pull_request.head.user.deleted,fixed
 github.event.pull_request.head.user.email,arbitrary
@@ -4009,3 +4010,22 @@ github.event.workflow_run.updated_at,fixed
 github.event.workflow_run.url,structured
 github.event.workflow_run.workflow_id,fixed
 github.event.workflow_run.workflow_url,arbitrary
+github.event_name,fixed
+github.job,fixed
+github.repository,fixed
+github.repository_id,fixed
+github.repository_owner,fixed
+github.repository_owner_id,fixed
+github.repositoryurl,fixed
+github.run_attempt,fixed
+github.run_id,fixed
+github.run_number,fixed
+github.server_url,fixed
+github.sha,fixed
+github.token,fixed
+github.workspace,fixed
+runner.arch,fixed
+runner.debug,fixed
+runner.os,fixed
+runner.temp,fixed
+runner.tool_cache,fixed

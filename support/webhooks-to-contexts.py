@@ -34,6 +34,9 @@ _WEBHOOKS_JSON_URL = f"https://github.com/octokit/openapi-webhooks/raw/{_REF}/pa
 
 _HERE = Path(__file__).parent
 
+_KNOWN_SAFE_CONTEXTS = _HERE / "known-safe-contexts.txt"
+assert _KNOWN_SAFE_CONTEXTS.is_file(), f"Missing {_KNOWN_SAFE_CONTEXTS}"
+
 _OUT = _HERE / "context-capabilities.csv"
 
 # A mapping of workflow trigger event names to subevents.
@@ -313,6 +316,15 @@ def process_schemas(
 
 
 if __name__ == "__main__":
+    log("loading known safe contexts...")
+    safe_contexts = []
+    for line in _KNOWN_SAFE_CONTEXTS.open().readlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        safe_contexts.append(line)
+    log(f"  ...{len(safe_contexts)} known safe contexts")
+
     log(f"downloading OpenAPI spec (ref={_REF})...")
     webhooks_json = requests.get(_WEBHOOKS_JSON_URL).text
 
@@ -345,6 +357,10 @@ if __name__ == "__main__":
     for event, schemas in schemas_for_event.items():
         log(f"  {event} -> {len(schemas)} schemas")
         process_schemas(event, schemas, patterns_to_capabilities)
+
+    # Finally, fill in with some hardcoded pattern, capability pairs.
+    for context in safe_contexts:
+        patterns_to_capabilities[context] = "fixed"
 
     with _OUT.open("w") as io:
         writer = csv.writer(io)
