@@ -13,7 +13,7 @@
 use std::sync::LazyLock;
 
 use fst::Map;
-use github_actions_expressions::{BinOp, Expr, UnOp};
+use github_actions_expressions::Expr;
 use github_actions_models::{
     common::{Uses, expr::LoE},
     workflow::job::Strategy,
@@ -96,50 +96,6 @@ impl TemplateInjection {
         }
     }
 
-    /// Checks whether an expression is "safe" for the purposes of template
-    /// injection.
-    ///
-    /// In the context of template injection, a "safe" expression is one that
-    /// can only ever return a literal node (i.e. bool, number, string, etc.).
-    /// All branches/flows of the expression must uphold that invariant;
-    /// no taint tracking is currently done.
-    fn expr_is_safe(expr: &Expr) -> bool {
-        match expr {
-            Expr::Number(_) => true,
-            Expr::String(_) => true,
-            Expr::Boolean(_) => true,
-            Expr::Null => true,
-            // NOTE: Currently unreachable, since these only occur
-            // within Expr::Context and we handle that at the top-level.
-            Expr::Star | Expr::Identifier(_) | Expr::Index(_) => unreachable!(),
-            // NOTE: Some function calls may be safe, but for now
-            // we consider them all unsafe.
-            Expr::Call { .. } => false,
-            // We consider all context accesses unsafe. This isn't true,
-            // but our audit filters the safe ones later on.
-            Expr::Context { .. } => false,
-            Expr::BinOp { lhs, op, rhs } => {
-                match op {
-                    // `==` and `!=` are always safe, since they evaluate to
-                    // boolean rather than to the truthy value.
-                    BinOp::Eq | BinOp::Neq => true,
-                    // `&&` is safe if its RHS is safe, since && cannot
-                    // short-circuit.
-                    BinOp::And => Self::expr_is_safe(rhs),
-                    // We consider all other binops safe if both sides are safe,
-                    // regardless of the actual operation type. This could be
-                    // refined to check only one side with taint information.
-                    // TODO: Relax this for >/>=/</<=?
-                    _ => Self::expr_is_safe(lhs) && Self::expr_is_safe(rhs),
-                }
-            }
-            Expr::UnOp { op, .. } => match op {
-                // !expr always produces a boolean.
-                UnOp::Not => true,
-            },
-        }
-    }
-
     fn injectable_template_expressions<'s>(
         &self,
         run: &str,
@@ -152,9 +108,11 @@ impl TemplateInjection {
                 continue;
             };
 
-            if Self::expr_is_safe(&parsed) {
-                // Emit a pedantic finding for all expressions, since
-                // all template injections are code smells, even if unexploitable.
+            let contexts = parsed.dataflow_contexts();
+            if contexts.is_empty() {
+                // Emit a blanket pedantic finding for all expressions
+                // that don't have any dataflow contexts (since these)
+                // are code smells, even if unexploitable.
                 bad_expressions.push((
                     expr.as_raw().into(),
                     Severity::Unknown,
@@ -164,7 +122,7 @@ impl TemplateInjection {
                 continue;
             }
 
-            for context in parsed.dataflow_contexts() {
+            for context in contexts {
                 // Try and turn our context into a pattern for
                 // matching against the FST.
                 match context.as_pattern().as_deref() {
@@ -339,73 +297,29 @@ impl Audit for TemplateInjection {
 
 #[cfg(test)]
 mod tests {
-    use super::{CONTEXT_CAPABILITIES_FST, Expr, TemplateInjection};
+    use crate::audit::template_injection::Capability;
+
+    use super::{Expr, TemplateInjection};
 
     #[test]
-    fn test_expr_is_safe() {
-        let cases = &[
-            // Literals are always safe.
-            ("true", true),
-            ("false", true),
-            ("1.0", true),
-            ("null", true),
-            ("'some string'", true),
-            // negation is always safe.
-            ("!true", true),
-            ("!some.context", true),
-            // == / != are always safe, even if their hands are not.
-            ("true == true", true),
-            ("'true' == true", true),
-            ("some.context == true", true),
-            ("contains(some.context, 'foo') != true", true),
-            // || is safe if both hands are safe.
-            ("true || true", true),
-            ("some.context || true", false),
-            ("true || some.context", false),
-            // && is true if the RHS is safe.
-            ("true && true", true),
-            ("some.context && true", true),
-            ("true && other.context", false),
-            ("some.context && other.context", false),
-            // Index ops and function calls are unsafe.
-            ("some.context[0]", false),
-            ("some.context[*]", false),
-            ("someFunction()", false),
-            ("fromJSON(some.context)", false),
-            ("toJSON(fromJSON(some.context))", false),
-            // Context accesses are unsafe.
-            ("some.context", false),
-            ("some.context.*.something", false),
-            // More complicated cases:
-            ("some.condition && '--some-arg' || ''", true),
-            ("some.condition && some.context || ''", false),
-            ("some.condition && '--some-arg' || some.context", false),
-            (
-                "(github.actor != 'github-actions[bot]' && github.actor) || 'BrewTestBot'",
-                false,
+    fn test_capability_from_context() {
+        assert!(matches!(
+            Capability::from_context("github.event.workflow_run.triggering_actor.login"),
+            Some(Capability::Arbitrary)
+        ));
+        assert!(matches!(
+            Capability::from_context(
+                "github.event.workflow_run.triggering_actor.organizations_url"
             ),
-        ];
-
-        for (case, safe) in cases {
-            let expr = Expr::parse(case).unwrap();
-            assert_eq!(TemplateInjection::expr_is_safe(&expr), *safe, "{expr:#?}");
-        }
-    }
-
-    #[test]
-    fn test_fst_basic() {
-        assert_eq!(
-            CONTEXT_CAPABILITIES_FST.get("github.event.workflow_run.triggering_actor.login"),
-            Some(0) // arbitrary
-        );
-        assert_eq!(
-            CONTEXT_CAPABILITIES_FST
-                .get("github.event.workflow_run.triggering_actor.organizations_url"),
-            Some(1) // structured
-        );
-        assert_eq!(
-            CONTEXT_CAPABILITIES_FST.get("github.event.type.is_enabled"),
-            Some(2) // fixed
-        );
+            Some(Capability::Structured)
+        ));
+        assert!(matches!(
+            Capability::from_context("github.event.type.is_enabled"),
+            Some(Capability::Fixed)
+        ));
+        assert!(matches!(
+            Capability::from_context("runner.arch"),
+            Some(Capability::Fixed)
+        ));
     }
 }
