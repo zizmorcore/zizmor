@@ -1,0 +1,83 @@
+name: Code generation 🤖
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 12 * * 1'
+
+permissions: {}
+
+env:
+  PR_ASSIGNEES: woodruffw
+
+jobs:
+  refresh-schemas:
+    name: Refresh JSON schemas 📈
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # for creating branches
+      pull-requests: write # for opening PRs
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: try to refresh schemas
+        run: |
+          make refresh-schemas
+
+      - name: create PR
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          commit-message: "[BOT] update JSON schemas from SchemaStore"
+          branch: refresh-schemas
+          branch-suffix: timestamp
+          title: "[BOT] update JSON schemas from SchemaStore"
+          body: |
+            :robot: :warning: :robot:
+
+            This is an automated pull request, updating the embedded JSON
+            schemas after a SchemaStore change was detected.
+
+            Please review manually before merging.
+          assignees: ${{ env.PR_ASSIGNEES }}
+          reviewers: ${{ env.PR_ASSIGNEES }}
+
+  refresh-context-capabilities:
+    name: Refresh context capabilities *️⃣
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # for creating branches
+      pull-requests: write # for opening PRs
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
+
+      - name: try to refresh context capabilities
+        run: |
+          make webhooks-to-contexts
+
+      - name: create PR
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          commit-message: "[BOT] update context capabilities"
+          branch: refresh-context-capabilities
+          branch-suffix: timestamp
+          title: "[BOT] update context-capabilities from GitHub webhooks"
+          body: |
+            :robot: :warning: :robot:
+
+            This is an automated pull request, updating the
+            context capabilities CSV after a change to GitHub's
+            webhooks was detected.
+
+            Please review manually before merging.
+          assignees: ${{ env.PR_ASSIGNEES }}
+          reviewers: ${{ env.PR_ASSIGNEES }}

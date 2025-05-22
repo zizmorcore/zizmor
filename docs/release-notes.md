@@ -13,10 +13,19 @@ of `zizmor`.
 
 * `zizmor` now supports generating completions for Nushell (#838)
 
+### Enhancements 🌱
+
+* The [template-injection] audit has been rewritten, and is now significantly
+  more precise and general over contexts supplied via GitHub's webhook
+  payloads (i.e. `github.event.*`) (#745)
+
 ### Bug Fixes 🐛
 
 * The [insecure-commands] now correctly detects different truthy
   values in `ACTIONS_ALLOW_UNSECURE_COMMANDS` (#840)
+* The [template-injection] audit now correctly emits pedantic findings
+  in a blanket manner, rather than filtering them based on the presence
+  of other findings (#745)
 
 ## v1.8.0
 
@@ -40,8 +49,11 @@ of `zizmor`.
 
 ### Bug Fixes 🐛
 
-* `zizmor` now correctly handles index-style contexts in the
-  [template-injection] audit (#800, #806)
+* The [template-injection] audit no longer produces false positive findings
+  on alternative representations of the same context pattern.
+  For example, `github.event.pull_request.head.sha` is considered safe
+  but `github['event']['pull_request']['head']['sha']` was not previously
+  detected as equivalent to it (#800, #806)
 
 ## v1.7.0
 

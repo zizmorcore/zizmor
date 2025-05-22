@@ -1,0 +1,31 @@
+# patterns.yml: tests that we normalize contexts correctly for the FST
+# lookup inside template-injection
+
+name: patterns
+
+on: workflow_run # zizmor: ignore[dangerous-triggers]
+
+permissions: {}
+
+jobs:
+  inject-me:
+    runs-on: ubuntu-latest
+
+    steps:
+      # these are safe and are correctly ignored by default by zizmor,
+      # since they're all instantiations of the same fixed-cap pattern present
+      # in the FST.
+      - name: safe
+        run: |
+          echo "${{ github.event.workflow_run.pull_requests.*.base.repo.id }}"
+          echo "${{ github.event.workflow_run.pull_requests[0].base.repo.id }}"
+          echo "${{ github.event.workflow_run.pull_requests[1].base.repo.id }}"
+
+      # these are unsafe and should be flagged by default by zizmor,
+      # since they're all instantiations of the same arbitrary-cap pattern
+      # present in the FST.
+      - name: unsafe
+        run: |
+          echo "${{ github.event.changes.new_discussion.labels.*.name }}"
+          echo "${{ github.event.changes.new_discussion.labels[0].name }}"
+          echo "${{ github.event.changes.new_discussion.labels[1].name }}"

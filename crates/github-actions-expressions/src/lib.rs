@@ -28,7 +28,7 @@ mod parser {
 ///
 /// Function names are case-insensitive.
 #[derive(Debug)]
-pub struct Function<'src>(&'src str);
+pub struct Function<'src>(pub(crate) &'src str);
 
 impl PartialEq for Function<'_> {
     fn eq(&self, other: &Self) -> bool {
@@ -455,7 +455,7 @@ mod tests {
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use super::{BinOp, Context, Expr, ExprParser, Function, Rule, UnOp};
+    use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
     #[test]
     fn test_function_eq() {
@@ -465,58 +465,6 @@ mod tests {
         assert_eq!(&func, "Foo");
 
         assert_eq!(func, Function("FOO"));
-    }
-
-    #[test]
-    fn test_context_eq() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
-        assert_eq!(&ctx, "foo.bar.baz");
-        assert_eq!(&ctx, "FOO.BAR.BAZ");
-        assert_eq!(&ctx, "Foo.Bar.Baz");
-    }
-
-    #[test]
-    fn test_context_child_of() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
-
-        for (case, child) in &[
-            // Trivial child cases.
-            ("foo", true),
-            ("foo.bar", true),
-            // Case-insensitive cases.
-            ("FOO", true),
-            ("FOO.BAR", true),
-            ("Foo", true),
-            ("Foo.Bar", true),
-            // We consider a context to be a child of itself.
-            ("foo.bar.baz", true),
-            // Trivial non-child cases.
-            ("foo.bar.baz.qux", false),
-            ("foo.bar.qux", false),
-            ("foo.qux", false),
-            ("qux", false),
-            // Invalid cases.
-            ("foo.", false),
-            (".", false),
-            ("", false),
-        ] {
-            assert_eq!(ctx.child_of(*case), *child);
-        }
-    }
-
-    #[test]
-    fn test_context_pop_if() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
-
-        for (case, expected) in &[
-            ("foo", Some("bar.baz")),
-            ("Foo", Some("bar.baz")),
-            ("FOO", Some("bar.baz")),
-            ("foo.", None),
-            ("bar", None),
-        ] {
-            assert_eq!(ctx.pop_if(case), *expected);
-        }
     }
 
     #[test]
