@@ -17,7 +17,7 @@ license = "MIT"
 [workspace.dependencies]
 anyhow = "1.0.98"
 github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.3" }
-github-actions-models = { path = "crates/github-actions-models", version = "0.28.3" }
+github-actions-models = { path = "crates/github-actions-models", version = "0.29.0" }
 itertools = "0.14.0"
 pest = "2.8.0"
 pest_derive = "2.8.0"
@@ -29,6 +29,7 @@ camino = "1.1.9"
 clap = "4.5.38"
 clap-verbosity-flag = { version = "3.0.2", default-features = false }
 clap_complete = "4.5.50"
+clap_complete_nushell = "4.5.5"
 etcetera = "0.10.0"
 flate2 = "1.1.1"
 http-cache-reqwest = "0.15.1"

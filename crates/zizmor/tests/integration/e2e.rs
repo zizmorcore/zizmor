@@ -15,7 +15,7 @@ fn gha_hazmat() -> Result<()> {
             .offline(false)
             .output(OutputMode::Both)
             .args(["--no-online-audits"])
-            .input("woodruffw/gha-hazmat@42064a9533f401a493c3599e56f144918f8eacfd")
+            .input("woodruffw/gha-hazmat@33cd22cdd7823a5795768388aff977fe992b5aad")
             .run()?
     );
     Ok(())

@@ -1,0 +1,45 @@
+on: pull_request
+
+name: issue-839-repro
+
+permissions: {}
+
+jobs:
+  some-dangerous-job:
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+    steps:
+      - run: echo "don't do this"
+
+  env-via-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env:
+          - ACTIONS_ALLOW_UNSECURE_COMMANDS: "   true"
+
+    steps:
+      - run: echo "don't do this"
+        env: ${{ matrix.env }}
+
+  this-is-ok-1:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "this is ok"
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: false
+
+  this-is-ok-2:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "this is ok"
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "false"
+
+  this-is-ok-3:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "this is ok"
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: yes # does not evaluate to true

@@ -264,6 +264,13 @@ fn insecure_commands() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("insecure-commands/issue-839-repro.yml"))
+            .args(["--persona=auditor"])
+            .run()?
+    );
+
     Ok(())
 }
 

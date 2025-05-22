@@ -8,7 +8,7 @@ jobs:
   some-dangerous-job:
     runs-on: ubuntu-latest
     env:
-      ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     steps:
       - run: echo "don't do this"
 
@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         env:
-          - ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
+          - ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
     steps:
       - run: echo "don't do this"

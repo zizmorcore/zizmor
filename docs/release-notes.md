@@ -9,6 +9,15 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* `zizmor` now supports generating completions for Nushell (#838)
+
+### Bug Fixes 🐛
+
+* The [insecure-commands] now correctly detects different truthy
+  values in `ACTIONS_ALLOW_UNSECURE_COMMANDS` (#840)
+
 ## v1.8.0
 
 ### Announcements 📣
@@ -804,3 +813,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [stale-action-refs]: ./audits.md#stale-action-refs
 [unsound-contains]: ./audits.md#unsound-contains
 [unpinned-images]: ./audits.md#unpinned-images
+[insecure-commands]: ./audits.md#insecure-commands

@@ -355,6 +355,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap_complete_nushell"
+version = "4.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6a8b1593457dfc2fe539002b795710d022dc62a65bf15023f039f9760c7b18a"
+dependencies = [
+ "clap",
+ "clap_complete",
+]
+
+[[package]]
 name = "clap_derive"
 version = "4.5.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -760,7 +770,7 @@ dependencies = [
 
 [[package]]
 name = "github-actions-models"
-version = "0.28.3"
+version = "0.29.0"
 dependencies = [
  "indexmap",
  "serde",
@@ -3604,6 +3614,7 @@ dependencies = [
  "clap",
  "clap-verbosity-flag",
  "clap_complete",
+ "clap_complete_nushell",
  "etcetera",
  "flate2",
  "github-actions-expressions",

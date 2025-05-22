@@ -193,6 +193,7 @@ PyO3/pyo3#4774
 quarkslab/quokka#46
 rolldown/rolldown#3861
 rubygems/rubygems.org#5350
+rubygems/rubygems#8702
 rust-lang/crates.io#10176
 rust-lang/crates.io#11203
 rust-lang/rust-clippy#13933
@@ -210,6 +211,15 @@ sigstore/gitsign#602
 sigstore/model-transparency#369
 sigstore/sigstore-rs#424
 simpeg/simpeg#1592
+slackapi/python-slack-hooks#58
+slackapi/bolt-python#1303
+slackapi/python-slack-sdk#1691
+slackapi/bolt-js#2537
+slackapi/java-slack-sdk#1474
+slackapi/node-slack-sdk#2246
+slackapi/manifest-schema#14
+slackapi/slack-cli#100
+slackapi/python-slack-events-api#110
 TecharoHQ/anubis#188
 termcolor/termcolor#89
 termux/termux-packages#22519

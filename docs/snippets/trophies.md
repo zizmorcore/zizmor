@@ -921,6 +921,7 @@
 
     ??? example "Examples"
         - rubygems/rubygems.org#5350
+        - rubygems/rubygems#8702
 
 
 -   ![](https://github.com/rust-lang.png?size=40){ width="40" loading=lazy align=left } rust-lang
@@ -1001,6 +1002,22 @@
 
     ??? example "Examples"
         - simpeg/simpeg#1592
+
+
+-   ![](https://github.com/slackapi.png?size=40){ width="40" loading=lazy align=left } slackapi
+
+    ---
+
+    ??? example "Examples"
+        - slackapi/python-slack-hooks#58
+        - slackapi/bolt-python#1303
+        - slackapi/python-slack-sdk#1691
+        - slackapi/bolt-js#2537
+        - slackapi/java-slack-sdk#1474
+        - slackapi/node-slack-sdk#2246
+        - slackapi/manifest-schema#14
+        - slackapi/slack-cli#100
+        - slackapi/python-slack-events-api#110
 
 
 -   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
