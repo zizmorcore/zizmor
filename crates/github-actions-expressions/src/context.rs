@@ -127,7 +127,7 @@ impl<'src> ContextPattern<'src> {
             match part {
                 Expr::Identifier(part) => pattern.eq_ignore_ascii_case(part.0),
                 Expr::Index(part) => match part.as_ref() {
-                    Expr::String(part) => pattern.eq_ignore_ascii_case(&part),
+                    Expr::String(part) => pattern.eq_ignore_ascii_case(part),
                     _ => false,
                 },
                 _ => false,
