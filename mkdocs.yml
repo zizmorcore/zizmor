@@ -69,7 +69,7 @@ markdown_extensions:
       repo_url_shorthand: true
       normalize_issue_symbols: true
       provider: github
-      user: woodruffw
+      user: zizmorcore
       repo: zizmor
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
