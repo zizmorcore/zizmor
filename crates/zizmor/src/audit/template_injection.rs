@@ -108,21 +108,17 @@ impl TemplateInjection {
                 continue;
             };
 
-            let contexts = parsed.dataflow_contexts();
-            if contexts.is_empty() {
-                // Emit a blanket pedantic finding for all expressions
-                // that don't have any dataflow contexts (since these)
-                // are code smells, even if unexploitable.
-                bad_expressions.push((
-                    expr.as_raw().into(),
-                    Severity::Unknown,
-                    Confidence::Unknown,
-                    Persona::Pedantic,
-                ));
-                continue;
-            }
+            // Emit a blanket pedantic finding for the extracted expression
+            // since any expression in a code context is a code smell,
+            // even if unexploitable.
+            bad_expressions.push((
+                expr.as_raw().into(),
+                Severity::Unknown,
+                Confidence::Unknown,
+                Persona::Pedantic,
+            ));
 
-            for context in contexts {
+            for context in parsed.dataflow_contexts() {
                 // Try and turn our context into a pattern for
                 // matching against the FST.
                 match context.as_pattern().as_deref() {
@@ -298,8 +294,6 @@ impl Audit for TemplateInjection {
 #[cfg(test)]
 mod tests {
     use crate::audit::template_injection::Capability;
-
-    use super::{Expr, TemplateInjection};
 
     #[test]
     fn test_capability_from_context() {

@@ -1076,4 +1076,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-110 findings (15 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high
+122 findings (27 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high
