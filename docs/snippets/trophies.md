@@ -1017,6 +1017,7 @@
         - slackapi/node-slack-sdk#2246
         - slackapi/manifest-schema#14
         - slackapi/slack-cli#100
+        - slackapi/python-slack-events-api#110
 
 
 -   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
