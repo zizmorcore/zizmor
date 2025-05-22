@@ -112,6 +112,18 @@ description: Installation instructions for zizmor.
     pacman -S zizmor
     ```
 
+=== "Chimera Linux"
+
+    [![Chimera Linux package](https://repology.org/badge/version-for-repo/chimera/zizmor.svg)](https://repology.org/project/zizmor/versions)
+
+    !!! note
+
+        This is a community-maintained package.
+
+    ```bash
+    apk add zizmor
+    ```
+
 === "Other ecosystems"
 
     !!! info
