@@ -219,6 +219,7 @@ slackapi/java-slack-sdk#1474
 slackapi/node-slack-sdk#2246
 slackapi/manifest-schema#14
 slackapi/slack-cli#100
+slackapi/python-slack-events-api#110
 TecharoHQ/anubis#188
 termcolor/termcolor#89
 termux/termux-packages#22519
