@@ -9,10 +9,11 @@ use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{Confidence, Finding, Persona, Severity},
+    finding::{Confidence, Finding, Fix, Persona, Severity},
     models::{JobExt, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
     utils::split_patterns,
+    yaml_patch::YamlPatchOperation,
 };
 
 pub(crate) struct Artipacked;
@@ -42,6 +43,52 @@ impl Artipacked {
         }
 
         patterns
+    }
+
+    /// Create a Fix for setting persist-credentials: false
+    fn create_persist_credentials_fix(job_id: String, checkout_index: usize) -> Fix {
+        // Create the path to the with section
+        let with_path = format!("/jobs/{}/steps/{}/with", job_id, checkout_index);
+
+        Fix {
+            title: "Set persist-credentials: false".to_string(),
+            description: "To prevent credential persistence, set 'persist-credentials: false' in this checkout step.".to_string(),
+            apply: Box::new(move |old_content: &str| -> anyhow::Result<Option<String>> {
+                // This is a two-step approach:
+                // 1. First, try to add persist-credentials to existing "with" section
+                // 2. If that fails, add the whole "with" section
+
+                let add_to_existing = crate::yaml_patch::apply_yaml_patch(
+                    old_content,
+                    vec![YamlPatchOperation::Add {
+                        path: with_path.clone(),
+                        key: "persist-credentials".to_string(),
+                        value: serde_yaml::Value::Bool(false),
+                    }]
+                );
+
+                if add_to_existing.is_ok() {
+                    return add_to_existing.map(Some).map_err(Into::into);
+                }
+
+                // If adding to existing "with" section failed, create the whole "with" section
+                let mut with_map = serde_yaml::Mapping::new();
+                with_map.insert(
+                    serde_yaml::Value::String("persist-credentials".to_string()),
+                    serde_yaml::Value::Bool(false),
+                );
+
+                let step_path = format!("/jobs/{}/steps/{}", job_id, checkout_index);
+                crate::yaml_patch::apply_yaml_patch(
+                    old_content,
+                    vec![YamlPatchOperation::Add {
+                        path: step_path,
+                        key: "with".to_string(),
+                        value: serde_yaml::Value::Mapping(with_map),
+                    }]
+                ).map(Some).map_err(Into::into)
+            }),
+        }
     }
 }
 
@@ -98,6 +145,8 @@ impl Audit for Artipacked {
             // If we have no vulnerable uploads, then emit lower-confidence
             // findings for just the checkout steps.
             for (checkout, persona) in vulnerable_checkouts {
+                let job_id = job.id().to_string();
+                let checkout_index = checkout.index;
                 findings.push(
                     Self::finding()
                         .severity(Severity::Medium)
@@ -109,6 +158,7 @@ impl Audit for Artipacked {
                                 .primary()
                                 .annotated("does not set persist-credentials: false"),
                         )
+                        .fix(Self::create_persist_credentials_fix(job_id, checkout_index))
                         .build(job.parent())?,
                 );
             }
@@ -121,6 +171,8 @@ impl Audit for Artipacked {
                 .cartesian_product(vulnerable_uploads.into_iter())
             {
                 if checkout.index < upload.index {
+                    let job_id = job.id().to_string();
+                    let checkout_index = checkout.index;
                     findings.push(
                         Self::finding()
                             .severity(Severity::High)
@@ -137,6 +189,7 @@ impl Audit for Artipacked {
                                     .location()
                                     .annotated("may leak the credentials persisted above"),
                             )
+                            .fix(Self::create_persist_credentials_fix(job_id, checkout_index))
                             .build(job.parent())?,
                     );
                 }
