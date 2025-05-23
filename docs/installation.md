@@ -126,7 +126,6 @@ description: Installation instructions for zizmor.
     # If you don't have the 'user' repo enabled yet, do that first
     apk add chimera-repo-user
 
-    # Install zizmor
     apk add zizmor
     ```
 
