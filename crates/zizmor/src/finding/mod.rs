@@ -442,6 +442,23 @@ pub(crate) struct Determinations {
     pub(super) persona: Persona,
 }
 
+/// Represents a suggested fix for a finding.
+pub struct Fix {
+    /// A short title describing the fix.
+    pub title: String,
+    /// A detailed description of the fix.
+    pub description: String,
+    /// A function that, when called, applies the fix and returns the new content (or None if not applicable).
+    pub apply: Box<dyn Fn(&str) -> anyhow::Result<Option<String>> + Send + Sync>,
+}
+
+impl Fix {
+    /// Apply the fix to the given file content.
+    pub fn apply_to_content(&self, old_content: &str) -> anyhow::Result<Option<String>> {
+        (self.apply)(old_content)
+    }
+}
+
 #[derive(Serialize)]
 pub(crate) struct Finding<'doc> {
     pub(crate) ident: &'static str,
@@ -450,9 +467,11 @@ pub(crate) struct Finding<'doc> {
     pub(crate) determinations: Determinations,
     pub(crate) locations: Vec<Location<'doc>>,
     pub(crate) ignored: bool,
+    #[serde(skip_serializing)]
+    pub(crate) fix: Option<Fix>,
 }
 
-impl Finding<'_> {
+impl<'doc> Finding<'doc> {
     /// A basic Markdown representation of the finding's metadata.
     pub(crate) fn to_markdown(&self) -> String {
         format!(
@@ -477,6 +496,7 @@ pub(crate) struct FindingBuilder<'doc> {
     persona: Persona,
     raw_locations: Vec<Location<'doc>>,
     locations: Vec<SymbolicLocation<'doc>>,
+    fix: Option<Fix>,
 }
 
 impl<'doc> FindingBuilder<'doc> {
@@ -490,6 +510,7 @@ impl<'doc> FindingBuilder<'doc> {
             persona: Default::default(),
             raw_locations: vec![],
             locations: vec![],
+            fix: None,
         }
     }
 
@@ -515,6 +536,11 @@ impl<'doc> FindingBuilder<'doc> {
 
     pub(crate) fn add_location(mut self, location: SymbolicLocation<'doc>) -> Self {
         self.locations.push(location);
+        self
+    }
+
+    pub fn fix(mut self, fix: Fix) -> Self {
+        self.fix = Some(fix);
         self
     }
 
@@ -549,6 +575,7 @@ impl<'doc> FindingBuilder<'doc> {
             },
             locations,
             ignored: should_ignore,
+            fix: self.fix,
         })
     }
 
@@ -610,4 +637,19 @@ mod tests {
             )
         }
     }
+}
+
+#[macro_export]
+macro_rules! apply_json_patch {
+    ($json_pointer:expr, $patch:expr) => {{
+        let patch = $patch;
+        Box::new(move |old_content: &str| -> anyhow::Result<Option<String>> {
+            let value: serde_yaml::Value = serde_yaml::from_str(old_content)?;
+            let mut json_value: serde_json::Value = serde_json::to_value(value)?;
+            json_patch::patch(&mut json_value, &patch)?;
+            let updated_yaml: serde_yaml::Value = serde_json::from_value(json_value)?;
+            let yaml_str = serde_yaml::to_string(&updated_yaml)?;
+            Ok(Some(yaml_str))
+        })
+    }};
 }
