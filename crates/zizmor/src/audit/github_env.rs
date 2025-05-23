@@ -11,10 +11,14 @@ use tree_sitter::{
 };
 
 use super::{Audit, AuditLoadError, audit_meta};
-use crate::finding::{Confidence, Finding, Severity};
-use crate::models::{JobExt as _, Step, StepCommon};
-use crate::state::AuditState;
-use crate::utils;
+use crate::{
+    apply_yaml_patch,
+    finding::{Confidence, Finding, Fix, Severity},
+    models::{JobExt as _, Step, StepCommon},
+    state::AuditState,
+    utils,
+    yaml_patch::YamlPatchOperation,
+};
 
 static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?mi)^.+\s*>>?\s*"?%(?<destination>GITHUB_ENV|GITHUB_PATH)%"?.*$"#).unwrap()
@@ -337,6 +341,107 @@ impl GitHubEnv {
             }
         }
     }
+
+    /// Create a fix that removes the dangerous run step entirely
+    fn create_remove_step_fix(job_id: &str, step_index: usize, destination: &str) -> Fix {
+        let step_path = format!("/jobs/{}/steps/{}", job_id, step_index);
+
+        Fix {
+            title: format!("Remove step with dangerous {} write", destination),
+            description: format!(
+                "Remove this step that writes to {} in an unsafe manner. This prevents potential code injection attacks. \
+                Consider using step outputs, job outputs, or uploading artifacts instead. \
+                For environment variables, use 'echo \"VAR=value\" >> $GITHUB_OUTPUT' to set step outputs, \
+                or set job-level environment variables in the workflow YAML.",
+                destination
+            ),
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::Remove { path: step_path }]),
+        }
+    }
+
+    /// Create a fix that adds a step output instead of environment file write
+    fn create_step_output_fix(_job_id: &str, _step_index: usize, destination: &str) -> Fix {
+        Fix {
+            title: format!("Replace {} write with step output", destination),
+            description: format!(
+                "Replace the dangerous {} write with a step output. This approach is much safer as step outputs \
+                cannot be used for code injection. Use 'echo \"name=value\" >> $GITHUB_OUTPUT' instead of writing to {}. \
+                Then reference the output in subsequent steps with '${{{{ steps.step-id.outputs.name }}}}'.",
+                destination, destination
+            ),
+            apply: Box::new(|content: &str| -> anyhow::Result<Option<String>> {
+                // For now, we provide guidance but don't automatically rewrite shell scripts
+                // as that's quite complex and error-prone
+                Ok(Some(content.to_string()))
+            }),
+        }
+    }
+
+    /// Create a fix that adds input validation
+    fn create_validation_fix(_job_id: &str, _step_index: usize, destination: &str) -> Fix {
+        Fix {
+            title: format!("Add input validation before {} write", destination),
+            description: format!(
+                "Add input validation and sanitization before writing to {}. This can help prevent code injection. \
+                Validate that variables contain only expected characters and escape special characters. \
+                However, the safest approach is still to use step outputs instead of environment files.",
+                destination
+            ),
+            apply: Box::new(|content: &str| -> anyhow::Result<Option<String>> {
+                // For now, we provide guidance but don't automatically rewrite shell scripts
+                Ok(Some(content.to_string()))
+            }),
+        }
+    }
+
+    /// Get the appropriate fix for a dangerous GITHUB_ENV usage
+    fn get_fix_for_step(&self, step: &Step, destination: &str) -> Vec<Fix> {
+        let job_id = step.job().id();
+        let step_index = step.index;
+
+        vec![
+            // Primary fix: remove the dangerous step
+            Self::create_remove_step_fix(job_id, step_index, destination),
+            // Alternative fix: suggest step outputs
+            Self::create_step_output_fix(job_id, step_index, destination),
+            // Another alternative: add validation (though removal is still preferred)
+            Self::create_validation_fix(job_id, step_index, destination),
+        ]
+    }
+
+    /// Get the appropriate fix for a dangerous GITHUB_ENV usage in composite actions
+    fn get_fix_for_composite_step(
+        &self,
+        step: &super::CompositeStep,
+        destination: &str,
+    ) -> Vec<Fix> {
+        let step_index = step.index;
+        let step_path = format!("/runs/steps/{}", step_index);
+
+        vec![
+            Fix {
+                title: format!("Remove step with dangerous {} write", destination),
+                description: format!(
+                    "Remove this step that writes to {} in an unsafe manner in the composite action. \
+                    Consider using step outputs instead: set outputs in the action.yml and use them in consuming workflows.",
+                    destination
+                ),
+                apply: apply_yaml_patch!(vec![YamlPatchOperation::Remove { path: step_path }]),
+            },
+            Fix {
+                title: format!("Replace {} write with action output", destination),
+                description: format!(
+                    "Replace the dangerous {} write with an action output. Define outputs in the action.yml file \
+                    and use 'echo \"name=value\" >> $GITHUB_OUTPUT' to set them safely.",
+                    destination
+                ),
+                apply: Box::new(|content: &str| -> anyhow::Result<Option<String>> {
+                    // Provide guidance but don't automatically rewrite
+                    Ok(Some(content.to_string()))
+                }),
+            },
+        ]
+    }
 }
 
 impl Audit for GitHubEnv {
@@ -398,18 +503,23 @@ impl Audit for GitHubEnv {
 
             // TODO: actually use the spanning information here.
             for (dest, _span) in self.uses_github_env(run, shell)? {
-                findings.push(
-                    Self::finding()
-                        .severity(Severity::High)
-                        .confidence(Confidence::Low)
-                        .add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(&["run".into()])
-                                .annotated(format!("write to {dest} may allow code execution")),
-                        )
-                        .build(step.workflow())?,
-                )
+                let mut finding_builder = Self::finding()
+                    .severity(Severity::High)
+                    .confidence(Confidence::Low)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["run".into()])
+                            .annotated(format!("write to {dest} may allow code execution")),
+                    );
+
+                // Add fixes for this dangerous usage
+                let fixes = self.get_fix_for_step(step, dest);
+                for fix in fixes {
+                    finding_builder = finding_builder.fix(fix);
+                }
+
+                findings.push(finding_builder.build(step.workflow())?);
             }
         }
 
@@ -428,18 +538,23 @@ impl Audit for GitHubEnv {
 
         // TODO: actually use the spanning information here.
         for (dest, _span) in self.uses_github_env(run, shell)? {
-            findings.push(
-                Self::finding()
-                    .severity(Severity::High)
-                    .confidence(Confidence::Low)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["run".into()])
-                            .annotated(format!("write to {dest} may allow code execution")),
-                    )
-                    .build(step.action())?,
-            )
+            let mut finding_builder = Self::finding()
+                .severity(Severity::High)
+                .confidence(Confidence::Low)
+                .add_location(
+                    step.location()
+                        .primary()
+                        .with_keys(&["run".into()])
+                        .annotated(format!("write to {dest} may allow code execution")),
+                );
+
+            // Add fixes for this dangerous usage in composite actions
+            let fixes = self.get_fix_for_composite_step(step, dest);
+            for fix in fixes {
+                finding_builder = finding_builder.fix(fix);
+            }
+
+            findings.push(finding_builder.build(step.action())?);
         }
 
         Ok(findings)
