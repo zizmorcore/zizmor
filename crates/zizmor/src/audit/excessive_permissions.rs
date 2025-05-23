@@ -3,10 +3,12 @@ use std::{collections::HashMap, sync::LazyLock};
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
+use crate::apply_yaml_patch;
 use crate::models::JobExt as _;
+use crate::yaml_patch::YamlPatchOperation;
 use crate::{
     AuditState,
-    finding::{Confidence, Persona, Severity, SymbolicLocation},
+    finding::{Confidence, Fix, Persona, Severity, SymbolicLocation},
 };
 
 // Subjective mapping of permissions to severities, when given `write` access.
@@ -85,21 +87,24 @@ impl Audit for ExcessivePermissions {
         // Handle top-level permissions.
         let location = workflow.location().primary();
 
-        for (severity, confidence, perm_location) in
+        for (severity, confidence, perm_location, fix) in
             self.check_workflow_permissions(&workflow.permissions, location)
         {
-            findings.push(
-                Self::finding()
-                    .severity(severity)
-                    .confidence(confidence)
-                    .persona(workflow_finding_persona)
-                    .add_location(perm_location)
-                    .build(workflow)?,
-            );
+            let mut finding_builder = Self::finding()
+                .severity(severity)
+                .confidence(confidence)
+                .persona(workflow_finding_persona)
+                .add_location(perm_location);
+
+            if let Some(fix) = fix {
+                finding_builder = finding_builder.fix(fix);
+            }
+
+            findings.push(finding_builder.build(workflow)?);
         }
 
         for job in workflow.jobs() {
-            let (permissions, job_location, job_finding_persona) = match job {
+            let (permissions, job_location, job_finding_persona, job_id) = match job {
                 Job::NormalJob(job) => {
                     // For normal jobs: if the workflow is reusable-only, we
                     // emit pedantic findings.
@@ -109,30 +114,34 @@ impl Audit for ExcessivePermissions {
                         Persona::Regular
                     };
 
-                    (&job.permissions, job.location(), persona)
+                    (&job.permissions, job.location(), persona, job.id())
                 }
                 Job::ReusableWorkflowCallJob(job) => {
                     // For reusable jobs: the caller is always responsible for
                     // permissions, so we emit regular findings even if
                     // the workflow is reusable-only.
-                    (&job.permissions, job.location(), Persona::Regular)
+                    (&job.permissions, job.location(), Persona::Regular, job.id())
                 }
             };
 
-            if let Some((severity, confidence, perm_location)) = self.check_job_permissions(
+            if let Some((severity, confidence, perm_location, fix)) = self.check_job_permissions(
                 permissions,
                 explicit_parent_permissions,
                 job_location.clone(),
+                job_id,
             ) {
-                findings.push(
-                    Self::finding()
-                        .severity(severity)
-                        .confidence(confidence)
-                        .persona(job_finding_persona)
-                        .add_location(job_location)
-                        .add_location(perm_location.primary())
-                        .build(workflow)?,
-                )
+                let mut finding_builder = Self::finding()
+                    .severity(severity)
+                    .confidence(confidence)
+                    .persona(job_finding_persona)
+                    .add_location(job_location)
+                    .add_location(perm_location.primary());
+
+                if let Some(fix) = fix {
+                    finding_builder = finding_builder.fix(fix);
+                }
+
+                findings.push(finding_builder.build(workflow)?);
             }
         }
 
@@ -145,7 +154,7 @@ impl ExcessivePermissions {
         &self,
         permissions: &'a Permissions,
         location: SymbolicLocation<'a>,
-    ) -> Vec<(Severity, Confidence, SymbolicLocation<'a>)> {
+    ) -> Vec<(Severity, Confidence, SymbolicLocation<'a>, Option<Fix>)> {
         let mut results = vec![];
 
         match &permissions {
@@ -154,6 +163,7 @@ impl ExcessivePermissions {
                     Severity::Medium,
                     Confidence::Medium,
                     location.annotated("default permissions used due to no permissions: block"),
+                    Some(Self::create_add_permissions_fix("/permissions".to_string())),
                 )),
                 BasePermission::ReadAll => results.push((
                     Severity::Medium,
@@ -161,6 +171,12 @@ impl ExcessivePermissions {
                     location
                         .with_keys(&["permissions".into()])
                         .annotated("uses read-all permissions"),
+                    Some(Self::create_replace_permissions_fix(
+                        "/permissions".to_string(),
+                        "Replace read-all with specific permissions".to_string(),
+                        "Replace 'read-all' with specific permissions or no permissions."
+                            .to_string(),
+                    )),
                 )),
                 BasePermission::WriteAll => results.push((
                     Severity::High,
@@ -168,6 +184,12 @@ impl ExcessivePermissions {
                     location
                         .with_keys(&["permissions".into()])
                         .annotated("uses write-all permissions"),
+                    Some(Self::create_replace_permissions_fix(
+                        "/permissions".to_string(),
+                        "Replace write-all with specific permissions".to_string(),
+                        "Replace 'write-all' with specific permissions or no permissions."
+                            .to_string(),
+                    )),
                 )),
             },
             Permissions::Explicit(perms) => {
@@ -190,6 +212,7 @@ impl ExcessivePermissions {
                             .annotated(format!(
                                 "{name}: write is overly broad at the workflow level"
                             )),
+                        Some(Self::create_write_to_read_fix(name, "/permissions")),
                     ));
                 }
             }
@@ -203,7 +226,8 @@ impl ExcessivePermissions {
         permissions: &Permissions,
         explicit_parent_permissions: bool,
         location: SymbolicLocation<'a>,
-    ) -> Option<(Severity, Confidence, SymbolicLocation<'a>)> {
+        job_id: &str,
+    ) -> Option<(Severity, Confidence, SymbolicLocation<'a>, Option<Fix>)> {
         match permissions {
             Permissions::Base(base) => match base {
                 // The job has no explicit permissions, meaning it gets
@@ -213,6 +237,10 @@ impl ExcessivePermissions {
                     Severity::Medium,
                     Confidence::Medium,
                     location.annotated("default permissions used due to no permissions: block"),
+                    Some(Self::create_add_permissions_fix(format!(
+                        "/jobs/{}/permissions",
+                        job_id
+                    ))),
                 )),
                 BasePermission::Default => None,
                 BasePermission::ReadAll => Some((
@@ -221,6 +249,12 @@ impl ExcessivePermissions {
                     location
                         .with_keys(&["permissions".into()])
                         .annotated("uses read-all permissions"),
+                    Some(Self::create_replace_permissions_fix(
+                        format!("/jobs/{}/permissions", job_id),
+                        "Replace read-all with specific permissions".to_string(),
+                        "Replace 'read-all' with specific permissions or no permissions."
+                            .to_string(),
+                    )),
                 )),
                 BasePermission::WriteAll => Some((
                     Severity::High,
@@ -228,6 +262,12 @@ impl ExcessivePermissions {
                     location
                         .with_keys(&["permissions".into()])
                         .annotated("uses write-all permissions"),
+                    Some(Self::create_replace_permissions_fix(
+                        format!("/jobs/{}/permissions", job_id),
+                        "Replace write-all with specific permissions".to_string(),
+                        "Replace 'write-all' with specific permissions or no permissions."
+                            .to_string(),
+                    )),
                 )),
             },
             // In the general case, it's impossible to tell whether a job-level
@@ -235,6 +275,65 @@ impl ExcessivePermissions {
             // TODO: We could in theory refine this by collecting minimum permission
             // sets for common actions, but that might be overkill.
             Permissions::Explicit(_) => None,
+        }
+    }
+
+    /// Create a fix for adding an explicit permissions block
+    fn create_add_permissions_fix(path: String) -> Fix {
+        // For adding permissions, we need to determine if we're adding to root or to a job
+        let (parent_path, key) = if path == "/permissions" {
+            // Adding to workflow root
+            ("/".to_string(), "permissions".to_string())
+        } else {
+            // Adding to a job, extract parent path and key
+            let parts: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+            if parts.len() >= 3 && parts[parts.len() - 1] == "permissions" {
+                // Path like "/jobs/job_id/permissions" -> parent "/jobs/job_id", key "permissions"
+                let parent_parts = &parts[0..parts.len() - 1];
+                let parent_path = format!("/{}", parent_parts.join("/"));
+                (parent_path, "permissions".to_string())
+            } else {
+                // Fallback to treating the whole path as the key to add at root
+                ("/".to_string(), path.trim_start_matches('/').to_string())
+            }
+        };
+
+        Fix {
+            title: "Add explicit permissions block".to_string(),
+            description: "Add an explicit permissions block to restrict token permissions."
+                .to_string(),
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::Add {
+                path: parent_path,
+                key: key,
+                value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+            }]),
+        }
+    }
+
+    /// Create a fix for replacing permissions with empty object (for read-all/write-all cases)
+    fn create_replace_permissions_fix(path: String, title: String, description: String) -> Fix {
+        Fix {
+            title,
+            description,
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::Replace {
+                path: path,
+                value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+            }]),
+        }
+    }
+
+    /// Create a fix for changing a specific permission from write to read
+    fn create_write_to_read_fix(permission_name: &str, base_path: &str) -> Fix {
+        let path = format!("{base_path}/{permission_name}");
+        Fix {
+            title: format!("Change {permission_name} permission from write to read"),
+            description: format!(
+                "Change {permission_name} permission from 'write' to 'read' to reduce scope."
+            ),
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::Replace {
+                path: path,
+                value: serde_yaml::Value::String("read".to_string()),
+            }]),
         }
     }
 }
