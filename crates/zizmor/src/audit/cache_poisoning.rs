@@ -4,10 +4,11 @@ use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 
 use crate::audit::{Audit, audit_meta};
-use crate::finding::{Confidence, Finding, Severity};
+use crate::finding::{Confidence, Finding, Fix, Severity};
 use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
 use crate::models::{JobExt as _, NormalJob, Step, StepCommon, Steps};
 use crate::state::AuditState;
+use crate::{apply_yaml_patch, yaml_patch::YamlPatchOperation};
 
 use super::AuditLoadError;
 
@@ -282,6 +283,105 @@ impl CachePoisoning {
             .find_map(|coord| coord.usage(step))
     }
 
+    fn create_cache_disable_fix(&self, step: &Step<'_>) -> Option<Fix> {
+        // Find the matching action coordinate
+        let matching_coord = KNOWN_CACHE_AWARE_ACTIONS
+            .iter()
+            .find(|coord| coord.usage(step).is_some())?;
+
+        let job_id = step.job().id();
+        let step_index = step.index;
+
+        match matching_coord {
+            ActionCoordinate::NotConfigurable(pattern) => {
+                // For non-configurable actions, suggest removing or replacing
+                Some(Fix {
+                    title: "Remove or replace cache-enabled action".to_string(),
+                    description: format!(
+                        "The action '{:?}' always enables caching and cannot be configured to disable it. \
+                        Consider removing this step or replacing it with a manual alternative in publishing workflows.",
+                        pattern
+                    ),
+                    apply: Box::new(|content| Ok(Some(content.to_string()))), // No automatic fix
+                })
+            }
+            ActionCoordinate::Configurable {
+                uses_pattern,
+                control,
+            } => self.create_configurable_action_fix(uses_pattern, control, job_id, step_index),
+        }
+    }
+
+    fn create_configurable_action_fix(
+        &self,
+        _uses_pattern: &crate::models::uses::RepositoryUsesPattern,
+        control: &ControlExpr,
+        job_id: &str,
+        step_index: usize,
+    ) -> Option<Fix> {
+        let with_path = format!("/jobs/{}/steps/{}/with", job_id, step_index);
+
+        match control {
+            ControlExpr::Single {
+                toggle,
+                field_name,
+                field_type,
+                ..
+            } => {
+                let (field_value, title, description) = match (toggle, field_type) {
+                    (Toggle::OptOut, ControlFieldType::Boolean) => (
+                        serde_yaml::Value::Bool(true),
+                        format!("Set {}: true to disable caching", field_name),
+                        format!(
+                            "Set '{}' to 'true' to disable cache writes in this publishing workflow.",
+                            field_name
+                        ),
+                    ),
+                    (Toggle::OptIn, ControlFieldType::Boolean) => (
+                        serde_yaml::Value::Bool(false),
+                        format!("Set {}: false to disable caching", field_name),
+                        format!(
+                            "Set '{}' to 'false' to disable caching in this publishing workflow.",
+                            field_name
+                        ),
+                    ),
+                    (Toggle::OptIn, ControlFieldType::String) => (
+                        serde_yaml::Value::String("".to_string()),
+                        format!("Clear {} to disable caching", field_name),
+                        format!(
+                            "Remove or clear the '{}' field to disable caching in this publishing workflow.",
+                            field_name
+                        ),
+                    ),
+                    (Toggle::OptOut, ControlFieldType::String) => {
+                        // For opt-out string controls, we need to provide a value that disables caching
+                        // This varies by action, but "false" is commonly understood
+                        (
+                            serde_yaml::Value::String("false".to_string()),
+                            format!("Set {}: false to disable caching", field_name),
+                            format!(
+                                "Set '{}' to 'false' to disable caching in this publishing workflow.",
+                                field_name
+                            ),
+                        )
+                    }
+                };
+
+                Some(Fix {
+                    title,
+                    description,
+                    apply: apply_yaml_patch!(vec![YamlPatchOperation::Add {
+                        path: with_path,
+                        key: field_name.to_string(),
+                        value: field_value,
+                    }]),
+                })
+            }
+            // For complex control expressions (All/Any), don't provide automatic fixes for now
+            ControlExpr::All(_) | ControlExpr::Any(_) => None,
+        }
+    }
+
     fn uses_cache_aware_step<'doc>(
         &self,
         step: &Step<'doc>,
@@ -296,7 +396,7 @@ impl CachePoisoning {
             Usage::ConditionalOptIn => ("with", "opt-in for caching might happen here"),
         };
 
-        let finding = match scenario {
+        let mut finding_builder = match scenario {
             PublishingArtifactsScenario::UsingTypicalWorkflowTrigger => Self::finding()
                 .confidence(Confidence::Low)
                 .severity(Severity::High)
@@ -311,8 +411,7 @@ impl CachePoisoning {
                         .primary()
                         .with_keys(&[yaml_key.into()])
                         .annotated(annotation),
-                )
-                .build(step.workflow()),
+                ),
             PublishingArtifactsScenario::UsingWellKnowPublisherAction(publisher) => Self::finding()
                 .confidence(Confidence::Low)
                 .severity(Severity::High)
@@ -327,11 +426,15 @@ impl CachePoisoning {
                         .primary()
                         .with_keys(&[yaml_key.into()])
                         .annotated(annotation),
-                )
-                .build(step.workflow()),
+                ),
         };
 
-        finding.ok()
+        // Add fix if available
+        if let Some(fix) = self.create_cache_disable_fix(step) {
+            finding_builder = finding_builder.fix(fix);
+        }
+
+        finding_builder.build(step.workflow()).ok()
     }
 }
 
