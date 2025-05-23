@@ -3,8 +3,10 @@ use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    finding::{Confidence, Severity},
+    apply_yaml_patch,
+    finding::{Confidence, Fix, Severity},
     models::{JobExt, StepCommon},
+    yaml_patch::YamlPatchOperation,
 };
 
 pub(crate) struct BotConditions;
@@ -34,30 +36,53 @@ impl Audit for BotConditions {
             return Ok(vec![]);
         }
 
-        let mut conds = vec![];
-        if let Some(If::Expr(expr)) = &job.r#if {
-            conds.push((expr, job.location()));
-        }
+        let job_id = job.id();
 
-        for step in job.steps() {
-            if let Some(If::Expr(expr)) = &step.r#if {
-                conds.push((expr, step.location()));
+        // Check job-level condition
+        if let Some(If::Expr(expr)) = &job.r#if {
+            if let Some(confidence) = Self::bot_condition(expr) {
+                let condition_path = format!("/jobs/{}/if", job_id);
+
+                let mut finding_builder = Self::finding()
+                    .severity(Severity::High)
+                    .confidence(confidence)
+                    .add_location(
+                        job.location()
+                            .with_keys(&["if".into()])
+                            .primary()
+                            .annotated("actor context may be spoofable"),
+                    );
+
+                // Add a practical fix that removes the condition and suggests permissions
+                finding_builder =
+                    finding_builder.fix(Self::create_remove_condition_fix(condition_path, true));
+
+                findings.push(finding_builder.build(job.parent())?);
             }
         }
 
-        for (expr, loc) in conds {
-            if let Some(confidence) = Self::bot_condition(expr) {
-                findings.push(
-                    Self::finding()
+        // Check step-level conditions
+        for (step_index, step) in job.steps().enumerate() {
+            if let Some(If::Expr(expr)) = &step.r#if {
+                if let Some(confidence) = Self::bot_condition(expr) {
+                    let condition_path = format!("/jobs/{}/steps/{}/if", job_id, step_index);
+
+                    let mut finding_builder = Self::finding()
                         .severity(Severity::High)
                         .confidence(confidence)
                         .add_location(
-                            loc.with_keys(&["if".into()])
+                            step.location()
+                                .with_keys(&["if".into()])
                                 .primary()
                                 .annotated("actor context may be spoofable"),
-                        )
-                        .build(job.parent())?,
-                );
+                        );
+
+                    // Add a practical fix that removes the condition
+                    finding_builder = finding_builder
+                        .fix(Self::create_remove_condition_fix(condition_path, false));
+
+                    findings.push(finding_builder.build(job.parent())?);
+                }
             }
         }
 
@@ -66,6 +91,21 @@ impl Audit for BotConditions {
 }
 
 impl BotConditions {
+    /// Create a fix that removes the problematic condition and suggests using permissions
+    fn create_remove_condition_fix(path: String, is_job_level: bool) -> Fix {
+        let target_type = if is_job_level { "job" } else { "step" };
+
+        Fix {
+            title: format!("Remove spoofable bot condition from {}", target_type),
+            description: format!(
+                "Remove the spoofable actor condition and use job-level permissions instead. \
+                Bot actor checks can be bypassed by attackers who can control the actor context. \
+                Consider using environment protection rules or restrictive permissions instead."
+            ),
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::Remove { path }]),
+        }
+    }
+
     fn walk_tree_for_bot_condition(expr: &Expr, dominating: bool) -> (bool, bool) {
         match expr {
             // We can't easily analyze the call's semantics, but we can
