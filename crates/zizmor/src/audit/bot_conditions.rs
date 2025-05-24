@@ -3,10 +3,8 @@ use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    apply_yaml_patch,
     finding::{Confidence, Fix, Severity},
     models::{JobExt, StepCommon},
-    yaml_patch::YamlPatchOperation,
 };
 
 pub(crate) struct BotConditions;
@@ -53,9 +51,9 @@ impl Audit for BotConditions {
                             .annotated("actor context may be spoofable"),
                     );
 
-                // Add a practical fix that removes the condition and suggests permissions
+                // Add a practical fix that replaces github.actor with github.event.pull_request.user.login
                 finding_builder =
-                    finding_builder.fix(Self::create_remove_condition_fix(condition_path, true));
+                    finding_builder.fix(Self::create_replace_actor_fix(condition_path, true));
 
                 findings.push(finding_builder.build(job.parent())?);
             }
@@ -77,9 +75,9 @@ impl Audit for BotConditions {
                                 .annotated("actor context may be spoofable"),
                         );
 
-                    // Add a practical fix that removes the condition
-                    finding_builder = finding_builder
-                        .fix(Self::create_remove_condition_fix(condition_path, false));
+                    // Add a practical fix that replaces github.actor with github.event.pull_request.user.login
+                    finding_builder =
+                        finding_builder.fix(Self::create_replace_actor_fix(condition_path, false));
 
                     findings.push(finding_builder.build(job.parent())?);
                 }
@@ -91,18 +89,67 @@ impl Audit for BotConditions {
 }
 
 impl BotConditions {
-    /// Create a fix that removes the problematic condition and suggests using permissions
-    fn create_remove_condition_fix(path: String, is_job_level: bool) -> Fix {
+    /// Create a fix that replaces github.actor with github.event.pull_request.user.login
+    fn create_replace_actor_fix(path: String, is_job_level: bool) -> Fix {
         let target_type = if is_job_level { "job" } else { "step" };
 
         Fix {
-            title: format!("Remove spoofable bot condition from {}", target_type),
-            description: format!(
-                "Remove the spoofable actor condition and use job-level permissions instead. \
-                Bot actor checks can be bypassed by attackers who can control the actor context. \
-                Consider using environment protection rules or restrictive permissions instead."
+            title: format!(
+                "Replace github.actor with github.event.pull_request.user.login in {}",
+                target_type
             ),
-            apply: apply_yaml_patch!(vec![YamlPatchOperation::Remove { path }]),
+            description: format!(
+                "Replace 'github.actor' with 'github.event.pull_request.user.login' in the condition. \
+                The github.actor context refers to the last actor to perform an action on the triggering context \
+                and can be spoofed by attackers. The github.event.pull_request.user.login context refers to \
+                the actor who created the Pull Request and is more reliable for bot detection."
+            ),
+            apply: Box::new(move |content: &str| -> anyhow::Result<Option<String>> {
+                // Parse the YAML to get the current condition
+                let mut yaml: serde_yaml::Value = serde_yaml::from_str(content)?;
+
+                // Navigate to the condition using the path
+                let path_parts: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+                let mut current = &mut yaml;
+
+                for part in &path_parts[..path_parts.len() - 1] {
+                    if let Some(obj) = current.as_mapping_mut() {
+                        current = obj
+                            .get_mut(part)
+                            .ok_or_else(|| anyhow::anyhow!("Path not found: {}", part))?;
+                    } else {
+                        return Err(anyhow::anyhow!("Expected mapping at path part: {}", part));
+                    }
+                }
+
+                // Get the condition value and replace github.actor references
+                if let Some(obj) = current.as_mapping_mut() {
+                    if let Some(condition_value) = obj.get_mut("if") {
+                        if let Some(condition_str) = condition_value.as_str() {
+                            let updated_condition = condition_str
+                                .replace("github.actor", "github.event.pull_request.user.login")
+                                .replace("GitHub.actor", "github.event.pull_request.user.login")
+                                .replace("GitHub.ACTOR", "github.event.pull_request.user.login")
+                                .replace(
+                                    "github.triggering_actor",
+                                    "github.event.pull_request.user.login",
+                                )
+                                .replace(
+                                    "GitHub.triggering_actor",
+                                    "github.event.pull_request.user.login",
+                                )
+                                .replace(
+                                    "GitHub.TRIGGERING_ACTOR",
+                                    "github.event.pull_request.user.login",
+                                );
+
+                            *condition_value = serde_yaml::Value::String(updated_condition);
+                        }
+                    }
+                }
+
+                Ok(Some(serde_yaml::to_string(&yaml)?))
+            }),
         }
     }
 
@@ -247,5 +294,26 @@ mod tests {
         ] {
             assert_eq!(BotConditions::bot_condition(cond).unwrap(), *confidence);
         }
+    }
+
+    #[test]
+    fn test_replace_actor_fix() {
+        let yaml_content = r#"on:
+  pull_request_target:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - run: echo "hello"
+"#;
+
+        let fix = BotConditions::create_replace_actor_fix("/jobs/test/if".to_string(), true);
+        let result = fix.apply_to_content(yaml_content).unwrap().unwrap();
+
+        // Verify that github.actor was replaced with github.event.pull_request.user.login
+        assert!(result.contains("github.event.pull_request.user.login == 'dependabot[bot]'"));
+        assert!(!result.contains("github.actor == 'dependabot[bot]'"));
     }
 }
