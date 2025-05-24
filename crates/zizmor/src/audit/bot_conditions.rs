@@ -52,8 +52,10 @@ impl Audit for BotConditions {
                     );
 
                 // Add a practical fix that replaces github.actor with github.event.pull_request.user.login
-                finding_builder =
-                    finding_builder.fix(Self::create_replace_actor_fix(condition_path, true));
+                finding_builder = finding_builder
+                    .fix(Self::create_replace_actor_fix(condition_path.clone(), true))
+                    .fix(Self::create_trigger_change_fix())
+                    .fix(Self::create_remove_condition_fix(condition_path, true));
 
                 findings.push(finding_builder.build(job.parent())?);
             }
@@ -76,8 +78,13 @@ impl Audit for BotConditions {
                         );
 
                     // Add a practical fix that replaces github.actor with github.event.pull_request.user.login
-                    finding_builder =
-                        finding_builder.fix(Self::create_replace_actor_fix(condition_path, false));
+                    finding_builder = finding_builder
+                        .fix(Self::create_replace_actor_fix(
+                            condition_path.clone(),
+                            false,
+                        ))
+                        .fix(Self::create_trigger_change_fix())
+                        .fix(Self::create_remove_condition_fix(condition_path, false));
 
                     findings.push(finding_builder.build(job.parent())?);
                 }
@@ -146,6 +153,85 @@ impl BotConditions {
                             *condition_value = serde_yaml::Value::String(updated_condition);
                         }
                     }
+                }
+
+                Ok(Some(serde_yaml::to_string(&yaml)?))
+            }),
+        }
+    }
+
+    /// Create a fix that suggests changing from pull_request_target to pull_request
+    fn create_trigger_change_fix() -> Fix {
+        Fix {
+            title: "Change trigger from pull_request_target to pull_request".to_string(),
+            description: "Change the workflow trigger from 'pull_request_target' to 'pull_request' to improve security. This ensures the workflow runs in the context of the fork repository instead of the base repository, which prevents access to secrets and write permissions for external contributors. Note that this may require adjusting the workflow if it relies on access to secrets or repository write permissions.".to_string(),
+            apply: Box::new(|content: &str| -> anyhow::Result<Option<String>> {
+                // Parse the YAML to replace pull_request_target with pull_request
+                let mut yaml: serde_yaml::Value = serde_yaml::from_str(content)?;
+
+                if let Some(on_value) = yaml.get_mut("on") {
+                    match on_value {
+                        // Single trigger: on: pull_request_target
+                        serde_yaml::Value::String(trigger) if trigger == "pull_request_target" => {
+                            *trigger = "pull_request".to_string();
+                        }
+                        // Array of triggers: on: [push, pull_request_target]
+                        serde_yaml::Value::Sequence(events) => {
+                            for event in events.iter_mut() {
+                                if let serde_yaml::Value::String(event_str) = event {
+                                    if event_str == "pull_request_target" {
+                                        *event_str = "pull_request".to_string();
+                                    }
+                                }
+                            }
+                        }
+                        // Object format: on: { pull_request_target: { ... } }
+                        serde_yaml::Value::Mapping(events) => {
+                            if let Some(target_config) = events.remove(&serde_yaml::Value::String("pull_request_target".to_string())) {
+                                events.insert(serde_yaml::Value::String("pull_request".to_string()), target_config);
+                            }
+                        }
+                        _ => {} // Other formats not supported
+                    }
+                }
+
+                Ok(Some(serde_yaml::to_string(&yaml)?))
+            }),
+        }
+    }
+
+    /// Create a fix that removes the bot condition entirely
+    fn create_remove_condition_fix(path: String, is_job_level: bool) -> Fix {
+        let target_type = if is_job_level { "job" } else { "step" };
+
+        Fix {
+            title: format!("Remove bot condition from {}", target_type),
+            description: format!(
+                "Remove the bot condition entirely from the {}. This is the safest option as it eliminates \
+                the spoofing risk completely, but you may need to implement alternative logic to handle bot PRs.",
+                target_type
+            ),
+            apply: Box::new(move |content: &str| -> anyhow::Result<Option<String>> {
+                // Parse the YAML to remove the condition
+                let mut yaml: serde_yaml::Value = serde_yaml::from_str(content)?;
+
+                // Navigate to the condition using the path
+                let path_parts: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+                let mut current = &mut yaml;
+
+                for part in &path_parts[..path_parts.len() - 1] {
+                    if let Some(obj) = current.as_mapping_mut() {
+                        current = obj
+                            .get_mut(part)
+                            .ok_or_else(|| anyhow::anyhow!("Path not found: {}", part))?;
+                    } else {
+                        return Err(anyhow::anyhow!("Expected mapping at path part: {}", part));
+                    }
+                }
+
+                // Remove the condition
+                if let Some(obj) = current.as_mapping_mut() {
+                    obj.remove("if");
                 }
 
                 Ok(Some(serde_yaml::to_string(&yaml)?))
