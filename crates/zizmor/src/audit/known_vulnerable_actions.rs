@@ -10,10 +10,12 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{Confidence, Finding, Severity},
+    apply_yaml_patch,
+    finding::{Confidence, Finding, Fix, Severity},
     github_api,
-    models::{CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
+    models::{CompositeStep, JobExt as _, Step, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
+    yaml_patch::YamlPatchOperation,
 };
 
 pub(crate) struct KnownVulnerableActions {
@@ -116,7 +118,150 @@ impl KnownVulnerableActions {
         Ok(results)
     }
 
-    fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
+    /// Create a fix to upgrade to a specific non-vulnerable version
+    fn create_upgrade_fix(
+        uses: &RepositoryUses,
+        target_version: &str,
+        path: &str,
+        _is_composite: bool,
+    ) -> Fix {
+        let current_ref = uses.git_ref.as_deref().unwrap_or("latest");
+        let action_name = format!("{}/{}", uses.owner, uses.repo);
+
+        Fix {
+            title: format!("Upgrade {} to {}", action_name, target_version),
+            description: format!(
+                "Upgrade {} from {} to {} to fix known vulnerability. This version contains security fixes that address the reported vulnerability.",
+                action_name, current_ref, target_version
+            ),
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::Replace {
+                path: path.to_string(),
+                value: serde_yaml::Value::String(format!("{}@{}", action_name, target_version)),
+            }]),
+        }
+    }
+
+    /// Create a fix to upgrade to the latest version
+    fn create_upgrade_to_latest_fix(
+        uses: &RepositoryUses,
+        _path: &str,
+        _is_composite: bool,
+    ) -> Fix {
+        let current_ref = uses.git_ref.as_deref().unwrap_or("latest");
+        let action_name = format!("{}/{}", uses.owner, uses.repo);
+
+        Fix {
+            title: format!("Upgrade {} to latest version", action_name),
+            description: format!(
+                "Upgrade {} from {} to the latest version to fix known vulnerability. Check the action's releases page for the most recent version and upgrade accordingly.",
+                action_name, current_ref
+            ),
+            apply: Box::new(|content: &str| -> anyhow::Result<Option<String>> {
+                // For now, provide guidance but don't automatically change to "latest"
+                // since that's not a good practice. Users should pin to specific versions.
+                Ok(Some(content.to_string()))
+            }),
+        }
+    }
+
+    /// Create a fix to remove the vulnerable action step
+    fn create_remove_step_fix(uses: &RepositoryUses, path: &str, is_composite: bool) -> Fix {
+        let action_name = format!("{}/{}", uses.owner, uses.repo);
+        let item_type = if is_composite {
+            "composite step"
+        } else {
+            "workflow step"
+        };
+
+        Fix {
+            title: format!("Remove vulnerable {} action", action_name),
+            description: format!(
+                "Remove the vulnerable {} action from this {}. This action has known security vulnerabilities and no fix is currently available. Consider finding an alternative action or implementing the functionality differently.",
+                action_name, item_type
+            ),
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::Remove {
+                path: path.to_string(),
+            }]),
+        }
+    }
+
+    /// Create a fix suggesting manual review and alternative actions
+    fn create_manual_review_fix(uses: &RepositoryUses, ghsa_id: &str) -> Fix {
+        let action_name = format!("{}/{}", uses.owner, uses.repo);
+
+        Fix {
+            title: format!(
+                "Review {} vulnerability and consider alternatives",
+                action_name
+            ),
+            description: format!(
+                "Manually review the security advisory {} for {} and consider the following options: \
+                1) Upgrade to a newer version if available, \
+                2) Use an alternative action that provides similar functionality, \
+                3) Implement the functionality directly in your workflow, \
+                4) Accept the risk if the vulnerability doesn't apply to your use case.",
+                ghsa_id, action_name
+            ),
+            apply: Box::new(|content: &str| -> anyhow::Result<Option<String>> {
+                // No automatic fix, just guidance
+                Ok(Some(content.to_string()))
+            }),
+        }
+    }
+
+    /// Get the best available fix for a vulnerable action
+    fn get_vulnerability_fix(
+        &self,
+        uses: &RepositoryUses,
+        ghsa_id: &str,
+        path: &str,
+        is_composite: bool,
+    ) -> Result<Vec<Fix>> {
+        let mut fixes = vec![];
+
+        // Try to get the latest tag to suggest as an upgrade target
+        match self.client.list_tags(&uses.owner, &uses.repo) {
+            Ok(tags) if !tags.is_empty() => {
+                // Use the first tag as the latest (GitHub API returns tags in descending order)
+                let latest_tag = &tags[0];
+                fixes.push(Self::create_upgrade_fix(
+                    uses,
+                    &latest_tag.name,
+                    path,
+                    is_composite,
+                ));
+
+                // Also offer manual review as an alternative
+                fixes.push(Self::create_manual_review_fix(uses, ghsa_id));
+            }
+            Ok(_) => {
+                // No tags found, suggest manual upgrade to latest
+                fixes.push(Self::create_upgrade_to_latest_fix(uses, path, is_composite));
+                fixes.push(Self::create_manual_review_fix(uses, ghsa_id));
+            }
+            Err(_) => {
+                // API error, fall back to manual review and removal options
+                fixes.push(Self::create_manual_review_fix(uses, ghsa_id));
+                fixes.push(Self::create_remove_step_fix(uses, path, is_composite));
+            }
+        }
+
+        Ok(fixes)
+    }
+
+    fn get_step_path(step: &Step, is_composite: bool) -> String {
+        if is_composite {
+            format!("/runs/steps/{}", step.index)
+        } else {
+            format!("/jobs/{}/steps/{}/uses", step.job().id(), step.index)
+        }
+    }
+
+    fn get_composite_step_path(step: &CompositeStep) -> String {
+        format!("/runs/steps/{}/uses", step.index)
+    }
+
+    fn process_workflow_step<'doc>(&self, step: &Step<'doc>) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
@@ -124,19 +269,78 @@ impl KnownVulnerableActions {
         };
 
         for (severity, id) in self.action_known_vulnerabilities(uses)? {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["uses".into()])
-                            .annotated(&id)
-                            .with_url(format!("https://github.com/advisories/{id}")),
-                    )
-                    .build(step)?,
-            );
+            let path = Self::get_step_path(step, false);
+
+            let mut finding_builder = Self::finding()
+                .confidence(Confidence::High)
+                .severity(severity)
+                .add_location(
+                    step.location()
+                        .primary()
+                        .with_keys(&["uses".into()])
+                        .annotated(&id)
+                        .with_url(format!("https://github.com/advisories/{id}")),
+                );
+
+            // Add fixes for this vulnerability
+            match self.get_vulnerability_fix(uses, &id, &path, false) {
+                Ok(fixes) => {
+                    for fix in fixes {
+                        finding_builder = finding_builder.fix(fix);
+                    }
+                }
+                Err(_) => {
+                    // If we can't get specific fixes, add a generic manual review fix
+                    finding_builder =
+                        finding_builder.fix(Self::create_manual_review_fix(uses, &id));
+                }
+            }
+
+            findings.push(finding_builder.build(step)?);
+        }
+
+        Ok(findings)
+    }
+
+    fn process_composite_step<'doc>(
+        &self,
+        step: &CompositeStep<'doc>,
+    ) -> Result<Vec<Finding<'doc>>> {
+        let mut findings = vec![];
+
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(findings);
+        };
+
+        for (severity, id) in self.action_known_vulnerabilities(uses)? {
+            let path = Self::get_composite_step_path(step);
+
+            let mut finding_builder = Self::finding()
+                .confidence(Confidence::High)
+                .severity(severity)
+                .add_location(
+                    step.location()
+                        .primary()
+                        .with_keys(&["uses".into()])
+                        .annotated(&id)
+                        .with_url(format!("https://github.com/advisories/{id}")),
+                );
+
+            // Add fixes for this vulnerability
+            match self.get_vulnerability_fix(uses, &id, &path, true) {
+                Ok(fixes) => {
+                    for fix in fixes {
+                        finding_builder = finding_builder.fix(fix);
+                    }
+                }
+                Err(_) => {
+                    // If we can't get specific fixes, add a generic manual review fix
+                    finding_builder =
+                        finding_builder.fix(Self::create_manual_review_fix(uses, &id));
+                }
+            }
+
+            findings.push(finding_builder.build(step)?);
         }
 
         Ok(findings)
@@ -164,10 +368,10 @@ impl Audit for KnownVulnerableActions {
     }
 
     fn audit_step<'doc>(&self, step: &Step<'doc>) -> Result<Vec<Finding<'doc>>> {
-        self.process_step(step)
+        self.process_workflow_step(step)
     }
 
     fn audit_composite_step<'doc>(&self, step: &CompositeStep<'doc>) -> Result<Vec<Finding<'doc>>> {
-        self.process_step(step)
+        self.process_composite_step(step)
     }
 }
