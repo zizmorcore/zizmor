@@ -468,7 +468,7 @@ pub(crate) struct Finding<'doc> {
     pub(crate) locations: Vec<Location<'doc>>,
     pub(crate) ignored: bool,
     #[serde(skip_serializing)]
-    pub(crate) fix: Option<Fix>,
+    pub(crate) fixes: Vec<Fix>,
 }
 
 impl<'doc> Finding<'doc> {
@@ -496,7 +496,7 @@ pub(crate) struct FindingBuilder<'doc> {
     persona: Persona,
     raw_locations: Vec<Location<'doc>>,
     locations: Vec<SymbolicLocation<'doc>>,
-    fix: Option<Fix>,
+    fixes: Vec<Fix>,
 }
 
 impl<'doc> FindingBuilder<'doc> {
@@ -510,7 +510,7 @@ impl<'doc> FindingBuilder<'doc> {
             persona: Default::default(),
             raw_locations: vec![],
             locations: vec![],
-            fix: None,
+            fixes: vec![],
         }
     }
 
@@ -540,7 +540,12 @@ impl<'doc> FindingBuilder<'doc> {
     }
 
     pub fn fix(mut self, fix: Fix) -> Self {
-        self.fix = Some(fix);
+        self.fixes.push(fix);
+        self
+    }
+
+    pub fn fixes(mut self, fixes: Vec<Fix>) -> Self {
+        self.fixes.extend(fixes);
         self
     }
 
@@ -575,7 +580,7 @@ impl<'doc> FindingBuilder<'doc> {
             },
             locations,
             ignored: should_ignore,
-            fix: self.fix,
+            fixes: self.fixes,
         })
     }
 

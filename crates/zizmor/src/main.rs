@@ -722,17 +722,20 @@ fn run() -> Result<ExitCode> {
         use std::collections::HashMap;
 
         // Collect all applicable fixes grouped by file
-        let mut file_fixes: HashMap<String, Vec<(&'static str, &finding::Finding)>> =
+        let mut file_fixes: HashMap<String, Vec<(&'static str, &finding::Finding, &finding::Fix)>> =
             HashMap::new();
 
         for finding in results.findings() {
             if let Some(location) = finding.locations.first() {
                 let file_path = location.symbolic.key.presentation_path().to_string();
-                if finding.fix.is_some() {
-                    file_fixes
-                        .entry(file_path)
-                        .or_default()
-                        .push((finding.ident, finding));
+                if !finding.fixes.is_empty() {
+                    for fix in &finding.fixes {
+                        file_fixes.entry(file_path.clone()).or_default().push((
+                            finding.ident,
+                            finding,
+                            fix,
+                        ));
+                    }
                 }
             }
         }
@@ -759,18 +762,16 @@ fn run() -> Result<ExitCode> {
 
                 // First, try to apply each fix independently to the original content
                 // to collect which fixes can be applied successfully
-                for (ident, finding) in fixes {
-                    if let Some(fix) = &finding.fix {
-                        match fix.apply_to_content(&original_content) {
-                            Ok(Some(_)) => {
-                                successful_fixes.push((ident, fix, finding));
-                            }
-                            Ok(None) => {
-                                // Fix didn't apply (no changes needed)
-                            }
-                            Err(e) => {
-                                failed_fixes.push((*ident, file_path.clone(), format!("{}", e)));
-                            }
+                for (ident, finding, fix) in fixes {
+                    match fix.apply_to_content(&original_content) {
+                        Ok(Some(_)) => {
+                            successful_fixes.push((ident, fix, finding));
+                        }
+                        Ok(None) => {
+                            // Fix didn't apply (no changes needed)
+                        }
+                        Err(e) => {
+                            failed_fixes.push((*ident, file_path.clone(), format!("{}", e)));
                         }
                     }
                 }
