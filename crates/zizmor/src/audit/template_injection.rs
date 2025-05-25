@@ -331,7 +331,7 @@ impl TemplateInjection {
                         value: serde_yaml::Value::String(new_script),
                     });
 
-                    // Add environment variables
+                    // Add environment variables (replace entire env section for security)
                     if !env_vars.is_empty() {
                         operations.push(YamlPatchOperation::MergeInto {
                             path: format!("/jobs/{}/steps/{}", job_id, step_index),
@@ -469,7 +469,7 @@ impl TemplateInjection {
                         value: serde_yaml::Value::String(new_script),
                     });
 
-                    // Add environment variables
+                    // Add environment variables (replace entire env section for security)
                     if !env_vars.is_empty() {
                         operations.push(YamlPatchOperation::MergeInto {
                             path: format!("/runs/steps/{}", step_index),

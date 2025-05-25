@@ -9,7 +9,7 @@ error[template-injection]: code injection via template expansion
    |         ^^^^^^^^^^^ this step
 13 | /       run: |
 14 | |         hello ${{ inputs.expandme }}
-   | |____________________________________^ inputs.expandme may expand into attacker-controllable code
+   | |____________________________________^ ${{ inputs.expandme }} may expand into attacker-controllable code
    |
    = note: audit confidence → Low
 
@@ -21,7 +21,7 @@ error[template-injection]: code injection via template expansion
 18 |       uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
 19 |       with:
 20 |         script: return "${{ inputs.expandme }}"
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ inputs.expandme may expand into attacker-controllable code
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ${{ inputs.expandme }} may expand into attacker-controllable code
    |
    = note: audit confidence → Low
 
@@ -34,7 +34,7 @@ error[template-injection]: code injection via template expansion
 24 |         with:
 25 | /         inlineScript: |
 26 | |           echo "hello ${{ inputs.expandme }}"
-   | |_____________________________________________^ inputs.expandme may expand into attacker-controllable code
+   | |_____________________________________________^ ${{ inputs.expandme }} may expand into attacker-controllable code
    |
    = note: audit confidence → Low
 
@@ -46,7 +46,7 @@ error[template-injection]: code injection via template expansion
 29 |       uses: azure/powershell
 30 |       with:
 31 |         inlineScript: Get-AzVM -ResourceGroupName "${{ inputs.expandme }}"
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ inputs.expandme may expand into attacker-controllable code
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ${{ inputs.expandme }} may expand into attacker-controllable code
    |
    = note: audit confidence → Low
 
@@ -58,4 +58,4 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
 
-9 findings (4 suppressed): 0 unknown, 0 informational, 0 low, 0 medium, 5 high
+5 findings: 0 unknown, 0 informational, 0 low, 0 medium, 5 high

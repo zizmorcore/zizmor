@@ -223,7 +223,26 @@ fn apply_single_operation(
                     }
                 } else {
                     // Regular key-value pair
-                    format!("{} {}", key_part, new_value_str)
+                    if let serde_yaml::Value::Mapping(_) = value {
+                        // For mappings, we need to format with proper indentation
+                        let leading_whitespace =
+                            extract_leading_whitespace(content, feature.location.byte_span.0);
+                        let value_indent = format!("{}  ", leading_whitespace); // Key indent + 2 spaces
+
+                        let value_lines: Vec<&str> = new_value_str.lines().collect();
+                        let mut result = format!("{}:", key_part.trim_end().trim_end_matches(':'));
+                        for line in value_lines.iter() {
+                            if !line.trim().is_empty() {
+                                result.push('\n');
+                                result.push_str(&value_indent);
+                                result.push_str(line.trim_start());
+                            }
+                        }
+                        result
+                    } else {
+                        // For non-mapping values, use simple concatenation
+                        format!("{} {}", key_part, new_value_str)
+                    }
                 }
             } else {
                 // This is just a value, replace it directly
@@ -325,9 +344,30 @@ fn apply_single_operation(
                 feature.location.byte_span.1
             };
 
+            // Check if we need to add a newline before the entry
+            // If the content at insertion point already ends with a newline, don't add another
+            let needs_leading_newline = if insertion_point > 0 {
+                !content
+                    .chars()
+                    .nth(insertion_point - 1)
+                    .map_or(false, |c| c == '\n')
+            } else {
+                true
+            };
+
+            let final_entry_to_insert = if needs_leading_newline {
+                final_entry
+            } else {
+                // Remove the leading newline since there's already one
+                final_entry
+                    .strip_prefix('\n')
+                    .unwrap_or(&final_entry)
+                    .to_string()
+            };
+
             // Insert the new entry
             let mut result = content.to_string();
-            result.insert_str(insertion_point, &final_entry);
+            result.insert_str(insertion_point, &final_entry_to_insert);
             Ok(result)
         }
 
@@ -338,7 +378,7 @@ fn apply_single_operation(
             }
 
             let query = parse_json_pointer_to_query(&path)?;
-            let feature = doc.query(&query)?;
+            let _feature = doc.query(&query)?;
 
             // Check if the key already exists in the target mapping
             let existing_key_path = format!("{}/{}", path, key);
@@ -655,7 +695,7 @@ fn handle_root_level_addition(
 fn apply_mapping_replacement(
     content: &str,
     path: &str,
-    key: &str,
+    _key: &str,
     value: &serde_yaml::Value,
 ) -> Result<String, YamlPatchError> {
     let doc = yamlpath::Document::new(content)?;
@@ -1475,12 +1515,11 @@ jobs:
         let result = apply_yaml_patch(original, operations).unwrap();
         println!("MergeInto existing key result:\n{}", result);
 
-        // Should replace the entire env section with the new mapping
+        // Should merge the new mapping with the existing one
         assert!(result.contains("env:"));
         assert!(result.contains("NEW_VAR: new_value"));
-        // Note: This replaces the entire env mapping, so EXISTING_VAR won't be there
-        // This is the expected behavior for our use case
-        assert!(!result.contains("EXISTING_VAR"));
+        // With true merging behavior, existing variables should be preserved
+        assert!(result.contains("EXISTING_VAR: existing_value"));
     }
 
     #[test]
@@ -1516,9 +1555,9 @@ jobs:
         let env_count = result.matches("env:").count();
         assert_eq!(env_count, 1, "Should only have one env: key");
 
-        // Should have the new value (replaces existing)
+        // Should have both the new value and preserve existing values
         assert!(result.contains("NEW_VAR: new_value"));
-        assert!(!result.contains("EXISTING_VAR")); // Previous value gets replaced
+        assert!(result.contains("EXISTING_VAR: existing_value")); // Previous value gets preserved
     }
 
     #[test]
@@ -1708,7 +1747,7 @@ jobs:
                 // Verify the result is valid YAML
                 assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
 
-                // Verify both env variables are present
+                // For MergeInto, we merge mappings, so both variables should be present
                 assert!(result.contains("IDENTITY: ${{ secrets.IDENTITY }}"));
                 assert!(result.contains("STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}"));
 
@@ -1757,12 +1796,150 @@ jobs:
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
 
-        // Should merge all environment variables
+        // For MergeInto, we merge mappings, so all variables should be present
         assert!(result.contains("IDENTITY: ${{ secrets.IDENTITY }}"));
         assert!(result.contains("OIDC_ISSUER_URL: ${{ secrets.OIDC_ISSUER_URL }}"));
         assert!(result.contains("STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}"));
 
         // Should only have one env: key
         assert_eq!(result.matches("env:").count(), 1);
+    }
+
+    #[test]
+    fn test_merge_into_reuses_existing_key_no_duplicates() {
+        // Test that MergeInto reuses an existing key instead of creating duplicates
+        let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: echo "hello"
+        env:
+          EXISTING_VAR: existing_value
+          ANOTHER_VAR: another_value"#;
+
+        let operations = vec![YamlPatchOperation::MergeInto {
+            path: "/jobs/test/steps/0".to_string(),
+            key: "env".to_string(),
+            value: serde_yaml::Value::Mapping({
+                let mut map = serde_yaml::Mapping::new();
+                map.insert(
+                    serde_yaml::Value::String("NEW_VAR".to_string()),
+                    serde_yaml::Value::String("new_value".to_string()),
+                );
+                map
+            }),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+        println!("MergeInto reuses existing key result:\n{}", result);
+
+        // Verify the result is valid YAML
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
+        // Should only have one env: key (no duplicates)
+        assert_eq!(result.matches("env:").count(), 1);
+
+        // Should have the new variable
+        assert!(result.contains("NEW_VAR: new_value"));
+
+        // With true merging behavior, existing vars should be preserved
+        assert!(result.contains("EXISTING_VAR: existing_value"));
+        assert!(result.contains("ANOTHER_VAR: another_value"));
+    }
+
+    #[test]
+    fn test_merge_into_with_mapping_merge_behavior() {
+        // Test what true merging behavior would look like for mappings
+        // This test documents what merging behavior could be if implemented
+        let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: echo "hello"
+        env:
+          EXISTING_VAR: existing_value
+          KEEP_THIS: keep_value"#;
+
+        // Apply multiple MergeInto operations to see how they interact
+        let operations = vec![
+            YamlPatchOperation::MergeInto {
+                path: "/jobs/test/steps/0".to_string(),
+                key: "env".to_string(),
+                value: serde_yaml::Value::Mapping({
+                    let mut map = serde_yaml::Mapping::new();
+                    map.insert(
+                        serde_yaml::Value::String("NEW_VAR_1".to_string()),
+                        serde_yaml::Value::String("new_value_1".to_string()),
+                    );
+                    map
+                }),
+            },
+            YamlPatchOperation::MergeInto {
+                path: "/jobs/test/steps/0".to_string(),
+                key: "env".to_string(),
+                value: serde_yaml::Value::Mapping({
+                    let mut map = serde_yaml::Mapping::new();
+                    map.insert(
+                        serde_yaml::Value::String("NEW_VAR_2".to_string()),
+                        serde_yaml::Value::String("new_value_2".to_string()),
+                    );
+                    map
+                }),
+            },
+        ];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+        println!("MergeInto multiple operations result:\n{}", result);
+
+        // Verify the result is valid YAML
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
+        // Should only have one env: key (no duplicates)
+        assert_eq!(result.matches("env:").count(), 1);
+
+        // With true merging behavior: each MergeInto merges with existing values
+        // So all variables should be present
+        assert!(result.contains("NEW_VAR_2: new_value_2"));
+
+        // The first operation's variable should also be present
+        assert!(result.contains("NEW_VAR_1: new_value_1"));
+
+        // Original variables should be preserved
+        assert!(result.contains("EXISTING_VAR: existing_value"));
+        assert!(result.contains("KEEP_THIS: keep_value"));
+    }
+
+    #[test]
+    fn test_merge_into_key_reuse_with_different_value_types() {
+        // Test MergeInto behavior when existing key has different value type
+        let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: echo "hello"
+        shell: bash"#;
+
+        // Try to merge a mapping into a step that has a shell key with string value
+        let operations = vec![YamlPatchOperation::MergeInto {
+            path: "/jobs/test/steps/0".to_string(),
+            key: "shell".to_string(),
+            value: serde_yaml::Value::String("sh".to_string()),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+        println!("MergeInto different value types result:\n{}", result);
+
+        // Verify the result is valid YAML
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
+        // Should only have one shell: key (reused, not duplicated)
+        assert_eq!(result.matches("shell:").count(), 1);
+
+        // Should have the new value (replaces the old one)
+        assert!(result.contains("shell: sh"));
+        assert!(!result.contains("shell: bash"));
     }
 }

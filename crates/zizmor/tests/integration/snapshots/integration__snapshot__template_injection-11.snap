@@ -11,8 +11,8 @@ error[template-injection]: code injection via template expansion
 16 | |           cmd: ${{ github.event.pull_request.title }}
    | |___________^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
    |             |
-   |             github.event.pull_request.title may expand into attacker-controllable code
+   |             ${{ github.event.pull_request.title }} may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
-2 findings (1 suppressed): 0 unknown, 0 informational, 0 low, 0 medium, 1 high
+1 finding: 0 unknown, 0 informational, 0 low, 0 medium, 1 high
