@@ -9,7 +9,7 @@ help[template-injection]: code injection via template expansion
    |           --------------------------- help: this step
 42 | /         run: |
 43 | |           echo ${{ env.bar }}
-   | |_____________________________- help: env.bar may expand into attacker-controllable code
+   | |_____________________________- help: ${{ env.bar }} may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
@@ -20,7 +20,7 @@ help[template-injection]: code injection via template expansion
    |           -------------------------- help: this step
 49 | /         run: |
 50 | |           echo ${{ env.foo }}
-   | |_____________________________- help: env.foo may expand into attacker-controllable code
+   | |_____________________________- help: ${{ env.foo }} may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
@@ -31,8 +31,8 @@ help[template-injection]: code injection via template expansion
    |           ------------------------------- help: this step
 54 | /         run: |
 55 | |           echo ${{ env.quux }}
-   | |_______________________________- help: env.quux may expand into attacker-controllable code
+   | |_______________________________- help: ${{ env.quux }} may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
-9 findings (6 suppressed): 0 unknown, 0 informational, 3 low, 0 medium, 0 high
+6 findings (3 suppressed): 0 unknown, 0 informational, 3 low, 0 medium, 0 high
