@@ -31,6 +31,7 @@ mod config;
 mod finding;
 mod github_api;
 mod models;
+mod oci_registry;
 mod output;
 mod registry;
 mod state;
