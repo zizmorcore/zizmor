@@ -26,10 +26,12 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{Confidence, Finding, Persona, Severity, SymbolicLocation},
-    models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesPattern},
+    apply_yaml_patch,
+    finding::{Confidence, Finding, Fix, Persona, Severity, SymbolicLocation},
+    models::{self, CompositeStep, JobExt as _, Step, StepCommon, uses::RepositoryUsesPattern},
     state::AuditState,
     utils::extract_expressions,
+    yaml_patch::YamlPatchOperation,
 };
 
 pub(crate) struct TemplateInjection;
@@ -121,6 +123,12 @@ impl TemplateInjection {
             }
             _ => vec![],
         }
+    }
+
+    fn script_with_location<'s>(
+        step: &impl StepCommon<'s>,
+    ) -> Option<(String, SymbolicLocation<'s>)> {
+        Self::scripts_with_location(step).into_iter().next()
     }
 
     fn injectable_template_expressions<'s>(
@@ -265,32 +273,79 @@ impl TemplateInjection {
         bad_expressions
     }
 
-    fn process_step<'doc>(
-        &self,
-        step: &impl StepCommon<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
-        let mut findings = vec![];
+    /// Create a fix that provides guidance on using environment variables
+    fn create_env_var_guidance_fix(expressions: &[String]) -> Fix {
+        let expr_list = if expressions.len() <= 3 {
+            expressions.join(", ")
+        } else {
+            format!(
+                "{}, and {} others",
+                expressions[..3].join(", "),
+                expressions.len() - 3
+            )
+        };
 
-        for (script, script_loc) in Self::scripts_with_location(step) {
-            for (expr, severity, confidence, persona) in
-                self.injectable_template_expressions(&script, step)
-            {
-                findings.push(
-                    Self::finding()
-                        .severity(severity)
-                        .confidence(confidence)
-                        .persona(persona)
-                        .add_location(step.location().hidden())
-                        .add_location(step.location_with_name())
-                        .add_location(script_loc.clone().primary().annotated(format!(
-                            "{expr} may expand into attacker-controllable code"
-                        )))
-                        .build(step)?,
-                )
-            }
+        Fix {
+            title: "Move template expressions to environment variables".to_string(),
+            description: format!(
+                "Move template expressions ({}) to environment variables to prevent code injection. \
+                Instead of using expressions like '${{{{ github.event.issue.title }}}}' directly in the script, \
+                add them to the 'env:' block and reference them as shell variables like '${{ISSUE_TITLE}}'. \
+                \n\nExample:\n\
+                Before: run: echo \"${{{{ github.event.issue.title }}}}\"\n\
+                After:\n  run: echo \"${{ISSUE_TITLE}}\"\n  env:\n    ISSUE_TITLE: ${{{{ github.event.issue.title }}}}",
+                expr_list
+            ),
+            apply: Box::new(|content| Ok(Some(content.to_string()))),
         }
+    }
 
-        Ok(findings)
+    /// Create a fix that adds explicit shell specification for workflow steps
+    fn create_shell_specification_fix(job_id: &str, step_index: usize) -> Fix {
+        Fix {
+            title: "Add explicit shell specification".to_string(),
+            description: "Add 'shell: bash' to ensure consistent variable expansion syntax across different runners. \
+                This prevents issues with PowerShell's different variable syntax ('${env:VARNAME}') on Windows runners.".to_string(),
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::Add {
+                path: format!("/jobs/{}/steps/{}", job_id, step_index),
+                key: "shell".to_string(),
+                value: serde_yaml::Value::String("bash".to_string()),
+            }]),
+        }
+    }
+
+    /// Create a fix that adds explicit shell specification for composite steps
+    fn create_composite_shell_specification_fix(step_index: usize) -> Fix {
+        Fix {
+            title: "Add explicit shell specification".to_string(),
+            description: "Add 'shell: bash' to ensure consistent variable expansion syntax across different runners.".to_string(),
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::Add {
+                path: format!("/runs/steps/{}", step_index),
+                key: "shell".to_string(),
+                value: serde_yaml::Value::String("bash".to_string()),
+            }]),
+        }
+    }
+
+    /// Create a fix that provides input validation guidance
+    fn create_validation_guidance_fix() -> Fix {
+        Fix {
+            title: "Add input validation".to_string(),
+            description: "Add validation for user-controlled inputs before using them in scripts. \
+                Validate input format, length, and characters. Use allowlists for expected values when possible. \
+                Consider using tools like 'jq' for safe JSON processing.".to_string(),
+            apply: Box::new(|content| Ok(Some(content.to_string()))),
+        }
+    }
+
+    /// Create a fix that suggests using GITHUB_OUTPUT instead of environment variables for step communication
+    fn create_output_alternative_fix() -> Fix {
+        Fix {
+            title: "Use GITHUB_OUTPUT for step communication".to_string(),
+            description: "If passing data between steps, consider using GITHUB_OUTPUT instead of environment variables. \
+                This provides better isolation and reduces the attack surface for environment variable injection.".to_string(),
+            apply: Box::new(|content| Ok(Some(content.to_string()))),
+        }
     }
 }
 
@@ -303,14 +358,108 @@ impl Audit for TemplateInjection {
     }
 
     fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
-        self.process_step(step)
+        let Some((script, script_location)) = Self::script_with_location(step) else {
+            return Ok(vec![]);
+        };
+
+        let expressions_info = self.injectable_template_expressions(&script, step);
+        if expressions_info.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Collect all expressions for fix generation
+        let expressions: Vec<String> = expressions_info
+            .iter()
+            .map(|(expr, _, _, _)| expr.clone())
+            .collect();
+
+        let mut findings = vec![];
+
+        for (i, (expr, severity, confidence, persona)) in expressions_info.into_iter().enumerate() {
+            let mut finding_builder = Self::finding()
+                .severity(severity)
+                .confidence(confidence)
+                .persona(persona)
+                .add_location(step.location().hidden())
+                .add_location(step.location_with_name())
+                .add_location(
+                    script_location
+                        .clone()
+                        .primary()
+                        .annotated(format!("{expr} may expand into attacker-controllable code")),
+                );
+
+            // Add fixes (shell fix only for the first finding to avoid duplicates)
+            finding_builder = finding_builder
+                .fix(Self::create_env_var_guidance_fix(&expressions))
+                .fix(Self::create_validation_guidance_fix())
+                .fix(Self::create_output_alternative_fix());
+
+            if i == 0 {
+                // Only add shell fix to the first finding
+                finding_builder = finding_builder.fix(Self::create_shell_specification_fix(
+                    step.job().id(),
+                    step.index,
+                ));
+            }
+
+            findings.push(finding_builder.build(step)?);
+        }
+
+        Ok(findings)
     }
 
     fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
-        self.process_step(step)
+        let Some((script, script_location)) = Self::script_with_location(step) else {
+            return Ok(vec![]);
+        };
+
+        let expressions_info = self.injectable_template_expressions(&script, step);
+        if expressions_info.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Collect all expressions for fix generation
+        let expressions: Vec<String> = expressions_info
+            .iter()
+            .map(|(expr, _, _, _)| expr.clone())
+            .collect();
+
+        let mut findings = vec![];
+
+        for (i, (expr, severity, confidence, persona)) in expressions_info.into_iter().enumerate() {
+            let mut finding_builder = Self::finding()
+                .severity(severity)
+                .confidence(confidence)
+                .persona(persona)
+                .add_location(step.location().hidden())
+                .add_location(step.location_with_name())
+                .add_location(
+                    script_location
+                        .clone()
+                        .primary()
+                        .annotated(format!("{expr} may expand into attacker-controllable code")),
+                );
+
+            // Add fixes (shell fix only for the first finding to avoid duplicates)
+            finding_builder = finding_builder
+                .fix(Self::create_env_var_guidance_fix(&expressions))
+                .fix(Self::create_validation_guidance_fix())
+                .fix(Self::create_output_alternative_fix());
+
+            if i == 0 {
+                // Only add shell fix to the first finding
+                finding_builder =
+                    finding_builder.fix(Self::create_composite_shell_specification_fix(step.index));
+            }
+
+            findings.push(finding_builder.build(step)?);
+        }
+
+        Ok(findings)
     }
 }
 
@@ -338,5 +487,145 @@ mod tests {
             Capability::from_context("runner.arch"),
             Some(Capability::Fixed)
         ));
+    }
+
+    #[test]
+    fn test_env_var_guidance_fix() {
+        use super::TemplateInjection;
+
+        let expressions = vec!["github.event.issue.title".to_string()];
+        let fix = TemplateInjection::create_env_var_guidance_fix(&expressions);
+
+        assert_eq!(
+            fix.title,
+            "Move template expressions to environment variables"
+        );
+        assert!(fix.description.contains("github.event.issue.title"));
+        assert!(fix.description.contains("env:"));
+        assert!(fix.description.contains("Example:"));
+
+        // Test that applying the fix returns the content unchanged (guidance only)
+        let content = "test content";
+        let result = fix.apply_to_content(content).unwrap().unwrap();
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn test_env_var_guidance_fix_multiple_expressions() {
+        use super::TemplateInjection;
+
+        let expressions = vec![
+            "github.event.issue.title".to_string(),
+            "github.event.pull_request.body".to_string(),
+            "github.event.comment.body".to_string(),
+            "github.event.issue.body".to_string(),
+            "github.event.workflow_run.head_commit.message".to_string(),
+        ];
+        let fix = TemplateInjection::create_env_var_guidance_fix(&expressions);
+
+        assert!(fix.description.contains("and 2 others"));
+        assert!(fix.description.contains("github.event.issue.title"));
+        assert!(fix.description.contains("github.event.pull_request.body"));
+        assert!(fix.description.contains("github.event.comment.body"));
+        assert!(!fix.description.contains("github.event.issue.body")); // Should be truncated
+    }
+
+    #[test]
+    fn test_shell_specification_fix() {
+        use super::TemplateInjection;
+
+        let fix = TemplateInjection::create_shell_specification_fix("build", 0);
+
+        assert_eq!(fix.title, "Add explicit shell specification");
+        assert!(fix.description.contains("shell: bash"));
+        assert!(fix.description.contains("PowerShell"));
+
+        // Test the fix application on a simple YAML
+        let yaml_content = r#"jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "hello"
+"#;
+
+        let result = fix.apply_to_content(yaml_content).unwrap().unwrap();
+        assert!(result.contains("shell: bash"));
+    }
+
+    #[test]
+    fn test_composite_shell_specification_fix() {
+        use super::TemplateInjection;
+
+        let fix = TemplateInjection::create_composite_shell_specification_fix(0);
+
+        assert_eq!(fix.title, "Add explicit shell specification");
+
+        // Test the fix application on a composite action
+        let yaml_content = r#"runs:
+  using: composite
+  steps:
+    - run: echo "hello"
+"#;
+
+        let result = fix.apply_to_content(yaml_content).unwrap().unwrap();
+        assert!(result.contains("shell: bash"));
+    }
+
+    #[test]
+    fn test_validation_guidance_fix() {
+        use super::TemplateInjection;
+
+        let fix = TemplateInjection::create_validation_guidance_fix();
+
+        assert_eq!(fix.title, "Add input validation");
+        assert!(fix.description.contains("validation"));
+        assert!(fix.description.contains("allowlists"));
+        assert!(fix.description.contains("jq"));
+
+        // Test that applying the fix returns the content unchanged (guidance only)
+        let content = "test content";
+        let result = fix.apply_to_content(content).unwrap().unwrap();
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn test_output_alternative_fix() {
+        use super::TemplateInjection;
+
+        let fix = TemplateInjection::create_output_alternative_fix();
+
+        assert_eq!(fix.title, "Use GITHUB_OUTPUT for step communication");
+        assert!(fix.description.contains("GITHUB_OUTPUT"));
+        assert!(fix.description.contains("isolation"));
+
+        // Test that applying the fix returns the content unchanged (guidance only)
+        let content = "test content";
+        let result = fix.apply_to_content(content).unwrap().unwrap();
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn test_fix_descriptions_are_informative() {
+        use super::TemplateInjection;
+
+        let expressions = vec!["github.event.issue.title".to_string()];
+
+        // Test that all fix descriptions are comprehensive
+        let env_var_fix = TemplateInjection::create_env_var_guidance_fix(&expressions);
+        let shell_fix = TemplateInjection::create_shell_specification_fix("job", 0);
+        let validation_fix = TemplateInjection::create_validation_guidance_fix();
+        let output_fix = TemplateInjection::create_output_alternative_fix();
+
+        // Each description should be substantial (more than just a title)
+        assert!(env_var_fix.description.len() > 100);
+        assert!(shell_fix.description.len() > 50);
+        assert!(validation_fix.description.len() > 50);
+        assert!(output_fix.description.len() > 50);
+
+        // Each should contain practical guidance
+        assert!(env_var_fix.description.contains("Example:"));
+        assert!(shell_fix.description.contains("PowerShell"));
+        assert!(validation_fix.description.contains("allowlists"));
+        assert!(output_fix.description.contains("isolation"));
     }
 }
