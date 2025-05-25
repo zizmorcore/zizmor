@@ -81,3 +81,39 @@ jobs:
             Please review manually before merging.
           assignees: ${{ env.PR_ASSIGNEES }}
           reviewers: ${{ env.PR_ASSIGNEES }}
+
+
+  refresh-codeql-injection-sinks:
+    name: Refresh CodeQL injection sinks 🚰
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # for creating branches
+      pull-requests: write # for opening PRs
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: try to refresh CodeQL injection sinks
+        run: |
+          make codeql-injection-sinks
+
+      - name: create PR
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          commit-message: "[BOT] update CodeQL injection sinks"
+          branch: refresh-codeql-injection-sinks
+          branch-suffix: timestamp
+          title: "[BOT] update CodeQL injection sinks from GitHub"
+          body: |
+            :robot: :warning: :robot:
+
+            This is an automated pull request, updating the CodeQL
+            injection sinks after a change to GitHub's CodeQL
+            models was detected.
+
+            Please review manually before merging.
+          assignees: ${{ env.PR_ASSIGNEES }}
+          reviewers: ${{ env.PR_ASSIGNEES }}
