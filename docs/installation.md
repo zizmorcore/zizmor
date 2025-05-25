@@ -120,7 +120,7 @@ description: Installation instructions for zizmor.
 
         This is a community-maintained package.
 
-    `zizmor` is available in [Chimera Linux' user repo](https://chimera-linux.org/docs/apk#repositories):
+    `zizmor` is available in the [Chimera Linux user repo](https://chimera-linux.org/docs/apk#repositories):
 
     ```bash
     # If you don't have the 'user' repo enabled yet, do that first
