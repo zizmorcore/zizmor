@@ -17,27 +17,73 @@ audit_meta!(
 );
 
 impl SecretsInherit {
+    /// Generate a safe secret name from a base name
+    fn generate_safe_secret_name(base_name: &str) -> String {
+        // Convert names to kebab-case and ensure they only contain allowed characters
+        // Secret names should be lowercase with hyphens, alphanumeric characters only
+        base_name
+            .chars()
+            .map(|c| {
+                if c.is_alphanumeric() {
+                    c.to_ascii_lowercase()
+                } else {
+                    '-'
+                }
+            })
+            .collect::<String>()
+            // Remove leading/trailing hyphens and collapse multiple hyphens
+            .trim_matches('-')
+            .split('-')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join("-")
+    }
+
     /// Create a fix that replaces secrets: inherit with explicit secret declarations
     fn create_explicit_secrets_fix(job_id: &str) -> Fix {
         let secrets_path = format!("/jobs/{}/secrets", job_id);
+        let job_id = job_id.to_string(); // Convert to owned string
 
         Fix {
             title: "Replace secrets: inherit with explicit secret declarations".to_string(),
             description: "Replace 'secrets: inherit' with explicit secret declarations. \
                 List only the specific secrets that the reusable workflow actually needs. \
-                For example: 'secrets: { my-secret: ${{ secrets.MY_SECRET }}, deploy-token: ${{ secrets.DEPLOY_TOKEN }} }'. \
+                For example:\n\
+                Before: secrets: inherit\n\
+                After:\n  secrets:\n    my-secret: ${{ secrets.MY_SECRET }}\n    deploy-token: ${{ secrets.DEPLOY_TOKEN }}\n\n\
                 This follows the principle of least authority and makes secret usage explicit and auditable.".to_string(),
-            apply: apply_yaml_patch!(vec![YamlPatchOperation::Replace {
-                path: secrets_path,
-                value: {
-                    let mut example_secrets = serde_yaml::Mapping::new();
-                    example_secrets.insert(
-                        serde_yaml::Value::String("example-secret".to_string()),
-                        serde_yaml::Value::String("${{ secrets.EXAMPLE_SECRET }}".to_string()),
-                    );
-                    serde_yaml::Value::Mapping(example_secrets)
-                },
-            }]),
+            apply: Box::new(move |old_content: &str| -> anyhow::Result<Option<String>> {
+                // First remove the existing secrets: inherit
+                let content_without_inherit = crate::yaml_patch::apply_yaml_patch(
+                    old_content,
+                    vec![YamlPatchOperation::Remove {
+                        path: secrets_path.clone(),
+                    }]
+                )?;
+
+                // Create a proper YAML mapping for explicit secrets with safe names
+                let mut example_secrets = serde_yaml::Mapping::new();
+
+                // Generate safe secret names - keep it simple for the example
+                let secret_key = Self::generate_safe_secret_name("example-secret");
+                let secret_ref = "EXAMPLE_SECRET"; // Keep the secret reference simple and valid
+
+                example_secrets.insert(
+                    serde_yaml::Value::String(secret_key),
+                    serde_yaml::Value::String(format!("${{{{ secrets.{} }}}}", secret_ref)),
+                );
+
+                // Use MergeInto to add the new secrets mapping (similar to template_injection)
+                let final_content = crate::yaml_patch::apply_yaml_patch(
+                    &content_without_inherit,
+                    vec![YamlPatchOperation::MergeInto {
+                        path: format!("/jobs/{}", job_id),
+                        key: "secrets".to_string(),
+                        value: serde_yaml::Value::Mapping(example_secrets),
+                    }]
+                )?;
+                Ok(Some(final_content))
+            }),
         }
     }
 
@@ -133,6 +179,44 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_generate_safe_secret_name() {
+        // Test basic alphanumeric names
+        assert_eq!(
+            SecretsInherit::generate_safe_secret_name("example-secret"),
+            "example-secret"
+        );
+
+        // Test names with special characters
+        assert_eq!(
+            SecretsInherit::generate_safe_secret_name("MY_SECRET_TOKEN"),
+            "my-secret-token"
+        );
+
+        // Test names with multiple special characters
+        assert_eq!(
+            SecretsInherit::generate_safe_secret_name("api.token@service"),
+            "api-token-service"
+        );
+
+        // Test names with leading/trailing special characters
+        assert_eq!(
+            SecretsInherit::generate_safe_secret_name("_secret_"),
+            "secret"
+        );
+
+        // Test names with consecutive special characters
+        assert_eq!(
+            SecretsInherit::generate_safe_secret_name("my___secret"),
+            "my-secret"
+        );
+
+        // Test empty and edge cases
+        assert_eq!(SecretsInherit::generate_safe_secret_name("___"), "");
+
+        assert_eq!(SecretsInherit::generate_safe_secret_name("a"), "a");
+    }
+
+    #[test]
     fn test_explicit_secrets_fix() {
         let fix = SecretsInherit::create_explicit_secrets_fix("test-job");
 
@@ -141,9 +225,15 @@ mod tests {
             "Replace secrets: inherit with explicit secret declarations"
         );
         assert!(fix.description.contains("principle of least authority"));
+        assert!(fix.description.contains("Before: secrets: inherit"));
+        assert!(fix.description.contains("After:"));
         assert!(
             fix.description
-                .contains("secrets: { my-secret: ${{ secrets.MY_SECRET }}, deploy-token: ${{ secrets.DEPLOY_TOKEN }} }")
+                .contains("my-secret: ${{ secrets.MY_SECRET }}")
+        );
+        assert!(
+            fix.description
+                .contains("deploy-token: ${{ secrets.DEPLOY_TOKEN }}")
         );
     }
 
@@ -193,9 +283,24 @@ jobs:
 
         let result = fix.apply_to_content(yaml_content).unwrap().unwrap();
 
-        // Should replace secrets: inherit with an example secret
-        assert!(result.contains("secrets: example-secret: ${{ secrets.EXAMPLE_SECRET }}"));
+        // Should replace secrets: inherit with properly formatted secrets
+        assert!(result.contains("secrets:"));
+        assert!(result.contains("example-secret"));
         assert!(!result.contains("secrets: inherit"));
+
+        // Try to parse the YAML to see if it's valid
+        match serde_yaml::from_str::<serde_yaml::Value>(&result) {
+            Ok(parsed) => {
+                let secrets = &parsed["jobs"]["test-job"]["secrets"];
+                assert!(secrets.is_mapping());
+            }
+            Err(e) => {
+                panic!(
+                    "Generated YAML is invalid: {}\nGenerated content:\n{}",
+                    e, result
+                );
+            }
+        }
     }
 
     #[test]

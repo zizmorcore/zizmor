@@ -71,6 +71,7 @@ impl UseTrustedPublishing {
     fn create_pypi_trusted_publishing_fix(job_id: String, step_index: usize) -> Fix {
         let step_path = format!("/jobs/{}/steps/{}", job_id, step_index);
         let password_path = format!("{}/with/password", step_path);
+        let with_path = format!("{}/with", step_path);
         let job_path = format!("/jobs/{}", job_id);
 
         Fix {
@@ -80,12 +81,29 @@ impl UseTrustedPublishing {
                 You'll need to configure the trusted publisher in your PyPI project settings first.".to_string(),
             apply: Box::new(move |old_content: &str| -> anyhow::Result<Option<String>> {
                 // First, remove the password field
-                let content_without_password = crate::yaml_patch::apply_yaml_patch(
+                let mut content_without_password = crate::yaml_patch::apply_yaml_patch(
                     old_content,
                     vec![YamlPatchOperation::Remove {
                         path: password_path.clone(),
                     }]
                 )?;
+
+                // Try to remove empty with block if it exists
+                // This is a best-effort cleanup - if it fails, we continue without it
+                if content_without_password.contains("with:") &&
+                   (content_without_password.contains("with: {}") ||
+                    content_without_password.contains("with:\n") &&
+                    !content_without_password.contains("with:\n          ")) {
+                    // Attempt to remove empty with block
+                    if let Ok(cleaned_content) = crate::yaml_patch::apply_yaml_patch(
+                        &content_without_password,
+                        vec![YamlPatchOperation::Remove {
+                            path: with_path.clone(),
+                        }]
+                    ) {
+                        content_without_password = cleaned_content;
+                    }
+                }
 
                 // Then, use MergeInto to add id-token permission to the job
                 // This will create the permissions section if it doesn't exist, or add to it if it does
@@ -152,15 +170,41 @@ impl UseTrustedPublishing {
     /// Create a fix that removes api-token and provides guidance for RubyGems credential action
     fn create_rubygems_credential_fix(job_id: String, step_index: usize) -> Fix {
         let api_token_path = format!("/jobs/{}/steps/{}/with/api-token", job_id, step_index);
+        let with_path = format!("/jobs/{}/steps/{}/with", job_id, step_index);
 
         Fix {
             title: "Remove manual API token for RubyGems".to_string(),
             description: "Remove the 'api-token' field and use Trusted Publishing instead. \
                 Configure the trusted publisher in your RubyGems.org account settings first."
                 .to_string(),
-            apply: apply_yaml_patch!(vec![YamlPatchOperation::Remove {
-                path: api_token_path,
-            }]),
+            apply: Box::new(move |old_content: &str| -> anyhow::Result<Option<String>> {
+                // Remove the api-token field
+                let mut content_without_token = crate::yaml_patch::apply_yaml_patch(
+                    old_content,
+                    vec![YamlPatchOperation::Remove {
+                        path: api_token_path.clone(),
+                    }],
+                )?;
+
+                // Try to remove empty with block if it exists
+                if content_without_token.contains("with:")
+                    && (content_without_token.contains("with: {}")
+                        || content_without_token.contains("with:\n")
+                            && !content_without_token.contains("with:\n          "))
+                {
+                    // Attempt to remove empty with block
+                    if let Ok(cleaned_content) = crate::yaml_patch::apply_yaml_patch(
+                        &content_without_token,
+                        vec![YamlPatchOperation::Remove {
+                            path: with_path.clone(),
+                        }],
+                    ) {
+                        content_without_token = cleaned_content;
+                    }
+                }
+
+                Ok(Some(content_without_token))
+            }),
         }
     }
 
