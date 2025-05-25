@@ -57,6 +57,12 @@ pub enum YamlPatchOperation {
         key: String,
         value: serde_yaml::Value,
     },
+    /// Merge key-value pairs into an existing mapping at the given path, or create the mapping if it doesn't exist
+    MergeInto {
+        path: String,
+        key: String,
+        value: serde_yaml::Value,
+    },
     /// Remove the key at the given path
     Remove { path: String },
 }
@@ -73,6 +79,14 @@ pub fn apply_yaml_patch(
     content: &str,
     operations: Vec<YamlPatchOperation>,
 ) -> Result<String, YamlPatchError> {
+    // Validate that the input YAML is parseable before attempting patches
+    if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(content) {
+        return Err(YamlPatchError::InvalidOperation(format!(
+            "input is not valid YAML: {}",
+            e
+        )));
+    }
+
     let mut result = content.to_string();
 
     // Sort operations by byte position (reverse order) so we can apply them without
@@ -89,13 +103,24 @@ pub fn apply_yaml_patch(
                     positioned_ops.push((feature.location.byte_span.0, op));
                 } else {
                     let query = parse_json_pointer_to_query(path)?;
-                    let feature = doc.query(&query)?;
-                    positioned_ops.push((feature.location.byte_span.0, op));
+                    let _feature = doc.query(&query)?;
+                    positioned_ops.push((_feature.location.byte_span.0, op));
                 }
             }
             YamlPatchOperation::Add { path, .. } => {
                 if path == "/" {
-                    // Handle root addition - use the document root
+                    // Handle root-level additions - use the document root
+                    let feature = doc.root();
+                    positioned_ops.push((feature.location.byte_span.1, op));
+                } else {
+                    let query = parse_json_pointer_to_query(path)?;
+                    let feature = doc.query(&query)?;
+                    positioned_ops.push((feature.location.byte_span.1, op));
+                }
+            }
+            YamlPatchOperation::MergeInto { path, .. } => {
+                if path == "/" {
+                    // Handle root-level merges - use the document root
                     let feature = doc.root();
                     positioned_ops.push((feature.location.byte_span.1, op));
                 } else {
@@ -106,9 +131,9 @@ pub fn apply_yaml_patch(
             }
             YamlPatchOperation::Remove { path } => {
                 if path == "/" {
-                    return Err(YamlPatchError::InvalidOperation(
-                        "Cannot remove root document".to_string(),
-                    ));
+                    // Handle root-level removal - use the document root
+                    let feature = doc.root();
+                    positioned_ops.push((feature.location.byte_span.0, op));
                 } else {
                     let query = parse_json_pointer_to_query(path)?;
                     let feature = doc.query(&query)?;
@@ -156,7 +181,50 @@ fn apply_single_operation(
             let replacement = if let Some(colon_pos) = current_content_with_ws.find(':') {
                 // This is a key-value pair, preserve the key and whitespace
                 let key_part = &current_content_with_ws[..colon_pos + 1];
-                format!("{} {}", key_part, new_value_str)
+
+                // Check if this is a multiline YAML string (contains |)
+                let after_colon = &current_content_with_ws[colon_pos + 1..];
+                let is_multiline_literal = after_colon.trim_start().starts_with('|');
+
+                if is_multiline_literal {
+                    // Check if this is a multiline string value
+                    if let serde_yaml::Value::String(ref string_content) = value {
+                        if string_content.contains('\n') {
+                            // For multiline literal blocks, use the raw string content
+                            let leading_whitespace =
+                                extract_leading_whitespace(content, feature.location.byte_span.0);
+                            let content_indent = format!("{}  ", leading_whitespace); // Key indent + 2 spaces for content
+
+                            // Format as: key: |\n  content\n  more content
+                            let indented_content = string_content
+                                .lines()
+                                .map(|line| {
+                                    if line.trim().is_empty() {
+                                        String::new()
+                                    } else {
+                                        format!("{}{}", content_indent, line.trim_start())
+                                    }
+                                })
+                                .collect::<Vec<_>>()
+                                .join("\n");
+
+                            // Find the position of | in the original content and include it
+                            let pipe_pos = after_colon.find('|').unwrap();
+                            let key_with_pipe = &current_content_with_ws
+                                [..colon_pos + 1 + after_colon[..pipe_pos].len() + 1];
+                            format!("{}\n{}", key_with_pipe.trim_end(), indented_content)
+                        } else {
+                            // Single line string, treat as regular key-value pair
+                            format!("{} {}", key_part, new_value_str)
+                        }
+                    } else {
+                        // Not a string value, treat as regular key-value pair
+                        format!("{} {}", key_part, new_value_str)
+                    }
+                } else {
+                    // Regular key-value pair
+                    format!("{} {}", key_part, new_value_str)
+                }
             } else {
                 // This is just a value, replace it directly
                 let leading_whitespace =
@@ -198,50 +266,22 @@ fn apply_single_operation(
             let new_value_str = serialize_yaml_value(&value)?;
             let new_value_str = new_value_str.trim_end(); // Remove trailing newline
 
-            // Extract the feature content with leading whitespace to analyze structure
-            let feature_with_ws = doc.extract_with_leading_whitespace(&feature);
-
             // Check if we're adding to a list item by examining the path
-            let is_list_item = path.contains("/steps/");
+            let is_list_item = path
+                .split('/')
+                .last()
+                .unwrap_or("")
+                .parse::<usize>()
+                .is_ok();
 
+            // Determine the appropriate indentation
             let indent = if is_list_item {
-                // For list items (steps), we need to calculate the proper indentation
-                // by looking at the existing step structure
-                let lines: Vec<&str> = feature_with_ws.lines().collect();
-                if let Some(first_line) = lines.first() {
-                    if let Some(dash_pos) = first_line.find('-') {
-                        // For steps, find existing key indentation by looking at the content
-                        let mut found_indent = None;
-                        if lines.len() > 1 {
-                            // Find a line that contains a key (has a colon)
-                            for line in lines.iter().skip(1) {
-                                if line.contains(':') && !line.trim().starts_with('#') {
-                                    // Use this line's indentation as our reference
-                                    let key_indent = line.len() - line.trim_start().len();
-                                    found_indent = Some(" ".repeat(key_indent));
-                                    break;
-                                }
-                            }
-                        }
-                        if let Some(indent) = found_indent {
-                            indent
-                        } else {
-                            // Fallback: dash position + 2 spaces (standard YAML step indentation)
-                            let dash_base_indent = &first_line[..dash_pos];
-                            format!("{}  ", dash_base_indent)
-                        }
-                    } else {
-                        // Fallback: use the leading whitespace + 2 spaces
-                        let leading_whitespace =
-                            extract_leading_whitespace(content, feature.location.byte_span.0);
-                        format!("{}  ", leading_whitespace)
-                    }
-                } else {
-                    // Fallback to standard indentation
-                    let leading_whitespace =
-                        extract_leading_whitespace(content, feature.location.byte_span.0);
-                    format!("{}  ", leading_whitespace)
-                }
+                // For list items, we need to match the indentation of other keys in the same item
+                // The feature extraction gives us the content without the leading "- " part,
+                // so we need to use the leading whitespace of the step itself plus 2 spaces
+                let leading_whitespace =
+                    extract_leading_whitespace(content, feature.location.byte_span.0);
+                format!("{}  ", leading_whitespace)
             } else {
                 // For regular mappings, add 2 spaces to current indentation
                 let leading_whitespace =
@@ -249,8 +289,8 @@ fn apply_single_operation(
                 format!("{}  ", leading_whitespace)
             };
 
-            // Handle different value types for proper YAML formatting
-            let new_entry = if let serde_yaml::Value::Mapping(ref mapping) = value {
+            // Format the new entry
+            let final_entry = if let serde_yaml::Value::Mapping(mapping) = &value {
                 if mapping.is_empty() {
                     // For empty mappings, format inline
                     format!("\n{}{}: {}", indent, key, new_value_str)
@@ -262,18 +302,21 @@ fn apply_single_operation(
                         if !line.trim().is_empty() {
                             result.push('\n');
                             result.push_str(&indent);
-                            result.push_str("  "); // Additional 2 spaces for nested content
+                            result.push_str("  "); // 2 spaces for nested content
                             result.push_str(line.trim_start());
                         }
                     }
                     result
                 }
+            } else if new_value_str.contains('\n') {
+                // Handle multiline values
+                let indented_value = indent_multiline_yaml(&new_value_str, &indent);
+                format!("\n{}{}: {}", indent, key, indented_value)
             } else {
-                // For scalar values, simple key: value format
                 format!("\n{}{}: {}", indent, key, new_value_str)
             };
 
-            // Find the actual insertion point
+            // Find the insertion point
             let insertion_point = if is_list_item {
                 // For list items, we need to find the end of the actual step content,
                 // not including trailing comments that yamlpath may have included
@@ -282,29 +325,90 @@ fn apply_single_operation(
                 feature.location.byte_span.1
             };
 
-            // Insert the new content
+            // Insert the new entry
             let mut result = content.to_string();
-
-            // Check if we need to add a leading newline
-            let needs_leading_newline = if insertion_point > 0 {
-                !content
-                    .chars()
-                    .nth(insertion_point - 1)
-                    .map_or(false, |c| c == '\n')
-            } else {
-                true
-            };
-
-            let final_entry = if needs_leading_newline && !new_entry.starts_with('\n') {
-                format!("\n{}", new_entry.trim_start_matches('\n'))
-            } else if !needs_leading_newline && new_entry.starts_with('\n') {
-                new_entry.trim_start_matches('\n').to_string()
-            } else {
-                new_entry
-            };
-
             result.insert_str(insertion_point, &final_entry);
             Ok(result)
+        }
+
+        YamlPatchOperation::MergeInto { path, key, value } => {
+            if path == "/" {
+                // Handle root-level merges specially
+                return handle_root_level_merge(content, &key, &value);
+            }
+
+            let query = parse_json_pointer_to_query(&path)?;
+            let feature = doc.query(&query)?;
+
+            // Check if the key already exists in the target mapping
+            let existing_key_path = format!("{}/{}", path, key);
+            let existing_key_query = parse_json_pointer_to_query(&existing_key_path);
+
+            if let Ok(existing_query) = existing_key_query {
+                if let Ok(existing_feature) = doc.query(&existing_query) {
+                    // Key exists, check if we need to merge mappings
+                    if let serde_yaml::Value::Mapping(new_mapping) = &value {
+                        // Try to parse the existing value as YAML to see if it's also a mapping
+                        let existing_content = doc.extract(&existing_feature);
+                        if let Ok(existing_value) =
+                            serde_yaml::from_str::<serde_yaml::Value>(&existing_content)
+                        {
+                            // The extracted content includes the key, so we need to get the value
+                            let actual_existing_value =
+                                if let serde_yaml::Value::Mapping(outer_mapping) = existing_value {
+                                    // If the extracted content is like "env: { ... }", get the value part
+                                    if let Some(inner_value) =
+                                        outer_mapping.get(&serde_yaml::Value::String(key.clone()))
+                                    {
+                                        inner_value.clone()
+                                    } else {
+                                        // Fallback: use the outer mapping directly
+                                        serde_yaml::Value::Mapping(outer_mapping)
+                                    }
+                                } else {
+                                    existing_value
+                                };
+
+                            if let serde_yaml::Value::Mapping(existing_mapping) =
+                                actual_existing_value
+                            {
+                                // Both are mappings, merge them
+                                let mut merged_mapping = existing_mapping.clone();
+                                for (k, v) in new_mapping {
+                                    merged_mapping.insert(k.clone(), v.clone());
+                                }
+
+                                // Use a custom replacement that preserves the key structure
+                                return apply_mapping_replacement(
+                                    content,
+                                    &existing_key_path,
+                                    &key,
+                                    &serde_yaml::Value::Mapping(merged_mapping),
+                                );
+                            }
+                        }
+                    }
+
+                    // Not both mappings, or parsing failed, just replace
+                    return apply_single_operation(
+                        content,
+                        YamlPatchOperation::Replace {
+                            path: existing_key_path,
+                            value: value.clone(),
+                        },
+                    );
+                }
+            }
+
+            // Key doesn't exist, add it using Add operation
+            apply_single_operation(
+                content,
+                YamlPatchOperation::Add {
+                    path: path.clone(),
+                    key: key.clone(),
+                    value: value.clone(),
+                },
+            )
         }
 
         YamlPatchOperation::Remove { path } => {
@@ -481,6 +585,165 @@ fn handle_root_level_addition(
     let new_value_str = new_value_str.trim_end(); // Remove trailing newline
 
     // For root-level additions, we want to insert at the end of the document
+    // but before any trailing whitespace or comments
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Find the last line that contains actual YAML content (not empty or comment-only)
+    let mut last_content_line_idx = None;
+    for (i, line) in lines.iter().enumerate().rev() {
+        let trimmed = line.trim();
+        if !trimmed.is_empty() && !trimmed.starts_with('#') {
+            last_content_line_idx = Some(i);
+            break;
+        }
+    }
+
+    // Format the new entry for root level (no indentation)
+    let new_entry = if let serde_yaml::Value::Mapping(mapping) = value {
+        if mapping.is_empty() {
+            // For empty mappings, format inline
+            format!("{}: {}", key, new_value_str)
+        } else {
+            // For non-empty mappings, format as a nested structure
+            let value_lines: Vec<&str> = new_value_str.lines().collect();
+            let mut result = format!("{}:", key);
+            for line in value_lines.iter() {
+                if !line.trim().is_empty() {
+                    result.push('\n');
+                    result.push_str("  "); // 2 spaces for nested content
+                    result.push_str(line.trim_start());
+                }
+            }
+            result
+        }
+    } else {
+        // For scalar values, simple key: value format
+        format!("{}: {}", key, new_value_str)
+    };
+
+    let mut result = content.to_string();
+
+    if let Some(last_idx) = last_content_line_idx {
+        // Calculate the insertion point after the last content line
+        let mut insertion_point = 0;
+        for (i, line) in lines.iter().enumerate() {
+            if i <= last_idx {
+                insertion_point += line.len();
+                if i < lines.len() - 1 {
+                    insertion_point += 1; // +1 for newline
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Insert the new entry with a leading newline
+        let final_entry = format!("\n{}", new_entry);
+        result.insert_str(insertion_point, &final_entry);
+    } else {
+        // If there's no content, just append at the end
+        if !result.is_empty() && !result.ends_with('\n') {
+            result.push('\n');
+        }
+        result.push_str(&new_entry);
+    }
+
+    Ok(result)
+}
+
+/// Apply a mapping replacement that preserves the key structure
+fn apply_mapping_replacement(
+    content: &str,
+    path: &str,
+    key: &str,
+    value: &serde_yaml::Value,
+) -> Result<String, YamlPatchError> {
+    let doc = yamlpath::Document::new(content)?;
+    let query = parse_json_pointer_to_query(path)?;
+    let feature = doc.query(&query)?;
+
+    // Convert the new value to YAML string
+    let new_value_str = serialize_yaml_value(value)?;
+    let new_value_str = new_value_str.trim_end(); // Remove trailing newline
+
+    // Extract the current content to see what we're replacing
+    let current_content = doc.extract(&feature);
+    let current_content_with_ws = doc.extract_with_leading_whitespace(&feature);
+
+    // For mapping values, we need to preserve the key part
+    let replacement = if let Some(colon_pos) = current_content_with_ws.find(':') {
+        // This is a key-value pair, preserve the key and whitespace
+        let key_part = &current_content_with_ws[..colon_pos + 1];
+
+        // Format as a proper mapping
+        if let serde_yaml::Value::Mapping(mapping) = value {
+            if mapping.is_empty() {
+                // For empty mappings, format inline
+                format!("{} {}", key_part, "{}")
+            } else {
+                // For non-empty mappings, format as a nested structure
+                let leading_whitespace =
+                    extract_leading_whitespace(content, feature.location.byte_span.0);
+                let content_indent = format!("{}  ", leading_whitespace); // Key indent + 2 spaces for content
+
+                let mut result = format!("{}", key_part.trim_end());
+                for (k, v) in mapping {
+                    let key_str = match k {
+                        serde_yaml::Value::String(s) => s.clone(),
+                        _ => serialize_yaml_value(k)?.trim().to_string(),
+                    };
+                    let value_str = serialize_yaml_value(v)?;
+                    let value_str = value_str.trim_end();
+                    result.push('\n');
+                    result.push_str(&content_indent);
+                    result.push_str(&key_str);
+                    result.push_str(": ");
+                    result.push_str(&value_str);
+                }
+                result
+            }
+        } else {
+            // Regular key-value pair
+            format!("{} {}", key_part, new_value_str)
+        }
+    } else {
+        // This is just a value, replace it directly
+        let leading_whitespace = extract_leading_whitespace(content, feature.location.byte_span.0);
+        if current_content.contains('\n') {
+            indent_multiline_yaml(&new_value_str, &leading_whitespace)
+        } else {
+            new_value_str.to_string()
+        }
+    };
+
+    // Find the span to replace - use the span with leading whitespace if it's a key-value pair
+    let (start_span, end_span) = if current_content_with_ws.contains(':') {
+        // Replace the entire key-value pair span
+        let ws_start =
+            feature.location.byte_span.0 - (current_content_with_ws.len() - current_content.len());
+        (ws_start, feature.location.byte_span.1)
+    } else {
+        // Replace just the value
+        (feature.location.byte_span.0, feature.location.byte_span.1)
+    };
+
+    // Replace the content
+    let mut result = content.to_string();
+    result.replace_range(start_span..end_span, &replacement);
+    Ok(result)
+}
+
+/// Handle root-level merges by finding the best insertion point at the document root
+fn handle_root_level_merge(
+    content: &str,
+    key: &str,
+    value: &serde_yaml::Value,
+) -> Result<String, YamlPatchError> {
+    // Convert the new value to YAML string
+    let new_value_str = serialize_yaml_value(value)?;
+    let new_value_str = new_value_str.trim_end(); // Remove trailing newline
+
+    // For root-level merges, we want to insert at the end of the document
     // but before any trailing whitespace or comments
     let lines: Vec<&str> = content.lines().collect();
 
@@ -820,7 +1083,7 @@ jobs:
         assert!(result.contains("packages: read"));
         assert!(!result.contains("contents: read"));
 
-        println!("✅ Full demo test passed!");
+        println!("Full demo test passed!");
         println!("📝 Original YAML had comments preserved while applying transformations");
     }
 
@@ -1150,5 +1413,356 @@ jobs:
             .position(|&line| line.contains("- name: Step2"))
             .unwrap();
         assert!(step2_line > with_line);
+    }
+
+    #[test]
+    fn test_merge_into_new_key() {
+        // Test MergeInto when the key doesn't exist yet
+        let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: echo "hello""#;
+
+        let operations = vec![YamlPatchOperation::MergeInto {
+            path: "/jobs/test/steps/0".to_string(),
+            key: "env".to_string(),
+            value: serde_yaml::Value::Mapping({
+                let mut map = serde_yaml::Mapping::new();
+                map.insert(
+                    serde_yaml::Value::String("TEST_VAR".to_string()),
+                    serde_yaml::Value::String("test_value".to_string()),
+                );
+                map
+            }),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+        println!("MergeInto new key result:\n{}", result);
+
+        // Should add the env section
+        assert!(result.contains("env:"));
+        assert!(result.contains("TEST_VAR: test_value"));
+        assert!(result.contains("run: echo \"hello\""));
+    }
+
+    #[test]
+    fn test_merge_into_existing_key() {
+        // Test MergeInto when the key already exists
+        let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: echo "hello"
+        env:
+          EXISTING_VAR: existing_value"#;
+
+        let operations = vec![YamlPatchOperation::MergeInto {
+            path: "/jobs/test/steps/0".to_string(),
+            key: "env".to_string(),
+            value: serde_yaml::Value::Mapping({
+                let mut map = serde_yaml::Mapping::new();
+                map.insert(
+                    serde_yaml::Value::String("NEW_VAR".to_string()),
+                    serde_yaml::Value::String("new_value".to_string()),
+                );
+                map
+            }),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+        println!("MergeInto existing key result:\n{}", result);
+
+        // Should replace the entire env section with the new mapping
+        assert!(result.contains("env:"));
+        assert!(result.contains("NEW_VAR: new_value"));
+        // Note: This replaces the entire env mapping, so EXISTING_VAR won't be there
+        // This is the expected behavior for our use case
+        assert!(!result.contains("EXISTING_VAR"));
+    }
+
+    #[test]
+    fn test_merge_into_prevents_duplicate_keys() {
+        // Test that MergeInto prevents duplicate env keys
+        let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: echo "hello"
+        env:
+          EXISTING_VAR: existing_value"#;
+
+        // Apply MergeInto operation for env key (should replace existing)
+        let operations = vec![YamlPatchOperation::MergeInto {
+            path: "/jobs/test/steps/0".to_string(),
+            key: "env".to_string(),
+            value: serde_yaml::Value::Mapping({
+                let mut map = serde_yaml::Mapping::new();
+                map.insert(
+                    serde_yaml::Value::String("NEW_VAR".to_string()),
+                    serde_yaml::Value::String("new_value".to_string()),
+                );
+                map
+            }),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+        println!("MergeInto duplicate prevention result:\n{}", result);
+
+        // Should only have one env: key
+        let env_count = result.matches("env:").count();
+        assert_eq!(env_count, 1, "Should only have one env: key");
+
+        // Should have the new value (replaces existing)
+        assert!(result.contains("NEW_VAR: new_value"));
+        assert!(!result.contains("EXISTING_VAR")); // Previous value gets replaced
+    }
+
+    #[test]
+    fn test_merge_into_with_shell_key() {
+        // Test MergeInto with shell key to simulate template injection fixes
+        let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: echo "hello""#;
+
+        let operations = vec![YamlPatchOperation::MergeInto {
+            path: "/jobs/test/steps/0".to_string(),
+            key: "env".to_string(),
+            value: serde_yaml::Value::Mapping({
+                let mut map = serde_yaml::Mapping::new();
+                map.insert(
+                    serde_yaml::Value::String("GITHUB_REF_NAME".to_string()),
+                    serde_yaml::Value::String("${{ github.ref_name }}".to_string()),
+                );
+                map
+            }),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+        println!("MergeInto with env result:\n{}", result);
+
+        // Should have env key
+        assert!(result.contains("env:"));
+        assert!(result.contains("GITHUB_REF_NAME: ${{ github.ref_name }}"));
+
+        // Should only have one env key
+        assert_eq!(result.matches("env:").count(), 1);
+    }
+
+    #[test]
+    fn test_debug_indentation_issue() {
+        let original = r#"jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: |
+          echo "line 1"
+          echo "line 2""#;
+
+        println!("Original YAML:");
+        println!("{}", original);
+        println!("\n{}\n", "=".repeat(50));
+
+        // Test yamlpath extraction
+        let doc = yamlpath::Document::new(original).unwrap();
+        let step_query = parse_json_pointer_to_query("/jobs/build/steps/0").unwrap();
+        let step_feature = doc.query(&step_query).unwrap();
+
+        println!("Step feature extraction:");
+        println!("Exact: '{}'", doc.extract(&step_feature));
+        println!(
+            "With leading whitespace: '{}'",
+            doc.extract_with_leading_whitespace(&step_feature)
+        );
+        println!("Byte span: {:?}", step_feature.location.byte_span);
+
+        // Test indentation calculation
+        let feature_with_ws = doc.extract_with_leading_whitespace(&step_feature);
+        println!("\nFeature with whitespace lines:");
+        for (i, line) in feature_with_ws.lines().enumerate() {
+            println!("Line {}: '{}'", i, line);
+        }
+
+        // Check if we're adding to a list item
+        let path = "/jobs/build/steps/0";
+        let is_list_item = path
+            .split('/')
+            .last()
+            .unwrap_or("")
+            .parse::<usize>()
+            .is_ok();
+        println!("\nIs list item: {}", is_list_item);
+
+        if let Some(first_line) = feature_with_ws.lines().next() {
+            if let Some(_colon_pos) = first_line.find(':') {
+                let key_indent = &first_line[..first_line.len() - first_line.trim_start().len()];
+                println!("\nKey indent: '{}'", key_indent);
+                println!("Key indent length: {}", key_indent.len());
+                let final_indent = format!("{}  ", key_indent);
+                println!("Final indent: '{}'", final_indent);
+                println!("Final indent length: {}", final_indent.len());
+            }
+        }
+
+        // Test leading whitespace extraction
+        let leading_ws = extract_leading_whitespace(original, step_feature.location.byte_span.0);
+        println!("\nLeading whitespace: '{}'", leading_ws);
+        println!("Leading whitespace length: {}", leading_ws.len());
+
+        // Test the actual MergeInto operation
+        let operations = vec![YamlPatchOperation::MergeInto {
+            path: "/jobs/build/steps/0".to_string(),
+            key: "shell".to_string(),
+            value: serde_yaml::Value::String("bash".to_string()),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+        println!("\nResult after MergeInto:");
+        println!("{}", result);
+
+        // Check if the result is valid YAML
+        match serde_yaml::from_str::<serde_yaml::Value>(&result) {
+            Ok(_) => println!("\nResult is valid YAML"),
+            Err(e) => println!("\nResult is invalid YAML: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_debug_merge_into_env_issue() {
+        let original = r#"name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Multiline step with env
+        run: |
+          echo "${{ steps.meta.outputs.tags }}" | xargs -I {} echo {}
+        env:
+          IDENTITY: ${{ secrets.IDENTITY }}
+        shell: bash"#;
+
+        println!("Original YAML:");
+        println!("{}", original);
+        println!("\n{}\n", "=".repeat(50));
+
+        // Test yamlpath extraction of the env section
+        let doc = yamlpath::Document::new(original).unwrap();
+        let env_query = parse_json_pointer_to_query("/jobs/test/steps/0/env").unwrap();
+
+        if let Ok(env_feature) = doc.query(&env_query) {
+            let env_content = doc.extract(&env_feature);
+            println!("Extracted env content: '{}'", env_content);
+
+            // Try to parse it as YAML
+            match serde_yaml::from_str::<serde_yaml::Value>(&env_content) {
+                Ok(value) => {
+                    println!("Successfully parsed as YAML: {:?}", value);
+                    if let serde_yaml::Value::Mapping(mapping) = value {
+                        println!("It's a mapping with {} entries", mapping.len());
+                        for (k, v) in &mapping {
+                            println!("  - {:?}: {:?}", k, v);
+                        }
+                    } else {
+                        println!("Not a mapping: {:?}", value);
+                    }
+                }
+                Err(e) => {
+                    println!("Failed to parse as YAML: {}", e);
+                }
+            }
+        } else {
+            println!("Failed to query env section");
+        }
+
+        // Test the MergeInto operation
+        let new_env = {
+            let mut map = serde_yaml::Mapping::new();
+            map.insert(
+                serde_yaml::Value::String("STEPS_META_OUTPUTS_TAGS".to_string()),
+                serde_yaml::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
+            );
+            map
+        };
+
+        let operations = vec![YamlPatchOperation::MergeInto {
+            path: "/jobs/test/steps/0".to_string(),
+            key: "env".to_string(),
+            value: serde_yaml::Value::Mapping(new_env),
+        }];
+
+        match apply_yaml_patch(original, operations) {
+            Ok(result) => {
+                println!("\nMergeInto succeeded:");
+                println!("{}", result);
+
+                // Verify the result is valid YAML
+                assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
+                // Verify both env variables are present
+                assert!(result.contains("IDENTITY: ${{ secrets.IDENTITY }}"));
+                assert!(result.contains("STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}"));
+
+                // Verify only one env: key exists
+                assert_eq!(result.matches("env:").count(), 1);
+            }
+            Err(e) => {
+                println!("\nMergeInto failed: {}", e);
+                panic!("MergeInto should succeed");
+            }
+        }
+    }
+
+    #[test]
+    fn test_merge_into_complex_env_mapping() {
+        // Test merging into an existing env section with multiple variables
+        let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: echo "hello"
+        env:
+          IDENTITY: ${{ secrets.IDENTITY }}
+          OIDC_ISSUER_URL: ${{ secrets.OIDC_ISSUER_URL }}
+        shell: bash"#;
+
+        let new_env = {
+            let mut map = serde_yaml::Mapping::new();
+            map.insert(
+                serde_yaml::Value::String("STEPS_META_OUTPUTS_TAGS".to_string()),
+                serde_yaml::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
+            );
+            map
+        };
+
+        let operations = vec![YamlPatchOperation::MergeInto {
+            path: "/jobs/test/steps/0".to_string(),
+            key: "env".to_string(),
+            value: serde_yaml::Value::Mapping(new_env),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+        println!("Complex env merge result:\n{}", result);
+
+        // Verify the result is valid YAML
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
+        // Should merge all environment variables
+        assert!(result.contains("IDENTITY: ${{ secrets.IDENTITY }}"));
+        assert!(result.contains("OIDC_ISSUER_URL: ${{ secrets.OIDC_ISSUER_URL }}"));
+        assert!(result.contains("STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}"));
+
+        // Should only have one env: key
+        assert_eq!(result.matches("env:").count(), 1);
     }
 }

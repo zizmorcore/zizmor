@@ -137,21 +137,24 @@ impl TemplateInjection {
         step: &impl StepCommon<'s>,
     ) -> Vec<(String, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
+        let mut processed_expressions = std::collections::HashSet::new();
+
         for (expr, _) in extract_expressions(run) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
 
+            // Track the overall severity and confidence for this expression
+            let mut max_severity = Severity::Unknown;
+            let mut max_confidence = Confidence::Unknown;
+            let mut has_default_persona = false;
+
             // Emit a blanket pedantic finding for the extracted expression
             // since any expression in a code context is a code smell,
             // even if unexploitable.
-            bad_expressions.push((
-                expr.as_raw().into(),
-                Severity::Unknown,
-                Confidence::Unknown,
-                Persona::Pedantic,
-            ));
+            max_severity = max_severity.max(Severity::Unknown);
+            max_confidence = max_confidence.max(Confidence::Unknown);
 
             for context in parsed.dataflow_contexts() {
                 // Try and turn our context into a pattern for
@@ -165,22 +168,16 @@ impl TemplateInjection {
                             // Structured means some attacker-controllable
                             // structure, but not fully arbitrary.
                             Some(Capability::Structured) => {
-                                bad_expressions.push((
-                                    context.as_str().into(),
-                                    Severity::Medium,
-                                    Confidence::High,
-                                    Persona::default(),
-                                ));
+                                max_severity = max_severity.max(Severity::Medium);
+                                max_confidence = max_confidence.max(Confidence::High);
+                                has_default_persona = true;
                             }
                             // Arbitrary means the context's expansion is
                             // fully attacker-controllable.
                             Some(Capability::Arbitrary) => {
-                                bad_expressions.push((
-                                    context.as_str().into(),
-                                    Severity::High,
-                                    Confidence::High,
-                                    Persona::default(),
-                                ));
+                                max_severity = max_severity.max(Severity::High);
+                                max_confidence = max_confidence.max(Confidence::High);
+                                has_default_persona = true;
                             }
                             None => {
                                 // Without a FST match, we fall back on heuristics.
@@ -192,32 +189,23 @@ impl TemplateInjection {
                                     // input's type. In the future, we should index back into
                                     // the workflow's triggers and exclude input expansions
                                     // from innocuous types, e.g. booleans.
-                                    bad_expressions.push((
-                                        context.as_str().into(),
-                                        Severity::High,
-                                        Confidence::Low,
-                                        Persona::default(),
-                                    ));
+                                    max_severity = max_severity.max(Severity::High);
+                                    max_confidence = max_confidence.max(Confidence::Low);
+                                    has_default_persona = true;
                                 } else if let Some(env) = context.pop_if("env") {
                                     let env_is_static = step.env_is_static(env);
 
                                     if !env_is_static {
-                                        bad_expressions.push((
-                                            context.as_str().into(),
-                                            Severity::Low,
-                                            Confidence::High,
-                                            Persona::default(),
-                                        ));
+                                        max_severity = max_severity.max(Severity::Low);
+                                        max_confidence = max_confidence.max(Confidence::High);
+                                        has_default_persona = true;
                                     }
                                 } else if context.child_of("github") {
                                     // TODO: Filter these more finely; not everything in the event
                                     // context is actually attacker-controllable.
-                                    bad_expressions.push((
-                                        context.as_str().into(),
-                                        Severity::High,
-                                        Confidence::High,
-                                        Persona::default(),
-                                    ));
+                                    max_severity = max_severity.max(Severity::High);
+                                    max_confidence = max_confidence.max(Confidence::High);
+                                    has_default_persona = true;
                                 } else if context.child_of("matrix") {
                                     if let Some(Strategy { matrix, .. }) = step.strategy() {
                                         let matrix_is_static = match matrix {
@@ -233,24 +221,18 @@ impl TemplateInjection {
                                         };
 
                                         if !matrix_is_static {
-                                            bad_expressions.push((
-                                                context.as_str().into(),
-                                                Severity::Medium,
-                                                Confidence::Medium,
-                                                Persona::default(),
-                                            ));
+                                            max_severity = max_severity.max(Severity::Medium);
+                                            max_confidence = max_confidence.max(Confidence::Medium);
+                                            has_default_persona = true;
                                         }
                                     }
                                     continue;
                                 } else {
                                     // All other contexts are typically not attacker controllable,
                                     // but may be in obscure cases.
-                                    bad_expressions.push((
-                                        context.as_str().into(),
-                                        Severity::Informational,
-                                        Confidence::Low,
-                                        Persona::default(),
-                                    ));
+                                    max_severity = max_severity.max(Severity::Informational);
+                                    max_confidence = max_confidence.max(Confidence::Low);
+                                    has_default_persona = true;
                                 }
                             }
                         }
@@ -259,22 +241,38 @@ impl TemplateInjection {
                         // If we couldn't turn the context into a pattern,
                         // we almost certainly have something like
                         // `call(...).foo.bar`.
-                        bad_expressions.push((
-                            context.as_str().into(),
-                            Severity::Informational,
-                            Confidence::Low,
-                            Persona::default(),
-                        ));
+                        max_severity = max_severity.max(Severity::Informational);
+                        max_confidence = max_confidence.max(Confidence::Low);
+                        has_default_persona = true;
                     }
                 }
+            }
+
+            // Only add the full expression once, with the highest severity/confidence found
+            let expr_raw = expr.as_raw();
+            if !processed_expressions.contains(expr_raw) {
+                processed_expressions.insert(expr_raw.to_string());
+
+                let persona = if has_default_persona {
+                    Persona::default()
+                } else {
+                    Persona::Pedantic
+                };
+
+                bad_expressions.push((expr_raw.into(), max_severity, max_confidence, persona));
             }
         }
 
         bad_expressions
     }
 
-    /// Create a fix that provides guidance on using environment variables
-    fn create_env_var_guidance_fix(expressions: &[String]) -> Fix {
+    /// Create a fix that moves template expressions to environment variables
+    fn create_env_var_fix(
+        expressions: &[String],
+        job_id: &str,
+        step_index: usize,
+        script: &str,
+    ) -> Fix {
         let expr_list = if expressions.len() <= 3 {
             expressions.join(", ")
         } else {
@@ -296,7 +294,143 @@ impl TemplateInjection {
                 After:\n  run: echo \"${{ISSUE_TITLE}}\"\n  env:\n    ISSUE_TITLE: ${{{{ github.event.issue.title }}}}",
                 expr_list
             ),
-            apply: Box::new(|content| Ok(Some(content.to_string()))),
+            apply: Box::new({
+                let expressions = expressions.to_vec();
+                let job_id = job_id.to_string();
+                let script = script.to_string();
+                move |content: &str| -> anyhow::Result<Option<String>> {
+                    let mut operations = Vec::new();
+                    let mut new_script = script.clone();
+                    let mut env_vars = serde_yaml::Mapping::new();
+
+                    // Process each expression and create environment variables
+                    // Replace ALL occurrences of each expression in the entire script
+                    for expr in &expressions {
+                        // Extract the expression without the ${{ }} wrapper
+                        let clean_expr =
+                            expr.trim_start_matches("${{").trim_end_matches("}}").trim();
+
+                        // Generate a safe environment variable name
+                        let env_var_name = Self::generate_env_var_name(clean_expr);
+
+                        // Replace ALL occurrences of the expression in the script with the environment variable
+                        let full_expr = format!("${{{{ {} }}}}", clean_expr);
+                        new_script =
+                            new_script.replace(&full_expr, &format!("${{{}}}", env_var_name));
+
+                        // Add to environment variables
+                        env_vars.insert(
+                            serde_yaml::Value::String(env_var_name),
+                            serde_yaml::Value::String(format!("${{{{ {} }}}}", clean_expr)),
+                        );
+                    }
+
+                    // Update the run script
+                    operations.push(YamlPatchOperation::Replace {
+                        path: format!("/jobs/{}/steps/{}/run", job_id, step_index),
+                        value: serde_yaml::Value::String(new_script),
+                    });
+
+                    // Add environment variables
+                    if !env_vars.is_empty() {
+                        operations.push(YamlPatchOperation::MergeInto {
+                            path: format!("/jobs/{}/steps/{}", job_id, step_index),
+                            key: "env".to_string(),
+                            value: serde_yaml::Value::Mapping(env_vars),
+                        });
+                    }
+
+                    match crate::yaml_patch::apply_yaml_patch(content, operations) {
+                        Ok(new_content) => Ok(Some(new_content)),
+                        Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
+                    }
+                }
+            }),
+        }
+    }
+
+    /// Generate a safe environment variable name from an expression
+    fn generate_env_var_name(expr: &str) -> String {
+        // Convert expressions like "github.event.issue.title" to "GITHUB_EVENT_ISSUE_TITLE"
+        expr.replace('.', "_")
+            .replace('-', "_")
+            .replace(' ', "_")
+            .to_uppercase()
+    }
+
+    /// Create a fix that moves template expressions to environment variables for composite actions
+    fn create_composite_env_var_fix(
+        expressions: &[String],
+        step_index: usize,
+        script: &str,
+    ) -> Fix {
+        let expr_list = if expressions.len() <= 3 {
+            expressions.join(", ")
+        } else {
+            format!(
+                "{}, and {} others",
+                expressions[..3].join(", "),
+                expressions.len() - 3
+            )
+        };
+
+        Fix {
+            title: "Move template expressions to environment variables".to_string(),
+            description: format!(
+                "Move template expressions ({}) to environment variables to prevent code injection.",
+                expr_list
+            ),
+            apply: Box::new({
+                let expressions = expressions.to_vec();
+                let script = script.to_string();
+                move |content: &str| -> anyhow::Result<Option<String>> {
+                    let mut operations = Vec::new();
+                    let mut new_script = script.clone();
+                    let mut env_vars = serde_yaml::Mapping::new();
+
+                    // Process each expression and create environment variables
+                    // Replace ALL occurrences of each expression in the entire script
+                    for expr in &expressions {
+                        // Extract the expression without the ${{ }} wrapper
+                        let clean_expr =
+                            expr.trim_start_matches("${{").trim_end_matches("}}").trim();
+
+                        // Generate a safe environment variable name
+                        let env_var_name = Self::generate_env_var_name(clean_expr);
+
+                        // Replace ALL occurrences of the expression in the script with the environment variable
+                        let full_expr = format!("${{{{ {} }}}}", clean_expr);
+                        new_script =
+                            new_script.replace(&full_expr, &format!("${{{}}}", env_var_name));
+
+                        // Add to environment variables
+                        env_vars.insert(
+                            serde_yaml::Value::String(env_var_name),
+                            serde_yaml::Value::String(format!("${{{{ {} }}}}", clean_expr)),
+                        );
+                    }
+
+                    // Update the run script
+                    operations.push(YamlPatchOperation::Replace {
+                        path: format!("/runs/steps/{}/run", step_index),
+                        value: serde_yaml::Value::String(new_script),
+                    });
+
+                    // Add environment variables
+                    if !env_vars.is_empty() {
+                        operations.push(YamlPatchOperation::MergeInto {
+                            path: format!("/runs/steps/{}", step_index),
+                            key: "env".to_string(),
+                            value: serde_yaml::Value::Mapping(env_vars),
+                        });
+                    }
+
+                    match crate::yaml_patch::apply_yaml_patch(content, operations) {
+                        Ok(new_content) => Ok(Some(new_content)),
+                        Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
+                    }
+                }
+            }),
         }
     }
 
@@ -306,7 +440,7 @@ impl TemplateInjection {
             title: "Add explicit shell specification".to_string(),
             description: "Add 'shell: bash' to ensure consistent variable expansion syntax across different runners. \
                 This prevents issues with PowerShell's different variable syntax ('${env:VARNAME}') on Windows runners.".to_string(),
-            apply: apply_yaml_patch!(vec![YamlPatchOperation::Add {
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::MergeInto {
                 path: format!("/jobs/{}/steps/{}", job_id, step_index),
                 key: "shell".to_string(),
                 value: serde_yaml::Value::String("bash".to_string()),
@@ -319,7 +453,7 @@ impl TemplateInjection {
         Fix {
             title: "Add explicit shell specification".to_string(),
             description: "Add 'shell: bash' to ensure consistent variable expansion syntax across different runners.".to_string(),
-            apply: apply_yaml_patch!(vec![YamlPatchOperation::Add {
+            apply: apply_yaml_patch!(vec![YamlPatchOperation::MergeInto {
                 path: format!("/runs/steps/{}", step_index),
                 key: "shell".to_string(),
                 value: serde_yaml::Value::String("bash".to_string()),
@@ -373,40 +507,67 @@ impl Audit for TemplateInjection {
             .map(|(expr, _, _, _)| expr.clone())
             .collect();
 
-        let mut findings = vec![];
+        // Find the highest severity and confidence from all expressions
+        let max_severity = expressions_info
+            .iter()
+            .map(|(_, severity, _, _)| *severity)
+            .max()
+            .unwrap_or(Severity::Unknown);
 
-        for (i, (expr, severity, confidence, persona)) in expressions_info.into_iter().enumerate() {
-            let mut finding_builder = Self::finding()
-                .severity(severity)
-                .confidence(confidence)
-                .persona(persona)
-                .add_location(step.location().hidden())
-                .add_location(step.location_with_name())
-                .add_location(
-                    script_location
-                        .clone()
-                        .primary()
-                        .annotated(format!("{expr} may expand into attacker-controllable code")),
-                );
+        let max_confidence = expressions_info
+            .iter()
+            .map(|(_, _, confidence, _)| *confidence)
+            .max()
+            .unwrap_or(Confidence::Unknown);
 
-            // Add fixes (shell fix only for the first finding to avoid duplicates)
-            finding_builder = finding_builder
-                .fix(Self::create_env_var_guidance_fix(&expressions))
-                .fix(Self::create_validation_guidance_fix())
-                .fix(Self::create_output_alternative_fix());
+        // Use the most restrictive persona (default over pedantic)
+        let persona = if expressions_info
+            .iter()
+            .any(|(_, _, _, persona)| *persona == Persona::default())
+        {
+            Persona::default()
+        } else {
+            Persona::Pedantic
+        };
 
-            if i == 0 {
-                // Only add shell fix to the first finding
-                finding_builder = finding_builder.fix(Self::create_shell_specification_fix(
-                    step.job().id(),
-                    step.index,
-                ));
-            }
+        // Create annotation listing all problematic expressions
+        let annotation = if expressions.len() == 1 {
+            format!(
+                "{} may expand into attacker-controllable code",
+                expressions[0]
+            )
+        } else {
+            format!(
+                "{} expressions may expand into attacker-controllable code: {}",
+                expressions.len(),
+                expressions.join(", ")
+            )
+        };
 
-            findings.push(finding_builder.build(step)?);
-        }
+        let mut finding_builder = Self::finding()
+            .severity(max_severity)
+            .confidence(max_confidence)
+            .persona(persona)
+            .add_location(step.location().hidden())
+            .add_location(step.location_with_name())
+            .add_location(script_location.primary().annotated(annotation));
 
-        Ok(findings)
+        // Add fixes - only one set of fixes per step
+        finding_builder = finding_builder
+            .fix(Self::create_env_var_fix(
+                &expressions,
+                step.job().id(),
+                step.index,
+                &script,
+            ))
+            .fix(Self::create_shell_specification_fix(
+                step.job().id(),
+                step.index,
+            ))
+            .fix(Self::create_validation_guidance_fix())
+            .fix(Self::create_output_alternative_fix());
+
+        Ok(vec![finding_builder.build(step)?])
     }
 
     fn audit_composite_step<'a>(
@@ -428,38 +589,63 @@ impl Audit for TemplateInjection {
             .map(|(expr, _, _, _)| expr.clone())
             .collect();
 
-        let mut findings = vec![];
+        // Find the highest severity and confidence from all expressions
+        let max_severity = expressions_info
+            .iter()
+            .map(|(_, severity, _, _)| *severity)
+            .max()
+            .unwrap_or(Severity::Unknown);
 
-        for (i, (expr, severity, confidence, persona)) in expressions_info.into_iter().enumerate() {
-            let mut finding_builder = Self::finding()
-                .severity(severity)
-                .confidence(confidence)
-                .persona(persona)
-                .add_location(step.location().hidden())
-                .add_location(step.location_with_name())
-                .add_location(
-                    script_location
-                        .clone()
-                        .primary()
-                        .annotated(format!("{expr} may expand into attacker-controllable code")),
-                );
+        let max_confidence = expressions_info
+            .iter()
+            .map(|(_, _, confidence, _)| *confidence)
+            .max()
+            .unwrap_or(Confidence::Unknown);
 
-            // Add fixes (shell fix only for the first finding to avoid duplicates)
-            finding_builder = finding_builder
-                .fix(Self::create_env_var_guidance_fix(&expressions))
-                .fix(Self::create_validation_guidance_fix())
-                .fix(Self::create_output_alternative_fix());
+        // Use the most restrictive persona (default over pedantic)
+        let persona = if expressions_info
+            .iter()
+            .any(|(_, _, _, persona)| *persona == Persona::default())
+        {
+            Persona::default()
+        } else {
+            Persona::Pedantic
+        };
 
-            if i == 0 {
-                // Only add shell fix to the first finding
-                finding_builder =
-                    finding_builder.fix(Self::create_composite_shell_specification_fix(step.index));
-            }
+        // Create annotation listing all problematic expressions
+        let annotation = if expressions.len() == 1 {
+            format!(
+                "{} may expand into attacker-controllable code",
+                expressions[0]
+            )
+        } else {
+            format!(
+                "{} expressions may expand into attacker-controllable code: {}",
+                expressions.len(),
+                expressions.join(", ")
+            )
+        };
 
-            findings.push(finding_builder.build(step)?);
-        }
+        let mut finding_builder = Self::finding()
+            .severity(max_severity)
+            .confidence(max_confidence)
+            .persona(persona)
+            .add_location(step.location().hidden())
+            .add_location(step.location_with_name())
+            .add_location(script_location.primary().annotated(annotation));
 
-        Ok(findings)
+        // Add fixes - only one set of fixes per step
+        finding_builder = finding_builder
+            .fix(Self::create_composite_env_var_fix(
+                &expressions,
+                step.index,
+                &script,
+            ))
+            .fix(Self::create_composite_shell_specification_fix(step.index))
+            .fix(Self::create_validation_guidance_fix())
+            .fix(Self::create_output_alternative_fix());
+
+        Ok(vec![finding_builder.build(step)?])
     }
 }
 
@@ -490,11 +676,16 @@ mod tests {
     }
 
     #[test]
-    fn test_env_var_guidance_fix() {
+    fn test_env_var_fix() {
         use super::TemplateInjection;
 
         let expressions = vec!["github.event.issue.title".to_string()];
-        let fix = TemplateInjection::create_env_var_guidance_fix(&expressions);
+        let fix = TemplateInjection::create_env_var_fix(
+            &expressions,
+            "build",
+            0,
+            "echo \"${{ github.event.issue.title }}\"",
+        );
 
         assert_eq!(
             fix.title,
@@ -504,14 +695,21 @@ mod tests {
         assert!(fix.description.contains("env:"));
         assert!(fix.description.contains("Example:"));
 
-        // Test that applying the fix returns the content unchanged (guidance only)
-        let content = "test content";
+        // Test that applying the fix actually modifies the content
+        let content = r#"jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ github.event.issue.title }}"
+"#;
         let result = fix.apply_to_content(content).unwrap().unwrap();
-        assert_eq!(result, content);
+        assert!(result.contains("env:"));
+        assert!(result.contains("GITHUB_EVENT_ISSUE_TITLE"));
+        assert!(result.contains("${GITHUB_EVENT_ISSUE_TITLE}"));
     }
 
     #[test]
-    fn test_env_var_guidance_fix_multiple_expressions() {
+    fn test_env_var_fix_multiple_expressions() {
         use super::TemplateInjection;
 
         let expressions = vec![
@@ -521,7 +719,12 @@ mod tests {
             "github.event.issue.body".to_string(),
             "github.event.workflow_run.head_commit.message".to_string(),
         ];
-        let fix = TemplateInjection::create_env_var_guidance_fix(&expressions);
+        let fix = TemplateInjection::create_env_var_fix(
+            &expressions,
+            "build",
+            0,
+            "echo \"${{ github.event.issue.title }}\"",
+        );
 
         assert!(fix.description.contains("and 2 others"));
         assert!(fix.description.contains("github.event.issue.title"));
@@ -611,7 +814,12 @@ mod tests {
         let expressions = vec!["github.event.issue.title".to_string()];
 
         // Test that all fix descriptions are comprehensive
-        let env_var_fix = TemplateInjection::create_env_var_guidance_fix(&expressions);
+        let env_var_fix = TemplateInjection::create_env_var_fix(
+            &expressions,
+            "job",
+            0,
+            "echo \"${{ github.event.issue.title }}\"",
+        );
         let shell_fix = TemplateInjection::create_shell_specification_fix("job", 0);
         let validation_fix = TemplateInjection::create_validation_guidance_fix();
         let output_fix = TemplateInjection::create_output_alternative_fix();
