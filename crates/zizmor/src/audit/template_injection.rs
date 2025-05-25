@@ -352,10 +352,63 @@ impl TemplateInjection {
     /// Generate a safe environment variable name from an expression
     fn generate_env_var_name(expr: &str) -> String {
         // Convert expressions like "github.event.issue.title" to "GITHUB_EVENT_ISSUE_TITLE"
-        expr.replace('.', "_")
-            .replace('-', "_")
-            .replace(' ', "_")
-            .to_uppercase()
+        // For fromJSON(secrets.foo).bar patterns, extract meaningful parts
+
+        let cleaned_expr = if expr.trim().starts_with("fromJSON(secrets.") {
+            // Handle patterns like "fromJSON(secrets.config).username"
+            // Extract the secret name and any property access
+            if let Some(closing_paren) = expr.find(')') {
+                let secrets_part = &expr[17..closing_paren]; // Skip "fromJSON(secrets."
+                let property_part = &expr[closing_paren + 1..]; // Everything after ")"
+
+                // Combine secret name with property access
+                if property_part.starts_with('.') {
+                    format!("{}_{}", secrets_part, &property_part[1..]) // Remove the leading dot
+                } else if property_part.is_empty() {
+                    secrets_part.to_string()
+                } else {
+                    format!("{}_{}", secrets_part, property_part)
+                }
+            } else {
+                // Malformed expression, fall back to original
+                expr.to_string()
+            }
+        } else if expr.trim().starts_with("fromJSON(") && expr.trim().contains(')') {
+            // Handle other fromJSON patterns like "fromJSON(github.event.config).field"
+            if let Some(closing_paren) = expr.find(')') {
+                let inner_part = &expr[9..closing_paren]; // Skip "fromJSON("
+                let property_part = &expr[closing_paren + 1..]; // Everything after ")"
+
+                if property_part.starts_with('.') {
+                    format!("{}_{}", inner_part, &property_part[1..]) // Remove the leading dot
+                } else if property_part.is_empty() {
+                    inner_part.to_string()
+                } else {
+                    format!("{}_{}", inner_part, property_part)
+                }
+            } else {
+                // Malformed expression, fall back to original
+                expr.to_string()
+            }
+        } else if expr.starts_with("secrets.") {
+            // For direct secrets references, extract just the secret name
+            expr.strip_prefix("secrets.").unwrap_or(expr).to_string()
+        } else {
+            // For other expressions, use as-is
+            expr.to_string()
+        };
+
+        // Replace all special characters with underscores to ensure valid environment variable names
+        cleaned_expr
+            .chars()
+            .map(|c| {
+                if c.is_alphanumeric() {
+                    c.to_ascii_uppercase()
+                } else {
+                    '_'
+                }
+            })
+            .collect()
     }
 
     /// Create a fix that moves template expressions to environment variables for composite actions
@@ -673,6 +726,71 @@ mod tests {
             Capability::from_context("runner.arch"),
             Some(Capability::Fixed)
         ));
+    }
+
+    #[test]
+    fn test_generate_env_var_name() {
+        use super::TemplateInjection;
+
+        // Test basic cases
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("github.event.issue.title"),
+            "GITHUB_EVENT_ISSUE_TITLE"
+        );
+
+        // Test direct secrets references (should strip secrets. prefix)
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("secrets.api-config"),
+            "API_CONFIG"
+        );
+
+        // Test fromJSON(secrets.*) patterns (should extract just the secret name)
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("fromJSON(secrets.config)"),
+            "CONFIG"
+        );
+
+        // Test fromJSON(secrets.*) with property access
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("fromJSON(secrets.database-config).username"),
+            "DATABASE_CONFIG_USERNAME"
+        );
+
+        // Test fromJSON(secrets.*) with special characters
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("fromJSON(secrets.api-config)"),
+            "API_CONFIG"
+        );
+
+        // Test fromJSON(secrets.*) with complex names and property access
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("fromJSON(secrets.database_config).password"),
+            "DATABASE_CONFIG_PASSWORD"
+        );
+
+        // Test fromJSON with non-secrets content
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("fromJSON(github.event.config)"),
+            "GITHUB_EVENT_CONFIG"
+        );
+
+        // Test with mixed special characters
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("github.event@issue.title"),
+            "GITHUB_EVENT_ISSUE_TITLE"
+        );
+
+        // Test with spaces and other special characters
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("my var.name-test@prod"),
+            "MY_VAR_NAME_TEST_PROD"
+        );
+
+        // Test with numbers (should be preserved)
+        assert_eq!(
+            TemplateInjection::generate_env_var_name("config.v2.test"),
+            "CONFIG_V2_TEST"
+        );
     }
 
     #[test]
