@@ -15,6 +15,8 @@ from typing import Dict, List, Set
 
 import yaml
 
+_MODELS_SUBDIR = "actions/ql/lib/ext/"
+
 
 def _debug(msg: str) -> None:
     print(f"[+] {msg}", file=sys.stderr)
@@ -50,7 +52,7 @@ def _clone_actions_codeql(temp_dir: Path) -> Path:
         [
             "sparse-checkout",
             "add",
-            "actions/ql/lib/ext/",
+            _MODELS_SUBDIR,
         ],
         cwd=repo_path,
     )
@@ -140,7 +142,7 @@ def _process_models(codeql_dir: Path) -> None:
     """Process all CodeQL model files and generate the output."""
     code_injection_sinks: Dict[str, List[str]] = defaultdict(list)
 
-    models_dir = codeql_dir / "actions/ql/lib/ext"
+    models_dir = codeql_dir / _MODELS_SUBDIR
 
     relevant_kinds = {"code-injection"}
     # For now only include models manually curated by the CodeQL developers
