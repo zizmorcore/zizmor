@@ -6,7 +6,6 @@ and extracts the information needed by zizmor
 """
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -22,7 +21,6 @@ def _debug(msg: str) -> None:
 
 
 def _git(args: List[str], cwd: Path = None) -> subprocess.CompletedProcess:
-    """Run a git command and return the result."""
     result = subprocess.run(
         ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
     )
@@ -30,12 +28,10 @@ def _git(args: List[str], cwd: Path = None) -> subprocess.CompletedProcess:
 
 
 def _clone_actions_codeql(temp_dir: Path) -> Path:
-    """Clone the CodeQL repository with sparse checkout for only the needed directory."""
-    repo_path = os.path.join(temp_dir, "codeql")
-
     _debug("Cloning CodeQL repository with sparse checkout...")
 
     repo_path = temp_dir / "codeql"
+    repo_path.mkdir()
 
     _git(
         [
@@ -76,7 +72,6 @@ def _process_yaml_file(
     only_manual_models: bool,
     code_injection_sinks: Dict[str, List[str]],
 ) -> None:
-    """Process a single YAML file and extract sink information."""
     with file_path.open() as f:
         content = yaml.safe_load(f)
 
