@@ -109,6 +109,9 @@ zizmor --offline workflow.yml
 # passing a token explicitly will enable online mode
 zizmor --gh-token ghp-... workflow.yml
 
+# use the [GitHub CLI](https://cli.github.com/) token instead of a long-lived PAT
+zizmor --gh-token $(gh auth token) workflow.yml
+
 # online for the purpose of fetching the input (example/example),
 # but all audits themselves are offline
 zizmor --no-online-audits --gh-token ghp-... example/example
