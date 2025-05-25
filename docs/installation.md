@@ -129,7 +129,7 @@ description: Installation instructions for zizmor.
     apk add zizmor
     ```
 
-=== "Alpine Linux"
+=== ":simple-alpinelinux: Alpine Linux"
 
     [![Alpine Linux package](https://repology.org/badge/version-for-repo/alpine_edge/zizmor.svg)](https://repology.org/project/zizmor/versions)
 
