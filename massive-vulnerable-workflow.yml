@@ -1,0 +1,513 @@
+name: "Massive Vulnerable Workflow - All Zizmor Issues"
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+  push:
+    branches:
+      - main
+      - develop
+  release:
+    types:
+      - published
+  issues:
+    types:
+      - opened
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  packages: write
+  actions: write
+  checks: write
+  deployments: write
+  id-token: write
+  pages: write
+  repository-projects: write
+  security-events: write
+  statuses: write
+
+env:
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+  GLOBAL_SECRET: ${{ secrets.SUPER_SECRET }}
+  ALL_SECRETS: ${{ toJSON(secrets) }}
+  ISSUE_TITLE: ${{ github.event.issue.title }}
+  PR_BODY: ${{ github.event.pull_request.body }}
+
+jobs:
+  artipacked-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout without persist-credentials config
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Upload artifact with git config
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-with-git
+          path: .
+
+  bot-conditions-vulnerable:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: Auto-merge PR
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cache-poisoning-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node with cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: npm
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      - name: Build and publish
+        run: npm ci && npm run build && npm publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  excessive-permissions-vulnerable:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+      actions: write
+      checks: write
+      deployments: write
+      id-token: write
+    steps:
+      - name: Simple echo
+        run: echo 'Hello World'
+
+  forbidden-uses-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use potentially forbidden action
+        uses: some-untrusted-org/dangerous-action@v1
+      - name: Use another forbidden action
+        uses: malicious-user/backdoor-action@main
+
+  github-env-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dangerous GITHUB_ENV usage
+        run: echo "DANGEROUS_VAR=${{ github.event.issue.title }}" >> $GITHUB_ENV
+      - name: Dangerous GITHUB_PATH usage
+        run: echo "${{ github.event.pull_request.head.ref }}" >> $GITHUB_PATH
+      - name: Use environment variable
+        run: echo $DANGEROUS_VAR
+
+  hardcoded-container-credentials-vulnerable:
+    runs-on: ubuntu-latest
+    container:
+      image: private.registry.com/myapp:latest
+      credentials:
+        username: hardcoded-user
+        password: hardcoded-password-123
+    services:
+      database:
+        image: private.registry.com/postgres:13
+        credentials:
+          username: db-user
+          password: super-secret-password
+    steps:
+      - name: Run tests
+        run: echo 'Running tests with hardcoded credentials'
+
+  impostor-commit-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use impostor commit
+        uses: actions/checkout@565ece486c7c1652754d7b6d2b5ed9cb4097f9d5
+      - name: Another impostor commit
+        uses: github/super-linter@fakehash123456789abcdef
+
+  insecure-commands-vulnerable:
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+    steps:
+      - name: Use deprecated set-env
+        run: echo "::set-env name=MY_VAR::dangerous-value"
+      - name: Use deprecated add-path
+        run: echo "::add-path::/dangerous/path"
+
+  known-vulnerable-actions-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use known vulnerable action
+        uses: actions/checkout@v1
+      - name: Another vulnerable action
+        uses: actions/upload-artifact@v1
+
+  obfuscation-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obfuscated uses path
+        uses: actions/../actions/checkout@v4
+      - name: Obfuscated expression
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ format('{0}/{1}', 'octocat', 'hello-world') }}
+      - name: No-op JSON transformation
+        run: echo '${{ fromJSON(toJSON(github.repository)) }}'
+
+  overprovisioned-secrets-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Expose all secrets
+        run: ./deploy.sh
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+      - name: Another secrets exposure
+        run: echo '${{ toJSON(secrets) }}' | base64
+
+  ref-confusion-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use confusable ref
+        uses: actions/checkout@v4
+      - name: Another confusable ref
+        uses: actions/setup-node@main
+      - name: Tag that could be branch
+        uses: some-org/some-action@release
+
+  secrets-inherit-vulnerable:
+    uses: ./.github/workflows/reusable.yml
+    secrets: inherit
+
+  self-hosted-runner-vulnerable:
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+    steps:
+      - name: Run on self-hosted
+        run: echo 'Running on potentially insecure self-hosted runner'
+
+  stale-action-refs-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use stale SHA reference
+        uses: actions/checkout@abcdef1234567890abcdef1234567890abcdef12
+
+  template-injection-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable template injection in run
+        run: |
+          echo "Issue title: ${{ github.event.issue.title }}"
+      - name: Vulnerable template injection in shell command
+        run: title="${{ github.event.issue.title }}"; echo $title
+      - name: Vulnerable in script
+        run: python -c "print('${{ github.event.pull_request.body }}')"
+      - name: Vulnerable in environment
+        run: echo $USER_INPUT
+        env:
+          USER_INPUT: ${{ github.event.issue.body }}
+
+  unpinned-images-vulnerable:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu
+    services:
+      redis:
+        image: redis:latest
+      postgres:
+        image: postgres
+    steps:
+      - name: Use unpinned Docker action
+        uses: docker://ubuntu
+      - name: Another unpinned Docker action
+        uses: docker://node:latest
+
+  unpinned-uses-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Completely unpinned action
+        uses: actions/checkout
+      - name: Tag-pinned action (should be hash-pinned)
+        uses: actions/setup-node@v4
+      - name: Branch-pinned action
+        uses: some-org/some-action@main
+      - name: Unpinned Docker action
+        uses: docker://ubuntu
+
+  unredacted-secrets-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unredacted JSON secret
+        run: ./deploy.sh
+        env:
+          USERNAME: ${{ fromJSON(secrets.MY_SECRET).username }}
+          PASSWORD: ${{ fromJSON(secrets.MY_SECRET).password }}
+          API_KEY: ${{ fromJSON(secrets.CONFIG).api_key }}
+
+  unsound-contains-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to production
+        run: terraform apply -auto-approve
+        if: contains('refs/heads/main refs/heads/develop', github.ref)
+      - name: Another unsound contains
+        run: echo 'Deploying'
+        if: contains('production staging', github.event.deployment.environment)
+
+  use-trusted-publishing-vulnerable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build package
+        run: python -m build
+      - name: Publish to PyPI with manual token
+        uses: pypa/gh-action-pypi-publish@v1.8.10
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+  multiple-vulnerabilities-combined:
+    runs-on:
+      - self-hosted
+    if: ${{ github.actor == 'dependabot[bot]' && contains('main develop', github.ref) }}
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    container:
+      image: ubuntu:latest
+      credentials:
+        username: hardcoded
+        password: password123
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+      ALL_SECRETS: ${{ toJSON(secrets) }}
+    steps:
+      - name: Unpinned checkout
+        uses: actions/checkout
+      - name: Template injection vulnerability
+        run: |
+          echo "User input: ${{ github.event.issue.title }}"
+      - name: GITHUB_ENV manipulation
+        run: echo "MALICIOUS_VAR=${{ github.event.pull_request.body }}" >> $GITHUB_ENV
+      - name: Insecure command
+        run: echo "::set-env name=DANGEROUS::${{ github.event.issue.body }}"
+      - name: Unredacted secrets
+        run: ./script.sh
+        env:
+          SECRET_VALUE: ${{ fromJSON(secrets.CONFIG).secret }}
+      - name: Cache for release
+        uses: actions/cache@v4
+        with:
+          path: dist/
+          key: build-${{ github.sha }}
+      - name: Upload with git credentials
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: .
+
+  reusable-workflow-secrets-inherit:
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+    with:
+      environment: production
+
+  dangerous-expressions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obfuscated format expression
+        run: echo 'Processing'
+        env:
+          REPO: ${{ format('{0}', github.repository) }}
+      - name: Redundant JSON operations
+        run: echo '${{ fromJSON(toJSON(github.event)) }}'
+
+  # Additional edge cases and variations
+  more-template-injection-variants:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Template injection in if condition
+        run: echo "Conditional execution"
+        if: ${{ github.event.issue.title == 'deploy' }}
+      - name: Template injection in with parameters
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Template injection in working directory
+        run: ls -la
+        working-directory: ${{ github.event.issue.title }}
+
+  more-github-env-variants:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Multiple GITHUB_ENV writes
+        run: |
+          echo "VAR1=${{ github.event.issue.title }}" >> $GITHUB_ENV
+          echo "VAR2=${{ github.event.pull_request.body }}" >> $GITHUB_ENV
+          echo "VAR3=${{ github.event.comment.body }}" >> $GITHUB_ENV
+      - name: GITHUB_PATH with user input
+        run: echo "/tmp/${{ github.event.issue.title }}" >> $GITHUB_PATH
+      - name: GITHUB_OUTPUT with potential issues
+        run: echo "result=${{ github.event.issue.body }}" >> $GITHUB_OUTPUT
+
+  more-unpinned-variations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Local action without version
+        uses: ./local-action
+      - name: Marketplace action without pin
+        uses: crazy-max/ghaction-docker-buildx
+      - name: Third party action with latest
+        uses: some-org/some-action@latest
+      - name: Action with floating tag
+        uses: docker/build-push-action@master
+
+  more-obfuscation-patterns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Complex path obfuscation
+        uses: actions/./checkout/../checkout@v4
+      - name: Nested format expressions
+        run: echo "Processing"
+        env:
+          COMPLEX: ${{ format('{0}', format('{0}', github.repository)) }}
+      - name: Multiple JSON transformations
+        run: echo '${{ toJSON(fromJSON(toJSON(secrets))) }}'
+
+  more-secrets-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Secrets in run command
+        run: echo "Secret is ${{ secrets.MY_SECRET }}"
+      - name: Multiple fromJSON secrets
+        run: ./script.sh
+        env:
+          USER: ${{ fromJSON(secrets.CREDENTIALS).user }}
+          PASS: ${{ fromJSON(secrets.CREDENTIALS).pass }}
+          TOKEN: ${{ fromJSON(secrets.CREDENTIALS).token }}
+          API_KEY: ${{ fromJSON(secrets.API_CONFIG).key }}
+
+  more-dangerous-conditions:
+    runs-on: ubuntu-latest
+    if: |
+      github.actor == 'dependabot[bot]' ||
+      github.actor == 'renovate[bot]' ||
+      contains('refs/heads/main refs/heads/master', github.ref)
+    steps:
+      - name: Dangerous auto-action
+        run: |
+          gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
+          gh release create "v1.0.0" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  container-variations:
+    runs-on: ubuntu-latest
+    container:
+      image: node:18
+      credentials:
+        username: ${{ secrets.REGISTRY_USER }}
+        password: plaintext-password
+    services:
+      mysql:
+        image: mysql
+        credentials:
+          username: root
+          password: root123
+      redis:
+        image: redis:6
+        credentials:
+          username: admin
+          password: ${{ secrets.REDIS_PASS }}
+    steps:
+      - name: Use services
+        run: echo "Using services with mixed credential types"
+
+  workflow-command-variations:
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    steps:
+      - name: Various deprecated commands
+        run: |
+          echo "::set-env name=VAR1::value1"
+          echo "::add-path::/usr/local/bin"
+          echo "::set-output name=result::success"
+          echo "::save-state name=state::saved"
+      - name: Commands with user input
+        run: |
+          echo "::set-env name=USER_VAR::${{ github.event.issue.title }}"
+          echo "::add-path::${{ github.event.pull_request.head.ref }}"
+
+  permission-escalation-patterns:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      repository-projects: write
+      packages: write
+      pages: write
+      actions: write
+      checks: write
+      deployments: write
+      statuses: write
+      security-events: write
+      id-token: write
+    steps:
+      - name: Minimal task with excessive permissions
+        run: echo "Hello World"
+      - name: Another simple task
+        run: date
+
+  cache-poisoning-variations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python with cache
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Setup Ruby with cache
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.1"
+          bundler-cache: true
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+      - name: Build and release
+        run: |
+          pip install build
+          python -m build
+          twine upload dist/*
+        env:
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+  expression-injection-variants:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Processing ${{ github.event.issue.title }}"
+        run: echo "Step with dynamic name"
+      - name: Injection in timeout
+        run: sleep 10
+        timeout-minutes: ${{ github.event.issue.number }}
+      - name: Injection in continue-on-error
+        run: echo "Might fail"
+        continue-on-error: ${{ github.event.issue.title == 'ignore-errors' }}
