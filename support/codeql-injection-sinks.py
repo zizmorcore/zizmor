@@ -45,8 +45,9 @@ def _clone_actions_codeql(temp_dir: Path) -> Path:
             "--depth=1",
             "--sparse",
             "https://github.com/github/codeql.git",
+            ".",
         ],
-        cwd=temp_dir,
+        cwd=repo_path,
     )
 
     _git(
