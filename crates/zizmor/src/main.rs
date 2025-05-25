@@ -13,6 +13,7 @@ use clap::{CommandFactory, Parser, ValueEnum};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
+use diff;
 use finding::{Confidence, Persona, Severity};
 use github_actions_models::common::Uses;
 use github_api::GitHubHost;
@@ -34,6 +35,7 @@ mod output;
 mod registry;
 mod state;
 mod utils;
+pub mod yaml_patch;
 
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
@@ -141,6 +143,22 @@ struct App {
     /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
+
+    /// Apply fixes automatically if available.
+    #[arg(long)]
+    fix: bool,
+
+    /// Skip confirmation prompt when applying fixes.
+    #[arg(long, requires = "fix")]
+    yes: bool,
+
+    /// Show what fixes would be applied without actually writing them.
+    #[arg(long, requires = "fix")]
+    dry_run: bool,
+
+    /// Show a diff of the changes before applying them.
+    #[arg(long, requires = "fix")]
+    diff: bool,
 }
 
 /// Shell with auto-generated completion script available.
@@ -472,6 +490,53 @@ fn completions<G: clap_complete::Generator>(generator: G, cmd: &mut clap::Comman
     );
 }
 
+/// Format severity and rule name with appropriate color based on the same scheme used in plain output
+fn format_severity_and_rule(severity: &finding::Severity, rule_name: &str) -> String {
+    use owo_colors::OwoColorize;
+    let severity_name = match severity {
+        finding::Severity::Unknown => "note",
+        finding::Severity::Informational => "info",
+        finding::Severity::Low => "help",
+        finding::Severity::Medium => "warning",
+        finding::Severity::High => "error",
+    };
+
+    let formatted = format!("{}[{}]", severity_name, rule_name);
+
+    match severity {
+        finding::Severity::Unknown => formatted,
+        finding::Severity::Informational => formatted.purple().to_string(),
+        finding::Severity::Low => formatted.cyan().to_string(),
+        finding::Severity::Medium => formatted.yellow().to_string(),
+        finding::Severity::High => formatted.red().to_string(),
+    }
+}
+
+/// Get the primary line number for a finding, if available
+fn get_primary_line_number(finding: &finding::Finding) -> Option<usize> {
+    finding
+        .locations
+        .iter()
+        .find(|loc| loc.symbolic.is_primary())
+        .or_else(|| finding.locations.first())
+        .map(|loc| loc.concrete.location.start_point.row + 1) // Convert to 1-based line number
+}
+
+#[macro_export]
+macro_rules! colorize_diff {
+    ($diff:expr) => {
+        $diff
+            .iter()
+            .map(|line| match line {
+                diff::Result::Left(l) => format!("{}{}", "-".red(), l.red()),
+                diff::Result::Right(r) => format!("{}{}", "+".green(), r.green()),
+                diff::Result::Both(l, _) => format!(" {}", l),
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+}
+
 fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
@@ -652,6 +717,241 @@ fn run() -> Result<ExitCode> {
         }
         OutputFormat::Github => output::github::output(stdout(), results.findings())?,
     };
+
+    if app.fix {
+        use std::collections::HashMap;
+
+        // Collect all applicable fixes grouped by file
+        let mut file_fixes: HashMap<String, Vec<(&'static str, &finding::Finding, &finding::Fix)>> =
+            HashMap::new();
+
+        for finding in results.findings() {
+            if let Some(location) = finding.locations.first() {
+                let file_path = location.symbolic.key.presentation_path().to_string();
+                if !finding.fixes.is_empty() {
+                    for fix in &finding.fixes {
+                        file_fixes.entry(file_path.clone()).or_default().push((
+                            finding.ident,
+                            finding,
+                            fix,
+                        ));
+                    }
+                }
+            }
+        }
+
+        if file_fixes.is_empty() {
+            println!("No fixes available to apply.");
+        } else {
+            // Process each file
+            let mut applied_fixes = Vec::new();
+            let mut failed_fixes = Vec::new();
+
+            for (file_path, fixes) in &file_fixes {
+                let original_content = match std::fs::read_to_string(&file_path) {
+                    Ok(content) => content,
+                    Err(e) => {
+                        eprintln!("Failed to read {}: {}", file_path, e);
+                        continue;
+                    }
+                };
+
+                let mut current_content = original_content.clone();
+                let mut file_applied_fixes = Vec::new();
+                let mut successful_fixes = Vec::new();
+
+                // First, try to apply each fix independently to the original content
+                // to collect which fixes can be applied successfully
+                for (ident, finding, fix) in fixes {
+                    match fix.apply_to_content(&original_content) {
+                        Ok(Some(_)) => {
+                            successful_fixes.push((ident, fix, finding));
+                        }
+                        Ok(None) => {
+                            // Fix didn't apply (no changes needed)
+                        }
+                        Err(e) => {
+                            failed_fixes.push((*ident, file_path.clone(), format!("{}", e)));
+                        }
+                    }
+                }
+
+                // Then apply successful fixes sequentially, handling conflicts gracefully
+                for (ident, fix, finding) in successful_fixes {
+                    match fix.apply_to_content(&current_content) {
+                        Ok(Some(new_content)) => {
+                            current_content = new_content;
+                            file_applied_fixes.push((ident, fix, finding));
+                        }
+                        Ok(None) => {
+                            // Fix didn't apply to modified content (possibly due to conflicts)
+                        }
+                        Err(e) => {
+                            // If the fix fails on modified content, it might be due to conflicts
+                            // with previously applied fixes. Record this as a failed fix.
+                            failed_fixes.push((
+                                ident,
+                                file_path.clone(),
+                                format!("conflict after applying previous fixes: {}", e),
+                            ));
+                        }
+                    }
+                }
+
+                // Only proceed if there are changes to apply
+                if current_content != original_content {
+                    if app.dry_run {
+                        println!("\n{}: {}", "File".green(), file_path);
+                        println!(
+                            "{}: {} fixes would be applied",
+                            "Fixes".green(),
+                            file_applied_fixes.len()
+                        );
+                        for (ident, fix, finding) in &file_applied_fixes {
+                            let line_info = if let Some(line) = get_primary_line_number(finding) {
+                                format!(" at line {}", line)
+                            } else {
+                                String::new()
+                            };
+                            println!(
+                                "  - {}{}: {}",
+                                format_severity_and_rule(&finding.determinations.severity, ident),
+                                line_info,
+                                fix.title
+                            );
+                        }
+
+                        if app.diff {
+                            println!("{}:", "Diff".green());
+                            println!(
+                                "{}",
+                                colorize_diff!(diff::lines(&original_content, &current_content))
+                            );
+                        } else {
+                            println!("{}:\n{}", "New content".green(), current_content);
+                        }
+                    } else if app.diff {
+                        println!("\n{}: {}", "File".green(), file_path);
+                        println!(
+                            "{}: {} fixes to apply",
+                            "Fixes".green(),
+                            file_applied_fixes.len()
+                        );
+                        for (ident, fix, finding) in &file_applied_fixes {
+                            let line_info = if let Some(line) = get_primary_line_number(finding) {
+                                format!(" at line {}", line)
+                            } else {
+                                String::new()
+                            };
+                            println!(
+                                "  - {}{}: {}",
+                                format_severity_and_rule(&finding.determinations.severity, ident),
+                                line_info,
+                                fix.title
+                            );
+                        }
+                        println!("{}:", "Diff".green());
+                        println!(
+                            "{}",
+                            colorize_diff!(diff::lines(&original_content, &current_content))
+                        );
+
+                        print!("Apply all fixes to this file? [y/N] ");
+                        stdout().flush()?;
+                        let mut input = String::new();
+                        std::io::stdin().read_line(&mut input)?;
+
+                        if input.trim().eq_ignore_ascii_case("y") {
+                            match std::fs::write(&file_path, &current_content) {
+                                Ok(_) => {
+                                    let num_fixes = file_applied_fixes.len();
+                                    applied_fixes.push((file_path.clone(), file_applied_fixes));
+                                    println!("Applied {} fixes to {}", num_fixes, file_path);
+                                }
+                                Err(e) => {
+                                    eprintln!("Failed to write {}: {}", file_path, e);
+                                }
+                            }
+                        } else {
+                            println!("Skipped fixes for {}", file_path);
+                        }
+                    } else if app.yes {
+                        match std::fs::write(&file_path, &current_content) {
+                            Ok(_) => {
+                                let num_fixes = file_applied_fixes.len();
+                                applied_fixes.push((file_path.clone(), file_applied_fixes));
+                                println!("Applied {} fixes to {}", num_fixes, file_path);
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to write {}: {}", file_path, e);
+                            }
+                        }
+                    } else {
+                        println!("\n{}: {}", "File".green(), file_path);
+                        println!(
+                            "{}: {} fixes to apply",
+                            "Fixes".green(),
+                            file_applied_fixes.len()
+                        );
+                        for (ident, fix, finding) in &file_applied_fixes {
+                            let line_info = if let Some(line) = get_primary_line_number(finding) {
+                                format!(" at line {}", line)
+                            } else {
+                                String::new()
+                            };
+                            println!(
+                                "  - {}{}: {}",
+                                format_severity_and_rule(&finding.determinations.severity, ident),
+                                line_info,
+                                fix.title
+                            );
+                        }
+
+                        print!("Apply all fixes to this file? [y/N] ");
+                        stdout().flush()?;
+                        let mut input = String::new();
+                        std::io::stdin().read_line(&mut input)?;
+
+                        if input.trim().eq_ignore_ascii_case("y") {
+                            match std::fs::write(&file_path, &current_content) {
+                                Ok(_) => {
+                                    let num_fixes = file_applied_fixes.len();
+                                    applied_fixes.push((file_path.clone(), file_applied_fixes));
+                                    println!("Applied {} fixes to {}", num_fixes, file_path);
+                                }
+                                Err(e) => {
+                                    eprintln!("Failed to write {}: {}", file_path, e);
+                                }
+                            }
+                        } else {
+                            println!("Skipped fixes for {}", file_path);
+                        }
+                    }
+                }
+            }
+
+            // Summary
+            if !app.dry_run && (!applied_fixes.is_empty() || !failed_fixes.is_empty()) {
+                println!("\n{}", "Fix Summary".green().bold());
+                if !applied_fixes.is_empty() {
+                    println!(
+                        "Successfully applied fixes to {} files:",
+                        applied_fixes.len()
+                    );
+                    for (file_path, fixes) in applied_fixes {
+                        println!("  {}: {} fixes", file_path, fixes.len());
+                    }
+                }
+
+                if !failed_fixes.is_empty() {
+                    println!("Failed to apply {} fixes:", failed_fixes.len());
+                    for (ident, file_path, error) in failed_fixes {
+                        println!("  {}: {} ({})", ident, file_path, error);
+                    }
+                }
+            }
+        }
+    }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
         Ok(ExitCode::SUCCESS)
