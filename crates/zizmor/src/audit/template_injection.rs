@@ -15,7 +15,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{collections::HashMap, sync::LazyLock};
+use std::sync::LazyLock;
 
 use fst::Map;
 use github_actions_expressions::Expr;
@@ -40,23 +40,23 @@ audit_meta!(
     "code injection via template expansion"
 );
 
-static ACTION_INJECTION_SINKS: LazyLock<HashMap<RepositoryUsesPattern, Vec<&str>>> =
+static ACTION_INJECTION_SINKS: LazyLock<Vec<(RepositoryUsesPattern, Vec<&str>)>> =
     LazyLock::new(|| {
-        let mut sinks: HashMap<RepositoryUsesPattern, Vec<&str>> = serde_json::from_slice(
+        let mut sinks: Vec<(RepositoryUsesPattern, Vec<&str>)> = serde_json::from_slice(
             include_bytes!(concat!(env!("OUT_DIR"), "/codeql-injection-sinks.json")),
         )
         .unwrap();
 
         // These sinks are not tracked by CodeQL (yet)
-        sinks.insert("amadevus/pwsh-script".parse().unwrap(), vec!["script"]);
-        sinks.insert(
+        sinks.push(("amadevus/pwsh-script".parse().unwrap(), vec!["script"]));
+        sinks.push((
             "jannekem/run-python-script-action".parse().unwrap(),
             vec!["script"],
-        );
-        sinks.insert(
+        ));
+        sinks.push((
             "cardinalby/js-eval-action".parse().unwrap(),
             vec!["expression"],
-        );
+        ));
         sinks
     });
 
