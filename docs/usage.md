@@ -117,8 +117,12 @@ zizmor --gh-token $(gh auth token) workflow.yml
 zizmor --no-online-audits --gh-token ghp-... example/example
 ```
 
-> [!TIP]
-> For auditing Actions that are available publicly, `GH_TOKEN` can be either a classic or fine-grained token that needs no additional scopes (don't check any of the permissions boxes).  If you're trying to reference private actions, this token will need the ability to access those repositories.
+!!! tip
+
+    For auditing Actions that are available publicly, `GH_TOKEN` can be either a
+    classic or fine-grained token that needs no additional scopes (don't check any
+    of the permissions boxes).  If you're trying to reference private Actions, this
+    token will need the ability to access those repositories.
 
 ## Output formats
 
