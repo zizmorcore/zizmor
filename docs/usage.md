@@ -142,7 +142,7 @@ This output will be colorized by default when sent to a supporting terminal and
 uncolorized by default when piped to another program. Users can also explicitly
 disable output colorization by setting `NO_COLOR=1` in their environment.
 
-This format can also be explicitly selected with `--format=plain`:
+This format can also be explicitly selected with `--format=plain`.
 
 ### JSON
 
