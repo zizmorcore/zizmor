@@ -109,10 +109,16 @@ zizmor --offline workflow.yml
 # passing a token explicitly will enable online mode
 zizmor --gh-token ghp-... workflow.yml
 
+# use the [GitHub CLI](https://cli.github.com/) token instead of a long-lived PAT
+zizmor --gh-token $(gh auth token) workflow.yml
+
 # online for the purpose of fetching the input (example/example),
 # but all audits themselves are offline
 zizmor --no-online-audits --gh-token ghp-... example/example
 ```
+
+> [!TIP]
+> For auditing Actions that are available publicly, `GH_TOKEN` can be either a classic or fine-grained token that needs no additional scopes (don't check any of the permissions boxes).  If you're trying to reference private actions, this token will need the ability to access those repositories.
 
 ## Output formats
 
