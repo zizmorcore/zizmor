@@ -734,6 +734,14 @@
         - prettytable/prettytable#339
 
 
+-   ![](https://github.com/prometheus.png?size=40){ width="40" loading=lazy align=left } prometheus
+
+    ---
+
+    ??? example "Examples"
+        - prometheus/prometheus#16530
+
+
 -   ![](https://github.com/psf.png?size=40){ width="40" loading=lazy align=left } psf
 
     ---
