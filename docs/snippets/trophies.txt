@@ -158,6 +158,7 @@ oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
+prometheus/prometheus#16530
 psf/cachecontrol#345
 pyca/service-identity#75
 pydata/pydata-sphinx-theme#2077
