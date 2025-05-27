@@ -395,12 +395,18 @@ fn collect_from_repo_slug(
         client.fetch_workflows(&slug, registry)?;
     } else {
         let before = registry.len();
+        let host = match &state.gh_hostname {
+            GitHubHost::Enterprise(address) => address.as_str(),
+            GitHubHost::Standard(_) => "github.com",
+        };
+
         client
             .fetch_audit_inputs(&slug, registry)
             .with_context(|| {
                 tips(
                     format!(
-                        "couldn't collect inputs from https://github.com/{owner}/{repo}",
+                        "couldn't collect inputs from https://{host}/{owner}/{repo}",
+                        host = host,
                         owner = slug.owner,
                         repo = slug.repo
                     ),
