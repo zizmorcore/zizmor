@@ -675,7 +675,7 @@ fn run() -> Result<ExitCode> {
     };
 
     if app.fix {
-        fix::apply_fixes(&results)?;
+        fix::apply_fixes(&results, &registry)?;
     }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {

@@ -5,11 +5,12 @@ use owo_colors::OwoColorize;
 
 use crate::{
     finding::{Finding, Fix},
-    registry::FindingRegistry,
+    models::AsDocument,
+    registry::{FindingRegistry, InputRegistry},
 };
 
 /// Apply fixes to files based on the provided configuration
-pub fn apply_fixes(results: &FindingRegistry) -> Result<()> {
+pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Result<()> {
     // Collect all applicable fixes grouped by file
     let mut file_fixes: HashMap<String, Vec<(&'static str, &Finding, &Fix)>> = HashMap::new();
 
@@ -38,15 +39,20 @@ pub fn apply_fixes(results: &FindingRegistry) -> Result<()> {
     let mut failed_fixes = Vec::new();
 
     for (file_path, fixes) in &file_fixes {
-        let original_content = match std::fs::read_to_string(&file_path) {
-            Ok(content) => content,
-            Err(e) => {
-                eprintln!("Failed to read {}: {}", file_path, e);
-                continue;
-            }
-        };
+        // Get the original content from the registry instead of reading from disk
+        let input_key = fixes
+            .first()
+            .unwrap()
+            .1
+            .locations
+            .first()
+            .unwrap()
+            .symbolic
+            .key;
+        let input = registry.get_input(input_key);
+        let original_content = input.as_document().source();
 
-        let mut current_content = original_content.clone();
+        let mut current_content = original_content.to_string();
         let mut file_applied_fixes = Vec::new();
         let mut successful_fixes = Vec::new();
 
