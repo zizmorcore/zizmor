@@ -110,54 +110,9 @@ impl InputKey {
             return Err(InputError::MissingName);
         }
 
-        // Resolve the absolute path, handling both existing and non-existing files
-        let given_path = if path.as_ref().exists() {
-            path.as_ref()
-                .canonicalize()
-                .map_err(|e| InputError::Io(e))?
-                .try_into()
-                .map_err(|e| InputError::Other(anyhow!("failed to convert path to UTF-8: {}", e)))?
-        } else {
-            // For non-existing files, resolve relative to current directory
-            std::env::current_dir()
-                .map_err(|e| InputError::Io(e))?
-                .join(path.as_ref())
-                .try_into()
-                .map_err(|e| InputError::Other(anyhow!("failed to convert path to UTF-8: {}", e)))?
-        };
-
-        // Also canonicalize the prefix if provided, to ensure consistent path resolution
-        let canonicalized_prefix = if let Some(prefix) = prefix.as_ref() {
-            if prefix.as_ref().exists() {
-                Some(
-                    prefix
-                        .as_ref()
-                        .canonicalize()
-                        .map_err(|e| InputError::Io(e))?
-                        .try_into()
-                        .map_err(|e| {
-                            InputError::Other(anyhow!("failed to convert prefix to UTF-8: {}", e))
-                        })?,
-                )
-            } else {
-                // For non-existing prefix, resolve relative to current directory
-                Some(
-                    std::env::current_dir()
-                        .map_err(|e| InputError::Io(e))?
-                        .join(prefix.as_ref())
-                        .try_into()
-                        .map_err(|e| {
-                            InputError::Other(anyhow!("failed to convert prefix to UTF-8: {}", e))
-                        })?,
-                )
-            }
-        } else {
-            None
-        };
-
         Ok(Self::Local(LocalKey {
-            prefix: canonicalized_prefix,
-            given_path,
+            prefix: prefix.map(|p| p.as_ref().to_path_buf()),
+            given_path: path.as_ref().to_path_buf(),
         }))
     }
 
