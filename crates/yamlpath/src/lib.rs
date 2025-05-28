@@ -70,16 +70,16 @@ pub enum QueryError {
 /// The sub-list member `e` would be identified via the path
 /// `foo`, `bar`, `baz`, `1`, `1`.
 #[derive(Debug)]
-pub struct Query {
+pub struct Query<'a> {
     /// The individual top-down components of this query.
-    route: Vec<Component>,
+    route: Vec<Component<'a>>,
 }
 
-impl Query {
+impl<'a> Query<'a> {
     /// Constructs a new query from the given path components.
     ///
     /// Returns `None` if the component list is empty.
-    pub fn new(route: Vec<Component>) -> Option<Self> {
+    pub fn new(route: Vec<Component<'a>>) -> Option<Self> {
         if route.is_empty() {
             None
         } else {
@@ -98,30 +98,30 @@ impl Query {
 
 /// A builder for [`Query`] objects.
 #[derive(Clone, Debug)]
-pub struct QueryBuilder {
-    route: Vec<Component>,
+pub struct QueryBuilder<'a> {
+    route: Vec<Component<'a>>,
 }
 
-impl Default for QueryBuilder {
+impl Default for QueryBuilder<'_> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl QueryBuilder {
+impl<'a> QueryBuilder<'a> {
     /// Starts a new `QueryBuilder`.
     pub fn new() -> Self {
         Self { route: vec![] }
     }
 
     /// Adds a new key to the query being built.
-    pub fn key(mut self, key: impl Into<String>) -> Self {
+    pub fn key(mut self, key: &'a str) -> Self {
         self.route.push(Component::Key(key.into()));
         self
     }
 
     /// Adds multiple new keys to the query being built.
-    pub fn keys(mut self, keys: impl Iterator<Item = impl Into<String>>) -> Self {
+    pub fn keys(mut self, keys: impl Iterator<Item = &'a str>) -> Self {
         for key in keys {
             self = self.key(key.into())
         }
@@ -139,16 +139,16 @@ impl QueryBuilder {
     /// it in the process.
     ///
     /// Panics unless at least one component has been added.
-    pub fn build(self) -> Query {
+    pub fn build(self) -> Query<'a> {
         Query::new(self.route).expect("API misuse: must add at least one component")
     }
 }
 
 /// A single `Query` component.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Component {
+pub enum Component<'a> {
     /// A YAML key.
-    Key(String),
+    Key(&'a str),
 
     /// An index into a YAML array.
     Index(usize),
@@ -473,7 +473,7 @@ impl Document {
         {
             match component {
                 Component::Index(idx) => self.descend_sequence(&child, *idx),
-                Component::Key(key) => Err(QueryError::ExpectedMapping(key.into())),
+                Component::Key(key) => Err(QueryError::ExpectedMapping(key.to_string())),
             }
         } else {
             Err(QueryError::UnexpectedNode(child.kind().into()))

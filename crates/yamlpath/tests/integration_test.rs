@@ -35,8 +35,8 @@ struct Testcase {
     queries: Vec<TestcaseQuery>,
 }
 
-impl From<&TestcaseQuery> for Query {
-    fn from(query: &TestcaseQuery) -> Self {
+impl<'a> From<&'a TestcaseQuery> for Query<'a> {
+    fn from(query: &'a TestcaseQuery) -> Self {
         let mut builder = QueryBuilder::new().key("testcase");
 
         for component in &query.query {

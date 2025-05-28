@@ -1,6 +1,6 @@
 //! Models and APIs for handling findings and their locations.
 
-use std::{borrow::Cow, ops::Range, sync::LazyLock};
+use std::{ops::Range, sync::LazyLock};
 
 use anyhow::{Result, anyhow};
 use clap::ValueEnum;
@@ -117,7 +117,7 @@ impl<'doc> From<&Step<'doc>> for StepLocation<'doc> {
 
 #[derive(Serialize, Clone, Debug)]
 pub(crate) enum RouteComponent<'doc> {
-    Key(Cow<'doc, str>),
+    Key(&'doc str),
     Index(usize),
 }
 
@@ -129,7 +129,7 @@ impl From<usize> for RouteComponent<'_> {
 
 impl<'doc> From<&'doc str> for RouteComponent<'doc> {
     fn from(value: &'doc str) -> Self {
-        Self::Key(Cow::Borrowed(value))
+        Self::Key(value)
     }
 }
 
@@ -261,7 +261,7 @@ impl<'doc> SymbolicLocation<'doc> {
 
             for component in &self.route.components {
                 builder = match component {
-                    RouteComponent::Key(key) => builder.key(key.clone()),
+                    RouteComponent::Key(key) => builder.key(key),
                     RouteComponent::Index(idx) => builder.index(*idx),
                 }
             }
