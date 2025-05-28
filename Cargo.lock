@@ -3643,7 +3643,6 @@ dependencies = [
  "clap_complete",
  "clap_complete_nushell",
  "csv",
- "diff",
  "etcetera",
  "flate2",
  "fst",

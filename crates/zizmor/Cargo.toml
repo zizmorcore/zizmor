@@ -63,7 +63,6 @@ tree-sitter.workspace = true
 tree-sitter-bash.workspace = true
 tree-sitter-powershell.workspace = true
 yamlpath.workspace = true
-diff = "0.1.13"
 jsonptr = "0.7"
 
 [build-dependencies]
