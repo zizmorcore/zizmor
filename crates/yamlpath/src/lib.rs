@@ -116,14 +116,14 @@ impl<'a> QueryBuilder<'a> {
 
     /// Adds a new key to the query being built.
     pub fn key(mut self, key: &'a str) -> Self {
-        self.route.push(Component::Key(key.into()));
+        self.route.push(Component::Key(key));
         self
     }
 
     /// Adds multiple new keys to the query being built.
     pub fn keys(mut self, keys: impl Iterator<Item = &'a str>) -> Self {
         for key in keys {
-            self = self.key(key.into())
+            self = self.key(key)
         }
 
         self
@@ -579,7 +579,7 @@ mod tests {
             .build();
         assert_eq!(
             query.parent().unwrap().route,
-            [Component::Key("foo".into()), Component::Key("bar".into())]
+            [Component::Key("foo"), Component::Key("bar")]
         );
 
         let query = QueryBuilder::new().keys(["foo"].into_iter()).build();
@@ -634,11 +634,11 @@ baz: quux
         assert_eq!(
             query.route,
             [
-                Component::Key("foo".into()),
-                Component::Key("bar".into()),
+                Component::Key("foo"),
+                Component::Key("bar"),
                 Component::Index(1),
                 Component::Index(123),
-                Component::Key("lol".into()),
+                Component::Key("lol"),
             ]
         )
     }
@@ -659,10 +659,10 @@ baz:
         let doc = Document::new(doc).unwrap();
         let query = Query {
             route: vec![
-                Component::Key("baz".into()),
-                Component::Key("sub".into()),
-                Component::Key("keys".into()),
-                Component::Key("abc".into()),
+                Component::Key("baz"),
+                Component::Key("sub"),
+                Component::Key("keys"),
+                Component::Key("abc"),
                 Component::Index(2),
                 Component::Index(3),
             ],
@@ -692,7 +692,7 @@ bar: # outside
 
         // Querying the root gives us all comments underneath it.
         let query = Query {
-            route: vec![Component::Key("root".into())],
+            route: vec![Component::Key("root")],
         };
         let feature = doc.query(&query).unwrap();
         assert_eq!(
@@ -704,8 +704,8 @@ bar: # outside
         // even though it's above it on the AST.
         let query = Query {
             route: vec![
-                Component::Key("root".into()),
-                Component::Key("e".into()),
+                Component::Key("root"),
+                Component::Key("e"),
                 Component::Index(1),
             ],
         };
