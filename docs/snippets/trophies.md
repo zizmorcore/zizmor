@@ -734,6 +734,14 @@
         - oxc-project/oxc-resolver#373
 
 
+-   ![](https://github.com/PlasmaPy.png?size=40){ width="40" loading=lazy align=left } PlasmaPy
+
+    ---
+
+    ??? example "Examples"
+        - PlasmaPy/PlasmaPy#2975
+
+
 -   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc
 
     ---
