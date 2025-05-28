@@ -158,6 +158,7 @@ orion-rs/orion#441
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
+PlasmaPy/PlasmaPy#2975
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 prometheus/prometheus#16530
