@@ -27,7 +27,7 @@ cakephp/cakephp#18081
 canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
-cunla/fakeredis#391
+cunla/fakeredis-py#391
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
 curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc

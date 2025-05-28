@@ -125,7 +125,7 @@
     ---
 
     ??? example "Examples"
-        - cunla/fakeredis#391
+        - cunla/fakeredis-py#391
 
 
 -   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl
