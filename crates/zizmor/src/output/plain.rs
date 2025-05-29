@@ -9,7 +9,7 @@ use terminal_link::Link;
 
 use crate::{
     App,
-    finding::{Finding, Location, Severity},
+    finding::{Finding, Severity, location::Location},
     models::AsDocument,
     registry::{FindingRegistry, InputKey, InputRegistry},
 };

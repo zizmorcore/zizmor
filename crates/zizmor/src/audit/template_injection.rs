@@ -26,7 +26,7 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{Confidence, Finding, Persona, Severity, SymbolicLocation},
+    finding::{Confidence, Finding, Persona, Severity, location::SymbolicLocation},
     models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesPattern},
     state::AuditState,
     utils::extract_expressions,

@@ -3,7 +3,7 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use crate::{
     Confidence, Severity,
-    finding::{Feature, Finding, Location},
+    finding::{Finding, location::Feature, location::Location},
     models::{CompositeStep, Step, StepCommon},
     utils::parse_expressions_from_input,
 };

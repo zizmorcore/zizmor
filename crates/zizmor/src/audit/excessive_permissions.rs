@@ -6,7 +6,7 @@ use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::models::JobExt as _;
 use crate::{
     AuditState,
-    finding::{Confidence, Persona, Severity, SymbolicLocation},
+    finding::{Confidence, Persona, Severity, location::SymbolicLocation},
 };
 
 // Subjective mapping of permissions to severities, when given `write` access.

@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::{
-    finding::{Confidence, Finding, Persona, Severity, SymbolicLocation},
+    finding::{Confidence, Finding, Persona, Severity, location::SymbolicLocation},
     models::JobExt as _,
     state::AuditState,
 };

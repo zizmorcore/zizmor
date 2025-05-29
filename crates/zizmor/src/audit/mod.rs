@@ -7,7 +7,7 @@ use tracing::instrument;
 use yamlpath::Document;
 
 use crate::{
-    finding::{Finding, FindingBuilder, SymbolicLocation},
+    finding::{Finding, FindingBuilder, location::SymbolicLocation},
     models::{
         Action, AsDocument, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow,
     },

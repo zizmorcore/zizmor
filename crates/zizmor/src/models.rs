@@ -17,7 +17,7 @@ use line_index::LineIndex;
 use serde_json::json;
 use terminal_link::Link;
 
-use crate::finding::{Route, SymbolicLocation};
+use crate::finding::location::{Route, SymbolicLocation};
 use crate::registry::{InputError, InputKey};
 use crate::utils::{
     self, ACTION_VALIDATOR, WORKFLOW_VALIDATOR, extract_expressions, from_str_with_validation,

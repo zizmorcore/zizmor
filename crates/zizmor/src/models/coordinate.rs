@@ -369,7 +369,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn location_with_name(&self) -> crate::finding::SymbolicLocation<'s> {
+        fn location_with_name(&self) -> crate::finding::location::SymbolicLocation<'s> {
             unimplemented!()
         }
 

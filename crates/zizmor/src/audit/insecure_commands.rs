@@ -8,7 +8,7 @@ use github_actions_models::workflow::job::StepBody;
 
 use super::{AuditLoadError, Job, audit_meta};
 use crate::audit::Audit;
-use crate::finding::{Confidence, Finding, Persona, Severity, SymbolicLocation};
+use crate::finding::{Confidence, Finding, Persona, Severity, location::SymbolicLocation};
 use crate::models::{AsDocument, JobExt as _, StepCommon, Steps, Workflow};
 use crate::state::AuditState;
 
