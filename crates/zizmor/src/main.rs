@@ -35,7 +35,7 @@ mod output;
 mod registry;
 mod state;
 mod utils;
-pub mod yaml_patch;
+mod yaml_patch;
 
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
