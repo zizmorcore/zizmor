@@ -478,21 +478,6 @@ fn completions<G: clap_complete::Generator>(generator: G, cmd: &mut clap::Comman
     );
 }
 
-#[macro_export]
-macro_rules! colorize_diff {
-    ($diff:expr) => {
-        $diff
-            .iter()
-            .map(|line| match line {
-                diff::Result::Left(l) => format!("{}{}", "-".red(), l.red()),
-                diff::Result::Right(r) => format!("{}{}", "+".green(), r.green()),
-                diff::Result::Both(l, _) => format!(" {}", l),
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    };
-}
-
 fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
