@@ -472,35 +472,8 @@ pub fn parse_json_pointer_to_query(path: &str) -> Result<yamlpath::Query, YamlPa
 
 /// Serialize a serde_yaml::Value to a YAML string, handling different types appropriately
 fn serialize_yaml_value(value: &serde_yaml::Value) -> Result<String, YamlPatchError> {
-    match value {
-        serde_yaml::Value::String(s) => {
-            // For strings, we may need to quote them if they contain special characters
-            if needs_quoting(s) {
-                Ok(serde_yaml::to_string(value)?)
-            } else {
-                Ok(s.clone())
-            }
-        }
-        _ => {
-            let yaml_str = serde_yaml::to_string(value)?;
-            Ok(yaml_str.trim_end().to_string()) // Remove trailing newline
-        }
-    }
-}
-
-/// Check if a string needs to be quoted in YAML
-fn needs_quoting(s: &str) -> bool {
-    s.is_empty()
-        || s.contains(':')
-        || s.contains('#')
-        || s.contains('\n')
-        || s.starts_with(' ')
-        || s.ends_with(' ')
-        || s.chars().all(|c| c.is_ascii_digit() || c == '.')
-        || matches!(
-            s.to_lowercase().as_str(),
-            "true" | "false" | "null" | "yes" | "no" | "on" | "off"
-        )
+    let yaml_str = serde_yaml::to_string(value)?;
+    Ok(yaml_str.trim_end().to_string()) // Remove trailing newline
 }
 
 /// Extract leading whitespace from the beginning of the line containing the given position
@@ -1014,24 +987,6 @@ jobs:
         // Test error cases
         assert!(parse_json_pointer_to_query("no-leading-slash").is_err());
         assert!(parse_json_pointer_to_query("").is_err());
-    }
-
-    #[test]
-    fn test_string_quoting_detection() {
-        assert!(!needs_quoting("simple"));
-        assert!(!needs_quoting("snake_case"));
-        assert!(!needs_quoting("kebab-case"));
-
-        assert!(needs_quoting(""));
-        assert!(needs_quoting("has: colon"));
-        assert!(needs_quoting("has # hash"));
-        assert!(needs_quoting(" leading space"));
-        assert!(needs_quoting("trailing space "));
-        assert!(needs_quoting("true"));
-        assert!(needs_quoting("false"));
-        assert!(needs_quoting("null"));
-        assert!(needs_quoting("123"));
-        assert!(needs_quoting("3.14"));
     }
 
     #[test]
