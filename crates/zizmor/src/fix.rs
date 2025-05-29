@@ -96,9 +96,24 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
 
         // Only proceed if there are changes to apply
         if current_content != original_content {
+            println!("{}", format!("\nFixes").green().bold());
+            let num_fixes = file_applied_fixes.len();
+            for (ident, fix, finding) in file_applied_fixes {
+                let line_info = if let Some(line) = get_primary_line_number(finding) {
+                    format!(" at line {}", line)
+                } else {
+                    String::new()
+                };
+                println!(
+                    "  - {}{}: {}",
+                    format_severity_and_rule(&finding.determinations.severity, ident),
+                    line_info,
+                    fix.title
+                );
+            }
+
             match std::fs::write(&file_path, &current_content) {
                 Ok(_) => {
-                    let num_fixes = file_applied_fixes.len();
                     applied_fixes.push((file_path.to_string(), num_fixes));
                     println!("Applied {} fixes to {}", num_fixes, file_path);
                 }
@@ -136,4 +151,36 @@ fn print_summary(applied_fixes: &[(String, usize)], failed_fixes: &[(&str, Strin
             println!("  {}: {} ({})", ident, file_path, error);
         }
     }
+}
+
+/// Format severity and rule name with appropriate color based on the same scheme used in plain output
+pub fn format_severity_and_rule(severity: &crate::finding::Severity, rule_name: &str) -> String {
+    use owo_colors::OwoColorize;
+    let severity_name = match severity {
+        crate::finding::Severity::Unknown => "note",
+        crate::finding::Severity::Informational => "info",
+        crate::finding::Severity::Low => "help",
+        crate::finding::Severity::Medium => "warning",
+        crate::finding::Severity::High => "error",
+    };
+
+    let formatted = format!("{}[{}]", severity_name, rule_name);
+
+    match severity {
+        crate::finding::Severity::Unknown => formatted,
+        crate::finding::Severity::Informational => formatted.purple().to_string(),
+        crate::finding::Severity::Low => formatted.cyan().to_string(),
+        crate::finding::Severity::Medium => formatted.yellow().to_string(),
+        crate::finding::Severity::High => formatted.red().to_string(),
+    }
+}
+
+/// Get the primary line number for a finding, if available
+pub fn get_primary_line_number(finding: &Finding) -> Option<usize> {
+    finding
+        .locations
+        .iter()
+        .find(|loc| loc.symbolic.is_primary())
+        .or_else(|| finding.locations.first())
+        .map(|loc| loc.concrete.location.start_point.row + 1) // Convert to 1-based line number
 }
