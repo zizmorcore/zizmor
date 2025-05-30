@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.9.0
+
 ### New Features 🌈
 
 * `zizmor` now supports generating completions for Nushell (#838)
@@ -29,6 +31,8 @@ of `zizmor`.
 * The [template-injection] audit now correctly emits pedantic findings
   in a blanket manner, rather than filtering them based on the presence
   of other findings (#745)
+* CLI: Fixed a misleading error message when `zizmor` is used with
+  a GitHub host other than `github.com` (#863)
 
 ## v1.8.0
 

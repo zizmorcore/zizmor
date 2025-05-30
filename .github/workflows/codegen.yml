@@ -14,6 +14,8 @@ jobs:
   refresh-schemas:
     name: Refresh JSON schemas 📈
     runs-on: ubuntu-latest
+    # this job does not make sense on forks
+    if: ${{ github.repository_owner == 'zizmorcore' }}
 
     permissions:
       contents: write # for creating branches
@@ -48,6 +50,8 @@ jobs:
   refresh-context-capabilities:
     name: Refresh context capabilities *️⃣
     runs-on: ubuntu-latest
+    # this job does not make sense on forks
+    if: ${{ github.repository_owner == 'zizmorcore' }}
 
     permissions:
       contents: write # for creating branches
@@ -58,7 +62,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
+      - uses: astral-sh/setup-uv@f0ec1fc3b38f5e7cd731bb6ce540c5af426746bb # v6.1.0
 
       - name: try to refresh context capabilities
         run: |

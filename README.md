@@ -52,7 +52,8 @@ See [our contributing guide!](./CONTRIBUTING.md)
 `zizmor`'s development is supported by these amazing sponsors!
 
 <!-- @@begin-sponsors@@ -->
-<table>
+<table width="100%">
+<caption>Logo-level sponsors</caption>
 <tbody>
 <tr>
 <td align="center" valign="top" width="15%">
@@ -60,6 +61,19 @@ See [our contributing guide!](./CONTRIBUTING.md)
 <img src="https://avatars.githubusercontent.com/u/115962839?s=100&v=4" width="100px">
 <br>
 Astral
+</a>
+</td>
+</tr>
+</tbody>
+</table>
+<hr align="center">
+<table width="100%">
+<caption>Name-level sponsors</caption>
+<tbody>
+<tr>
+<td align="center" valign="top">
+<a href="http://tenki.cloud/">
+Tenki Cloud
 </a>
 </td>
 </tr>

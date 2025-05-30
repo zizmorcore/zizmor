@@ -36,7 +36,9 @@ There are three input sources that `zizmor` knows about:
     !!! tip
 
         Remote auditing requires Internet access and a GitHub API token.
-        See [Operating Modes](#operating-modes) for more information.
+        See [Operating Modes](#operating-modes) and
+        [GitHub API token permissions](#github-api-token-permissions) for more
+        information.
 
 `zizmor` can audit multiple inputs in the same run, and different input
 sources can be mixed and matched:
@@ -94,12 +96,40 @@ zizmor --strict-collection example/example
 
 ## Operating Modes
 
-Some of `zizmor`'s audits require access to GitHub's API.
-`zizmor` will perform online audits by default *if* the user has a `GH_TOKEN`
-specified in their environment. If no `GH_TOKEN` is present, then `zizmor`
-will operate in offline mode by default.
+`zizmor` has three *operating modes*:
 
-Both of these can be made explicit through their respective command-line flags:
+* **Offline**: `zizmor` will not access the Internet,
+  will not fetch remote repositories, and will not perform
+  any audits that require online access (e.g. to the GitHub API).
+* **Online**: `zizmor` will fetch remote repositories
+  as necessary, and will perform all audits that require
+  online access.
+* **Online sans audits**: `zizmor` will fetch remote repositories
+  as necessary, but will skip any audits that require online access.
+
+`zizmor` attempts to select a default operating mode based on the user's
+environment:
+
+- If `ZIZMOR_OFFLINE` is set, then `zizmor` runs in offline mode.
+- If `GH_TOKEN` is set, then `zizmor` runs in online mode with audits.
+    - Additionally `ZIZMOR_NO_ONLINE_AUDITS` is set, then `zizmor` runs
+      online sans audits.
+- If neither `ZIZMOR_OFFLINE` nor `GH_TOKEN` are set, then `zizmor` runs
+  in offline mode.
+
+Or, as a flowchart:
+
+```mermaid
+flowchart TD
+  B{ZIZMOR_OFFLINE set?} -- Yes --> C[Offline mode]
+  B -- No --> D{GH_TOKEN set?}
+  D -- No --> C
+  D -- Yes --> E{ZIZMOR_NO_ONLINE_AUDITS set?}
+  E -- Yes --> F[Online sans audits mode]
+  E -- No --> G[Online mode]
+```
+
+Each operating mode can also be made explicit through command-line flags:
 
 ```bash
 # force offline, even if a GH_TOKEN is present
@@ -107,12 +137,50 @@ Both of these can be made explicit through their respective command-line flags:
 zizmor --offline workflow.yml
 
 # passing a token explicitly will enable online mode
-zizmor --gh-token ghp-... workflow.yml
+# in this case, we use the `gh` CLI token
+zizmor --gh-token $(gh auth token) workflow.yml
 
 # online for the purpose of fetching the input (example/example),
 # but all audits themselves are offline
-zizmor --no-online-audits --gh-token ghp-... example/example
+zizmor --no-online-audits --gh-token $(gh auth token) example/example
 ```
+
+### GitHub API token permissions
+
+!!! tip
+
+    If you're running `zizmor` locally with an online mode, it is
+    **strongly recommended** that you use `gh auth token` from the [GitHub CLI]
+    to automatically access an API token and avoid error-prone manual
+    provisioning.
+
+    This token is almost always pre-configured with sufficient permissions,
+    meaning that you **do not** need any of the manual steps below.
+
+    [GitHub CLI]: https://cli.github.com/
+
+When running in an online mode, `zizmor` uses the GitHub API for
+various operations, including fetching a repository's contents
+(for the collection phase) and fetching tag/branch/commit histories
+(for the auditing phase).
+
+Generally speaking, `zizmor` does **not** require any special permissions
+from its GitHub API token: it uses the token *primarily* to provide
+authentication for rate-limited API requests.
+
+However, if you are auditing a private remote repository (e.g.
+`zizmor myorg/private-repo`) or auditing _any_ input that contains
+private references (e.g. `#!yaml uses: myorg/private-action`), then
+you may need to provision permissions for the token:
+
+- `#!yaml contents: read` for GitHub Actions
+- `repo` for OAuth tokens and "classic" PATs
+- An appropriate repository access scope for fine-grained PATs
+
+In addition to these permissions, some integrations of `zizmor`
+(like GitHub Advanced Security) may require additional permissions
+in the context of GitHub Actions. See
+[Use in GitHub Actions](#use-in-github-actions) for more details.
 
 ## Output formats
 
@@ -314,7 +382,7 @@ sensitive `zizmor`'s analyses are:
         although this is not required.
 
 
-* The _pedantic persona_, enabled by `--persona=pedantic`: the user wants
+* The _pedantic persona_, enabled with `--persona=pedantic`: the user wants
   *code smells* in addition to regular, actionable security findings.
 
     This persona is ideal for finding things that are a good idea
@@ -348,17 +416,19 @@ sensitive `zizmor`'s analyses are:
         This persona can also be enabled with `--pedantic`, which is
         an alias for `--persona=pedantic`.
 
-* The _auditor persona_, enabled by `--persona=auditor`: the user wants
+* The _auditor persona_, enabled with `--persona=auditor`: the user wants
   *everything* flagged by `zizmor`, including findings that are likely
   to be false positives.
 
     This persona is ideal for security auditors and code reviewers, who
     want to go through `zizmor`'s findings manually with a fine-toothed comb.
 
-    Some audits, notably `self-hosted-runner`, *only* produce auditor-level
-    results. This is because these audits require runtime context that `zizmor`
-    lacks access to by design, meaning that their results are always
-    subject to false positives.
+!!! tip
+
+    Some audits, notably [`self-hosted-runner`](./audits.md#self-hosted-runner),
+    *only* produce auditor-level results. This is because these audits require
+    runtime context that `zizmor` lacks access to by design, meaning that their
+    results are always subject to false positives.
 
     For example, with the default persona:
 
@@ -583,7 +653,7 @@ two primary ways to use `zizmor` in GitHub Actions:
         name: zizmor latest via PyPI
         runs-on: ubuntu-latest
         permissions:
-          security-events: write
+          security-events: write # needed for SARIF uploads
           contents: read # only needed for private repos
           actions: read # only needed for private repos
         steps:
@@ -723,7 +793,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
-  rev: v1.8.0 # (1)!
+  rev: v1.9.0 # (1)!
   hooks:
   - id: zizmor
 ```

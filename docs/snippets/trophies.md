@@ -120,6 +120,14 @@
         - canonical/testflinger#630
 
 
+-   ![](https://github.com/cunla.png?size=40){ width="40" loading=lazy align=left } cunla
+
+    ---
+
+    ??? example "Examples"
+        - cunla/fakeredis-py#391
+
+
 -   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl
 
     ---
@@ -179,6 +187,14 @@
 
     ??? example "Examples"
         - Diaoul/subliminal#1190
+
+
+-   ![](https://github.com/django-commons.png?size=40){ width="40" loading=lazy align=left } django-commons
+
+    ---
+
+    ??? example "Examples"
+        - django-commons/django-tasks-scheduler#272
 
 
 -   ![](https://github.com/docker.png?size=40){ width="40" loading=lazy align=left } docker
@@ -718,6 +734,14 @@
         - oxc-project/oxc-resolver#373
 
 
+-   ![](https://github.com/PlasmaPy.png?size=40){ width="40" loading=lazy align=left } PlasmaPy
+
+    ---
+
+    ??? example "Examples"
+        - PlasmaPy/PlasmaPy#2975
+
+
 -   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc
 
     ---
@@ -732,6 +756,14 @@
 
     ??? example "Examples"
         - prettytable/prettytable#339
+
+
+-   ![](https://github.com/prometheus.png?size=40){ width="40" loading=lazy align=left } prometheus
+
+    ---
+
+    ??? example "Examples"
+        - prometheus/prometheus#16530
 
 
 -   ![](https://github.com/psf.png?size=40){ width="40" loading=lazy align=left } psf

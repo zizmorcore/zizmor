@@ -27,6 +27,7 @@ cakephp/cakephp#18081
 canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
+cunla/fakeredis-py#391
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
 curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
@@ -38,6 +39,7 @@ DataDog/dd-trace-rb#4456
 datalens-tech/datalens-backend#777
 davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
+django-commons/django-tasks-scheduler#272
 Diaoul/subliminal#1190
 docker/compose#12737
 earthobservations/wetterdienst#1440
@@ -156,8 +158,10 @@ orion-rs/orion#441
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
+PlasmaPy/PlasmaPy#2975
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
+prometheus/prometheus#16530
 psf/cachecontrol#345
 pyca/service-identity#75
 pydata/pydata-sphinx-theme#2077
