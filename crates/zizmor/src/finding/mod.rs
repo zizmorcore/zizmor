@@ -474,7 +474,7 @@ pub(crate) struct Finding<'doc> {
     pub(crate) fixes: Vec<Fix>,
 }
 
-impl<'doc> Finding<'doc> {
+impl Finding<'_> {
     /// A basic Markdown representation of the finding's metadata.
     pub(crate) fn to_markdown(&self) -> String {
         format!(
