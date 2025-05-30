@@ -4,7 +4,7 @@ use std::{ops::Range, sync::LazyLock};
 
 use crate::{
     audit::AuditInput,
-    models::{AsDocument as _, CompositeStep, JobExt, Step},
+    models::{AsDocument as _, JobExt},
     registry::InputKey,
 };
 use line_index::{LineCol, TextSize};
@@ -109,14 +109,6 @@ impl<'doc> SymbolicLocation<'doc> {
         self.with_keys(&["jobs".into(), job.id().into()])
     }
 
-    pub(crate) fn with_step(&self, step: &Step<'doc>) -> SymbolicLocation<'doc> {
-        self.with_keys(&["steps".into(), step.index.into()])
-    }
-
-    pub(crate) fn with_composite_step(&self, step: &CompositeStep<'doc>) -> SymbolicLocation<'doc> {
-        self.with_keys(&["runs".into(), "steps".into(), step.index.into()])
-    }
-
     /// Adds a human-readable annotation to the current `SymbolicLocation`.
     pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> SymbolicLocation<'doc> {
         self.annotation = annotation.into();
@@ -185,6 +177,22 @@ impl<'doc> SymbolicLocation<'doc> {
                     .collect(),
             },
         })
+    }
+}
+
+/// Gives models (e.g. workflow steps) the ability to express their symbolic location.
+pub(crate) trait Locatable<'a, 'doc> {
+    /// Returns the symbolic location of this model.
+    fn location(&'a self) -> SymbolicLocation<'doc>;
+
+    /// Returns an "enriched" symbolic location of this model,
+    /// when the model is of a type that has a name. Otherwise,
+    /// returns the same symbolic location as `location()`.
+    ///
+    /// For example, a GitHub Actions workflow step has an optional name,
+    /// which is included in this symbolic location if present.
+    fn location_with_name(&'a self) -> SymbolicLocation<'doc> {
+        self.location()
     }
 }
 

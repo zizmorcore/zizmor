@@ -97,9 +97,9 @@ impl TemplateInjection {
             .unwrap_or(&[])
     }
 
-    fn scripts_with_location<'s>(
-        step: &impl StepCommon<'s>,
-    ) -> Vec<(String, SymbolicLocation<'s>)> {
+    fn scripts_with_location<'a, 'doc>(
+        step: &'a impl StepCommon<'a, 'doc>,
+    ) -> Vec<(String, SymbolicLocation<'doc>)> {
         match step.body() {
             models::StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
@@ -123,10 +123,10 @@ impl TemplateInjection {
         }
     }
 
-    fn injectable_template_expressions<'s>(
+    fn injectable_template_expressions<'a, 'doc>(
         &self,
         run: &str,
-        step: &impl StepCommon<'s>,
+        step: &impl StepCommon<'a, 'doc>,
     ) -> Vec<(String, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
         for (expr, _) in extract_expressions(run) {
@@ -265,9 +265,9 @@ impl TemplateInjection {
         bad_expressions
     }
 
-    fn process_step<'doc>(
+    fn process_step<'a, 'doc>(
         &self,
-        step: &impl StepCommon<'doc>,
+        step: &'a impl StepCommon<'a, 'doc>,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 

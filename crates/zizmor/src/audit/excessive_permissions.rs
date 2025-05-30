@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::LazyLock};
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
-use crate::models::JobExt as _;
+use crate::finding::location::Locatable as _;
 use crate::{
     AuditState,
     finding::{Confidence, Persona, Severity, location::SymbolicLocation},

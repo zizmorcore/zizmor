@@ -34,7 +34,10 @@ impl StaleActionRefs {
         Ok(tag.is_none())
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Result<Vec<Finding<'w>>> {
+    fn process_step<'a, 'doc>(
+        &self,
+        step: &'a impl StepCommon<'a, 'doc>,
+    ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {

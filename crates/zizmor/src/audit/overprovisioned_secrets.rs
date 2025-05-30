@@ -1,7 +1,10 @@
 use github_actions_expressions::Expr;
 
 use crate::{
-    finding::{Confidence, Severity, location::Feature, location::Location},
+    finding::{
+        Confidence, Severity,
+        location::{Feature, Locatable as _, Location},
+    },
     utils::parse_expressions_from_input,
 };
 

@@ -3,7 +3,10 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use crate::{
     Confidence, Severity,
-    finding::{Finding, location::Feature, location::Location},
+    finding::{
+        Finding,
+        location::{Feature, Locatable as _, Location},
+    },
     models::{CompositeStep, Step, StepCommon},
     utils::parse_expressions_from_input,
 };
@@ -69,9 +72,9 @@ impl Obfuscation {
         annotations
     }
 
-    fn process_step<'doc>(
+    fn process_step<'a, 'doc>(
         &self,
-        step: &impl StepCommon<'doc>,
+        step: &'a impl StepCommon<'a, 'doc>,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 

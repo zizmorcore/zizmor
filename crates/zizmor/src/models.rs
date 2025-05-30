@@ -17,7 +17,7 @@ use line_index::LineIndex;
 use serde_json::json;
 use terminal_link::Link;
 
-use crate::finding::location::{Route, SymbolicLocation};
+use crate::finding::location::{Locatable, Route, SymbolicLocation};
 use crate::registry::{InputError, InputKey};
 use crate::utils::{
     self, ACTION_VALIDATOR, WORKFLOW_VALIDATOR, extract_expressions, from_str_with_validation,
@@ -25,6 +25,10 @@ use crate::utils::{
 
 pub(crate) mod coordinate;
 pub(crate) mod uses;
+
+pub(crate) trait AsDocument<'a, 'doc> {
+    fn as_document(&'a self) -> &'doc yamlpath::Document;
+}
 
 /// Common fields between workflow and action step bodies.
 pub(crate) enum StepBodyCommon<'s> {
@@ -41,7 +45,7 @@ pub(crate) enum StepBodyCommon<'s> {
 }
 
 /// Common interfaces between workflow and action steps.
-pub(crate) trait StepCommon<'s> {
+pub(crate) trait StepCommon<'a, 'doc>: Locatable<'a, 'doc> {
     /// Returns whether the given `env.name` environment access is "static,"
     /// i.e. is not influenced by another expression.
     fn env_is_static(&self, name: &str) -> bool;
@@ -57,22 +61,11 @@ pub(crate) trait StepCommon<'s> {
     /// Returns a [`StepBodyCommon`] for this step.
     fn body(&self) -> StepBodyCommon;
 
-    /// Returns a [`SymbolicLocation`] for this step.
-    fn location(&self) -> SymbolicLocation<'s>;
-
-    /// Like [`Self::location()`], except with the step's `name`
-    /// key as the final path component if present.
-    fn location_with_name(&self) -> SymbolicLocation<'s>;
-
     /// Returns the document which contains this step.
-    fn document(&self) -> &'s yamlpath::Document;
+    fn document(&self) -> &'doc yamlpath::Document;
 }
 
-pub(crate) trait AsDocument<'a, 'doc> {
-    fn as_document(&'a self) -> &'doc yamlpath::Document;
-}
-
-impl<'a, 'doc, T: StepCommon<'doc>> AsDocument<'a, 'doc> for T {
+impl<'a, 'doc, T: StepCommon<'a, 'doc>> AsDocument<'a, 'doc> for T {
     fn as_document(&'a self) -> &'doc yamlpath::Document {
         self.document()
     }
@@ -139,17 +132,6 @@ impl Workflow {
         })
     }
 
-    /// This workflow's [`SymbolicLocation`].
-    pub(crate) fn location(&self) -> SymbolicLocation {
-        SymbolicLocation {
-            key: &self.key,
-            annotation: "this workflow".to_string(),
-            link: None,
-            route: Route::new(),
-            kind: Default::default(),
-        }
-    }
-
     /// A [`Jobs`] iterator over this workflow's constituent [`Job`]s.
     pub(crate) fn jobs(&self) -> Jobs<'_> {
         Jobs::new(self)
@@ -192,16 +174,36 @@ impl Workflow {
     }
 }
 
+impl<'a> Locatable<'a, 'a> for Workflow {
+    /// This workflow's [`SymbolicLocation`].
+    fn location(&'a self) -> SymbolicLocation<'a> {
+        SymbolicLocation {
+            key: &self.key,
+            annotation: "this workflow".to_string(),
+            link: None,
+            route: Route::new(),
+            kind: Default::default(),
+        }
+    }
+}
+
 /// Common behavior across both normal and reusable jobs.
 pub(crate) trait JobExt<'doc> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
     fn id(&self) -> &'doc str;
 
-    /// The job's symbolic location.
-    fn location(&self) -> SymbolicLocation<'doc>;
-
     /// The job's parent [`Workflow`].
     fn parent(&self) -> &'doc Workflow;
+}
+
+impl<'a, 'doc, T: JobExt<'doc>> Locatable<'a, 'doc> for T {
+    /// Returns this job's [`SymbolicLocation`].
+    fn location(&'a self) -> SymbolicLocation<'doc> {
+        self.parent()
+            .location()
+            .annotated("this job")
+            .with_job(self)
+    }
 }
 
 /// Represents a single "normal" GitHub Actions job.
@@ -261,13 +263,6 @@ impl<'doc> JobExt<'doc> for NormalJob<'doc> {
         self.id
     }
 
-    fn location(&self) -> SymbolicLocation<'doc> {
-        self.parent()
-            .location()
-            .annotated("this job")
-            .with_job(self)
-    }
-
     fn parent(&self) -> &'doc Workflow {
         self.parent
     }
@@ -305,13 +300,6 @@ impl<'doc> ReusableWorkflowCallJob<'doc> {
 impl<'doc> JobExt<'doc> for ReusableWorkflowCallJob<'doc> {
     fn id(&self) -> &'doc str {
         self.id
-    }
-
-    fn location(&self) -> SymbolicLocation<'doc> {
-        self.parent()
-            .location()
-            .annotated("this job")
-            .with_job(self)
     }
 
     fn parent(&self) -> &'doc Workflow {
@@ -555,7 +543,25 @@ impl<'doc> Deref for Step<'doc> {
     }
 }
 
-impl<'doc> StepCommon<'doc> for Step<'doc> {
+impl<'a, 'doc> Locatable<'a, 'doc> for Step<'doc> {
+    /// This step's [`SymbolicLocation`].
+    fn location(&'a self) -> SymbolicLocation<'doc> {
+        self.parent
+            .location()
+            .with_keys(&["steps".into(), self.index.into()])
+            .annotated("this step")
+    }
+
+    fn location_with_name(&'a self) -> SymbolicLocation<'doc> {
+        match self.inner.name {
+            Some(_) => self.location().with_keys(&["name".into()]),
+            None => self.location(),
+        }
+        .annotated("this step")
+    }
+}
+
+impl<'a, 'doc> StepCommon<'a, 'doc> for Step<'doc> {
     fn env_is_static(&self, name: &str) -> bool {
         // Collect each of the step, job, and workflow-level `env` blocks
         // and check each.
@@ -606,21 +612,6 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
                 _env: env,
             },
         }
-    }
-
-    fn location(&self) -> SymbolicLocation<'doc> {
-        self.parent
-            .location()
-            .with_step(self)
-            .annotated("this step")
-    }
-
-    fn location_with_name(&self) -> SymbolicLocation<'doc> {
-        match self.inner.name {
-            Some(_) => self.location().with_keys(&["name".into()]),
-            None => self.location(),
-        }
-        .annotated("this step")
     }
 
     fn document(&self) -> &'doc yamlpath::Document {
@@ -731,6 +722,19 @@ impl<'a> AsDocument<'a, 'a> for Action {
     }
 }
 
+impl<'a> Locatable<'a, 'a> for Action {
+    /// This actions's [`SymbolicLocation`].
+    fn location(&'a self) -> SymbolicLocation<'a> {
+        SymbolicLocation {
+            key: &self.key,
+            annotation: "this action".to_string(),
+            link: None,
+            route: Route::new(),
+            kind: Default::default(),
+        }
+    }
+}
+
 impl Deref for Action {
     type Target = action::Action;
 
@@ -770,17 +774,6 @@ impl Action {
             line_index,
             inner,
         })
-    }
-
-    /// This actions's [`SymbolicLocation`].
-    pub(crate) fn location(&self) -> SymbolicLocation {
-        SymbolicLocation {
-            key: &self.key,
-            annotation: "this action".to_string(),
-            link: None,
-            route: Route::new(),
-            kind: Default::default(),
-        }
     }
 
     /// A [`CompositeSteps`] iterator over this workflow's constituent [`CompositeStep`]s.
@@ -840,7 +833,23 @@ impl<'a> Deref for CompositeStep<'a> {
     }
 }
 
-impl<'s> StepCommon<'s> for CompositeStep<'s> {
+impl<'a, 'doc> Locatable<'a, 'doc> for CompositeStep<'doc> {
+    fn location(&'a self) -> SymbolicLocation<'doc> {
+        self.parent
+            .location()
+            .with_keys(&["runs".into(), "steps".into(), self.index.into()])
+    }
+
+    fn location_with_name(&'a self) -> SymbolicLocation<'doc> {
+        match self.inner.name {
+            Some(_) => self.location().with_keys(&["name".into()]),
+            None => self.location(),
+        }
+        .annotated("this step")
+    }
+}
+
+impl<'a, 'doc> StepCommon<'a, 'doc> for CompositeStep<'doc> {
     fn env_is_static(&self, name: &str) -> bool {
         let env = match &self.body {
             action::StepBody::Uses { .. } => {
@@ -886,19 +895,7 @@ impl<'s> StepCommon<'s> for CompositeStep<'s> {
         }
     }
 
-    fn location(&self) -> SymbolicLocation<'s> {
-        self.parent.location().with_composite_step(self)
-    }
-
-    fn location_with_name(&self) -> SymbolicLocation<'s> {
-        match self.inner.name {
-            Some(_) => self.location().with_keys(&["name".into()]),
-            None => self.location(),
-        }
-        .annotated("this step")
-    }
-
-    fn document(&self) -> &'s yamlpath::Document {
+    fn document(&self) -> &'doc yamlpath::Document {
         self.action().as_document()
     }
 }

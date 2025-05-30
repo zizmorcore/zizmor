@@ -5,8 +5,7 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
-    finding::{Confidence, Severity},
-    models::JobExt as _,
+    finding::{Confidence, Severity, location::Locatable as _},
     state::AuditState,
 };
 
