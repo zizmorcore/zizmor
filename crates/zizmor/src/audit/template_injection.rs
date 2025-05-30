@@ -276,6 +276,20 @@ impl TemplateInjection {
         bad_expressions
     }
 
+    /// Check if an expression contains functions that should only get suggestions, not automatic fixes
+    fn expression_contains_suggestion_only_functions(expr: &str) -> bool {
+        let cleaned_expr = expr.trim();
+        cleaned_expr.starts_with("fromJSON(")
+            || cleaned_expr.starts_with("toJSON(")
+            || cleaned_expr.starts_with("contains(")
+            || cleaned_expr.starts_with("startsWith(")
+            || cleaned_expr.starts_with("endsWith(")
+            || cleaned_expr.starts_with("format(")
+            || cleaned_expr.starts_with("join(")
+            || cleaned_expr.starts_with("hashFiles(")
+            || cleaned_expr.starts_with("secrets.")
+    }
+
     /// Create a fix that moves multiple template expressions to environment variables
     fn create_env_var_fix(
         expressions: &[String],
@@ -445,63 +459,26 @@ impl TemplateInjection {
     /// Generate a safe environment variable name from an expression
     fn generate_env_var_name(expr: &str) -> String {
         // Convert expressions like "github.event.issue.title" to "GITHUB_EVENT_ISSUE_TITLE"
-        // For fromJSON(secrets.foo).bar patterns, extract meaningful parts
 
-        let cleaned_expr = if expr.trim().starts_with("fromJSON(secrets.") {
-            // Handle patterns like "fromJSON(secrets.config).username"
-            // Extract the secret name and any property access
-            if let Some(closing_paren) = expr.find(')') {
-                let secrets_part = &expr[17..closing_paren]; // Skip "fromJSON(secrets."
-                let property_part = &expr[closing_paren + 1..]; // Everything after ")"
-
-                // Combine secret name with property access
-                if property_part.starts_with('.') {
-                    format!("{}_{}", secrets_part, &property_part[1..]) // Remove the leading dot
-                } else if property_part.is_empty() {
-                    secrets_part.to_string()
-                } else {
-                    format!("{}_{}", secrets_part, property_part)
-                }
-            } else {
-                // Malformed expression, fall back to original
-                expr.to_string()
-            }
-        } else if expr.trim().starts_with("fromJSON(") && expr.trim().contains(')') {
-            // Handle other fromJSON patterns like "fromJSON(github.event.config).field"
-            if let Some(closing_paren) = expr.find(')') {
-                let inner_part = &expr[9..closing_paren]; // Skip "fromJSON("
-                let property_part = &expr[closing_paren + 1..]; // Everything after ")"
-
-                if property_part.starts_with('.') {
-                    format!("{}_{}", inner_part, &property_part[1..]) // Remove the leading dot
-                } else if property_part.is_empty() {
-                    inner_part.to_string()
-                } else {
-                    format!("{}_{}", inner_part, property_part)
-                }
-            } else {
-                // Malformed expression, fall back to original
-                expr.to_string()
-            }
-        } else if expr.starts_with("secrets.") {
-            // For direct secrets references, extract just the secret name
-            expr.strip_prefix("secrets.").unwrap_or(expr).to_string()
-        } else {
-            // For other expressions, use as-is
-            expr.to_string()
+        let cleaned_expr = match expr.trim() {
+            expr if Self::expression_contains_suggestion_only_functions(expr) => expr.to_string(),
+            // Replace all special characters with underscores to
+            // ensure valid environment variable names
+            _ => expr
+                .to_string()
+                .trim()
+                .chars()
+                .map(|c| {
+                    if c.is_alphanumeric() {
+                        c.to_ascii_uppercase()
+                    } else {
+                        '_'
+                    }
+                })
+                .collect(),
         };
 
-        // Replace all special characters with underscores to ensure valid environment variable names
         cleaned_expr
-            .chars()
-            .map(|c| {
-                if c.is_alphanumeric() {
-                    c.to_ascii_uppercase()
-                } else {
-                    '_'
-                }
-            })
-            .collect()
     }
 
     /// Create a fix that adds explicit shell specification for workflow steps
@@ -582,15 +559,30 @@ impl Audit for TemplateInjection {
             Vec<(Finding<'doc>, String)>,
         > = std::collections::HashMap::new();
 
+        // Separate expressions into those that get fixes vs suggestions only
+        let mut script_to_suggestion_only: std::collections::HashMap<
+            String,
+            Vec<(Finding<'doc>, String)>,
+        > = std::collections::HashMap::new();
+
         for (finding, full_expr, script) in findings_with_expressions {
-            script_to_expressions
-                .entry(script)
-                .or_default()
-                .push((finding, full_expr));
+            // Check if this expression contains functions that should only get suggestions
+            if Self::expression_contains_suggestion_only_functions(&full_expr) {
+                script_to_suggestion_only
+                    .entry(script)
+                    .or_default()
+                    .push((finding, full_expr));
+            } else {
+                script_to_expressions
+                    .entry(script)
+                    .or_default()
+                    .push((finding, full_expr));
+            }
         }
 
         let mut all_findings = Vec::new();
 
+        // Handle expressions that get automatic fixes
         for (script, findings_and_expressions) in script_to_expressions {
             // Extract all expressions for this script
             let expressions: Vec<String> = findings_and_expressions
@@ -614,6 +606,15 @@ impl Audit for TemplateInjection {
             }
         }
 
+        // Handle expressions that only get suggestions (no automatic fixes)
+        for (_, findings_and_expressions) in script_to_suggestion_only {
+            for (finding, _) in findings_and_expressions {
+                // Don't add any automatic fixes for these expressions
+                // The finding itself serves as the suggestion
+                all_findings.push(finding);
+            }
+        }
+
         Ok(all_findings)
     }
 
@@ -629,15 +630,30 @@ impl Audit for TemplateInjection {
             Vec<(Finding<'a>, String)>,
         > = std::collections::HashMap::new();
 
+        // Separate expressions into those that get fixes vs suggestions only
+        let mut script_to_suggestion_only: std::collections::HashMap<
+            String,
+            Vec<(Finding<'a>, String)>,
+        > = std::collections::HashMap::new();
+
         for (finding, full_expr, script) in findings_with_expressions {
-            script_to_expressions
-                .entry(script)
-                .or_default()
-                .push((finding, full_expr));
+            // Check if this expression contains functions that should only get suggestions
+            if Self::expression_contains_suggestion_only_functions(&full_expr) {
+                script_to_suggestion_only
+                    .entry(script)
+                    .or_default()
+                    .push((finding, full_expr));
+            } else {
+                script_to_expressions
+                    .entry(script)
+                    .or_default()
+                    .push((finding, full_expr));
+            }
         }
 
         let mut all_findings = Vec::new();
 
+        // Handle expressions that get automatic fixes
         for (script, findings_and_expressions) in script_to_expressions {
             // Extract all expressions for this script
             let expressions: Vec<String> = findings_and_expressions
@@ -655,6 +671,15 @@ impl Audit for TemplateInjection {
                 finding
                     .fixes
                     .push(Self::create_composite_shell_specification_fix(step.index));
+                all_findings.push(finding);
+            }
+        }
+
+        // Handle expressions that only get suggestions (no automatic fixes)
+        for (_, findings_and_expressions) in script_to_suggestion_only {
+            for (finding, _) in findings_and_expressions {
+                // Don't add any automatic fixes for these expressions
+                // The finding itself serves as the suggestion
                 all_findings.push(finding);
             }
         }
@@ -699,40 +724,40 @@ mod tests {
             "GITHUB_EVENT_ISSUE_TITLE"
         );
 
-        // Test direct secrets references (should strip secrets. prefix)
+        // Test direct secrets references (should NOT strip secrets. prefix)
         assert_eq!(
             TemplateInjection::generate_env_var_name("secrets.api-config"),
-            "API_CONFIG"
+            "secrets.api-config"
         );
 
-        // Test fromJSON(secrets.*) patterns (should extract just the secret name)
+        // Test fromJSON(secrets.*) patterns (should stay the same)
         assert_eq!(
             TemplateInjection::generate_env_var_name("fromJSON(secrets.config)"),
-            "CONFIG"
+            "fromJSON(secrets.config)"
         );
 
         // Test fromJSON(secrets.*) with property access
         assert_eq!(
             TemplateInjection::generate_env_var_name("fromJSON(secrets.database-config).username"),
-            "DATABASE_CONFIG_USERNAME"
+            "fromJSON(secrets.database-config).username"
         );
 
         // Test fromJSON(secrets.*) with special characters
         assert_eq!(
             TemplateInjection::generate_env_var_name("fromJSON(secrets.api-config)"),
-            "API_CONFIG"
+            "fromJSON(secrets.api-config)"
         );
 
         // Test fromJSON(secrets.*) with complex names and property access
         assert_eq!(
             TemplateInjection::generate_env_var_name("fromJSON(secrets.database_config).password"),
-            "DATABASE_CONFIG_PASSWORD"
+            "fromJSON(secrets.database_config).password"
         );
 
         // Test fromJSON with non-secrets content
         assert_eq!(
             TemplateInjection::generate_env_var_name("fromJSON(github.event.config)"),
-            "GITHUB_EVENT_CONFIG"
+            "fromJSON(github.event.config)"
         );
 
         // Test with mixed special characters
@@ -741,7 +766,7 @@ mod tests {
             "GITHUB_EVENT_ISSUE_TITLE"
         );
 
-        // Test with spaces and other special characters
+        // Test with spaces and other special characters (unlikely case)
         assert_eq!(
             TemplateInjection::generate_env_var_name("my var.name-test@prod"),
             "MY_VAR_NAME_TEST_PROD"
@@ -817,5 +842,52 @@ mod tests {
         assert!(shell_fix.description.contains("PowerShell"));
         assert!(shell_fix.description.contains("${env:VARNAME}"));
         assert!(shell_fix.description.contains("shell: bash"));
+    }
+
+    #[test]
+    fn test_suggestion_only_functions_no_fixes() {
+        use super::TemplateInjection;
+
+        // Test that expressions with fromJSON, toJSON, etc. are detected correctly
+        assert!(
+            TemplateInjection::expression_contains_suggestion_only_functions(
+                "fromJSON(secrets.config)"
+            )
+        );
+        assert!(
+            TemplateInjection::expression_contains_suggestion_only_functions(
+                "toJSON(github.event)"
+            )
+        );
+        assert!(
+            TemplateInjection::expression_contains_suggestion_only_functions(
+                "contains(github.ref, 'main')"
+            )
+        );
+        assert!(
+            TemplateInjection::expression_contains_suggestion_only_functions("secrets.API_KEY")
+        );
+        assert!(
+            TemplateInjection::expression_contains_suggestion_only_functions(
+                "hashFiles('**/*.lock')"
+            )
+        );
+
+        // Test that regular expressions are not detected as suggestion-only
+        assert!(
+            !TemplateInjection::expression_contains_suggestion_only_functions(
+                "github.event.issue.title"
+            )
+        );
+        assert!(
+            !TemplateInjection::expression_contains_suggestion_only_functions(
+                "matrix.node-version"
+            )
+        );
+        assert!(
+            !TemplateInjection::expression_contains_suggestion_only_functions(
+                "inputs.deployment-target"
+            )
+        );
     }
 }
