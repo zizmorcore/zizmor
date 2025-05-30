@@ -308,7 +308,7 @@ fn apply_single_operation(
             // Check if we need to add a newline before the entry
             // If the content at insertion point already ends with a newline, don't add another
             let needs_leading_newline = if insertion_point > 0 {
-                (content.chars().nth(insertion_point - 1) != Some('\n'))
+                content.chars().nth(insertion_point - 1) != Some('\n')
             } else {
                 true
             };
