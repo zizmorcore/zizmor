@@ -99,11 +99,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
             println!("{}", format!("\nFixes").green().bold());
             let num_fixes = file_applied_fixes.len();
             for (ident, fix, finding) in file_applied_fixes {
-                let line_info = if let Some(line) = get_primary_line_number(finding) {
-                    format!(" at line {}", line)
-                } else {
-                    String::new()
-                };
+                let line_info = format!(" at line {}", get_primary_line_number(finding));
                 println!(
                     "  - {}{}: {}",
                     format_severity_and_rule(&finding.determinations.severity, ident),
@@ -175,12 +171,14 @@ pub fn format_severity_and_rule(severity: &crate::finding::Severity, rule_name: 
     }
 }
 
-/// Get the primary line number for a finding, if available
-pub fn get_primary_line_number(finding: &Finding) -> Option<usize> {
+/// Get the primary line number for a finding
+/// Since finding builder APIs enforce the presence of a primary location, this is safe to unwrap
+pub fn get_primary_line_number(finding: &Finding) -> usize {
     finding
         .locations
         .iter()
         .find(|loc| loc.symbolic.is_primary())
         .or_else(|| finding.locations.first())
         .map(|loc| loc.concrete.location.start_point.row + 1) // Convert to 1-based line number
+        .unwrap()
 }
