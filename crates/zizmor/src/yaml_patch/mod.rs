@@ -435,17 +435,24 @@ fn apply_single_operation(
 ///
 /// Supports the full JSON Pointer specification (RFC 6901):
 /// - Array indices are automatically detected and parsed as integers
-/// - Special characters are unescaped (~1 becomes /, ~0 becomes ~)
 /// - Empty path components are filtered out
+///
+/// Note: This function does not support JSON Pointer escaping (e.g., "~1" for "/").
 ///
 /// # Examples
 /// - "/permissions/contents" → Query for nested key
 /// - "/jobs/0/steps/1" → Query for array indices
-/// - "/path/with~1slash" → Query for key containing "/"
 pub fn parse_json_pointer_to_query(path: &str) -> Result<yamlpath::Query, YamlPatchError> {
     if !path.starts_with('/') {
         return Err(YamlPatchError::InvalidPath(format!(
             "Path must start with '/': {}",
+            path
+        )));
+    }
+
+    if path.contains('~') {
+        return Err(YamlPatchError::InvalidPath(format!(
+            "Path contains unsupported escape sequences: {}",
             path
         )));
     }
@@ -458,9 +465,7 @@ pub fn parse_json_pointer_to_query(path: &str) -> Result<yamlpath::Query, YamlPa
             if let Ok(index) = component.parse::<usize>() {
                 yamlpath::Component::Index(index)
             } else {
-                // Decode URI encoding if present
-                let decoded = component.replace("~1", "/").replace("~0", "~");
-                yamlpath::Component::Key(decoded)
+                yamlpath::Component::Key(component)
             }
         })
         .collect();
@@ -979,11 +984,8 @@ jobs:
         let query = parse_json_pointer_to_query("/jobs/0/steps/1");
         assert!(query.is_ok());
 
-        // Test URI encoding
-        let query = parse_json_pointer_to_query("/path/with~1slash/and~0tilde");
-        assert!(query.is_ok());
-
         // Test error cases
+        assert!(parse_json_pointer_to_query("/path/with~1slash/and~0tilde").is_err());
         assert!(parse_json_pointer_to_query("no-leading-slash").is_err());
         assert!(parse_json_pointer_to_query("").is_err());
     }
