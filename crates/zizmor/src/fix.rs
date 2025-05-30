@@ -59,7 +59,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
         // First, try to apply each fix independently to the original content
         // to collect which fixes can be applied successfully
         for (ident, finding, fix) in fixes {
-            match fix.apply_to_content(&original_content) {
+            match fix.apply_to_content(original_content) {
                 Ok(Some(_)) => {
                     successful_fixes.push((*ident, *fix, *finding));
                 }
@@ -96,7 +96,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
 
         // Only proceed if there are changes to apply
         if current_content != original_content {
-            println!("{}", format!("\nFixes").green().bold());
+            println!("{}", "\nFixes".to_string().green().bold());
             let num_fixes = file_applied_fixes.len();
             for (ident, fix, finding) in file_applied_fixes {
                 let line_info = format!(" at line {}", get_primary_line_number(finding));
@@ -108,7 +108,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
                 );
             }
 
-            match std::fs::write(&file_path, &current_content) {
+            match std::fs::write(file_path, &current_content) {
                 Ok(_) => {
                     applied_fixes.push((file_path.to_string(), num_fixes));
                     println!("Applied {} fixes to {}", num_fixes, file_path);

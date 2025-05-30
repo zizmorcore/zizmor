@@ -26,7 +26,6 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    apply_yaml_patch,
     finding::{Confidence, Finding, Fix, Persona, Severity, SymbolicLocation},
     models::{self, CompositeStep, JobExt as _, Step, StepCommon, uses::RepositoryUsesPattern},
     state::AuditState,
@@ -460,7 +459,7 @@ impl TemplateInjection {
     fn generate_env_var_name(expr: &str) -> String {
         // Convert expressions like "github.event.issue.title" to "GITHUB_EVENT_ISSUE_TITLE"
 
-        let cleaned_expr = match expr.trim() {
+        match expr.trim() {
             expr if Self::expression_contains_suggestion_only_functions(expr) => expr.to_string(),
             // Replace all special characters with underscores to
             // ensure valid environment variable names
@@ -476,9 +475,7 @@ impl TemplateInjection {
                     }
                 })
                 .collect(),
-        };
-
-        cleaned_expr
+        }
     }
 
     fn process_step<'doc>(

@@ -249,7 +249,7 @@ fn apply_single_operation(
             // Check if we're adding to a list item by examining the path
             let is_list_item = path
                 .split('/')
-                .last()
+                .next_back()
                 .unwrap_or("")
                 .parse::<usize>()
                 .is_ok();
@@ -290,7 +290,7 @@ fn apply_single_operation(
                 }
             } else if new_value_str.contains('\n') {
                 // Handle multiline values
-                let indented_value = indent_multiline_yaml(&new_value_str, &indent);
+                let indented_value = indent_multiline_yaml(new_value_str, &indent);
                 format!("\n{}{}: {}", indent, key, indented_value)
             } else {
                 format!("\n{}{}: {}", indent, key, new_value_str)
@@ -308,10 +308,7 @@ fn apply_single_operation(
             // Check if we need to add a newline before the entry
             // If the content at insertion point already ends with a newline, don't add another
             let needs_leading_newline = if insertion_point > 0 {
-                !content
-                    .chars()
-                    .nth(insertion_point - 1)
-                    .map_or(false, |c| c == '\n')
+                (content.chars().nth(insertion_point - 1) != Some('\n'))
             } else {
                 true
             };
@@ -352,14 +349,14 @@ fn apply_single_operation(
                         // Try to parse the existing value as YAML to see if it's also a mapping
                         let existing_content = doc.extract(&existing_feature);
                         if let Ok(existing_value) =
-                            serde_yaml::from_str::<serde_yaml::Value>(&existing_content)
+                            serde_yaml::from_str::<serde_yaml::Value>(existing_content)
                         {
                             // The extracted content includes the key, so we need to get the value
                             let actual_existing_value =
                                 if let serde_yaml::Value::Mapping(outer_mapping) = existing_value {
                                     // If the extracted content is like "env: { ... }", get the value part
                                     if let Some(inner_value) =
-                                        outer_mapping.get(&serde_yaml::Value::String(key.clone()))
+                                        outer_mapping.get(serde_yaml::Value::String(key.clone()))
                                     {
                                         inner_value.clone()
                                     } else {
@@ -763,7 +760,7 @@ fn apply_value_replacement(
                     result
                 } else {
                     // Use the simpler formatting from apply_mapping_replacement
-                    let mut result = format!("{}", key_part.trim_end());
+                    let mut result = key_part.trim_end().to_string();
                     for (k, v) in mapping {
                         let key_str = match k {
                             serde_yaml::Value::String(s) => s.clone(),
@@ -775,7 +772,7 @@ fn apply_value_replacement(
                         result.push_str(&content_indent);
                         result.push_str(&key_str);
                         result.push_str(": ");
-                        result.push_str(&value_str);
+                        result.push_str(value_str);
                     }
                     result
                 }
@@ -788,7 +785,7 @@ fn apply_value_replacement(
         // This is just a value, replace it directly
         let leading_whitespace = extract_leading_whitespace(content, feature.location.byte_span.0);
         if current_content.contains('\n') {
-            indent_multiline_yaml(&new_value_str, &leading_whitespace)
+            indent_multiline_yaml(new_value_str, &leading_whitespace)
         } else {
             new_value_str.to_string()
         }
@@ -828,7 +825,7 @@ macro_rules! apply_yaml_patch {
     ($operations:expr) => {{
         let operations = $operations;
         Box::new(move |old_content: &str| -> anyhow::Result<Option<String>> {
-            match crate::yaml_patch::apply_yaml_patch(old_content, operations.clone()) {
+            match $crate::yaml_patch::apply_yaml_patch(old_content, operations.clone()) {
                 Ok(new_content) => Ok(Some(new_content)),
                 Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
             }
@@ -1582,7 +1579,7 @@ jobs:
         let path = "/jobs/build/steps/0";
         let is_list_item = path
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("")
             .parse::<usize>()
             .is_ok();
@@ -1660,7 +1657,7 @@ jobs:
             assert!(env_content.contains("IDENTITY: ${{ secrets.IDENTITY }}"));
 
             // Try to parse it as YAML and verify structure
-            match serde_yaml::from_str::<serde_yaml::Value>(&env_content) {
+            match serde_yaml::from_str::<serde_yaml::Value>(env_content) {
                 Ok(value) => {
                     if let serde_yaml::Value::Mapping(outer_mapping) = value {
                         // Assert that the mapping contains expected keys
@@ -1671,7 +1668,7 @@ jobs:
 
                         // The extracted content includes the "env:" key, so we need to look inside it
                         if let Some(env_value) =
-                            outer_mapping.get(&serde_yaml::Value::String("env".to_string()))
+                            outer_mapping.get(serde_yaml::Value::String("env".to_string()))
                         {
                             if let serde_yaml::Value::Mapping(env_mapping) = env_value {
                                 // Verify that we can iterate over the env mapping
