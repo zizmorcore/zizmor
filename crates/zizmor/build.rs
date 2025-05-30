@@ -5,7 +5,13 @@ use std::{env, io};
 use fst::MapBuilder;
 
 fn do_context_capabilities() {
-    println!("cargo::rerun-if-changed=../../support/context-capabilities.csv");
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let source = Path::new(&manifest_dir).join("data/context-capabilities.csv");
+
+    println!(
+        "cargo::rerun-if-changed={source}",
+        source = source.display()
+    );
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_path = Path::new(&out_dir).join("context-capabilities.fst");
@@ -15,7 +21,7 @@ fn do_context_capabilities() {
 
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(false)
-        .from_path("../../support/context-capabilities.csv")
+        .from_path(source)
         .unwrap();
 
     for record in rdr.records() {
@@ -35,10 +41,14 @@ fn do_context_capabilities() {
 }
 
 fn do_codeql_injection_sinks() {
-    let source = "../../support/codeql-injection-sinks.json";
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let source = Path::new(&manifest_dir).join("data/codeql-injection-sinks.json");
     let target = Path::new(&env::var("OUT_DIR").unwrap()).join("codeql-injection-sinks.json");
 
-    print!("cargo::rerun-if-changed={}", source);
+    print!(
+        "cargo::rerun-if-changed={source}",
+        source = source.display()
+    );
 
     fs::copy(source, target).unwrap();
 }

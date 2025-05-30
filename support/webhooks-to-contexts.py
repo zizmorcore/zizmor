@@ -37,7 +37,7 @@ _HERE = Path(__file__).parent
 _KNOWN_SAFE_CONTEXTS = _HERE / "known-safe-contexts.txt"
 assert _KNOWN_SAFE_CONTEXTS.is_file(), f"Missing {_KNOWN_SAFE_CONTEXTS}"
 
-_OUT = _HERE / "context-capabilities.csv"
+_OUT = _HERE.parent / "crates" / "zizmor" / "data" / "context-capabilities.csv"
 
 # A mapping of workflow trigger event names to subevents.
 # Keep in sync with: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows
