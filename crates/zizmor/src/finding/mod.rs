@@ -449,7 +449,7 @@ pub struct Fix {
     /// A detailed description of the fix.
     pub description: String,
     /// A function that, when called, applies the fix and returns the new content (or None if not applicable).
-    pub apply: Box<dyn Fn(&str) -> anyhow::Result<Option<String>> + Send + Sync>,
+    pub apply: Box<dyn Fn(&str) -> anyhow::Result<Option<String>>>,
 }
 
 impl Fix {
