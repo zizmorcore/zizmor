@@ -16,7 +16,7 @@ license = "MIT"
 
 [workspace.dependencies]
 anyhow = "1.0.98"
-github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.3" }
+github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.4" }
 github-actions-models = { path = "crates/github-actions-models", version = "0.29.0" }
 itertools = "0.14.0"
 pest = "2.8.0"
