@@ -871,15 +871,22 @@ jobs:
 
         let result = apply_yaml_patch(original, operations).unwrap();
 
-        // The result should preserve all comments
-        assert!(result.contains("# This is a workflow file"));
-        assert!(result.contains("# This configures permissions"));
-        assert!(result.contains("# Only read access"));
-        assert!(result.contains("# Write access for actions"));
+        // Preserves all comments, but changes the value of `contents`
+        insta::assert_snapshot!(result, @r"
+        # This is a workflow file
+        name: CI
+        on: push
 
-        // But should change the value
-        assert!(result.contains("contents: write"));
-        assert!(!result.contains("contents: read"));
+        permissions: # This configures permissions
+          contents: write  # Only read access
+          actions: write  # Write access for actions
+
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@v4
+        ");
     }
 
     #[test]
@@ -898,13 +905,13 @@ permissions:
 
         let result = apply_yaml_patch(original, operations).unwrap();
 
-        // Should preserve original content and add new key
-        assert!(result.contains("contents: read"));
-        assert!(result.contains("actions: write"));
-        assert!(result.contains("issues: read"));
-
-        // Should maintain proper indentation
-        assert!(result.contains("  issues: read"));
+        // Preserves original content, adds new key while maintaining indentation
+        insta::assert_snapshot!(result, @r"
+        permissions:
+          contents: read
+          actions: write
+          issues: read
+        ");
     }
 
     #[test]
@@ -922,14 +929,12 @@ permissions:
 
         let result = apply_yaml_patch(original, operations).unwrap();
 
-        // Should preserve other content and comments
-        assert!(result.contains("contents: read"));
-        assert!(result.contains("# Keep this comment"));
-        assert!(result.contains("issues: read"));
-
-        // Should remove the target line
-        assert!(!result.contains("actions: write"));
-        assert!(!result.contains("# Remove this line"));
+        // Preserves other content, removes the target line
+        insta::assert_snapshot!(result, @r"
+        permissions:
+          contents: read  # Keep this comment
+          issues: read
+        ");
     }
 
     #[test]
@@ -964,16 +969,23 @@ jobs:
 
         let result = apply_yaml_patch(original, operations).unwrap();
 
-        // All comments should be preserved
-        assert!(result.contains("# Main configuration"));
-        assert!(result.contains("# Trigger on push"));
-        assert!(result.contains("# Security settings"));
-        assert!(result.contains("# Main job"));
+        // All comments preserved, all changes applied
+        insta::assert_snapshot!(result, @r"
+        # Main configuration
+        name: Test Workflow
+        on:
+          push: # Trigger on push
+            branches: [main]
 
-        // Changes should be applied
-        assert!(result.contains("contents: write"));
-        assert!(result.contains("issues: write"));
-        assert!(!result.contains("contents: read"));
+        permissions:  # Security settings
+          contents: write
+          actions: read
+          issues: write
+
+        jobs:
+          build: # Main job
+            runs-on: ubuntu-latest
+        ");
     }
 
     #[test]
@@ -1049,18 +1061,24 @@ jobs:
 
         let result = apply_yaml_patch(original_yaml, operations).unwrap();
 
-        // Verify all comments are preserved
-        assert!(result.contains("# GitHub Actions Workflow"));
-        assert!(result.contains("# Security permissions"));
-        assert!(result.contains("# This section defines permissions"));
-        assert!(result.contains("# Only read access to repository contents"));
-        assert!(result.contains("# Write access for GitHub Actions"));
-        assert!(result.contains("# Read access to issues"));
+        insta::assert_snapshot!(result, @r"
+        # GitHub Actions Workflow
+        name: CI
+        on: push
 
-        // Verify changes were applied
-        assert!(result.contains("contents: write"));
-        assert!(result.contains("packages: read"));
-        assert!(!result.contains("contents: read"));
+        # Security permissions
+        permissions: # This section defines permissions
+          contents: write  # Only read access to repository contents
+          actions: write  # Write access for GitHub Actions
+          issues: read    # Read access to issues
+          packages: read
+
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@v4
+        ")
     }
 
     #[test]
@@ -1081,8 +1099,13 @@ jobs:
         let result = apply_yaml_patch(original, operations).unwrap();
 
         // Empty mapping should be formatted inline
-        assert!(result.contains("    permissions: {}"));
-        assert!(!result.contains("permissions:\n      {}"));
+        insta::assert_snapshot!(result, @r"
+        name: Test
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            permissions: {}
+        ");
     }
 
     #[test]
@@ -1105,23 +1128,15 @@ jobs:
 
         let result = apply_yaml_patch(&original_with_newline, operations).unwrap();
 
-        // Should not have empty lines between content and new addition
-        assert!(!result.contains("\"test\"\n\n    permissions"));
-        assert!(result.contains("\"test\"\n    permissions: {}"));
-
-        // Should have proper structure without extra empty lines
-        let lines: Vec<&str> = result.lines().collect();
-        let steps_line = lines
-            .iter()
-            .position(|&line| line.contains("- run: echo \"test\""))
-            .unwrap();
-        let permissions_line = lines
-            .iter()
-            .position(|&line| line.contains("permissions: {}"))
-            .unwrap();
-
-        // permissions should come immediately after the step (no empty line in between)
-        assert_eq!(permissions_line, steps_line + 1);
+        insta::assert_snapshot!(result, @r#"
+        name: Test
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - run: echo "test"
+            permissions: {}
+        "#);
     }
 
     #[test]
@@ -1203,13 +1218,17 @@ jobs:
         let result = apply_yaml_patch(original, operations).unwrap();
 
         // The with section should be added to the first step correctly, not mixed with comments
-        assert!(result.contains("uses: actions/checkout@v4"));
-        assert!(result.contains("with:"));
-        assert!(result.contains("persist-credentials: false"));
-        assert!(result.contains("# This is a comment after the step"));
+        insta::assert_snapshot!(result, @r#"
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+            with:
+              persist-credentials: false
+            # This is a comment after the step
 
-        // Should not break the structure
-        assert!(result.contains("- name: Build"));
+          - name: Build
+            run: echo "build"
+        "#);
     }
 
     #[test]
@@ -1309,22 +1328,18 @@ jobs:
 
         let result = apply_yaml_patch(original, operations).unwrap();
 
-        // Should preserve all comments and structure
-        assert!(result.contains("# GitHub Actions Workflow"));
-        assert!(result.contains("name: CI"));
-        assert!(result.contains("on: push"));
+        insta::assert_snapshot!(result, @r"
+        # GitHub Actions Workflow
+        name: CI
+        on: push
 
-        // Should add permissions at the root level exactly once
-        assert!(result.contains("permissions: {}"));
-
-        // Should NOT have duplicated permissions (check that it only appears once)
-        let permissions_count = result.matches("permissions:").count();
-        assert_eq!(permissions_count, 1, "permissions should only appear once");
-
-        // Should maintain proper structure
-        assert!(result.contains("jobs:"));
-        assert!(result.contains("  test:"));
-        assert!(result.contains("    runs-on: ubuntu-latest"));
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@v4
+        permissions: {}
+        ");
     }
 
     #[test]
@@ -1346,9 +1361,14 @@ jobs:
         assert!(result.is_ok());
 
         let result = result.unwrap();
-        assert!(result.contains("permissions: {}"));
-        assert!(result.contains("name: Test"));
-        assert!(result.contains("on: push"));
+        insta::assert_snapshot!(result, @r"
+        name: Test
+        on: push
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+        permissions: {}
+        ");
     }
 
     #[test]
@@ -1377,34 +1397,18 @@ jobs:
 
         let result = apply_yaml_patch(original, operations).unwrap();
 
-        // The with section should be added to the first step correctly, not mixed with comments
-        assert!(result.contains("uses: actions/checkout@v4"));
-        assert!(result.contains("with:"));
-        assert!(result.contains("persist-credentials: false"));
-        assert!(result.contains("# Comment after step1"));
-        assert!(result.contains("# Comment before step2"));
-        assert!(result.contains("- name: Step2"));
+        insta::assert_snapshot!(result, @r#"
+        steps:
+          - name: Step1
+            uses: actions/checkout@v4
+            with:
+              persist-credentials: false
+            # Comment after step1
 
-        // Verify the structure is correct - with should come right after uses
-        let lines: Vec<&str> = result.lines().collect();
-        let uses_line = lines
-            .iter()
-            .position(|&line| line.contains("uses: actions/checkout@v4"))
-            .unwrap();
-        let with_line = lines
-            .iter()
-            .position(|&line| line.contains("with:"))
-            .unwrap();
-
-        // with should come immediately after uses (or with one comment line in between)
-        assert!(with_line > uses_line && with_line <= uses_line + 2);
-
-        // Step2 should still be intact
-        let step2_line = lines
-            .iter()
-            .position(|&line| line.contains("- name: Step2"))
-            .unwrap();
-        assert!(step2_line > with_line);
+          # Comment before step2
+          - name: Step2
+            run: echo "test"
+        "#);
     }
 
     #[test]
@@ -1431,11 +1435,16 @@ jobs:
         }];
 
         let result = apply_yaml_patch(original, operations).unwrap();
-
-        // Should add the env section
-        assert!(result.contains("env:"));
-        assert!(result.contains("TEST_VAR: test_value"));
-        assert!(result.contains("run: echo \"hello\""));
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                run: echo "hello"
+                env:
+                  TEST_VAR: test_value
+        "#);
     }
 
     #[test]
@@ -1466,10 +1475,17 @@ jobs:
         let result = apply_yaml_patch(original, operations).unwrap();
 
         // Should merge the new mapping with the existing one
-        assert!(result.contains("env:"));
-        assert!(result.contains("NEW_VAR: new_value"));
-        // With true merging behavior, existing variables should be preserved
-        assert!(result.contains("EXISTING_VAR: existing_value"));
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                run: echo "hello"
+                env:
+                  EXISTING_VAR: existing_value
+                  NEW_VAR: new_value
+        "#);
     }
 
     #[test]
@@ -1501,12 +1517,17 @@ jobs:
         let result = apply_yaml_patch(original, operations).unwrap();
 
         // Should only have one env: key
-        let env_count = result.matches("env:").count();
-        assert_eq!(env_count, 1, "Should only have one env: key");
-
-        // Should have both the new value and preserve existing values
-        assert!(result.contains("NEW_VAR: new_value"));
-        assert!(result.contains("EXISTING_VAR: existing_value")); // Previous value gets preserved
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                run: echo "hello"
+                env:
+                  EXISTING_VAR: existing_value
+                  NEW_VAR: new_value
+        "#);
     }
 
     #[test]
@@ -1533,13 +1554,16 @@ jobs:
         }];
 
         let result = apply_yaml_patch(original, operations).unwrap();
-
-        // Should have env key
-        assert!(result.contains("env:"));
-        assert!(result.contains("GITHUB_REF_NAME: ${{ github.ref_name }}"));
-
-        // Should only have one env key
-        assert_eq!(result.matches("env:").count(), 1);
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                run: echo "hello"
+                env:
+                  GITHUB_REF_NAME: ${{ github.ref_name }}
+        "#);
     }
 
     #[test]
@@ -1625,14 +1649,17 @@ jobs:
         // Assert that the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
 
-        // Assert that the shell key was added correctly
-        assert!(result.contains("shell: bash"));
-
-        // Assert that original content is preserved
-        assert!(result.contains("name: Test step"));
-        assert!(result.contains("run: |"));
-        assert!(result.contains("echo \"line 1\""));
-        assert!(result.contains("echo \"line 2\""));
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                run: |
+                  echo "line 1"
+                  echo "line 2"
+                shell: bash
+        "#);
     }
 
     #[test]
@@ -1732,12 +1759,23 @@ jobs:
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
 
-        // For MergeInto, we merge mappings, so both variables should be present
-        assert!(result.contains("IDENTITY: ${{ secrets.IDENTITY }}"));
-        assert!(result.contains("STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}"));
-
-        // Verify only one env: key exists
-        assert_eq!(result.matches("env:").count(), 1);
+        insta::assert_snapshot!(result, @r#"
+        name: Test
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            permissions: {}
+            steps:
+              - name: Multiline step with env
+                run: |
+                  echo "${{ steps.meta.outputs.tags }}" | xargs -I {} echo {}
+                env:
+                  IDENTITY: ${{ secrets.IDENTITY }}
+                  STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}
+                shell: bash
+        "#);
     }
 
     #[test]
@@ -1774,13 +1812,21 @@ jobs:
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
 
-        // For MergeInto, we merge mappings, so all variables should be present
-        assert!(result.contains("IDENTITY: ${{ secrets.IDENTITY }}"));
-        assert!(result.contains("OIDC_ISSUER_URL: ${{ secrets.OIDC_ISSUER_URL }}"));
-        assert!(result.contains("STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}"));
-
         // Should only have one env: key
         assert_eq!(result.matches("env:").count(), 1);
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                run: echo "hello"
+                env:
+                  IDENTITY: ${{ secrets.IDENTITY }}
+                  OIDC_ISSUER_URL: ${{ secrets.OIDC_ISSUER_URL }}
+                  STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}
+                shell: bash
+        "#);
     }
 
     #[test]
@@ -1814,15 +1860,18 @@ jobs:
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
 
-        // Should only have one env: key (no duplicates)
-        assert_eq!(result.matches("env:").count(), 1);
-
-        // Should have the new variable
-        assert!(result.contains("NEW_VAR: new_value"));
-
-        // With true merging behavior, existing vars should be preserved
-        assert!(result.contains("EXISTING_VAR: existing_value"));
-        assert!(result.contains("ANOTHER_VAR: another_value"));
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                run: echo "hello"
+                env:
+                  EXISTING_VAR: existing_value
+                  ANOTHER_VAR: another_value
+                  NEW_VAR: new_value
+        "#);
     }
 
     #[test]
@@ -1872,19 +1921,19 @@ jobs:
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
 
-        // Should only have one env: key (no duplicates)
-        assert_eq!(result.matches("env:").count(), 1);
-
-        // With true merging behavior: each MergeInto merges with existing values
-        // So all variables should be present
-        assert!(result.contains("NEW_VAR_2: new_value_2"));
-
-        // The first operation's variable should also be present
-        assert!(result.contains("NEW_VAR_1: new_value_1"));
-
-        // Original variables should be preserved
-        assert!(result.contains("EXISTING_VAR: existing_value"));
-        assert!(result.contains("KEEP_THIS: keep_value"));
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                run: echo "hello"
+                env:
+                  EXISTING_VAR: existing_value
+                  KEEP_THIS: keep_value
+                  NEW_VAR_1: new_value_1
+                  NEW_VAR_2: new_value_2
+        "#);
     }
 
     #[test]
@@ -1917,13 +1966,16 @@ jobs:
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
 
-        // Should have one env: key (newly added)
-        assert_eq!(result.matches("env:").count(), 1);
-
-        // Should have the new env variable
-        assert!(result.contains("GITHUB_REF_NAME: ${{ github.ref_name }}"));
-
-        // Should preserve the original shell key
-        assert!(result.contains("shell: bash"));
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                run: echo "hello"
+                shell: bash
+                env:
+                  GITHUB_REF_NAME: ${{ github.ref_name }}
+        "#);
     }
 }
