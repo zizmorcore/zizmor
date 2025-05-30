@@ -2,11 +2,7 @@
 
 use std::{ops::Range, sync::LazyLock};
 
-use crate::{
-    audit::AuditInput,
-    models::{AsDocument as _, JobExt},
-    registry::InputKey,
-};
+use crate::{audit::AuditInput, models::AsDocument as _, registry::InputKey};
 use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
@@ -103,10 +99,6 @@ impl<'doc> SymbolicLocation<'doc> {
             route: self.route.with_keys(keys),
             kind: self.kind,
         }
-    }
-
-    pub(crate) fn with_job(&self, job: &impl JobExt<'doc>) -> SymbolicLocation<'doc> {
-        self.with_keys(&["jobs".into(), job.id().into()])
     }
 
     /// Adds a human-readable annotation to the current `SymbolicLocation`.

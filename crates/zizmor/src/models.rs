@@ -202,7 +202,7 @@ impl<'a, 'doc, T: JobExt<'doc>> Locatable<'a, 'doc> for T {
         self.parent()
             .location()
             .annotated("this job")
-            .with_job(self)
+            .with_keys(&["jobs".into(), self.id().into()])
     }
 }
 
