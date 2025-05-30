@@ -442,6 +442,8 @@ pub(crate) struct Determinations {
     pub(super) persona: Persona,
 }
 
+type ApplyFn = dyn Fn(&str) -> anyhow::Result<Option<String>>;
+
 /// Represents a suggested fix for a finding.
 pub(crate) struct Fix {
     /// A short title describing the fix.
@@ -450,7 +452,7 @@ pub(crate) struct Fix {
     #[allow(dead_code)]
     pub(crate) description: String,
     /// A function that, when called, applies the fix and returns the new content (or None if not applicable).
-    pub(crate) apply: Box<dyn Fn(&str) -> anyhow::Result<Option<String>>>,
+    pub(crate) apply: Box<ApplyFn>,
 }
 
 impl Fix {

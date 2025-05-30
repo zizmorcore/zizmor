@@ -528,6 +528,7 @@ fn indent_multiline_yaml(content: &str, base_indent: &str) -> String {
 }
 
 /// Find the end of actual step content, excluding trailing comments
+#[allow(clippy::needless_range_loop)]
 fn find_step_content_end(
     _content: &str,
     feature: &yamlpath::Feature,
@@ -546,6 +547,7 @@ fn find_step_content_end(
             // This is the last line with actual content
             // Calculate its position relative to the start of the feature
             let mut current_pos = 0;
+
             for j in 0..=i {
                 if j == i {
                     // This is our target line, find the end of it
