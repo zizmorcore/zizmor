@@ -10,6 +10,7 @@ authors.workspace = true
 homepage.workspace = true
 edition.workspace = true
 license.workspace = true
+lints.workspace = true
 
 [dependencies]
 thiserror.workspace = true

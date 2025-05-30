@@ -64,6 +64,11 @@ tree-sitter-powershell = "0.25.2"
 yamlpath = { path = "crates/yamlpath", version = "0.19.0" }
 tree-sitter-yaml = "0.7.1"
 
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+use_debug = "warn"
 
 [profile.dev.package]
 insta.opt-level = 3
