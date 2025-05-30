@@ -335,15 +335,15 @@ mod tests {
     // Test-only trait impl.
     impl<'s> StepCommon<'s> for Step {
         fn env_is_static(&self, _name: &str) -> bool {
-            unimplemented!()
+            unreachable!()
         }
 
         fn uses(&self) -> Option<&github_actions_models::common::Uses> {
-            unimplemented!()
+            unreachable!()
         }
 
         fn strategy(&self) -> Option<&github_actions_models::workflow::job::Strategy> {
-            unimplemented!()
+            unreachable!()
         }
 
         fn body(&self) -> super::StepBodyCommon {
@@ -366,15 +366,15 @@ mod tests {
         }
 
         fn location(&self) -> crate::models::SymbolicLocation<'s> {
-            unimplemented!()
+            unreachable!()
         }
 
         fn location_with_name(&self) -> crate::finding::SymbolicLocation<'s> {
-            unimplemented!()
+            unreachable!()
         }
 
         fn document(&self) -> &'s yamlpath::Document {
-            unimplemented!()
+            unreachable!()
         }
     }
 
