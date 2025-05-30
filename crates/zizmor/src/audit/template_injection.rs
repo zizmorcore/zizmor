@@ -481,38 +481,6 @@ impl TemplateInjection {
         cleaned_expr
     }
 
-    /// Create a fix that adds explicit shell specification for workflow steps
-    fn create_shell_specification_fix(job_id: &str, step_index: usize) -> Fix {
-        Fix {
-            title: "Add explicit shell specification".to_string(),
-            description: "Add 'shell: bash' to ensure consistent variable expansion syntax across different runners. \
-                When switching to '${VARNAME}', keep in mind that different shells have different environment variable syntaxes. \
-                In particular, PowerShell (the default shell on Windows runners) uses '${env:VARNAME}'. \
-                To avoid having to specialize your handling for different runners, you can set 'shell: bash'.".to_string(),
-            apply: apply_yaml_patch!(vec![YamlPatchOperation::MergeInto {
-                path: format!("/jobs/{}/steps/{}", job_id, step_index),
-                key: "shell".to_string(),
-                value: serde_yaml::Value::String("bash".to_string()),
-            }]),
-        }
-    }
-
-    /// Create a fix that adds explicit shell specification for composite steps
-    fn create_composite_shell_specification_fix(step_index: usize) -> Fix {
-        Fix {
-            title: "Add explicit shell specification".to_string(),
-            description: "Add 'shell: bash' to ensure consistent variable expansion syntax across different runners. \
-                When switching to '${VARNAME}', keep in mind that different shells have different environment variable syntaxes. \
-                In particular, PowerShell (the default shell on Windows runners) uses '${env:VARNAME}'. \
-                To avoid having to specialize your handling for different runners, you can set 'shell: bash'.".to_string(),
-            apply: apply_yaml_patch!(vec![YamlPatchOperation::MergeInto {
-                path: format!("/runs/steps/{}", step_index),
-                key: "shell".to_string(),
-                value: serde_yaml::Value::String("bash".to_string()),
-            }]),
-        }
-    }
-
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
@@ -598,10 +566,6 @@ impl Audit for TemplateInjection {
                     step.index,
                     &script,
                 ));
-                finding.fixes.push(Self::create_shell_specification_fix(
-                    step.job().id(),
-                    step.index,
-                ));
                 all_findings.push(finding);
             }
         }
@@ -668,9 +632,6 @@ impl Audit for TemplateInjection {
                     step.index,
                     &script,
                 ));
-                finding
-                    .fixes
-                    .push(Self::create_composite_shell_specification_fix(step.index));
                 all_findings.push(finding);
             }
         }
@@ -796,10 +757,6 @@ mod tests {
         );
         assert!(env_var_fix.description.contains("github.event.issue.title"));
         assert!(env_var_fix.description.contains("env:"));
-
-        let shell_fix = TemplateInjection::create_shell_specification_fix("test-job", 0);
-        assert_eq!(shell_fix.title, "Add explicit shell specification");
-        assert!(shell_fix.description.contains("shell: bash"));
     }
 
     #[test]
@@ -830,18 +787,6 @@ mod tests {
                 .description
                 .contains("variable expansion is subject to normal shell quoting/expansion rules")
         );
-
-        let shell_fix = TemplateInjection::create_shell_specification_fix("test-job", 0);
-
-        // Verify shell fix description contains guidance from audits.md
-        assert!(
-            shell_fix
-                .description
-                .contains("different shells have different environment variable syntaxes")
-        );
-        assert!(shell_fix.description.contains("PowerShell"));
-        assert!(shell_fix.description.contains("${env:VARNAME}"));
-        assert!(shell_fix.description.contains("shell: bash"));
     }
 
     #[test]
