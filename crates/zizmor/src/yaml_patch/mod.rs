@@ -58,6 +58,7 @@ use anyhow::Result;
 /// Error types for YAML patch operations
 #[derive(thiserror::Error, Debug)]
 pub enum YamlPatchError {
+    #[allow(dead_code)]
     #[error("Path not found: {0}")]
     PathNotFound(String),
     #[error("Invalid path format: {0}")]
@@ -94,6 +95,7 @@ pub enum YamlPatchOperation {
         value: serde_yaml::Value,
     },
     /// Remove the key at the given path
+    #[allow(dead_code)]
     Remove { path: String },
 }
 

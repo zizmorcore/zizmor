@@ -443,18 +443,19 @@ pub(crate) struct Determinations {
 }
 
 /// Represents a suggested fix for a finding.
-pub struct Fix {
+pub(crate) struct Fix {
     /// A short title describing the fix.
-    pub title: String,
+    pub(crate) title: String,
     /// A detailed description of the fix.
-    pub description: String,
+    #[allow(dead_code)]
+    pub(crate) description: String,
     /// A function that, when called, applies the fix and returns the new content (or None if not applicable).
-    pub apply: Box<dyn Fn(&str) -> anyhow::Result<Option<String>>>,
+    pub(crate) apply: Box<dyn Fn(&str) -> anyhow::Result<Option<String>>>,
 }
 
 impl Fix {
     /// Apply the fix to the given file content.
-    pub fn apply_to_content(&self, old_content: &str) -> anyhow::Result<Option<String>> {
+    pub(crate) fn apply_to_content(&self, old_content: &str) -> anyhow::Result<Option<String>> {
         (self.apply)(old_content)
     }
 }
@@ -539,12 +540,14 @@ impl<'doc> FindingBuilder<'doc> {
         self
     }
 
-    pub fn fix(mut self, fix: Fix) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn fix(mut self, fix: Fix) -> Self {
         self.fixes.push(fix);
         self
     }
 
-    pub fn fixes(mut self, fixes: Vec<Fix>) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn fixes(mut self, fixes: Vec<Fix>) -> Self {
         self.fixes.extend(fixes);
         self
     }
