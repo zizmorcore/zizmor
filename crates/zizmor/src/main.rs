@@ -135,6 +135,10 @@ struct App {
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
     naches: bool,
 
+    /// Apply fixes automatically if available.
+    #[arg(long, hide = true)]
+    fix: bool,
+
     /// The inputs to audit.
     ///
     /// These can be individual workflow filenames, action definitions
@@ -143,10 +147,6 @@ struct App {
     /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
-
-    /// Apply fixes automatically if available.
-    #[arg(long)]
-    fix: bool,
 }
 
 /// Shell with auto-generated completion script available.
