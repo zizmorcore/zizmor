@@ -13,6 +13,7 @@ license.workspace = true
 readme.workspace = true
 authors.workspace = true
 edition.workspace = true
+lints.workspace = true
 
 [features]
 # Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
