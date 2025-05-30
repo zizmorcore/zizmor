@@ -9,7 +9,9 @@ homepage.workspace = true
 license.workspace = true
 authors.workspace = true
 edition.workspace = true
-lints.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 anyhow.workspace = true
