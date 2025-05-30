@@ -14,6 +14,8 @@ jobs:
   refresh-schemas:
     name: Refresh JSON schemas 📈
     runs-on: ubuntu-latest
+    # this job does not make sense on forks
+    if: ${{ github.repository_owner == 'zizmorcore' }}
 
     permissions:
       contents: write # for creating branches
@@ -48,6 +50,8 @@ jobs:
   refresh-context-capabilities:
     name: Refresh context capabilities *️⃣
     runs-on: ubuntu-latest
+    # this job does not make sense on forks
+    if: ${{ github.repository_owner == 'zizmorcore' }}
 
     permissions:
       contents: write # for creating branches
