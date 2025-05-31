@@ -348,15 +348,15 @@ mod tests {
 
     impl<'a, 'doc> StepCommon<'a, 'doc> for Step {
         fn env_is_static(&self, _name: &str) -> bool {
-            unimplemented!()
+            unreachable!()
         }
 
         fn uses(&self) -> Option<&github_actions_models::common::Uses> {
-            unimplemented!()
+            unreachable!()
         }
 
         fn strategy(&self) -> Option<&github_actions_models::workflow::job::Strategy> {
-            unimplemented!()
+            unreachable!()
         }
 
         fn body(&self) -> super::StepBodyCommon {

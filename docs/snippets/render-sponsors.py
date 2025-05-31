@@ -9,17 +9,35 @@ from pathlib import Path
 
 _SPONSORS_HTML = """
 <!-- @@begin-sponsors@@ -->
-<table>
+<table width="100%">
+<caption>Logo-level sponsors</caption>
 <tbody>
 <tr>
-{all_sponsors}
+{logo_sponsors}
+</tr>
+</tbody>
+</table>
+<hr align="center">
+<table width="100%">
+<caption>Name-level sponsors</caption>
+<tbody>
+<tr>
+{name_sponsors}
 </tr>
 </tbody>
 </table>
 <!-- @@end-sponsors@@ -->
 """
 
-_SPONSOR_HTML = """
+_SPONSOR_NAME_HTML = """
+<td align="center" valign="top">
+<a href="{url}">
+{name}
+</a>
+</td>
+"""
+
+_SPONSOR_LOGO_HTML = """
 <td align="center" valign="top" width="15%">
 <a href="{url}">
 <img src="{img}" width="100px">
@@ -36,10 +54,17 @@ _README = _HERE.parent.parent / "README.md"
 
 assert _README.is_file()
 
-all_sponsors = "\n".join(
-    [_SPONSOR_HTML.format(**sponsor).strip() for sponsor in _SPONSORS]
-)
-sponsors_html = _SPONSORS_HTML.format(all_sponsors=all_sponsors).strip()
+logo_sponsors = []
+name_sponsors = []
+for sponsor in _SPONSORS:
+    if "img" in sponsor:
+        logo_sponsors.append(_SPONSOR_LOGO_HTML.format(**sponsor).strip())
+    else:
+        name_sponsors.append(_SPONSOR_NAME_HTML.format(**sponsor).strip())
+
+sponsors_html = _SPONSORS_HTML.format(
+    logo_sponsors="\n".join(logo_sponsors), name_sponsors="\n".join(name_sponsors)
+).strip()
 
 readme = _README.read_text()
 
