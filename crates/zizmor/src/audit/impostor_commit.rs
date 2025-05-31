@@ -10,9 +10,9 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
-    finding::{Confidence, Finding, Severity},
+    finding::{Confidence, Finding, Severity, location::Locatable as _},
     github_api::{self, ComparisonStatus},
-    models::{JobExt as _, StepCommon, Workflow, uses::RepositoryUsesExt as _},
+    models::{StepCommon, Workflow, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 

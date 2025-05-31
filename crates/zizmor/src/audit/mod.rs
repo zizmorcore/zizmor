@@ -7,7 +7,10 @@ use tracing::instrument;
 use yamlpath::Document;
 
 use crate::{
-    finding::{Finding, FindingBuilder, SymbolicLocation},
+    finding::{
+        Finding, FindingBuilder,
+        location::{Locatable, SymbolicLocation},
+    },
     models::{
         Action, AsDocument, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow,
     },
@@ -66,8 +69,10 @@ impl AuditInput {
             AuditInput::Action(action) => action.link.as_deref(),
         }
     }
+}
 
-    pub(crate) fn location(&self) -> SymbolicLocation {
+impl<'a> Locatable<'a, 'a> for AuditInput {
+    fn location(&'a self) -> SymbolicLocation<'a> {
         match self {
             AuditInput::Workflow(workflow) => workflow.location(),
             AuditInput::Action(action) => action.location(),

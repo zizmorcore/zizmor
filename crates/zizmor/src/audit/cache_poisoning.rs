@@ -4,6 +4,7 @@ use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 
 use crate::audit::{Audit, audit_meta};
+use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
 use crate::models::{JobExt as _, NormalJob, Step, StepCommon, Steps};
@@ -276,7 +277,7 @@ impl CachePoisoning {
         ))
     }
 
-    fn evaluate_cache_usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
+    fn evaluate_cache_usage<'a, 'doc>(&self, step: &impl StepCommon<'a, 'doc>) -> Option<Usage> {
         KNOWN_CACHE_AWARE_ACTIONS
             .iter()
             .find_map(|coord| coord.usage(step))

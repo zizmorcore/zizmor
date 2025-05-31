@@ -1,3 +1,5 @@
+#![warn(clippy::all, clippy::dbg_macro)]
+
 use std::{
     io::{Write, stdout},
     process::ExitCode,

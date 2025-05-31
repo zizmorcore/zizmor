@@ -12,12 +12,11 @@ use github_actions_models::{
 };
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
-use crate::models::Matrix;
 use crate::{
     AuditState,
     finding::{Confidence, Persona, Severity},
-    models::JobExt as _,
 };
+use crate::{finding::location::Locatable as _, models::Matrix};
 
 pub(crate) struct SelfHostedRunner;
 

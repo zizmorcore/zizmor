@@ -8,8 +8,8 @@ use indexmap::IndexMap;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{Confidence, Severity},
-    models::{StepCommon, uses::RepositoryUsesExt as _},
+    finding::{Confidence, Severity, location::Locatable as _},
+    models::uses::RepositoryUsesExt as _,
     state::AuditState,
 };
 

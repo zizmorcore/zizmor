@@ -9,8 +9,8 @@ use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{Confidence, Finding, Persona, Severity},
-    models::{JobExt, StepCommon, uses::RepositoryUsesExt as _},
+    finding::{Confidence, Finding, Persona, Severity, location::Locatable as _},
+    models::{JobExt, uses::RepositoryUsesExt as _},
     state::AuditState,
     utils::split_patterns,
 };

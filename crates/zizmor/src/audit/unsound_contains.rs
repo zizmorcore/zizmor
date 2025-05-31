@@ -3,8 +3,8 @@ use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    finding::{Confidence, Severity},
-    models::{JobExt, StepCommon as _},
+    finding::{Confidence, Severity, location::Locatable as _},
+    models::JobExt,
 };
 
 // TODO: Merge this with the list in `template_injection.rs`?
