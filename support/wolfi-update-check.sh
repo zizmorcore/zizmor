@@ -72,7 +72,7 @@ behind the new Wolfi version.
 Please review the versions manually and, if a Docker update is needed,
 dispatch it appropriately. Maintainers can do this locally with:
 
-    gh workflow run release-docker.yml --field version=${docker_version}
+    gh workflow run release-docker.yml --field version=${wolfi_version}
 "
 
 issue_exists=$(
