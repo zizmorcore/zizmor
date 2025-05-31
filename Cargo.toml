@@ -69,6 +69,7 @@ dbg_macro = "warn"
 todo = "warn"
 unimplemented = "warn"
 use_debug = "warn"
+needless_lifetimes = "warn"
 
 [profile.dev.package]
 insta.opt-level = 3

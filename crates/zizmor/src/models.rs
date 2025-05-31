@@ -561,7 +561,7 @@ impl<'a, 'doc> Locatable<'a, 'doc> for Step<'doc> {
     }
 }
 
-impl<'a, 'doc> StepCommon<'a, 'doc> for Step<'doc> {
+impl<'doc> StepCommon<'_, 'doc> for Step<'doc> {
     fn env_is_static(&self, name: &str) -> bool {
         // Collect each of the step, job, and workflow-level `env` blocks
         // and check each.
@@ -849,7 +849,7 @@ impl<'a, 'doc> Locatable<'a, 'doc> for CompositeStep<'doc> {
     }
 }
 
-impl<'a, 'doc> StepCommon<'a, 'doc> for CompositeStep<'doc> {
+impl<'doc> StepCommon<'_, 'doc> for CompositeStep<'doc> {
     fn env_is_static(&self, name: &str) -> bool {
         let env = match &self.body {
             action::StepBody::Uses { .. } => {
