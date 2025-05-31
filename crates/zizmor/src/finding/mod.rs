@@ -442,6 +442,26 @@ pub(crate) struct Determinations {
     pub(super) persona: Persona,
 }
 
+type ApplyFn = dyn Fn(&str) -> anyhow::Result<Option<String>>;
+
+/// Represents a suggested fix for a finding.
+pub(crate) struct Fix {
+    /// A short title describing the fix.
+    pub(crate) title: String,
+    /// A detailed description of the fix.
+    #[allow(dead_code)]
+    pub(crate) description: String,
+    /// A function that, when called, applies the fix and returns the new content (or None if not applicable).
+    pub(crate) apply: Box<ApplyFn>,
+}
+
+impl Fix {
+    /// Apply the fix to the given file content.
+    pub(crate) fn apply_to_content(&self, old_content: &str) -> anyhow::Result<Option<String>> {
+        (self.apply)(old_content)
+    }
+}
+
 #[derive(Serialize)]
 pub(crate) struct Finding<'doc> {
     pub(crate) ident: &'static str,
@@ -450,6 +470,8 @@ pub(crate) struct Finding<'doc> {
     pub(crate) determinations: Determinations,
     pub(crate) locations: Vec<Location<'doc>>,
     pub(crate) ignored: bool,
+    #[serde(skip_serializing)]
+    pub(crate) fixes: Vec<Fix>,
 }
 
 impl Finding<'_> {
@@ -477,6 +499,7 @@ pub(crate) struct FindingBuilder<'doc> {
     persona: Persona,
     raw_locations: Vec<Location<'doc>>,
     locations: Vec<SymbolicLocation<'doc>>,
+    fixes: Vec<Fix>,
 }
 
 impl<'doc> FindingBuilder<'doc> {
@@ -490,6 +513,7 @@ impl<'doc> FindingBuilder<'doc> {
             persona: Default::default(),
             raw_locations: vec![],
             locations: vec![],
+            fixes: vec![],
         }
     }
 
@@ -515,6 +539,18 @@ impl<'doc> FindingBuilder<'doc> {
 
     pub(crate) fn add_location(mut self, location: SymbolicLocation<'doc>) -> Self {
         self.locations.push(location);
+        self
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn fix(mut self, fix: Fix) -> Self {
+        self.fixes.push(fix);
+        self
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn fixes(mut self, fixes: Vec<Fix>) -> Self {
+        self.fixes.extend(fixes);
         self
     }
 
@@ -549,6 +585,7 @@ impl<'doc> FindingBuilder<'doc> {
             },
             locations,
             ignored: should_ignore,
+            fixes: self.fixes,
         })
     }
 

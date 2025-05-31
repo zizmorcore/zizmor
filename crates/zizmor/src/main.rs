@@ -28,12 +28,14 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 mod audit;
 mod config;
 mod finding;
+mod fix;
 mod github_api;
 mod models;
 mod output;
 mod registry;
 mod state;
 mod utils;
+mod yaml_patch;
 
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
@@ -132,6 +134,10 @@ struct App {
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
     naches: bool,
+
+    /// Apply fixes automatically if available.
+    #[arg(long, hide = true)]
+    fix: bool,
 
     /// The inputs to audit.
     ///
@@ -658,6 +664,10 @@ fn run() -> Result<ExitCode> {
         }
         OutputFormat::Github => output::github::output(stdout(), results.findings())?,
     };
+
+    if app.fix {
+        fix::apply_fixes(&results, &registry)?;
+    }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
         Ok(ExitCode::SUCCESS)
