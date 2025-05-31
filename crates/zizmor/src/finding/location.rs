@@ -188,6 +188,16 @@ pub(crate) trait Locatable<'a, 'doc> {
     }
 }
 
+pub(crate) trait Routable<'a, 'doc> {
+    fn route(&'a self) -> Route<'doc>;
+}
+
+impl<'a, 'doc, T: Locatable<'a, 'doc>> Routable<'a, 'doc> for T {
+    fn route(&'a self) -> Route<'doc> {
+        self.location().route
+    }
+}
+
 /// Represents a `(row, column)` point within a file.
 #[derive(Serialize)]
 pub(crate) struct Point {
