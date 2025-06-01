@@ -15,12 +15,15 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::sync::LazyLock;
+use std::{env, sync::LazyLock};
 
 use fst::Map;
-use github_actions_expressions::Expr;
+use github_actions_expressions::{Expr, context::Context};
 use github_actions_models::{
-    common::{RepositoryUses, Uses, expr::LoE},
+    common::{
+        RepositoryUses, Uses,
+        expr::{ExplicitExpr, LoE},
+    },
     workflow::job::Strategy,
 };
 
@@ -124,13 +127,111 @@ impl TemplateInjection {
         }
     }
 
+    /// Converts a [`Context`] into an appropriate environment variable name,
+    /// or `None` if conversion is not possible.
+    fn context_to_env_var(ctx: &Context) -> Option<String> {
+        // This is annoyingly non-trivial because of a few different syntax
+        // forms in contexts, plus some special cases we want to produce:
+        //
+        // - Contexts like `foo.bar` should become `FOO_BAR` (the happy path)
+        // - Contexts that contain `[n]` where `n <= 3` should render with
+        //   a friendly index, e.g. `foo.bar[0]` becomes `FOO_FIRST_BAR`
+        //   and `foo.bar[2]` becomes `FOO_THIRD_BAR`.
+        // - Contexts that contain `[n]` where `n > 3` should render with
+        //   an index, e.g. `foo.bar[4]` becomes `FOO_5TH_BAR`.
+        // - Contexts that contain `*` should render with `ANY`, e.g.
+        //   `foo.bar[*]` becomes `FOO_ANY_BAR`, as does `foo.bar.*`.
+        let mut env_parts = vec![];
+
+        for part in &ctx.parts {
+            match part {
+                // We don't support turning call-led contexts into variable names.
+                Expr::Call { .. } => return None,
+                Expr::Identifier(ident) => {
+                    env_parts.push(ident.as_str().replace('-', "_"));
+                }
+                Expr::Star => {
+                    env_parts.insert(env_parts.len() - 1, "ANY".into());
+                }
+                Expr::Index(idx) => {
+                    // We support string, numeric, and star indices;
+                    // everything else is presumed computed.
+                    match idx.as_ref() {
+                        // FIXME: Annoying soundness hole here: index-style
+                        // literal keys can be anything, not just valid identifiers.
+                        // The right thing to do here is to parse these literals
+                        // and refuse to convert them if we can't make them
+                        // into valid identifiers.
+                        Expr::String(lit) => env_parts.push(lit.replace('-', "_")),
+                        Expr::Number(idx) => {
+                            let name = match *idx as i64 {
+                                0 => "FIRST".into(),
+                                1 => "SECOND".into(),
+                                2 => "THIRD".into(),
+                                n => format!("{}TH", n + 1),
+                            };
+
+                            env_parts.insert(env_parts.len() - 1, name);
+                        }
+                        Expr::Star => {
+                            env_parts.insert(env_parts.len() - 1, "ANY".into());
+                        }
+                        _ => return None,
+                    }
+                }
+                _ => {
+                    tracing::warn!("unexpected context component: {part:?}");
+                    return None;
+                }
+            }
+        }
+
+        Some(env_parts.join("_").to_uppercase())
+    }
+
+    /// Attempts to produce a `Fix` for a given expression.
+    fn attempt_fix<'a, 'doc>(
+        &self,
+        script: &str,
+        raw: &ExplicitExpr,
+        parsed: &Expr,
+        step: &impl StepCommon<'a, 'doc>,
+    ) -> Option<Fix> {
+        // We can only fix `run:` steps for now.
+        if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
+            return None;
+        }
+
+        // FIXME: We should only produce a fix if we're confident that
+        // the `run:` block has bash syntax.
+
+        // If our expression isn't a single context, then we can't fix it yet.
+        let Expr::Context(ctx) = parsed else {
+            return None;
+        };
+
+        // From here, our fix consists of two patch operations:
+        // 1. Replacing the expression in the script with an environment
+        //    variable of our generation. For example, `${{ foo.bar }}`
+        //    becomes `${FOO_BAR}`.
+        // 2. Inserting the new environment variable into the step's
+        //    `env:` block, e.g. `FOO_BAR: ${{ foo.bar }}`.
+
+        // We might fail to produce a reasonable environment variable,
+        // e.g. if the context is a call expression or has a computed
+        // index. In those kinds of cases, we don't produce a fix.
+        let env_var = Self::context_to_env_var(ctx)?;
+
+        todo!()
+    }
+
     fn injectable_template_expressions<'a, 'doc>(
         &self,
-        run: &str,
+        script: &str,
         step: &impl StepCommon<'a, 'doc>,
-    ) -> Vec<(String, String, Severity, Confidence, Persona)> {
+    ) -> Vec<(String, Option<Fix>, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
-        for (expr, _) in extract_expressions(run) {
+        for (expr, _) in extract_expressions(script) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
@@ -141,7 +242,8 @@ impl TemplateInjection {
             // even if unexploitable.
             bad_expressions.push((
                 expr.as_curly().into(),
-                expr.as_raw().into(),
+                // Intentionally not providing a fix here,
+                None,
                 Severity::Unknown,
                 Confidence::Unknown,
                 Persona::Pedantic,
@@ -161,7 +263,7 @@ impl TemplateInjection {
                             Some(Capability::Structured) => {
                                 bad_expressions.push((
                                     context.as_str().into(),
-                                    expr.as_curly().into(),
+                                    self.attempt_fix(script, &expr, &parsed, step),
                                     Severity::Medium,
                                     Confidence::High,
                                     Persona::default(),
@@ -172,7 +274,7 @@ impl TemplateInjection {
                             Some(Capability::Arbitrary) => {
                                 bad_expressions.push((
                                     context.as_str().into(),
-                                    expr.as_curly().into(),
+                                    self.attempt_fix(script, &expr, &parsed, step),
                                     Severity::High,
                                     Confidence::High,
                                     Persona::default(),
@@ -190,7 +292,7 @@ impl TemplateInjection {
                                     // from innocuous types, e.g. booleans.
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        expr.as_curly().into(),
+                                        self.attempt_fix(script, &expr, &parsed, step),
                                         Severity::High,
                                         Confidence::Low,
                                         Persona::default(),
@@ -201,7 +303,7 @@ impl TemplateInjection {
                                     if !env_is_static {
                                         bad_expressions.push((
                                             context.as_str().into(),
-                                            expr.as_curly().into(),
+                                            self.attempt_fix(script, &expr, &parsed, step),
                                             Severity::Low,
                                             Confidence::High,
                                             Persona::default(),
@@ -212,7 +314,7 @@ impl TemplateInjection {
                                     // context is actually attacker-controllable.
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        expr.as_curly().into(),
+                                        self.attempt_fix(script, &expr, &parsed, step),
                                         Severity::High,
                                         Confidence::High,
                                         Persona::default(),
@@ -234,7 +336,7 @@ impl TemplateInjection {
                                         if !matrix_is_static {
                                             bad_expressions.push((
                                                 context.as_str().into(),
-                                                expr.as_curly().into(),
+                                                self.attempt_fix(script, &expr, &parsed, step),
                                                 Severity::Medium,
                                                 Confidence::Medium,
                                                 Persona::default(),
@@ -247,7 +349,7 @@ impl TemplateInjection {
                                     // but may be in obscure cases.
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        expr.as_curly().into(),
+                                        self.attempt_fix(script, &expr, &parsed, step),
                                         Severity::Informational,
                                         Confidence::Low,
                                         Persona::default(),
@@ -262,7 +364,7 @@ impl TemplateInjection {
                         // `call(...).foo.bar`.
                         bad_expressions.push((
                             context.as_str().into(),
-                            expr.as_curly().into(),
+                            self.attempt_fix(script, &expr, &parsed, step),
                             Severity::Informational,
                             Confidence::Low,
                             Persona::default(),
@@ -353,13 +455,13 @@ impl TemplateInjection {
 
                     // Update the run script
                     operations.push(YamlPatchOperation::Replace {
-                        path: format!("/jobs/{}/steps/{}/run", job_id, step_index),
+                        route: format!("/jobs/{}/steps/{}/run", job_id, step_index),
                         value: serde_yaml::Value::String(new_script),
                     });
 
                     // Add all environment variables at once
                     operations.push(YamlPatchOperation::MergeInto {
-                        path: format!("/jobs/{}/steps/{}", job_id, step_index),
+                        route: format!("/jobs/{}/steps/{}", job_id, step_index),
                         key: "env".to_string(),
                         value: serde_yaml::Value::Mapping(env_vars),
                     });
@@ -435,13 +537,13 @@ impl TemplateInjection {
 
                     // Update the run script
                     operations.push(YamlPatchOperation::Replace {
-                        path: format!("/runs/steps/{}/run", step_index),
+                        route: format!("/runs/steps/{}/run", step_index),
                         value: serde_yaml::Value::String(new_script),
                     });
 
                     // Add all environment variables at once
                     operations.push(YamlPatchOperation::MergeInto {
-                        path: format!("/runs/steps/{}", step_index),
+                        route: format!("/runs/steps/{}", step_index),
                         key: "env".to_string(),
                         value: serde_yaml::Value::Mapping(env_vars),
                     });
@@ -481,14 +583,14 @@ impl TemplateInjection {
     fn process_step<'a, 'doc>(
         &self,
         step: &'a impl StepCommon<'a, 'doc>,
-    ) -> anyhow::Result<Vec<(Finding<'doc>, String, String)>> {
-        let mut findings_with_expressions = vec![];
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        let mut findings = vec![];
 
         for (script, script_loc) in Self::scripts_with_location(step) {
-            for (context, full_expr, severity, confidence, persona) in
+            for (context, fix, severity, confidence, persona) in
                 self.injectable_template_expressions(&script, step)
             {
-                let finding_builder = Self::finding()
+                let mut finding_builder = Self::finding()
                     .severity(severity)
                     .confidence(confidence)
                     .persona(persona)
@@ -498,12 +600,16 @@ impl TemplateInjection {
                         "{context} may expand into attacker-controllable code"
                     )));
 
+                if let Some(fix) = fix {
+                    finding_builder = finding_builder.fix(fix);
+                }
+
                 let finding = finding_builder.build(step)?;
-                findings_with_expressions.push((finding, full_expr, script.clone()));
+                findings.push(finding);
             }
         }
 
-        Ok(findings_with_expressions)
+        Ok(findings)
     }
 }
 
@@ -516,139 +622,143 @@ impl Audit for TemplateInjection {
     }
 
     fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
-        let findings_with_expressions = self.process_step(step)?;
+        self.process_step(step)
+        // let findings_with_expressions = self.process_step(step)?;
 
-        // Group findings by script to create comprehensive fixes
-        let mut script_to_expressions: std::collections::HashMap<
-            String,
-            Vec<(Finding<'doc>, String)>,
-        > = std::collections::HashMap::new();
+        // // Group findings by script to create comprehensive fixes
+        // let mut script_to_expressions: std::collections::HashMap<
+        //     String,
+        //     Vec<(Finding<'doc>, String)>,
+        // > = std::collections::HashMap::new();
 
-        // Separate expressions into those that get fixes vs suggestions only
-        let mut script_to_suggestion_only: std::collections::HashMap<
-            String,
-            Vec<(Finding<'doc>, String)>,
-        > = std::collections::HashMap::new();
+        // // Separate expressions into those that get fixes vs suggestions only
+        // let mut script_to_suggestion_only: std::collections::HashMap<
+        //     String,
+        //     Vec<(Finding<'doc>, String)>,
+        // > = std::collections::HashMap::new();
 
-        for (finding, full_expr, script) in findings_with_expressions {
-            // Check if this expression contains functions that should only get suggestions
-            if Self::expression_contains_suggestion_only_functions(&full_expr) {
-                script_to_suggestion_only
-                    .entry(script)
-                    .or_default()
-                    .push((finding, full_expr));
-            } else {
-                script_to_expressions
-                    .entry(script)
-                    .or_default()
-                    .push((finding, full_expr));
-            }
-        }
+        // for (finding, full_expr, script) in findings_with_expressions {
+        //     // Check if this expression contains functions that should only get suggestions
+        //     if Self::expression_contains_suggestion_only_functions(&full_expr) {
+        //         script_to_suggestion_only
+        //             .entry(script)
+        //             .or_default()
+        //             .push((finding, full_expr));
+        //     } else {
+        //         script_to_expressions
+        //             .entry(script)
+        //             .or_default()
+        //             .push((finding, full_expr));
+        //     }
+        // }
 
-        let mut all_findings = Vec::new();
+        // let mut all_findings = Vec::new();
 
-        // Handle expressions that get automatic fixes
-        for (script, findings_and_expressions) in script_to_expressions {
-            // Extract all expressions for this script
-            let expressions: Vec<String> = findings_and_expressions
-                .iter()
-                .map(|(_, expr)| expr.clone())
-                .collect();
+        // // Handle expressions that get automatic fixes
+        // for (script, findings_and_expressions) in script_to_expressions {
+        //     // Extract all expressions for this script
+        //     let expressions: Vec<String> = findings_and_expressions
+        //         .iter()
+        //         .map(|(_, expr)| expr.clone())
+        //         .collect();
 
-            // Add the fixes to each finding for this script
-            for (mut finding, _) in findings_and_expressions {
-                finding.fixes.push(Self::create_env_var_fix(
-                    &expressions,
-                    step.job().id(),
-                    step.index,
-                    &script,
-                ));
-                all_findings.push(finding);
-            }
-        }
+        //     // Add the fixes to each finding for this script
+        //     for (mut finding, _) in findings_and_expressions {
+        //         finding.fixes.push(Self::create_env_var_fix(
+        //             &expressions,
+        //             step.job().id(),
+        //             step.index,
+        //             &script,
+        //         ));
+        //         all_findings.push(finding);
+        //     }
+        // }
 
-        // Handle expressions that only get suggestions (no automatic fixes)
-        for (_, findings_and_expressions) in script_to_suggestion_only {
-            for (finding, _) in findings_and_expressions {
-                // Don't add any automatic fixes for these expressions
-                // The finding itself serves as the suggestion
-                all_findings.push(finding);
-            }
-        }
+        // // Handle expressions that only get suggestions (no automatic fixes)
+        // for (_, findings_and_expressions) in script_to_suggestion_only {
+        //     for (finding, _) in findings_and_expressions {
+        //         // Don't add any automatic fixes for these expressions
+        //         // The finding itself serves as the suggestion
+        //         all_findings.push(finding);
+        //     }
+        // }
 
-        Ok(all_findings)
+        // Ok(all_findings)
     }
 
     fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
-        let findings_with_expressions = self.process_step(step)?;
+        self.process_step(step)
+        // let findings_with_expressions = self.process_step(step)?;
 
-        // Group findings by script to create comprehensive fixes
-        let mut script_to_expressions: std::collections::HashMap<
-            String,
-            Vec<(Finding<'a>, String)>,
-        > = std::collections::HashMap::new();
+        // // Group findings by script to create comprehensive fixes
+        // let mut script_to_expressions: std::collections::HashMap<
+        //     String,
+        //     Vec<(Finding<'a>, String)>,
+        // > = std::collections::HashMap::new();
 
-        // Separate expressions into those that get fixes vs suggestions only
-        let mut script_to_suggestion_only: std::collections::HashMap<
-            String,
-            Vec<(Finding<'a>, String)>,
-        > = std::collections::HashMap::new();
+        // // Separate expressions into those that get fixes vs suggestions only
+        // let mut script_to_suggestion_only: std::collections::HashMap<
+        //     String,
+        //     Vec<(Finding<'a>, String)>,
+        // > = std::collections::HashMap::new();
 
-        for (finding, full_expr, script) in findings_with_expressions {
-            // Check if this expression contains functions that should only get suggestions
-            if Self::expression_contains_suggestion_only_functions(&full_expr) {
-                script_to_suggestion_only
-                    .entry(script)
-                    .or_default()
-                    .push((finding, full_expr));
-            } else {
-                script_to_expressions
-                    .entry(script)
-                    .or_default()
-                    .push((finding, full_expr));
-            }
-        }
+        // for (finding, full_expr, script) in findings_with_expressions {
+        //     // Check if this expression contains functions that should only get suggestions
+        //     if Self::expression_contains_suggestion_only_functions(&full_expr) {
+        //         script_to_suggestion_only
+        //             .entry(script)
+        //             .or_default()
+        //             .push((finding, full_expr));
+        //     } else {
+        //         script_to_expressions
+        //             .entry(script)
+        //             .or_default()
+        //             .push((finding, full_expr));
+        //     }
+        // }
 
-        let mut all_findings = Vec::new();
+        // let mut all_findings = Vec::new();
 
-        // Handle expressions that get automatic fixes
-        for (script, findings_and_expressions) in script_to_expressions {
-            // Extract all expressions for this script
-            let expressions: Vec<String> = findings_and_expressions
-                .iter()
-                .map(|(_, expr)| expr.clone())
-                .collect();
+        // // Handle expressions that get automatic fixes
+        // for (script, findings_and_expressions) in script_to_expressions {
+        //     // Extract all expressions for this script
+        //     let expressions: Vec<String> = findings_and_expressions
+        //         .iter()
+        //         .map(|(_, expr)| expr.clone())
+        //         .collect();
 
-            // Add the fixes to each finding for this script
-            for (mut finding, _) in findings_and_expressions {
-                finding.fixes.push(Self::create_composite_env_var_fix(
-                    &expressions,
-                    step.index,
-                    &script,
-                ));
-                all_findings.push(finding);
-            }
-        }
+        //     // Add the fixes to each finding for this script
+        //     for (mut finding, _) in findings_and_expressions {
+        //         finding.fixes.push(Self::create_composite_env_var_fix(
+        //             &expressions,
+        //             step.index,
+        //             &script,
+        //         ));
+        //         all_findings.push(finding);
+        //     }
+        // }
 
-        // Handle expressions that only get suggestions (no automatic fixes)
-        for (_, findings_and_expressions) in script_to_suggestion_only {
-            for (finding, _) in findings_and_expressions {
-                // Don't add any automatic fixes for these expressions
-                // The finding itself serves as the suggestion
-                all_findings.push(finding);
-            }
-        }
+        // // Handle expressions that only get suggestions (no automatic fixes)
+        // for (_, findings_and_expressions) in script_to_suggestion_only {
+        //     for (finding, _) in findings_and_expressions {
+        //         // Don't add any automatic fixes for these expressions
+        //         // The finding itself serves as the suggestion
+        //         all_findings.push(finding);
+        //     }
+        // }
 
-        Ok(all_findings)
+        // Ok(all_findings)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::audit::template_injection::Capability;
+    use github_actions_expressions::{Expr, context::Context};
+
+    use crate::audit::template_injection::{Capability, TemplateInjection};
 
     #[test]
     fn test_capability_from_context() {
@@ -670,6 +780,49 @@ mod tests {
             Capability::from_context("runner.arch"),
             Some(Capability::Fixed)
         ));
+    }
+
+    #[test]
+    fn test_context_to_env_var() {
+        for (ctx, expected) in [
+            ("foo.bar", Some("FOO_BAR")),
+            ("foo.bar[0]", Some("FOO_FIRST_BAR")),
+            ("foo.bar[0][0]", Some("FOO_FIRST_FIRST_BAR")),
+            ("foo.bar[1]", Some("FOO_SECOND_BAR")),
+            ("foo.bar[2]", Some("FOO_THIRD_BAR")),
+            ("foo.bar[3]", Some("FOO_4TH_BAR")),
+            ("foo.bar[4]", Some("FOO_5TH_BAR")),
+            ("foo.bar[*]", Some("FOO_ANY_BAR")),
+            ("foo.bar.*", Some("FOO_ANY_BAR")),
+            ("foo.bar.*.*", Some("FOO_ANY_ANY_BAR")),
+            ("foo.bar.*[*]", Some("FOO_ANY_ANY_BAR")),
+            ("foo.bar[*].*", Some("FOO_ANY_ANY_BAR")),
+            ("foo.bar.baz", Some("FOO_BAR_BAZ")),
+            ("foo.bar['baz']", Some("FOO_BAR_BAZ")),
+            ("foo.bar['baz']['quux']", Some("FOO_BAR_BAZ_QUUX")),
+            ("foo.bar['baz']['quux'].zap", Some("FOO_BAR_BAZ_QUUX_ZAP")),
+            ("github.event.issue.title", Some("GITHUB_EVENT_ISSUE_TITLE")),
+            // Calls not supported
+            ("call(foo.bar).baz", None),
+            // Computed indices not supported
+            ("foo.bar[computed]", None),
+            ("foo.bar[abc && def]", None),
+            // FIXME: soundness hole
+            (
+                "foo.bar['oops all spaces']",
+                Some("FOO_BAR_OOPS ALL SPACES"),
+            ),
+        ] {
+            let expr = Expr::parse(ctx).unwrap();
+            let Expr::Context(ctx) = expr else {
+                panic!("Expected context expression, got: {expr:?}");
+            };
+
+            assert_eq!(
+                TemplateInjection::context_to_env_var(&ctx).as_deref(),
+                expected
+            );
+        }
     }
 
     #[test]
