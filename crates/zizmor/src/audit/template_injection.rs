@@ -143,6 +143,9 @@ impl TemplateInjection {
         //   `foo.bar[*]` becomes `FOO_ANY_BAR`, as does `foo.bar.*`.
         let mut env_parts = vec![];
 
+        // TODO: Pop off `matrix` and `secrets` heads, since these don't
+        // add any extra information to the variable name.
+
         for part in &ctx.parts {
             match part {
                 // We don't support turning call-led contexts into variable names.
@@ -216,6 +219,11 @@ impl TemplateInjection {
         //    becomes `${FOO_BAR}`.
         // 2. Inserting the new environment variable into the step's
         //    `env:` block, e.g. `FOO_BAR: ${{ foo.bar }}`.
+        //
+        // TODO: We could optimize patching a bit here by keeping track
+        // of contexts that have pre-defined environment variable equivalents,
+        // e.g. `github.ref_name` is always `GITHUB_REF_NAME`. When we see
+        // these, we shouldn't add a new `env:` member.
 
         // We might fail to produce a reasonable environment variable,
         // e.g. if the context is a call expression or has a computed
