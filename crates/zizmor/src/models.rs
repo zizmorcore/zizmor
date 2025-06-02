@@ -40,7 +40,6 @@ pub(crate) enum StepBodyCommon<'s> {
         run: &'s str,
         _working_directory: Option<&'s str>,
         _shell: Option<&'s str>,
-        _env: &'s LoE<Env>,
     },
 }
 
@@ -563,26 +562,7 @@ impl<'a, 'doc> Locatable<'a, 'doc> for Step<'doc> {
 
 impl<'doc> StepCommon<'_, 'doc> for Step<'doc> {
     fn env_is_static(&self, name: &str) -> bool {
-        // Collect each of the step, job, and workflow-level `env` blocks
-        // and check each.
-        let mut envs = vec![];
-
-        match &self.body {
-            // `uses:` does not have an `env:` but its parent
-            // job and workflow might, so we skip instead of failing.
-            workflow::job::StepBody::Uses { .. } => (),
-            workflow::job::StepBody::Run {
-                run: _,
-                working_directory: _,
-                shell: _,
-                env,
-            } => envs.push(env),
-        };
-
-        envs.push(&self.job().env);
-        envs.push(&self.workflow().env);
-
-        utils::env_is_static(name, &envs)
+        utils::env_is_static(name, &[&self.env, &self.job().env, &self.workflow().env])
     }
 
     fn uses(&self) -> Option<&common::Uses> {
@@ -604,12 +584,10 @@ impl<'doc> StepCommon<'_, 'doc> for Step<'doc> {
                 run,
                 working_directory,
                 shell,
-                env,
             } => StepBodyCommon::Run {
                 run,
                 _working_directory: working_directory.as_deref(),
                 _shell: shell.as_deref(),
-                _env: env,
             },
         }
     }
@@ -647,7 +625,6 @@ impl<'doc> Step<'doc> {
             run: _,
             working_directory: _,
             shell,
-            env: _,
         } = &self.inner.body
         else {
             panic!("API misuse: can't call shell() on a uses: step")
@@ -851,19 +828,7 @@ impl<'a, 'doc> Locatable<'a, 'doc> for CompositeStep<'doc> {
 
 impl<'doc> StepCommon<'_, 'doc> for CompositeStep<'doc> {
     fn env_is_static(&self, name: &str) -> bool {
-        let env = match &self.body {
-            action::StepBody::Uses { .. } => {
-                panic!("API misuse: can't call env_is_static on a uses: step")
-            }
-            action::StepBody::Run {
-                run: _,
-                working_directory: _,
-                shell: _,
-                env,
-            } => env,
-        };
-
-        utils::env_is_static(name, &[env])
+        utils::env_is_static(name, &[&self.env])
     }
 
     fn uses(&self) -> Option<&common::Uses> {
@@ -885,12 +850,10 @@ impl<'doc> StepCommon<'_, 'doc> for CompositeStep<'doc> {
                 run,
                 working_directory,
                 shell,
-                env,
             } => StepBodyCommon::Run {
                 run,
                 _working_directory: working_directory.as_deref(),
                 _shell: Some(shell),
-                _env: env,
             },
         }
     }

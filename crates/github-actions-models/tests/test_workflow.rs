@@ -71,7 +71,6 @@ fn test_pip_audit_ci() {
         run,
         working_directory,
         shell,
-        env: LoE::Literal(env),
     } = &test_job.steps[2].body
     else {
         panic!("expected run step");
@@ -79,7 +78,6 @@ fn test_pip_audit_ci() {
     assert_eq!(run, "make test PIP_AUDIT_EXTRA=test");
     assert!(working_directory.is_none());
     assert!(shell.is_none());
-    assert!(env.is_empty());
 }
 
 #[test]

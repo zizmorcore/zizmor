@@ -368,12 +368,10 @@ mod tests {
                     run,
                     working_directory,
                     shell,
-                    env,
                 } => super::StepBodyCommon::Run {
                     run,
                     _working_directory: working_directory.as_deref(),
                     _shell: shell.as_deref(),
-                    _env: env,
                 },
             }
         }

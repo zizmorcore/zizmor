@@ -102,6 +102,10 @@ pub struct Step {
     #[serde(default)]
     pub continue_on_error: BoE,
 
+    /// An optional environment mapping for this step.
+    #[serde(default)]
+    pub env: LoE<Env>,
+
     /// The `run:` or `uses:` body for this step.
     #[serde(flatten)]
     pub body: StepBody,
@@ -130,10 +134,6 @@ pub enum StepBody {
         /// An optional shell to run in. Defaults to the job or workflow's
         /// default shell.
         shell: Option<String>,
-
-        /// An optional environment mapping for this step.
-        #[serde(default)]
-        env: LoE<Env>,
     },
 }
 

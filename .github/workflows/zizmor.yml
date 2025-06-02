@@ -21,3 +21,7 @@ jobs:
 
       - name: Run zizmor 🌈
         uses: zizmorcore/zizmor-action@2520132f44b3ed84916048d32e5c7153fc739fe7 # v0.0.3
+        with:
+          # intentionally not scanning the entire repository,
+          # since it contains integration tests.
+          inputs: ./.github/

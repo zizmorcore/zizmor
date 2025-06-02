@@ -123,6 +123,10 @@ pub struct Step {
     #[serde(default)]
     pub continue_on_error: BoE,
 
+    /// An optional environment mapping for this step.
+    #[serde(default)]
+    pub env: LoE<Env>,
+
     /// The `run:` or `uses:` body for this composite step.
     #[serde(flatten)]
     pub body: StepBody,
@@ -149,10 +153,6 @@ pub enum StepBody {
 
         /// The shell to run in.
         shell: String,
-
-        /// An optional environment mapping for this step.
-        #[serde(default)]
-        env: LoE<Env>,
 
         /// An optional working directory to run [`RunShell::run`] from.
         working_directory: Option<String>,
