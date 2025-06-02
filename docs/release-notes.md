@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* The [template-injection] audit no longer crashes when attempting to
+  evaluate the static-ness of an environment context within a
+  composite action `uses:` step (#887)
+
 ## 1.9.0
 
 ### New Features 🌈

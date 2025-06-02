@@ -1,0 +1,123 @@
+# minimized reproducer for zizmor#883
+# see: https://github.com/zizmorcore/zizmor/issues/883
+
+# minimized from: https://github.com/Bibo-Joshi/chango/blob/3b587df3226c5/action.yml
+
+# Copyright (c) 2024-present Hinrich Mahler <chango@mahlerhome.de>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+name: issue-883-repro
+description: issue 883 repro
+
+runs:
+  using: composite
+  steps:
+    - name: Create chango fragment
+      id: create-chango-fragment
+      uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+      env:
+        CUSTOM_OUTPUT: ${{ steps.fetch-linked-issues-custom-token.outputs.data }}
+        DEFAULT_OUTPUT: ${{ steps.fetch-linked-issues-default-token.outputs.data }}
+      with:
+        script: |
+          import base64
+          import subprocess
+          import os
+          from chango.config import get_chango_instance
+          from chango.action import ChanGoActionData
+
+          os.chdir('./target-repo')
+
+          chango_instance = get_chango_instance(${{ inputs.pyproject-toml }})
+
+          null = None
+          false = False
+          true = True
+
+          # Merge additionally fetched data into the data passed by the user
+          output = (
+              ${{ toJson(env.CUSTOM_OUTPUT) }}
+              or ${{ toJson(env.DEFAULT_OUTPUT) }}
+          )
+          data = (
+              ${{ inputs.data }}
+              or ChanGoActionData.model_validate_json(output)
+          )
+
+          change_note = chango_instance.build_github_event_change_note(
+              event=${{ toJson(github.event) }},
+              data=data
+          )
+
+          should_commit = False
+          if change_note is not None:
+            path = chango_instance.write_change_note(change_note, version=None)
+
+            last_commiter = subprocess.run(
+              ["git", "log", "-1", "--format=%ce", "--", path],
+              capture_output=True,
+              text=True,
+              check=True
+            ).stdout.strip()
+
+            # Do not override manual changes
+            if last_commiter in ("github-actions[bot]", ""):
+              should_commit = True
+
+          set_output("should_commit", "true" if should_commit else "false")
+
+          if should_commit:
+            # b64 encoding avoits problems with new lines in the output
+            encoded_content = base64.b64encode(change_note.to_string().encode()).decode()
+            set_output("change_note_content", encoded_content)
+            set_output("change_note_path", path.relative_to(os.getcwd()).as_posix())
+          else:
+            set_output("change_note_content", "")
+            set_output("change_note_path", "")
+
+    - name: Set Job Summary
+      id: job-summary
+      # Run only if the commit & push step failed.
+      # We use this for PRs coming from forks. Here we can't easily push back to the PR branch or
+      # create PR reviews, so we fail the job and set the job summary
+      if: ${{ failure() && steps.create-chango-fragment.outputs.should_commit == 'true' }}
+      env:
+        CHANGE_NOTE_PATH: ${{ steps.create-chango-fragment.outputs.change_note_path }}
+        CHANGE_NOTE_CONTENT: ${{ steps.create-chango-fragment.outputs.change_note_content }}
+      uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+      with:
+        script: |
+          import base64
+          from pathlib import Path
+
+          file_path = Path("${{ env.CHANGE_NOTE_PATH }}")
+          encoded_content = "${{ env.CHANGE_NOTE_CONTENT }}"
+          decoded_content = base64.b64decode(encoded_content).decode()
+
+          text = f"""
+          Please create a [chango](https://chango.readthedocs.io/stable/) fragment for this PR.
+          I suggest adding the following content to `{file_path}` in the repository:
+
+          ```{file_path.suffix[1:]}
+          {decoded_content}
+          ```
+          """
+          set_summary(text)
+          error("Chango fragment should be updated. See the job summary for details.")
