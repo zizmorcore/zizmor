@@ -1,5 +1,6 @@
 //! Parsing and matching APIs for GitHub Actions expressions
 //! contexts (e.g. `github.event.name`).
+
 use super::Expr;
 
 /// Represents a context in a GitHub Actions expression.
@@ -46,6 +47,54 @@ impl<'src> Context<'src> {
             Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
             _ => None,
         }
+    }
+
+    /// Returns the "pattern equivalent" of this context.
+    ///
+    /// This is a string that can be used to efficiently match the context,
+    /// such as is done in `zizmor`'s template-injection audit via a
+    /// finite state transducer.
+    ///
+    /// Returns None if the context doesn't have a sensible pattern
+    /// equivalent, e.g. if it starts with a call.
+    pub fn as_pattern(&self) -> Option<String> {
+        fn push_part(part: &Expr<'_>, pattern: &mut String) {
+            match part {
+                Expr::Identifier(ident) => pattern.push_str(ident.0),
+                Expr::Star => pattern.push('*'),
+                Expr::Index(idx) => match idx.as_ref() {
+                    // foo['bar'] -> foo.bar
+                    Expr::String(idx) => pattern.push_str(idx),
+                    // any kind of numeric or computed index, e.g.:
+                    // foo[0], foo[1 + 2], foo[bar]
+                    _ => pattern.push('*'),
+                },
+                _ => unreachable!("unexpected part in context pattern"),
+            }
+        }
+
+        // TODO: Optimization ideas:
+        // 1. Add a happy path for contexts that contain only
+        //    identifiers? Problem: case normalization.
+        // 2. Use `regex-automata` to return a case insensitive
+        //    automation here?
+        let mut pattern = String::with_capacity(self.raw.len());
+
+        let mut parts = self.parts.iter().peekable();
+
+        let head = parts.next()?;
+        if matches!(head, Expr::Call { .. }) {
+            return None;
+        }
+
+        push_part(head, &mut pattern);
+        for part in parts {
+            pattern.push('.');
+            push_part(part, &mut pattern);
+        }
+
+        pattern.make_ascii_lowercase();
+        Some(pattern)
     }
 }
 
@@ -120,33 +169,28 @@ impl<'src> ContextPattern<'src> {
         }
     }
 
+    fn compare_part(pattern: &str, part: &Expr<'src>) -> bool {
+        if pattern == "*" {
+            true
+        } else {
+            match part {
+                Expr::Identifier(part) => pattern.eq_ignore_ascii_case(part.0),
+                Expr::Index(part) => match part.as_ref() {
+                    Expr::String(part) => pattern.eq_ignore_ascii_case(part),
+                    _ => false,
+                },
+                _ => false,
+            }
+        }
+    }
+
     fn compare(&self, ctx: &Context<'src>) -> Option<Comparison> {
         let mut pattern_parts = self.0.split('.').peekable();
         let mut ctx_parts = ctx.parts.iter().peekable();
 
         while let (Some(pattern), Some(part)) = (pattern_parts.peek(), ctx_parts.peek()) {
-            // TODO: Refactor this; it's way too hard to read.
-            match (*pattern, part) {
-                // Calls can't be compared to patterns.
-                (_, Expr::Call { .. }) => return None,
-                // "*" matches any part.
-                ("*", _) => {}
-                (_, Expr::Star) => return None,
-                (pattern, Expr::Identifier(part)) if !pattern.eq_ignore_ascii_case(part.0) => {
-                    return None;
-                }
-                (pattern, Expr::Index(idx)) => {
-                    // Anything other than a string index is invalid
-                    // for part-wise comparison.
-                    let Expr::String(part) = idx.as_ref() else {
-                        return None;
-                    };
-
-                    if !pattern.eq_ignore_ascii_case(part) {
-                        return None;
-                    }
-                }
-                _ => {}
+            if !Self::compare_part(pattern, part) {
+                return None;
             }
 
             pattern_parts.next();
@@ -250,6 +294,45 @@ mod tests {
             ("bar", None),
         ] {
             assert_eq!(ctx.pop_if(case), *expected);
+        }
+    }
+
+    #[test]
+    fn test_context_as_pattern() {
+        for (case, expected) in &[
+            // Basic cases.
+            ("foo", Some("foo")),
+            ("foo.bar", Some("foo.bar")),
+            ("foo.bar.baz", Some("foo.bar.baz")),
+            ("foo.bar.baz_baz", Some("foo.bar.baz_baz")),
+            ("foo.bar.baz-baz", Some("foo.bar.baz-baz")),
+            ("foo.*", Some("foo.*")),
+            ("foo.bar.*", Some("foo.bar.*")),
+            ("foo.*.baz", Some("foo.*.baz")),
+            ("foo.*.*", Some("foo.*.*")),
+            // Case sensitivity.
+            ("FOO", Some("foo")),
+            ("FOO.BAR", Some("foo.bar")),
+            ("FOO.BAR.BAZ", Some("foo.bar.baz")),
+            ("FOO.BAR.BAZ_BAZ", Some("foo.bar.baz_baz")),
+            ("FOO.BAR.BAZ-BAZ", Some("foo.bar.baz-baz")),
+            ("FOO.*", Some("foo.*")),
+            ("FOO.BAR.*", Some("foo.bar.*")),
+            ("FOO.*.BAZ", Some("foo.*.baz")),
+            ("FOO.*.*", Some("foo.*.*")),
+            // Indexes.
+            ("foo.bar.baz[0]", Some("foo.bar.baz.*")),
+            ("foo.bar.baz['abc']", Some("foo.bar.baz.abc")),
+            ("foo.bar.baz[0].qux", Some("foo.bar.baz.*.qux")),
+            ("foo.bar.baz[0].qux[1]", Some("foo.bar.baz.*.qux.*")),
+            ("foo[1][2][3]", Some("foo.*.*.*")),
+            ("foo.bar[abc]", Some("foo.bar.*")),
+            ("foo.bar[abc()]", Some("foo.bar.*")),
+            // Invalid cases
+            ("foo().bar", None),
+        ] {
+            let ctx = Context::try_from(*case).unwrap();
+            assert_eq!(ctx.as_pattern().as_deref(), *expected);
         }
     }
 

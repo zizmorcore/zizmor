@@ -10,6 +10,7 @@ use anyhow::{Context, Result, anyhow};
 use audit::{Audit, AuditLoadError};
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{CommandFactory, Parser, ValueEnum};
+use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
@@ -27,12 +28,14 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 mod audit;
 mod config;
 mod finding;
+mod fix;
 mod github_api;
 mod models;
 mod output;
 mod registry;
 mod state;
 mod utils;
+mod yaml_patch;
 
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
@@ -126,11 +129,15 @@ struct App {
 
     /// Generate tab completion scripts for the specified shell.
     #[arg(long, value_enum, value_name = "SHELL", exclusive = true)]
-    completions: Option<clap_complete::Shell>,
+    completions: Option<Shell>,
 
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
     naches: bool,
+
+    /// Apply fixes automatically if available.
+    #[arg(long, hide = true)]
+    fix: bool,
 
     /// The inputs to audit.
     ///
@@ -140,6 +147,48 @@ struct App {
     /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
+}
+
+/// Shell with auto-generated completion script available.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ValueEnum)]
+#[allow(clippy::enum_variant_names)]
+enum Shell {
+    /// Bourne Again `SHell` (bash)
+    Bash,
+    /// Elvish shell
+    Elvish,
+    /// Friendly Interactive `SHell` (fish)
+    Fish,
+    /// Nushell
+    Nushell,
+    /// `PowerShell`
+    Powershell,
+    /// Z `SHell` (zsh)
+    Zsh,
+}
+
+impl Generator for Shell {
+    fn file_name(&self, name: &str) -> String {
+        match self {
+            Shell::Bash => clap_complete::shells::Bash.file_name(name),
+            Shell::Elvish => clap_complete::shells::Elvish.file_name(name),
+            Shell::Fish => clap_complete::shells::Fish.file_name(name),
+            Shell::Nushell => clap_complete_nushell::Nushell.file_name(name),
+            Shell::Powershell => clap_complete::shells::PowerShell.file_name(name),
+            Shell::Zsh => clap_complete::shells::Zsh.file_name(name),
+        }
+    }
+
+    fn generate(&self, cmd: &clap::Command, buf: &mut dyn std::io::Write) {
+        match self {
+            Shell::Bash => clap_complete::shells::Bash.generate(cmd, buf),
+            Shell::Elvish => clap_complete::shells::Elvish.generate(cmd, buf),
+            Shell::Fish => clap_complete::shells::Fish.generate(cmd, buf),
+            Shell::Nushell => clap_complete_nushell::Nushell.generate(cmd, buf),
+            Shell::Powershell => clap_complete::shells::PowerShell.generate(cmd, buf),
+            Shell::Zsh => clap_complete::shells::Zsh.generate(cmd, buf),
+        }
+    }
 }
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
@@ -352,12 +401,18 @@ fn collect_from_repo_slug(
         client.fetch_workflows(&slug, registry)?;
     } else {
         let before = registry.len();
+        let host = match &state.gh_hostname {
+            GitHubHost::Enterprise(address) => address.as_str(),
+            GitHubHost::Standard(_) => "github.com",
+        };
+
         client
             .fetch_audit_inputs(&slug, registry)
             .with_context(|| {
                 tips(
                     format!(
-                        "couldn't collect inputs from https://github.com/{owner}/{repo}",
+                        "couldn't collect inputs from https://{host}/{owner}/{repo}",
+                        host = host,
                         owner = slug.owner,
                         repo = slug.repo
                     ),
@@ -609,6 +664,10 @@ fn run() -> Result<ExitCode> {
         }
         OutputFormat::Github => output::github::output(stdout(), results.findings())?,
     };
+
+    if app.fix {
+        fix::apply_fixes(&results, &registry)?;
+    }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
         Ok(ExitCode::SUCCESS)

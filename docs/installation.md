@@ -112,6 +112,35 @@ description: Installation instructions for zizmor.
     pacman -S zizmor
     ```
 
+=== "Chimera Linux"
+
+    [![Chimera Linux package](https://repology.org/badge/version-for-repo/chimera/zizmor.svg)](https://repology.org/project/zizmor/versions)
+
+    !!! note
+
+        This is a community-maintained package.
+
+    `zizmor` is available in the [Chimera Linux user repo](https://chimera-linux.org/docs/apk#repositories):
+
+    ```bash
+    # If you don't have the 'user' repo enabled yet, do that first
+    apk add chimera-repo-user
+
+    apk add zizmor
+    ```
+
+=== ":simple-alpinelinux: Alpine Linux"
+
+    [![Alpine Linux package](https://repology.org/badge/version-for-repo/alpine_edge/zizmor.svg)](https://repology.org/project/zizmor/versions)
+
+    !!! note
+
+        This is a community-maintained package.
+
+    ```bash
+    apk add zizmor
+    ```
+
 === "Other ecosystems"
 
     !!! info
@@ -122,8 +151,6 @@ description: Installation instructions for zizmor.
     The badge below tracks `zizmor`'s overall packaging status.
 
     [![Packaging status](https://repology.org/badge/vertical-allrepos/zizmor.svg)](https://repology.org/project/zizmor/versions)
-
-
 
 ## From source
 
@@ -138,3 +165,15 @@ You can install the latest unstable `zizmor` directly from GitHub with `cargo`:
 ```bash
 cargo install --git https://github.com/zizmorcore/zizmor
 ```
+
+## From GitHub release binaries
+
+!!! warning
+
+    Most ordinary users **should not** install the binaries from
+    `zizmor`'s GitHub releases. Binaries are provided on a best-effort basis,
+    and may be subject to libc and other compatibility issues.
+
+`zizmor`'s GitHub releases contain pre-built binaries for several platforms
+and architectures. You can find them at
+<https://github.com/zizmorcore/zizmor/releases/latest>.

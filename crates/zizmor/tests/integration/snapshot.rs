@@ -264,6 +264,13 @@ fn insecure_commands() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("insecure-commands/issue-839-repro.yml"))
+            .args(["--persona=auditor"])
+            .run()?
+    );
+
     Ok(())
 }
 
@@ -336,6 +343,18 @@ fn template_injection() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("template-injection/issue-749-repro.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("template-injection/codeql-sinks.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("template-injection/pwsh-script.yml"))
             .run()?
     );
 

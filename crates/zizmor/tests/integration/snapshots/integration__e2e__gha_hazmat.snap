@@ -1,8 +1,8 @@
 ---
-source: tests/integration/e2e.rs
-expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@42064a9533f401a493c3599e56f144918f8eacfd\").run()?"
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@33cd22cdd7823a5795768388aff977fe992b5aad\").run()?"
 ---
- INFO collect_inputs: zizmor: collected 20 inputs from woodruffw/gha-hazmat
+ INFO collect_inputs: zizmor: collected 22 inputs from woodruffw/gha-hazmat
  INFO zizmor: skipping impostor-commit: offline audits only requested
  INFO zizmor: skipping ref-confusion: offline audits only requested
  INFO zizmor: skipping known-vulnerable-actions: offline audits only requested
@@ -24,8 +24,10 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-onlin
  INFO audit: zizmor: 🌈 completed .github/workflows/secrets-inherit.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/self-hosted.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/template-injection.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/unpinned-images.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/unpinned.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/unredacted-secrets.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/unsound-contains.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/workflow-run.yml
  INFO audit: zizmor: 🌈 completed ref-confusion/action.yml
 error[artipacked]: credential persistence through GitHub Actions artifacts
@@ -394,11 +396,11 @@ warning[excessive-permissions]: overly broad permissions
 11 | |     runs-on: ubuntu-latest
 ...  |
 18 | |           # NOT OK
-19 | |           ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
-   | |                                               -
-   | |_______________________________________________|
-   |                                                 this job
-   |                                                 default permissions used due to no permissions: block
+19 | |           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+   | |                                                -
+   | |________________________________________________|
+   |                                                  this job
+   |                                                  default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
@@ -407,8 +409,8 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
   |
 5 | / env:
 6 | |   # NOT OK
-7 | |   ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
-  | |______________________________________^ insecure commands enabled here
+7 | |   ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+  | |_______________________________________^ insecure commands enabled here
   |
   = note: audit confidence → High
 
@@ -417,8 +419,8 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
    |
 12 | /     env:
 13 | |       # NOT OK
-14 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
-   | |__________________________________________^ insecure commands enabled here
+14 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+   | |___________________________________________^ insecure commands enabled here
    |
    = note: audit confidence → High
 
@@ -427,8 +429,8 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
    |
 17 | /         env:
 18 | |           # NOT OK
-19 | |           ACTIONS_ALLOW_UNSECURE_COMMANDS: yes
-   | |_______________________________________________^ insecure commands enabled here
+19 | |           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+   | |________________________________________________^ insecure commands enabled here
    |
    = note: audit confidence → High
 
@@ -914,6 +916,38 @@ error[template-injection]: code injection via template expansion
     |
     = note: audit confidence → High
 
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/unpinned-images.yml:23:7
+   |
+23 |       image: fake.example.com/example
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/unpinned-images.yml:31:9
+   |
+31 |         image: fake.example.com/redis
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/unpinned-images.yml:38:7
+   |
+38 |       image: fake.example.com/example:latest
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/unpinned-images.yml:46:9
+   |
+46 |         image: fake.example.com/redis:latest
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+   |
+   = note: audit confidence → High
+
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/unpinned.yml:16:3
    |
@@ -976,6 +1010,46 @@ warning[unredacted-secrets]: leaked secret values
    |
    = note: audit confidence → High
 
+error[unsound-contains]: unsound contains condition
+  --> .github/workflows/unsound-contains.yml:26:9
+   |
+26 |         if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'github.ref'
+   |
+   = note: audit confidence → High
+
+error[unsound-contains]: unsound contains condition
+  --> .github/workflows/unsound-contains.yml:30:9
+   |
+30 |         if: ${{ contains('main,develop', env.GITHUB_REF_NAME) }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'env.GITHUB_REF_NAME'
+   |
+   = note: audit confidence → High
+
+error[unsound-contains]: unsound contains condition
+  --> .github/workflows/unsound-contains.yml:34:9
+   |
+34 |         if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'github.ref_name'
+   |
+   = note: audit confidence → High
+
+error[unsound-contains]: unsound contains condition
+  --> .github/workflows/unsound-contains.yml:34:9
+   |
+34 |         if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'github.actor'
+   |
+   = note: audit confidence → High
+
+info[unsound-contains]: unsound contains condition
+  --> .github/workflows/unsound-contains.yml:38:9
+   |
+38 |         if: contains('runner1,runner2', runner.name)
+   |         -------------------------------------------- info: contains(..) condition can be bypassed if attacker can control 'runner.name'
+   |
+   = note: audit confidence → High
+
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/workflow-run.yml:23:3
    |
@@ -1002,4 +1076,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-99 findings (13 suppressed): 0 unknown, 5 informational, 0 low, 37 medium, 44 high
+122 findings (27 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high

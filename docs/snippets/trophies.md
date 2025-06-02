@@ -83,6 +83,7 @@
 
     ??? example "Examples"
         - bitcoindevkit/bdk#1778
+        - bitcoindevkit/bdk#1813
 
 
 -   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear
@@ -117,6 +118,14 @@
         - canonical/operator#1656
         - canonical/operator#1721
         - canonical/testflinger#630
+
+
+-   ![](https://github.com/cunla.png?size=40){ width="40" loading=lazy align=left } cunla
+
+    ---
+
+    ??? example "Examples"
+        - cunla/fakeredis-py#391
 
 
 -   ![](https://github.com/curl.png?size=40){ width="40" loading=lazy align=left } curl
@@ -178,6 +187,14 @@
 
     ??? example "Examples"
         - Diaoul/subliminal#1190
+
+
+-   ![](https://github.com/django-commons.png?size=40){ width="40" loading=lazy align=left } django-commons
+
+    ---
+
+    ??? example "Examples"
+        - django-commons/django-tasks-scheduler#272
 
 
 -   ![](https://github.com/docker.png?size=40){ width="40" loading=lazy align=left } docker
@@ -717,6 +734,14 @@
         - oxc-project/oxc-resolver#373
 
 
+-   ![](https://github.com/PlasmaPy.png?size=40){ width="40" loading=lazy align=left } PlasmaPy
+
+    ---
+
+    ??? example "Examples"
+        - PlasmaPy/PlasmaPy#2975
+
+
 -   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc
 
     ---
@@ -731,6 +756,14 @@
 
     ??? example "Examples"
         - prettytable/prettytable#339
+
+
+-   ![](https://github.com/prometheus.png?size=40){ width="40" loading=lazy align=left } prometheus
+
+    ---
+
+    ??? example "Examples"
+        - prometheus/prometheus#16530
 
 
 -   ![](https://github.com/psf.png?size=40){ width="40" loading=lazy align=left } psf
@@ -920,6 +953,7 @@
 
     ??? example "Examples"
         - rubygems/rubygems.org#5350
+        - rubygems/rubygems#8702
 
 
 -   ![](https://github.com/rust-lang.png?size=40){ width="40" loading=lazy align=left } rust-lang
@@ -928,6 +962,7 @@
 
     ??? example "Examples"
         - rust-lang/crates.io#10176
+        - rust-lang/crates.io#11203
         - rust-lang/rust-clippy#13933
 
 
@@ -999,6 +1034,22 @@
 
     ??? example "Examples"
         - simpeg/simpeg#1592
+
+
+-   ![](https://github.com/slackapi.png?size=40){ width="40" loading=lazy align=left } slackapi
+
+    ---
+
+    ??? example "Examples"
+        - slackapi/python-slack-hooks#58
+        - slackapi/bolt-python#1303
+        - slackapi/python-slack-sdk#1691
+        - slackapi/bolt-js#2537
+        - slackapi/java-slack-sdk#1474
+        - slackapi/node-slack-sdk#2246
+        - slackapi/manifest-schema#14
+        - slackapi/slack-cli#100
+        - slackapi/python-slack-events-api#110
 
 
 -   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ

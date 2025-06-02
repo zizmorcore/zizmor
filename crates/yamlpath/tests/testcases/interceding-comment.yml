@@ -1,0 +1,25 @@
+testcase:
+  foo:
+    - # hello!
+      bar: baz
+
+  multiple:
+    - # comment 1
+      # comment 2
+      bar: baz
+
+  many-children:
+    - # foo
+      foo: bar
+    - # bar
+      bar: baz
+
+queries:
+  - query: [foo, 0, bar]
+    expected: "      bar: baz"
+
+  - query: [multiple, 0, bar]
+    expected: "      bar: baz"
+
+  - query: [many-children, 1, bar]
+    expected: "      bar: baz"

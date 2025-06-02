@@ -1,0 +1,31 @@
+# See https://github.com/woodruffw/zizmor/issues/650
+
+# Copyright © Michal Čihař <michal@weblate.org>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# This file is maintained in https://github.com/WeblateOrg/meta/
+
+name: Pull request automation
+
+on:
+  pull_request_target:
+    types: opened
+
+permissions:
+  contents: read
+
+jobs:
+  weblate_automerge:
+    permissions:
+      pull-requests: write
+      contents: write
+    runs-on: ubuntu-24.04
+    name: Weblate automerge
+    if: github.actor == 'weblate'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Enable Pull Request Automerge
+        run: gh pr merge --rebase --auto "${{ github.event.pull_request.number }}"
+        env:
+          GH_TOKEN: ${{ secrets.WEBLATE_CI_TOKEN }}

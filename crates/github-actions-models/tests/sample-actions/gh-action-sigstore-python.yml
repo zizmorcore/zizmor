@@ -1,0 +1,146 @@
+# https://github.com/sigstore/gh-action-sigstore-python/blob/b3690e3a279c94669b1e9e4e1e29317cdc7a52d5/action.yml
+
+# Copyright 2022 The Sigstore Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "gh-action-sigstore-python"
+author: "Sigstore Authors <sigstore-dev@googlegroups.com>"
+description: "Use sigstore-python to sign Python packages"
+inputs:
+  inputs:
+    description: "the files to sign, whitespace separated"
+    required: true
+    default: ""
+  identity-token:
+    description: "the OIDC identity token to use"
+    required: false
+    default: ""
+  oidc-client-id:
+    description: "the custom OpenID Connect client ID to use during OAuth2"
+    required: false
+    default: ""
+  oidc-client-secret:
+    description: "the custom OpenID Connect client secret to use during OAuth2"
+    required: false
+    default: ""
+  signature:
+    description: "write a single signature to the given file; does not work with multiple input files"
+    required: false
+    default: ""
+  certificate:
+    description: "write a single certificate to the given file; does not work with multiple input files"
+    required: false
+    default: ""
+  bundle:
+    description: "write a single Sigstore bundle to the given file; does not work with multiple input files"
+    required: false
+    default: ""
+  fulcio-url:
+    description: "the Fulcio instance to use (conflicts with `staging`)"
+    required: false
+    default: ""
+  rekor-url:
+    description: "the Rekor instance to use (conflicts with `staging`)"
+    required: false
+    default: ""
+  ctfe:
+    description: "a PEM-encoded public key for the CT log (conflicts with `staging`)"
+    required: false
+    default: ""
+  rekor-root-pubkey:
+    description: "a PEM-encoded root public key for Rekor itself (conflicts with `staging`)"
+    required: false
+    default: ""
+  staging:
+    description: "use sigstore's staging instances, instead of the default production instances"
+    required: false
+    default: false
+  verify:
+    description: "verify the generated signatures after signing"
+    required: false
+    default: false
+  verify-cert-identity:
+    description: |
+      verify the identity in the signing certificate's Subject Alternative Name
+
+      required if `verify` is enabled; has no effect otherwise.
+    required: false
+    default: ""
+  verify-oidc-issuer:
+    description: |
+      verify the issuer extension of the signing certificate
+
+      required if `verify` is enabled; has no effect otherwise.
+    required: false
+    default: ""
+  upload-signing-artifacts:
+    description: "upload all signing artifacts as workflow artifacts"
+    required: false
+    default: false
+  release-signing-artifacts:
+    description: "attach all signing artifacts as release assets"
+    required: false
+    default: false
+  internal-be-careful-debug:
+    description: "run with debug logs (default false)"
+    required: false
+    default: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up sigstore-python
+      run: |
+        # NOTE: Sourced, not executed as a script.
+        source "${GITHUB_ACTION_PATH}/setup/setup.bash"
+      env:
+        GHA_SIGSTORE_PYTHON_INTERNAL_BE_CAREFUL_DEBUG: "${{ inputs.internal-be-careful-debug }}"
+      shell: bash
+
+    - name: Run sigstore-python
+      id: sigstore-python
+      run: |
+        ${GITHUB_ACTION_PATH}/action.py "${GHA_SIGSTORE_PYTHON_INPUTS}"
+      env:
+        # The year is 2023, and nonsense like this is still necessary on Windows.
+        PYTHONUTF8: "1"
+        GHA_SIGSTORE_PYTHON_IDENTITY_TOKEN: "${{ inputs.identity-token }}"
+        GHA_SIGSTORE_PYTHON_SIGNATURE: "${{ inputs.signature }}"
+        GHA_SIGSTORE_PYTHON_CERTIFICATE: "${{ inputs.certificate }}"
+        GHA_SIGSTORE_PYTHON_BUNDLE: "${{ inputs.bundle }}"
+        GHA_SIGSTORE_PYTHON_OIDC_CLIENT_ID: "${{ inputs.oidc-client-id }}"
+        GHA_SIGSTORE_PYTHON_OIDC_CLIENT_SECRET: "${{ inputs.oidc-client-secret }}"
+        GHA_SIGSTORE_PYTHON_FULCIO_URL: "${{ inputs.fulcio-url }}"
+        GHA_SIGSTORE_PYTHON_REKOR_URL: "${{ inputs.rekor-url }}"
+        GHA_SIGSTORE_PYTHON_CTFE: "${{ inputs.ctfe }}"
+        GHA_SIGSTORE_PYTHON_REKOR_ROOT_PUBKEY: "${{ inputs.rekor-root-pubkey }}"
+        GHA_SIGSTORE_PYTHON_STAGING: "${{ inputs.staging }}"
+        GHA_SIGSTORE_PYTHON_VERIFY: "${{ inputs.verify }}"
+        GHA_SIGSTORE_PYTHON_VERIFY_CERT_IDENTITY: "${{ inputs.verify-cert-identity }}"
+        GHA_SIGSTORE_PYTHON_VERIFY_OIDC_ISSUER: "${{ inputs.verify-oidc-issuer }}"
+        GHA_SIGSTORE_PYTHON_RELEASE_SIGNING_ARTIFACTS: "${{ inputs.release-signing-artifacts }}"
+        GHA_SIGSTORE_PYTHON_INTERNAL_BE_CAREFUL_DEBUG: "${{ inputs.internal-be-careful-debug }}"
+        GHA_SIGSTORE_PYTHON_INPUTS: "${{ inputs.inputs }}"
+      shell: bash
+
+    - uses: actions/upload-artifact@v4
+      if: inputs.upload-signing-artifacts == 'true'
+      with:
+        name: "signing-artifacts-${{ github.job }}"
+        path: "${{ env.GHA_SIGSTORE_PYTHON_INTERNAL_SIGNING_ARTIFACTS }}"
+
+    - uses: softprops/action-gh-release@v1
+      if: inputs.release-signing-artifacts == 'true' && github.event_name == 'release' && github.event.action == 'published'
+      with:
+        files: "${{ env.GHA_SIGSTORE_PYTHON_INTERNAL_SIGNING_ARTIFACTS }}"

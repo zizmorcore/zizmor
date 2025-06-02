@@ -1,0 +1,332 @@
+# https://github.com/intel/llvm/blob/776af8ed456bf7f10458ca171af1dd7ca27f8895/.github/workflows/sycl-linux-run-tests.yml
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+#
+# Full terms: https://github.com/intel/llvm/blob/776af8ed456bf7f10458ca171af1dd7ca27f8895/LICENSE.TXT
+
+name: SYCL E2E
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        required: True
+
+      runner:
+        type: string
+        required: True
+      image:
+        type: string
+        required: False
+      image_options:
+        type: string
+        required: True
+
+      target_devices:
+        type: string
+        required: False
+      extra_cmake_args:
+        type: string
+        required: False
+      tests_selector:
+        description: |
+          Three possible options: "e2e", "cts", and "compute-benchmarks".
+        type: string
+        default: "e2e"
+
+      extra_lit_opts:
+        description: |
+          Extra options to be added to LIT_OPTS.
+        type: string
+        default: ''
+
+      ref:
+        type: string
+        required: True
+      devops_ref:
+        type: string
+        required: False
+        description: |
+          By default we checkout the devops directory from "inputs.ref" branch.
+          devops_ref may be specified to checkout the devops dir from different
+          branch.
+          Note: it doesn't affect ./devops/actions/run-tests/* as these actions
+          call checkout again and therefore override the devops directory, so
+          configs/dependecies from input.ref are used.
+
+      sycl_toolchain_artifact:
+        type: string
+        default: ''
+        required: False
+      sycl_toolchain_archive:
+        type: string
+        default: ''
+        required: False
+      sycl_toolchain_decompress_command:
+        type: string
+        default: ''
+        required: False
+
+      e2e_binaries_artifact:
+        description: |
+          Must be set if `e2e_testing_mode` is equal to `run-only` and the
+          artifact must exist. Can be set in other modes resulting in artifact
+          upload.
+        type: string
+        default: ''
+        required: False
+      e2e_testing_mode:
+        description: |
+          Testing mode to run E2E tests in, can be either `full`, `build-only`
+          or `run-only`.
+        type: string
+        default: 'full'
+      retention-days:
+        description: 'E2E/SYCL-CTS binaries artifact retention period.'
+        type: string
+        default: 1
+
+      reset_intel_gpu:
+        type: string
+        required: False
+      install_igc_driver:
+        type: string
+        required: False
+      install_dev_igc_driver:
+        type: string
+        required: False
+      env:
+        type: string
+        default: '{}'
+        required: False
+
+      skip_run:
+        type: string
+        default: 'false'
+        required: False
+
+      cts_testing_mode:
+        description: |
+          Testing mode to run SYCL-CTS in, can be either `full`, `build-only`
+          or `run-only`. In `build-only` mode an artifact of the CTS binaries
+          will be uploaded.
+        type: string
+        default: 'full'
+
+      sycl_cts_artifact:
+        type: string
+        default: ''
+        required: False
+
+  workflow_dispatch:
+    inputs:
+      runner:
+        type: choice
+        options:
+          - '["Linux", "gen12"]'
+          - '["amdgpu"]'
+          - '["Linux", "arc"]'
+          - '["Linux", "pvc"]'
+          - '["cts-cpu"]'
+          - '["Linux", "build"]'
+          - '["cuda"]'
+      image:
+        type: choice
+        options:
+          - 'ghcr.io/intel/llvm/sycl_ubuntu2404_nightly:latest'
+          - 'ghcr.io/intel/llvm/ubuntu2404_intel_drivers:alldeps'
+      image_options:
+        description: |
+          Use option with "--device=/dev/kfd" for AMDGPU, without it for the rest.
+        type: choice
+        options:
+          - '-u 1001 --device=/dev/dri --device=/dev/kfd --privileged --cap-add SYS_ADMIN'
+          - '-u 1001 --device=/dev/dri --privileged --cap-add SYS_ADMIN'
+          - '-u 1001 --gpus all --cap-add SYS_ADMIN'
+      target_devices:
+        type: choice
+        options:
+          - 'level_zero:gpu'
+          - 'opencl:cpu'
+          - 'opencl:gpu'
+          - 'opencl:fpga'
+          - 'hip:gpu'
+          - 'cuda:gpu'
+      tests_selector:
+        type: choice
+        options:
+          - e2e
+          - cts
+          - compute-benchmarks
+
+      env:
+        description: |
+          Suggested variables: for E2E tests - LIT_FILTER, LIT_FILTER_OUT.
+          LIT_OPTS won't work as we redefine it as part of this workflow.
+
+          For SYCL CTS - CTS_TESTS_TO_BUILD to specify which categories to
+          build, e.g. {"CTS_TESTS_TO_BUILD":"test_category1 test_category2..."}.
+
+          Format: '{"VAR1":"VAL1","VAR2":"VAL2",...}'
+        default: '{}'
+
+      extra_lit_opts:
+        description: |
+          Extra options to be added to LIT_OPTS.
+        default: ''
+
+      install_igc_driver:
+        type: choice
+        options:
+          - false
+          - true
+
+      install_dev_igc_driver:
+        type: choice
+        options:
+          - false
+          - true
+      e2e_testing_mode:
+        type: choice
+        options:
+          - "full"
+          - "build-only"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  run:
+    if: github.event_name == 'workflow_dispatch' || inputs.skip_run == 'false'
+    name: ${{ inputs.name }}
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    container:
+      image: ${{ inputs.image || 'ghcr.io/intel/llvm/ubuntu2404_intel_drivers:alldeps'}}
+      options: ${{ inputs.image_options }}
+    env: ${{ fromJSON(inputs.env) }}
+    steps:
+    - name: Reset Intel GPU
+      if: inputs.reset_intel_gpu == 'true'
+      run: |
+        sudo mount -t debugfs none /sys/kernel/debug
+        sudo bash -c 'echo 1 > /sys/kernel/debug/dri/0/i915_wedged'
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.devops_ref || inputs.ref }}
+        sparse-checkout: |
+          devops
+    - name: Register cleanup after job is finished
+      uses: ./devops/actions/cleanup
+    - name: Install drivers
+      if: inputs.install_igc_driver == 'true' || inputs.install_dev_igc_driver == 'true'
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        if [ "${{ inputs.install_dev_igc_driver }}" = "true" ]; then
+            # If libllvm14 is already installed (dev igc docker), still return true.
+            sudo apt-get install -yqq libllvm14 || true;
+        fi
+        sudo -E bash devops/scripts/install_drivers.sh devops/dependencies.json ${{ inputs.install_dev_igc_driver == 'true' && 'devops/dependencies-igc-dev.json --use-dev-igc' || '' }} --all
+    - name: Source OneAPI TBB vars.sh
+      shell: bash
+      run: |
+        # https://github.com/actions/runner/issues/1964 prevents us from using
+        # the ENTRYPOINT in the image.
+        env | sort > env_before
+        if [ -e /runtimes/oneapi-tbb/env/vars.sh ]; then
+          source /runtimes/oneapi-tbb/env/vars.sh;
+        elif [ -e /opt/runtimes/oneapi-tbb/env/vars.sh ]; then
+          source /opt/runtimes/oneapi-tbb/env/vars.sh;
+        else
+          echo "no TBB vars in /opt/runtimes or /runtimes";
+        fi
+        env | sort > env_after
+        comm -13 env_before env_after >> $GITHUB_ENV
+        rm env_before env_after
+    - name: Download SYCL toolchain
+      if: inputs.sycl_toolchain_artifact != '' && github.event_name != 'workflow_run'
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.sycl_toolchain_artifact }}
+    - name: Debug prints [workflow_run]
+      if: inputs.sycl_toolchain_artifact != '' && github.event_name == 'workflow_run'
+      run: |
+        pwd
+        ls
+    - name: Download SYCL toolchain [workflow_run]
+      if: inputs.sycl_toolchain_artifact != '' && github.event_name == 'workflow_run'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const name = '${{ inputs.sycl_toolchain_artifact }}'
+          let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+             owner: context.repo.owner,
+             repo: context.repo.repo,
+             run_id: context.payload.workflow_run.id,
+          });
+          let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+            return artifact.name == name
+          })[0];
+          let download = await github.rest.actions.downloadArtifact({
+             owner: context.repo.owner,
+             repo: context.repo.repo,
+             artifact_id: matchArtifact.id,
+             archive_format: 'zip',
+          });
+          let fs = require('fs');
+          fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/` + name + '.zip', Buffer.from(download.data));
+    - name: Unzip artifact [workflow_run]
+      if: inputs.sycl_toolchain_artifact != '' && github.event_name == 'workflow_run'
+      run: |
+        pwd
+        ls
+        unzip ${{ inputs.sycl_toolchain_artifact }}.zip
+        rm ${{ inputs.sycl_toolchain_artifact }}.zip
+    - name: Extract/Setup SYCL toolchain
+      if: inputs.sycl_toolchain_artifact != ''
+      run: |
+        mkdir toolchain
+        tar -I '${{ inputs.sycl_toolchain_decompress_command }}' -xf ${{ inputs.sycl_toolchain_archive }} -C toolchain
+        rm -f ${{ inputs.sycl_toolchain_archive }}
+        echo PATH=$PWD/toolchain/bin/:$PATH >> $GITHUB_ENV
+        echo LD_LIBRARY_PATH=$PWD/toolchain/lib/:$LD_LIBRARY_PATH >> $GITHUB_ENV
+    - run: which clang++ sycl-ls
+    - run: sycl-ls --verbose
+    - run: SYCL_UR_TRACE=1 sycl-ls
+    - run: |
+          if [ -f /usr/local/lib/igc/IGCTAG.txt ]; then
+            cat /usr/local/lib/igc/IGCTAG.txt
+          fi
+
+    - name: Run E2E Tests
+      if: inputs.tests_selector == 'e2e'
+      uses: ./devops/actions/run-tests/e2e
+      with:
+        ref: ${{ inputs.ref || github.sha }}
+        binaries_artifact: ${{ inputs.e2e_binaries_artifact }}
+        testing_mode: ${{ inputs.e2e_testing_mode }}
+        extra_cmake_args: ${{ inputs.extra_cmake_args }}
+        target_devices: ${{ inputs.target_devices }}
+        extra_lit_opts: ${{ inputs.extra_lit_opts }}
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Run SYCL CTS Tests
+      if: inputs.tests_selector == 'cts'
+      uses: ./devops/actions/run-tests/cts
+      with:
+        extra_cmake_args: ${{ inputs.extra_cmake_args }}
+        cts_testing_mode: ${{ inputs.cts_testing_mode }}
+        sycl_cts_artifact: ${{ inputs.sycl_cts_artifact }}
+        target_devices: ${{ inputs.target_devices }}
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Run compute-benchmarks on SYCL
+      if: inputs.tests_selector == 'compute-benchmarks'
+      uses: ./devops/actions/run-tests/benchmark
+      with:
+        target_devices: ${{ inputs.target_devices }}
+      env:
+        RUNNER_TAG: ${{ inputs.runner }}
+        GITHUB_TOKEN: ${{ secrets.LLVM_SYCL_BENCHMARK_TOKEN }}

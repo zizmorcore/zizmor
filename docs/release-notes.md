@@ -9,6 +9,33 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.9.0
+
+### New Features 🌈
+
+* `zizmor` now supports generating completions for Nushell (#838)
+
+### Enhancements 🌱
+
+* The [template-injection] audit has been rewritten, and is now significantly
+  more precise and general over contexts supplied via GitHub's webhook
+  payloads (i.e. `github.event.*`) (#745)
+* The [template-injection] audit now detects vulnerable template injections
+  in more actions inputs, thanks to an integration with CodeQL's
+  sink metadata (#849)
+
+### Bug Fixes 🐛
+
+* The [insecure-commands] now correctly detects different truthy
+  values in `ACTIONS_ALLOW_UNSECURE_COMMANDS` (#840)
+* The [template-injection] audit now correctly emits pedantic findings
+  in a blanket manner, rather than filtering them based on the presence
+  of other findings (#745)
+* CLI: Fixed a misleading error message when `zizmor` is used with
+  a GitHub host other than `github.com` (#863)
+
+## v1.8.0
+
 ### Announcements 📣
 
 * `zizmor`'s website has changed! The new website is hosted at
@@ -29,8 +56,11 @@ of `zizmor`.
 
 ### Bug Fixes 🐛
 
-* `zizmor` now correctly handles index-style contexts in the
-  [template-injection] audit (#800, #806)
+* The [template-injection] audit no longer produces false positive findings
+  on alternative representations of the same context pattern.
+  For example, `github.event.pull_request.head.sha` is considered safe
+  but `github['event']['pull_request']['head']['sha']` was not previously
+  detected as equivalent to it (#800, #806)
 
 ## v1.7.0
 
@@ -799,3 +829,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [stale-action-refs]: ./audits.md#stale-action-refs
 [unsound-contains]: ./audits.md#unsound-contains
 [unpinned-images]: ./audits.md#unpinned-images
+[insecure-commands]: ./audits.md#insecure-commands

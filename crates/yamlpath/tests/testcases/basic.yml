@@ -1,0 +1,18 @@
+testcase:
+  foo:
+    bar:
+      baz: hello!
+
+  emptykey:
+
+queries:
+  - query: [foo, bar, baz]
+    expected: |2-
+            baz: hello!
+
+  - query: [foo, bar]
+    expected: |2-
+          bar:
+            baz: hello!
+  - query: [emptykey]
+    expected: "  emptykey:"

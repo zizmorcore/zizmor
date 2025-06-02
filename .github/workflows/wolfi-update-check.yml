@@ -1,0 +1,31 @@
+name: Check for a new zizmor version in Wolfi OS
+
+on:
+  schedule:
+    - cron: '0 */12 * * *' # every 12 hours
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check-for-new-version:
+    runs-on: ubuntu-latest
+    # this job does not make sense on forks
+    if: ${{ github.repository_owner == 'zizmorcore' }}
+
+    permissions:
+      packages: read # to read the current Docker image version
+      issues: write # to create an issue if a new version is found
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          sparse-checkout: support/
+
+      - name: Check for new zizmor version in Wolfi OS
+        run: |
+          ./support/wolfi-update-check.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
