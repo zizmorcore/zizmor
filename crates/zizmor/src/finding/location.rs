@@ -61,10 +61,35 @@ impl<'doc> Route<'doc> {
         }
     }
 
-    fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> Route<'doc> {
+    pub(crate) fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> Route<'doc> {
         let mut components = self.components.clone();
         components.extend(keys.iter().cloned());
         Route { components }
+    }
+
+    pub(crate) fn is_root(&self) -> bool {
+        self.components.is_empty()
+    }
+
+    pub(crate) fn to_query(&self) -> Option<yamlpath::Query<'doc>> {
+        if self.is_root() {
+            return None;
+        }
+
+        let mut builder = yamlpath::QueryBuilder::new();
+
+        for component in &self.components {
+            builder = match component {
+                RouteComponent::Key(key) => builder.key(key),
+                RouteComponent::Index(idx) => builder.index(*idx),
+            }
+        }
+
+        Some(builder.build())
+    }
+
+    pub(crate) fn tail(&self) -> Option<&RouteComponent<'doc>> {
+        self.components.last()
     }
 }
 

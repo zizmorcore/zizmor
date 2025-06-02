@@ -29,11 +29,14 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{Confidence, Finding, Fix, Persona, Severity, location::SymbolicLocation},
-    models::{self, CompositeStep, JobExt as _, Step, StepCommon, uses::RepositoryUsesPattern},
+    finding::{
+        Confidence, Finding, Fix, Persona, Severity,
+        location::{Routable as _, SymbolicLocation},
+    },
+    models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesPattern},
     state::AuditState,
     utils::extract_expressions,
-    yaml_patch::YamlPatchOperation,
+    yaml_patch::{self, YamlPatchOperation},
 };
 
 pub(crate) struct TemplateInjection;
@@ -198,7 +201,7 @@ impl TemplateInjection {
         script: &str,
         raw: &ExplicitExpr,
         parsed: &Expr,
-        step: &impl StepCommon<'a, 'doc>,
+        step: &'a impl StepCommon<'a, 'doc>,
     ) -> Option<Fix> {
         // We can only fix `run:` steps for now.
         if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
@@ -230,7 +233,34 @@ impl TemplateInjection {
         // index. In those kinds of cases, we don't produce a fix.
         let env_var = Self::context_to_env_var(ctx)?;
 
-        todo!()
+        // NOTE: We only replace the first occurrence of the raw expression,
+        // since each fix corresponds to exactly one expression.
+        // This implicitly assumes that we perform fixes in the order
+        // of findings, which is currently but not inherently the case.
+        // The cleaner thing to do here would probably be to replace the
+        // expression's exact span, but that would invalidate the
+        // next fix's span. Needs more thought.
+        let new_script = script.replacen(raw.as_raw(), &format!("${{{env_var}}}"), 1);
+
+        Some(Fix {
+            title: "replace expression with environment variable".into(),
+            description: "todo".into(),
+            apply: Box::new(move |content: &str| -> anyhow::Result<Option<String>> {
+                let mut ops = vec![];
+
+                ops.push(YamlPatchOperation::Replace {
+                    route: step.route().with_keys(&["run".into()]),
+                    value: serde_yaml::Value::String(new_script),
+                });
+
+                // ops.push(YamlPatchOperation::MergeInto { route: (), key: (), value: () })
+
+                match yaml_patch::apply_yaml_patch(content, vec![]) {
+                    Ok(new_content) => Ok(Some(new_content)),
+                    Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
+                }
+            }),
+        })
     }
 
     fn injectable_template_expressions<'a, 'doc>(
@@ -399,171 +429,171 @@ impl TemplateInjection {
             || cleaned_expr.starts_with("secrets.")
     }
 
-    /// Create a fix that moves multiple template expressions to environment variables
-    fn create_env_var_fix(
-        expressions: &[String],
-        job_id: &str,
-        step_index: usize,
-        script: &str,
-    ) -> Fix {
-        Fix {
-            title: "Move template expressions to environment variables".to_string(),
-            description: format!(
-                "Move template expressions ({}) to environment variables to prevent code injection. \
-                Template expansions aren't syntax-aware, meaning that they can result in unintended shell injection vectors. \
-                This is especially true when they're used with attacker-controllable expression contexts. \
-                \n\nInstead of using expressions like '${{{{ github.event.issue.title }}}}' directly in the script, \
-                add them to the 'env:' block and reference them as shell variables like '${{ISSUE_TITLE}}'. \
-                This avoids the vulnerability, since variable expansion is subject to normal shell quoting/expansion rules.",
-                expressions.join(", ")
-            ),
-            apply: Box::new({
-                let expressions = expressions.to_vec();
-                let job_id = job_id.to_string();
-                let script = script.to_string();
-                move |content: &str| -> anyhow::Result<Option<String>> {
-                    let mut operations = Vec::new();
-                    let mut new_script = script.clone();
-                    let mut env_vars = serde_yaml::Mapping::new();
+    // /// Create a fix that moves multiple template expressions to environment variables
+    // fn create_env_var_fix(
+    //     expressions: &[String],
+    //     job_id: &str,
+    //     step_index: usize,
+    //     script: &str,
+    // ) -> Fix {
+    //     Fix {
+    //         title: "Move template expressions to environment variables".to_string(),
+    //         description: format!(
+    //             "Move template expressions ({}) to environment variables to prevent code injection. \
+    //             Template expansions aren't syntax-aware, meaning that they can result in unintended shell injection vectors. \
+    //             This is especially true when they're used with attacker-controllable expression contexts. \
+    //             \n\nInstead of using expressions like '${{{{ github.event.issue.title }}}}' directly in the script, \
+    //             add them to the 'env:' block and reference them as shell variables like '${{ISSUE_TITLE}}'. \
+    //             This avoids the vulnerability, since variable expansion is subject to normal shell quoting/expansion rules.",
+    //             expressions.join(", ")
+    //         ),
+    //         apply: Box::new({
+    //             let expressions = expressions.to_vec();
+    //             let job_id = job_id.to_string();
+    //             let script = script.to_string();
+    //             move |content: &str| -> anyhow::Result<Option<String>> {
+    //                 let mut operations = Vec::new();
+    //                 let mut new_script = script.clone();
+    //                 let mut env_vars = serde_yaml::Mapping::new();
 
-                    // Process each expression
-                    for expression in &expressions {
-                        // Check if the expression already includes ${{ }} wrapper
-                        let (clean_expr, full_expr) = if expression.trim().starts_with("${{")
-                            && expression.trim().ends_with("}}")
-                        {
-                            // Expression already has wrapper, extract the bare content
-                            let clean = expression
-                                .trim()
-                                .strip_prefix("${{")
-                                .unwrap()
-                                .strip_suffix("}}")
-                                .unwrap()
-                                .trim();
-                            (clean, expression.trim().to_string())
-                        } else {
-                            // Expression doesn't have wrapper, add it
-                            let clean = expression.trim();
-                            (clean, format!("${{{{ {} }}}}", clean))
-                        };
+    //                 // Process each expression
+    //                 for expression in &expressions {
+    //                     // Check if the expression already includes ${{ }} wrapper
+    //                     let (clean_expr, full_expr) = if expression.trim().starts_with("${{")
+    //                         && expression.trim().ends_with("}}")
+    //                     {
+    //                         // Expression already has wrapper, extract the bare content
+    //                         let clean = expression
+    //                             .trim()
+    //                             .strip_prefix("${{")
+    //                             .unwrap()
+    //                             .strip_suffix("}}")
+    //                             .unwrap()
+    //                             .trim();
+    //                         (clean, expression.trim().to_string())
+    //                     } else {
+    //                         // Expression doesn't have wrapper, add it
+    //                         let clean = expression.trim();
+    //                         (clean, format!("${{{{ {} }}}}", clean))
+    //                     };
 
-                        // Generate a safe environment variable name
-                        let env_var_name = Self::generate_env_var_name(clean_expr);
+    //                     // Generate a safe environment variable name
+    //                     let env_var_name = Self::generate_env_var_name(clean_expr);
 
-                        // Replace the expression in the script with the environment variable
-                        new_script =
-                            new_script.replace(&full_expr, &format!("${{{}}}", env_var_name));
+    //                     // Replace the expression in the script with the environment variable
+    //                     new_script =
+    //                         new_script.replace(&full_expr, &format!("${{{}}}", env_var_name));
 
-                        // Add to environment variables
-                        env_vars.insert(
-                            serde_yaml::Value::String(env_var_name),
-                            serde_yaml::Value::String(format!("${{{{ {} }}}}", clean_expr)),
-                        );
-                    }
+    //                     // Add to environment variables
+    //                     env_vars.insert(
+    //                         serde_yaml::Value::String(env_var_name),
+    //                         serde_yaml::Value::String(format!("${{{{ {} }}}}", clean_expr)),
+    //                     );
+    //                 }
 
-                    // Update the run script
-                    operations.push(YamlPatchOperation::Replace {
-                        route: format!("/jobs/{}/steps/{}/run", job_id, step_index),
-                        value: serde_yaml::Value::String(new_script),
-                    });
+    //                 // Update the run script
+    //                 operations.push(YamlPatchOperation::Replace {
+    //                     route: format!("/jobs/{}/steps/{}/run", job_id, step_index),
+    //                     value: serde_yaml::Value::String(new_script),
+    //                 });
 
-                    // Add all environment variables at once
-                    operations.push(YamlPatchOperation::MergeInto {
-                        route: format!("/jobs/{}/steps/{}", job_id, step_index),
-                        key: "env".to_string(),
-                        value: serde_yaml::Value::Mapping(env_vars),
-                    });
+    //                 // Add all environment variables at once
+    //                 operations.push(YamlPatchOperation::MergeInto {
+    //                     route: format!("/jobs/{}/steps/{}", job_id, step_index),
+    //                     key: "env".to_string(),
+    //                     value: serde_yaml::Value::Mapping(env_vars),
+    //                 });
 
-                    match crate::yaml_patch::apply_yaml_patch(content, operations) {
-                        Ok(new_content) => Ok(Some(new_content)),
-                        Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
-                    }
-                }
-            }),
-        }
-    }
+    //                 match crate::yaml_patch::apply_yaml_patch(content, operations) {
+    //                     Ok(new_content) => Ok(Some(new_content)),
+    //                     Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
+    //                 }
+    //             }
+    //         }),
+    //     }
+    // }
 
-    /// Create a fix that moves multiple template expressions to environment variables for composite actions
-    fn create_composite_env_var_fix(
-        expressions: &[String],
-        step_index: usize,
-        script: &str,
-    ) -> Fix {
-        Fix {
-            title: "Move template expressions to environment variables".to_string(),
-            description: format!(
-                "Move template expressions ({}) to environment variables to prevent code injection. \
-                Template expansions aren't syntax-aware, meaning that they can result in unintended shell injection vectors. \
-                This is especially true when they're used with attacker-controllable expression contexts. \
-                \n\nInstead of using expressions like '${{{{ github.event.issue.title }}}}' directly in the script, \
-                add them to the 'env:' block and reference them as shell variables like '${{ISSUE_TITLE}}'. \
-                This avoids the vulnerability, since variable expansion is subject to normal shell quoting/expansion rules.",
-                expressions.join(", ")
-            ),
-            apply: Box::new({
-                let expressions = expressions.to_vec();
-                let script = script.to_string();
-                move |content: &str| -> anyhow::Result<Option<String>> {
-                    let mut operations = Vec::new();
-                    let mut new_script = script.clone();
-                    let mut env_vars = serde_yaml::Mapping::new();
+    // /// Create a fix that moves multiple template expressions to environment variables for composite actions
+    // fn create_composite_env_var_fix(
+    //     expressions: &[String],
+    //     step_index: usize,
+    //     script: &str,
+    // ) -> Fix {
+    //     Fix {
+    //         title: "Move template expressions to environment variables".to_string(),
+    //         description: format!(
+    //             "Move template expressions ({}) to environment variables to prevent code injection. \
+    //             Template expansions aren't syntax-aware, meaning that they can result in unintended shell injection vectors. \
+    //             This is especially true when they're used with attacker-controllable expression contexts. \
+    //             \n\nInstead of using expressions like '${{{{ github.event.issue.title }}}}' directly in the script, \
+    //             add them to the 'env:' block and reference them as shell variables like '${{ISSUE_TITLE}}'. \
+    //             This avoids the vulnerability, since variable expansion is subject to normal shell quoting/expansion rules.",
+    //             expressions.join(", ")
+    //         ),
+    //         apply: Box::new({
+    //             let expressions = expressions.to_vec();
+    //             let script = script.to_string();
+    //             move |content: &str| -> anyhow::Result<Option<String>> {
+    //                 let mut operations = Vec::new();
+    //                 let mut new_script = script.clone();
+    //                 let mut env_vars = serde_yaml::Mapping::new();
 
-                    // Process each expression
-                    for expression in &expressions {
-                        // Check if the expression already includes ${{ }} wrapper
-                        let (clean_expr, full_expr) = if expression.trim().starts_with("${{")
-                            && expression.trim().ends_with("}}")
-                        {
-                            // Expression already has wrapper, extract the bare content
-                            let clean = expression
-                                .trim()
-                                .strip_prefix("${{")
-                                .unwrap()
-                                .strip_suffix("}}")
-                                .unwrap()
-                                .trim();
-                            (clean, expression.trim().to_string())
-                        } else {
-                            // Expression doesn't have wrapper, add it
-                            let clean = expression.trim();
-                            (clean, format!("${{{{ {} }}}}", clean))
-                        };
+    //                 // Process each expression
+    //                 for expression in &expressions {
+    //                     // Check if the expression already includes ${{ }} wrapper
+    //                     let (clean_expr, full_expr) = if expression.trim().starts_with("${{")
+    //                         && expression.trim().ends_with("}}")
+    //                     {
+    //                         // Expression already has wrapper, extract the bare content
+    //                         let clean = expression
+    //                             .trim()
+    //                             .strip_prefix("${{")
+    //                             .unwrap()
+    //                             .strip_suffix("}}")
+    //                             .unwrap()
+    //                             .trim();
+    //                         (clean, expression.trim().to_string())
+    //                     } else {
+    //                         // Expression doesn't have wrapper, add it
+    //                         let clean = expression.trim();
+    //                         (clean, format!("${{{{ {} }}}}", clean))
+    //                     };
 
-                        // Generate a safe environment variable name
-                        let env_var_name = Self::generate_env_var_name(clean_expr);
+    //                     // Generate a safe environment variable name
+    //                     let env_var_name = Self::generate_env_var_name(clean_expr);
 
-                        // Replace the expression in the script with the environment variable
-                        new_script =
-                            new_script.replace(&full_expr, &format!("${{{}}}", env_var_name));
+    //                     // Replace the expression in the script with the environment variable
+    //                     new_script =
+    //                         new_script.replace(&full_expr, &format!("${{{}}}", env_var_name));
 
-                        // Add to environment variables
-                        env_vars.insert(
-                            serde_yaml::Value::String(env_var_name),
-                            serde_yaml::Value::String(format!("${{{{ {} }}}}", clean_expr)),
-                        );
-                    }
+    //                     // Add to environment variables
+    //                     env_vars.insert(
+    //                         serde_yaml::Value::String(env_var_name),
+    //                         serde_yaml::Value::String(format!("${{{{ {} }}}}", clean_expr)),
+    //                     );
+    //                 }
 
-                    // Update the run script
-                    operations.push(YamlPatchOperation::Replace {
-                        route: format!("/runs/steps/{}/run", step_index),
-                        value: serde_yaml::Value::String(new_script),
-                    });
+    //                 // Update the run script
+    //                 operations.push(YamlPatchOperation::Replace {
+    //                     route: format!("/runs/steps/{}/run", step_index),
+    //                     value: serde_yaml::Value::String(new_script),
+    //                 });
 
-                    // Add all environment variables at once
-                    operations.push(YamlPatchOperation::MergeInto {
-                        route: format!("/runs/steps/{}", step_index),
-                        key: "env".to_string(),
-                        value: serde_yaml::Value::Mapping(env_vars),
-                    });
+    //                 // Add all environment variables at once
+    //                 operations.push(YamlPatchOperation::MergeInto {
+    //                     route: format!("/runs/steps/{}", step_index),
+    //                     key: "env".to_string(),
+    //                     value: serde_yaml::Value::Mapping(env_vars),
+    //                 });
 
-                    match crate::yaml_patch::apply_yaml_patch(content, operations) {
-                        Ok(new_content) => Ok(Some(new_content)),
-                        Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
-                    }
-                }
-            }),
-        }
-    }
+    //                 match crate::yaml_patch::apply_yaml_patch(content, operations) {
+    //                     Ok(new_content) => Ok(Some(new_content)),
+    //                     Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
+    //                 }
+    //             }
+    //         }),
+    //     }
+    // }
 
     /// Generate a safe environment variable name from an expression
     fn generate_env_var_name(expr: &str) -> String {
@@ -898,54 +928,54 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_fixes_are_added_to_findings() {
-        use super::TemplateInjection;
+    // #[test]
+    // fn test_fixes_are_added_to_findings() {
+    //     use super::TemplateInjection;
 
-        let env_var_fix = TemplateInjection::create_env_var_fix(
-            &["${{ github.event.issue.title }}".to_string()],
-            "test-job",
-            0,
-            "echo \"${{ github.event.issue.title }}\"",
-        );
+    //     let env_var_fix = TemplateInjection::create_env_var_fix(
+    //         &["${{ github.event.issue.title }}".to_string()],
+    //         "test-job",
+    //         0,
+    //         "echo \"${{ github.event.issue.title }}\"",
+    //     );
 
-        assert_eq!(
-            env_var_fix.title,
-            "Move template expressions to environment variables"
-        );
-        assert!(env_var_fix.description.contains("github.event.issue.title"));
-        assert!(env_var_fix.description.contains("env:"));
-    }
+    //     assert_eq!(
+    //         env_var_fix.title,
+    //         "Move template expressions to environment variables"
+    //     );
+    //     assert!(env_var_fix.description.contains("github.event.issue.title"));
+    //     assert!(env_var_fix.description.contains("env:"));
+    // }
 
-    #[test]
-    fn test_fix_descriptions_match_audits_md_guidelines() {
-        use super::TemplateInjection;
+    // #[test]
+    // fn test_fix_descriptions_match_audits_md_guidelines() {
+    //     use super::TemplateInjection;
 
-        let env_var_fix = TemplateInjection::create_env_var_fix(
-            &["${{ github.event.issue.title }}".to_string()],
-            "test-job",
-            0,
-            "echo \"${{ github.event.issue.title }}\"",
-        );
+    //     let env_var_fix = TemplateInjection::create_env_var_fix(
+    //         &["${{ github.event.issue.title }}".to_string()],
+    //         "test-job",
+    //         0,
+    //         "echo \"${{ github.event.issue.title }}\"",
+    //     );
 
-        // Verify the description contains key phrases from audits.md
-        assert!(
-            env_var_fix
-                .description
-                .contains("Template expansions aren't syntax-aware")
-        );
-        assert!(env_var_fix.description.contains("shell injection vectors"));
-        assert!(
-            env_var_fix
-                .description
-                .contains("attacker-controllable expression contexts")
-        );
-        assert!(
-            env_var_fix
-                .description
-                .contains("variable expansion is subject to normal shell quoting/expansion rules")
-        );
-    }
+    //     // Verify the description contains key phrases from audits.md
+    //     assert!(
+    //         env_var_fix
+    //             .description
+    //             .contains("Template expansions aren't syntax-aware")
+    //     );
+    //     assert!(env_var_fix.description.contains("shell injection vectors"));
+    //     assert!(
+    //         env_var_fix
+    //             .description
+    //             .contains("attacker-controllable expression contexts")
+    //     );
+    //     assert!(
+    //         env_var_fix
+    //             .description
+    //             .contains("variable expansion is subject to normal shell quoting/expansion rules")
+    //     );
+    // }
 
     #[test]
     fn test_suggestion_only_functions_no_fixes() {

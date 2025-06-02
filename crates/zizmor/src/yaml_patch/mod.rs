@@ -55,6 +55,8 @@
 
 use anyhow::Result;
 
+use crate::finding::location::{Route, RouteComponent};
+
 /// Error types for YAML patch operations
 #[derive(thiserror::Error, Debug)]
 pub enum YamlPatchError {
@@ -73,16 +75,16 @@ pub enum YamlPatchError {
 
 /// Represents a YAML patch operation that preserves comments and formatting
 #[derive(Debug, Clone)]
-pub enum YamlPatchOperation {
+pub enum YamlPatchOperation<'doc> {
     /// Replace the value at the given path
     Replace {
-        route: String,
+        route: Route<'doc>,
         value: serde_yaml::Value,
     },
     /// Add a new key-value pair at the given path. The path should point to a mapping,
     /// or use "/" for root-level additions. Maintains proper indentation and formatting.
     Add {
-        route: String,
+        route: Route<'doc>,
         key: String,
         value: serde_yaml::Value,
     },
@@ -90,13 +92,13 @@ pub enum YamlPatchOperation {
     /// If both the existing value and new value are mappings, they are merged together.
     /// Otherwise, the new value replaces the existing one.
     MergeInto {
-        route: String,
+        route: Route<'doc>,
         key: String,
         value: serde_yaml::Value,
     },
     /// Remove the key at the given path
     #[allow(dead_code)]
-    Remove { route: String },
+    Remove { route: Route<'doc> },
 }
 
 /// Apply YAML patch operations while preserving comments and formatting
@@ -138,52 +140,21 @@ pub fn apply_yaml_patch(
     for op in operations {
         let doc = yamlpath::Document::new(&result)?;
         match &op {
-            YamlPatchOperation::Replace {
-                route: path,
-                value: _,
-            } => {
-                if path == "/" {
-                    // Handle root replacement - use the document root
-                    let feature = doc.root();
-                    positioned_ops.push((feature.location.byte_span.0, op));
-                } else {
-                    let query = parse_json_pointer_to_query(path)?;
-                    let feature = doc.query(&query)?;
-                    positioned_ops.push((feature.location.byte_span.0, op));
-                }
+            YamlPatchOperation::Replace { route, value: _ } => {
+                let feature = route_to_feature(&route, &doc)?;
+                positioned_ops.push((feature.location.byte_span.0, op));
             }
-            YamlPatchOperation::Add { route: path, .. } => {
-                if path == "/" {
-                    // Handle root-level additions - use the document root
-                    let feature = doc.root();
-                    positioned_ops.push((feature.location.byte_span.1, op));
-                } else {
-                    let query = parse_json_pointer_to_query(path)?;
-                    let feature = doc.query(&query)?;
-                    positioned_ops.push((feature.location.byte_span.1, op));
-                }
+            YamlPatchOperation::Add { route, .. } => {
+                let feature = route_to_feature(&route, &doc)?;
+                positioned_ops.push((feature.location.byte_span.1, op));
             }
-            YamlPatchOperation::MergeInto { route: path, .. } => {
-                if path == "/" {
-                    // Handle root-level merges - use the document root
-                    let feature = doc.root();
-                    positioned_ops.push((feature.location.byte_span.1, op));
-                } else {
-                    let query = parse_json_pointer_to_query(path)?;
-                    let feature = doc.query(&query)?;
-                    positioned_ops.push((feature.location.byte_span.1, op));
-                }
+            YamlPatchOperation::MergeInto { route, .. } => {
+                let feature = route_to_feature(&route, &doc)?;
+                positioned_ops.push((feature.location.byte_span.1, op));
             }
-            YamlPatchOperation::Remove { route: path } => {
-                if path == "/" {
-                    // Handle root-level removal - use the document root
-                    let feature = doc.root();
-                    positioned_ops.push((feature.location.byte_span.0, op));
-                } else {
-                    let query = parse_json_pointer_to_query(path)?;
-                    let feature = doc.query(&query)?;
-                    positioned_ops.push((feature.location.byte_span.0, op));
-                }
+            YamlPatchOperation::Remove { route } => {
+                let feature = route_to_feature(&route, &doc)?;
+                positioned_ops.push((feature.location.byte_span.1, op));
             }
         }
     }
@@ -206,13 +177,8 @@ fn apply_single_operation(
     let doc = yamlpath::Document::new(content)?;
 
     match operation {
-        YamlPatchOperation::Replace { route: path, value } => {
-            let feature = if path == "/" {
-                doc.root()
-            } else {
-                let query = parse_json_pointer_to_query(&path)?;
-                doc.query(&query)?
-            };
+        YamlPatchOperation::Replace { route, value } => {
+            let feature = route_to_feature(&route, &doc)?;
 
             // Get the replacement content
             let replacement = apply_value_replacement(content, &feature, &doc, &value, true)?;
@@ -238,30 +204,20 @@ fn apply_single_operation(
             Ok(result)
         }
 
-        YamlPatchOperation::Add {
-            route: path,
-            key,
-            value,
-        } => {
-            if path == "/" {
+        YamlPatchOperation::Add { route, key, value } => {
+            if route.is_root() {
                 // Handle root-level additions specially
                 return handle_root_level_addition(content, &key, &value);
             }
 
-            let query = parse_json_pointer_to_query(&path)?;
-            let feature = doc.query(&query)?;
+            let feature = route_to_feature(&route, &doc)?;
 
             // Convert the new value to YAML string
             let new_value_str = serialize_yaml_value(&value)?;
             let new_value_str = new_value_str.trim_end(); // Remove trailing newline
 
             // Check if we're adding to a list item by examining the path
-            let is_list_item = path
-                .split('/')
-                .next_back()
-                .unwrap_or("")
-                .parse::<usize>()
-                .is_ok();
+            let is_list_item = matches!(route.tail(), Some(RouteComponent::Index(_)));
 
             // Determine the appropriate indentation
             let indent = if is_list_item {
@@ -338,98 +294,87 @@ fn apply_single_operation(
             Ok(result)
         }
 
-        YamlPatchOperation::MergeInto {
-            route: path,
-            key,
-            value,
-        } => {
-            if path == "/" {
+        YamlPatchOperation::MergeInto { route, key, value } => {
+            if route.is_root() {
                 // Handle root-level merges specially
                 return handle_root_level_addition(content, &key, &value);
             }
 
-            let query = parse_json_pointer_to_query(&path)?;
-            let _feature = doc.query(&query)?;
-
             // Check if the key already exists in the target mapping
-            let existing_key_path = format!("{}/{}", path, key);
-            let existing_key_query = parse_json_pointer_to_query(&existing_key_path);
+            let existing_key_route = route.with_keys(&[key.as_str().into()]);
 
-            if let Ok(existing_query) = existing_key_query {
-                if let Ok(existing_feature) = doc.query(&existing_query) {
-                    // Key exists, check if we need to merge mappings
-                    if let serde_yaml::Value::Mapping(new_mapping) = &value {
-                        // Try to parse the existing value as YAML to see if it's also a mapping
-                        let existing_content = doc.extract(&existing_feature);
-                        if let Ok(existing_value) =
-                            serde_yaml::from_str::<serde_yaml::Value>(existing_content)
-                        {
-                            // The extracted content includes the key, so we need to get the value
-                            let actual_existing_value =
-                                if let serde_yaml::Value::Mapping(outer_mapping) = existing_value {
-                                    // If the extracted content is like "env: { ... }", get the value part
-                                    if let Some(inner_value) =
-                                        outer_mapping.get(serde_yaml::Value::String(key.clone()))
-                                    {
-                                        inner_value.clone()
-                                    } else {
-                                        // Fallback: use the outer mapping directly
-                                        serde_yaml::Value::Mapping(outer_mapping)
-                                    }
+            if let Ok(existing_feature) = route_to_feature(&existing_key_route, &doc) {
+                // Key exists, check if we need to merge mappings
+                if let serde_yaml::Value::Mapping(new_mapping) = &value {
+                    // Try to parse the existing value as YAML to see if it's also a mapping
+                    let existing_content = doc.extract(&existing_feature);
+                    if let Ok(existing_value) =
+                        serde_yaml::from_str::<serde_yaml::Value>(existing_content)
+                    {
+                        // The extracted content includes the key, so we need to get the value
+                        let actual_existing_value =
+                            if let serde_yaml::Value::Mapping(outer_mapping) = existing_value {
+                                // If the extracted content is like "env: { ... }", get the value part
+                                if let Some(inner_value) =
+                                    outer_mapping.get(serde_yaml::Value::String(key.clone()))
+                                {
+                                    inner_value.clone()
                                 } else {
-                                    existing_value
-                                };
-
-                            if let serde_yaml::Value::Mapping(existing_mapping) =
-                                actual_existing_value
-                            {
-                                // Both are mappings, merge them
-                                let mut merged_mapping = existing_mapping.clone();
-                                for (k, v) in new_mapping {
-                                    merged_mapping.insert(k.clone(), v.clone());
+                                    // Fallback: use the outer mapping directly
+                                    serde_yaml::Value::Mapping(outer_mapping)
                                 }
+                            } else {
+                                existing_value
+                            };
 
-                                // Use a custom replacement that preserves the key structure
-                                return apply_mapping_replacement(
-                                    content,
-                                    &existing_key_path,
-                                    &key,
-                                    &serde_yaml::Value::Mapping(merged_mapping),
-                                );
+                        if let serde_yaml::Value::Mapping(existing_mapping) = actual_existing_value
+                        {
+                            // Both are mappings, merge them
+                            let mut merged_mapping = existing_mapping.clone();
+                            for (k, v) in new_mapping {
+                                merged_mapping.insert(k.clone(), v.clone());
                             }
+
+                            // Use a custom replacement that preserves the key structure
+                            return apply_mapping_replacement(
+                                content,
+                                &existing_key_route,
+                                &key,
+                                &serde_yaml::Value::Mapping(merged_mapping),
+                            );
                         }
                     }
-
-                    // Not both mappings, or parsing failed, just replace
-                    return apply_single_operation(
-                        content,
-                        YamlPatchOperation::Replace {
-                            route: existing_key_path,
-                            value: value.clone(),
-                        },
-                    );
                 }
+
+                // Not both mappings, or parsing failed, just replace
+                return apply_single_operation(
+                    content,
+                    YamlPatchOperation::Replace {
+                        route: existing_key_route,
+                        value: value.clone(),
+                    },
+                );
             }
 
             // Key doesn't exist, add it using Add operation
             apply_single_operation(
                 content,
                 YamlPatchOperation::Add {
-                    route: path.clone(),
+                    route: route,
                     key: key.clone(),
                     value: value.clone(),
                 },
             )
         }
 
-        YamlPatchOperation::Remove { route: path } => {
-            if path == "/" {
+        YamlPatchOperation::Remove { route } => {
+            if route.is_root() {
                 return Err(YamlPatchError::InvalidOperation(
                     "Cannot remove root document".to_string(),
                 ));
             }
-            let query = parse_json_pointer_to_query(&path)?;
-            let feature = doc.query(&query)?;
+
+            let feature = route_to_feature(&route, &doc)?;
 
             // For removal, we need to remove the entire line including leading whitespace
             let start_pos = find_line_start(content, feature.location.byte_span.0);
@@ -439,6 +384,16 @@ fn apply_single_operation(
             result.replace_range(start_pos..end_pos, "");
             Ok(result)
         }
+    }
+}
+
+fn route_to_feature<'a>(
+    route: &Route<'_>,
+    doc: &'a yamlpath::Document,
+) -> Result<yamlpath::Feature<'a>, YamlPatchError> {
+    match route.to_query() {
+        Some(query) => doc.query(&query).map_err(YamlPatchError::from),
+        None => Ok(doc.root()),
     }
 }
 
@@ -655,13 +610,12 @@ fn handle_root_level_addition(
 /// Apply a mapping replacement that preserves the key structure
 fn apply_mapping_replacement(
     content: &str,
-    path: &str,
+    route: &Route<'_>,
     _key: &str,
     value: &serde_yaml::Value,
 ) -> Result<String, YamlPatchError> {
     let doc = yamlpath::Document::new(content)?;
-    let query = parse_json_pointer_to_query(path)?;
-    let feature = doc.query(&query)?;
+    let feature = route_to_feature(route, &doc)?;
 
     // Get the replacement content using the shared function (without multiline literal support)
     let replacement = apply_value_replacement(content, &feature, &doc, value, false)?;
