@@ -556,10 +556,7 @@ impl<'doc> Deref for Step<'doc> {
 
 impl<'doc> StepCommon<'doc> for Step<'doc> {
     fn env_is_static(&self, name: &str) -> bool {
-        utils::env_is_static(
-            name,
-            &[&self.env, &self.job().env, &self.workflow().env],
-        )
+        utils::env_is_static(name, &[&self.env, &self.job().env, &self.workflow().env])
     }
 
     fn uses(&self) -> Option<&common::Uses> {
