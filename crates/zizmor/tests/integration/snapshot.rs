@@ -358,6 +358,14 @@ fn template_injection() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "template-injection/issue-883-repro/action.yml"
+            ))
+            .run()?
+    );
+
     Ok(())
 }
 
