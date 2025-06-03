@@ -54,6 +54,7 @@
 //! ```
 
 use anyhow::Result;
+use yamlpath::QueryMode;
 
 use crate::finding::location::{Route, RouteComponent};
 
@@ -392,7 +393,9 @@ fn route_to_feature<'a>(
     doc: &'a yamlpath::Document,
 ) -> Result<yamlpath::Feature<'a>, YamlPatchError> {
     match route.to_query() {
-        Some(query) => doc.query(&query).map_err(YamlPatchError::from),
+        Some(query) => doc
+            .query(&query, QueryMode::Pretty)
+            .map_err(YamlPatchError::from),
         None => Ok(doc.root()),
     }
 }

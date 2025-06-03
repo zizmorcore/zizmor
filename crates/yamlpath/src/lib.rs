@@ -187,9 +187,16 @@ pub struct Feature<'tree> {
     /// The exact location of the query result.
     pub location: Location,
 
-    /// The "context" location for the quest result.
+    /// The "context" location for the query result.
     /// This is typically the surrounding mapping or list structure.
     pub context: Option<Location>,
+}
+
+impl Feature<'_> {
+    /// Return this feature's parent feature, if it has one.
+    pub fn parent(&self) -> Option<Feature<'_>> {
+        self._node.parent().map(Feature::from)
+    }
 }
 
 impl<'tree> From<Node<'tree>> for Feature<'tree> {
@@ -200,6 +207,21 @@ impl<'tree> From<Node<'tree>> for Feature<'tree> {
             context: node.parent().map(Location::from),
         }
     }
+}
+
+/// Configures how features are extracted from a YAML document
+/// during queries.
+#[derive(Copy, Clone, Debug)]
+pub enum QueryMode {
+    /// Make extracted features as "pretty" as possible, e.g. by
+    /// including components that humans subjectively consider relevant.
+    ///
+    /// For example, querying `foo: bar` for `foo` will return
+    /// `foo: bar` instead of just `bar`.
+    Pretty,
+    /// Make extracted features as "exact" as possible, e.g. by
+    /// including only the exact span of the query result.
+    Exact,
 }
 
 /// Represents a queryable YAML document.
@@ -291,13 +313,8 @@ impl Document {
 
     /// Perform a query on the current document, returning a `Feature`
     /// if the query succeeds.
-    pub fn query(&self, query: &Query) -> Result<Feature, QueryError> {
-        // TODO: Figure out comment extraction. This is made annoying
-        // by the fact that comments aren't parented in obvious places on
-        // the tree, e.g. `[a, b, [c]] # foo` has a comment adjacent to the
-        // top sequence when we may be querying for the `c` in the innermost
-        // sequence.
-        self.query_node(query).map(|n| n.into())
+    pub fn query(&self, query: &Query, mode: QueryMode) -> Result<Feature, QueryError> {
+        self.query_node(query, mode).map(|n| n.into())
     }
 
     /// Returns a string slice of the original document corresponding to
@@ -410,7 +427,7 @@ impl Document {
         )
     }
 
-    fn query_node(&self, query: &Query) -> Result<Node, QueryError> {
+    fn query_node(&self, query: &Query, mode: QueryMode) -> Result<Node, QueryError> {
         // All tree-sitter-yaml trees start with a `stream` node.
         let stream = self.tree.root_node();
 
@@ -439,14 +456,15 @@ impl Document {
             }
         }
 
-        // If we're ending on a key and not an index, we clean up the final
+        // If we're extracting "pretty" features, we clean up the final
         // node a bit to have it point to the parent `block_mapping_pair`.
         // This results in a (subjectively) more intuitive extracted feature,
         // since `foo: bar` gets extracted for `foo` instead of just `bar`.
         //
         // NOTE: We might already be on the block_mapping_pair if we terminated
         // with an absent value, in which case we don't need to do this cleanup.
-        if matches!(query.route.last(), Some(Component::Key(_)))
+        if matches!(mode, QueryMode::Pretty)
+            && matches!(query.route.last(), Some(Component::Key(_)))
             && key_node.kind_id() != self.block_mapping_pair_id
         {
             key_node = key_node.parent().unwrap()
@@ -669,7 +687,9 @@ baz:
         };
 
         assert_eq!(
-            doc.extract_with_leading_whitespace(&doc.query(&query).unwrap()),
+            doc.extract_with_leading_whitespace(
+                &doc.query(&query, crate::QueryMode::Pretty).unwrap()
+            ),
             "{d: e}"
         );
     }
@@ -694,7 +714,7 @@ bar: # outside
         let query = Query {
             route: vec![Component::Key("root")],
         };
-        let feature = doc.query(&query).unwrap();
+        let feature = doc.query(&query, crate::QueryMode::Pretty).unwrap();
         assert_eq!(
             doc.feature_comments(&feature),
             &["# rootlevel", "# foo", "# bar", "# baz", "# quux"]
@@ -709,7 +729,7 @@ bar: # outside
                 Component::Index(1),
             ],
         };
-        let feature = doc.query(&query).unwrap();
+        let feature = doc.query(&query, crate::QueryMode::Pretty).unwrap();
         assert_eq!(doc.feature_comments(&feature), &["# quux"]);
     }
 }
