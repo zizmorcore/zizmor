@@ -779,11 +779,11 @@ foo:
 "#;
 
         let operations = vec![YamlPatchOperation::Replace {
-            path: "/foo/bar/baz".into(),
+            route: route!("foo", "bar", "baz"),
             value: "New content.\nMore new content.\n".into(),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r"
         foo:
@@ -807,11 +807,11 @@ jobs:
 "#;
 
         let operations = vec![YamlPatchOperation::Replace {
-            path: "/jobs/replace-me/steps/0/run".into(),
+            route: route!("jobs", "replace-me", "steps", 0, "run"),
             value: "echo \"${GITHUB_EVENT_ISSUE_TITLE}\"\n".into(),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r"");
     }
