@@ -137,19 +137,19 @@ pub fn apply_yaml_patch(
         let doc = yamlpath::Document::new(&result)?;
         match &op {
             YamlPatchOperation::Replace { route, value: _ } => {
-                let feature = route_to_feature(route, &doc)?;
+                let feature = route_to_feature_pretty(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.0, op));
             }
             YamlPatchOperation::Add { route, .. } => {
-                let feature = route_to_feature(route, &doc)?;
+                let feature = route_to_feature_pretty(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.1, op));
             }
             YamlPatchOperation::MergeInto { route, .. } => {
-                let feature = route_to_feature(route, &doc)?;
+                let feature = route_to_feature_pretty(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.1, op));
             }
             YamlPatchOperation::Remove { route } => {
-                let feature = route_to_feature(route, &doc)?;
+                let feature = route_to_feature_pretty(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.1, op));
             }
         }
@@ -174,7 +174,7 @@ fn apply_single_operation(
 
     match operation {
         YamlPatchOperation::Replace { route, value } => {
-            let feature = route_to_feature(route, &doc)?;
+            let feature = route_to_feature_pretty(route, &doc)?;
 
             // Get the replacement content
             let replacement = apply_value_replacement(content, &feature, &doc, value, true)?;
@@ -206,7 +206,7 @@ fn apply_single_operation(
                 return handle_root_level_addition(content, key, value);
             }
 
-            let feature = route_to_feature(route, &doc)?;
+            let feature = route_to_feature_pretty(route, &doc)?;
 
             // Convert the new value to YAML string
             let new_value_str = serialize_yaml_value(value)?;
@@ -299,7 +299,7 @@ fn apply_single_operation(
             // Check if the key already exists in the target mapping
             let existing_key_route = route.with_keys(&[key.as_str().into()]);
 
-            if let Ok(existing_feature) = route_to_feature(&existing_key_route, &doc) {
+            if let Ok(existing_feature) = route_to_feature_pretty(&existing_key_route, &doc) {
                 // Key exists, check if we need to merge mappings
                 if let serde_yaml::Value::Mapping(new_mapping) = &value {
                     // Try to parse the existing value as YAML to see if it's also a mapping
@@ -370,7 +370,7 @@ fn apply_single_operation(
                 ));
             }
 
-            let feature = route_to_feature(route, &doc)?;
+            let feature = route_to_feature_pretty(route, &doc)?;
 
             // For removal, we need to remove the entire line including leading whitespace
             let start_pos = find_line_start(content, feature.location.byte_span.0);
@@ -383,13 +383,25 @@ fn apply_single_operation(
     }
 }
 
-fn route_to_feature<'a>(
+fn route_to_feature_pretty<'a>(
     route: &Route<'_>,
     doc: &'a yamlpath::Document,
 ) -> Result<yamlpath::Feature<'a>, YamlPatchError> {
     match route.to_query() {
         Some(query) => doc
             .query(&query, QueryMode::Pretty)
+            .map_err(YamlPatchError::from),
+        None => Ok(doc.root()),
+    }
+}
+
+fn route_to_feature_exact<'a>(
+    route: &Route<'_>,
+    doc: &'a yamlpath::Document,
+) -> Result<yamlpath::Feature<'a>, YamlPatchError> {
+    match route.to_query() {
+        Some(query) => doc
+            .query(&query, QueryMode::Exact)
             .map_err(YamlPatchError::from),
         None => Ok(doc.root()),
     }
@@ -570,7 +582,7 @@ fn apply_mapping_replacement(
     value: &serde_yaml::Value,
 ) -> Result<String, YamlPatchError> {
     let doc = yamlpath::Document::new(content)?;
-    let feature = route_to_feature(route, &doc)?;
+    let feature = route_to_feature_pretty(route, &doc)?;
 
     // Get the replacement content using the shared function (without multiline literal support)
     let replacement = apply_value_replacement(content, &feature, &doc, value, false)?;
@@ -767,6 +779,41 @@ mod tests {
     use crate::route;
 
     use super::*;
+
+    #[test]
+    fn test_route_to_feature_exact() {
+        let yaml = r#"
+foo:
+  bar:
+    ex1: |
+      abc
+      def
+
+    ext2: flow string
+
+    ext3: >-
+      abc
+      def
+
+    empty:
+"#;
+
+        let doc = yamlpath::Document::new(yaml).unwrap();
+
+        let feature = route_to_feature_exact(&route!("foo", "bar", "ex1"), &doc).unwrap();
+        assert_eq!(doc.extract(&feature), "|\n      abc\n      def");
+
+        let feature = route_to_feature_exact(&route!("foo", "bar", "ext2"), &doc).unwrap();
+        assert_eq!(doc.extract(&feature), "flow string");
+
+        let feature = route_to_feature_exact(&route!("foo", "bar", "ext3"), &doc).unwrap();
+        assert_eq!(doc.extract(&feature), ">-\n      abc\n      def");
+
+        // NOTE: Violates our "exact" contract since it returns the key itself,
+        // not an empty value.
+        let feature = route_to_feature_exact(&route!("foo", "bar", "empty"), &doc).unwrap();
+        assert_eq!(doc.extract(&feature), "empty:");
+    }
 
     #[test]
     fn test_yaml_path_replace_multiline_string() {
