@@ -245,7 +245,7 @@ impl TemplateInjection {
         Some(Fix {
             title: "replace expression with environment variable".into(),
             description: "todo".into(),
-            key: step.location().key,
+            _key: step.location().key,
             ops: vec![
                 YamlPatchOperation::Replace {
                     route: step.route().with_keys(&["run".into()]),

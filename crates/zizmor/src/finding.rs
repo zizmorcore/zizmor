@@ -111,7 +111,7 @@ pub(crate) struct Fix<'doc> {
     /// A detailed description of the fix.
     #[allow(dead_code)]
     pub(crate) description: String,
-    pub(crate) key: &'doc InputKey,
+    pub(crate) _key: &'doc InputKey,
     pub(crate) ops: Vec<YamlPatchOperation<'doc>>,
 }
 
