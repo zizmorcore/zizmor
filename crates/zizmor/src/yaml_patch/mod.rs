@@ -61,11 +61,6 @@ use crate::finding::location::{Route, RouteComponent};
 /// Error types for YAML patch operations
 #[derive(thiserror::Error, Debug)]
 pub enum YamlPatchError {
-    #[allow(dead_code)]
-    #[error("Path not found: {0}")]
-    PathNotFound(String),
-    #[error("Invalid path format: {0}")]
-    InvalidPath(String),
     #[error("YAML query error: {0}")]
     QueryError(#[from] yamlpath::QueryError),
     #[error("YAML serialization error: {0}")]
