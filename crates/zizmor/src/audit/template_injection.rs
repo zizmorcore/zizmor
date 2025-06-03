@@ -614,7 +614,18 @@ jobs:
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content);
+                    insta::assert_snapshot!(fixed_content, @r#"
+                    name: Test Template Injection
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step
+                            run: echo "Branch is ${GITHUB_REF_NAME}"
+                            env:
+                              GITHUB_REF_NAME: ${{ github.ref_name }}
+                    "#);
                 }
             }
         );
@@ -656,7 +667,20 @@ jobs:
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content);
+                    insta::assert_snapshot!(fixed_content, @r#"
+                    name: Test Template Injection
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step
+                            run: |
+                              echo "Hello ${GITHUB_ACTOR}"
+                              echo "Processing user input"
+                            env:
+                              GITHUB_ACTOR: ${{ github.actor }}
+                    "#);
                 }
             }
         );
@@ -698,7 +722,19 @@ jobs:
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content);
+                    insta::assert_snapshot!(fixed_content, @r#"
+                    name: Test Template Injection
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step with existing env
+                            run: echo "Event name is ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
+                            env:
+                              EXISTING_VAR: existing_value
+                              GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+                    "#);
                 }
             }
         );
@@ -796,7 +832,24 @@ jobs:
                     }
                 }
 
-                insta::assert_snapshot!(current_content);
+                insta::assert_snapshot!(current_content, @r#"
+                name: Test Multiple Template Injections
+                on: push
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    steps:
+                      - name: Multiple vulnerable expressions
+                        # Only one fix is applied, but the environment variables accumulate
+                        run: |
+                          echo "User: ${{ github.actor }}"
+                          echo "Ref: ${{ github.ref_name }}"
+                          echo "Commit: ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
+                        env:
+                          GITHUB_ACTOR: ${{ github.actor }}
+                          GITHUB_REF_NAME: ${{ github.ref_name }}
+                          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+                "#);
             }
         );
     }
@@ -833,7 +886,22 @@ jobs:
                             finding,
                             "replace expression with environment variable",
                         );
-                        insta::assert_snapshot!(fixed_content);
+                        insta::assert_snapshot!(fixed_content, @r#"
+                        name: Test Safe Template Contexts
+                        on: push
+                        jobs:
+                          test:
+                            runs-on: ubuntu-latest
+                            steps:
+                              - name: Safe expressions
+                                run: |
+                                  echo "Runner OS: ${{ runner.os }}"
+                                  echo "Job status: ${JOB_STATUS}"
+                                  echo "Repository: ${{ github.repository }}"
+                                env:
+                                  SAFE_SECRET: ${{ secrets.MY_SECRET }}
+                                  JOB_STATUS: ${{ job.status }}
+                        "#);
                         break; // Only test the first fix to avoid multiple snapshots
                     }
                 }

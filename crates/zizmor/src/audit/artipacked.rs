@@ -274,7 +274,25 @@ jobs:
             workflow_content,
             |findings| {
                 let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
-                insta::assert_snapshot!(fixed_content);
+                insta::assert_snapshot!(fixed_content, @r"
+                name: Test Workflow
+                on: push
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    steps:
+                      - name: Checkout
+                        uses: actions/checkout@v4
+                        with:
+                          token: ${{ secrets.GITHUB_TOKEN }}
+                          fetch-depth: 2
+                          persist-credentials: false
+                      - name: Upload artifacts
+                        uses: actions/upload-artifact@v4
+                        with:
+                          name: my-artifact
+                          path: .
+                ");
             }
         );
     }
@@ -303,7 +321,23 @@ jobs:
             workflow_content,
             |findings| {
                 let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
-                insta::assert_snapshot!(fixed_content);
+                insta::assert_snapshot!(fixed_content, @r"
+                name: Test Workflow
+                on: push
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    steps:
+                      - name: Checkout
+                        uses: actions/checkout@v4
+                        with:
+                          persist-credentials: false
+                      - name: Upload artifacts
+                        uses: actions/upload-artifact@v4
+                        with:
+                          name: my-artifact
+                          path: .
+                ");
             }
         );
     }
