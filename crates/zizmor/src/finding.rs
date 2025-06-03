@@ -5,7 +5,11 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 use self::location::{Location, SymbolicLocation};
-use crate::models::AsDocument;
+use crate::{
+    InputKey,
+    models::AsDocument,
+    yaml_patch::{self, YamlPatchOperation},
+};
 
 pub(crate) mod location;
 
@@ -100,23 +104,24 @@ pub(crate) struct Determinations {
     pub(super) persona: Persona,
 }
 
-type ApplyFn = dyn Fn(&str) -> anyhow::Result<Option<String>>;
-
 /// Represents a suggested fix for a finding.
-pub(crate) struct Fix {
+pub(crate) struct Fix<'doc> {
     /// A short title describing the fix.
     pub(crate) title: String,
     /// A detailed description of the fix.
     #[allow(dead_code)]
     pub(crate) description: String,
-    /// A function that, when called, applies the fix and returns the new content (or None if not applicable).
-    pub(crate) apply: Box<ApplyFn>,
+    pub(crate) key: &'doc InputKey,
+    pub(crate) ops: Vec<YamlPatchOperation<'doc>>,
 }
 
-impl Fix {
+impl Fix<'_> {
     /// Apply the fix to the given file content.
     pub(crate) fn apply_to_content(&self, old_content: &str) -> anyhow::Result<Option<String>> {
-        (self.apply)(old_content)
+        match yaml_patch::apply_yaml_patch(old_content, &self.ops) {
+            Ok(new_content) => Ok(Some(new_content)),
+            Err(e) => Err(anyhow!("YAML path failed: {e}")),
+        }
     }
 }
 
@@ -129,7 +134,7 @@ pub(crate) struct Finding<'doc> {
     pub(crate) locations: Vec<Location<'doc>>,
     pub(crate) ignored: bool,
     #[serde(skip_serializing)]
-    pub(crate) fixes: Vec<Fix>,
+    pub(crate) fixes: Vec<Fix<'doc>>,
 }
 
 impl Finding<'_> {
@@ -157,7 +162,7 @@ pub(crate) struct FindingBuilder<'doc> {
     persona: Persona,
     raw_locations: Vec<Location<'doc>>,
     locations: Vec<SymbolicLocation<'doc>>,
-    fixes: Vec<Fix>,
+    fixes: Vec<Fix<'doc>>,
 }
 
 impl<'doc> FindingBuilder<'doc> {
@@ -201,14 +206,8 @@ impl<'doc> FindingBuilder<'doc> {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn fix(mut self, fix: Fix) -> Self {
+    pub(crate) fn fix(mut self, fix: Fix<'doc>) -> Self {
         self.fixes.push(fix);
-        self
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn fixes(mut self, fixes: Vec<Fix>) -> Self {
-        self.fixes.extend(fixes);
         self
     }
 

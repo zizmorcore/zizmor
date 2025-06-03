@@ -15,7 +15,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{env, sync::LazyLock};
+use std::{collections::HashMap, env, sync::LazyLock};
 
 use fst::Map;
 use github_actions_expressions::{Expr, context::Context};
@@ -36,7 +36,7 @@ use crate::{
     models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesPattern},
     state::AuditState,
     utils::extract_expressions,
-    yaml_patch::{self, YamlPatchOperation},
+    yaml_patch::YamlPatchOperation,
 };
 
 pub(crate) struct TemplateInjection;
@@ -202,7 +202,7 @@ impl TemplateInjection {
         raw: &ExplicitExpr,
         parsed: &Expr,
         step: &'a impl StepCommon<'a, 'doc>,
-    ) -> Option<Fix> {
+    ) -> Option<Fix<'doc>> {
         // We can only fix `run:` steps for now.
         if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
             return None;
@@ -245,29 +245,30 @@ impl TemplateInjection {
         Some(Fix {
             title: "replace expression with environment variable".into(),
             description: "todo".into(),
-            apply: Box::new(move |content: &str| -> anyhow::Result<Option<String>> {
-                let mut ops = vec![];
-
-                ops.push(YamlPatchOperation::Replace {
+            key: step.location().key,
+            ops: vec![
+                YamlPatchOperation::Replace {
                     route: step.route().with_keys(&["run".into()]),
                     value: serde_yaml::Value::String(new_script),
-                });
-
-                // ops.push(YamlPatchOperation::MergeInto { route: (), key: (), value: () })
-
-                match yaml_patch::apply_yaml_patch(content, vec![]) {
-                    Ok(new_content) => Ok(Some(new_content)),
-                    Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
-                }
-            }),
+                },
+                YamlPatchOperation::MergeInto {
+                    route: step.route(),
+                    key: "env".to_string(),
+                    value: serde_yaml::to_value(HashMap::from([(
+                        env_var.as_str(),
+                        raw.as_curly(),
+                    )]))
+                    .unwrap(),
+                },
+            ],
         })
     }
 
     fn injectable_template_expressions<'a, 'doc>(
         &self,
         script: &str,
-        step: &impl StepCommon<'a, 'doc>,
-    ) -> Vec<(String, Option<Fix>, Severity, Confidence, Persona)> {
+        step: &'a impl StepCommon<'a, 'doc>,
+    ) -> Vec<(String, Option<Fix<'doc>>, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
         for (expr, _) in extract_expressions(script) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
@@ -415,209 +416,6 @@ impl TemplateInjection {
         bad_expressions
     }
 
-    /// Check if an expression contains functions that should only get suggestions, not automatic fixes
-    fn expression_contains_suggestion_only_functions(expr: &str) -> bool {
-        let cleaned_expr = expr.trim();
-        cleaned_expr.starts_with("fromJSON(")
-            || cleaned_expr.starts_with("toJSON(")
-            || cleaned_expr.starts_with("contains(")
-            || cleaned_expr.starts_with("startsWith(")
-            || cleaned_expr.starts_with("endsWith(")
-            || cleaned_expr.starts_with("format(")
-            || cleaned_expr.starts_with("join(")
-            || cleaned_expr.starts_with("hashFiles(")
-            || cleaned_expr.starts_with("secrets.")
-    }
-
-    // /// Create a fix that moves multiple template expressions to environment variables
-    // fn create_env_var_fix(
-    //     expressions: &[String],
-    //     job_id: &str,
-    //     step_index: usize,
-    //     script: &str,
-    // ) -> Fix {
-    //     Fix {
-    //         title: "Move template expressions to environment variables".to_string(),
-    //         description: format!(
-    //             "Move template expressions ({}) to environment variables to prevent code injection. \
-    //             Template expansions aren't syntax-aware, meaning that they can result in unintended shell injection vectors. \
-    //             This is especially true when they're used with attacker-controllable expression contexts. \
-    //             \n\nInstead of using expressions like '${{{{ github.event.issue.title }}}}' directly in the script, \
-    //             add them to the 'env:' block and reference them as shell variables like '${{ISSUE_TITLE}}'. \
-    //             This avoids the vulnerability, since variable expansion is subject to normal shell quoting/expansion rules.",
-    //             expressions.join(", ")
-    //         ),
-    //         apply: Box::new({
-    //             let expressions = expressions.to_vec();
-    //             let job_id = job_id.to_string();
-    //             let script = script.to_string();
-    //             move |content: &str| -> anyhow::Result<Option<String>> {
-    //                 let mut operations = Vec::new();
-    //                 let mut new_script = script.clone();
-    //                 let mut env_vars = serde_yaml::Mapping::new();
-
-    //                 // Process each expression
-    //                 for expression in &expressions {
-    //                     // Check if the expression already includes ${{ }} wrapper
-    //                     let (clean_expr, full_expr) = if expression.trim().starts_with("${{")
-    //                         && expression.trim().ends_with("}}")
-    //                     {
-    //                         // Expression already has wrapper, extract the bare content
-    //                         let clean = expression
-    //                             .trim()
-    //                             .strip_prefix("${{")
-    //                             .unwrap()
-    //                             .strip_suffix("}}")
-    //                             .unwrap()
-    //                             .trim();
-    //                         (clean, expression.trim().to_string())
-    //                     } else {
-    //                         // Expression doesn't have wrapper, add it
-    //                         let clean = expression.trim();
-    //                         (clean, format!("${{{{ {} }}}}", clean))
-    //                     };
-
-    //                     // Generate a safe environment variable name
-    //                     let env_var_name = Self::generate_env_var_name(clean_expr);
-
-    //                     // Replace the expression in the script with the environment variable
-    //                     new_script =
-    //                         new_script.replace(&full_expr, &format!("${{{}}}", env_var_name));
-
-    //                     // Add to environment variables
-    //                     env_vars.insert(
-    //                         serde_yaml::Value::String(env_var_name),
-    //                         serde_yaml::Value::String(format!("${{{{ {} }}}}", clean_expr)),
-    //                     );
-    //                 }
-
-    //                 // Update the run script
-    //                 operations.push(YamlPatchOperation::Replace {
-    //                     route: format!("/jobs/{}/steps/{}/run", job_id, step_index),
-    //                     value: serde_yaml::Value::String(new_script),
-    //                 });
-
-    //                 // Add all environment variables at once
-    //                 operations.push(YamlPatchOperation::MergeInto {
-    //                     route: format!("/jobs/{}/steps/{}", job_id, step_index),
-    //                     key: "env".to_string(),
-    //                     value: serde_yaml::Value::Mapping(env_vars),
-    //                 });
-
-    //                 match crate::yaml_patch::apply_yaml_patch(content, operations) {
-    //                     Ok(new_content) => Ok(Some(new_content)),
-    //                     Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
-    //                 }
-    //             }
-    //         }),
-    //     }
-    // }
-
-    // /// Create a fix that moves multiple template expressions to environment variables for composite actions
-    // fn create_composite_env_var_fix(
-    //     expressions: &[String],
-    //     step_index: usize,
-    //     script: &str,
-    // ) -> Fix {
-    //     Fix {
-    //         title: "Move template expressions to environment variables".to_string(),
-    //         description: format!(
-    //             "Move template expressions ({}) to environment variables to prevent code injection. \
-    //             Template expansions aren't syntax-aware, meaning that they can result in unintended shell injection vectors. \
-    //             This is especially true when they're used with attacker-controllable expression contexts. \
-    //             \n\nInstead of using expressions like '${{{{ github.event.issue.title }}}}' directly in the script, \
-    //             add them to the 'env:' block and reference them as shell variables like '${{ISSUE_TITLE}}'. \
-    //             This avoids the vulnerability, since variable expansion is subject to normal shell quoting/expansion rules.",
-    //             expressions.join(", ")
-    //         ),
-    //         apply: Box::new({
-    //             let expressions = expressions.to_vec();
-    //             let script = script.to_string();
-    //             move |content: &str| -> anyhow::Result<Option<String>> {
-    //                 let mut operations = Vec::new();
-    //                 let mut new_script = script.clone();
-    //                 let mut env_vars = serde_yaml::Mapping::new();
-
-    //                 // Process each expression
-    //                 for expression in &expressions {
-    //                     // Check if the expression already includes ${{ }} wrapper
-    //                     let (clean_expr, full_expr) = if expression.trim().starts_with("${{")
-    //                         && expression.trim().ends_with("}}")
-    //                     {
-    //                         // Expression already has wrapper, extract the bare content
-    //                         let clean = expression
-    //                             .trim()
-    //                             .strip_prefix("${{")
-    //                             .unwrap()
-    //                             .strip_suffix("}}")
-    //                             .unwrap()
-    //                             .trim();
-    //                         (clean, expression.trim().to_string())
-    //                     } else {
-    //                         // Expression doesn't have wrapper, add it
-    //                         let clean = expression.trim();
-    //                         (clean, format!("${{{{ {} }}}}", clean))
-    //                     };
-
-    //                     // Generate a safe environment variable name
-    //                     let env_var_name = Self::generate_env_var_name(clean_expr);
-
-    //                     // Replace the expression in the script with the environment variable
-    //                     new_script =
-    //                         new_script.replace(&full_expr, &format!("${{{}}}", env_var_name));
-
-    //                     // Add to environment variables
-    //                     env_vars.insert(
-    //                         serde_yaml::Value::String(env_var_name),
-    //                         serde_yaml::Value::String(format!("${{{{ {} }}}}", clean_expr)),
-    //                     );
-    //                 }
-
-    //                 // Update the run script
-    //                 operations.push(YamlPatchOperation::Replace {
-    //                     route: format!("/runs/steps/{}/run", step_index),
-    //                     value: serde_yaml::Value::String(new_script),
-    //                 });
-
-    //                 // Add all environment variables at once
-    //                 operations.push(YamlPatchOperation::MergeInto {
-    //                     route: format!("/runs/steps/{}", step_index),
-    //                     key: "env".to_string(),
-    //                     value: serde_yaml::Value::Mapping(env_vars),
-    //                 });
-
-    //                 match crate::yaml_patch::apply_yaml_patch(content, operations) {
-    //                     Ok(new_content) => Ok(Some(new_content)),
-    //                     Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
-    //                 }
-    //             }
-    //         }),
-    //     }
-    // }
-
-    /// Generate a safe environment variable name from an expression
-    fn generate_env_var_name(expr: &str) -> String {
-        // Convert expressions like "github.event.issue.title" to "GITHUB_EVENT_ISSUE_TITLE"
-
-        match expr.trim() {
-            expr if Self::expression_contains_suggestion_only_functions(expr) => expr.to_string(),
-            // Replace all special characters with underscores to
-            // ensure valid environment variable names
-            _ => expr
-                .to_string()
-                .trim()
-                .chars()
-                .map(|c| {
-                    if c.is_alphanumeric() {
-                        c.to_ascii_uppercase()
-                    } else {
-                        '_'
-                    }
-                })
-                .collect(),
-        }
-    }
-
     fn process_step<'a, 'doc>(
         &self,
         step: &'a impl StepCommon<'a, 'doc>,
@@ -661,67 +459,6 @@ impl Audit for TemplateInjection {
 
     fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
-        // let findings_with_expressions = self.process_step(step)?;
-
-        // // Group findings by script to create comprehensive fixes
-        // let mut script_to_expressions: std::collections::HashMap<
-        //     String,
-        //     Vec<(Finding<'doc>, String)>,
-        // > = std::collections::HashMap::new();
-
-        // // Separate expressions into those that get fixes vs suggestions only
-        // let mut script_to_suggestion_only: std::collections::HashMap<
-        //     String,
-        //     Vec<(Finding<'doc>, String)>,
-        // > = std::collections::HashMap::new();
-
-        // for (finding, full_expr, script) in findings_with_expressions {
-        //     // Check if this expression contains functions that should only get suggestions
-        //     if Self::expression_contains_suggestion_only_functions(&full_expr) {
-        //         script_to_suggestion_only
-        //             .entry(script)
-        //             .or_default()
-        //             .push((finding, full_expr));
-        //     } else {
-        //         script_to_expressions
-        //             .entry(script)
-        //             .or_default()
-        //             .push((finding, full_expr));
-        //     }
-        // }
-
-        // let mut all_findings = Vec::new();
-
-        // // Handle expressions that get automatic fixes
-        // for (script, findings_and_expressions) in script_to_expressions {
-        //     // Extract all expressions for this script
-        //     let expressions: Vec<String> = findings_and_expressions
-        //         .iter()
-        //         .map(|(_, expr)| expr.clone())
-        //         .collect();
-
-        //     // Add the fixes to each finding for this script
-        //     for (mut finding, _) in findings_and_expressions {
-        //         finding.fixes.push(Self::create_env_var_fix(
-        //             &expressions,
-        //             step.job().id(),
-        //             step.index,
-        //             &script,
-        //         ));
-        //         all_findings.push(finding);
-        //     }
-        // }
-
-        // // Handle expressions that only get suggestions (no automatic fixes)
-        // for (_, findings_and_expressions) in script_to_suggestion_only {
-        //     for (finding, _) in findings_and_expressions {
-        //         // Don't add any automatic fixes for these expressions
-        //         // The finding itself serves as the suggestion
-        //         all_findings.push(finding);
-        //     }
-        // }
-
-        // Ok(all_findings)
     }
 
     fn audit_composite_step<'a>(
@@ -729,72 +466,12 @@ impl Audit for TemplateInjection {
         step: &CompositeStep<'a>,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
         self.process_step(step)
-        // let findings_with_expressions = self.process_step(step)?;
-
-        // // Group findings by script to create comprehensive fixes
-        // let mut script_to_expressions: std::collections::HashMap<
-        //     String,
-        //     Vec<(Finding<'a>, String)>,
-        // > = std::collections::HashMap::new();
-
-        // // Separate expressions into those that get fixes vs suggestions only
-        // let mut script_to_suggestion_only: std::collections::HashMap<
-        //     String,
-        //     Vec<(Finding<'a>, String)>,
-        // > = std::collections::HashMap::new();
-
-        // for (finding, full_expr, script) in findings_with_expressions {
-        //     // Check if this expression contains functions that should only get suggestions
-        //     if Self::expression_contains_suggestion_only_functions(&full_expr) {
-        //         script_to_suggestion_only
-        //             .entry(script)
-        //             .or_default()
-        //             .push((finding, full_expr));
-        //     } else {
-        //         script_to_expressions
-        //             .entry(script)
-        //             .or_default()
-        //             .push((finding, full_expr));
-        //     }
-        // }
-
-        // let mut all_findings = Vec::new();
-
-        // // Handle expressions that get automatic fixes
-        // for (script, findings_and_expressions) in script_to_expressions {
-        //     // Extract all expressions for this script
-        //     let expressions: Vec<String> = findings_and_expressions
-        //         .iter()
-        //         .map(|(_, expr)| expr.clone())
-        //         .collect();
-
-        //     // Add the fixes to each finding for this script
-        //     for (mut finding, _) in findings_and_expressions {
-        //         finding.fixes.push(Self::create_composite_env_var_fix(
-        //             &expressions,
-        //             step.index,
-        //             &script,
-        //         ));
-        //         all_findings.push(finding);
-        //     }
-        // }
-
-        // // Handle expressions that only get suggestions (no automatic fixes)
-        // for (_, findings_and_expressions) in script_to_suggestion_only {
-        //     for (finding, _) in findings_and_expressions {
-        //         // Don't add any automatic fixes for these expressions
-        //         // The finding itself serves as the suggestion
-        //         all_findings.push(finding);
-        //     }
-        // }
-
-        // Ok(all_findings)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use github_actions_expressions::{Expr, context::Context};
+    use github_actions_expressions::Expr;
 
     use crate::audit::template_injection::{Capability, TemplateInjection};
 
@@ -861,166 +538,5 @@ mod tests {
                 expected
             );
         }
-    }
-
-    #[test]
-    fn test_generate_env_var_name() {
-        use super::TemplateInjection;
-
-        // Test basic cases
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("github.event.issue.title"),
-            "GITHUB_EVENT_ISSUE_TITLE"
-        );
-
-        // Test direct secrets references (should NOT strip secrets. prefix)
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("secrets.api-config"),
-            "secrets.api-config"
-        );
-
-        // Test fromJSON(secrets.*) patterns (should stay the same)
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("fromJSON(secrets.config)"),
-            "fromJSON(secrets.config)"
-        );
-
-        // Test fromJSON(secrets.*) with property access
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("fromJSON(secrets.database-config).username"),
-            "fromJSON(secrets.database-config).username"
-        );
-
-        // Test fromJSON(secrets.*) with special characters
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("fromJSON(secrets.api-config)"),
-            "fromJSON(secrets.api-config)"
-        );
-
-        // Test fromJSON(secrets.*) with complex names and property access
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("fromJSON(secrets.database_config).password"),
-            "fromJSON(secrets.database_config).password"
-        );
-
-        // Test fromJSON with non-secrets content
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("fromJSON(github.event.config)"),
-            "fromJSON(github.event.config)"
-        );
-
-        // Test with mixed special characters
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("github.event@issue.title"),
-            "GITHUB_EVENT_ISSUE_TITLE"
-        );
-
-        // Test with spaces and other special characters (unlikely case)
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("my var.name-test@prod"),
-            "MY_VAR_NAME_TEST_PROD"
-        );
-
-        // Test with numbers (should be preserved)
-        assert_eq!(
-            TemplateInjection::generate_env_var_name("config.v2.test"),
-            "CONFIG_V2_TEST"
-        );
-    }
-
-    // #[test]
-    // fn test_fixes_are_added_to_findings() {
-    //     use super::TemplateInjection;
-
-    //     let env_var_fix = TemplateInjection::create_env_var_fix(
-    //         &["${{ github.event.issue.title }}".to_string()],
-    //         "test-job",
-    //         0,
-    //         "echo \"${{ github.event.issue.title }}\"",
-    //     );
-
-    //     assert_eq!(
-    //         env_var_fix.title,
-    //         "Move template expressions to environment variables"
-    //     );
-    //     assert!(env_var_fix.description.contains("github.event.issue.title"));
-    //     assert!(env_var_fix.description.contains("env:"));
-    // }
-
-    // #[test]
-    // fn test_fix_descriptions_match_audits_md_guidelines() {
-    //     use super::TemplateInjection;
-
-    //     let env_var_fix = TemplateInjection::create_env_var_fix(
-    //         &["${{ github.event.issue.title }}".to_string()],
-    //         "test-job",
-    //         0,
-    //         "echo \"${{ github.event.issue.title }}\"",
-    //     );
-
-    //     // Verify the description contains key phrases from audits.md
-    //     assert!(
-    //         env_var_fix
-    //             .description
-    //             .contains("Template expansions aren't syntax-aware")
-    //     );
-    //     assert!(env_var_fix.description.contains("shell injection vectors"));
-    //     assert!(
-    //         env_var_fix
-    //             .description
-    //             .contains("attacker-controllable expression contexts")
-    //     );
-    //     assert!(
-    //         env_var_fix
-    //             .description
-    //             .contains("variable expansion is subject to normal shell quoting/expansion rules")
-    //     );
-    // }
-
-    #[test]
-    fn test_suggestion_only_functions_no_fixes() {
-        use super::TemplateInjection;
-
-        // Test that expressions with fromJSON, toJSON, etc. are detected correctly
-        assert!(
-            TemplateInjection::expression_contains_suggestion_only_functions(
-                "fromJSON(secrets.config)"
-            )
-        );
-        assert!(
-            TemplateInjection::expression_contains_suggestion_only_functions(
-                "toJSON(github.event)"
-            )
-        );
-        assert!(
-            TemplateInjection::expression_contains_suggestion_only_functions(
-                "contains(github.ref, 'main')"
-            )
-        );
-        assert!(
-            TemplateInjection::expression_contains_suggestion_only_functions("secrets.API_KEY")
-        );
-        assert!(
-            TemplateInjection::expression_contains_suggestion_only_functions(
-                "hashFiles('**/*.lock')"
-            )
-        );
-
-        // Test that regular expressions are not detected as suggestion-only
-        assert!(
-            !TemplateInjection::expression_contains_suggestion_only_functions(
-                "github.event.issue.title"
-            )
-        );
-        assert!(
-            !TemplateInjection::expression_contains_suggestion_only_functions(
-                "matrix.node-version"
-            )
-        );
-        assert!(
-            !TemplateInjection::expression_contains_suggestion_only_functions(
-                "inputs.deployment-target"
-            )
-        );
     }
 }
