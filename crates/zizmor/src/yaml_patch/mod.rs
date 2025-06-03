@@ -847,6 +847,54 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_yaml_path_replace_multiline_string() {
+        let original = r#"
+foo:
+  bar:
+    baz: |
+      Replace me.
+      Replace me too.
+"#;
+
+        let operations = vec![YamlPatchOperation::Replace {
+            path: "/foo/bar/baz".into(),
+            value: "New content.\nMore new content.\n".into(),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        foo:
+          bar:
+            baz: |
+              New content.
+              More new content.
+        ");
+    }
+
+    #[test]
+    fn test_yaml_patch_replace_multiline_string_in_list() {
+        let original = r#"
+jobs:
+  replace-me:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: |
+          echo "${{ github.event.issue.title }}"
+"#;
+
+        let operations = vec![YamlPatchOperation::Replace {
+            path: "/jobs/replace-me/steps/0/run".into(),
+            value: "echo \"${GITHUB_EVENT_ISSUE_TITLE}\"\n".into(),
+        }];
+
+        let result = apply_yaml_patch(original, operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"");
+    }
+
+    #[test]
     fn test_yaml_patch_replace_preserves_comments() {
         let original = r#"
 # This is a workflow file
