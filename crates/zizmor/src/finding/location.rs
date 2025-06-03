@@ -1,118 +1,35 @@
-//! Models and APIs for handling findings and their locations.
+//! Symbolic and concrete locations.
 
 use std::{ops::Range, sync::LazyLock};
 
-use anyhow::{Result, anyhow};
-use clap::ValueEnum;
+use crate::{audit::AuditInput, models::AsDocument as _, registry::InputKey};
 use line_index::{LineCol, TextSize};
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use terminal_link::Link;
+use yamlpath::QueryMode;
 
-use crate::{
-    audit::AuditInput,
-    models::{AsDocument, CompositeStep, JobExt, Step},
-    registry::InputKey,
-};
-
-/// Represents the expected "persona" that would be interested in a given
-/// finding. This is used to model the sensitivity of different use-cases
-/// to false positives.
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    Hash,
-    Ord,
-    PartialOrd,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    ValueEnum,
-)]
-pub(crate) enum Persona {
-    /// The "auditor" persona (false positives OK).
+/// Represents a location's type.
+#[derive(Serialize, Copy, Clone, Debug, Default)]
+pub(crate) enum LocationKind {
+    /// A location that is subjectively "primary" to a finding.
     ///
-    /// This persona wants all results, including results that are likely
-    /// to be false positives.
-    Auditor,
+    /// This is used to distinguish between "primary" and "related" locations
+    /// in output formats like SARIF.
+    Primary,
 
-    /// The "pedantic" persona (code smells OK).
+    /// A location that is "related" to a finding.
     ///
-    /// This persona wants findings that may or may not be problems,
-    /// but are potential "code smells".
-    Pedantic,
+    /// This is the default location type.
+    #[default]
+    Related,
 
-    /// The "regular" persona (minimal false positives).
+    /// A hidden location.
     ///
-    /// This persona wants actionable findings, and is sensitive to
-    /// false positives.
-    #[default]
-    Regular,
-}
-
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    Hash,
-    Ord,
-    PartialOrd,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    ValueEnum,
-)]
-pub(crate) enum Confidence {
-    #[default]
-    Unknown,
-    Low,
-    Medium,
-    High,
-}
-
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    Hash,
-    Ord,
-    PartialOrd,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    ValueEnum,
-)]
-pub(crate) enum Severity {
-    #[default]
-    Unknown,
-    Informational,
-    Low,
-    Medium,
-    High,
-}
-
-#[derive(Serialize, Clone, Debug)]
-pub(crate) struct StepLocation<'doc> {
-    pub(crate) index: usize,
-    pub(crate) id: Option<&'doc str>,
-    pub(crate) name: Option<&'doc str>,
-}
-
-impl<'doc> From<&Step<'doc>> for StepLocation<'doc> {
-    fn from(step: &Step<'doc>) -> Self {
-        Self {
-            index: step.index,
-            id: step.id.as_deref(),
-            name: step.name.as_deref(),
-        }
-    }
+    /// These locations are not rendered in output formats like SARIF or
+    /// the cargo-style output. Instead, they're used to provide spanning
+    /// information for checking things like ignore comments.
+    Hidden,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -145,32 +62,52 @@ impl<'doc> Route<'doc> {
         }
     }
 
-    fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> Route<'doc> {
+    pub(crate) fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> Route<'doc> {
         let mut components = self.components.clone();
         components.extend(keys.iter().cloned());
         Route { components }
     }
+
+    pub(crate) fn is_root(&self) -> bool {
+        self.components.is_empty()
+    }
+
+    pub(crate) fn to_query(&self) -> Option<yamlpath::Query<'doc>> {
+        if self.is_root() {
+            return None;
+        }
+
+        let mut builder = yamlpath::QueryBuilder::new();
+
+        for component in &self.components {
+            builder = match component {
+                RouteComponent::Key(key) => builder.key(key),
+                RouteComponent::Index(idx) => builder.index(*idx),
+            }
+        }
+
+        Some(builder.build())
+    }
+
+    pub(crate) fn tail(&self) -> Option<&RouteComponent<'doc>> {
+        self.components.last()
+    }
 }
 
-/// Represents a location's type.
-#[derive(Serialize, Copy, Clone, Debug, Default)]
-pub(crate) enum LocationKind {
-    /// A location that is subjectively "primary" to a finding.
-    ///
-    /// This is used to distinguish between "primary" and "related" locations
-    /// in output formats like SARIF.
-    Primary,
-    #[default]
-    /// A location that is "related" to a finding.
-    ///
-    /// This is the default location type.
-    Related,
-    /// A hidden location.
-    ///
-    /// These locations are not rendered in output formats like SARIF or
-    /// the cargo-style output. Instead, they're used to provide spanning
-    /// information for checking things like ignore comments.
-    Hidden,
+impl<'doc> From<Vec<RouteComponent<'doc>>> for Route<'doc> {
+    fn from(components: Vec<RouteComponent<'doc>>) -> Self {
+        Self { components }
+    }
+}
+
+#[macro_export]
+macro_rules! route {
+    ($($key:expr),* $(,)?) => {
+        Route::from(vec![$(RouteComponent::from($key)),*])
+    };
+    () => {
+        Route::new()
+    };
 }
 
 /// Represents a symbolic location.
@@ -206,18 +143,6 @@ impl<'doc> SymbolicLocation<'doc> {
         }
     }
 
-    pub(crate) fn with_job(&self, job: &impl JobExt<'doc>) -> SymbolicLocation<'doc> {
-        self.with_keys(&["jobs".into(), job.id().into()])
-    }
-
-    pub(crate) fn with_step(&self, step: &Step<'doc>) -> SymbolicLocation<'doc> {
-        self.with_keys(&["steps".into(), step.index.into()])
-    }
-
-    pub(crate) fn with_composite_step(&self, step: &CompositeStep<'doc>) -> SymbolicLocation<'doc> {
-        self.with_keys(&["runs".into(), "steps".into(), step.index.into()])
-    }
-
     /// Adds a human-readable annotation to the current `SymbolicLocation`.
     pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> SymbolicLocation<'doc> {
         self.annotation = annotation.into();
@@ -251,7 +176,10 @@ impl<'doc> SymbolicLocation<'doc> {
     }
 
     /// Concretize this `SymbolicLocation`, consuming it in the process.
-    pub(crate) fn concretize(self, document: &'doc yamlpath::Document) -> Result<Location<'doc>> {
+    pub(crate) fn concretize(
+        self,
+        document: &'doc yamlpath::Document,
+    ) -> anyhow::Result<Location<'doc>> {
         // If we don't have a path into the workflow, all
         // we have is the workflow itself.
         let feature = if self.route.components.is_empty() {
@@ -268,7 +196,7 @@ impl<'doc> SymbolicLocation<'doc> {
 
             let query = builder.build();
 
-            document.query(&query)?
+            document.query(&query, QueryMode::Pretty)?
         };
 
         Ok(Location {
@@ -283,6 +211,32 @@ impl<'doc> SymbolicLocation<'doc> {
                     .collect(),
             },
         })
+    }
+}
+
+/// Gives models (e.g. workflow steps) the ability to express their symbolic location.
+pub(crate) trait Locatable<'a, 'doc> {
+    /// Returns the symbolic location of this model.
+    fn location(&'a self) -> SymbolicLocation<'doc>;
+
+    /// Returns an "enriched" symbolic location of this model,
+    /// when the model is of a type that has a name. Otherwise,
+    /// returns the same symbolic location as `location()`.
+    ///
+    /// For example, a GitHub Actions workflow step has an optional name,
+    /// which is included in this symbolic location if present.
+    fn location_with_name(&'a self) -> SymbolicLocation<'doc> {
+        self.location()
+    }
+}
+
+pub(crate) trait Routable<'a, 'doc> {
+    fn route(&'a self) -> Route<'doc>;
+}
+
+impl<'a, 'doc, T: Locatable<'a, 'doc>> Routable<'a, 'doc> for T {
+    fn route(&'a self) -> Route<'doc> {
+        self.location().route
     }
 }
 
@@ -349,7 +303,7 @@ static IGNORE_EXPR: LazyLock<Regex> =
 pub(crate) struct Comment<'doc>(&'doc str);
 
 impl Comment<'_> {
-    fn ignores(&self, rule_id: &str) -> bool {
+    pub(crate) fn ignores(&self, rule_id: &str) -> bool {
         // Extracts foo,bar from `# zizmor: ignore[foo,bar]`
         let Some(caps) = IGNORE_EXPR.captures(self.0) else {
             return false;
@@ -434,172 +388,9 @@ impl<'doc> Location<'doc> {
     }
 }
 
-/// A finding's "determination," i.e. its various classifications.
-#[derive(Serialize)]
-pub(crate) struct Determinations {
-    pub(crate) confidence: Confidence,
-    pub(crate) severity: Severity,
-    pub(super) persona: Persona,
-}
-
-type ApplyFn = dyn Fn(&str) -> anyhow::Result<Option<String>>;
-
-/// Represents a suggested fix for a finding.
-pub(crate) struct Fix {
-    /// A short title describing the fix.
-    pub(crate) title: String,
-    /// A detailed description of the fix.
-    #[allow(dead_code)]
-    pub(crate) description: String,
-    /// A function that, when called, applies the fix and returns the new content (or None if not applicable).
-    pub(crate) apply: Box<ApplyFn>,
-}
-
-impl Fix {
-    /// Apply the fix to the given file content.
-    pub(crate) fn apply_to_content(&self, old_content: &str) -> anyhow::Result<Option<String>> {
-        (self.apply)(old_content)
-    }
-}
-
-#[derive(Serialize)]
-pub(crate) struct Finding<'doc> {
-    pub(crate) ident: &'static str,
-    pub(crate) desc: &'static str,
-    pub(crate) url: &'static str,
-    pub(crate) determinations: Determinations,
-    pub(crate) locations: Vec<Location<'doc>>,
-    pub(crate) ignored: bool,
-    #[serde(skip_serializing)]
-    pub(crate) fixes: Vec<Fix>,
-}
-
-impl Finding<'_> {
-    /// A basic Markdown representation of the finding's metadata.
-    pub(crate) fn to_markdown(&self) -> String {
-        format!(
-            "`{ident}`: {desc}\n\nDocs: <{url}>",
-            ident = self.ident,
-            desc = self.desc,
-            url = self.url
-        )
-    }
-
-    pub(crate) fn visible_locations(&self) -> impl Iterator<Item = &Location<'_>> {
-        self.locations.iter().filter(|l| !l.symbolic.is_hidden())
-    }
-}
-
-pub(crate) struct FindingBuilder<'doc> {
-    ident: &'static str,
-    desc: &'static str,
-    url: &'static str,
-    severity: Severity,
-    confidence: Confidence,
-    persona: Persona,
-    raw_locations: Vec<Location<'doc>>,
-    locations: Vec<SymbolicLocation<'doc>>,
-    fixes: Vec<Fix>,
-}
-
-impl<'doc> FindingBuilder<'doc> {
-    pub(crate) fn new(ident: &'static str, desc: &'static str, url: &'static str) -> Self {
-        Self {
-            ident,
-            desc,
-            url,
-            severity: Default::default(),
-            confidence: Default::default(),
-            persona: Default::default(),
-            raw_locations: vec![],
-            locations: vec![],
-            fixes: vec![],
-        }
-    }
-
-    pub(crate) fn severity(mut self, severity: Severity) -> Self {
-        self.severity = severity;
-        self
-    }
-
-    pub(crate) fn confidence(mut self, confidence: Confidence) -> Self {
-        self.confidence = confidence;
-        self
-    }
-
-    pub(crate) fn persona(mut self, persona: Persona) -> Self {
-        self.persona = persona;
-        self
-    }
-
-    pub(crate) fn add_raw_location(mut self, location: Location<'doc>) -> Self {
-        self.raw_locations.push(location);
-        self
-    }
-
-    pub(crate) fn add_location(mut self, location: SymbolicLocation<'doc>) -> Self {
-        self.locations.push(location);
-        self
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn fix(mut self, fix: Fix) -> Self {
-        self.fixes.push(fix);
-        self
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn fixes(mut self, fixes: Vec<Fix>) -> Self {
-        self.fixes.extend(fixes);
-        self
-    }
-
-    pub(crate) fn build<'a>(
-        self,
-        document: &'a impl AsDocument<'a, 'doc>,
-    ) -> Result<Finding<'doc>> {
-        let mut locations = self
-            .locations
-            .iter()
-            .map(|l| l.clone().concretize(document.as_document()))
-            .collect::<Result<Vec<_>>>()?;
-
-        locations.extend(self.raw_locations);
-
-        if !locations.iter().any(|l| l.symbolic.is_primary()) {
-            return Err(anyhow!(
-                "API misuse: at least one location must be marked with primary()"
-            ));
-        }
-
-        let should_ignore = Self::ignored_from_inlined_comment(&locations, self.ident);
-
-        Ok(Finding {
-            ident: self.ident,
-            desc: self.desc,
-            url: self.url,
-            determinations: Determinations {
-                confidence: self.confidence,
-                severity: self.severity,
-                persona: self.persona,
-            },
-            locations,
-            ignored: should_ignore,
-            fixes: self.fixes,
-        })
-    }
-
-    fn ignored_from_inlined_comment(locations: &[Location], id: &str) -> bool {
-        locations
-            .iter()
-            .flat_map(|l| &l.concrete.comments)
-            .any(|c| c.ignores(id))
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::finding::Comment;
+    use super::Comment;
 
     #[test]
     fn test_comment_ignores() {

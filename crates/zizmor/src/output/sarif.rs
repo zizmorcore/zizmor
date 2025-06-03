@@ -8,7 +8,7 @@ use serde_sarif::sarif::{
     Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, Tool, ToolComponent,
 };
 
-use crate::finding::{Finding, Location, Severity};
+use crate::finding::{Finding, Severity, location::Location};
 
 impl From<Severity> for ResultKind {
     fn from(value: Severity) -> Self {
