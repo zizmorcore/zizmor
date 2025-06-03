@@ -94,6 +94,22 @@ impl<'doc> Route<'doc> {
     }
 }
 
+impl<'doc> From<Vec<RouteComponent<'doc>>> for Route<'doc> {
+    fn from(components: Vec<RouteComponent<'doc>>) -> Self {
+        Self { components }
+    }
+}
+
+#[macro_export]
+macro_rules! route {
+    ($($key:expr),* $(,)?) => {
+        Route::from(vec![$(RouteComponent::from($key)),*])
+    };
+    () => {
+        Route::new()
+    };
+}
+
 /// Represents a symbolic location.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct SymbolicLocation<'doc> {
