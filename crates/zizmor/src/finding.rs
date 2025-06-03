@@ -205,7 +205,6 @@ impl<'doc> FindingBuilder<'doc> {
         self
     }
 
-    #[allow(dead_code)]
     pub(crate) fn fix(mut self, fix: Fix<'doc>) -> Self {
         self.fixes.push(fix);
         self
