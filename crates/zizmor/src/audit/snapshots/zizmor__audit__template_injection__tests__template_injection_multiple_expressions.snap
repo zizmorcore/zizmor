@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Multiple vulnerable expressions
+        # Only one fix is applied, but the environment variables accumulate
         run: |
           echo "User: ${{ github.actor }}"
           echo "Ref: ${{ github.ref_name }}"
