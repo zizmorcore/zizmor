@@ -44,7 +44,7 @@ impl ActionCoordinate {
     /// while the `Some(_)` variants indicate various (potential) usages (such as being implicitly
     /// enabled, or explicitly enabled, or potentially enabled by a template expansion that
     /// can't be directly analyzed).
-    pub(crate) fn usage<'s>(&self, step: &impl StepCommon<'s>) -> Option<Usage> {
+    pub(crate) fn usage<'a, 'doc>(&self, step: &impl StepCommon<'a, 'doc>) -> Option<Usage> {
         let uses_pattern = self.uses_pattern();
 
         let StepBodyCommon::Uses {
@@ -327,13 +327,26 @@ mod tests {
     use github_actions_models::workflow::job::Step;
 
     use super::{ActionCoordinate, StepCommon};
-    use crate::models::{
-        coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
-        uses::RepositoryUsesPattern,
+    use crate::{
+        finding::location::Locatable,
+        models::{
+            coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
+            uses::RepositoryUsesPattern,
+        },
     };
 
-    // Test-only trait impl.
-    impl<'s> StepCommon<'s> for Step {
+    // Test-only trait impls.
+    impl<'a, 'doc> Locatable<'a, 'doc> for Step {
+        fn location(&self) -> crate::models::SymbolicLocation<'doc> {
+            unreachable!()
+        }
+
+        fn location_with_name(&self) -> crate::finding::location::SymbolicLocation<'doc> {
+            unreachable!()
+        }
+    }
+
+    impl<'a, 'doc> StepCommon<'a, 'doc> for Step {
         fn env_is_static(&self, _name: &str) -> bool {
             unreachable!()
         }
@@ -363,15 +376,7 @@ mod tests {
             }
         }
 
-        fn location(&self) -> crate::models::SymbolicLocation<'s> {
-            unreachable!()
-        }
-
-        fn location_with_name(&self) -> crate::finding::SymbolicLocation<'s> {
-            unreachable!()
-        }
-
-        fn document(&self) -> &'s yamlpath::Document {
+        fn document(&self) -> &'doc yamlpath::Document {
             unreachable!()
         }
     }

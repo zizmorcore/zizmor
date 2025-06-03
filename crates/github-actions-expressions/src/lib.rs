@@ -48,6 +48,17 @@ impl PartialEq<str> for Function<'_> {
 #[derive(Debug)]
 pub struct Identifier<'src>(&'src str);
 
+impl Identifier<'_> {
+    /// Returns the identifier as a string slice, as it appears in the
+    /// expression.
+    ///
+    /// Important: identifiers are case-insensitive, so this should not
+    /// be used for comparisons.
+    pub fn as_str(&self) -> &str {
+        self.0
+    }
+}
+
 impl PartialEq for Identifier<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.0.eq_ignore_ascii_case(other.0)
@@ -237,7 +248,7 @@ impl<'src> Expr<'src> {
     /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
     /// since the value of `foo.bar` flows into a boolean evaluation
     /// that gets expanded.
-    pub fn dataflow_contexts(&self) -> Vec<&Context> {
+    pub fn dataflow_contexts(&self) -> Vec<&Context<'src>> {
         let mut contexts = vec![];
 
         match self {

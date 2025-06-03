@@ -54,15 +54,13 @@
 //! ```
 
 use anyhow::Result;
+use yamlpath::QueryMode;
+
+use crate::finding::location::{Route, RouteComponent};
 
 /// Error types for YAML patch operations
 #[derive(thiserror::Error, Debug)]
 pub enum YamlPatchError {
-    #[allow(dead_code)]
-    #[error("Path not found: {0}")]
-    PathNotFound(String),
-    #[error("Invalid path format: {0}")]
-    InvalidPath(String),
     #[error("YAML query error: {0}")]
     QueryError(#[from] yamlpath::QueryError),
     #[error("YAML serialization error: {0}")]
@@ -73,16 +71,16 @@ pub enum YamlPatchError {
 
 /// Represents a YAML patch operation that preserves comments and formatting
 #[derive(Debug, Clone)]
-pub enum YamlPatchOperation {
+pub enum YamlPatchOperation<'doc> {
     /// Replace the value at the given path
     Replace {
-        path: String,
+        route: Route<'doc>,
         value: serde_yaml::Value,
     },
     /// Add a new key-value pair at the given path. The path should point to a mapping,
     /// or use "/" for root-level additions. Maintains proper indentation and formatting.
     Add {
-        path: String,
+        route: Route<'doc>,
         key: String,
         value: serde_yaml::Value,
     },
@@ -90,13 +88,13 @@ pub enum YamlPatchOperation {
     /// If both the existing value and new value are mappings, they are merged together.
     /// Otherwise, the new value replaces the existing one.
     MergeInto {
-        path: String,
+        route: Route<'doc>,
         key: String,
         value: serde_yaml::Value,
     },
     /// Remove the key at the given path
     #[allow(dead_code)]
-    Remove { path: String },
+    Remove { route: Route<'doc> },
 }
 
 /// Apply YAML patch operations while preserving comments and formatting
@@ -119,7 +117,7 @@ pub enum YamlPatchOperation {
 /// - YAML serialization fails during value conversion
 pub fn apply_yaml_patch(
     content: &str,
-    operations: Vec<YamlPatchOperation>,
+    operations: &[YamlPatchOperation],
 ) -> Result<String, YamlPatchError> {
     // Validate that the input YAML is parseable before attempting patches
     if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(content) {
@@ -138,49 +136,21 @@ pub fn apply_yaml_patch(
     for op in operations {
         let doc = yamlpath::Document::new(&result)?;
         match &op {
-            YamlPatchOperation::Replace { path, value: _ } => {
-                if path == "/" {
-                    // Handle root replacement - use the document root
-                    let feature = doc.root();
-                    positioned_ops.push((feature.location.byte_span.0, op));
-                } else {
-                    let query = parse_json_pointer_to_query(path)?;
-                    let feature = doc.query(&query)?;
-                    positioned_ops.push((feature.location.byte_span.0, op));
-                }
+            YamlPatchOperation::Replace { route, value: _ } => {
+                let feature = route_to_feature(route, &doc)?;
+                positioned_ops.push((feature.location.byte_span.0, op));
             }
-            YamlPatchOperation::Add { path, .. } => {
-                if path == "/" {
-                    // Handle root-level additions - use the document root
-                    let feature = doc.root();
-                    positioned_ops.push((feature.location.byte_span.1, op));
-                } else {
-                    let query = parse_json_pointer_to_query(path)?;
-                    let feature = doc.query(&query)?;
-                    positioned_ops.push((feature.location.byte_span.1, op));
-                }
+            YamlPatchOperation::Add { route, .. } => {
+                let feature = route_to_feature(route, &doc)?;
+                positioned_ops.push((feature.location.byte_span.1, op));
             }
-            YamlPatchOperation::MergeInto { path, .. } => {
-                if path == "/" {
-                    // Handle root-level merges - use the document root
-                    let feature = doc.root();
-                    positioned_ops.push((feature.location.byte_span.1, op));
-                } else {
-                    let query = parse_json_pointer_to_query(path)?;
-                    let feature = doc.query(&query)?;
-                    positioned_ops.push((feature.location.byte_span.1, op));
-                }
+            YamlPatchOperation::MergeInto { route, .. } => {
+                let feature = route_to_feature(route, &doc)?;
+                positioned_ops.push((feature.location.byte_span.1, op));
             }
-            YamlPatchOperation::Remove { path } => {
-                if path == "/" {
-                    // Handle root-level removal - use the document root
-                    let feature = doc.root();
-                    positioned_ops.push((feature.location.byte_span.0, op));
-                } else {
-                    let query = parse_json_pointer_to_query(path)?;
-                    let feature = doc.query(&query)?;
-                    positioned_ops.push((feature.location.byte_span.0, op));
-                }
+            YamlPatchOperation::Remove { route } => {
+                let feature = route_to_feature(route, &doc)?;
+                positioned_ops.push((feature.location.byte_span.1, op));
             }
         }
     }
@@ -198,21 +168,16 @@ pub fn apply_yaml_patch(
 /// Apply a single YAML patch operation
 fn apply_single_operation(
     content: &str,
-    operation: YamlPatchOperation,
+    operation: &YamlPatchOperation,
 ) -> Result<String, YamlPatchError> {
     let doc = yamlpath::Document::new(content)?;
 
     match operation {
-        YamlPatchOperation::Replace { path, value } => {
-            let feature = if path == "/" {
-                doc.root()
-            } else {
-                let query = parse_json_pointer_to_query(&path)?;
-                doc.query(&query)?
-            };
+        YamlPatchOperation::Replace { route, value } => {
+            let feature = route_to_feature(route, &doc)?;
 
             // Get the replacement content
-            let replacement = apply_value_replacement(content, &feature, &doc, &value, true)?;
+            let replacement = apply_value_replacement(content, &feature, &doc, value, true)?;
 
             // Extract the current content to calculate spans
             let current_content = doc.extract(&feature);
@@ -235,26 +200,20 @@ fn apply_single_operation(
             Ok(result)
         }
 
-        YamlPatchOperation::Add { path, key, value } => {
-            if path == "/" {
+        YamlPatchOperation::Add { route, key, value } => {
+            if route.is_root() {
                 // Handle root-level additions specially
-                return handle_root_level_addition(content, &key, &value);
+                return handle_root_level_addition(content, key, value);
             }
 
-            let query = parse_json_pointer_to_query(&path)?;
-            let feature = doc.query(&query)?;
+            let feature = route_to_feature(route, &doc)?;
 
             // Convert the new value to YAML string
-            let new_value_str = serialize_yaml_value(&value)?;
+            let new_value_str = serialize_yaml_value(value)?;
             let new_value_str = new_value_str.trim_end(); // Remove trailing newline
 
             // Check if we're adding to a list item by examining the path
-            let is_list_item = path
-                .split('/')
-                .next_back()
-                .unwrap_or("")
-                .parse::<usize>()
-                .is_ok();
+            let is_list_item = matches!(route.tail(), Some(RouteComponent::Index(_)));
 
             // Determine the appropriate indentation
             let indent = if is_list_item {
@@ -331,94 +290,87 @@ fn apply_single_operation(
             Ok(result)
         }
 
-        YamlPatchOperation::MergeInto { path, key, value } => {
-            if path == "/" {
+        YamlPatchOperation::MergeInto { route, key, value } => {
+            if route.is_root() {
                 // Handle root-level merges specially
-                return handle_root_level_addition(content, &key, &value);
+                return handle_root_level_addition(content, key, value);
             }
 
-            let query = parse_json_pointer_to_query(&path)?;
-            let _feature = doc.query(&query)?;
-
             // Check if the key already exists in the target mapping
-            let existing_key_path = format!("{}/{}", path, key);
-            let existing_key_query = parse_json_pointer_to_query(&existing_key_path);
+            let existing_key_route = route.with_keys(&[key.as_str().into()]);
 
-            if let Ok(existing_query) = existing_key_query {
-                if let Ok(existing_feature) = doc.query(&existing_query) {
-                    // Key exists, check if we need to merge mappings
-                    if let serde_yaml::Value::Mapping(new_mapping) = &value {
-                        // Try to parse the existing value as YAML to see if it's also a mapping
-                        let existing_content = doc.extract(&existing_feature);
-                        if let Ok(existing_value) =
-                            serde_yaml::from_str::<serde_yaml::Value>(existing_content)
-                        {
-                            // The extracted content includes the key, so we need to get the value
-                            let actual_existing_value =
-                                if let serde_yaml::Value::Mapping(outer_mapping) = existing_value {
-                                    // If the extracted content is like "env: { ... }", get the value part
-                                    if let Some(inner_value) =
-                                        outer_mapping.get(serde_yaml::Value::String(key.clone()))
-                                    {
-                                        inner_value.clone()
-                                    } else {
-                                        // Fallback: use the outer mapping directly
-                                        serde_yaml::Value::Mapping(outer_mapping)
-                                    }
+            if let Ok(existing_feature) = route_to_feature(&existing_key_route, &doc) {
+                // Key exists, check if we need to merge mappings
+                if let serde_yaml::Value::Mapping(new_mapping) = &value {
+                    // Try to parse the existing value as YAML to see if it's also a mapping
+                    let existing_content = doc.extract(&existing_feature);
+                    if let Ok(existing_value) =
+                        serde_yaml::from_str::<serde_yaml::Value>(existing_content)
+                    {
+                        // The extracted content includes the key, so we need to get the value
+                        let actual_existing_value =
+                            if let serde_yaml::Value::Mapping(outer_mapping) = existing_value {
+                                // If the extracted content is like "env: { ... }", get the value part
+                                if let Some(inner_value) =
+                                    outer_mapping.get(serde_yaml::Value::String(key.clone()))
+                                {
+                                    inner_value.clone()
                                 } else {
-                                    existing_value
-                                };
-
-                            if let serde_yaml::Value::Mapping(existing_mapping) =
-                                actual_existing_value
-                            {
-                                // Both are mappings, merge them
-                                let mut merged_mapping = existing_mapping.clone();
-                                for (k, v) in new_mapping {
-                                    merged_mapping.insert(k.clone(), v.clone());
+                                    // Fallback: use the outer mapping directly
+                                    serde_yaml::Value::Mapping(outer_mapping)
                                 }
+                            } else {
+                                existing_value
+                            };
 
-                                // Use a custom replacement that preserves the key structure
-                                return apply_mapping_replacement(
-                                    content,
-                                    &existing_key_path,
-                                    &key,
-                                    &serde_yaml::Value::Mapping(merged_mapping),
-                                );
+                        if let serde_yaml::Value::Mapping(existing_mapping) = actual_existing_value
+                        {
+                            // Both are mappings, merge them
+                            let mut merged_mapping = existing_mapping.clone();
+                            for (k, v) in new_mapping {
+                                merged_mapping.insert(k.clone(), v.clone());
                             }
+
+                            // Use a custom replacement that preserves the key structure
+                            return apply_mapping_replacement(
+                                content,
+                                &existing_key_route,
+                                key,
+                                &serde_yaml::Value::Mapping(merged_mapping),
+                            );
                         }
                     }
-
-                    // Not both mappings, or parsing failed, just replace
-                    return apply_single_operation(
-                        content,
-                        YamlPatchOperation::Replace {
-                            path: existing_key_path,
-                            value: value.clone(),
-                        },
-                    );
                 }
+
+                // Not both mappings, or parsing failed, just replace
+                return apply_single_operation(
+                    content,
+                    &YamlPatchOperation::Replace {
+                        route: existing_key_route,
+                        value: value.clone(),
+                    },
+                );
             }
 
             // Key doesn't exist, add it using Add operation
             apply_single_operation(
                 content,
-                YamlPatchOperation::Add {
-                    path: path.clone(),
+                &YamlPatchOperation::Add {
+                    route: route.clone(),
                     key: key.clone(),
                     value: value.clone(),
                 },
             )
         }
 
-        YamlPatchOperation::Remove { path } => {
-            if path == "/" {
+        YamlPatchOperation::Remove { route } => {
+            if route.is_root() {
                 return Err(YamlPatchError::InvalidOperation(
                     "Cannot remove root document".to_string(),
                 ));
             }
-            let query = parse_json_pointer_to_query(&path)?;
-            let feature = doc.query(&query)?;
+
+            let feature = route_to_feature(route, &doc)?;
 
             // For removal, we need to remove the entire line including leading whitespace
             let start_pos = find_line_start(content, feature.location.byte_span.0);
@@ -431,47 +383,16 @@ fn apply_single_operation(
     }
 }
 
-/// Convert a JSON Pointer path (like "/permissions/contents") to a yamlpath Query
-///
-/// Supports the full JSON Pointer specification (RFC 6901):
-/// - Array indices are automatically detected and parsed as integers
-/// - Empty path components are filtered out
-///
-/// Note: This function does not support JSON Pointer escaping (e.g., "~1" for "/").
-///
-/// # Examples
-/// - "/permissions/contents" → Query for nested key
-/// - "/jobs/0/steps/1" → Query for array indices
-pub fn parse_json_pointer_to_query(path: &str) -> Result<yamlpath::Query, YamlPatchError> {
-    if !path.starts_with('/') {
-        return Err(YamlPatchError::InvalidPath(format!(
-            "Path must start with '/': {}",
-            path
-        )));
+fn route_to_feature<'a>(
+    route: &Route<'_>,
+    doc: &'a yamlpath::Document,
+) -> Result<yamlpath::Feature<'a>, YamlPatchError> {
+    match route.to_query() {
+        Some(query) => doc
+            .query(&query, QueryMode::Pretty)
+            .map_err(YamlPatchError::from),
+        None => Ok(doc.root()),
     }
-
-    if path.contains('~') {
-        return Err(YamlPatchError::InvalidPath(format!(
-            "Path contains unsupported escape sequences: {}",
-            path
-        )));
-    }
-
-    let components = path[1..] // Skip the leading '/'
-        .split('/')
-        .filter(|s| !s.is_empty())
-        .map(|component| {
-            // Try to parse as integer (for array indices)
-            if let Ok(index) = component.parse::<usize>() {
-                yamlpath::Component::Index(index)
-            } else {
-                yamlpath::Component::Key(component)
-            }
-        })
-        .collect();
-
-    yamlpath::Query::new(components)
-        .ok_or_else(|| YamlPatchError::InvalidPath("Empty path".to_string()))
 }
 
 /// Serialize a serde_yaml::Value to a YAML string, handling different types appropriately
@@ -644,13 +565,12 @@ fn handle_root_level_addition(
 /// Apply a mapping replacement that preserves the key structure
 fn apply_mapping_replacement(
     content: &str,
-    path: &str,
+    route: &Route<'_>,
     _key: &str,
     value: &serde_yaml::Value,
 ) -> Result<String, YamlPatchError> {
     let doc = yamlpath::Document::new(content)?;
-    let query = parse_json_pointer_to_query(path)?;
-    let feature = doc.query(&query)?;
+    let feature = route_to_feature(route, &doc)?;
 
     // Get the replacement content using the shared function (without multiline literal support)
     let replacement = apply_value_replacement(content, &feature, &doc, value, false)?;
@@ -844,6 +764,8 @@ macro_rules! apply_yaml_patch {
 
 #[cfg(test)]
 mod tests {
+    use crate::route;
+
     use super::*;
 
     #[test]
@@ -865,11 +787,11 @@ jobs:
 "#;
 
         let operations = vec![YamlPatchOperation::Replace {
-            path: "/permissions/contents".to_string(),
+            route: route!("permissions", "contents"),
             value: serde_yaml::Value::String("write".to_string()),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Preserves all comments, but changes the value of `contents`
         insta::assert_snapshot!(result, @r"
@@ -898,12 +820,12 @@ permissions:
 "#;
 
         let operations = vec![YamlPatchOperation::Add {
-            path: "/permissions".to_string(),
+            route: route!("permissions"),
             key: "issues".to_string(),
             value: serde_yaml::Value::String("read".to_string()),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Preserves original content, adds new key while maintaining indentation
         insta::assert_snapshot!(result, @r"
@@ -924,10 +846,10 @@ permissions:
 "#;
 
         let operations = vec![YamlPatchOperation::Remove {
-            path: "/permissions/actions".to_string(),
+            route: route!("permissions", "actions"),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Preserves other content, removes the target line
         insta::assert_snapshot!(result, @r"
@@ -957,17 +879,17 @@ jobs:
 
         let operations = vec![
             YamlPatchOperation::Replace {
-                path: "/permissions/contents".to_string(),
+                route: route!("permissions", "contents"),
                 value: serde_yaml::Value::String("write".to_string()),
             },
             YamlPatchOperation::Add {
-                path: "/permissions".to_string(),
+                route: route!("permissions"),
                 key: "issues".to_string(),
                 value: serde_yaml::Value::String("write".to_string()),
             },
         ];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // All comments preserved, all changes applied
         insta::assert_snapshot!(result, @r"
@@ -986,22 +908,6 @@ jobs:
           build: # Main job
             runs-on: ubuntu-latest
         ");
-    }
-
-    #[test]
-    fn test_json_pointer_parsing() {
-        // Test basic path parsing
-        let query = parse_json_pointer_to_query("/permissions/contents");
-        assert!(query.is_ok());
-
-        // Test array index parsing
-        let query = parse_json_pointer_to_query("/jobs/0/steps/1");
-        assert!(query.is_ok());
-
-        // Test error cases
-        assert!(parse_json_pointer_to_query("/path/with~1slash/and~0tilde").is_err());
-        assert!(parse_json_pointer_to_query("no-leading-slash").is_err());
-        assert!(parse_json_pointer_to_query("").is_err());
     }
 
     #[test]
@@ -1049,17 +955,17 @@ jobs:
 
         let operations = vec![
             YamlPatchOperation::Replace {
-                path: "/permissions/contents".to_string(),
+                route: route!("permissions", "contents"),
                 value: serde_yaml::Value::String("write".to_string()),
             },
             YamlPatchOperation::Add {
-                path: "/permissions".to_string(),
+                route: route!("permissions"),
                 key: "packages".to_string(),
                 value: serde_yaml::Value::String("read".to_string()),
             },
         ];
 
-        let result = apply_yaml_patch(original_yaml, operations).unwrap();
+        let result = apply_yaml_patch(original_yaml, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r"
         # GitHub Actions Workflow
@@ -1091,12 +997,12 @@ jobs:
         // Test empty mapping formatting
         let empty_mapping = serde_yaml::Mapping::new();
         let operations = vec![YamlPatchOperation::Add {
-            path: "/jobs/test".to_string(),
+            route: route!("jobs", "test"),
             key: "permissions".to_string(),
             value: serde_yaml::Value::Mapping(empty_mapping),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Empty mapping should be formatted inline
         insta::assert_snapshot!(result, @r"
@@ -1121,12 +1027,12 @@ jobs:
         let original_with_newline = format!("{}\n", original);
 
         let operations = vec![YamlPatchOperation::Add {
-            path: "/jobs/test".to_string(),
+            route: route!("jobs", "test"),
             key: "permissions".to_string(),
             value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
         }];
 
-        let result = apply_yaml_patch(&original_with_newline, operations).unwrap();
+        let result = apply_yaml_patch(&original_with_newline, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r#"
         name: Test
@@ -1160,13 +1066,12 @@ jobs:
 
         // Test what yamlpath extracts for the checkout step
         let doc = yamlpath::Document::new(original).unwrap();
-        let checkout_query =
-            crate::yaml_patch::parse_json_pointer_to_query("/jobs/test/steps/0").unwrap();
-        let checkout_feature = doc.query(&checkout_query).unwrap();
+        let checkout_query = route!("jobs", "test", "steps", 0).to_query().unwrap();
+        let checkout_feature = doc.query(&checkout_query, QueryMode::Pretty).unwrap();
 
         // Test what yamlpath extracts for the test job
-        let job_query = crate::yaml_patch::parse_json_pointer_to_query("/jobs/test").unwrap();
-        let job_feature = doc.query(&job_query).unwrap();
+        let job_query = route!("jobs", "test").to_query().unwrap();
+        let job_feature = doc.query(&job_query, QueryMode::Pretty).unwrap();
 
         // Assert that the checkout step extraction includes the expected content
         let checkout_content = doc.extract(&checkout_feature);
@@ -1203,7 +1108,7 @@ jobs:
     run: echo "build""#;
 
         let operations = vec![YamlPatchOperation::Add {
-            path: "/steps/0".to_string(),
+            route: route!("steps", 0),
             key: "with".to_string(),
             value: serde_yaml::Value::Mapping({
                 let mut map = serde_yaml::Mapping::new();
@@ -1215,7 +1120,7 @@ jobs:
             }),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // The with section should be added to the first step correctly, not mixed with comments
         insta::assert_snapshot!(result, @r#"
@@ -1244,12 +1149,12 @@ jobs:
 
         // See what yamlpath extracts for step 0
         let doc = yamlpath::Document::new(original).unwrap();
-        let step0_query = crate::yaml_patch::parse_json_pointer_to_query("/steps/0").unwrap();
-        let step0_feature = doc.query(&step0_query).unwrap();
+        let step0_query = route!("steps", 0).to_query().unwrap();
+        let step0_feature = doc.query(&step0_query, QueryMode::Pretty).unwrap();
 
         // See what yamlpath extracts for step 1
-        let step1_query = crate::yaml_patch::parse_json_pointer_to_query("/steps/1").unwrap();
-        let step1_feature = doc.query(&step1_query).unwrap();
+        let step1_query = route!("steps", 1).to_query().unwrap();
+        let step1_feature = doc.query(&step1_query, QueryMode::Pretty).unwrap();
 
         // Check for overlaps
         if step0_feature.location.byte_span.1 > step1_feature.location.byte_span.0 {
@@ -1321,12 +1226,12 @@ jobs:
 "#;
 
         let operations = vec![YamlPatchOperation::Add {
-            path: "/".to_string(),
+            route: route!(),
             key: "permissions".to_string(),
             value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r"
         # GitHub Actions Workflow
@@ -1352,12 +1257,12 @@ jobs:
     runs-on: ubuntu-latest"#;
 
         let operations = vec![YamlPatchOperation::Add {
-            path: "/".to_string(),
+            route: route!(),
             key: "permissions".to_string(),
             value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
         }];
 
-        let result = apply_yaml_patch(original, operations);
+        let result = apply_yaml_patch(original, &operations);
         assert!(result.is_ok());
 
         let result = result.unwrap();
@@ -1383,7 +1288,7 @@ jobs:
     run: echo "test""#;
 
         let operations = vec![YamlPatchOperation::Add {
-            path: "/steps/0".to_string(),
+            route: route!("steps", 0),
             key: "with".to_string(),
             value: serde_yaml::Value::Mapping({
                 let mut map = serde_yaml::Mapping::new();
@@ -1395,7 +1300,7 @@ jobs:
             }),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r#"
         steps:
@@ -1422,7 +1327,7 @@ jobs:
         run: echo "hello""#;
 
         let operations = vec![YamlPatchOperation::MergeInto {
-            path: "/jobs/test/steps/0".to_string(),
+            route: route!("jobs", "test", "steps", 0),
             key: "env".to_string(),
             value: serde_yaml::Value::Mapping({
                 let mut map = serde_yaml::Mapping::new();
@@ -1434,7 +1339,7 @@ jobs:
             }),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
         insta::assert_snapshot!(result, @r#"
         jobs:
           test:
@@ -1460,7 +1365,7 @@ jobs:
           EXISTING_VAR: existing_value"#;
 
         let operations = vec![YamlPatchOperation::MergeInto {
-            path: "/jobs/test/steps/0".to_string(),
+            route: route!("jobs", "test", "steps", 0),
             key: "env".to_string(),
             value: serde_yaml::Value::Mapping({
                 let mut map = serde_yaml::Mapping::new();
@@ -1472,7 +1377,7 @@ jobs:
             }),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Should merge the new mapping with the existing one
         insta::assert_snapshot!(result, @r#"
@@ -1502,7 +1407,7 @@ jobs:
 
         // Apply MergeInto operation for env key (should replace existing)
         let operations = vec![YamlPatchOperation::MergeInto {
-            path: "/jobs/test/steps/0".to_string(),
+            route: route!("jobs", "test", "steps", 0),
             key: "env".to_string(),
             value: serde_yaml::Value::Mapping({
                 let mut map = serde_yaml::Mapping::new();
@@ -1514,7 +1419,7 @@ jobs:
             }),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Should only have one env: key
         insta::assert_snapshot!(result, @r#"
@@ -1541,7 +1446,7 @@ jobs:
         run: echo "hello""#;
 
         let operations = vec![YamlPatchOperation::MergeInto {
-            path: "/jobs/test/steps/0".to_string(),
+            route: route!("jobs", "test", "steps", 0),
             key: "env".to_string(),
             value: serde_yaml::Value::Mapping({
                 let mut map = serde_yaml::Mapping::new();
@@ -1553,7 +1458,7 @@ jobs:
             }),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
         insta::assert_snapshot!(result, @r#"
         jobs:
           test:
@@ -1579,8 +1484,8 @@ jobs:
 
         // Test yamlpath extraction
         let doc = yamlpath::Document::new(original).unwrap();
-        let step_query = parse_json_pointer_to_query("/jobs/build/steps/0").unwrap();
-        let step_feature = doc.query(&step_query).unwrap();
+        let step_query = route!("jobs", "build", "steps", 0).to_query().unwrap();
+        let step_feature = doc.query(&step_query, QueryMode::Pretty).unwrap();
 
         // Test indentation calculation and content extraction
         let feature_with_ws = doc.extract_with_leading_whitespace(&step_feature);
@@ -1639,12 +1544,12 @@ jobs:
 
         // Test the actual MergeInto operation
         let operations = vec![YamlPatchOperation::MergeInto {
-            path: "/jobs/build/steps/0".to_string(),
+            route: route!("jobs", "build", "steps", 0),
             key: "shell".to_string(),
             value: serde_yaml::Value::String("bash".to_string()),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Assert that the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -1681,9 +1586,11 @@ jobs:
 
         // Test yamlpath extraction of the env section
         let doc = yamlpath::Document::new(original).unwrap();
-        let env_query = parse_json_pointer_to_query("/jobs/test/steps/0/env").unwrap();
+        let env_query = route!("jobs", "test", "steps", 0, "env")
+            .to_query()
+            .unwrap();
 
-        if let Ok(env_feature) = doc.query(&env_query) {
+        if let Ok(env_feature) = doc.query(&env_query, QueryMode::Pretty) {
             let env_content = doc.extract(&env_feature);
 
             // Assert that env content is extracted correctly
@@ -1749,12 +1656,12 @@ jobs:
         };
 
         let operations = vec![YamlPatchOperation::MergeInto {
-            path: "/jobs/test/steps/0".to_string(),
+            route: route!("jobs", "test", "steps", 0),
             key: "env".to_string(),
             value: serde_yaml::Value::Mapping(new_env),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -1802,12 +1709,12 @@ jobs:
         };
 
         let operations = vec![YamlPatchOperation::MergeInto {
-            path: "/jobs/test/steps/0".to_string(),
+            route: route!("jobs", "test", "steps", 0),
             key: "env".to_string(),
             value: serde_yaml::Value::Mapping(new_env),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -1843,7 +1750,7 @@ jobs:
           ANOTHER_VAR: another_value"#;
 
         let operations = vec![YamlPatchOperation::MergeInto {
-            path: "/jobs/test/steps/0".to_string(),
+            route: route!("jobs", "test", "steps", 0),
             key: "env".to_string(),
             value: serde_yaml::Value::Mapping({
                 let mut map = serde_yaml::Mapping::new();
@@ -1855,7 +1762,7 @@ jobs:
             }),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -1891,7 +1798,7 @@ jobs:
         // Apply multiple MergeInto operations to see how they interact
         let operations = vec![
             YamlPatchOperation::MergeInto {
-                path: "/jobs/test/steps/0".to_string(),
+                route: route!("jobs", "test", "steps", 0),
                 key: "env".to_string(),
                 value: serde_yaml::Value::Mapping({
                     let mut map = serde_yaml::Mapping::new();
@@ -1903,7 +1810,7 @@ jobs:
                 }),
             },
             YamlPatchOperation::MergeInto {
-                path: "/jobs/test/steps/0".to_string(),
+                route: route!("jobs", "test", "steps", 0),
                 key: "env".to_string(),
                 value: serde_yaml::Value::Mapping({
                     let mut map = serde_yaml::Mapping::new();
@@ -1916,7 +1823,7 @@ jobs:
             },
         ];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -1949,7 +1856,7 @@ jobs:
 
         // Try to merge a mapping into a step that has a shell key with string value
         let operations = vec![YamlPatchOperation::MergeInto {
-            path: "/jobs/test/steps/0".to_string(),
+            route: route!("jobs", "test", "steps", 0),
             key: "env".to_string(),
             value: serde_yaml::Value::Mapping({
                 let mut map = serde_yaml::Mapping::new();
@@ -1961,7 +1868,7 @@ jobs:
             }),
         }];
 
-        let result = apply_yaml_patch(original, operations).unwrap();
+        let result = apply_yaml_patch(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());

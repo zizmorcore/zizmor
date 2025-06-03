@@ -116,7 +116,10 @@ impl KnownVulnerableActions {
         Ok(results)
     }
 
-    fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
+    fn process_step<'a, 'doc>(
+        &self,
+        step: &'a impl StepCommon<'a, 'doc>,
+    ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {

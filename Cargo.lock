@@ -786,7 +786,7 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "github-actions-expressions"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "itertools",
@@ -3448,7 +3448,7 @@ checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
 
 [[package]]
 name = "yamlpath"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "serde",
  "serde_yaml",

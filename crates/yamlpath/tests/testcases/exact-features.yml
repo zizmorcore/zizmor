@@ -1,0 +1,36 @@
+testcase:
+  foo: bar
+  abc:
+    def: ghi
+
+  even:
+    deeper:
+      block: |
+        foo
+        bar baz
+
+  flow:
+    - list: >-
+        abc
+
+queries:
+  - query: [foo]
+    mode: exact
+    expected: bar
+
+  - query: [abc, def]
+    mode: exact
+    expected: ghi
+
+  - query: [even, deeper, block]
+    mode: exact
+    expected: |2-
+      |
+              foo
+              bar baz
+
+  - query: [flow, 0, list]
+    mode: exact
+    expected: |2-
+      >-
+              abc

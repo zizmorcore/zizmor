@@ -36,9 +36,9 @@ impl ForbiddenUses {
         }
     }
 
-    fn process_step<'doc>(
+    fn process_step<'a, 'doc>(
         &self,
-        step: &impl StepCommon<'doc>,
+        step: &'a impl StepCommon<'a, 'doc>,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 

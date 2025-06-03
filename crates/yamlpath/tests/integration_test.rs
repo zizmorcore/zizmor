@@ -25,6 +25,7 @@ enum QueryComponent {
 #[derive(Deserialize)]
 struct TestcaseQuery {
     query: Vec<QueryComponent>,
+    mode: Option<String>,
     expected: String,
 }
 
@@ -56,10 +57,15 @@ fn run_testcase(path: &Path) {
 
     for q in &testcase.queries {
         let query: Query = q.into();
+        let mode = match q.mode.as_deref() {
+            Some("pretty") | None => yamlpath::QueryMode::Pretty,
+            Some("exact") => yamlpath::QueryMode::Exact,
+            Some(o) => panic!("invalid testcase mode: {o}"),
+        };
         let expected = q.expected.as_str();
 
         let document = Document::new(raw_testcase.clone()).unwrap();
-        let feature = document.query(&query).unwrap();
+        let feature = document.query(&query, mode).unwrap();
 
         assert_eq!(document.extract_with_leading_whitespace(&feature), expected)
     }
