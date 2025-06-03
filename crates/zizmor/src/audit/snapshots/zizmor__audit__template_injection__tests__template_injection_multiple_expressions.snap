@@ -1,0 +1,19 @@
+---
+source: crates/zizmor/src/audit/template_injection.rs
+expression: current_content
+---
+name: Test Multiple Template Injections
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Multiple vulnerable expressions
+        run: |
+          echo "User: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref_name }}"
+          echo "Commit: ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}

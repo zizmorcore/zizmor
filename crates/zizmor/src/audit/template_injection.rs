@@ -473,7 +473,47 @@ impl Audit for TemplateInjection {
 mod tests {
     use github_actions_expressions::Expr;
 
+    use crate::audit::Audit;
     use crate::audit::template_injection::{Capability, TemplateInjection};
+    use crate::{github_api::GitHubHost, models::Workflow, registry::InputKey, state::AuditState};
+
+    /// Macro for testing workflow audits with common boilerplate
+    macro_rules! test_workflow_audit {
+        ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
+            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
+            let audit_state = AuditState {
+                config: &Default::default(),
+                no_online_audits: false,
+                cache_dir: "/tmp/zizmor".into(),
+                gh_token: None,
+                gh_hostname: GitHubHost::Standard("github.com".into()),
+            };
+            let audit = <$audit_type>::new(&audit_state).unwrap();
+            let findings = audit.audit_workflow(&workflow).unwrap();
+
+            $test_fn(findings)
+        }};
+    }
+
+    /// Helper function to apply a specific fix by title and return the result for snapshot testing
+    fn apply_fix_by_title_for_snapshot(
+        workflow_content: &str,
+        finding: &crate::finding::Finding,
+        expected_title: &str,
+    ) -> String {
+        assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
+
+        let fix = finding
+            .fixes
+            .iter()
+            .find(|f| f.title == expected_title)
+            .unwrap_or_else(|| {
+                panic!("Expected fix with title '{}' but not found", expected_title)
+            });
+
+        fix.apply_to_content(workflow_content).unwrap().unwrap()
+    }
 
     #[test]
     fn test_capability_from_context() {
@@ -538,5 +578,265 @@ mod tests {
                 expected
             );
         }
+    }
+
+    #[test]
+    fn test_template_injection_fix_github_ref_name() {
+        let workflow_content = r#"
+name: Test Template Injection
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step
+        run: echo "Branch is ${{ github.ref_name }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_github_ref_name.yml",
+            workflow_content,
+            |findings: Vec<crate::finding::Finding>| {
+                // Should find template injection
+                assert!(!findings.is_empty());
+
+                // Should have at least one finding with a fix
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(
+                    finding_with_fix.is_some(),
+                    "Expected at least one finding with a fix"
+                );
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow_content,
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_github_actor() {
+        let workflow_content = r#"
+name: Test Template Injection
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step
+        run: |
+          echo "Hello ${{ github.actor }}"
+          echo "Processing user input"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_github_actor.yml",
+            workflow_content,
+            |findings: Vec<crate::finding::Finding>| {
+                // Should find template injection
+                assert!(!findings.is_empty());
+
+                // Should have at least one finding with a fix
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(
+                    finding_with_fix.is_some(),
+                    "Expected at least one finding with a fix"
+                );
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow_content,
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_with_existing_env() {
+        let workflow_content = r#"
+name: Test Template Injection
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with existing env
+        run: echo "Event name is ${{ github.event.head_commit.message }}"
+        env:
+          EXISTING_VAR: "existing_value"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_with_existing_env.yml",
+            workflow_content,
+            |findings: Vec<crate::finding::Finding>| {
+                // Should find template injection
+                assert!(!findings.is_empty());
+
+                // Should have at least one finding with a fix
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(
+                    finding_with_fix.is_some(),
+                    "Expected at least one finding with a fix"
+                );
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow_content,
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_no_fix_for_action_sinks() {
+        let workflow_content = r#"
+name: Test Template Injection - Actions
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Action with injection sink
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log("${{ github.actor }}")
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_no_fix_for_action_sinks.yml",
+            workflow_content,
+            |findings: Vec<crate::finding::Finding>| {
+                // Should find template injection
+                assert!(!findings.is_empty());
+
+                // But should not have fixes for action sinks (only run: steps get fixes)
+                let findings_with_fixes: Vec<_> =
+                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
+                assert!(
+                    findings_with_fixes.is_empty(),
+                    "Expected no fixes for action injection sinks"
+                );
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_multiple_expressions() {
+        let workflow_content = r#"
+name: Test Multiple Template Injections
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Multiple vulnerable expressions
+        run: |
+          echo "User: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.event.head_commit.message }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_multiple_expressions.yml",
+            workflow_content,
+            |findings: Vec<crate::finding::Finding>| {
+                // Should find multiple template injections
+                assert!(!findings.is_empty());
+
+                // Should have multiple findings
+                assert!(
+                    findings.len() >= 3,
+                    "Expected at least 3 findings for 3 expressions"
+                );
+
+                // Note: When applying multiple script-level fixes sequentially,
+                // only the last script replacement will survive since each fix
+                // replaces the entire script content. However, environment variables
+                // accumulate correctly via MergeInto operations.
+                let mut current_content = workflow_content.to_string();
+                let findings_with_fixes: Vec<_> =
+                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
+
+                assert!(
+                    !findings_with_fixes.is_empty(),
+                    "Expected at least one finding with a fix"
+                );
+
+                // Apply each fix in sequence
+                for finding in findings_with_fixes {
+                    if let Some(fix) = finding
+                        .fixes
+                        .iter()
+                        .find(|f| f.title == "replace expression with environment variable")
+                    {
+                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
+                            current_content = new_content;
+                        }
+                    }
+                }
+
+                insta::assert_snapshot!(current_content);
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_safe_contexts() {
+        let workflow_content = r#"
+name: Test Safe Template Contexts
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Safe expressions
+        run: |
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Job status: ${{ job.status }}"
+          echo "Repository: ${{ github.repository }}"
+        env:
+          SAFE_SECRET: ${{ secrets.MY_SECRET }}
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_safe_contexts.yml",
+            workflow_content,
+            |findings: Vec<crate::finding::Finding>| {
+                // May have some findings but they should be low severity or pedantic
+                for finding in &findings {
+                    if !finding.fixes.is_empty() {
+                        // If there are fixes, they should only be for contexts that can be made safer
+                        let fixed_content = apply_fix_by_title_for_snapshot(
+                            workflow_content,
+                            finding,
+                            "replace expression with environment variable",
+                        );
+                        insta::assert_snapshot!(fixed_content);
+                        break; // Only test the first fix to avoid multiple snapshots
+                    }
+                }
+            }
+        );
     }
 }

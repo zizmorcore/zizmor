@@ -1,0 +1,15 @@
+---
+source: crates/zizmor/src/audit/template_injection.rs
+expression: fixed_content
+---
+name: Test Template Injection
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with existing env
+        run: echo "Event name is ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
+        env:
+          EXISTING_VAR: existing_value
+          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}

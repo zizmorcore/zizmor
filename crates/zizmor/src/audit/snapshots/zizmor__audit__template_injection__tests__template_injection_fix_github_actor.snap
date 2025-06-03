@@ -1,0 +1,16 @@
+---
+source: crates/zizmor/src/audit/template_injection.rs
+expression: fixed_content
+---
+name: Test Template Injection
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step
+        run: |
+          echo "Hello ${GITHUB_ACTOR}"
+          echo "Processing user input"
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}

@@ -1,0 +1,18 @@
+---
+source: crates/zizmor/src/audit/template_injection.rs
+expression: fixed_content
+---
+name: Test Safe Template Contexts
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Safe expressions
+        run: |
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Job status: ${JOB_STATUS}"
+          echo "Repository: ${{ github.repository }}"
+        env:
+          SAFE_SECRET: ${{ secrets.MY_SECRET }}
+          JOB_STATUS: ${{ job.status }}
