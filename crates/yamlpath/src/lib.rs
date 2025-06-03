@@ -197,6 +197,9 @@ impl Feature<'_> {
     pub fn parent(&self) -> Option<Feature<'_>> {
         self._node.parent().map(Feature::from)
     }
+
+    // TODO: `kind()` to return the node's kind, including block/flow
+    // disposition.
 }
 
 impl<'tree> From<Node<'tree>> for Feature<'tree> {
