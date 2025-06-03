@@ -137,19 +137,19 @@ pub fn apply_yaml_patch(
         let doc = yamlpath::Document::new(&result)?;
         match &op {
             YamlPatchOperation::Replace { route, value: _ } => {
-                let feature = route_to_feature(&route, &doc)?;
+                let feature = route_to_feature(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.0, op));
             }
             YamlPatchOperation::Add { route, .. } => {
-                let feature = route_to_feature(&route, &doc)?;
+                let feature = route_to_feature(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.1, op));
             }
             YamlPatchOperation::MergeInto { route, .. } => {
-                let feature = route_to_feature(&route, &doc)?;
+                let feature = route_to_feature(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.1, op));
             }
             YamlPatchOperation::Remove { route } => {
-                let feature = route_to_feature(&route, &doc)?;
+                let feature = route_to_feature(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.1, op));
             }
         }
@@ -174,10 +174,10 @@ fn apply_single_operation(
 
     match operation {
         YamlPatchOperation::Replace { route, value } => {
-            let feature = route_to_feature(&route, &doc)?;
+            let feature = route_to_feature(route, &doc)?;
 
             // Get the replacement content
-            let replacement = apply_value_replacement(content, &feature, &doc, &value, true)?;
+            let replacement = apply_value_replacement(content, &feature, &doc, value, true)?;
 
             // Extract the current content to calculate spans
             let current_content = doc.extract(&feature);
@@ -203,13 +203,13 @@ fn apply_single_operation(
         YamlPatchOperation::Add { route, key, value } => {
             if route.is_root() {
                 // Handle root-level additions specially
-                return handle_root_level_addition(content, &key, &value);
+                return handle_root_level_addition(content, key, value);
             }
 
-            let feature = route_to_feature(&route, &doc)?;
+            let feature = route_to_feature(route, &doc)?;
 
             // Convert the new value to YAML string
-            let new_value_str = serialize_yaml_value(&value)?;
+            let new_value_str = serialize_yaml_value(value)?;
             let new_value_str = new_value_str.trim_end(); // Remove trailing newline
 
             // Check if we're adding to a list item by examining the path
@@ -293,7 +293,7 @@ fn apply_single_operation(
         YamlPatchOperation::MergeInto { route, key, value } => {
             if route.is_root() {
                 // Handle root-level merges specially
-                return handle_root_level_addition(content, &key, &value);
+                return handle_root_level_addition(content, key, value);
             }
 
             // Check if the key already exists in the target mapping
@@ -335,7 +335,7 @@ fn apply_single_operation(
                             return apply_mapping_replacement(
                                 content,
                                 &existing_key_route,
-                                &key,
+                                key,
                                 &serde_yaml::Value::Mapping(merged_mapping),
                             );
                         }
@@ -370,7 +370,7 @@ fn apply_single_operation(
                 ));
             }
 
-            let feature = route_to_feature(&route, &doc)?;
+            let feature = route_to_feature(route, &doc)?;
 
             // For removal, we need to remove the entire line including leading whitespace
             let start_pos = find_line_start(content, feature.location.byte_span.0);

@@ -338,11 +338,11 @@ mod tests {
     // Test-only trait impls.
     impl<'a, 'doc> Locatable<'a, 'doc> for Step {
         fn location(&self) -> crate::models::SymbolicLocation<'doc> {
-            unimplemented!()
+            unreachable!()
         }
 
         fn location_with_name(&self) -> crate::finding::location::SymbolicLocation<'doc> {
-            unimplemented!()
+            unreachable!()
         }
     }
 
@@ -377,7 +377,7 @@ mod tests {
         }
 
         fn document(&self) -> &'doc yamlpath::Document {
-            unimplemented!()
+            unreachable!()
         }
     }
 
