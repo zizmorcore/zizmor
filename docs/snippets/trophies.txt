@@ -195,6 +195,8 @@ pyvista/pyvista#7006
 PyVRP/PyVRP#670
 PyO3/pyo3#4774
 quarkslab/quokka#46
+reubeno/brush#534
+reubeno/brush#535
 rolldown/rolldown#3861
 rubygems/rubygems.org#5350
 rubygems/rubygems#8702
