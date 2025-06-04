@@ -15,7 +15,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{collections::BTreeMap, env, sync::LazyLock};
+use std::{collections::HashMap, env, sync::LazyLock};
 
 use fst::Map;
 use github_actions_expressions::{Expr, context::Context};
@@ -195,18 +195,14 @@ impl TemplateInjection {
         Some(env_parts.join("_").to_uppercase())
     }
 
-    /// Extracts fixable expression data for a given expression.
-    ///
-    /// This method returns the expression and environment variable name
-    /// for expressions that can be fixed, rather than generating complete fixes.
-    /// The actual fix generation is handled by `attempt_comprehensive_fix`.
-    fn extract_fixable_expression_data<'a, 'doc>(
+    /// Attempts to produce a `Fix` for a given expression.
+    fn attempt_fix<'a, 'doc>(
         &self,
-        _script: &str,
+        script: &str,
         raw: &ExplicitExpr,
         parsed: &Expr,
         step: &'a impl StepCommon<'a, 'doc>,
-    ) -> Option<(ExplicitExpr, String)> {
+    ) -> Option<Fix<'doc>> {
         // We can only fix `run:` steps for now.
         if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
             return None;
@@ -220,51 +216,31 @@ impl TemplateInjection {
             return None;
         };
 
-        // We might fail to produce a reasonable environment variable,
-        // e.g. if the context is a call expression or has a computed
-        // index. In those kinds of cases, we don't produce a fix.
-        let env_var = Self::context_to_env_var(ctx)?;
-        let new_expr = ExplicitExpr::from_curly(raw.as_raw()).unwrap();
-        Some((new_expr, env_var))
-    }
-
-    /// Attempts to produce a comprehensive `Fix` for all fixable expressions in a script.
-    ///
-    /// This method generates a single fix that handles all expressions at once.
-    ///
-    /// The fix consists of two patch operations:
-    /// 1. Replacing all expressions in the script with their corresponding environment
-    ///    variables. For example, `${{ github.actor }}` becomes `${GITHUB_ACTOR}`.
-    /// 2. Merging all the new environment variables into the step's `env:` block,
-    ///    e.g. `GITHUB_ACTOR: ${{ github.actor }}`.
-    ///
-    /// Uses BTreeMap to ensure deterministic ordering of environment variables.
-    fn attempt_comprehensive_fix<'a, 'doc>(
-        &self,
-        script: &str,
-        fixable_expressions: &[(ExplicitExpr, String)],
-        step: &'a impl StepCommon<'a, 'doc>,
-    ) -> Option<Fix<'doc>> {
-        if fixable_expressions.is_empty() {
-            return None;
-        }
-
-        // Replace all expressions in the script with their environment variables
-        let mut new_script = script.to_string();
-        let mut env_vars = BTreeMap::new();
-
-        for (raw_expr, env_var) in fixable_expressions {
-            // Replace each expression with its environment variable.
-            // We only replace the first occurrence of each expression to avoid
-            // issues with duplicate expressions.
-            new_script = new_script.replacen(raw_expr.as_raw(), &format!("${{{env_var}}}"), 1);
-            env_vars.insert(env_var.as_str(), raw_expr.as_curly());
-        }
-
+        // From here, our fix consists of two patch operations:
+        // 1. Replacing the expression in the script with an environment
+        //    variable of our generation. For example, `${{ foo.bar }}`
+        //    becomes `${FOO_BAR}`.
+        // 2. Inserting the new environment variable into the step's
+        //    `env:` block, e.g. `FOO_BAR: ${{ foo.bar }}`.
+        //
         // TODO: We could optimize patching a bit here by keeping track
         // of contexts that have pre-defined environment variable equivalents,
         // e.g. `github.ref_name` is always `GITHUB_REF_NAME`. When we see
         // these, we shouldn't add a new `env:` member.
+
+        // We might fail to produce a reasonable environment variable,
+        // e.g. if the context is a call expression or has a computed
+        // index. In those kinds of cases, we don't produce a fix.
+        let env_var = Self::context_to_env_var(ctx)?;
+
+        // NOTE: We only replace the first occurrence of the raw expression,
+        // since each fix corresponds to exactly one expression.
+        // This implicitly assumes that we perform fixes in the order
+        // of findings, which is currently but not inherently the case.
+        // The cleaner thing to do here would probably be to replace the
+        // expression's exact span, but that would invalidate the
+        // next fix's span. Needs more thought.
+        let new_script = script.replacen(raw.as_raw(), &format!("${{{env_var}}}"), 1);
 
         Some(Fix {
             title: "replace expression with environment variable".into(),
@@ -278,7 +254,11 @@ impl TemplateInjection {
                 YamlPatchOperation::MergeInto {
                     route: step.route(),
                     key: "env".to_string(),
-                    value: serde_yaml::to_value(env_vars).unwrap(),
+                    value: serde_yaml::to_value(HashMap::from([(
+                        env_var.as_str(),
+                        raw.as_curly(),
+                    )]))
+                    .unwrap(),
                 },
             ],
         })
@@ -290,8 +270,6 @@ impl TemplateInjection {
         step: &'a impl StepCommon<'a, 'doc>,
     ) -> Vec<(String, Option<Fix<'doc>>, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
-        let mut fixable_expressions = vec![];
-
         for (expr, _) in extract_expressions(script) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
@@ -303,6 +281,7 @@ impl TemplateInjection {
             // even if unexploitable.
             bad_expressions.push((
                 expr.as_curly().into(),
+                // Intentionally not providing a fix here,
                 None,
                 Severity::Unknown,
                 Confidence::Unknown,
@@ -321,14 +300,9 @@ impl TemplateInjection {
                             // Structured means some attacker-controllable
                             // structure, but not fully arbitrary.
                             Some(Capability::Structured) => {
-                                if let Some((raw, env_var)) = self
-                                    .extract_fixable_expression_data(script, &expr, &parsed, step)
-                                {
-                                    fixable_expressions.push((raw, env_var));
-                                }
                                 bad_expressions.push((
                                     context.as_str().into(),
-                                    None,
+                                    self.attempt_fix(script, &expr, &parsed, step),
                                     Severity::Medium,
                                     Confidence::High,
                                     Persona::default(),
@@ -337,14 +311,9 @@ impl TemplateInjection {
                             // Arbitrary means the context's expansion is
                             // fully attacker-controllable.
                             Some(Capability::Arbitrary) => {
-                                if let Some((raw, env_var)) = self
-                                    .extract_fixable_expression_data(script, &expr, &parsed, step)
-                                {
-                                    fixable_expressions.push((raw, env_var));
-                                }
                                 bad_expressions.push((
                                     context.as_str().into(),
-                                    None,
+                                    self.attempt_fix(script, &expr, &parsed, step),
                                     Severity::High,
                                     Confidence::High,
                                     Persona::default(),
@@ -360,16 +329,9 @@ impl TemplateInjection {
                                     // input's type. In the future, we should index back into
                                     // the workflow's triggers and exclude input expansions
                                     // from innocuous types, e.g. booleans.
-                                    if let Some((raw, env_var)) = self
-                                        .extract_fixable_expression_data(
-                                            script, &expr, &parsed, step,
-                                        )
-                                    {
-                                        fixable_expressions.push((raw, env_var));
-                                    }
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        None,
+                                        self.attempt_fix(script, &expr, &parsed, step),
                                         Severity::High,
                                         Confidence::Low,
                                         Persona::default(),
@@ -378,16 +340,9 @@ impl TemplateInjection {
                                     let env_is_static = step.env_is_static(env);
 
                                     if !env_is_static {
-                                        if let Some((raw, env_var)) = self
-                                            .extract_fixable_expression_data(
-                                                script, &expr, &parsed, step,
-                                            )
-                                        {
-                                            fixable_expressions.push((raw, env_var));
-                                        }
                                         bad_expressions.push((
                                             context.as_str().into(),
-                                            None,
+                                            self.attempt_fix(script, &expr, &parsed, step),
                                             Severity::Low,
                                             Confidence::High,
                                             Persona::default(),
@@ -396,16 +351,9 @@ impl TemplateInjection {
                                 } else if context.child_of("github") {
                                     // TODO: Filter these more finely; not everything in the event
                                     // context is actually attacker-controllable.
-                                    if let Some((raw, env_var)) = self
-                                        .extract_fixable_expression_data(
-                                            script, &expr, &parsed, step,
-                                        )
-                                    {
-                                        fixable_expressions.push((raw, env_var));
-                                    }
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        None,
+                                        self.attempt_fix(script, &expr, &parsed, step),
                                         Severity::High,
                                         Confidence::High,
                                         Persona::default(),
@@ -425,16 +373,9 @@ impl TemplateInjection {
                                         };
 
                                         if !matrix_is_static {
-                                            if let Some((raw, env_var)) = self
-                                                .extract_fixable_expression_data(
-                                                    script, &expr, &parsed, step,
-                                                )
-                                            {
-                                                fixable_expressions.push((raw, env_var));
-                                            }
                                             bad_expressions.push((
                                                 context.as_str().into(),
-                                                None,
+                                                self.attempt_fix(script, &expr, &parsed, step),
                                                 Severity::Medium,
                                                 Confidence::Medium,
                                                 Persona::default(),
@@ -445,16 +386,9 @@ impl TemplateInjection {
                                 } else {
                                     // All other contexts are typically not attacker controllable,
                                     // but may be in obscure cases.
-                                    if let Some((raw, env_var)) = self
-                                        .extract_fixable_expression_data(
-                                            script, &expr, &parsed, step,
-                                        )
-                                    {
-                                        fixable_expressions.push((raw, env_var));
-                                    }
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        None,
+                                        self.attempt_fix(script, &expr, &parsed, step),
                                         Severity::Informational,
                                         Confidence::Low,
                                         Persona::default(),
@@ -467,33 +401,15 @@ impl TemplateInjection {
                         // If we couldn't turn the context into a pattern,
                         // we almost certainly have something like
                         // `call(...).foo.bar`.
-                        if let Some((raw, env_var)) =
-                            self.extract_fixable_expression_data(script, &expr, &parsed, step)
-                        {
-                            fixable_expressions.push((raw, env_var));
-                        }
                         bad_expressions.push((
                             context.as_str().into(),
-                            None,
+                            self.attempt_fix(script, &expr, &parsed, step),
                             Severity::Informational,
                             Confidence::Low,
                             Persona::default(),
                         ));
                     }
                 }
-            }
-        }
-
-        // Generate a comprehensive fix for all fixable expressions
-        let comprehensive_fix = self.attempt_comprehensive_fix(script, &fixable_expressions, step);
-
-        // Add the comprehensive fix to the first non-pedantic finding
-        if let Some(fix) = comprehensive_fix {
-            if let Some(first_fixable) = bad_expressions
-                .iter_mut()
-                .find(|(_, _, _, _, persona)| !matches!(persona, Persona::Pedantic))
-            {
-                first_fixable.1 = Some(fix);
             }
         }
 
@@ -557,47 +473,7 @@ impl Audit for TemplateInjection {
 mod tests {
     use github_actions_expressions::Expr;
 
-    use crate::audit::Audit;
     use crate::audit::template_injection::{Capability, TemplateInjection};
-    use crate::{github_api::GitHubHost, models::Workflow, registry::InputKey, state::AuditState};
-
-    /// Macro for testing workflow audits with common boilerplate
-    macro_rules! test_workflow_audit {
-        ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local($filename, None::<&str>).unwrap();
-            let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                cache_dir: "/tmp/zizmor".into(),
-                gh_token: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
-            let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
-
-            $test_fn(findings)
-        }};
-    }
-
-    /// Helper function to apply a specific fix by title and return the result for snapshot testing
-    fn apply_fix_by_title_for_snapshot(
-        workflow_content: &str,
-        finding: &crate::finding::Finding,
-        expected_title: &str,
-    ) -> String {
-        assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
-
-        let fix = finding
-            .fixes
-            .iter()
-            .find(|f| f.title == expected_title)
-            .unwrap_or_else(|| {
-                panic!("Expected fix with title '{}' but not found", expected_title)
-            });
-
-        fix.apply_to_content(workflow_content).unwrap().unwrap()
-    }
 
     #[test]
     fn test_capability_from_context() {
@@ -662,333 +538,5 @@ mod tests {
                 expected
             );
         }
-    }
-
-    #[test]
-    fn test_template_injection_fix_github_ref_name() {
-        let workflow_content = r#"
-name: Test Template Injection
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Vulnerable step
-        run: echo "Branch is ${{ github.ref_name }}"
-"#;
-
-        test_workflow_audit!(
-            TemplateInjection,
-            "test_template_injection_fix_github_ref_name.yml",
-            workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
-                // Should find template injection
-                assert!(!findings.is_empty());
-
-                // Should have at least one finding with a fix
-                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
-                assert!(
-                    finding_with_fix.is_some(),
-                    "Expected at least one finding with a fix"
-                );
-
-                if let Some(finding) = finding_with_fix {
-                    let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow_content,
-                        finding,
-                        "replace expression with environment variable",
-                    );
-                    insta::assert_snapshot!(fixed_content, @r#"
-                    name: Test Template Injection
-                    on: push
-                    jobs:
-                      test:
-                        runs-on: ubuntu-latest
-                        steps:
-                          - name: Vulnerable step
-                            run: echo "Branch is ${GITHUB_REF_NAME}"
-                            env:
-                              GITHUB_REF_NAME: ${{ github.ref_name }}
-                    "#);
-                }
-            }
-        );
-    }
-
-    #[test]
-    fn test_template_injection_fix_github_actor() {
-        let workflow_content = r#"
-name: Test Template Injection
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Vulnerable step
-        run: |
-          echo "Hello ${{ github.actor }}"
-          echo "Processing user input"
-"#;
-
-        test_workflow_audit!(
-            TemplateInjection,
-            "test_template_injection_fix_github_actor.yml",
-            workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
-                // Should find template injection
-                assert!(!findings.is_empty());
-
-                // Should have at least one finding with a fix
-                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
-                assert!(
-                    finding_with_fix.is_some(),
-                    "Expected at least one finding with a fix"
-                );
-
-                if let Some(finding) = finding_with_fix {
-                    let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow_content,
-                        finding,
-                        "replace expression with environment variable",
-                    );
-                    insta::assert_snapshot!(fixed_content, @r#"
-                    name: Test Template Injection
-                    on: push
-                    jobs:
-                      test:
-                        runs-on: ubuntu-latest
-                        steps:
-                          - name: Vulnerable step
-                            run: |
-                              echo "Hello ${GITHUB_ACTOR}"
-                              echo "Processing user input"
-                            env:
-                              GITHUB_ACTOR: ${{ github.actor }}
-                    "#);
-                }
-            }
-        );
-    }
-
-    #[test]
-    fn test_template_injection_fix_with_existing_env() {
-        let workflow_content = r#"
-name: Test Template Injection
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Vulnerable step with existing env
-        run: echo "Event name is ${{ github.event.head_commit.message }}"
-        env:
-          EXISTING_VAR: "existing_value"
-"#;
-
-        test_workflow_audit!(
-            TemplateInjection,
-            "test_template_injection_fix_with_existing_env.yml",
-            workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
-                // Should find template injection
-                assert!(!findings.is_empty());
-
-                // Should have at least one finding with a fix
-                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
-                assert!(
-                    finding_with_fix.is_some(),
-                    "Expected at least one finding with a fix"
-                );
-
-                if let Some(finding) = finding_with_fix {
-                    let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow_content,
-                        finding,
-                        "replace expression with environment variable",
-                    );
-                    insta::assert_snapshot!(fixed_content, @r#"
-                    name: Test Template Injection
-                    on: push
-                    jobs:
-                      test:
-                        runs-on: ubuntu-latest
-                        steps:
-                          - name: Vulnerable step with existing env
-                            run: echo "Event name is ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
-                            env:
-                              EXISTING_VAR: existing_value
-                              GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-                    "#);
-                }
-            }
-        );
-    }
-
-    #[test]
-    fn test_template_injection_no_fix_for_action_sinks() {
-        let workflow_content = r#"
-name: Test Template Injection - Actions
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Action with injection sink
-        uses: actions/github-script@v7
-        with:
-          script: |
-            console.log("${{ github.actor }}")
-"#;
-
-        test_workflow_audit!(
-            TemplateInjection,
-            "test_template_injection_no_fix_for_action_sinks.yml",
-            workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
-                // Should find template injection
-                assert!(!findings.is_empty());
-
-                // But should not have fixes for action sinks (only run: steps get fixes)
-                let findings_with_fixes: Vec<_> =
-                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
-                assert!(
-                    findings_with_fixes.is_empty(),
-                    "Expected no fixes for action injection sinks"
-                );
-            }
-        );
-    }
-
-    #[test]
-    fn test_template_injection_multiple_expressions() {
-        let workflow_content = r#"
-name: Test Multiple Template Injections
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Multiple vulnerable expressions
-        # All expressions are replaced and environment variables are created in a single comprehensive fix
-        run: |
-          echo "User: ${{ github.actor }}"
-          echo "Ref: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.event.head_commit.message }}"
-"#;
-
-        test_workflow_audit!(
-            TemplateInjection,
-            "test_template_injection_multiple_expressions.yml",
-            workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
-                // Should find multiple template injections
-                assert!(!findings.is_empty());
-
-                // Should have multiple findings
-                assert!(
-                    findings.len() >= 3,
-                    "Expected at least 3 findings for 3 expressions"
-                );
-
-                // Our comprehensive fix approach now handles all expressions in a single operation:
-                // All expressions in the script are replaced with environment variables,
-                // and all corresponding environment variables are defined in the env section.
-                let mut current_content = workflow_content.to_string();
-                let findings_with_fixes: Vec<_> =
-                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
-
-                assert!(
-                    !findings_with_fixes.is_empty(),
-                    "Expected at least one finding with a fix"
-                );
-
-                // Apply each fix in sequence
-                for finding in findings_with_fixes {
-                    if let Some(fix) = finding
-                        .fixes
-                        .iter()
-                        .find(|f| f.title == "replace expression with environment variable")
-                    {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
-                            current_content = new_content;
-                        }
-                    }
-                }
-
-                insta::assert_snapshot!(current_content, @r#"
-                name: Test Multiple Template Injections
-                on: push
-                jobs:
-                  test:
-                    runs-on: ubuntu-latest
-                    steps:
-                      - name: Multiple vulnerable expressions
-                        # All expressions are replaced and environment variables are created in a single comprehensive fix
-                        run: |
-                          echo "User: ${GITHUB_ACTOR}"
-                          echo "Ref: ${GITHUB_REF_NAME}"
-                          echo "Commit: ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
-                        env:
-                          GITHUB_ACTOR: ${{ github.actor }}
-                          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-                          GITHUB_REF_NAME: ${{ github.ref_name }}
-                "#);
-            }
-        );
-    }
-
-    #[test]
-    fn test_template_injection_safe_contexts() {
-        let workflow_content = r#"
-name: Test Safe Template Contexts
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Safe expressions
-        run: |
-          echo "Runner OS: ${{ runner.os }}"
-          echo "Job status: ${{ job.status }}"
-          echo "Repository: ${{ github.repository }}"
-        env:
-          SAFE_SECRET: ${{ secrets.MY_SECRET }}
-"#;
-
-        test_workflow_audit!(
-            TemplateInjection,
-            "test_template_injection_safe_contexts.yml",
-            workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
-                // May have some findings but they should be low severity or pedantic
-                for finding in &findings {
-                    if !finding.fixes.is_empty() {
-                        // If there are fixes, they should only be for contexts that can be made safer
-                        let fixed_content = apply_fix_by_title_for_snapshot(
-                            workflow_content,
-                            finding,
-                            "replace expression with environment variable",
-                        );
-                        insta::assert_snapshot!(fixed_content, @r#"
-                        name: Test Safe Template Contexts
-                        on: push
-                        jobs:
-                          test:
-                            runs-on: ubuntu-latest
-                            steps:
-                              - name: Safe expressions
-                                run: |
-                                  echo "Runner OS: ${{ runner.os }}"
-                                  echo "Job status: ${JOB_STATUS}"
-                                  echo "Repository: ${{ github.repository }}"
-                                env:
-                                  SAFE_SECRET: ${{ secrets.MY_SECRET }}
-                                  JOB_STATUS: ${{ job.status }}
-                        "#);
-                        break; // Only test the first fix to avoid multiple snapshots
-                    }
-                }
-            }
-        );
     }
 }
