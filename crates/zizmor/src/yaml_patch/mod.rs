@@ -832,6 +832,30 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_reparse_exact_extracted() {
+        let original = r#"
+foo:
+  bar:
+    a: b
+    c: d
+    e: f
+"#;
+
+        let doc = yamlpath::Document::new(original).unwrap();
+        let feature = route_to_feature_exact(&route!("foo", "bar"), &doc)
+            .unwrap()
+            .unwrap();
+
+        let content = doc.extract_with_leading_whitespace(&feature);
+
+        let reparsed = serde_yaml::from_str::<serde_yaml::Mapping>(content).unwrap();
+        assert_eq!(
+            reparsed.get(&serde_yaml::Value::String("a".to_string())),
+            Some(&serde_yaml::Value::String("b".to_string()))
+        );
+    }
+
+    #[test]
     fn test_yaml_path_rewrite_fragment_single_line() {
         let original = r#"
 foo:
