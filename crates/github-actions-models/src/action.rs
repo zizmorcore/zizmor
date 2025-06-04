@@ -154,7 +154,7 @@ pub enum StepBody {
         /// The shell to run in.
         shell: String,
 
-        /// An optional working directory to run [`RunShell::run`] from.
+        /// An optional working directory to run from.
         working_directory: Option<String>,
     },
 }

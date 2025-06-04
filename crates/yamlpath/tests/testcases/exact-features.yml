@@ -2,6 +2,8 @@ testcase:
   foo: bar
   abc:
     def: ghi
+    lol: { foo: foo }
+    lol2: { foo: }
 
   even:
     deeper:
@@ -28,6 +30,14 @@ queries:
   - query: [abc, def]
     mode: exact
     expected: ghi
+
+  - query: [abc, lol]
+    mode: exact
+    expected: '{ foo: foo }'
+  
+  - query: [abc, lol2]
+    mode: exact
+    expected: '{ foo: }'
 
   - query: [even, deeper, block]
     mode: exact
