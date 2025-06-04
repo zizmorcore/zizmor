@@ -13,6 +13,9 @@ testcase:
     - list: >-
         abc
 
+  flow2:
+    emptykey:
+
 queries:
   - query: [foo]
     mode: exact
@@ -34,3 +37,9 @@ queries:
     expected: |2-
       >-
               abc
+
+  # NOTE: edge case in exact mode -- we have no value feature for an empty
+  # key, so we just return the key with no value.
+  - query: [flow2, emptykey]
+    mode: exact
+    expected: "    emptykey:"

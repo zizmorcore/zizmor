@@ -735,45 +735,6 @@ fn apply_value_replacement(
     Ok(replacement)
 }
 
-/// Macro for creating comment-preserving YAML patch functions
-///
-/// This macro creates a closure that can be used with the Fix system to apply
-/// YAML patch operations while preserving comments and formatting. The generated
-/// function takes the old content as input and returns the patched content wrapped
-/// in `anyhow::Result<Option<String>>`.
-///
-/// # Returns
-///
-/// - `Ok(Some(new_content))` if the patch was successfully applied
-/// - `Err(error)` if the patch failed to apply
-///
-/// # Example
-///
-/// ```rust
-/// let fix = Fix {
-///     title: "Update permission".to_string(),
-///     description: "Change permission from write to read".to_string(),
-///     apply: apply_yaml_patch!(vec![
-///         YamlPatchOperation::Replace {
-///             path: "/permissions/contents".to_string(),
-///             value: serde_yaml::Value::String("read".to_string()),
-///         }
-///     ]),
-/// };
-/// ```
-#[macro_export]
-macro_rules! apply_yaml_patch {
-    ($operations:expr) => {{
-        let operations = $operations;
-        Box::new(move |old_content: &str| -> anyhow::Result<Option<String>> {
-            match $crate::yaml_patch::apply_yaml_patch(old_content, operations.clone()) {
-                Ok(new_content) => Ok(Some(new_content)),
-                Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
-            }
-        })
-    }};
-}
-
 #[cfg(test)]
 mod tests {
     use crate::route;
