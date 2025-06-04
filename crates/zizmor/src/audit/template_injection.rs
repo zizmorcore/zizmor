@@ -15,7 +15,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{collections::HashMap, env, sync::LazyLock};
+use std::{collections::BTreeMap, env, sync::LazyLock};
 
 use fst::Map;
 use github_actions_expressions::{Expr, context::Context};
@@ -195,14 +195,18 @@ impl TemplateInjection {
         Some(env_parts.join("_").to_uppercase())
     }
 
-    /// Attempts to produce a `Fix` for a given expression.
-    fn attempt_fix<'a, 'doc>(
+    /// Extracts fixable expression data for a given expression.
+    ///
+    /// This method returns the expression and environment variable name
+    /// for expressions that can be fixed, rather than generating complete fixes.
+    /// The actual fix generation is handled by `attempt_comprehensive_fix`.
+    fn extract_fixable_expression_data<'a, 'doc>(
         &self,
-        script: &str,
+        _script: &str,
         raw: &ExplicitExpr,
         parsed: &Expr,
         step: &'a impl StepCommon<'a, 'doc>,
-    ) -> Option<Fix<'doc>> {
+    ) -> Option<(ExplicitExpr, String)> {
         // We can only fix `run:` steps for now.
         if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
             return None;
@@ -216,31 +220,51 @@ impl TemplateInjection {
             return None;
         };
 
-        // From here, our fix consists of two patch operations:
-        // 1. Replacing the expression in the script with an environment
-        //    variable of our generation. For example, `${{ foo.bar }}`
-        //    becomes `${FOO_BAR}`.
-        // 2. Inserting the new environment variable into the step's
-        //    `env:` block, e.g. `FOO_BAR: ${{ foo.bar }}`.
-        //
-        // TODO: We could optimize patching a bit here by keeping track
-        // of contexts that have pre-defined environment variable equivalents,
-        // e.g. `github.ref_name` is always `GITHUB_REF_NAME`. When we see
-        // these, we shouldn't add a new `env:` member.
-
         // We might fail to produce a reasonable environment variable,
         // e.g. if the context is a call expression or has a computed
         // index. In those kinds of cases, we don't produce a fix.
         let env_var = Self::context_to_env_var(ctx)?;
+        let new_expr = ExplicitExpr::from_curly(raw.as_raw()).unwrap();
+        Some((new_expr, env_var))
+    }
 
-        // NOTE: We only replace the first occurrence of the raw expression,
-        // since each fix corresponds to exactly one expression.
-        // This implicitly assumes that we perform fixes in the order
-        // of findings, which is currently but not inherently the case.
-        // The cleaner thing to do here would probably be to replace the
-        // expression's exact span, but that would invalidate the
-        // next fix's span. Needs more thought.
-        let new_script = script.replacen(raw.as_raw(), &format!("${{{env_var}}}"), 1);
+    /// Attempts to produce a comprehensive `Fix` for all fixable expressions in a script.
+    ///
+    /// This method generates a single fix that handles all expressions at once.
+    ///
+    /// The fix consists of two patch operations:
+    /// 1. Replacing all expressions in the script with their corresponding environment
+    ///    variables. For example, `${{ github.actor }}` becomes `${GITHUB_ACTOR}`.
+    /// 2. Merging all the new environment variables into the step's `env:` block,
+    ///    e.g. `GITHUB_ACTOR: ${{ github.actor }}`.
+    ///
+    /// Uses BTreeMap to ensure deterministic ordering of environment variables.
+    fn attempt_comprehensive_fix<'a, 'doc>(
+        &self,
+        script: &str,
+        fixable_expressions: &[(ExplicitExpr, String)],
+        step: &'a impl StepCommon<'a, 'doc>,
+    ) -> Option<Fix<'doc>> {
+        if fixable_expressions.is_empty() {
+            return None;
+        }
+
+        // Replace all expressions in the script with their environment variables
+        let mut new_script = script.to_string();
+        let mut env_vars = BTreeMap::new();
+
+        for (raw_expr, env_var) in fixable_expressions {
+            // Replace each expression with its environment variable.
+            // We only replace the first occurrence of each expression to avoid
+            // issues with duplicate expressions.
+            new_script = new_script.replacen(raw_expr.as_raw(), &format!("${{{env_var}}}"), 1);
+            env_vars.insert(env_var.as_str(), raw_expr.as_curly());
+        }
+
+        // TODO: We could optimize patching a bit here by keeping track
+        // of contexts that have pre-defined environment variable equivalents,
+        // e.g. `github.ref_name` is always `GITHUB_REF_NAME`. When we see
+        // these, we shouldn't add a new `env:` member.
 
         Some(Fix {
             title: "replace expression with environment variable".into(),
@@ -254,11 +278,7 @@ impl TemplateInjection {
                 YamlPatchOperation::MergeInto {
                     route: step.route(),
                     key: "env".to_string(),
-                    value: serde_yaml::to_value(HashMap::from([(
-                        env_var.as_str(),
-                        raw.as_curly(),
-                    )]))
-                    .unwrap(),
+                    value: serde_yaml::to_value(env_vars).unwrap(),
                 },
             ],
         })
@@ -270,6 +290,8 @@ impl TemplateInjection {
         step: &'a impl StepCommon<'a, 'doc>,
     ) -> Vec<(String, Option<Fix<'doc>>, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
+        let mut fixable_expressions = vec![];
+
         for (expr, _) in extract_expressions(script) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
@@ -281,7 +303,6 @@ impl TemplateInjection {
             // even if unexploitable.
             bad_expressions.push((
                 expr.as_curly().into(),
-                // Intentionally not providing a fix here,
                 None,
                 Severity::Unknown,
                 Confidence::Unknown,
@@ -300,9 +321,14 @@ impl TemplateInjection {
                             // Structured means some attacker-controllable
                             // structure, but not fully arbitrary.
                             Some(Capability::Structured) => {
+                                if let Some((raw, env_var)) = self
+                                    .extract_fixable_expression_data(script, &expr, &parsed, step)
+                                {
+                                    fixable_expressions.push((raw, env_var));
+                                }
                                 bad_expressions.push((
                                     context.as_str().into(),
-                                    self.attempt_fix(script, &expr, &parsed, step),
+                                    None,
                                     Severity::Medium,
                                     Confidence::High,
                                     Persona::default(),
@@ -311,9 +337,14 @@ impl TemplateInjection {
                             // Arbitrary means the context's expansion is
                             // fully attacker-controllable.
                             Some(Capability::Arbitrary) => {
+                                if let Some((raw, env_var)) = self
+                                    .extract_fixable_expression_data(script, &expr, &parsed, step)
+                                {
+                                    fixable_expressions.push((raw, env_var));
+                                }
                                 bad_expressions.push((
                                     context.as_str().into(),
-                                    self.attempt_fix(script, &expr, &parsed, step),
+                                    None,
                                     Severity::High,
                                     Confidence::High,
                                     Persona::default(),
@@ -329,9 +360,16 @@ impl TemplateInjection {
                                     // input's type. In the future, we should index back into
                                     // the workflow's triggers and exclude input expansions
                                     // from innocuous types, e.g. booleans.
+                                    if let Some((raw, env_var)) = self
+                                        .extract_fixable_expression_data(
+                                            script, &expr, &parsed, step,
+                                        )
+                                    {
+                                        fixable_expressions.push((raw, env_var));
+                                    }
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        self.attempt_fix(script, &expr, &parsed, step),
+                                        None,
                                         Severity::High,
                                         Confidence::Low,
                                         Persona::default(),
@@ -340,9 +378,16 @@ impl TemplateInjection {
                                     let env_is_static = step.env_is_static(env);
 
                                     if !env_is_static {
+                                        if let Some((raw, env_var)) = self
+                                            .extract_fixable_expression_data(
+                                                script, &expr, &parsed, step,
+                                            )
+                                        {
+                                            fixable_expressions.push((raw, env_var));
+                                        }
                                         bad_expressions.push((
                                             context.as_str().into(),
-                                            self.attempt_fix(script, &expr, &parsed, step),
+                                            None,
                                             Severity::Low,
                                             Confidence::High,
                                             Persona::default(),
@@ -351,9 +396,16 @@ impl TemplateInjection {
                                 } else if context.child_of("github") {
                                     // TODO: Filter these more finely; not everything in the event
                                     // context is actually attacker-controllable.
+                                    if let Some((raw, env_var)) = self
+                                        .extract_fixable_expression_data(
+                                            script, &expr, &parsed, step,
+                                        )
+                                    {
+                                        fixable_expressions.push((raw, env_var));
+                                    }
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        self.attempt_fix(script, &expr, &parsed, step),
+                                        None,
                                         Severity::High,
                                         Confidence::High,
                                         Persona::default(),
@@ -373,9 +425,16 @@ impl TemplateInjection {
                                         };
 
                                         if !matrix_is_static {
+                                            if let Some((raw, env_var)) = self
+                                                .extract_fixable_expression_data(
+                                                    script, &expr, &parsed, step,
+                                                )
+                                            {
+                                                fixable_expressions.push((raw, env_var));
+                                            }
                                             bad_expressions.push((
                                                 context.as_str().into(),
-                                                self.attempt_fix(script, &expr, &parsed, step),
+                                                None,
                                                 Severity::Medium,
                                                 Confidence::Medium,
                                                 Persona::default(),
@@ -386,9 +445,16 @@ impl TemplateInjection {
                                 } else {
                                     // All other contexts are typically not attacker controllable,
                                     // but may be in obscure cases.
+                                    if let Some((raw, env_var)) = self
+                                        .extract_fixable_expression_data(
+                                            script, &expr, &parsed, step,
+                                        )
+                                    {
+                                        fixable_expressions.push((raw, env_var));
+                                    }
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        self.attempt_fix(script, &expr, &parsed, step),
+                                        None,
                                         Severity::Informational,
                                         Confidence::Low,
                                         Persona::default(),
@@ -401,15 +467,33 @@ impl TemplateInjection {
                         // If we couldn't turn the context into a pattern,
                         // we almost certainly have something like
                         // `call(...).foo.bar`.
+                        if let Some((raw, env_var)) =
+                            self.extract_fixable_expression_data(script, &expr, &parsed, step)
+                        {
+                            fixable_expressions.push((raw, env_var));
+                        }
                         bad_expressions.push((
                             context.as_str().into(),
-                            self.attempt_fix(script, &expr, &parsed, step),
+                            None,
                             Severity::Informational,
                             Confidence::Low,
                             Persona::default(),
                         ));
                     }
                 }
+            }
+        }
+
+        // Generate a comprehensive fix for all fixable expressions
+        let comprehensive_fix = self.attempt_comprehensive_fix(script, &fixable_expressions, step);
+
+        // Add the comprehensive fix to the first non-pedantic finding
+        if let Some(fix) = comprehensive_fix {
+            if let Some(first_fixable) = bad_expressions
+                .iter_mut()
+                .find(|(_, _, _, _, persona)| !matches!(persona, Persona::Pedantic))
+            {
+                first_fixable.1 = Some(fix);
             }
         }
 
@@ -785,7 +869,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Multiple vulnerable expressions
-        # Only one fix is applied, but the environment variables accumulate
+        # All expressions are replaced and environment variables are created in a single comprehensive fix
         run: |
           echo "User: ${{ github.actor }}"
           echo "Ref: ${{ github.ref_name }}"
@@ -806,10 +890,9 @@ jobs:
                     "Expected at least 3 findings for 3 expressions"
                 );
 
-                // Note: When applying multiple script-level fixes sequentially,
-                // only the last script replacement will survive since each fix
-                // replaces the entire script content. However, environment variables
-                // accumulate correctly via MergeInto operations.
+                // Our comprehensive fix approach now handles all expressions in a single operation:
+                // All expressions in the script are replaced with environment variables,
+                // and all corresponding environment variables are defined in the env section.
                 let mut current_content = workflow_content.to_string();
                 let findings_with_fixes: Vec<_> =
                     findings.iter().filter(|f| !f.fixes.is_empty()).collect();
@@ -840,15 +923,15 @@ jobs:
                     runs-on: ubuntu-latest
                     steps:
                       - name: Multiple vulnerable expressions
-                        # Only one fix is applied, but the environment variables accumulate
+                        # All expressions are replaced and environment variables are created in a single comprehensive fix
                         run: |
-                          echo "User: ${{ github.actor }}"
-                          echo "Ref: ${{ github.ref_name }}"
+                          echo "User: ${GITHUB_ACTOR}"
+                          echo "Ref: ${GITHUB_REF_NAME}"
                           echo "Commit: ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
                         env:
                           GITHUB_ACTOR: ${{ github.actor }}
-                          GITHUB_REF_NAME: ${{ github.ref_name }}
                           GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+                          GITHUB_REF_NAME: ${{ github.ref_name }}
                 "#);
             }
         );
