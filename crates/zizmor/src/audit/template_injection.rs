@@ -244,7 +244,8 @@ impl TemplateInjection {
                     after: None,
                 },
                 YamlPatchOperation::MergeInto {
-                    route: step.route().with_keys(&["env".into()]),
+                    route: step.route(),
+                    key: "env".to_string(),
                     value: serde_yaml::to_value(HashMap::from([(
                         env_var.as_str(),
                         raw.as_curly(),
