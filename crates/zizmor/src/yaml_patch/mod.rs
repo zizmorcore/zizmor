@@ -54,7 +54,6 @@
 //! ```
 
 use anyhow::Result;
-use yamlpath::QueryMode;
 
 use crate::finding::location::{Route, RouteComponent};
 
@@ -388,21 +387,7 @@ fn route_to_feature_pretty<'a>(
     doc: &'a yamlpath::Document,
 ) -> Result<yamlpath::Feature<'a>, YamlPatchError> {
     match route.to_query() {
-        Some(query) => doc
-            .query(&query, QueryMode::Pretty)
-            .map_err(YamlPatchError::from),
-        None => Ok(doc.root()),
-    }
-}
-
-fn route_to_feature_exact<'a>(
-    route: &Route<'_>,
-    doc: &'a yamlpath::Document,
-) -> Result<yamlpath::Feature<'a>, YamlPatchError> {
-    match route.to_query() {
-        Some(query) => doc
-            .query(&query, QueryMode::Exact)
-            .map_err(YamlPatchError::from),
+        Some(query) => doc.query_pretty(&query).map_err(YamlPatchError::from),
         None => Ok(doc.root()),
     }
 }
@@ -740,41 +725,6 @@ mod tests {
     use crate::route;
 
     use super::*;
-
-    #[test]
-    fn test_route_to_feature_exact() {
-        let yaml = r#"
-foo:
-  bar:
-    ex1: |
-      abc
-      def
-
-    ext2: flow string
-
-    ext3: >-
-      abc
-      def
-
-    empty:
-"#;
-
-        let doc = yamlpath::Document::new(yaml).unwrap();
-
-        let feature = route_to_feature_exact(&route!("foo", "bar", "ex1"), &doc).unwrap();
-        assert_eq!(doc.extract(&feature), "|\n      abc\n      def");
-
-        let feature = route_to_feature_exact(&route!("foo", "bar", "ext2"), &doc).unwrap();
-        assert_eq!(doc.extract(&feature), "flow string");
-
-        let feature = route_to_feature_exact(&route!("foo", "bar", "ext3"), &doc).unwrap();
-        assert_eq!(doc.extract(&feature), ">-\n      abc\n      def");
-
-        // NOTE: Violates our "exact" contract since it returns the key itself,
-        // not an empty value.
-        let feature = route_to_feature_exact(&route!("foo", "bar", "empty"), &doc).unwrap();
-        assert_eq!(doc.extract(&feature), "empty:");
-    }
 
     #[test]
     fn test_yaml_path_replace_multiline_string() {
@@ -1123,11 +1073,11 @@ jobs:
         // Test what yamlpath extracts for the checkout step
         let doc = yamlpath::Document::new(original).unwrap();
         let checkout_query = route!("jobs", "test", "steps", 0).to_query().unwrap();
-        let checkout_feature = doc.query(&checkout_query, QueryMode::Pretty).unwrap();
+        let checkout_feature = doc.query_pretty(&checkout_query).unwrap();
 
         // Test what yamlpath extracts for the test job
         let job_query = route!("jobs", "test").to_query().unwrap();
-        let job_feature = doc.query(&job_query, QueryMode::Pretty).unwrap();
+        let job_feature = doc.query_pretty(&job_query).unwrap();
 
         // Assert that the checkout step extraction includes the expected content
         let checkout_content = doc.extract(&checkout_feature);
@@ -1206,11 +1156,11 @@ jobs:
         // See what yamlpath extracts for step 0
         let doc = yamlpath::Document::new(original).unwrap();
         let step0_query = route!("steps", 0).to_query().unwrap();
-        let step0_feature = doc.query(&step0_query, QueryMode::Pretty).unwrap();
+        let step0_feature = doc.query_pretty(&step0_query).unwrap();
 
         // See what yamlpath extracts for step 1
         let step1_query = route!("steps", 1).to_query().unwrap();
-        let step1_feature = doc.query(&step1_query, QueryMode::Pretty).unwrap();
+        let step1_feature = doc.query_pretty(&step1_query).unwrap();
 
         // Check for overlaps
         if step0_feature.location.byte_span.1 > step1_feature.location.byte_span.0 {
@@ -1541,7 +1491,7 @@ jobs:
         // Test yamlpath extraction
         let doc = yamlpath::Document::new(original).unwrap();
         let step_query = route!("jobs", "build", "steps", 0).to_query().unwrap();
-        let step_feature = doc.query(&step_query, QueryMode::Pretty).unwrap();
+        let step_feature = doc.query_pretty(&step_query).unwrap();
 
         // Test indentation calculation and content extraction
         let feature_with_ws = doc.extract_with_leading_whitespace(&step_feature);
@@ -1646,7 +1596,7 @@ jobs:
             .to_query()
             .unwrap();
 
-        if let Ok(env_feature) = doc.query(&env_query, QueryMode::Pretty) {
+        if let Ok(env_feature) = doc.query_pretty(&env_query) {
             let env_content = doc.extract(&env_feature);
 
             // Assert that env content is extracted correctly

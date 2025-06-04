@@ -7,7 +7,6 @@ use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
 use terminal_link::Link;
-use yamlpath::QueryMode;
 
 /// Represents a location's type.
 #[derive(Serialize, Copy, Clone, Debug, Default)]
@@ -196,7 +195,7 @@ impl<'doc> SymbolicLocation<'doc> {
 
             let query = builder.build();
 
-            document.query(&query, QueryMode::Pretty)?
+            document.query_pretty(&query)?
         };
 
         Ok(Location {

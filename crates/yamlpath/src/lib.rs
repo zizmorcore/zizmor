@@ -215,7 +215,7 @@ impl<'tree> From<Node<'tree>> for Feature<'tree> {
 /// Configures how features are extracted from a YAML document
 /// during queries.
 #[derive(Copy, Clone, Debug)]
-pub enum QueryMode {
+enum QueryMode {
     /// Make extracted features as "pretty" as possible, e.g. by
     /// including components that humans subjectively consider relevant.
     ///
@@ -316,8 +316,37 @@ impl Document {
 
     /// Perform a query on the current document, returning a `Feature`
     /// if the query succeeds.
-    pub fn query(&self, query: &Query, mode: QueryMode) -> Result<Feature, QueryError> {
-        self.query_node(query, mode).map(|n| n.into())
+    ///
+    /// The feature is extracted in "pretty" mode, meaning that it'll
+    /// contain a subjectively relevant "pretty" span rather than the
+    /// exact span of the query result.
+    ///
+    /// For example, querying `foo: bar` for `foo` will return
+    /// `foo: bar` instead of just `bar`.
+    pub fn query_pretty(&self, query: &Query) -> Result<Feature, QueryError> {
+        self.query_node(query, QueryMode::Pretty).map(|n| n.into())
+    }
+
+    /// Perform a query on the current document, returning a `Feature`
+    /// if the query succeeds. Returns `None` if the query
+    /// succeeds, but matches an absent value (e.g. `foo:`).
+    ///
+    /// The feature is extracted in "exact" mode, meaning that it'll
+    /// contain the exact span of the query result.
+    ///
+    /// For example, querying `foo: bar` for `foo` will return
+    /// just `bar` instead of `foo: bar`.
+    pub fn query_exact(&self, query: &Query) -> Result<Option<Feature>, QueryError> {
+        let node = self.query_node(query, QueryMode::Exact)?;
+
+        if node.kind_id() == self.block_mapping_pair_id || node.kind_id() == self.flow_pair_id {
+            // If the query matches a mapping pair, we return None,
+            // since this indicates an absent value.
+            Ok(None)
+        } else {
+            // Otherwise, we return the node as a feature.
+            Ok(Some(node.into()))
+        }
     }
 
     /// Returns a string slice of the original document corresponding to
@@ -504,15 +533,18 @@ impl Document {
     fn descend_mapping<'b>(&self, node: &Node<'b>, expected: &str) -> Result<Node<'b>, QueryError> {
         let mut cur = node.walk();
         for child in node.named_children(&mut cur) {
-            // Skip over any unexpected children, e.g. comments.
-            if child.kind_id() != self.flow_pair_id && child.kind_id() != self.block_mapping_pair_id
-            {
-                continue;
-            }
-
-            let key = child
-                .child_by_field_name("key")
-                .ok_or_else(|| QueryError::MissingChildField(child.kind().into(), "key"))?;
+            let key = match child.kind_id() {
+                // If we're on a `flow_pair` or `block_mapping_pair`, we
+                // need to get the `key` child.
+                id if id == self.flow_pair_id || id == self.block_mapping_pair_id => child
+                    .child_by_field_name("key")
+                    .ok_or_else(|| QueryError::MissingChildField(child.kind().into(), "key"))?,
+                // NOTE: Annoying edge case: if we have a flow mapping
+                // like `{ foo }`, then `foo` is a `flow_node` instead
+                // of a `flow_pair`.
+                id if id == self.flow_node_id => child,
+                _ => continue,
+            };
 
             // NOTE: To get the key's actual value, we need to get down to its
             // inner scalar. This is slightly annoying, since keys can be
@@ -690,9 +722,7 @@ baz:
         };
 
         assert_eq!(
-            doc.extract_with_leading_whitespace(
-                &doc.query(&query, crate::QueryMode::Pretty).unwrap()
-            ),
+            doc.extract_with_leading_whitespace(&doc.query_pretty(&query).unwrap()),
             "{d: e}"
         );
     }
@@ -717,7 +747,7 @@ bar: # outside
         let query = Query {
             route: vec![Component::Key("root")],
         };
-        let feature = doc.query(&query, crate::QueryMode::Pretty).unwrap();
+        let feature = doc.query_pretty(&query).unwrap();
         assert_eq!(
             doc.feature_comments(&feature),
             &["# rootlevel", "# foo", "# bar", "# baz", "# quux"]
@@ -732,7 +762,7 @@ bar: # outside
                 Component::Index(1),
             ],
         };
-        let feature = doc.query(&query, crate::QueryMode::Pretty).unwrap();
+        let feature = doc.query_pretty(&query).unwrap();
         assert_eq!(doc.feature_comments(&feature), &["# quux"]);
     }
 }
