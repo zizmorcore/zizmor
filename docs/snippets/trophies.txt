@@ -174,6 +174,7 @@ pypi/warehouse#18103
 pymc-devs/pymc#7624
 pymc-devs/pytensor#1136
 pytest-dev/pytest#13062
+pytest-dev/pytest-django#1211
 python/bedevere#652
 python/cpython#127749
 python/miss-islington#705
