@@ -840,6 +840,7 @@
 
     ??? example "Examples"
         - pytest-dev/pytest#13062
+        - pytest-dev/pytest-django#1211
 
 
 -   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python
