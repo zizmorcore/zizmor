@@ -197,8 +197,6 @@ mod tests {
     /// 2. Sets up the audit state
     /// 3. Creates and runs the audit
     /// 4. Executes the provided test closure with the findings
-    ///
-    /// TODO: Move this to a separate file for reuse in tests in other audit rules.
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
             let key = InputKey::local($filename, None::<&str>).unwrap();
