@@ -727,6 +727,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_yaml_path_replace_empty_block_value() {
+        let original = r#"
+foo:
+  bar:
+"#;
+
+        let operations = vec![YamlPatchOperation::Replace {
+            route: route!("foo", "bar"),
+            value: serde_yaml::Value::String("abc".to_string()),
+        }];
+
+        let result = apply_yaml_patch(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        foo:
+          bar: abc
+        ");
+    }
+
+    #[test]
+    fn test_yaml_path_replace_empty_flow_value() {
+        let original = r#"
+foo: { bar: }
+"#;
+
+        let operations = vec![YamlPatchOperation::Replace {
+            route: route!("foo", "bar"),
+            value: serde_yaml::Value::String("abc".to_string()),
+        }];
+
+        let result = apply_yaml_patch(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"");
+    }
+
+    #[test]
     fn test_yaml_path_replace_multiline_string() {
         let original = r#"
 foo:
