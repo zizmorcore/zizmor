@@ -53,8 +53,9 @@
 //! // Result contains: contents: write, actions: write, issues: read
 //! ```
 
+use std::borrow::Cow;
+
 use anyhow::Result;
-use yamlpath::QueryMode;
 
 use crate::finding::location::{Route, RouteComponent};
 
@@ -72,6 +73,45 @@ pub enum YamlPatchError {
 /// Represents a YAML patch operation that preserves comments and formatting
 #[derive(Debug, Clone)]
 pub enum YamlPatchOperation<'doc> {
+    /// Rewrites a fragment of a feature at the given path.
+    ///
+    /// This can be used to perform graceful rewrites of string values,
+    /// regardless of their nested position or single/multi-line nature.
+    ///
+    /// For example, the following:
+    ///
+    /// ```yaml
+    /// run: |
+    ///   echo "foo: ${{ foo }}"
+    /// ```
+    ///
+    /// can be rewritten to:
+    ///
+    /// ```yaml
+    /// run: |
+    ///   echo "foo ${FOO}"
+    /// ```
+    ///
+    /// via a `RewriteFragment` with:
+    ///
+    /// ```
+    /// route: "/run",
+    /// from: "${{ foo }}",
+    /// to: "${FOO}",
+    /// ```
+    ///
+    /// This operation performs exactly one rewrite at a time, meaning
+    /// that the first match of `from` in the feature will be replaced.
+    ///
+    /// This can be made more precise by passing a `after` index,
+    /// which specifies that the rewrite should only occur on
+    /// the first match of `from` that occurs after the given byte index.
+    RewriteFragment {
+        route: Route<'doc>,
+        from: Cow<'doc, str>,
+        to: Cow<'doc, str>,
+        after: Option<usize>,
+    },
     /// Replace the value at the given path
     Replace {
         route: Route<'doc>,
@@ -136,20 +176,24 @@ pub fn apply_yaml_patch(
     for op in operations {
         let doc = yamlpath::Document::new(&result)?;
         match &op {
+            YamlPatchOperation::RewriteFragment { route, .. } => {
+                let feature = route_to_feature_pretty(route, &doc)?;
+                positioned_ops.push((feature.location.byte_span.0, op));
+            }
             YamlPatchOperation::Replace { route, value: _ } => {
-                let feature = route_to_feature(route, &doc)?;
+                let feature = route_to_feature_pretty(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.0, op));
             }
             YamlPatchOperation::Add { route, .. } => {
-                let feature = route_to_feature(route, &doc)?;
+                let feature = route_to_feature_pretty(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.1, op));
             }
             YamlPatchOperation::MergeInto { route, .. } => {
-                let feature = route_to_feature(route, &doc)?;
+                let feature = route_to_feature_pretty(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.1, op));
             }
             YamlPatchOperation::Remove { route } => {
-                let feature = route_to_feature(route, &doc)?;
+                let feature = route_to_feature_pretty(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.1, op));
             }
         }
@@ -173,8 +217,57 @@ fn apply_single_operation(
     let doc = yamlpath::Document::new(content)?;
 
     match operation {
+        YamlPatchOperation::RewriteFragment {
+            route,
+            from,
+            to,
+            after,
+        } => {
+            let Some(feature) = route_to_feature_exact(route, &doc)? else {
+                return Err(YamlPatchError::InvalidOperation(format!(
+                    "no pre-existing value to patch at {route:?}"
+                )));
+            };
+
+            let extracted_feature = doc.extract(&feature);
+
+            let bias = match after {
+                Some(after) => *after,
+                None => 0,
+            };
+
+            if bias > extracted_feature.len() {
+                return Err(YamlPatchError::InvalidOperation(format!(
+                    "replacement scan index {bias} is out of bounds for feature",
+                )));
+            }
+
+            let slice = &extracted_feature[bias..];
+
+            let (from_start, from_end) = match slice.find(from.as_ref()) {
+                Some(idx) => (idx + bias, idx + bias + from.len()),
+                None => {
+                    return Err(YamlPatchError::InvalidOperation(format!(
+                        "no match for '{}' in feature",
+                        from
+                    )));
+                }
+            };
+
+            let mut patched_feature = extracted_feature.to_string();
+            patched_feature.replace_range(from_start..from_end, to);
+
+            // Finally, put our patch back into the overall content.
+            let mut patched_content = content.to_string();
+            patched_content.replace_range(
+                feature.location.byte_span.0..feature.location.byte_span.1,
+                &patched_feature,
+            );
+
+            Ok(patched_content)
+        }
         YamlPatchOperation::Replace { route, value } => {
-            let feature = route_to_feature(route, &doc)?;
+            let feature = route_to_feature_pretty(route, &doc)?;
 
             // Get the replacement content
             let replacement = apply_value_replacement(content, &feature, &doc, value, true)?;
@@ -206,7 +299,7 @@ fn apply_single_operation(
                 return handle_root_level_addition(content, key, value);
             }
 
-            let feature = route_to_feature(route, &doc)?;
+            let feature = route_to_feature_pretty(route, &doc)?;
 
             // Convert the new value to YAML string
             let new_value_str = serialize_yaml_value(value)?;
@@ -299,7 +392,7 @@ fn apply_single_operation(
             // Check if the key already exists in the target mapping
             let existing_key_route = route.with_keys(&[key.as_str().into()]);
 
-            if let Ok(existing_feature) = route_to_feature(&existing_key_route, &doc) {
+            if let Ok(existing_feature) = route_to_feature_pretty(&existing_key_route, &doc) {
                 // Key exists, check if we need to merge mappings
                 if let serde_yaml::Value::Mapping(new_mapping) = &value {
                     // Try to parse the existing value as YAML to see if it's also a mapping
@@ -370,7 +463,7 @@ fn apply_single_operation(
                 ));
             }
 
-            let feature = route_to_feature(route, &doc)?;
+            let feature = route_to_feature_pretty(route, &doc)?;
 
             // For removal, we need to remove the entire line including leading whitespace
             let start_pos = find_line_start(content, feature.location.byte_span.0);
@@ -383,15 +476,23 @@ fn apply_single_operation(
     }
 }
 
-fn route_to_feature<'a>(
+fn route_to_feature_pretty<'a>(
     route: &Route<'_>,
     doc: &'a yamlpath::Document,
 ) -> Result<yamlpath::Feature<'a>, YamlPatchError> {
     match route.to_query() {
-        Some(query) => doc
-            .query(&query, QueryMode::Pretty)
-            .map_err(YamlPatchError::from),
+        Some(query) => doc.query_pretty(&query).map_err(YamlPatchError::from),
         None => Ok(doc.root()),
+    }
+}
+
+fn route_to_feature_exact<'a>(
+    route: &Route<'_>,
+    doc: &'a yamlpath::Document,
+) -> Result<Option<yamlpath::Feature<'a>>, YamlPatchError> {
+    match route.to_query() {
+        Some(query) => doc.query_exact(&query).map_err(YamlPatchError::from),
+        None => Ok(Some(doc.root())),
     }
 }
 
@@ -570,7 +671,7 @@ fn apply_mapping_replacement(
     value: &serde_yaml::Value,
 ) -> Result<String, YamlPatchError> {
     let doc = yamlpath::Document::new(content)?;
-    let feature = route_to_feature(route, &doc)?;
+    let feature = route_to_feature_pretty(route, &doc)?;
 
     // Get the replacement content using the shared function (without multiline literal support)
     let replacement = apply_value_replacement(content, &feature, &doc, value, false)?;
@@ -723,50 +824,244 @@ fn apply_value_replacement(
     Ok(replacement)
 }
 
-/// Macro for creating comment-preserving YAML patch functions
-///
-/// This macro creates a closure that can be used with the Fix system to apply
-/// YAML patch operations while preserving comments and formatting. The generated
-/// function takes the old content as input and returns the patched content wrapped
-/// in `anyhow::Result<Option<String>>`.
-///
-/// # Returns
-///
-/// - `Ok(Some(new_content))` if the patch was successfully applied
-/// - `Err(error)` if the patch failed to apply
-///
-/// # Example
-///
-/// ```rust
-/// let fix = Fix {
-///     title: "Update permission".to_string(),
-///     description: "Change permission from write to read".to_string(),
-///     apply: apply_yaml_patch!(vec![
-///         YamlPatchOperation::Replace {
-///             path: "/permissions/contents".to_string(),
-///             value: serde_yaml::Value::String("read".to_string()),
-///         }
-///     ]),
-/// };
-/// ```
-#[macro_export]
-macro_rules! apply_yaml_patch {
-    ($operations:expr) => {{
-        let operations = $operations;
-        Box::new(move |old_content: &str| -> anyhow::Result<Option<String>> {
-            match $crate::yaml_patch::apply_yaml_patch(old_content, operations.clone()) {
-                Ok(new_content) => Ok(Some(new_content)),
-                Err(e) => Err(anyhow::anyhow!("YAML patch failed: {}", e)),
-            }
-        })
-    }};
-}
-
 #[cfg(test)]
 mod tests {
     use crate::route;
 
     use super::*;
+
+    #[test]
+    fn test_reparse_exact_extracted() {
+        let original = r#"
+foo:
+  bar:
+    a: b
+    c: d
+    e: f
+"#;
+
+        let doc = yamlpath::Document::new(original).unwrap();
+        let feature = route_to_feature_exact(&route!("foo", "bar"), &doc)
+            .unwrap()
+            .unwrap();
+
+        let content = doc.extract_with_leading_whitespace(&feature);
+
+        let reparsed = serde_yaml::from_str::<serde_yaml::Mapping>(content).unwrap();
+        assert_eq!(
+            reparsed.get(&serde_yaml::Value::String("a".to_string())),
+            Some(&serde_yaml::Value::String("b".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_yaml_path_rewrite_fragment_single_line() {
+        let original = r#"
+foo:
+  bar: 'echo "foo: ${{ foo }}"'
+"#;
+
+        let operations = vec![YamlPatchOperation::RewriteFragment {
+            route: route!("foo", "bar"),
+            from: "${{ foo }}".into(),
+            to: "${FOO}".into(),
+            after: None,
+        }];
+
+        let result = apply_yaml_patch(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        foo:
+          bar: 'echo "foo: ${FOO}"'
+        "#);
+    }
+
+    #[test]
+    fn test_yaml_path_rewrite_fragment_multi_line() {
+        let original = r#"
+foo:
+  bar: |
+    echo "foo: ${{ foo }}"
+    echo "bar: ${{ bar }}"
+    echo "foo: ${{ foo }}"
+"#;
+
+        // Only the first occurrence of `from` should be replaced
+        let operations = vec![YamlPatchOperation::RewriteFragment {
+            route: route!("foo", "bar"),
+            from: "${{ foo }}".into(),
+            to: "${FOO}".into(),
+            after: None,
+        }];
+
+        let result = apply_yaml_patch(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        foo:
+          bar: |
+            echo "foo: ${FOO}"
+            echo "bar: ${{ bar }}"
+            echo "foo: ${{ foo }}"
+        "#);
+
+        // Now test with not_before set to skip the first occurrence
+        let operations = vec![YamlPatchOperation::RewriteFragment {
+            route: route!("foo", "bar"),
+            from: "${{ foo }}".into(),
+            to: "${FOO}".into(),
+            after: original.find("${{ foo }}").map(|idx| idx + 1),
+        }];
+
+        let result = apply_yaml_patch(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        foo:
+          bar: |
+            echo "foo: ${{ foo }}"
+            echo "bar: ${{ bar }}"
+            echo "foo: ${FOO}"
+        "#);
+    }
+
+    #[test]
+    fn test_yaml_path_rewrite_fragment_multi_line_in_list() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "foo: ${{ foo }}"
+          echo "bar: ${{ bar }}"
+        "#;
+
+        let operations = vec![
+            YamlPatchOperation::RewriteFragment {
+                route: route!("jobs", "test", "steps", 0, "run"),
+                from: "${{ foo }}".into(),
+                to: "${FOO}".into(),
+                after: None,
+            },
+            YamlPatchOperation::RewriteFragment {
+                route: route!("jobs", "test", "steps", 0, "run"),
+                from: "${{ bar }}".into(),
+                to: "${BAR}".into(),
+                after: None,
+            },
+        ];
+
+        let result = apply_yaml_patch(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - run: |
+                  echo "foo: ${FOO}"
+                  echo "bar: ${BAR}"
+        "#);
+    }
+
+    #[test]
+    fn test_yaml_path_replace_empty_block_value() {
+        let original = r#"
+foo:
+  bar:
+"#;
+
+        let operations = vec![YamlPatchOperation::Replace {
+            route: route!("foo", "bar"),
+            value: serde_yaml::Value::String("abc".to_string()),
+        }];
+
+        let result = apply_yaml_patch(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        foo:
+          bar: abc
+        ");
+    }
+
+    //     #[test]
+    //     fn test_yaml_path_replace_empty_flow_value() {
+    //         let original = r#"
+    // foo: { bar: }
+    // "#;
+
+    //         let operations = vec![YamlPatchOperation::Replace {
+    //             route: route!("foo", "bar"),
+    //             value: serde_yaml::Value::String("abc".to_string()),
+    //         }];
+
+    //         let result = apply_yaml_patch(original, &operations).unwrap();
+
+    //         insta::assert_snapshot!(result, @r"");
+    //     }
+
+    //     #[test]
+    //     fn test_yaml_path_replace_empty_flow_value_no_colon() {
+    //         let original = r#"
+    //     foo: { bar }
+    //     "#;
+
+    //         let operations = vec![YamlPatchOperation::Replace {
+    //             route: route!("foo", "bar"),
+    //             value: serde_yaml::Value::String("abc".to_string()),
+    //         }];
+
+    //         let result = apply_yaml_patch(original, &operations).unwrap();
+
+    //         insta::assert_snapshot!(result, @r"");
+    //     }
+
+    #[test]
+    fn test_yaml_path_replace_multiline_string() {
+        let original = r#"
+foo:
+  bar:
+    baz: |
+      Replace me.
+      Replace me too.
+"#;
+
+        let operations = vec![YamlPatchOperation::Replace {
+            route: route!("foo", "bar", "baz"),
+            value: "New content.\nMore new content.\n".into(),
+        }];
+
+        let result = apply_yaml_patch(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        foo:
+          bar:
+            baz: |
+              New content.
+              More new content.
+        ");
+    }
+
+    //     #[test]
+    //     fn test_yaml_patch_replace_multiline_string_in_list() {
+    //         let original = r#"
+    // jobs:
+    //   replace-me:
+    //     runs-on: ubuntu-latest
+
+    //     steps:
+    //       - run: |
+    //           echo "${{ github.event.issue.title }}"
+    // "#;
+
+    //         let operations = vec![YamlPatchOperation::Replace {
+    //             route: route!("jobs", "replace-me", "steps", 0, "run"),
+    //             value: "echo \"${GITHUB_EVENT_ISSUE_TITLE}\"\n".into(),
+    //         }];
+
+    //         let result = apply_yaml_patch(original, &operations).unwrap();
+
+    //         insta::assert_snapshot!(result, @r"");
+    //     }
 
     #[test]
     fn test_yaml_patch_replace_preserves_comments() {
@@ -1067,11 +1362,11 @@ jobs:
         // Test what yamlpath extracts for the checkout step
         let doc = yamlpath::Document::new(original).unwrap();
         let checkout_query = route!("jobs", "test", "steps", 0).to_query().unwrap();
-        let checkout_feature = doc.query(&checkout_query, QueryMode::Pretty).unwrap();
+        let checkout_feature = doc.query_pretty(&checkout_query).unwrap();
 
         // Test what yamlpath extracts for the test job
         let job_query = route!("jobs", "test").to_query().unwrap();
-        let job_feature = doc.query(&job_query, QueryMode::Pretty).unwrap();
+        let job_feature = doc.query_pretty(&job_query).unwrap();
 
         // Assert that the checkout step extraction includes the expected content
         let checkout_content = doc.extract(&checkout_feature);
@@ -1150,11 +1445,11 @@ jobs:
         // See what yamlpath extracts for step 0
         let doc = yamlpath::Document::new(original).unwrap();
         let step0_query = route!("steps", 0).to_query().unwrap();
-        let step0_feature = doc.query(&step0_query, QueryMode::Pretty).unwrap();
+        let step0_feature = doc.query_pretty(&step0_query).unwrap();
 
         // See what yamlpath extracts for step 1
         let step1_query = route!("steps", 1).to_query().unwrap();
-        let step1_feature = doc.query(&step1_query, QueryMode::Pretty).unwrap();
+        let step1_feature = doc.query_pretty(&step1_query).unwrap();
 
         // Check for overlaps
         if step0_feature.location.byte_span.1 > step1_feature.location.byte_span.0 {
@@ -1485,7 +1780,7 @@ jobs:
         // Test yamlpath extraction
         let doc = yamlpath::Document::new(original).unwrap();
         let step_query = route!("jobs", "build", "steps", 0).to_query().unwrap();
-        let step_feature = doc.query(&step_query, QueryMode::Pretty).unwrap();
+        let step_feature = doc.query_pretty(&step_query).unwrap();
 
         // Test indentation calculation and content extraction
         let feature_with_ws = doc.extract_with_leading_whitespace(&step_feature);
@@ -1590,7 +1885,7 @@ jobs:
             .to_query()
             .unwrap();
 
-        if let Ok(env_feature) = doc.query(&env_query, QueryMode::Pretty) {
+        if let Ok(env_feature) = doc.query_pretty(&env_query) {
             let env_content = doc.extract(&env_feature);
 
             // Assert that env content is extracted correctly

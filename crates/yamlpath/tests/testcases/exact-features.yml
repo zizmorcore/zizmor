@@ -2,6 +2,8 @@ testcase:
   foo: bar
   abc:
     def: ghi
+    lol: { foo: foo }
+    lol2: { foo: }
 
   even:
     deeper:
@@ -13,6 +15,13 @@ testcase:
     - list: >-
         abc
 
+  flow2:
+    emptykey:
+
+  flow3: { emptykey: }
+  flow4: { emptykey }
+
+
 queries:
   - query: [foo]
     mode: exact
@@ -21,6 +30,14 @@ queries:
   - query: [abc, def]
     mode: exact
     expected: ghi
+
+  - query: [abc, lol]
+    mode: exact
+    expected: '{ foo: foo }'
+  
+  - query: [abc, lol2]
+    mode: exact
+    expected: '{ foo: }'
 
   - query: [even, deeper, block]
     mode: exact
@@ -34,3 +51,16 @@ queries:
     expected: |2-
       >-
               abc
+
+  - query: [flow2, emptykey]
+    mode: exact
+    expected: "<<empty>>"
+
+  - query: [flow3, emptykey]
+    mode: exact
+    expected: "<<empty>>"
+
+  # BUG: should be "<<empty>>"
+  - query: [flow4, emptykey]
+    mode: exact
+    expected: "emptykey"
