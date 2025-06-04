@@ -706,7 +706,7 @@ jobs:
     }
 
     #[test]
-    fn test_template_injection_multiple_expressions() {
+    fn test_template_injection_fix_multiple_expressions() {
         let workflow_content = r#"
 name: Test Multiple Template Injections
 on: push
@@ -779,6 +779,72 @@ jobs:
                           GITHUB_REF_NAME: ${{ github.ref_name }}
                           GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
                 "#);
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_duplicate_expressions() {
+        let workflow_content = r#"
+        name: Test Duplicate Template Injections
+        on: push
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Duplicate vulnerable expressions
+                run: |
+                  echo "User: ${{ github.actor }}"
+                  echo "User again: ${{ github.actor }}"
+                  echo "Ref: ${{ github.ref_name }}"
+        "#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_duplicate_expressions.yml",
+            workflow_content,
+            |findings: Vec<crate::finding::Finding>| {
+                // Should find template injection
+                assert!(!findings.is_empty());
+
+                // Should have at least one finding with a fix
+                let findings_with_fixes: Vec<_> =
+                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
+                assert!(
+                    !findings_with_fixes.is_empty(),
+                    "Expected at least one finding with a fix"
+                );
+
+                // Apply each fix in sequence
+                let mut current_content = workflow_content.to_string();
+                for finding in findings_with_fixes {
+                    if let Some(fix) = finding
+                        .fixes
+                        .iter()
+                        .find(|f| f.title == "replace expression with environment variable")
+                    {
+                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
+                            current_content = new_content;
+                        }
+                    }
+                }
+
+                insta::assert_snapshot!(current_content, @r#"
+                    name: Test Duplicate Template Injections
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Duplicate vulnerable expressions
+                            run: |
+                              echo "User: ${GITHUB_ACTOR}"
+                              echo "User again: ${GITHUB_ACTOR}"
+                              echo "Ref: ${GITHUB_REF_NAME}"
+                            env:
+                              GITHUB_ACTOR: ${{ github.actor }}
+                              GITHUB_REF_NAME: ${{ github.ref_name }}
+                    "#);
             }
         );
     }
