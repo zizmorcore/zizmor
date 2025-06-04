@@ -177,7 +177,6 @@ pub fn apply_yaml_patch(
         let doc = yamlpath::Document::new(&result)?;
         match &op {
             YamlPatchOperation::RewriteFragment { route, .. } => {
-                // For RewriteFragment, we need to find the feature and its position
                 let feature = route_to_feature_pretty(route, &doc)?;
                 positioned_ops.push((feature.location.byte_span.0, op));
             }
