@@ -100,6 +100,8 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: astral-sh/setup-uv@f0ec1fc3b38f5e7cd731bb6ce540c5af426746bb # v6.1.0
+
       - name: try to refresh CodeQL injection sinks
         run: |
           make codeql-injection-sinks
