@@ -1,57 +1,4 @@
 //! Comment and format-preserving YAML patch operations.
-//!
-//! This module provides functionality to modify YAML documents while preserving
-//! comments, formatting, and structure. Unlike standard YAML->JSON->YAML round-trips
-//! that lose comments, this implementation uses precise byte-level operations
-//! guided by the yamlpath library.
-//!
-//! # Supported Operations
-//!
-//! - **Replace**: Replace the value at a given JSON Pointer path
-//! - **Add**: Add a new key-value pair to a mapping at the given path
-//! - **MergeInto**: Merge key-value pairs into an existing mapping, or create if it doesn't exist
-//! - **Remove**: Remove a key at the given path
-//!
-//! All operations support root-level paths ("/") and use JSON Pointer syntax for path specification.
-//!
-//! # Path Format
-//!
-//! Paths use JSON Pointer format (RFC 6901):
-//! - `/` - Root document
-//! - `/permissions` - Top-level key "permissions"
-//! - `/permissions/contents` - Nested key "contents" under "permissions"
-//! - `/jobs/test/steps/0` - Array index 0 in the "steps" array
-//! - `/path/with~1slash` - Key containing a forward slash (escaped as ~1)
-//! - `/path/with~0tilde` - Key containing a tilde (escaped as ~0)
-//!
-//! # Example
-//!
-//! ```rust
-//! use crate::yaml_patch::{Op, apply_yaml_patch};
-//!
-//! let yaml = r#"
-//! # Configuration
-//! permissions: # Security settings
-//!   contents: read  # Only read access
-//!   actions: write  # Write access for actions
-//! "#;
-//!
-//! let operations = vec![
-//!     Op::Replace {
-//!         path: "/permissions/contents".to_string(),
-//!         value: serde_yaml::Value::String("write".to_string()),
-//!     },
-//!     Op::Add {
-//!         path: "/permissions".to_string(),
-//!         key: "issues".to_string(),
-//!         value: serde_yaml::Value::String("read".to_string()),
-//!     },
-//! ];
-//!
-//! let result = apply_yaml_patch(yaml, operations).unwrap();
-//! // Comments are preserved!
-//! // Result contains: contents: write, actions: write, issues: read
-//! ```
 
 use std::borrow::Cow;
 
@@ -161,7 +108,7 @@ pub enum Op<'doc> {
 /// - The input YAML is not valid
 /// - Any path in the operations is invalid or not found
 /// - YAML serialization fails during value conversion
-pub fn apply_yaml_patch(content: &str, patches: &[Patch]) -> Result<String, YamlPatchError> {
+pub fn apply_yaml_patches(content: &str, patches: &[Patch]) -> Result<String, YamlPatchError> {
     // Validate that the input YAML is parseable before attempting patches
     if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(content) {
         return Err(YamlPatchError::InvalidOperation(format!(
@@ -868,7 +815,7 @@ foo:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r#"
         foo:
@@ -896,7 +843,7 @@ foo:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r#"
         foo:
@@ -916,7 +863,7 @@ foo:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r#"
         foo:
@@ -958,7 +905,7 @@ jobs:
             },
         ];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r#"
         jobs:
@@ -983,7 +930,7 @@ foo:
             operation: Op::Replace(serde_yaml::Value::String("abc".to_string())),
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r"
         foo:
@@ -1038,7 +985,7 @@ foo:
             operation: Op::Replace("New content.\nMore new content.\n".into()),
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r"
         foo:
@@ -1094,7 +1041,7 @@ jobs:
             operation: Op::Replace(serde_yaml::Value::String("write".to_string())),
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Preserves all comments, but changes the value of `contents`
         insta::assert_snapshot!(result, @r"
@@ -1130,7 +1077,7 @@ permissions:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Preserves original content, adds new key while maintaining indentation
         insta::assert_snapshot!(result, @r"
@@ -1155,7 +1102,7 @@ permissions:
             operation: Op::Remove,
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Preserves other content, removes the target line
         insta::assert_snapshot!(result, @r"
@@ -1197,7 +1144,7 @@ jobs:
             },
         ];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // All comments preserved, all changes applied
         insta::assert_snapshot!(result, @r"
@@ -1275,7 +1222,7 @@ jobs:
             },
         ];
 
-        let result = apply_yaml_patch(original_yaml, &operations).unwrap();
+        let result = apply_yaml_patches(original_yaml, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r"
         # GitHub Actions Workflow
@@ -1314,7 +1261,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Empty mapping should be formatted inline
         insta::assert_snapshot!(result, @r"
@@ -1346,7 +1293,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(&original_with_newline, &operations).unwrap();
+        let result = apply_yaml_patches(&original_with_newline, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r#"
         name: Test
@@ -1436,7 +1383,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // The with section should be added to the first step correctly, not mixed with comments
         insta::assert_snapshot!(result, @r#"
@@ -1549,7 +1496,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r"
         # GitHub Actions Workflow
@@ -1582,7 +1529,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations);
+        let result = apply_yaml_patches(original, &operations);
         assert!(result.is_ok());
 
         let result = result.unwrap();
@@ -1622,7 +1569,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         insta::assert_snapshot!(result, @r#"
         steps:
@@ -1663,7 +1610,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
         insta::assert_snapshot!(result, @r#"
         jobs:
           test:
@@ -1703,7 +1650,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Should merge the new mapping with the existing one
         insta::assert_snapshot!(result, @r#"
@@ -1747,7 +1694,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Should only have one env: key
         insta::assert_snapshot!(result, @r#"
@@ -1788,7 +1735,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
         insta::assert_snapshot!(result, @r#"
         jobs:
           test:
@@ -1881,7 +1828,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Assert that the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -1995,7 +1942,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -2050,7 +1997,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -2100,7 +2047,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -2165,7 +2112,7 @@ jobs:
             },
         ];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
@@ -2212,7 +2159,7 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &operations).unwrap();
 
         // Verify the result is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
