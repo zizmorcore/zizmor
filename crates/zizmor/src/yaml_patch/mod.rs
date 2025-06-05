@@ -10,9 +10,9 @@ use crate::finding::location::{Route, RouteComponent};
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("YAML query error: {0}")]
-    QueryError(#[from] yamlpath::QueryError),
+    Query(#[from] yamlpath::QueryError),
     #[error("YAML serialization error: {0}")]
-    SerializationError(#[from] serde_yaml::Error),
+    Serialization(#[from] serde_yaml::Error),
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
 }
