@@ -8,7 +8,7 @@ use self::location::{Location, SymbolicLocation};
 use crate::{
     InputKey,
     models::AsDocument,
-    yaml_patch::{self, YamlPatchOperation},
+    yaml_patch::{self, Patch},
 };
 
 pub(crate) mod location;
@@ -112,13 +112,13 @@ pub(crate) struct Fix<'doc> {
     #[allow(dead_code)]
     pub(crate) description: String,
     pub(crate) _key: &'doc InputKey,
-    pub(crate) ops: Vec<YamlPatchOperation<'doc>>,
+    pub(crate) patches: Vec<Patch<'doc>>,
 }
 
 impl Fix<'_> {
     /// Apply the fix to the given file content.
     pub(crate) fn apply_to_content(&self, old_content: &str) -> anyhow::Result<Option<String>> {
-        match yaml_patch::apply_yaml_patch(old_content, &self.ops) {
+        match yaml_patch::apply_yaml_patches(old_content, &self.patches) {
             Ok(new_content) => Ok(Some(new_content)),
             Err(e) => Err(anyhow!("YAML path failed: {e}")),
         }

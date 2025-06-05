@@ -17,7 +17,7 @@ use crate::{
     route,
     state::AuditState,
     utils::split_patterns,
-    yaml_patch::YamlPatchOperation,
+    yaml_patch::{Op, Patch},
 };
 
 pub(crate) struct Artipacked;
@@ -61,19 +61,22 @@ impl Artipacked {
                 after checkout, which may be inadvertently leaked through subsequent actions like artifact uploads. \
                 Setting 'persist-credentials: false' ensures that credentials don't persist beyond the checkout step itself.".to_string(),
             _key: step.location().key,
-            ops: vec![
-                YamlPatchOperation::MergeInto {
+            patches: vec![
+                Patch {
                     route: route!("jobs", job_id, "steps", checkout_index),
-                    key: "with".to_string(),
-                    value: {
-                        let mut with_map = serde_yaml::Mapping::new();
-                        with_map.insert(
-                            serde_yaml::Value::String("persist-credentials".to_string()),
-                            serde_yaml::Value::Bool(false),
-                        );
-                        serde_yaml::Value::Mapping(with_map)
+                    operation: Op::MergeInto {
+
+                        key: "with".to_string(),
+                        value: {
+                            let mut with_map = serde_yaml::Mapping::new();
+                            with_map.insert(
+                                serde_yaml::Value::String("persist-credentials".to_string()),
+                                serde_yaml::Value::Bool(false),
+                            );
+                            serde_yaml::Value::Mapping(with_map)
+                        },
                     },
-                },
+                }
             ],
         }
     }

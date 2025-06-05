@@ -36,7 +36,7 @@ use crate::{
     models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesPattern},
     state::AuditState,
     utils::extract_expressions,
-    yaml_patch::YamlPatchOperation,
+    yaml_patch::{Op, Patch},
 };
 
 pub(crate) struct TemplateInjection;
@@ -236,21 +236,25 @@ impl TemplateInjection {
             title: "replace expression with environment variable".into(),
             description: "todo".into(),
             _key: step.location().key,
-            ops: vec![
-                YamlPatchOperation::RewriteFragment {
+            patches: vec![
+                Patch {
                     route: step.route().with_keys(&["run".into()]),
-                    from: raw.as_raw().to_string().into(),
-                    to: format!("${{{env_var}}}").into(),
-                    after: None,
+                    operation: Op::RewriteFragment {
+                        from: raw.as_raw().to_string().into(),
+                        to: format!("${{{env_var}}}").into(),
+                        after: None,
+                    },
                 },
-                YamlPatchOperation::MergeInto {
+                Patch {
                     route: step.route(),
-                    key: "env".to_string(),
-                    value: serde_yaml::to_value(HashMap::from([(
-                        env_var.as_str(),
-                        raw.as_curly(),
-                    )]))
-                    .unwrap(),
+                    operation: Op::MergeInto {
+                        key: "env".to_string(),
+                        value: serde_yaml::to_value(HashMap::from([(
+                            env_var.as_str(),
+                            raw.as_curly(),
+                        )]))
+                        .unwrap(),
+                    },
                 },
             ],
         })
