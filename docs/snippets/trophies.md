@@ -742,6 +742,14 @@
         - PlasmaPy/PlasmaPy#2975
 
 
+-   ![](https://github.com/PowerDNS.png?size=40){ width="40" loading=lazy align=left } PowerDNS
+
+    ---
+
+    ??? example "Examples"
+        - PowerDNS/pdns#15600
+
+
 -   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc
 
     ---
@@ -841,6 +849,7 @@
     ??? example "Examples"
         - pytest-dev/pytest#13062
         - pytest-dev/pytest-django#1211
+        - pytest-dev/pytest-django#1214
 
 
 -   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python
