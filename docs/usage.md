@@ -618,13 +618,66 @@ zizmor --cache-dir /tmp/zizmor ...
 
 ### Use in GitHub Actions
 
-`zizmor` is designed to integrate with GitHub Actions. There are
-two primary ways to use `zizmor` in GitHub Actions:
+`zizmor` is designed to integrate with GitHub Actions.
 
-1. With `--format=sarif` via Advanced Security (recommended)
+The easiest way to use `zizmor` in GitHub Actions is
+with @zizmorcore/zizmor-action. However, expert users or those who want
+more fine-grained control over their integration can also use the
+[Manual integration](#manual-integration) steps further below.
+
+#### With @zizmorcore/zizmor-action *&nbsp;*{.chip-recommended}
+
+To get started with @zizmorcore/zizmor-action, you can use the following
+workflow skeleton:
+
+```yaml title="zizmor.yml"
+name: GitHub Actions Security Analysis with zizmor 🌈
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["**"]
+
+permissions: {}
+
+jobs:
+  zizmor:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read # only needed for private repos
+      actions: read # only needed for private repos
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor 🌈
+        uses: zizmorcore/zizmor-action@f52a838cfabf134edcbaa7c8b3677dde20045018 # v0.1.1
+```
+
+See the action's [`inputs` documentation][inputs-documentation] for
+additional configuration options.
+
+[inputs-documentation]: https://github.com/zizmorcore/zizmor-action#inputs
+
+#### Manual integration *&nbsp;*{.chip-expert}
+
+If you don't want to use @zizmorcore/zizmor-action, you can always
+use `zizmor` directly in your GitHub Actions workflows.
+
+All of the same functionality is available, but you'll need to do a bit
+more explicit scaffolding.
+
+There are two main ways to manually integrate `zizmor` into your
+GitHub Actions setup:
+
+1. With `--format=sarif` via Advanced Security *&nbsp;*{.chip-recommended}
 2. With `--format=github` via GitHub Annotations
 
-=== "With Advanced Security (recommended)"
+=== "With Advanced Security *&nbsp;*{.chip-recommended}"
 
     GitHub's Advanced Security and [code scanning functionality] supports
     [SARIF], which `zizmor` can produce via `--format=sarif`.

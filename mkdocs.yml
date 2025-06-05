@@ -107,6 +107,7 @@ validation:
 
 extra_css:
   - assets/magiclink.css
+  - assets/chips.css
 
 exclude_docs: |
   snippets/
