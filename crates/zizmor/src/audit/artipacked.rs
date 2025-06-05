@@ -65,7 +65,6 @@ impl Artipacked {
                 Patch {
                     route: route!("jobs", job_id, "steps", checkout_index),
                     operation: Op::MergeInto {
-
                         key: "with".to_string(),
                         value: {
                             let mut with_map = serde_yaml::Mapping::new();
