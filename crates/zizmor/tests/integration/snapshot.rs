@@ -250,6 +250,25 @@ fn unpinned_uses() -> Result<()> {
 }
 
 #[test]
+fn use_trusted_publishing() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "use-trusted-publishing/demo-action/action.yml"
+            ))
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
 fn insecure_commands() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()

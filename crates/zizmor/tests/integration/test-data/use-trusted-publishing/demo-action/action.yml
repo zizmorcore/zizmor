@@ -1,0 +1,11 @@
+# demo of a composite action being flagged by use-trusted-publishing
+
+name: use-trusted-publishing-composite-action
+description: use-trusted-publishing-composite-action
+
+runs:
+  using: composite
+  steps:
+    - uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+      with:
+        password: ${{ secrets.PYPI_TOKEN }}
