@@ -13,6 +13,8 @@ of `zizmor`.
 
 * The [artipacked] audit now produces findings on composite action definitions,
   rather than just workflow definitions (#896)
+* The [use-trusted-publishing] audit now produces findings on composite
+  action definitions, rather than just workflow definitions (#899)
 
 ### Bug Fixes 🐛
 
@@ -841,3 +843,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [unsound-contains]: ./audits.md#unsound-contains
 [unpinned-images]: ./audits.md#unpinned-images
 [insecure-commands]: ./audits.md#insecure-commands
+[use-trusted-publishing]: ./audits.md#use-trusted-publishing
