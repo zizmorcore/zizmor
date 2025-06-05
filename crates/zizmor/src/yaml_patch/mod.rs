@@ -125,28 +125,8 @@ pub fn apply_yaml_patches(content: &str, patches: &[Patch]) -> Result<String, Er
 
     for patch in patches {
         let doc = yamlpath::Document::new(&result)?;
-        match &patch.operation {
-            Op::RewriteFragment { .. } => {
-                let feature = route_to_feature_pretty(&patch.route, &doc)?;
-                positioned_ops.push((feature.location.byte_span.0, patch));
-            }
-            Op::Replace(_) => {
-                let feature = route_to_feature_pretty(&patch.route, &doc)?;
-                positioned_ops.push((feature.location.byte_span.0, patch));
-            }
-            Op::Add { .. } => {
-                let feature = route_to_feature_pretty(&patch.route, &doc)?;
-                positioned_ops.push((feature.location.byte_span.1, patch));
-            }
-            Op::MergeInto { .. } => {
-                let feature = route_to_feature_pretty(&patch.route, &doc)?;
-                positioned_ops.push((feature.location.byte_span.1, patch));
-            }
-            Op::Remove => {
-                let feature = route_to_feature_pretty(&patch.route, &doc)?;
-                positioned_ops.push((feature.location.byte_span.1, patch));
-            }
-        }
+        let feature = route_to_feature_pretty(&patch.route, &doc)?;
+        positioned_ops.push((feature.location.byte_span.0, patch));
     }
 
     // Sort by position (descending) so we apply changes from end to beginning
@@ -249,7 +229,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             let new_value_str = new_value_str.trim_end(); // Remove trailing newline
 
             // Check if we're adding to a list item by examining the path
-            let is_list_item = matches!(patch.route.tail(), Some(RouteComponent::Index(_)));
+            let is_list_item = matches!(patch.route.last(), Some(RouteComponent::Index(_)));
 
             // Determine the appropriate indentation
             let indent = if is_list_item {
@@ -938,37 +918,39 @@ foo:
         ");
     }
 
-    //     #[test]
-    //     fn test_yaml_path_replace_empty_flow_value() {
-    //         let original = r#"
-    // foo: { bar: }
-    // "#;
+    #[test]
+    #[ignore = "not yet fixed"]
+    fn test_yaml_path_replace_empty_flow_value() {
+        let original = r#"
+    foo: { bar: }
+    "#;
 
-    //         let operations = vec![Op::Replace {
-    //             route: route!("foo", "bar"),
-    //             value: serde_yaml::Value::String("abc".to_string()),
-    //         }];
+        let patches = vec![Patch {
+            route: route!("foo", "bar"),
+            operation: Op::Replace(serde_yaml::Value::String("abc".to_string())),
+        }];
 
-    //         let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &patches).unwrap();
 
-    //         insta::assert_snapshot!(result, @r"");
-    //     }
+        insta::assert_snapshot!(result, @r"foo: { bar: abc }");
+    }
 
-    //     #[test]
-    //     fn test_yaml_path_replace_empty_flow_value_no_colon() {
-    //         let original = r#"
-    //     foo: { bar }
-    //     "#;
+    #[test]
+    #[ignore = "not yet fixed"]
+    fn test_yaml_path_replace_empty_flow_value_no_colon() {
+        let original = r#"
+        foo: { bar }
+        "#;
 
-    //         let operations = vec![Op::Replace {
-    //             route: route!("foo", "bar"),
-    //             value: serde_yaml::Value::String("abc".to_string()),
-    //         }];
+        let patches = vec![Patch {
+            route: route!("foo", "bar"),
+            operation: Op::Replace(serde_yaml::Value::String("abc".to_string())),
+        }];
 
-    //         let result = apply_yaml_patch(original, &operations).unwrap();
+        let result = apply_yaml_patches(original, &patches).unwrap();
 
-    //         insta::assert_snapshot!(result, @r"");
-    //     }
+        insta::assert_snapshot!(result, @r"foo: { bar: abc }");
+    }
 
     #[test]
     fn test_yaml_path_replace_multiline_string() {
@@ -995,28 +977,6 @@ foo:
               More new content.
         ");
     }
-
-    //     #[test]
-    //     fn test_yaml_patch_replace_multiline_string_in_list() {
-    //         let original = r#"
-    // jobs:
-    //   replace-me:
-    //     runs-on: ubuntu-latest
-
-    //     steps:
-    //       - run: |
-    //           echo "${{ github.event.issue.title }}"
-    // "#;
-
-    //         let operations = vec![Op::Replace {
-    //             route: route!("jobs", "replace-me", "steps", 0, "run"),
-    //             value: "echo \"${GITHUB_EVENT_ISSUE_TITLE}\"\n".into(),
-    //         }];
-
-    //         let result = apply_yaml_patch(original, &operations).unwrap();
-
-    //         insta::assert_snapshot!(result, @r"");
-    //     }
 
     #[test]
     fn test_yaml_patch_replace_preserves_comments() {
@@ -1086,6 +1046,28 @@ permissions:
           actions: write
           issues: read
         ");
+    }
+
+    #[test]
+    #[ignore = "not yet fixed"]
+    fn test_yaml_patch_add_preserves_flow_mapping_formatting() {
+        let original = r#"
+foo: { bar: abc }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("foo"),
+            operation: Op::Add {
+                key: "baz".to_string(),
+                value: serde_yaml::Value::String("qux".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        foo: { bar: abc, baz: qux }
+        "#);
     }
 
     #[test]

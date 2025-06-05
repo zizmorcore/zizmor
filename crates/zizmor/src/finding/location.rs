@@ -88,7 +88,7 @@ impl<'doc> Route<'doc> {
         Some(builder.build())
     }
 
-    pub(crate) fn tail(&self) -> Option<&RouteComponent<'doc>> {
+    pub(crate) fn last(&self) -> Option<&RouteComponent<'doc>> {
         self.components.last()
     }
 }
