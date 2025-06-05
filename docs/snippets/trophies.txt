@@ -159,6 +159,7 @@ oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
 PlasmaPy/PlasmaPy#2975
+PowerDNS/pdns#15600
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 prometheus/prometheus#16530
@@ -175,6 +176,7 @@ pymc-devs/pymc#7624
 pymc-devs/pytensor#1136
 pytest-dev/pytest#13062
 pytest-dev/pytest-django#1211
+pytest-dev/pytest-django#1214
 python/bedevere#652
 python/cpython#127749
 python/miss-islington#705
