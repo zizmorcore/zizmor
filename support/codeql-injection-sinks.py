@@ -165,7 +165,7 @@ def _process_models(codeql_dir: Path) -> None:
 
     _debug(f"Processed {processed_count} files")
 
-    print(json.dumps(list(code_injection_sinks.items()), indent=2))
+    print(json.dumps(list(sorted(code_injection_sinks.items())), indent=2))
 
 
 def main():

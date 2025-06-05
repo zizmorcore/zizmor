@@ -1,5 +1,35 @@
 [
   [
+    "8398a7/action-slack",
+    [
+      "custom_payload"
+    ]
+  ],
+  [
+    "actions/github-script",
+    [
+      "script"
+    ]
+  ],
+  [
+    "appleboy/ssh-action",
+    [
+      "script"
+    ]
+  ],
+  [
+    "azure/cli",
+    [
+      "inlineScript"
+    ]
+  ],
+  [
+    "azure/powershell",
+    [
+      "inlineScript"
+    ]
+  ],
+  [
     "devorbitus/yq-action-output",
     [
       "cmd"
@@ -12,46 +42,9 @@
     ]
   ],
   [
-    "appleboy/ssh-action",
+    "gautamkrishnar/blog-post-workflow",
     [
-      "script"
-    ]
-  ],
-  [
-    "sergeysova/jq-action",
-    [
-      "cmd"
-    ]
-  ],
-  [
-    "azure/powershell",
-    [
-      "inlineScript"
-    ]
-  ],
-  [
-    "roots/issue-closer-action",
-    [
-      "issue-close-message",
-      "pr-close-message"
-    ]
-  ],
-  [
-    "skitionek/notify-microsoft-teams",
-    [
-      "overwrite"
-    ]
-  ],
-  [
-    "mikefarah/yq",
-    [
-      "cmd"
-    ]
-  ],
-  [
-    "lucasbento/auto-close-issues",
-    [
-      "issue-close-message"
+      "item_exec"
     ]
   ],
   [
@@ -63,27 +56,34 @@
     ]
   ],
   [
-    "8398a7/action-slack",
+    "lucasbento/auto-close-issues",
     [
-      "custom_payload"
+      "issue-close-message"
     ]
   ],
   [
-    "azure/cli",
+    "mikefarah/yq",
     [
-      "inlineScript"
+      "cmd"
     ]
   ],
   [
-    "actions/github-script",
+    "roots/issue-closer-action",
     [
-      "script"
+      "issue-close-message",
+      "pr-close-message"
     ]
   ],
   [
-    "gautamkrishnar/blog-post-workflow",
+    "sergeysova/jq-action",
     [
-      "item_exec"
+      "cmd"
+    ]
+  ],
+  [
+    "skitionek/notify-microsoft-teams",
+    [
+      "overwrite"
     ]
   ],
   [
