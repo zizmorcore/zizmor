@@ -8,7 +8,7 @@ use crate::finding::location::{Route, RouteComponent};
 
 /// Error types for YAML patch operations
 #[derive(thiserror::Error, Debug)]
-pub enum YamlPatchError {
+pub enum Error {
     #[error("YAML query error: {0}")]
     QueryError(#[from] yamlpath::QueryError),
     #[error("YAML serialization error: {0}")]
@@ -108,10 +108,10 @@ pub enum Op<'doc> {
 /// - The input YAML is not valid
 /// - Any path in the operations is invalid or not found
 /// - YAML serialization fails during value conversion
-pub fn apply_yaml_patches(content: &str, patches: &[Patch]) -> Result<String, YamlPatchError> {
+pub fn apply_yaml_patches(content: &str, patches: &[Patch]) -> Result<String, Error> {
     // Validate that the input YAML is parseable before attempting patches
     if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(content) {
-        return Err(YamlPatchError::InvalidOperation(format!(
+        return Err(Error::InvalidOperation(format!(
             "input is not valid YAML: {}",
             e
         )));
@@ -160,13 +160,13 @@ pub fn apply_yaml_patches(content: &str, patches: &[Patch]) -> Result<String, Ya
 }
 
 /// Apply a single YAML patch operation
-fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, YamlPatchError> {
+fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
     let doc = yamlpath::Document::new(content)?;
 
     match &patch.operation {
         Op::RewriteFragment { from, to, after } => {
             let Some(feature) = route_to_feature_exact(&patch.route, &doc)? else {
-                return Err(YamlPatchError::InvalidOperation(format!(
+                return Err(Error::InvalidOperation(format!(
                     "no pre-existing value to patch at {route:?}",
                     route = patch.route
                 )));
@@ -180,7 +180,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, YamlPatchE
             };
 
             if bias > extracted_feature.len() {
-                return Err(YamlPatchError::InvalidOperation(format!(
+                return Err(Error::InvalidOperation(format!(
                     "replacement scan index {bias} is out of bounds for feature",
                 )));
             }
@@ -190,7 +190,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, YamlPatchE
             let (from_start, from_end) = match slice.find(from.as_ref()) {
                 Some(idx) => (idx + bias, idx + bias + from.len()),
                 None => {
-                    return Err(YamlPatchError::InvalidOperation(format!(
+                    return Err(Error::InvalidOperation(format!(
                         "no match for '{}' in feature",
                         from
                     )));
@@ -403,7 +403,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, YamlPatchE
 
         Op::Remove => {
             if patch.route.is_root() {
-                return Err(YamlPatchError::InvalidOperation(
+                return Err(Error::InvalidOperation(
                     "Cannot remove root document".to_string(),
                 ));
             }
@@ -424,9 +424,9 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, YamlPatchE
 fn route_to_feature_pretty<'a>(
     route: &Route<'_>,
     doc: &'a yamlpath::Document,
-) -> Result<yamlpath::Feature<'a>, YamlPatchError> {
+) -> Result<yamlpath::Feature<'a>, Error> {
     match route.to_query() {
-        Some(query) => doc.query_pretty(&query).map_err(YamlPatchError::from),
+        Some(query) => doc.query_pretty(&query).map_err(Error::from),
         None => Ok(doc.root()),
     }
 }
@@ -434,15 +434,15 @@ fn route_to_feature_pretty<'a>(
 fn route_to_feature_exact<'a>(
     route: &Route<'_>,
     doc: &'a yamlpath::Document,
-) -> Result<Option<yamlpath::Feature<'a>>, YamlPatchError> {
+) -> Result<Option<yamlpath::Feature<'a>>, Error> {
     match route.to_query() {
-        Some(query) => doc.query_exact(&query).map_err(YamlPatchError::from),
+        Some(query) => doc.query_exact(&query).map_err(Error::from),
         None => Ok(Some(doc.root())),
     }
 }
 
 /// Serialize a serde_yaml::Value to a YAML string, handling different types appropriately
-fn serialize_yaml_value(value: &serde_yaml::Value) -> Result<String, YamlPatchError> {
+fn serialize_yaml_value(value: &serde_yaml::Value) -> Result<String, Error> {
     let yaml_str = serde_yaml::to_string(value)?;
     Ok(yaml_str.trim_end().to_string()) // Remove trailing newline
 }
@@ -536,7 +536,7 @@ fn handle_root_level_addition(
     content: &str,
     key: &str,
     value: &serde_yaml::Value,
-) -> Result<String, YamlPatchError> {
+) -> Result<String, Error> {
     // Convert the new value to YAML string
     let new_value_str = serialize_yaml_value(value)?;
     let new_value_str = new_value_str.trim_end(); // Remove trailing newline
@@ -614,7 +614,7 @@ fn apply_mapping_replacement(
     route: &Route<'_>,
     _key: &str,
     value: &serde_yaml::Value,
-) -> Result<String, YamlPatchError> {
+) -> Result<String, Error> {
     let doc = yamlpath::Document::new(content)?;
     let feature = route_to_feature_pretty(route, &doc)?;
 
@@ -649,7 +649,7 @@ fn apply_value_replacement(
     doc: &yamlpath::Document,
     value: &serde_yaml::Value,
     support_multiline_literals: bool,
-) -> Result<String, YamlPatchError> {
+) -> Result<String, Error> {
     // Convert the new value to YAML string
     let new_value_str = serialize_yaml_value(value)?;
     let new_value_str = new_value_str.trim_end(); // Remove trailing newline
