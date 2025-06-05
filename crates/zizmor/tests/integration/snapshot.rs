@@ -58,6 +58,13 @@ fn artipacked() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("artipacked/demo-action/action.yml"))
+            .args(["--persona=auditor"])
+            .run()?
+    );
+
     Ok(())
 }
 

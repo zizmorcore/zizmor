@@ -87,9 +87,9 @@ impl UnpinnedUses {
         }
     }
 
-    fn process_step<'a, 'doc>(
+    fn process_step<'doc>(
         &self,
-        step: &'a impl StepCommon<'a, 'doc>,
+        step: &impl StepCommon<'doc>,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 

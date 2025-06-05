@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* The [artipacked] audit now produces findings on composite action definitions,
+  rather than just workflow definitions (#896)
+
 ### Bug Fixes 🐛
 
 * The [template-injection] audit no longer crashes when attempting to

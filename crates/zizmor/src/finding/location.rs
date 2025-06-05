@@ -214,9 +214,9 @@ impl<'doc> SymbolicLocation<'doc> {
 }
 
 /// Gives models (e.g. workflow steps) the ability to express their symbolic location.
-pub(crate) trait Locatable<'a, 'doc> {
+pub(crate) trait Locatable<'doc> {
     /// Returns the symbolic location of this model.
-    fn location(&'a self) -> SymbolicLocation<'doc>;
+    fn location(&self) -> SymbolicLocation<'doc>;
 
     /// Returns an "enriched" symbolic location of this model,
     /// when the model is of a type that has a name. Otherwise,
@@ -224,7 +224,7 @@ pub(crate) trait Locatable<'a, 'doc> {
     ///
     /// For example, a GitHub Actions workflow step has an optional name,
     /// which is included in this symbolic location if present.
-    fn location_with_name(&'a self) -> SymbolicLocation<'doc> {
+    fn location_with_name(&self) -> SymbolicLocation<'doc> {
         self.location()
     }
 }
@@ -233,7 +233,7 @@ pub(crate) trait Routable<'a, 'doc> {
     fn route(&'a self) -> Route<'doc>;
 }
 
-impl<'a, 'doc, T: Locatable<'a, 'doc>> Routable<'a, 'doc> for T {
+impl<'a, 'doc, T: Locatable<'doc>> Routable<'a, 'doc> for T {
     fn route(&'a self) -> Route<'doc> {
         self.location().route
     }

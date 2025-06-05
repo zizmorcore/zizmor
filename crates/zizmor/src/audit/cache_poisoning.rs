@@ -277,7 +277,7 @@ impl CachePoisoning {
         ))
     }
 
-    fn evaluate_cache_usage<'a, 'doc>(&self, step: &impl StepCommon<'a, 'doc>) -> Option<Usage> {
+    fn evaluate_cache_usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
         KNOWN_CACHE_AWARE_ACTIONS
             .iter()
             .find_map(|coord| coord.usage(step))

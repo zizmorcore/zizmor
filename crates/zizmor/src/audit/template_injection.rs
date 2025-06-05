@@ -104,8 +104,8 @@ impl TemplateInjection {
             .unwrap_or(&[])
     }
 
-    fn scripts_with_location<'a, 'doc>(
-        step: &'a impl StepCommon<'a, 'doc>,
+    fn scripts_with_location<'doc>(
+        step: &impl StepCommon<'doc>,
     ) -> Vec<(String, SymbolicLocation<'doc>)> {
         match step.body() {
             models::StepBodyCommon::Uses {
@@ -196,11 +196,11 @@ impl TemplateInjection {
     }
 
     /// Attempts to produce a `Fix` for a given expression.
-    fn attempt_fix<'a, 'doc>(
+    fn attempt_fix<'doc>(
         &self,
         raw: &ExplicitExpr,
         parsed: &Expr,
-        step: &'a impl StepCommon<'a, 'doc>,
+        step: &impl StepCommon<'doc>,
     ) -> Option<Fix<'doc>> {
         // We can only fix `run:` steps for now.
         if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
@@ -260,10 +260,10 @@ impl TemplateInjection {
         })
     }
 
-    fn injectable_template_expressions<'a, 'doc>(
+    fn injectable_template_expressions<'doc>(
         &self,
         script: &str,
-        step: &'a impl StepCommon<'a, 'doc>,
+        step: &impl StepCommon<'doc>,
     ) -> Vec<(String, Option<Fix<'doc>>, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
         for (expr, _) in extract_expressions(script) {
@@ -412,9 +412,9 @@ impl TemplateInjection {
         bad_expressions
     }
 
-    fn process_step<'a, 'doc>(
+    fn process_step<'doc>(
         &self,
-        step: &'a impl StepCommon<'a, 'doc>,
+        step: &impl StepCommon<'doc>,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
