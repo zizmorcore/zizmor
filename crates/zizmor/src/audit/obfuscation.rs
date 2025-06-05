@@ -5,7 +5,7 @@ use crate::{
     Confidence, Severity,
     finding::{
         Finding,
-        location::{Feature, Locatable as _, Location},
+        location::{Feature, Location},
     },
     models::{CompositeStep, Step, StepCommon},
     utils::parse_expressions_from_input,
@@ -72,9 +72,9 @@ impl Obfuscation {
         annotations
     }
 
-    fn process_step<'a, 'doc>(
+    fn process_step<'doc>(
         &self,
-        step: &'a impl StepCommon<'a, 'doc>,
+        step: &impl StepCommon<'doc>,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 

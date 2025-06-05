@@ -1,20 +1,11 @@
-use std::ops::Deref as _;
-
 use anyhow::Result;
-use github_actions_models::{
-    common::{EnvValue, Uses, expr::ExplicitExpr},
-    workflow::job::StepBody,
-};
+use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
 use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{
-        Confidence, Finding, Fix, Persona, Severity,
-        location::{Locatable as _, Route, RouteComponent},
-    },
-    models::{JobExt, Step, uses::RepositoryUsesExt as _},
-    route,
+    finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
+    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
     utils::split_patterns,
     yaml_patch::{Op, Patch},
@@ -29,74 +20,20 @@ audit_meta!(
 );
 
 impl Artipacked {
-    fn dangerous_artifact_patterns<'b>(&self, path: &'b str) -> Vec<&'b str> {
-        let mut patterns = vec![];
-        for path in split_patterns(path) {
-            match path {
-                // TODO: this could be even more generic.
-                "." | "./" | ".." | "../" => patterns.push(path),
-                path => match ExplicitExpr::from_curly(path) {
-                    Some(expr) if expr.as_bare().contains("github.workspace") => {
-                        patterns.push(path)
-                    }
-                    // TODO: Other expressions worth flagging here?
-                    Some(_) => continue,
-                    _ => continue,
-                },
-            }
-        }
-
-        patterns
-    }
-
-    /// Create a Fix for setting persist-credentials: false
-    fn create_persist_credentials_fix<'doc>(step: &Step<'doc>) -> Fix<'doc> {
-        let job_id = step.parent.id();
-        let checkout_index = step.index;
-
-        Fix {
-            title: "Set persist-credentials: false".to_string(),
-            description: "To prevent credential persistence, set 'persist-credentials: false' in this checkout step. \
-                When 'persist-credentials' is true (the default), the GITHUB_TOKEN persists in the local git config \
-                after checkout, which may be inadvertently leaked through subsequent actions like artifact uploads. \
-                Setting 'persist-credentials: false' ensures that credentials don't persist beyond the checkout step itself.".to_string(),
-            _key: step.location().key,
-            patches: vec![
-                Patch {
-                    route: route!("jobs", job_id, "steps", checkout_index),
-                    operation: Op::MergeInto {
-                        key: "with".to_string(),
-                        value: {
-                            let mut with_map = serde_yaml::Mapping::new();
-                            with_map.insert(
-                                serde_yaml::Value::String("persist-credentials".to_string()),
-                                serde_yaml::Value::Bool(false),
-                            );
-                            serde_yaml::Value::Mapping(with_map)
-                        },
-                    },
-                }
-            ],
-        }
-    }
-}
-
-impl Audit for Artipacked {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
-        Ok(Self)
-    }
-
-    fn audit_normal_job<'doc>(&self, job: &super::NormalJob<'doc>) -> Result<Vec<Finding<'doc>>> {
+    fn process_steps<'doc>(
+        &self,
+        steps: impl Iterator<Item = impl StepCommon<'doc>>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         // First, collect all vulnerable checkouts and upload steps independently.
         let mut vulnerable_checkouts = vec![];
         let mut vulnerable_uploads = vec![];
-        for step in job.steps() {
-            let StepBody::Uses {
+        for step in steps {
+            let StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
                 with,
-            } = &step.deref().body
+            } = &step.body()
             else {
                 continue;
             };
@@ -133,20 +70,20 @@ impl Audit for Artipacked {
         if vulnerable_uploads.is_empty() {
             // If we have no vulnerable uploads, then emit lower-confidence
             // findings for just the checkout steps.
-            for (checkout, persona) in vulnerable_checkouts {
+            for (checkout, persona) in &vulnerable_checkouts {
                 findings.push(
                     Self::finding()
                         .severity(Severity::Medium)
                         .confidence(Confidence::Low)
-                        .persona(persona)
+                        .persona(*persona)
                         .add_location(
                             checkout
                                 .location()
                                 .primary()
                                 .annotated("does not set persist-credentials: false"),
                         )
-                        .fix(Self::create_persist_credentials_fix(&checkout))
-                        .build(job.parent())?,
+                        .fix(Self::create_persist_credentials_fix(checkout))
+                        .build(checkout)?,
                 );
             }
         } else {
@@ -154,15 +91,15 @@ impl Audit for Artipacked {
             // vulnerable upload. There are more efficient ways to do this than
             // a cartesian product, but this way is simple.
             for ((checkout, persona), upload) in vulnerable_checkouts
-                .into_iter()
-                .cartesian_product(vulnerable_uploads.into_iter())
+                .iter()
+                .cartesian_product(vulnerable_uploads.iter())
             {
-                if checkout.index < upload.index {
+                if checkout.index() < upload.index() {
                     findings.push(
                         Self::finding()
                             .severity(Severity::High)
                             .confidence(Confidence::High)
-                            .persona(persona)
+                            .persona(*persona)
                             .add_location(
                                 checkout
                                     .location()
@@ -174,14 +111,80 @@ impl Audit for Artipacked {
                                     .location()
                                     .annotated("may leak the credentials persisted above"),
                             )
-                            .fix(Self::create_persist_credentials_fix(&checkout))
-                            .build(job.parent())?,
+                            .fix(Self::create_persist_credentials_fix(checkout))
+                            .build(checkout)?,
                     );
                 }
             }
         }
 
         Ok(findings)
+    }
+
+    fn dangerous_artifact_patterns<'b>(&self, path: &'b str) -> Vec<&'b str> {
+        let mut patterns = vec![];
+        for path in split_patterns(path) {
+            match path {
+                // TODO: this could be even more generic.
+                "." | "./" | ".." | "../" => patterns.push(path),
+                path => match ExplicitExpr::from_curly(path) {
+                    Some(expr) if expr.as_bare().contains("github.workspace") => {
+                        patterns.push(path)
+                    }
+                    // TODO: Other expressions worth flagging here?
+                    Some(_) => continue,
+                    _ => continue,
+                },
+            }
+        }
+
+        patterns
+    }
+
+    /// Create a Fix for setting persist-credentials: false
+    fn create_persist_credentials_fix<'doc>(step: &impl StepCommon<'doc>) -> Fix<'doc> {
+        Fix {
+            title: "Set persist-credentials: false".to_string(),
+            description: "To prevent credential persistence, set 'persist-credentials: false' in this checkout step. \
+                When 'persist-credentials' is true (the default), the GITHUB_TOKEN persists in the local git config \
+                after checkout, which may be inadvertently leaked through subsequent actions like artifact uploads. \
+                Setting 'persist-credentials: false' ensures that credentials don't persist beyond the checkout step itself.".to_string(),
+            _key: step.location().key,
+            patches: vec![
+                Patch {
+                    route: step.route(),
+                    operation: Op::MergeInto {
+                        key: "with".to_string(),
+                        value: {
+                            let mut with_map = serde_yaml::Mapping::new();
+                            with_map.insert(
+                                serde_yaml::Value::String("persist-credentials".to_string()),
+                                serde_yaml::Value::Bool(false),
+                            );
+                            serde_yaml::Value::Mapping(with_map)
+                        },
+                    },
+                }
+            ],
+        }
+    }
+}
+
+impl Audit for Artipacked {
+    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+        Ok(Self)
+    }
+
+    fn audit_action<'doc>(
+        &self,
+        action: &'doc crate::models::Action,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        let steps = action.steps();
+        self.process_steps(steps)
+    }
+
+    fn audit_normal_job<'doc>(&self, job: &super::NormalJob<'doc>) -> Result<Vec<Finding<'doc>>> {
+        self.process_steps(job.steps())
     }
 }
 

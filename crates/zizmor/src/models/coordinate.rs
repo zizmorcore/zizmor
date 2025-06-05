@@ -44,7 +44,7 @@ impl ActionCoordinate {
     /// while the `Some(_)` variants indicate various (potential) usages (such as being implicitly
     /// enabled, or explicitly enabled, or potentially enabled by a template expansion that
     /// can't be directly analyzed).
-    pub(crate) fn usage<'a, 'doc>(&self, step: &impl StepCommon<'a, 'doc>) -> Option<Usage> {
+    pub(crate) fn usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
         let uses_pattern = self.uses_pattern();
 
         let StepBodyCommon::Uses {
@@ -336,7 +336,7 @@ mod tests {
     };
 
     // Test-only trait impls.
-    impl<'a, 'doc> Locatable<'a, 'doc> for Step {
+    impl<'doc> Locatable<'doc> for Step {
         fn location(&self) -> crate::models::SymbolicLocation<'doc> {
             unreachable!()
         }
@@ -346,7 +346,11 @@ mod tests {
         }
     }
 
-    impl<'a, 'doc> StepCommon<'a, 'doc> for Step {
+    impl<'doc> StepCommon<'doc> for Step {
+        fn index(&self) -> usize {
+            unreachable!()
+        }
+
         fn env_is_static(&self, _name: &str) -> bool {
             unreachable!()
         }

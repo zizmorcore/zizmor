@@ -2,7 +2,7 @@ use github_actions_expressions::{Expr, context::Context};
 
 use crate::{
     Confidence, Severity,
-    finding::location::{Feature, Locatable as _, Location},
+    finding::location::{Feature, Location},
     utils::parse_expressions_from_input,
 };
 

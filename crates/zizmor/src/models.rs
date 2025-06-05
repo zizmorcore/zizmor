@@ -44,7 +44,10 @@ pub(crate) enum StepBodyCommon<'s> {
 }
 
 /// Common interfaces between workflow and action steps.
-pub(crate) trait StepCommon<'a, 'doc>: Locatable<'a, 'doc> {
+pub(crate) trait StepCommon<'doc>: Locatable<'doc> {
+    /// Returns the step's index within its parent job or action.
+    fn index(&self) -> usize;
+
     /// Returns whether the given `env.name` environment access is "static,"
     /// i.e. is not influenced by another expression.
     fn env_is_static(&self, name: &str) -> bool;
@@ -64,7 +67,7 @@ pub(crate) trait StepCommon<'a, 'doc>: Locatable<'a, 'doc> {
     fn document(&self) -> &'doc yamlpath::Document;
 }
 
-impl<'a, 'doc, T: StepCommon<'a, 'doc>> AsDocument<'a, 'doc> for T {
+impl<'a, 'doc, T: StepCommon<'doc>> AsDocument<'a, 'doc> for T {
     fn as_document(&'a self) -> &'doc yamlpath::Document {
         self.document()
     }
@@ -171,11 +174,15 @@ impl Workflow {
             Trigger::Events(events) => events.count() == 1,
         }
     }
-}
 
-impl<'a> Locatable<'a, 'a> for Workflow {
-    /// This workflow's [`SymbolicLocation`].
-    fn location(&'a self) -> SymbolicLocation<'a> {
+    /// Returns this workflow's [`SymbolicLocation`].
+    ///
+    /// NOTE: This is intentionally implemented directly on the `Workflow` type
+    /// rather than through the [`Locatable`] trait, since introducing
+    /// this through [`Locatable`] would require a split lifetime between
+    /// `'self` and `'doc` for just this and [`Action`], i.e. the owning
+    /// container types rather than the borrowing subtypes.
+    pub fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
             key: &self.key,
             annotation: "this workflow".to_string(),
@@ -195,9 +202,9 @@ pub(crate) trait JobExt<'doc> {
     fn parent(&self) -> &'doc Workflow;
 }
 
-impl<'a, 'doc, T: JobExt<'doc>> Locatable<'a, 'doc> for T {
+impl<'doc, T: JobExt<'doc>> Locatable<'doc> for T {
     /// Returns this job's [`SymbolicLocation`].
-    fn location(&'a self) -> SymbolicLocation<'doc> {
+    fn location(&self) -> SymbolicLocation<'doc> {
         self.parent()
             .location()
             .annotated("this job")
@@ -542,16 +549,16 @@ impl<'doc> Deref for Step<'doc> {
     }
 }
 
-impl<'a, 'doc> Locatable<'a, 'doc> for Step<'doc> {
+impl<'doc> Locatable<'doc> for Step<'doc> {
     /// This step's [`SymbolicLocation`].
-    fn location(&'a self) -> SymbolicLocation<'doc> {
+    fn location(&self) -> SymbolicLocation<'doc> {
         self.parent
             .location()
             .with_keys(&["steps".into(), self.index.into()])
             .annotated("this step")
     }
 
-    fn location_with_name(&'a self) -> SymbolicLocation<'doc> {
+    fn location_with_name(&self) -> SymbolicLocation<'doc> {
         match self.inner.name {
             Some(_) => self.location().with_keys(&["name".into()]),
             None => self.location(),
@@ -560,7 +567,11 @@ impl<'a, 'doc> Locatable<'a, 'doc> for Step<'doc> {
     }
 }
 
-impl<'doc> StepCommon<'_, 'doc> for Step<'doc> {
+impl<'doc> StepCommon<'doc> for Step<'doc> {
+    fn index(&self) -> usize {
+        self.index
+    }
+
     fn env_is_static(&self, name: &str) -> bool {
         utils::env_is_static(name, &[&self.env, &self.job().env, &self.workflow().env])
     }
@@ -699,19 +710,6 @@ impl<'a> AsDocument<'a, 'a> for Action {
     }
 }
 
-impl<'a> Locatable<'a, 'a> for Action {
-    /// This actions's [`SymbolicLocation`].
-    fn location(&'a self) -> SymbolicLocation<'a> {
-        SymbolicLocation {
-            key: &self.key,
-            annotation: "this action".to_string(),
-            link: None,
-            route: Route::new(),
-            kind: Default::default(),
-        }
-    }
-}
-
 impl Deref for Action {
     type Target = action::Action;
 
@@ -756,6 +754,20 @@ impl Action {
     /// A [`CompositeSteps`] iterator over this workflow's constituent [`CompositeStep`]s.
     pub(crate) fn steps(&self) -> CompositeSteps<'_> {
         CompositeSteps::new(self)
+    }
+
+    /// Returns this action's [`SymbolicLocation`].
+    ///
+    /// See [`Workflow::location`] for an explanation of why this isn't
+    /// implemented through the [`Locatable`] trait.
+    pub(crate) fn location(&self) -> SymbolicLocation<'_> {
+        SymbolicLocation {
+            key: &self.key,
+            annotation: "this action".to_string(),
+            link: None,
+            route: Route::new(),
+            kind: Default::default(),
+        }
     }
 }
 
@@ -810,14 +822,14 @@ impl<'a> Deref for CompositeStep<'a> {
     }
 }
 
-impl<'a, 'doc> Locatable<'a, 'doc> for CompositeStep<'doc> {
-    fn location(&'a self) -> SymbolicLocation<'doc> {
+impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
+    fn location(&self) -> SymbolicLocation<'doc> {
         self.parent
             .location()
             .with_keys(&["runs".into(), "steps".into(), self.index.into()])
     }
 
-    fn location_with_name(&'a self) -> SymbolicLocation<'doc> {
+    fn location_with_name(&self) -> SymbolicLocation<'doc> {
         match self.inner.name {
             Some(_) => self.location().with_keys(&["name".into()]),
             None => self.location(),
@@ -826,7 +838,11 @@ impl<'a, 'doc> Locatable<'a, 'doc> for CompositeStep<'doc> {
     }
 }
 
-impl<'doc> StepCommon<'_, 'doc> for CompositeStep<'doc> {
+impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
+    fn index(&self) -> usize {
+        self.index
+    }
+
     fn env_is_static(&self, name: &str) -> bool {
         utils::env_is_static(name, &[&self.env])
     }
