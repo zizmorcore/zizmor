@@ -494,13 +494,13 @@ impl From<String> for Expr<'_> {
     }
 }
 
-impl<'src> From<f64> for Expr<'src> {
+impl From<f64> for Expr<'_> {
     fn from(n: f64) -> Self {
         Expr::Literal(Literal::Number(n))
     }
 }
 
-impl<'src> From<bool> for Expr<'src> {
+impl From<bool> for Expr<'_> {
     fn from(b: bool) -> Self {
         Expr::Literal(Literal::Boolean(b))
     }
