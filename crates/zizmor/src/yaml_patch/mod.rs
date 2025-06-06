@@ -47,6 +47,14 @@ impl YamlStyle {
 fn detect_yaml_style(content: &str) -> YamlStyle {
     let trimmed = content.trim();
 
+    // First check if the entire content is a flow mapping or sequence
+    if trimmed.starts_with('{') && trimmed.ends_with('}') {
+        return YamlStyle::FlowMapping;
+    }
+    if trimmed.starts_with('[') && trimmed.ends_with(']') {
+        return YamlStyle::FlowSequence;
+    }
+
     // Handle key-value pairs by extracting the value part
     if let Some(colon_pos) = trimmed.find(':') {
         let value_part = trimmed[colon_pos + 1..].trim();
@@ -295,7 +303,12 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             }
 
             // Convert the new value to YAML string for block style handling
-            let new_value_str = serialize_yaml_value(value)?;
+            let new_value_str = if matches!(value, serde_yaml::Value::Sequence(_)) {
+                // For sequences, use flow-aware serialization to maintain consistency
+                serialize_yaml_value_for_flow_context(value)?
+            } else {
+                serialize_yaml_value(value)?
+            };
             let new_value_str = new_value_str.trim_end(); // Remove trailing newline
 
             // Check if we're adding to a list item by examining the path
@@ -497,6 +510,38 @@ fn serialize_yaml_value(value: &serde_yaml::Value) -> Result<String, Error> {
     Ok(yaml_str.trim_end().to_string()) // Remove trailing newline
 }
 
+/// Serialize a serde_yaml::Value to a YAML string in flow style for sequences when in flow context
+fn serialize_yaml_value_for_flow_context(value: &serde_yaml::Value) -> Result<String, Error> {
+    match value {
+        serde_yaml::Value::Sequence(seq) => {
+            // Serialize sequence in flow style: [item1, item2, item3]
+            let items: Result<Vec<String>, Error> = seq
+                .iter()
+                .map(|item| {
+                    match item {
+                        serde_yaml::Value::String(s) => Ok(s.clone()),
+                        serde_yaml::Value::Number(n) => Ok(n.to_string()),
+                        serde_yaml::Value::Bool(b) => Ok(b.to_string()),
+                        serde_yaml::Value::Null => Ok("null".to_string()),
+                        _ => {
+                            // For complex nested values, serialize them normally
+                            let serialized = serde_yaml::to_string(item)?;
+                            Ok(serialized.trim().to_string())
+                        }
+                    }
+                })
+                .collect();
+
+            let items = items?;
+            Ok(format!("[{}]", items.join(", ")))
+        }
+        _ => {
+            // For non-sequences, use normal serialization
+            serialize_yaml_value(value)
+        }
+    }
+}
+
 /// Extract leading whitespace from the beginning of the line containing the given position
 fn extract_leading_whitespace(content: &str, pos: usize) -> String {
     let line_start = find_line_start(content, pos);
@@ -564,8 +609,8 @@ fn handle_flow_mapping_addition(
         &current_content[current_content.find('{').unwrap() + 1..closing_brace_pos].trim();
     let is_empty = content_inside_braces.is_empty();
 
-    // Serialize the new value
-    let new_value_str = serialize_yaml_value(value)?;
+    // Serialize the new value using flow context-aware serialization
+    let new_value_str = serialize_yaml_value_for_flow_context(value)?;
     let new_value_str = new_value_str.trim();
 
     // Create the new key-value pair
@@ -2336,6 +2381,237 @@ jobs:
                 shell: bash
                 env:
                   GITHUB_REF_NAME: ${{ github.ref_name }}
+        "#);
+    }
+
+    #[test]
+    fn test_mixed_flow_block_styles_github_workflow() {
+        // GitHub Action workflow with mixed flow and block styles similar to the user's example
+        let original = r#"
+name: CI
+on:
+  push:
+    branches: [main]   # Flow sequence inside block mapping
+  pull_request: { branches: [main, develop] }  # Flow mapping with flow sequence
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 18 }  # Flow mapping in block list
+          - os: macos-latest                 # Block mapping in block list
+            node: 20
+            extra_flags: ["--verbose"]       # Flow sequence in block mapping
+          - { os: windows-latest, node: 16, extra_flags: ["--silent", "--prod"] }  # Mixed flow
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with: { fetch-depth: 0 }           # Flow mapping in block context
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+"#;
+
+        // Test adding to the flow mapping in pull_request trigger
+        let operations = vec![Patch {
+            route: route!("on", "pull_request"),
+            operation: Op::Add {
+                key: "types".to_string(),
+                value: serde_yaml::Value::Sequence(vec![
+                    serde_yaml::Value::String("opened".to_string()),
+                    serde_yaml::Value::String("synchronize".to_string()),
+                ]),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        // Debug: print the result to see what went wrong
+        println!("Result:\n{}", result);
+
+        // Verify the result is valid YAML
+        if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(&result) {
+            panic!("Invalid YAML: {}", e);
+        }
+
+        insta::assert_snapshot!(result, @r#"
+        name: CI
+        on:
+          push:
+            branches: [main]   # Flow sequence inside block mapping
+          pull_request: { branches: [main, develop], types: [opened, synchronize] }  # Flow mapping with flow sequence
+
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            strategy:
+              matrix:
+                include:
+                  - { os: ubuntu-latest, node: 18 }  # Flow mapping in block list
+                  - os: macos-latest                 # Block mapping in block list
+                    node: 20
+                    extra_flags: ["--verbose"]       # Flow sequence in block mapping
+                  - { os: windows-latest, node: 16, extra_flags: ["--silent", "--prod"] }  # Mixed flow
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+                with: { fetch-depth: 0 }           # Flow mapping in block context
+              - name: Setup Node
+                uses: actions/setup-node@v4
+                with:
+                  node-version: ${{ matrix.node }}
+                  cache: npm
+        "#);
+    }
+
+    #[test]
+    fn test_replace_value_in_flow_mapping_within_block_context() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        with: { timeout: 300 }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "steps", 0, "with", "timeout"),
+            operation: Op::Replace(serde_yaml::Value::Number(serde_yaml::Number::from(600))),
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                with: { timeout: 600 }
+        "#);
+    }
+
+    #[test]
+    fn test_add_to_flow_mapping_nested_in_block_list() {
+        let original = r#"
+strategy:
+  matrix:
+    include:
+      - { os: ubuntu-latest, node: 18 }
+      - { os: macos-latest, node: 20 }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("strategy", "matrix", "include", 0),
+            operation: Op::Add {
+                key: "arch".to_string(),
+                value: serde_yaml::Value::String("x64".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        strategy:
+          matrix:
+            include:
+              - { os: ubuntu-latest, node: 18, arch: x64 }
+              - { os: macos-latest, node: 20 }
+        "#);
+    }
+
+    #[test]
+    fn test_complex_mixed_styles_permissions() {
+        let original = r#"
+permissions:
+  contents: read
+  actions: { read: true, write: false }  # Flow mapping in block context
+  packages: write
+"#;
+
+        let operations = vec![Patch {
+            route: route!("permissions", "actions"),
+            operation: Op::Add {
+                key: "delete".to_string(),
+                value: serde_yaml::Value::Bool(true),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        permissions:
+          contents: read
+          actions: { read: true, write: false, delete: true }  # Flow mapping in block context
+          packages: write
+        "#);
+    }
+
+    #[test]
+    fn test_preserve_flow_sequence_in_block_mapping() {
+        let original = r#"
+on:
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 0 * * *"
+"#;
+
+        let operations = vec![Patch {
+            route: route!("on", "push"),
+            operation: Op::Add {
+                key: "tags".to_string(),
+                value: serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
+                    "v*".to_string(),
+                )]),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        on:
+          push:
+            branches: [main, develop]
+            tags: [v*]
+          schedule:
+            - cron: "0 0 * * *"
+        "#);
+    }
+
+    #[test]
+    fn test_empty_flow_mapping_expansion() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: {}
+    steps:
+      - run: echo "test"
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "NODE_ENV".to_string(),
+                value: serde_yaml::Value::String("test".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: { NODE_ENV: test }
+            steps:
+              - run: echo "test"
         "#);
     }
 }
