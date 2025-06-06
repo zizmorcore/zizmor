@@ -136,6 +136,7 @@
         - curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
         - curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
         - curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
+        - curl/curl@17a669426f36b467dfd945b4b35f6211598b7977
         - curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 
 
