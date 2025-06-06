@@ -133,12 +133,10 @@ impl BotConditions {
                 BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
                     (Expr::Context(ctx), Expr::Literal(lit))
                     | (Expr::Literal(lit), Expr::Context(ctx)) => {
-                        if SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))
-                            && lit.as_str().ends_with("[bot]")
-                        {
-                            (true, true)
-                        } else if SPOOFABLE_ACTOR_ID_CONTEXTS.iter().any(|x| x.matches(ctx))
-                            && BOT_ACTOR_IDS.contains(&lit.as_str().as_ref())
+                        if (SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))
+                            && lit.as_str().ends_with("[bot]"))
+                            || (SPOOFABLE_ACTOR_ID_CONTEXTS.iter().any(|x| x.matches(ctx))
+                                && BOT_ACTOR_IDS.contains(&lit.as_str().as_ref()))
                         {
                             (true, true)
                         } else {
