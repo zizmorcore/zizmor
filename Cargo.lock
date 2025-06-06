@@ -786,7 +786,7 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "github-actions-expressions"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "itertools",
