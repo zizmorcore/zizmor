@@ -3,6 +3,8 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+use std::borrow::Cow;
+
 use crate::context::Context;
 
 use self::parser::{ExprParser, Rule};
@@ -99,17 +101,41 @@ pub enum UnOp {
     Not,
 }
 
-/// Represents a GitHub Actions expression.
+/// Represents a literal value in a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
-pub enum Expr<'src> {
+pub enum Literal<'src> {
     /// A number literal.
     Number(f64),
     /// A string literal.
-    String(String),
+    String(Cow<'src, str>),
     /// A boolean literal.
     Boolean(bool),
     /// The `null` literal.
     Null,
+}
+
+impl<'src> Literal<'src> {
+    /// Returns a string representation of the literal.
+    ///
+    /// This is not guaranteed to be an exact equivalent of the literal
+    /// as it appears in its source expression. For example, the string
+    /// representation of a floating point literal is subject to normalization,
+    /// and string literals are returned without surrounding quotes.
+    pub fn as_str(&self) -> Cow<'src, str> {
+        match self {
+            Literal::String(s) => s.clone(),
+            Literal::Number(n) => Cow::Owned(n.to_string()),
+            Literal::Boolean(b) => Cow::Owned(b.to_string()),
+            Literal::Null => Cow::Borrowed("null"),
+        }
+    }
+}
+
+/// Represents a GitHub Actions expression.
+#[derive(Debug, PartialEq)]
+pub enum Expr<'src> {
+    /// A literal value.
+    Literal(Literal<'src>),
     /// The `*` literal within an index or context.
     Star,
     /// A function call.
@@ -144,11 +170,6 @@ pub enum Expr<'src> {
 }
 
 impl<'src> Expr<'src> {
-    /// Convenience API for making a boxed [`Expr::String`].
-    fn string(s: impl Into<String>) -> Box<Self> {
-        Self::String(s.into()).into()
-    }
-
     /// Convenience API for making an [`Expr::Identifier`].
     fn ident(i: &'src str) -> Self {
         Self::Identifier(Identifier(i))
@@ -161,10 +182,7 @@ impl<'src> Expr<'src> {
 
     /// Returns whether the expression is a literal.
     fn is_literal(&self) -> bool {
-        matches!(
-            self,
-            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null
-        )
+        matches!(self, Expr::Literal(_))
     }
 
     /// Returns whether the expression is constant reducible.
@@ -188,7 +206,7 @@ impl<'src> Expr<'src> {
     pub fn constant_reducible(&self) -> bool {
         match self {
             // Literals are always reducible.
-            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) | Expr::Null => true,
+            Expr::Literal(_) => true,
             // Binops are reducible if their LHS and RHS are reducible.
             Expr::BinOp { lhs, op: _, rhs } => lhs.constant_reducible() && rhs.constant_reducible(),
             // Unops are reducible if their interior expression is reducible.
@@ -405,17 +423,21 @@ impl<'src> Expr<'src> {
                     // Punt back to the top level match to keep things simple.
                     parse_pair(pair.into_inner().next().unwrap())
                 }
-                Rule::number => Ok(Expr::Number(pair.as_str().parse().unwrap()).into()),
-                Rule::string => Ok(Expr::string(
+                Rule::number => Ok(Box::new(pair.as_str().parse::<f64>().unwrap().into())),
+                Rule::string => {
                     // string -> string_inner
-                    pair.into_inner()
-                        .next()
-                        .unwrap()
-                        .as_str()
-                        .replace("''", "'"),
-                )),
-                Rule::boolean => Ok(Expr::Boolean(pair.as_str().parse().unwrap()).into()),
-                Rule::null => Ok(Expr::Null.into()),
+                    let string_inner = pair.into_inner().next().unwrap().as_str();
+
+                    // Optimization: if our string literal doesn't have any
+                    // escaped quotes in it, we can save ourselves a clone.
+                    if !string_inner.contains('\'') {
+                        Ok(Box::new(string_inner.into()))
+                    } else {
+                        Ok(Box::new(string_inner.replace("''", "'").into()))
+                    }
+                }
+                Rule::boolean => Ok(Box::new(pair.as_str().parse::<bool>().unwrap().into())),
+                Rule::null => Ok(Expr::Literal(Literal::Null).into()),
                 Rule::star => Ok(Expr::Star.into()),
                 Rule::function_call => {
                     let mut pairs = pair.into_inner();
@@ -460,13 +482,87 @@ impl<'src> Expr<'src> {
     }
 }
 
+impl<'src> From<&'src str> for Expr<'src> {
+    fn from(s: &'src str) -> Self {
+        Expr::Literal(Literal::String(s.into()))
+    }
+}
+
+impl From<String> for Expr<'_> {
+    fn from(s: String) -> Self {
+        Expr::Literal(Literal::String(s.into()))
+    }
+}
+
+impl<'src> From<f64> for Expr<'src> {
+    fn from(n: f64) -> Self {
+        Expr::Literal(Literal::Number(n))
+    }
+}
+
+impl<'src> From<bool> for Expr<'src> {
+    fn from(b: bool) -> Self {
+        Expr::Literal(Literal::Boolean(b))
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use anyhow::Result;
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
+    use crate::Literal;
+
     use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
+
+    #[test]
+    fn test_literal_string_borrows() {
+        let cases = &[
+            ("'foo'", true),
+            ("'foo bar'", true),
+            ("'foo '' bar'", false),
+            ("'foo''bar'", false),
+            ("'foo''''bar'", false),
+        ];
+
+        for (expr, borrows) in cases {
+            let Expr::Literal(Literal::String(s)) = Expr::parse(expr).unwrap() else {
+                panic!("expected a literal string expression for {expr}");
+            };
+
+            assert!(matches!(
+                (s, borrows),
+                (Cow::Borrowed(_), true) | (Cow::Owned(_), false)
+            ));
+        }
+    }
+
+    #[test]
+    fn test_literal_as_str() {
+        let cases = &[
+            ("'foo'", "foo"),
+            ("'foo '' bar'", "foo ' bar"),
+            ("123", "123"),
+            ("123.000", "123"),
+            ("0.0", "0"),
+            ("0.1", "0.1"),
+            ("0.12345", "0.12345"),
+            ("true", "true"),
+            ("false", "false"),
+            ("null", "null"),
+        ];
+
+        for (expr, expected) in cases {
+            let Expr::Literal(expr) = Expr::parse(expr).unwrap() else {
+                panic!("expected a literal expression for {expr}");
+            };
+
+            assert_eq!(expr.as_str(), *expected);
+        }
+    }
 
     #[test]
     fn test_function_eq() {
@@ -605,25 +701,25 @@ mod tests {
                     lhs: Expr::BinOp {
                         lhs: Expr::UnOp {
                             op: UnOp::Not,
-                            expr: Expr::Boolean(true).into(),
+                            expr: Box::new(true.into()),
                         }
                         .into(),
                         op: BinOp::Or,
-                        rhs: Expr::Boolean(false).into(),
+                        rhs: Box::new(false.into()),
                     }
                     .into(),
                     op: BinOp::Or,
-                    rhs: Expr::Boolean(true).into(),
+                    rhs: Box::new(true.into()),
                 },
             ),
-            ("'foo '' bar'", *Expr::string("foo ' bar")),
-            ("('foo '' bar')", *Expr::string("foo ' bar")),
-            ("((('foo '' bar')))", *Expr::string("foo ' bar")),
+            ("'foo '' bar'", "foo ' bar".into()),
+            ("('foo '' bar')", "foo ' bar".into()),
+            ("((('foo '' bar')))", "foo ' bar".into()),
             (
                 "foo(1, 2, 3)",
                 Expr::Call {
                     func: Function("foo"),
-                    args: vec![Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)],
+                    args: vec![1.0.into(), 2.0.into(), 3.0.into()],
                 },
             ),
             (
@@ -641,8 +737,8 @@ mod tests {
                         Expr::ident("foo"),
                         Expr::ident("bar"),
                         Expr::ident("baz"),
-                        Expr::Index(Expr::Number(1.0).into()),
-                        Expr::Index(Expr::Number(2.0).into()),
+                        Expr::Index(Box::new(1.0.into())),
+                        Expr::Index(Box::new(2.0.into())),
                     ],
                 ),
             ),
@@ -682,28 +778,28 @@ mod tests {
                             )
                             .into(),
                             op: BinOp::Eq,
-                            rhs: Expr::string("refs/heads/main"),
+                            rhs: Box::new("refs/heads/main".into()),
                         }
                         .into(),
                         op: BinOp::And,
-                        rhs: Expr::string("value_for_main_branch"),
+                        rhs: Box::new("value_for_main_branch".into()),
                     }
                     .into(),
                     op: BinOp::Or,
-                    rhs: Expr::string("value_for_other_branches"),
+                    rhs: Box::new("value_for_other_branches".into()),
                 },
             ),
             (
                 "(true || false) == true",
                 Expr::BinOp {
                     lhs: Expr::BinOp {
-                        lhs: Expr::Boolean(true).into(),
+                        lhs: Box::new(true.into()),
                         op: BinOp::Or,
-                        rhs: Expr::Boolean(false).into(),
+                        rhs: Box::new(false.into()),
                     }
                     .into(),
                     op: BinOp::Eq,
-                    rhs: Expr::Boolean(true).into(),
+                    rhs: Box::new(true.into()),
                 },
             ),
             (
@@ -713,11 +809,11 @@ mod tests {
                     expr: Expr::BinOp {
                         lhs: Expr::UnOp {
                             op: UnOp::Not,
-                            expr: Expr::Boolean(true).into(),
+                            expr: Box::new(true.into()),
                         }
                         .into(),
                         op: BinOp::Or,
-                        rhs: Expr::Boolean(false).into(),
+                        rhs: Box::new(false.into()),
                     }
                     .into(),
                 },
@@ -731,7 +827,7 @@ mod tests {
                         Expr::Index(
                             Expr::Call {
                                 func: Function("format"),
-                                args: vec![*Expr::string("{0}"), *Expr::string("event")],
+                                args: vec!["{0}".into(), "event".into()],
                             }
                             .into(),
                         ),
