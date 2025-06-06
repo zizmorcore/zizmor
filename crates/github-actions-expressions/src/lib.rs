@@ -834,6 +834,18 @@ mod tests {
                     ],
                 ),
             ),
+            (
+                "github.actor_id == '49699333'",
+                Expr::BinOp {
+                    lhs: Expr::context(
+                        "github.actor_id",
+                        [Expr::ident("github"), Expr::ident("actor_id")],
+                    )
+                    .into(),
+                    op: BinOp::Eq,
+                    rhs: Box::new("49699333".into()),
+                },
+            ),
         ];
 
         for (case, expr) in cases {
