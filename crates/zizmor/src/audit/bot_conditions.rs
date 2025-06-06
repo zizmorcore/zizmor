@@ -1,4 +1,9 @@
-use github_actions_expressions::{BinOp, Expr, Literal, UnOp, context::Context};
+use std::sync::LazyLock;
+
+use github_actions_expressions::{
+    BinOp, Expr, UnOp,
+    context::{Context, ContextPattern},
+};
 use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
@@ -11,7 +16,36 @@ pub(crate) struct BotConditions;
 
 audit_meta!(BotConditions, "bot-conditions", "spoofable bot actor check");
 
-const SPOOFABLE_ACTOR_CONTEXTS: &[&str] = &["github.actor", "github.triggering_actor"];
+static SPOOFABLE_ACTOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        ContextPattern::new("github.actor").unwrap(),
+        ContextPattern::new("github.triggering_actor").unwrap(),
+        ContextPattern::new("github.event.pull_request.sender.login").unwrap(),
+    ]
+});
+
+static SPOOFABLE_ACTOR_ID_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        ContextPattern::new("github.actor_id").unwrap(),
+        ContextPattern::new("github.event.pull_request.sender.id").unwrap(),
+    ]
+});
+
+// A list of known bot actor IDs; we need to hardcode these because they
+// have no equivalent `[bot]' suffix check.
+//
+// Stored as strings because every equality is stringly-typed
+// in GHA expressions anyways.
+//
+// NOTE: This list also contains non-user IDs like integration IDs.
+// The thinking there is that users will sometimes confuse the two,
+// so we should flag them as well.
+const BOT_ACTOR_IDS: &[&str] = &[
+    "29110",    //dependabot[bot]'s integration ID
+    "49699333", // dependabot[bot]
+    "27856297", // dependabot-preview[bot]
+    "29139614", // renovate[bot]
+];
 
 impl Audit for BotConditions {
     fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
@@ -36,26 +70,31 @@ impl Audit for BotConditions {
 
         let mut conds = vec![];
         if let Some(If::Expr(expr)) = &job.r#if {
-            conds.push((expr, job.location()));
+            conds.push((
+                expr,
+                job.location_with_name(),
+                job.location().with_keys(&["if".into()]),
+            ));
         }
 
         for step in job.steps() {
             if let Some(If::Expr(expr)) = &step.r#if {
-                conds.push((expr, step.location()));
+                conds.push((
+                    expr,
+                    step.location_with_name(),
+                    step.location().with_keys(&["if".into()]),
+                ));
             }
         }
 
-        for (expr, loc) in conds {
+        for (expr, parent, if_loc) in conds {
             if let Some(confidence) = Self::bot_condition(expr) {
                 findings.push(
                     Self::finding()
                         .severity(Severity::High)
                         .confidence(confidence)
-                        .add_location(
-                            loc.with_keys(&["if".into()])
-                                .primary()
-                                .annotated("actor context may be spoofable"),
-                        )
+                        .add_location(parent)
+                        .add_location(if_loc.primary().annotated("actor context may be spoofable"))
                         .build(job.parent())?,
                 );
             }
@@ -71,6 +110,7 @@ impl BotConditions {
             // We can't easily analyze the call's semantics, but we can
             // check to see if any of the call's arguments are
             // bot conditions. We treat a call as non-dominating always.
+            // TODO: Should probably check some variant of `contains` here.
             Expr::Call {
                 func: _,
                 args: exprs,
@@ -91,12 +131,12 @@ impl BotConditions {
                 }
                 // == is trivially dominating.
                 BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
-                    (Expr::Context(ctx), Expr::Literal(Literal::String(s)))
-                    | (Expr::Literal(Literal::String(s)), Expr::Context(ctx)) => {
-                        // NOTE: Can't use `contains` here because we need
-                        // Context's `PartialEq` for case insensitive matching.
-                        if SPOOFABLE_ACTOR_CONTEXTS.iter().any(|x| ctx == *x)
-                            && s.ends_with("[bot]")
+                    (Expr::Context(ctx), Expr::Literal(lit))
+                    | (Expr::Literal(lit), Expr::Context(ctx)) => {
+                        if (SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))
+                            && lit.as_str().ends_with("[bot]"))
+                            || (SPOOFABLE_ACTOR_ID_CONTEXTS.iter().any(|x| x.matches(ctx))
+                                && BOT_ACTOR_IDS.contains(&lit.as_str().as_ref()))
                         {
                             (true, true)
                         } else {

@@ -198,6 +198,9 @@ pub(crate) trait JobExt<'doc> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
     fn id(&self) -> &'doc str;
 
+    // The job's name, if it has one.
+    fn name(&self) -> Option<&'doc str>;
+
     /// The job's parent [`Workflow`].
     fn parent(&self) -> &'doc Workflow;
 }
@@ -209,6 +212,13 @@ impl<'doc, T: JobExt<'doc>> Locatable<'doc> for T {
             .location()
             .annotated("this job")
             .with_keys(&["jobs".into(), self.id().into()])
+    }
+
+    fn location_with_name(&self) -> SymbolicLocation<'doc> {
+        match self.name() {
+            Some(_) => self.location().with_keys(&["name".into()]),
+            None => self.location(),
+        }
     }
 }
 
@@ -269,6 +279,10 @@ impl<'doc> JobExt<'doc> for NormalJob<'doc> {
         self.id
     }
 
+    fn name(&self) -> Option<&'doc str> {
+        self.inner.name.as_deref()
+    }
+
     fn parent(&self) -> &'doc Workflow {
         self.parent
     }
@@ -306,6 +320,10 @@ impl<'doc> ReusableWorkflowCallJob<'doc> {
 impl<'doc> JobExt<'doc> for ReusableWorkflowCallJob<'doc> {
     fn id(&self) -> &'doc str {
         self.id
+    }
+
+    fn name(&self) -> Option<&'doc str> {
+        self.inner.name.as_deref()
     }
 
     fn parent(&self) -> &'doc Workflow {
@@ -563,7 +581,6 @@ impl<'doc> Locatable<'doc> for Step<'doc> {
             Some(_) => self.location().with_keys(&["name".into()]),
             None => self.location(),
         }
-        .annotated("this step")
     }
 }
 
@@ -824,9 +841,11 @@ impl<'a> Deref for CompositeStep<'a> {
 
 impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
     fn location(&self) -> SymbolicLocation<'doc> {
-        self.parent
-            .location()
-            .with_keys(&["runs".into(), "steps".into(), self.index.into()])
+        self.parent.location().annotated("this step").with_keys(&[
+            "runs".into(),
+            "steps".into(),
+            self.index.into(),
+        ])
     }
 
     fn location_with_name(&self) -> SymbolicLocation<'doc> {
@@ -834,7 +853,6 @@ impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
             Some(_) => self.location().with_keys(&["name".into()]),
             None => self.location(),
         }
-        .annotated("this step")
     }
 }
 
