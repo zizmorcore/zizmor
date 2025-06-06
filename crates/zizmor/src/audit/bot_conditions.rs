@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 
 use github_actions_expressions::{
-    BinOp, Expr, UnOp,
+    BinOp, Expr, Literal, UnOp,
     context::{Context, ContextPattern},
 };
 use github_actions_models::common::{If, expr::ExplicitExpr};
@@ -122,8 +122,8 @@ impl BotConditions {
                 }
                 // == is trivially dominating.
                 BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
-                    (Expr::Context(ctx), Expr::String(s))
-                    | (Expr::String(s), Expr::Context(ctx)) => {
+                    (Expr::Context(ctx), Expr::Literal(Literal::String(s)))
+                    | (Expr::Literal(Literal::String(s)), Expr::Context(ctx)) => {
                         // NOTE: Can't use `contains` here because we our matching API.
                         if SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))
                             && s.ends_with("[bot]")

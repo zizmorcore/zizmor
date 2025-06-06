@@ -1,6 +1,8 @@
 //! Parsing and matching APIs for GitHub Actions expressions
 //! contexts (e.g. `github.event.name`).
 
+use crate::Literal;
+
 use super::Expr;
 
 /// Represents a context in a GitHub Actions expression.
@@ -64,7 +66,7 @@ impl<'src> Context<'src> {
                 Expr::Star => pattern.push('*'),
                 Expr::Index(idx) => match idx.as_ref() {
                     // foo['bar'] -> foo.bar
-                    Expr::String(idx) => pattern.push_str(idx),
+                    Expr::Literal(Literal::String(idx)) => pattern.push_str(idx),
                     // any kind of numeric or computed index, e.g.:
                     // foo[0], foo[1 + 2], foo[bar]
                     _ => pattern.push('*'),
@@ -176,7 +178,7 @@ impl<'src> ContextPattern<'src> {
             match part {
                 Expr::Identifier(part) => pattern.eq_ignore_ascii_case(part.0),
                 Expr::Index(part) => match part.as_ref() {
-                    Expr::String(part) => pattern.eq_ignore_ascii_case(part),
+                    Expr::Literal(Literal::String(part)) => pattern.eq_ignore_ascii_case(part),
                     _ => false,
                 },
                 _ => false,

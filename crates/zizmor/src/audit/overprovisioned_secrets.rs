@@ -84,9 +84,9 @@ impl OverprovisionedSecrets {
             Expr::Context(ctx) => {
                 match (ctx.parts.first(), ctx.parts.get(1)) {
                     // Look for `secrets[...]` accesses where the index component
-                    // is not a string literal.
+                    // is not a literal.
                     (Some(Expr::Identifier(ident)), Some(Expr::Index(idx)))
-                        if ident == "secrets" && !matches!(idx.as_ref(), Expr::String(_)) =>
+                        if ident == "secrets" && !matches!(idx.as_ref(), Expr::Literal(_)) =>
                     {
                         results.push(())
                     }

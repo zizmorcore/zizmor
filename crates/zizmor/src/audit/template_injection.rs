@@ -18,7 +18,7 @@
 use std::{collections::HashMap, env, sync::LazyLock};
 
 use fst::Map;
-use github_actions_expressions::{Expr, context::Context};
+use github_actions_expressions::{Expr, Literal, context::Context};
 use github_actions_models::{
     common::{
         RepositoryUses, Uses,
@@ -168,8 +168,10 @@ impl TemplateInjection {
                         // The right thing to do here is to parse these literals
                         // and refuse to convert them if we can't make them
                         // into valid identifiers.
-                        Expr::String(lit) => env_parts.push(lit.replace('-', "_")),
-                        Expr::Number(idx) => {
+                        Expr::Literal(Literal::String(lit)) => {
+                            env_parts.push(lit.replace('-', "_"))
+                        }
+                        Expr::Literal(Literal::Number(idx)) => {
                             let name = match *idx as i64 {
                                 0 => "FIRST".into(),
                                 1 => "SECOND".into(),
