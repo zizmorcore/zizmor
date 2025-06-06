@@ -11,20 +11,15 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:6:3
-   |
- 6 | /   hackme:
- 7 | |     name: hackme
- 8 | |     runs-on: ubuntu-latest
- 9 | |     if: github.actor == 'dependabot[bot]'
-   | |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
-10 | |     steps:
-...  |
-57 | |         run: echo hello
-58 | |         if: ${{ github.actor_id == '49699333' }}
-   | |_________________________________________________^ this job
-   |
-   = note: audit confidence → High
+ --> @@INPUT@@:7:5
+  |
+7 |     name: hackme
+  |     ^^^^^^^^^^^^ this job
+8 |     runs-on: ubuntu-latest
+9 |     if: github.actor == 'dependabot[bot]'
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+  |
+  = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:11:9
