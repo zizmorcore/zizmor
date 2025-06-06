@@ -1,4 +1,4 @@
-use github_actions_expressions::{BinOp, Expr, UnOp, context::Context};
+use github_actions_expressions::{BinOp, Expr, Literal, UnOp, context::Context};
 use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
@@ -91,8 +91,8 @@ impl BotConditions {
                 }
                 // == is trivially dominating.
                 BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
-                    (Expr::Context(ctx), Expr::String(s))
-                    | (Expr::String(s), Expr::Context(ctx)) => {
+                    (Expr::Context(ctx), Expr::Literal(Literal::String(s)))
+                    | (Expr::Literal(Literal::String(s)), Expr::Context(ctx)) => {
                         // NOTE: Can't use `contains` here because we need
                         // Context's `PartialEq` for case insensitive matching.
                         if SPOOFABLE_ACTOR_CONTEXTS.iter().any(|x| ctx == *x)
