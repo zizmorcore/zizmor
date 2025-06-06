@@ -145,32 +145,48 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:18:5
+  --> .github/workflows/bot-conditions.yml:16:3
    |
-18 |     if: github.actor == 'dependabot[bot]'
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+16 | /   hackme:
+17 | |     runs-on: ubuntu-latest
+18 | |     if: github.actor == 'dependabot[bot]'
+   | |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+19 | |     steps:
+...  |
+33 | |         run: echo hello
+34 | |         if: github.actor == 'notabot'
+   | |______________________________________^ this job
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:22:9
+  --> .github/workflows/bot-conditions.yml:20:9
    |
+20 |       - name: vulnerable-1
+   |         ^^^^^^^^^^^^^^^^^^ this step
+21 |         run: echo hello
 22 |         if: ${{ github.actor == 'dependabot[bot]' }}
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:26:9
+  --> .github/workflows/bot-conditions.yml:24:9
    |
+24 |       - name: vulnerable-2
+   |         ^^^^^^^^^^^^^^^^^^ this step
+25 |         run: echo hello
 26 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:30:9
+  --> .github/workflows/bot-conditions.yml:28:9
    |
+28 |       - name: vulnerable-3
+   |         ^^^^^^^^^^^^^^^^^^ this step
+29 |         run: echo hello
 30 |         if: github.actor == 'renovate[bot]'
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
