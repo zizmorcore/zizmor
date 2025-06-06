@@ -1,4 +1,9 @@
-use github_actions_expressions::{BinOp, Expr, UnOp, context::Context};
+use std::sync::LazyLock;
+
+use github_actions_expressions::{
+    BinOp, Expr, UnOp,
+    context::{Context, ContextPattern},
+};
 use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
@@ -11,7 +16,33 @@ pub(crate) struct BotConditions;
 
 audit_meta!(BotConditions, "bot-conditions", "spoofable bot actor check");
 
-const SPOOFABLE_ACTOR_CONTEXTS: &[&str] = &["github.actor", "github.triggering_actor"];
+static SPOOFABLE_ACTOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        ContextPattern::new("github.actor").unwrap(),
+        ContextPattern::new("github.triggering_actor").unwrap(),
+        ContextPattern::new("github.event.pull_request.sender.login").unwrap(),
+    ]
+});
+
+static SPOOFABLE_ACTOR_ID_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        ContextPattern::new("github.actor_id").unwrap(),
+        ContextPattern::new("github.event.pull_request.sender.id").unwrap(),
+    ]
+});
+
+// A list of known bot actor IDs; we need to hardcode these because they
+// have no equivalent `[bot]' suffix check.
+//
+// NOTE: This list also contains non-user IDs like integration IDs.
+// The thinking there is that users will sometimes confuse the two,
+// so we should flag them as well.
+const BOT_ACTOR_IDS: &[u32] = &[
+    29110,    //dependabot[bot]'s integration ID
+    49699333, // dependabot[bot]
+    27856297, // dependabot-preview[bot]
+    29139614, // renovate[bot]
+];
 
 impl Audit for BotConditions {
     fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
@@ -93,9 +124,8 @@ impl BotConditions {
                 BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
                     (Expr::Context(ctx), Expr::String(s))
                     | (Expr::String(s), Expr::Context(ctx)) => {
-                        // NOTE: Can't use `contains` here because we need
-                        // Context's `PartialEq` for case insensitive matching.
-                        if SPOOFABLE_ACTOR_CONTEXTS.iter().any(|x| ctx == *x)
+                        // NOTE: Can't use `contains` here because we our matching API.
+                        if SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))
                             && s.ends_with("[bot]")
                         {
                             (true, true)
