@@ -25,6 +25,8 @@ of `zizmor`.
   composite action `uses:` step (#887)
 * The [bot-conditions] audit now correctly analyzes index-style contexts,
   e.g. `github['actor']` (#905)
+* Fixed a bug where `zizmor` would fail to parse expressions that
+  contained `>=` or `<=` (#916)
 
 ## 1.9.0
 

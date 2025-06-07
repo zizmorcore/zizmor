@@ -33,7 +33,7 @@ comp_expr = {
     unary_expr ~ (comp_op ~ unary_expr)*
   | ("(" ~ or_expr ~ ")")
 }
-comp_op   = { ">" | ">=" | "<" | "<=" }
+comp_op   = { ">=" | ">" | "<=" | "<" }
 
 /// Unary operations, including the base case for expressions.
 // HACK: `unary_op ~ or_expr` ensures that we handle non-trivial

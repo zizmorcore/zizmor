@@ -677,6 +677,10 @@ mod tests {
             "github[format('{0}', 'event')]",
             "github['event']['inputs'][github.event.inputs.magic]",
             "github['event']['inputs'].*",
+            "1 == 1",
+            "1 > 1",
+            "1 >= 1",
+            "matrix.node_version >= 20",
         ];
 
         for case in cases {
