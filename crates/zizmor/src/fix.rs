@@ -4,13 +4,17 @@ use anyhow::Result;
 use owo_colors::OwoColorize;
 
 use crate::{
-    finding::{Finding, Fix},
+    finding::{Finding, Fix, Persona},
     models::AsDocument,
     registry::{FindingRegistry, InputRegistry},
 };
 
 /// Apply fixes to files based on the provided configuration
-pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Result<()> {
+pub fn apply_fixes(
+    results: &FindingRegistry,
+    registry: &InputRegistry,
+    persona: Persona,
+) -> Result<()> {
     // Collect all applicable fixes grouped by file
     let mut file_fixes: HashMap<String, Vec<(&'static str, &Finding, &Fix)>> = HashMap::new();
 
@@ -59,6 +63,11 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
         // First, try to apply each fix independently to the original content
         // to collect which fixes can be applied successfully
         for (ident, finding, fix) in fixes {
+            // Skip fixes that are not applicable to the current persona
+            if fix.persona <= persona {
+                continue;
+            }
+
             match fix.apply_to_content(original_content) {
                 Ok(Some(_)) => {
                     successful_fixes.push((*ident, *fix, *finding));
@@ -70,6 +79,13 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
                     failed_fixes.push((*ident, file_path.clone(), format!("{}", e)));
                 }
             }
+        }
+
+        // If no fixes can be applied, skip this file
+        if successful_fixes.is_empty() {
+            println!("{}", "\nFixes".to_string().green().bold());
+            println!("No applicable fixes. Skipping {}", file_path);
+            continue;
         }
 
         // Then apply successful fixes sequentially, handling conflicts gracefully

@@ -203,6 +203,7 @@ impl TemplateInjection {
         raw: &ExplicitExpr,
         parsed: &Expr,
         step: &impl StepCommon<'doc>,
+        persona: Persona,
     ) -> Option<Fix<'doc>> {
         // We can only fix `run:` steps for now.
         if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
@@ -259,6 +260,7 @@ impl TemplateInjection {
                     },
                 },
             ],
+            persona: persona,
         })
     }
 
@@ -300,7 +302,7 @@ impl TemplateInjection {
                             Some(Capability::Structured) => {
                                 bad_expressions.push((
                                     context.as_str().into(),
-                                    self.attempt_fix(&expr, &parsed, step),
+                                    self.attempt_fix(&expr, &parsed, step, Persona::default()),
                                     Severity::Medium,
                                     Confidence::High,
                                     Persona::default(),
@@ -311,7 +313,7 @@ impl TemplateInjection {
                             Some(Capability::Arbitrary) => {
                                 bad_expressions.push((
                                     context.as_str().into(),
-                                    self.attempt_fix(&expr, &parsed, step),
+                                    self.attempt_fix(&expr, &parsed, step, Persona::default()),
                                     Severity::High,
                                     Confidence::High,
                                     Persona::default(),
@@ -329,7 +331,7 @@ impl TemplateInjection {
                                     // from innocuous types, e.g. booleans.
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        self.attempt_fix(&expr, &parsed, step),
+                                        self.attempt_fix(&expr, &parsed, step, Persona::default()),
                                         Severity::High,
                                         Confidence::Low,
                                         Persona::default(),
@@ -340,7 +342,12 @@ impl TemplateInjection {
                                     if !env_is_static {
                                         bad_expressions.push((
                                             context.as_str().into(),
-                                            self.attempt_fix(&expr, &parsed, step),
+                                            self.attempt_fix(
+                                                &expr,
+                                                &parsed,
+                                                step,
+                                                Persona::default(),
+                                            ),
                                             Severity::Low,
                                             Confidence::High,
                                             Persona::default(),
@@ -351,7 +358,7 @@ impl TemplateInjection {
                                     // context is actually attacker-controllable.
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        self.attempt_fix(&expr, &parsed, step),
+                                        self.attempt_fix(&expr, &parsed, step, Persona::default()),
                                         Severity::High,
                                         Confidence::High,
                                         Persona::default(),
@@ -373,7 +380,12 @@ impl TemplateInjection {
                                         if !matrix_is_static {
                                             bad_expressions.push((
                                                 context.as_str().into(),
-                                                self.attempt_fix(&expr, &parsed, step),
+                                                self.attempt_fix(
+                                                    &expr,
+                                                    &parsed,
+                                                    step,
+                                                    Persona::default(),
+                                                ),
                                                 Severity::Medium,
                                                 Confidence::Medium,
                                                 Persona::default(),
@@ -386,7 +398,7 @@ impl TemplateInjection {
                                     // but may be in obscure cases.
                                     bad_expressions.push((
                                         context.as_str().into(),
-                                        self.attempt_fix(&expr, &parsed, step),
+                                        self.attempt_fix(&expr, &parsed, step, Persona::default()),
                                         Severity::Informational,
                                         Confidence::Low,
                                         Persona::default(),
@@ -401,7 +413,7 @@ impl TemplateInjection {
                         // `call(...).foo.bar`.
                         bad_expressions.push((
                             context.as_str().into(),
-                            self.attempt_fix(&expr, &parsed, step),
+                            self.attempt_fix(&expr, &parsed, step, Persona::default()),
                             Severity::Informational,
                             Confidence::Low,
                             Persona::default(),

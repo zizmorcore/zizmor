@@ -113,6 +113,7 @@ pub(crate) struct Fix<'doc> {
     pub(crate) description: String,
     pub(crate) _key: &'doc InputKey,
     pub(crate) patches: Vec<Patch<'doc>>,
+    pub(crate) persona: Persona,
 }
 
 impl Fix<'_> {

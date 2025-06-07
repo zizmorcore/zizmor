@@ -82,7 +82,7 @@ impl Artipacked {
                                 .primary()
                                 .annotated("does not set persist-credentials: false"),
                         )
-                        .fix(Self::create_persist_credentials_fix(checkout))
+                        .fix(Self::create_persist_credentials_fix(checkout, *persona))
                         .build(checkout)?,
                 );
             }
@@ -111,7 +111,7 @@ impl Artipacked {
                                     .location()
                                     .annotated("may leak the credentials persisted above"),
                             )
-                            .fix(Self::create_persist_credentials_fix(checkout))
+                            .fix(Self::create_persist_credentials_fix(checkout, *persona))
                             .build(checkout)?,
                     );
                 }
@@ -142,7 +142,10 @@ impl Artipacked {
     }
 
     /// Create a Fix for setting persist-credentials: false
-    fn create_persist_credentials_fix<'doc>(step: &impl StepCommon<'doc>) -> Fix<'doc> {
+    fn create_persist_credentials_fix<'doc>(
+        step: &impl StepCommon<'doc>,
+        persona: Persona,
+    ) -> Fix<'doc> {
         Fix {
             title: "Set persist-credentials: false".to_string(),
             description: "To prevent credential persistence, set 'persist-credentials: false' in this checkout step. \
@@ -166,6 +169,7 @@ impl Artipacked {
                     },
                 }
             ],
+            persona,
         }
     }
 }
