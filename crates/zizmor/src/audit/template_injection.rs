@@ -26,6 +26,7 @@ use github_actions_models::{
     },
     workflow::job::Strategy,
 };
+use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
@@ -35,7 +36,7 @@ use crate::{
     },
     models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesPattern},
     state::AuditState,
-    utils::extract_expressions,
+    utils::{DEFAULT_ENVIRONMENT_VARIABLES, extract_expressions},
     yaml_patch::{Op, Patch},
 };
 
@@ -71,52 +72,6 @@ static CONTEXT_CAPABILITIES_FST: LazyLock<Map<&[u8]>> = LazyLock::new(|| {
     fst::Map::new(include_bytes!(concat!(env!("OUT_DIR"), "/context-capabilities.fst")).as_slice())
         .expect("couldn't initialize context capabilities FST")
 });
-
-// Default environment variables that the runner supplies.
-// We track these to avoid confusingly inserting our own versions of
-// them at fix time, since the built-in values always take precedence.
-// See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables>
-const DEFAULT_ENVIRONMENT_VARIABLES: &[&str] = &[
-    "GITHUB_ACTION",              // github.action
-    "GITHUB_ACTION_PATH",         // github.action_path
-    "GITHUB_ACTION_REPOSITORY",   // github.action_repository
-    "GITHUB_ACTOR",               // github.actor
-    "GITHUB_ACTOR_ID",            // github.actor_id
-    "GITHUB_API_URL",             // github.api_url
-    "GITHUB_BASE_REF",            // github.base_ref
-    "GITHUB_ENV",                 // github.env
-    "GITHUB_EVENT_NAME",          // github.event_name
-    "GITHUB_EVENT_PATH",          // github.event_path
-    "GITHUB_GRAPHQL_URL",         // github.graphql_url
-    "GITHUB_HEAD_REF",            // github.head_ref
-    "GITHUB_JOB",                 // github.job
-    "GITHUB_PATH",                // github.path
-    "GITHUB_REF",                 // github.ref
-    "GITHUB_REF_NAME",            // github.ref_name
-    "GITHUB_REF_PROTECTED",       // github.ref_protected
-    "GITHUB_REF_TYPE",            // github.ref_type
-    "GITHUB_REPOSITORY",          // github.repository
-    "GITHUB_REPOSITORY_ID",       // github.repository_id
-    "GITHUB_REPOSITORY_OWNER",    // github.repository_owner
-    "GITHUB_REPOSITORY_OWNER_ID", // github.repository_owner_id
-    "GITHUB_RUN_ATTEMPT",         // github.run_attempt
-    "GITHUB_RUN_ID",              // github.run_id
-    "GITHUB_RUN_NUMBER",          // github.run_number
-    "GITHUB_SERVER_URL",          // github.server_url
-    "GITHUB_SHA",                 // github.sha
-    "GITHUB_TRIGGERING_ACTOR",    // github.triggering_actor
-    "GITHUB_WORKFLOW",            // github.workflow
-    "GITHUB_WORKFLOW_REF",        // github.workflow_ref
-    "GITHUB_WORKFLOW_SHA",        // github.workflow_sha
-    "GITHUB_WORKSPACE",           // github.workspace
-    "RUNNER_ARCH",                // runner.arch
-    "RUNNER_DEBUG",               // runner.debug
-    "RUNNER_ENVIRONMENT",         // runner.environment
-    "RUNNER_NAME",                // runner.name
-    "RUNNER_OS",                  // runner.os
-    "RUNNER_TEMP",                // runner.temp
-    "RUNNER_TOOL_CACHE",          // runner.tool_cache
-];
 
 enum Capability {
     Arbitrary,
@@ -307,7 +262,11 @@ impl TemplateInjection {
 
         // We only need to add the environment variable if it doesn't
         // match one of the runner's default environment variables.
-        if !DEFAULT_ENVIRONMENT_VARIABLES.contains(&env_var.as_str()) {
+        if !DEFAULT_ENVIRONMENT_VARIABLES
+            .iter()
+            .map(|t| t.0)
+            .contains(&env_var.as_str())
+        {
             patches.push(Patch {
                 route: step.route(),
                 operation: Op::MergeInto {
@@ -401,8 +360,8 @@ impl TemplateInjection {
                                         Confidence::Low,
                                         Persona::default(),
                                     ));
-                                } else if let Some(env) = context.pop_if("env") {
-                                    let env_is_static = step.env_is_static(env);
+                                } else if context.child_of("env") {
+                                    let env_is_static = step.env_is_static(context);
 
                                     if !env_is_static {
                                         bad_expressions.push((

@@ -6,6 +6,7 @@ use std::fmt::Debug;
 use std::{iter::Enumerate, ops::Deref};
 
 use anyhow::{Context, bail};
+use github_actions_expressions::context;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::event::{BareEvent, OptionalBody};
@@ -50,7 +51,7 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> {
 
     /// Returns whether the given `env.name` environment access is "static,"
     /// i.e. is not influenced by another expression.
-    fn env_is_static(&self, name: &str) -> bool;
+    fn env_is_static(&self, ctx: &context::Context) -> bool;
 
     /// Returns a [`common::Uses`] for this step, if it has one.
     fn uses(&self) -> Option<&common::Uses>;
@@ -589,8 +590,8 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         self.index
     }
 
-    fn env_is_static(&self, name: &str) -> bool {
-        utils::env_is_static(name, &[&self.env, &self.job().env, &self.workflow().env])
+    fn env_is_static(&self, ctx: &context::Context) -> bool {
+        utils::env_is_static(ctx, &[&self.env, &self.job().env, &self.workflow().env])
     }
 
     fn uses(&self) -> Option<&common::Uses> {
@@ -861,8 +862,8 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         self.index
     }
 
-    fn env_is_static(&self, name: &str) -> bool {
-        utils::env_is_static(name, &[&self.env])
+    fn env_is_static(&self, ctx: &context::Context) -> bool {
+        utils::env_is_static(ctx, &[&self.env])
     }
 
     fn uses(&self) -> Option<&common::Uses> {

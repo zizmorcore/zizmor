@@ -324,6 +324,7 @@ pub(crate) enum Usage {
 mod tests {
     use std::str::FromStr;
 
+    use github_actions_expressions::context;
     use github_actions_models::workflow::job::Step;
 
     use super::{ActionCoordinate, StepCommon};
@@ -351,7 +352,7 @@ mod tests {
             unreachable!()
         }
 
-        fn env_is_static(&self, _name: &str) -> bool {
+        fn env_is_static(&self, _ctx: &context::Context) -> bool {
             unreachable!()
         }
 
