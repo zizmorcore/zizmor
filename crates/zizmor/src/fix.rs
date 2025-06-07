@@ -4,17 +4,13 @@ use anyhow::Result;
 use owo_colors::OwoColorize;
 
 use crate::{
-    finding::{Finding, Fix, Persona},
+    finding::{Finding, Fix},
     models::AsDocument,
     registry::{FindingRegistry, InputRegistry},
 };
 
 /// Apply fixes to files based on the provided configuration
-pub fn apply_fixes(
-    results: &FindingRegistry,
-    registry: &InputRegistry,
-    persona: Persona,
-) -> Result<()> {
+pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Result<()> {
     // Collect all applicable fixes grouped by file
     let mut file_fixes: HashMap<String, Vec<(&'static str, &Finding, &Fix)>> = HashMap::new();
 
@@ -64,7 +60,7 @@ pub fn apply_fixes(
         // to collect which fixes can be applied successfully
         for (ident, finding, fix) in fixes {
             // Skip fixes that are not applicable to the current persona
-            if fix.persona <= persona {
+            if finding.determinations.persona <= results.persona() {
                 continue;
             }
 

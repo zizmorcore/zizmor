@@ -348,6 +348,11 @@ impl<'a> FindingRegistry<'a> {
     pub(crate) fn suppressed(&self) -> &[Finding<'a>] {
         &self.suppressed
     }
+
+    /// The persona for which this registry was created.
+    pub(crate) fn persona(&self) -> Persona {
+        self.persona
+    }
 }
 
 impl From<FindingRegistry<'_>> for ExitCode {
