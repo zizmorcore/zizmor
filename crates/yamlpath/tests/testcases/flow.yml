@@ -2,6 +2,13 @@ testcase:
   flow1: { foo: [1, 2, 3: [4, 5, { a: b }]] }
   flow2: { foo: [1, { a }] }
   flow3: { foo: [1, { a: }] }
+  flow4: {
+    foo: [1, 2, 3: [4, 5, { a: b }]],
+  }
+  flow5: [
+    abc, def,
+    xyz,
+  ]
 
 queries:
   - query: [flow1, foo]
@@ -19,3 +26,15 @@ queries:
 
   - query: [flow3, foo, 1]
     expected: "{ a: }"
+
+  - query: [flow4, foo]
+    expected: "    foo: [1, 2, 3: [4, 5, { a: b }]]"
+
+  - query: [flow5, 0]
+    expected: "    abc"
+
+  - query: [flow5, 1]
+    expected: "def"
+
+  - query: [flow5, 2]
+    expected: "    xyz"
