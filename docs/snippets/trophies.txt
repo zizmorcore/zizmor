@@ -12,6 +12,7 @@ apache/airflow#47258
 apache/airflow#50749
 apache/iceberg-rust#1123
 apache/opennlp#736
+apache/sedona#1976
 artichoke/artichoke#2825
 artichoke/boba#265
 artichoke/project-infrastructure#683
