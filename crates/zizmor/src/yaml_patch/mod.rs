@@ -39,49 +39,53 @@ pub enum YamlStyle {
 }
 
 impl YamlStyle {
-    // Note: Helper methods removed to avoid unused code warnings
-    // The enum variants provide comprehensive YAML style detection
-}
+    /// Detect the YAML style of a value from its string representation
+    pub fn detect(content: &str) -> Self {
+        let trimmed = content.trim();
 
-/// Detect the YAML style of a value from its string representation
-fn detect_yaml_style(content: &str) -> YamlStyle {
-    let trimmed = content.trim();
+        // First check if the entire content is a flow mapping or sequence
+        if trimmed.starts_with('{') && trimmed.ends_with('}') {
+            return YamlStyle::FlowMapping;
+        }
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            return YamlStyle::FlowSequence;
+        }
 
-    // First check if the entire content is a flow mapping or sequence
-    if trimmed.starts_with('{') && trimmed.ends_with('}') {
-        return YamlStyle::FlowMapping;
+        // Handle key-value pairs by extracting the value part
+        if let Some(colon_pos) = trimmed.find(':') {
+            let value_part = trimmed[colon_pos + 1..].trim();
+            return Self::detect_scalar_style(value_part);
+        }
+
+        Self::detect_scalar_style(trimmed)
     }
-    if trimmed.starts_with('[') && trimmed.ends_with(']') {
-        return YamlStyle::FlowSequence;
-    }
 
-    // Handle key-value pairs by extracting the value part
-    if let Some(colon_pos) = trimmed.find(':') {
-        let value_part = trimmed[colon_pos + 1..].trim();
-        return detect_scalar_style(value_part);
-    }
+    /// Detect the style of a scalar value
+    fn detect_scalar_style(content: &str) -> Self {
+        let trimmed = content.trim();
 
-    detect_scalar_style(trimmed)
-}
+        // Check for flow collections first
+        if trimmed.starts_with('{') && trimmed.ends_with('}') {
+            return YamlStyle::FlowMapping;
+        }
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            return YamlStyle::FlowSequence;
+        }
 
-/// Detect the style of a scalar value
-fn detect_scalar_style(content: &str) -> YamlStyle {
-    let trimmed = content.trim();
+        // Then check for scalar styles
+        if trimmed.starts_with('|') {
+            return YamlStyle::LiteralScalar;
+        }
+        if trimmed.starts_with('>') {
+            return YamlStyle::FoldedScalar;
+        }
+        if trimmed.starts_with('"') && trimmed.ends_with('"') {
+            return YamlStyle::DoubleQuoted;
+        }
+        if trimmed.starts_with('\'') && trimmed.ends_with('\'') {
+            return YamlStyle::SingleQuoted;
+        }
 
-    // Order matters - check specific patterns first
-    if trimmed.starts_with('{') {
-        YamlStyle::FlowMapping
-    } else if trimmed.starts_with('[') {
-        YamlStyle::FlowSequence
-    } else if trimmed.starts_with('|') {
-        YamlStyle::LiteralScalar
-    } else if trimmed.starts_with('>') {
-        YamlStyle::FoldedScalar
-    } else if trimmed.starts_with('"') && trimmed.ends_with('"') {
-        YamlStyle::DoubleQuoted
-    } else if trimmed.starts_with('\'') && trimmed.ends_with('\'') {
-        YamlStyle::SingleQuoted
-    } else {
         YamlStyle::PlainScalar
     }
 }
@@ -295,7 +299,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
 
             // Detect the target's YAML style
             let current_content = doc.extract(&feature);
-            let target_style = detect_yaml_style(&current_content);
+            let target_style = YamlStyle::detect(current_content);
 
             // Check if we're adding to a flow mapping
             if target_style == YamlStyle::FlowMapping {
