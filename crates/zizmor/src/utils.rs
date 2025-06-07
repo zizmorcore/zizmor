@@ -41,9 +41,9 @@ macro_rules! pat {
 /// These variables are provided by the runner itself and are presumed
 /// static *except* for `CI`, which can be overridden by the user.
 ///
-/// This is stored as a three-tuple of the environment variable name,
-/// its corresponding context patterns, if any, and a boolean indicating whether
-/// the variable is presumed static.
+/// This is stored as a four-tuple of the environment variable name,
+/// its environment context equivalent, its "real" context equivalent,
+/// if any, and a boolean indicating whether the variable is presumed static.
 ///
 /// See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables>
 pub(crate) static DEFAULT_ENVIRONMENT_VARIABLES: &[(
