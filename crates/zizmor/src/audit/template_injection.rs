@@ -72,6 +72,52 @@ static CONTEXT_CAPABILITIES_FST: LazyLock<Map<&[u8]>> = LazyLock::new(|| {
         .expect("couldn't initialize context capabilities FST")
 });
 
+// Default environment variables that the runner supplies.
+// We track these to avoid confusingly inserting our own versions of
+// them at fix time, since the built-in values always take precedence.
+// See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables>
+const DEFAULT_ENVIRONMENT_VARIABLES: &[&str] = &[
+    "GITHUB_ACTION",              // github.action
+    "GITHUB_ACTION_PATH",         // github.action_path
+    "GITHUB_ACTION_REPOSITORY",   // github.action_repository
+    "GITHUB_ACTOR",               // github.actor
+    "GITHUB_ACTOR_ID",            // github.actor_id
+    "GITHUB_API_URL",             // github.api_url
+    "GITHUB_BASE_REF",            // github.base_ref
+    "GITHUB_ENV",                 // github.env
+    "GITHUB_EVENT_NAME",          // github.event_name
+    "GITHUB_EVENT_PATH",          // github.event_path
+    "GITHUB_GRAPHQL_URL",         // github.graphql_url
+    "GITHUB_HEAD_REF",            // github.head_ref
+    "GITHUB_JOB",                 // github.job
+    "GITHUB_PATH",                // github.path
+    "GITHUB_REF",                 // github.ref
+    "GITHUB_REF_NAME",            // github.ref_name
+    "GITHUB_REF_PROTECTED",       // github.ref_protected
+    "GITHUB_REF_TYPE",            // github.ref_type
+    "GITHUB_REPOSITORY",          // github.repository
+    "GITHUB_REPOSITORY_ID",       // github.repository_id
+    "GITHUB_REPOSITORY_OWNER",    // github.repository_owner
+    "GITHUB_REPOSITORY_OWNER_ID", // github.repository_owner_id
+    "GITHUB_RUN_ATTEMPT",         // github.run_attempt
+    "GITHUB_RUN_ID",              // github.run_id
+    "GITHUB_RUN_NUMBER",          // github.run_number
+    "GITHUB_SERVER_URL",          // github.server_url
+    "GITHUB_SHA",                 // github.sha
+    "GITHUB_TRIGGERING_ACTOR",    // github.triggering_actor
+    "GITHUB_WORKFLOW",            // github.workflow
+    "GITHUB_WORKFLOW_REF",        // github.workflow_ref
+    "GITHUB_WORKFLOW_SHA",        // github.workflow_sha
+    "GITHUB_WORKSPACE",           // github.workspace
+    "RUNNER_ARCH",                // runner.arch
+    "RUNNER_DEBUG",               // runner.debug
+    "RUNNER_ENVIRONMENT",         // runner.environment
+    "RUNNER_NAME",                // runner.name
+    "RUNNER_OS",                  // runner.os
+    "RUNNER_TEMP",                // runner.temp
+    "RUNNER_TOOL_CACHE",          // runner.tool_cache
+];
+
 enum Capability {
     Arbitrary,
     Structured,
@@ -146,10 +192,25 @@ impl TemplateInjection {
         //   `foo.bar[*]` becomes `FOO_ANY_BAR`, as does `foo.bar.*`.
         let mut env_parts = vec![];
 
-        // TODO: Pop off `matrix` and `secrets` heads, since these don't
-        // add any extra information to the variable name.
+        let mut ctx_parts = ctx.parts.iter();
 
-        for part in &ctx.parts {
+        // `env` contexts don't include the `env` prefix in the variable name,
+        // both because they're already environment variables and so that
+        // we can check against the runner's default environment variables.
+        // TODO: We could probably go a step further here and avoid the
+        // loop below entirely, since we expect `env` contexts to only
+        // have a single part, i.e. `foo.bar` and never `foo.bar.baz`.
+        if ctx.child_of("env") {
+            ctx_parts.next();
+        }
+
+        // TODO: Pop off `matrix` and `secrets` heads, since these don't
+        // add any extra information to the variable name?
+        // Doing this will require us to do a bit of deconflicting, since
+        // we don't want to accidentally produce a default environment
+        // variable, e.g. `secrets.GITHUB_JOB` should not become `GITHUB_JOB`.
+
+        for part in ctx_parts {
             match part {
                 // We don't support turning call-led contexts into variable names.
                 Expr::Call { .. } => return None,
@@ -234,31 +295,37 @@ impl TemplateInjection {
         // index. In those kinds of cases, we don't produce a fix.
         let env_var = Self::context_to_env_var(ctx)?;
 
+        let mut patches = vec![];
+        patches.push(Patch {
+            route: step.route().with_keys(&["run".into()]),
+            operation: Op::RewriteFragment {
+                from: raw.as_raw().to_string().into(),
+                to: format!("${{{env_var}}}").into(),
+                after: None,
+            },
+        });
+
+        // We only need to add the environment variable if it doesn't
+        // match one of the runner's default environment variables.
+        if !DEFAULT_ENVIRONMENT_VARIABLES.contains(&env_var.as_str()) {
+            patches.push(Patch {
+                route: step.route(),
+                operation: Op::MergeInto {
+                    key: "env".to_string(),
+                    value: serde_yaml::to_value(HashMap::from([(
+                        env_var.as_str(),
+                        raw.as_curly(),
+                    )]))
+                    .unwrap(),
+                },
+            });
+        }
+
         Some(Fix {
             title: "replace expression with environment variable".into(),
             description: "todo".into(),
             _key: step.location().key,
-            patches: vec![
-                Patch {
-                    route: step.route().with_keys(&["run".into()]),
-                    operation: Op::RewriteFragment {
-                        from: raw.as_raw().to_string().into(),
-                        to: format!("${{{env_var}}}").into(),
-                        after: None,
-                    },
-                },
-                Patch {
-                    route: step.route(),
-                    operation: Op::MergeInto {
-                        key: "env".to_string(),
-                        value: serde_yaml::to_value(HashMap::from([(
-                            env_var.as_str(),
-                            raw.as_curly(),
-                        )]))
-                        .unwrap(),
-                    },
-                },
-            ],
+            patches,
         })
     }
 
@@ -344,6 +411,16 @@ impl TemplateInjection {
                                             Severity::Low,
                                             Confidence::High,
                                             Persona::default(),
+                                        ));
+                                    } else {
+                                        // Emit a pedantic finding even if we think the env context
+                                        // expansion is probably static.
+                                        bad_expressions.push((
+                                            context.as_str().into(),
+                                            self.attempt_fix(&expr, &parsed, step),
+                                            Severity::Unknown,
+                                            Confidence::High,
+                                            Persona::Pedantic,
                                         ));
                                     }
                                 } else if context.child_of("github") {
@@ -559,8 +636,6 @@ jobs:
                         steps:
                           - name: Vulnerable step
                             run: echo "Branch is ${GITHUB_REF_NAME}"
-                            env:
-                              GITHUB_REF_NAME: ${{ github.ref_name }}
                     "#);
                 }
             }
@@ -614,8 +689,6 @@ jobs:
                             run: |
                               echo "Hello ${GITHUB_ACTOR}"
                               echo "Processing user input"
-                            env:
-                              GITHUB_ACTOR: ${{ github.actor }}
                     "#);
                 }
             }
@@ -781,8 +854,6 @@ jobs:
                           echo "Ref: ${GITHUB_REF_NAME}"
                           echo "Commit: ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
                         env:
-                          GITHUB_ACTOR: ${{ github.actor }}
-                          GITHUB_REF_NAME: ${{ github.ref_name }}
                           GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
                 "#);
             }
@@ -836,21 +907,79 @@ jobs:
                 }
 
                 insta::assert_snapshot!(current_content, @r#"
-                    name: Test Duplicate Template Injections
-                    on: push
-                    jobs:
-                      test:
-                        runs-on: ubuntu-latest
-                        steps:
-                          - name: Duplicate vulnerable expressions
-                            run: |
-                              echo "User: ${GITHUB_ACTOR}"
-                              echo "User again: ${GITHUB_ACTOR}"
-                              echo "Ref: ${GITHUB_REF_NAME}"
-                            env:
-                              GITHUB_ACTOR: ${{ github.actor }}
-                              GITHUB_REF_NAME: ${{ github.ref_name }}
-                    "#);
+                name: Test Duplicate Template Injections
+                on: push
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    steps:
+                      - name: Duplicate vulnerable expressions
+                        run: |
+                          echo "User: ${GITHUB_ACTOR}"
+                          echo "User again: ${GITHUB_ACTOR}"
+                          echo "Ref: ${GITHUB_REF_NAME}"
+                "#);
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_equivalent_expressions() {
+        let workflow_content = r#"
+        name: Test Duplicate Template Injections
+        on: push
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Equivalent vulnerable expressions
+                run: |
+                  echo "User: ${{ github.actor }}"
+                  echo "User: ${{ env.GITHUB_ACTOR }}"
+                  echo "User: ${{ env['GITHUB_ACTOR'] }}"
+                  echo "User: ${{ env['github_actor'] }}"
+        "#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_equivalent_expressions.yml",
+            workflow_content,
+            |findings: Vec<crate::finding::Finding>| {
+                // Should find template injection
+                assert!(!findings.is_empty());
+
+                // Should have at least one finding with a fix
+                let findings_with_fixes: Vec<_> =
+                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
+
+                // Apply each fix in sequence
+                let mut current_content = workflow_content.to_string();
+                for finding in findings_with_fixes {
+                    if let Some(fix) = finding
+                        .fixes
+                        .iter()
+                        .find(|f| f.title == "replace expression with environment variable")
+                    {
+                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
+                            current_content = new_content;
+                        }
+                    }
+                }
+
+                insta::assert_snapshot!(current_content, @r#"
+                name: Test Duplicate Template Injections
+                on: push
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    steps:
+                      - name: Equivalent vulnerable expressions
+                        run: |
+                          echo "User: ${GITHUB_ACTOR}"
+                          echo "User: ${GITHUB_ACTOR}"
+                          echo "User: ${GITHUB_ACTOR}"
+                          echo "User: ${GITHUB_ACTOR}"
+                "#);
             }
         );
     }
@@ -902,6 +1031,12 @@ jobs:
             // Computed indices not supported
             ("foo.bar[computed]", None),
             ("foo.bar[abc && def]", None),
+            // env contexts should have the env prefix removed
+            ("env.FOO_BAR", Some("FOO_BAR")),
+            ("env.foo_bar", Some("FOO_BAR")),
+            ("ENV.foo_bar", Some("FOO_BAR")),
+            ("ENV['foo_bar']", Some("FOO_BAR")),
+            ("env.GITHUB_ACTOR", Some("GITHUB_ACTOR")),
             // FIXME: soundness hole
             (
                 "foo.bar['oops all spaces']",
