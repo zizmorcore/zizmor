@@ -22,7 +22,9 @@
 
     ??? example "Examples"
         - apache/airflow#45408
+        - apache/airflow#47258
         - apache/airflow#50749
+        - apache/iceberg-rust#1123
         - apache/opennlp#736
 
 

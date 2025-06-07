@@ -8,7 +8,9 @@ adafruit/circuitpython#9785
 aio-libs/aiobotocore#1344
 aio-libs/aiobotocore#1355
 apache/airflow#45408
+apache/airflow#47258
 apache/airflow#50749
+apache/iceberg-rust#1123
 apache/opennlp#736
 artichoke/artichoke#2825
 artichoke/boba#265
