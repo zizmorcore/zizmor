@@ -332,6 +332,7 @@ mod tests {
         finding::location::{Locatable, SymbolicLocation},
         models::{
             coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
+            inputs::HasInputs,
             uses::RepositoryUsesPattern,
         },
     };
@@ -343,6 +344,12 @@ mod tests {
         }
 
         fn location_with_name(&self) -> crate::finding::location::SymbolicLocation<'doc> {
+            unreachable!()
+        }
+    }
+
+    impl HasInputs for Step {
+        fn get_input(&self, _name: &str) -> Option<crate::models::inputs::Capability> {
             unreachable!()
         }
     }

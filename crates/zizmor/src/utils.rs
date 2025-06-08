@@ -2,10 +2,7 @@
 
 use anyhow::{Context as _, Error, anyhow};
 use camino::Utf8Path;
-use github_actions_expressions::{
-    Expr, Literal,
-    context::{Context, ContextPattern},
-};
+use github_actions_expressions::context::{Context, ContextPattern};
 use github_actions_models::common::{
     Env,
     expr::{ExplicitExpr, LoE},
@@ -502,26 +499,11 @@ pub(crate) fn env_is_static(env_ctx: &Context, envs: &[&LoE<Env>]) -> bool {
         }
     }
 
-    // Turn env.FOOBAR into FOOBAR.
-    // This is slightly annoying because we need to handle both
-    // `env.FOOBAR` and `env['FOOBAR']` syntaxes.
-    if env_ctx.parts.len() != 2 {
-        // We expect exactly `env.name` or `env['name']`.
-        // Something like `env.foo.bar` is syntactically valid but semantically
-        // nonsense, so we assume it's non-static.
+    let Some(env_name) = env_ctx.single_tail() else {
+        // We expect exactly one tail, e.g. `env.FOOBAR` or `env['FOOBAR']`.
+        // Anything other than that suggests that the user has given us
+        // a semantically invalid env context, so we assume it's not static.
         return false;
-    }
-
-    let env_name = match &env_ctx.parts[1] {
-        Expr::Identifier(ident) => ident.as_str(),
-        Expr::Index(idx) => match idx.as_ref() {
-            Expr::Literal(Literal::String(s)) => s,
-            // Anything besides a string literal index is either not
-            // static (e.g. a computed index) or is semantically
-            // invalid (e.g. `env[1]`).
-            _ => return false,
-        },
-        _ => return false,
     };
 
     for env in envs {

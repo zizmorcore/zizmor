@@ -881,7 +881,7 @@ error[template-injection]: code injection via template expansion
 53 | |           echo "doing a thing: ${{ inputs.hackme }}"
    | |____________________________________________________^ inputs.hackme may expand into attacker-controllable code
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 
 error[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:60:9
@@ -893,7 +893,7 @@ error[template-injection]: code injection via template expansion
 63 | |           echo "doing a thing: ${{ inputs.hackme-call }}"
    | |_________________________________________________________^ inputs.hackme-call may expand into attacker-controllable code
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 
 warning[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:82:9

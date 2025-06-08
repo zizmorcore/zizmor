@@ -97,22 +97,26 @@ impl HasInputs for Workflow {
         };
 
         let wc_cap = {
-            let workflow::event::OptionalBody::Body(wc) = &events.workflow_call else {
-                return None;
-            };
-
-            wc.get_input(name)?
+            if let workflow::event::OptionalBody::Body(wc) = &events.workflow_call {
+                wc.get_input(name)
+            } else {
+                None
+            }
         };
 
         let wd_cap = {
-            let workflow::event::OptionalBody::Body(wd) = &events.workflow_dispatch else {
-                return None;
-            };
-
-            wd.get_input(name)?
+            if let workflow::event::OptionalBody::Body(wd) = &events.workflow_dispatch {
+                wd.get_input(name)
+            } else {
+                None
+            }
         };
 
-        Some(wc_cap.unify(wd_cap))
+        match (wc_cap, wd_cap) {
+            (Some(cap1), Some(cap2)) => Some(cap1.unify(cap2)),
+            (Some(single), None) | (None, Some(single)) => Some(single),
+            (None, None) => None,
+        }
     }
 }
 
@@ -590,6 +594,12 @@ impl<'doc> Locatable<'doc> for Step<'doc> {
             Some(_) => self.location().with_keys(&["name".into()]),
             None => self.location(),
         }
+    }
+}
+
+impl HasInputs for Step<'_> {
+    fn get_input(&self, name: &str) -> Option<Capability> {
+        self.workflow().get_input(name)
     }
 }
 

@@ -178,6 +178,12 @@ impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
     }
 }
 
+impl HasInputs for CompositeStep<'_> {
+    fn get_input(&self, name: &str) -> Option<Capability> {
+        self.parent.get_input(name)
+    }
+}
+
 impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
     fn index(&self) -> usize {
         self.index

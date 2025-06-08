@@ -43,6 +43,29 @@ impl<'src> Context<'src> {
         parent.parent_of(self)
     }
 
+    /// Return this context's "single tail," if it has one.
+    ///
+    /// This is useful primarily for contexts under `env` and `inputs`,
+    /// where we expect only a single tail part, e.g. `env.FOO` or
+    /// `inputs['bar']`.
+    ///
+    /// Returns `None` if the context has more than one tail part,
+    /// or if the context's head part is not an identifier.
+    pub fn single_tail(&self) -> Option<&str> {
+        if self.parts.len() != 2 || !matches!(self.parts[0], Expr::Identifier(_)) {
+            return None;
+        }
+
+        match &self.parts[1] {
+            Expr::Identifier(ident) => Some(ident.as_str()),
+            Expr::Index(idx) => match idx.as_ref() {
+                Expr::Literal(Literal::String(idx)) => Some(idx),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
     /// Returns the "pattern equivalent" of this context.
     ///
     /// This is a string that can be used to efficiently match the context,
@@ -312,6 +335,24 @@ mod tests {
             ("", false),
         ] {
             assert_eq!(ctx.child_of(*case), *child);
+        }
+    }
+
+    #[test]
+    fn test_single_tail() {
+        for (case, expected) in &[
+            // Valid cases.
+            ("foo.bar", Some("bar")),
+            ("foo['bar']", Some("bar")),
+            ("inputs.test", Some("test")),
+            // Invalid cases.
+            ("foo.bar.baz", None),       // too many parts
+            ("foo.bar.baz.qux", None),   // too many parts
+            ("foo['bar']['baz']", None), // too many parts
+            ("foo().bar", None),         // head is a call, not an identifier
+        ] {
+            let ctx = Context::try_from(*case).unwrap();
+            assert_eq!(ctx.single_tail(), *expected);
         }
     }
 

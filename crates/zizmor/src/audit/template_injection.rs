@@ -346,16 +346,30 @@ impl TemplateInjection {
                                     // While not ideal, secret expansion is typically not exploitable.
                                     continue;
                                 } else if context.child_of("inputs") {
-                                    // TODO: Currently low confidence because we don't check the
-                                    // input's type. In the future, we should index back into
-                                    // the workflow's triggers and exclude input expansions
-                                    // from innocuous types, e.g. booleans.
+                                    let (severity, confidence, persona) = match context
+                                        .single_tail()
+                                        .and_then(|input_name| step.get_input(input_name))
+                                    {
+                                        Some(Capability::Fixed) => {
+                                            (Severity::Low, Confidence::High, Persona::Pedantic)
+                                        }
+                                        Some(Capability::Structured) => {
+                                            (Severity::Medium, Confidence::High, Persona::default())
+                                        }
+                                        Some(Capability::Arbitrary) => {
+                                            (Severity::High, Confidence::High, Persona::default())
+                                        }
+                                        None => {
+                                            (Severity::Unknown, Confidence::Low, Persona::default())
+                                        }
+                                    };
+
                                     bad_expressions.push((
                                         context.as_str().into(),
                                         self.attempt_fix(&expr, &parsed, step),
-                                        Severity::High,
-                                        Confidence::Low,
-                                        Persona::default(),
+                                        severity,
+                                        confidence,
+                                        persona,
                                     ));
                                 } else if context.child_of("env") {
                                     let env_is_static = step.env_is_static(context);
