@@ -56,10 +56,7 @@ impl std::fmt::Debug for Action {
 impl HasInputs for Action {
     fn get_input(&self, name: &str) -> Option<Capability> {
         // Action inputs are always arbitrary strings.
-        match self.inputs.get(name) {
-            Some(_) => Some(Capability::Arbitrary),
-            None => None,
-        }
+        self.inputs.get(name).map(|_| Capability::Arbitrary)
     }
 }
 
