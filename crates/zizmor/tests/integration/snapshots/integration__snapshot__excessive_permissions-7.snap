@@ -1,33 +1,35 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"excessive-permissions/jobs-broaden-permissions.yml\")).run()?"
 ---
 warning[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:6:3
+  --> @@INPUT@@:8:3
    |
- 6 | /   job1:
- 7 | |     runs-on: ubuntu-latest
- 8 | |     permissions: read-all
+ 8 | /   job1:
+ 9 | |     name: job1
+10 | |     runs-on: ubuntu-latest
+11 | |     permissions: read-all
    | |     --------------------- uses read-all permissions
- 9 | |     steps:
-10 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-11 | |         with:
-12 | |           persist-credentials: false
+12 | |     steps:
+13 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+14 | |         with:
+15 | |           persist-credentials: false
    | |____________________________________- this job
    |
    = note: audit confidence → High
 
 error[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:14:3
+  --> @@INPUT@@:17:3
    |
-14 | /   job2:
-15 | |     runs-on: ubuntu-latest
-16 | |     permissions: write-all
+17 | /   job2:
+18 | |     name: job2
+19 | |     runs-on: ubuntu-latest
+20 | |     permissions: write-all
    | |     ^^^^^^^^^^^^^^^^^^^^^^ uses write-all permissions
-17 | |     steps:
-18 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-19 | |         with:
-20 | |           persist-credentials: false
+21 | |     steps:
+22 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+23 | |         with:
+24 | |           persist-credentials: false
    | |_____________________________________^ this job
    |
    = note: audit confidence → High

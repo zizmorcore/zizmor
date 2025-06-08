@@ -11,127 +11,127 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
- --> @@INPUT@@:7:5
-  |
-7 |     name: hackme
-  |     ^^^^^^^^^^^^ this job
-8 |     runs-on: ubuntu-latest
-9 |     if: github.actor == 'dependabot[bot]'
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
-  |
-  = note: audit confidence → High
+  --> @@INPUT@@:9:5
+   |
+ 9 |     name: hackme
+   |     ^^^^^^^^^^^^ this job
+10 |     runs-on: ubuntu-latest
+11 |     if: github.actor == 'dependabot[bot]'
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |
+   = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:11:9
+  --> @@INPUT@@:13:9
    |
-11 |       - name: vulnerable-1
+13 |       - name: vulnerable-1
    |         ^^^^^^^^^^^^^^^^^^ this step
-12 |         run: echo hello
-13 |         if: ${{ github.actor == 'dependabot[bot]' }}
+14 |         run: echo hello
+15 |         if: ${{ github.actor == 'dependabot[bot]' }}
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:15:9
+  --> @@INPUT@@:17:9
    |
-15 |       - name: vulnerable-2
+17 |       - name: vulnerable-2
    |         ^^^^^^^^^^^^^^^^^^ this step
-16 |         run: echo hello
-17 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
+18 |         run: echo hello
+19 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:19:9
+  --> @@INPUT@@:21:9
    |
-19 |       - name: vulnerable-3
+21 |       - name: vulnerable-3
    |         ^^^^^^^^^^^^^^^^^^ this step
-20 |         run: echo hello
-21 |         if: github.actor == 'renovate[bot]'
+22 |         run: echo hello
+23 |         if: github.actor == 'renovate[bot]'
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:27:9
+  --> @@INPUT@@:29:9
    |
-27 |       - name: vulnerable-5
+29 |       - name: vulnerable-5
    |         ^^^^^^^^^^^^^^^^^^ this step
-28 |         run: echo hello
-29 |         # ensure we're case insensitive
-30 |         if: github.ACTOR == 'dependabot[bot]'
+30 |         run: echo hello
+31 |         # ensure we're case insensitive
+32 |         if: github.ACTOR == 'dependabot[bot]'
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:32:9
+  --> @@INPUT@@:34:9
    |
-32 |       - name: vulnerable-6
+34 |       - name: vulnerable-6
    |         ^^^^^^^^^^^^^^^^^^ this step
-33 |         run: echo hello
-34 |         # ensure we detect unknown bots
-35 |         if: github.actor == 'mystery[bot]'
+35 |         run: echo hello
+36 |         # ensure we detect unknown bots
+37 |         if: github.actor == 'mystery[bot]'
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:37:9
+  --> @@INPUT@@:39:9
    |
-37 |       - name: vulnerable-7
+39 |       - name: vulnerable-7
    |         ^^^^^^^^^^^^^^^^^^ this step
-38 |         run: echo hello
-39 |         # ensure we handle index-style contexts
-40 |         if: github['actor'] == 'dependabot[bot]'
+40 |         run: echo hello
+41 |         # ensure we handle index-style contexts
+42 |         if: github['actor'] == 'dependabot[bot]'
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:42:9
+  --> @@INPUT@@:44:9
    |
-42 |       - name: vulnerable-8
+44 |       - name: vulnerable-8
    |         ^^^^^^^^^^^^^^^^^^ this step
-43 |         run: echo hello
-44 |         # ensure we handle index-style contexts with a different case
-45 |         if: github['ACTOR'] == 'dependabot[bot]'
+45 |         run: echo hello
+46 |         # ensure we handle index-style contexts with a different case
+47 |         if: github['ACTOR'] == 'dependabot[bot]'
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:47:9
+  --> @@INPUT@@:49:9
    |
-47 |       - name: vulnerable-9
+49 |       - name: vulnerable-9
    |         ^^^^^^^^^^^^^^^^^^ this step
-48 |         run: echo hello
-49 |         # ensure we handle actor ID checks
-50 |         if: github.actor_id == 49699333
+50 |         run: echo hello
+51 |         # ensure we handle actor ID checks
+52 |         if: github.actor_id == 49699333
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:52:9
+  --> @@INPUT@@:54:9
    |
-52 |       - name: vulnerable-10
+54 |       - name: vulnerable-10
    |         ^^^^^^^^^^^^^^^^^^^ this step
-53 |         run: echo hello
-54 |         if: github['ACTOR_ID'] == 49699333
+55 |         run: echo hello
+56 |         if: github['ACTOR_ID'] == 49699333
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:56:9
+  --> @@INPUT@@:58:9
    |
-56 |       - name: vulnerable-11
+58 |       - name: vulnerable-11
    |         ^^^^^^^^^^^^^^^^^^^ this step
-57 |         run: echo hello
-58 |         if: ${{ github.actor_id == '49699333' }}
+59 |         run: echo hello
+60 |         if: ${{ github.actor_id == '49699333' }}
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High

@@ -1,11 +1,11 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"excessive-permissions/workflow-read-all.yml\")).run()?"
 ---
 warning[excessive-permissions]: overly broad permissions
- --> @@INPUT@@:3:1
+ --> @@INPUT@@:5:1
   |
-3 | permissions: read-all
+5 | permissions: read-all
   | --------------------- uses read-all permissions
   |
   = note: audit confidence → High
