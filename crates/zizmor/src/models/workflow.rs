@@ -22,7 +22,10 @@ use terminal_link::Link;
 use crate::{
     InputKey,
     finding::location::{Locatable, Route, SymbolicLocation},
-    models::{AsDocument, StepBodyCommon, StepCommon},
+    models::{
+        AsDocument, StepBodyCommon, StepCommon,
+        inputs::{Capability, HasInputs},
+    },
     registry::InputError,
     utils::{self, WORKFLOW_VALIDATOR, extract_expressions, from_str_with_validation},
 };
@@ -58,6 +61,62 @@ impl std::ops::Deref for Workflow {
 
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+impl HasInputs for workflow::event::WorkflowCall {
+    fn get_input(&self, name: &str) -> Option<Capability> {
+        let input = self.inputs.get(name)?;
+
+        Some(match input.r#type {
+            workflow::event::WorkflowCallInputType::Boolean => Capability::Fixed,
+            workflow::event::WorkflowCallInputType::Number => Capability::Fixed,
+            workflow::event::WorkflowCallInputType::String => Capability::Arbitrary,
+        })
+    }
+}
+
+impl HasInputs for workflow::event::WorkflowDispatch {
+    fn get_input(&self, name: &str) -> Option<Capability> {
+        let input = self.inputs.get(name)?;
+
+        Some(match input.r#type {
+            workflow::event::WorkflowDispatchInputType::Boolean => Capability::Fixed,
+            workflow::event::WorkflowDispatchInputType::Choice => Capability::Fixed,
+            workflow::event::WorkflowDispatchInputType::Environment => Capability::Fixed,
+            workflow::event::WorkflowDispatchInputType::Number => Capability::Fixed,
+            workflow::event::WorkflowDispatchInputType::String => Capability::Arbitrary,
+        })
+    }
+}
+
+impl HasInputs for Workflow {
+    fn get_input(&self, name: &str) -> Option<Capability> {
+        let workflow::Trigger::Events(events) = &self.on else {
+            return None;
+        };
+
+        let wc_cap = {
+            if let workflow::event::OptionalBody::Body(wc) = &events.workflow_call {
+                wc.get_input(name)
+            } else {
+                None
+            }
+        };
+
+        let wd_cap = {
+            if let workflow::event::OptionalBody::Body(wd) = &events.workflow_dispatch {
+                wd.get_input(name)
+            } else {
+                None
+            }
+        };
+
+        match (wc_cap, wd_cap) {
+            (Some(cap1), Some(cap2)) => Some(cap1.unify(cap2)),
+            (Some(single), None) | (None, Some(single)) => Some(single),
+            (None, None) => None,
+        }
     }
 }
 
@@ -538,6 +597,12 @@ impl<'doc> Locatable<'doc> for Step<'doc> {
     }
 }
 
+impl HasInputs for Step<'_> {
+    fn get_input(&self, name: &str) -> Option<Capability> {
+        self.workflow().get_input(name)
+    }
+}
+
 impl<'doc> StepCommon<'doc> for Step<'doc> {
     fn index(&self) -> usize {
         self.index
@@ -659,5 +724,59 @@ impl<'doc> Iterator for Steps<'doc> {
             Some((idx, step)) => Some(Step::new(idx, step, self.parent.clone())),
             None => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::models::{
+        inputs::{Capability, HasInputs as _},
+        workflow::Workflow,
+    };
+
+    #[test]
+    fn test_workflow_has_inputs() -> anyhow::Result<()> {
+        let workflow = r#"
+name: Test Workflow
+on:
+  workflow_dispatch:
+    inputs:
+      foo:
+        type: string
+        required: true
+      bar:
+        type: boolean
+        required: false
+  workflow_call:
+    inputs:
+      foo:
+        type: number
+        required: true
+      bar:
+        type: boolean
+        required: false
+
+jobs:
+  test_job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: true
+"#;
+
+        let workflow =
+            Workflow::from_string(workflow.into(), crate::InputKey::local("dummy", None)?)?;
+
+        // `foo` unifies in favor of the more permissive capability,
+        // which is `Capability::Arbitrary` from the `string` input type
+        // under `workflow_dispatch`.
+        let foo_cap = workflow.get_input("foo").unwrap();
+        assert_eq!(foo_cap, Capability::Arbitrary);
+
+        // `bar` unifies to `Capability::Fixed` since both
+        // `workflow_dispatch` and `workflow_call` define it as a boolean.
+        let bar_cap = workflow.get_input("bar").unwrap();
+        assert_eq!(bar_cap, Capability::Fixed);
+
+        Ok(())
     }
 }

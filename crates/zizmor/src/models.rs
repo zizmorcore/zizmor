@@ -7,9 +7,11 @@ use github_actions_models::common::Env;
 use github_actions_models::workflow::job::Strategy;
 
 use crate::finding::location::Locatable;
+use crate::models::inputs::HasInputs;
 
 pub(crate) mod action;
 pub(crate) mod coordinate;
+pub(crate) mod inputs;
 pub(crate) mod uses;
 pub(crate) mod workflow;
 
@@ -31,7 +33,7 @@ pub(crate) enum StepBodyCommon<'s> {
 }
 
 /// Common interfaces between workflow and action steps.
-pub(crate) trait StepCommon<'doc>: Locatable<'doc> {
+pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
     /// Returns the step's index within its parent job or action.
     fn index(&self) -> usize;
 

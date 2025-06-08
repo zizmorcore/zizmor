@@ -249,7 +249,16 @@ pub struct WorkflowCallInput {
     // TODO: model `default`?
     #[serde(default)]
     pub required: bool,
-    pub r#type: String,
+    pub r#type: WorkflowCallInputType,
+}
+
+/// The type of a `workflow_call` input, as specified in the `type` field.
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum WorkflowCallInputType {
+    Boolean,
+    Number,
+    String,
 }
 
 /// A single output in a `workflow_call` event trigger body.
@@ -274,7 +283,7 @@ pub struct WorkflowCallSecret {
 #[serde(rename_all = "kebab-case")]
 pub struct WorkflowDispatch {
     #[serde(default)]
-    pub inputs: IndexMap<String, WorkflowDispatchInput>, // TODO: WorkflowDispatchInput
+    pub inputs: IndexMap<String, WorkflowDispatchInput>,
 }
 
 /// A single input in a `workflow_dispatch` event trigger body.
@@ -285,11 +294,23 @@ pub struct WorkflowDispatchInput {
     // TODO: model `default`?
     #[serde(default)]
     pub required: bool,
-    // TODO: Model as boolean, choice, number, environment, string; default is string.
-    pub r#type: Option<String>,
+    /// The type of this `workflow_dispatch` input.
+    #[serde(default)]
+    pub r#type: WorkflowDispatchInputType,
     // Only present when `type` is `choice`.
     #[serde(default)]
     pub options: Vec<EnvValue>,
+}
+
+#[derive(Default, Deserialize, Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum WorkflowDispatchInputType {
+    Boolean,
+    Choice,
+    Environment,
+    Number,
+    #[default]
+    String,
 }
 
 /// The body of a `workflow_run` event trigger.

@@ -12,7 +12,10 @@ use terminal_link::Link;
 use crate::{
     InputKey,
     finding::location::{Locatable, Route, SymbolicLocation},
-    models::{AsDocument, StepBodyCommon, StepCommon},
+    models::{
+        AsDocument, StepBodyCommon, StepCommon,
+        inputs::{Capability, HasInputs},
+    },
     registry::InputError,
     utils::{self, ACTION_VALIDATOR, from_str_with_validation},
 };
@@ -47,6 +50,13 @@ impl std::ops::Deref for Action {
 impl std::fmt::Debug for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{key}", key = self.key)
+    }
+}
+
+impl HasInputs for Action {
+    fn get_input(&self, name: &str) -> Option<Capability> {
+        // Action inputs are always arbitrary strings.
+        self.inputs.get(name).map(|_| Capability::Arbitrary)
     }
 }
 
@@ -162,6 +172,12 @@ impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
             Some(_) => self.location().with_keys(&["name".into()]),
             None => self.location(),
         }
+    }
+}
+
+impl HasInputs for CompositeStep<'_> {
+    fn get_input(&self, name: &str) -> Option<Capability> {
+        self.parent.get_input(name)
     }
 }
 
