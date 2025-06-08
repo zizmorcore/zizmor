@@ -20,8 +20,10 @@ pub enum Error {
 /// Represents different YAML style formats for collections and scalars
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum YamlStyle {
-    /// Block style collections and mappings
-    Block,
+    /// Block style mappings
+    BlockMapping,
+    /// Block style sequences
+    BlockSequence,
     /// Multiline flow mapping style:
     ///
     /// ```yaml
@@ -44,9 +46,9 @@ pub enum YamlStyle {
     /// Single-line flow sequence style: [ item1, item2, item3 ]
     FlowSequence,
     /// Literal scalar style: |
-    LiteralScalar,
+    MultilineLiteralScalar,
     /// Folded scalar style: >
-    FoldedScalar,
+    MultilineFoldedScalar,
     /// Double quoted scalar style: "value"
     DoubleQuoted,
     /// Single quoted scalar style: 'value'
@@ -98,10 +100,10 @@ impl YamlStyle {
 
         // Then check for scalar styles
         if trimmed.starts_with('|') {
-            return YamlStyle::LiteralScalar;
+            return YamlStyle::MultilineLiteralScalar;
         }
         if trimmed.starts_with('>') {
-            return YamlStyle::FoldedScalar;
+            return YamlStyle::MultilineFoldedScalar;
         }
         if trimmed.starts_with('"') && trimmed.ends_with('"') {
             return YamlStyle::DoubleQuoted;
@@ -1004,88 +1006,140 @@ mod tests {
 
     #[test]
     fn test_detect_yaml_style() {
-        for (case, expected_style) in &[
-            // flow mapping cases
-            ("{key: value}", YamlStyle::FlowMapping),
-            ("{ key: value }", YamlStyle::FlowMapping),
-            ("  { key: value }", YamlStyle::FlowMapping),
-            ("  { key: value }  ", YamlStyle::FlowMapping),
-            ("{ key: [x, y, z] }", YamlStyle::FlowMapping),
-            // flow sequence cases
-            ("[item1, item2]", YamlStyle::FlowSequence),
-            ("[ item1, item2 ]", YamlStyle::FlowSequence),
-            ("  [ item1, item2 ]", YamlStyle::FlowSequence),
-            ("  [ item1, item2 ]  ", YamlStyle::FlowSequence),
-            // multi line flow mapping cases
-            (
-                r#"
-{
-  key: value,
-  key2: value2,
-}
-"#,
-                YamlStyle::MultilineFlowMapping,
-            ),
-            (
-                r#"
+        let doc = r#"
+block-mapping:
+ foo: bar
+ baz: qux
 
-{
-  key: value,
-  key2: value2,
-}
+block-sequence:
+ - item1
+ - item2
+ - item3
 
-"#,
-                YamlStyle::MultilineFlowMapping,
-            ),
-            (
-                r#"
-{
-  foo: bar, baz: qux,
+flow-mapping-a: { a: b, c: d }
+flow-mapping-b: { a: b, c: d, }
+flow-mapping-c: {
+  a: b,
+  c: d
 }
-"#,
-                YamlStyle::MultilineFlowMapping,
-            ),
-            (
-                r#"
-[
-  a,
-  b,
-  c
+flow-mapping-d: {
+  a: b,
+  c: d,
+}
+flow-mapping-e: {
+  a: b, c: d,
+}
+flow-mapping-f: { abc }
+flow-mapping-g: { abc: }
+
+flow-sequence-a: [item1, item2, item3]
+flow-sequence-b: [ item1, item2, item3 ]
+flow-sequence-c: [
+  item1,
+  item2,
+  item3
 ]
-"#,
-                YamlStyle::MultilineFlowSequence,
-            ),
-            (
-                r#"
-
-[
-  a,
-  b,
-  c
+flow-sequence-d: [
+  item1,
+  item2,
+  item3,
 ]
 
-"#,
-                YamlStyle::MultilineFlowSequence,
+scalars:
+  - 123
+  - abc
+  - "abc"
+  - 'abc'
+
+multiline-scalars:
+  literal-a: |
+    abcd
+  literal-b: |-
+    abcd
+  literal-c: |+
+    abcd
+  literal-d: |2
+    abcd
+  literal-e: |-2
+    abcd
+
+  folded-a: >
+    abcd
+  folded-b: >-
+    abcd
+  folded-c: >+
+    abcd
+  folded-d: >2
+    abcd
+  folded-e: >-2
+    abcd
+"#;
+
+        let doc = yamlpath::Document::new(doc).unwrap();
+
+        for (route, expected_style) in &[
+            // (route!("block-mapping"), YamlStyle::Block),
+            // (route!("block-sequence"), YamlStyle::Block),
+            (route!("flow-mapping-a"), YamlStyle::FlowMapping),
+            (route!("flow-mapping-b"), YamlStyle::FlowMapping),
+            (route!("flow-mapping-c"), YamlStyle::MultilineFlowMapping),
+            (route!("flow-mapping-d"), YamlStyle::MultilineFlowMapping),
+            (route!("flow-mapping-e"), YamlStyle::MultilineFlowMapping),
+            (route!("flow-mapping-f"), YamlStyle::FlowMapping),
+            (route!("flow-mapping-g"), YamlStyle::FlowMapping),
+            (route!("flow-sequence-a"), YamlStyle::FlowSequence),
+            (route!("flow-sequence-b"), YamlStyle::FlowSequence),
+            (route!("flow-sequence-c"), YamlStyle::MultilineFlowSequence),
+            (route!("flow-sequence-d"), YamlStyle::MultilineFlowSequence),
+            (route!("scalars", 0), YamlStyle::PlainScalar),
+            (route!("scalars", 1), YamlStyle::PlainScalar),
+            (route!("scalars", 2), YamlStyle::DoubleQuoted),
+            (route!("scalars", 3), YamlStyle::SingleQuoted),
+            (
+                route!("multiline-scalars", "literal-a"),
+                YamlStyle::MultilineLiteralScalar,
             ),
             (
-                r#"
-[
-  a: 1,
-  b,
-  c,
-]
-"#,
-                YamlStyle::MultilineFlowSequence,
+                route!("multiline-scalars", "literal-b"),
+                YamlStyle::MultilineLiteralScalar,
             ),
-            ("\"foo\"", YamlStyle::DoubleQuoted),
-            (" \"foo\" ", YamlStyle::DoubleQuoted),
-            ("\'foo\'", YamlStyle::SingleQuoted),
-            (" \'foo\' ", YamlStyle::SingleQuoted),
-            ("foo", YamlStyle::PlainScalar),
-            ("  foo", YamlStyle::PlainScalar),
-            ("123", YamlStyle::PlainScalar),
+            (
+                route!("multiline-scalars", "literal-c"),
+                YamlStyle::MultilineLiteralScalar,
+            ),
+            (
+                route!("multiline-scalars", "literal-d"),
+                YamlStyle::MultilineLiteralScalar,
+            ),
+            (
+                route!("multiline-scalars", "literal-e"),
+                YamlStyle::MultilineLiteralScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-a"),
+                YamlStyle::MultilineFoldedScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-b"),
+                YamlStyle::MultilineFoldedScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-c"),
+                YamlStyle::MultilineFoldedScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-d"),
+                YamlStyle::MultilineFoldedScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-e"),
+                YamlStyle::MultilineFoldedScalar,
+            ),
         ] {
-            assert_eq!(YamlStyle::detect(case), *expected_style);
+            let feature = route_to_feature_exact(&route, &doc).unwrap().unwrap();
+            let content = doc.extract_with_leading_whitespace(&feature);
+            let style = YamlStyle::detect(content);
+            assert_eq!(style, *expected_style);
         }
     }
 
