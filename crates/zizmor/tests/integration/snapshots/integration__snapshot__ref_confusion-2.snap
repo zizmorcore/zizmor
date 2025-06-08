@@ -1,11 +1,11 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"ref-confusion/issue-518-repro.yml\")).offline(false).run()?"
 ---
 error[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:12:9
+  --> @@INPUT@@:13:9
    |
-12 |         uses: arduino/setup-task@v2
+13 |         uses: arduino/setup-task@v2
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High

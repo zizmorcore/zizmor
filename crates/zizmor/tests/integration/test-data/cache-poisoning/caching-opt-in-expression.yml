@@ -1,9 +1,12 @@
 on: release
 
+name: caching-opt-in-expression
+
 permissions: {}
 
 jobs:
   publish:
+    name: publish
     runs-on: ubuntu-latest
     steps:
       - name: Project Checkout

@@ -8,6 +8,7 @@ permissions: {}
 
 jobs:
   inject-me:
+    name: inject-me
     runs-on: ubuntu-latest
 
     steps:

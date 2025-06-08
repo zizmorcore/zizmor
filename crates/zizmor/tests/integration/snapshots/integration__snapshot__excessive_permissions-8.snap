@@ -1,27 +1,27 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"excessive-permissions/workflow-write-explicit.yml\")).run()?"
 ---
 error[excessive-permissions]: overly broad permissions
- --> @@INPUT@@:5:3
+ --> @@INPUT@@:7:3
   |
-5 |   contents: write
+7 |   contents: write
   |   ^^^^^^^^^^^^^^^ contents: write is overly broad at the workflow level
   |
   = note: audit confidence → High
 
 error[excessive-permissions]: overly broad permissions
- --> @@INPUT@@:6:3
+ --> @@INPUT@@:8:3
   |
-6 |   id-token: write
+8 |   id-token: write
   |   ^^^^^^^^^^^^^^^ id-token: write is overly broad at the workflow level
   |
   = note: audit confidence → High
 
 note[excessive-permissions]: overly broad permissions
- --> @@INPUT@@:7:3
+ --> @@INPUT@@:9:3
   |
-7 |   nonexistent: write
+9 |   nonexistent: write
   |   ------------------ note: nonexistent: write is overly broad at the workflow level
   |
   = note: audit confidence → High

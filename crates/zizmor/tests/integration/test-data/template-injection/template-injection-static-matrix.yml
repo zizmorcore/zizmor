@@ -8,6 +8,7 @@ permissions: {}
 
 jobs:
   ok-ish:
+    name: ok-ish
     runs-on: ubuntu-latest
 
     strategy:

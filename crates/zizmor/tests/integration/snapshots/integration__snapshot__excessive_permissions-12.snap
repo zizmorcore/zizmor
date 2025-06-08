@@ -1,5 +1,5 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"excessive-permissions/reusable-workflow-other-triggers.yml\")).run()?"
 ---
 warning[excessive-permissions]: overly broad permissions
@@ -8,8 +8,8 @@ warning[excessive-permissions]: overly broad permissions
  1 | / name: reusable-workflow-other-triggers
  2 | |
 ...  |
-20 | |     # responsible for setting permissions
-21 | |     uses: ./.github/workflows/fake.yml
+22 | |     # responsible for setting permissions
+23 | |     uses: ./.github/workflows/fake.yml
    | |_______________________________________- default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
@@ -18,10 +18,10 @@ warning[excessive-permissions]: overly broad permissions
   --> @@INPUT@@:11:3
    |
 11 | /   job1:
-12 | |     # regular job-level finding, since we can be triggered by
+12 | |     name: job1
 ...  |
-15 | |     steps:
-16 | |       - run: echo hello
+16 | |     steps:
+17 | |       - run: echo hello
    | |                       -
    | |_______________________|
    |                         this job
@@ -30,12 +30,13 @@ warning[excessive-permissions]: overly broad permissions
    = note: audit confidence → Medium
 
 warning[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:18:3
+  --> @@INPUT@@:19:3
    |
-18 | /   job2:
-19 | |     # normal permissions finding here, since callers are always
-20 | |     # responsible for setting permissions
-21 | |     uses: ./.github/workflows/fake.yml
+19 | /   job2:
+20 | |     name: job2
+21 | |     # normal permissions finding here, since callers are always
+22 | |     # responsible for setting permissions
+23 | |     uses: ./.github/workflows/fake.yml
    | |                                       -
    | |_______________________________________|
    |                                         this job

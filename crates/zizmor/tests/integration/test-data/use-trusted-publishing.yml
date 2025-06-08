@@ -3,8 +3,11 @@
 
 on: [push]
 
+name: use-trusted-publishing
+
 jobs:
   publish:
+    name: publish
     runs-on: ubuntu-latest
     permissions:
       id-token: write

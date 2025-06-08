@@ -3,10 +3,13 @@ on:
     branches:
       - main
 
+name: publisher-step
+
 permissions: {}
 
 jobs:
   publish:
+    name: publish
     runs-on: macos-latest
     steps:
       - name: Project Checkout

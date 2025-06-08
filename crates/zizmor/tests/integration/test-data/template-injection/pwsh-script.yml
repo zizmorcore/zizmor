@@ -6,6 +6,7 @@ permissions: {}
 
 jobs:
   some-job:
+    name: some-job
     runs-on: ubuntu-latest
 
     steps:

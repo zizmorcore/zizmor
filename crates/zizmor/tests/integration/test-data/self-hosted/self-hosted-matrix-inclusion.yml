@@ -1,10 +1,13 @@
 on:
   push:
 
+name: self-hosted-matrix-inclusion
+
 permissions: {}
 
 jobs:
   whops:
+    name: whops
     runs-on: ${{ matrix.os }}
 
     strategy:

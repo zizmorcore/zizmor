@@ -6,6 +6,7 @@ on:
 
 jobs:
   test-itg:
+    name: test-itg
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
