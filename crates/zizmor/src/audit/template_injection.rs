@@ -35,7 +35,8 @@ use crate::{
         location::{Routable as _, SymbolicLocation},
     },
     models::{
-        self, StepCommon, action::CompositeStep, uses::RepositoryUsesPattern, workflow::Step,
+        self, StepCommon, action::CompositeStep, inputs::Capability, uses::RepositoryUsesPattern,
+        workflow::Step,
     },
     state::AuditState,
     utils::{DEFAULT_ENVIRONMENT_VARIABLES, extract_expressions},
@@ -74,12 +75,6 @@ static CONTEXT_CAPABILITIES_FST: LazyLock<Map<&[u8]>> = LazyLock::new(|| {
     fst::Map::new(include_bytes!(concat!(env!("OUT_DIR"), "/context-capabilities.fst")).as_slice())
         .expect("couldn't initialize context capabilities FST")
 });
-
-enum Capability {
-    Arbitrary,
-    Structured,
-    Fixed,
-}
 
 impl Capability {
     fn from_context(context: &str) -> Option<Self> {

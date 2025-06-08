@@ -10,6 +10,7 @@ use crate::finding::location::Locatable;
 
 pub(crate) mod action;
 pub(crate) mod coordinate;
+pub(crate) mod inputs;
 pub(crate) mod uses;
 pub(crate) mod workflow;
 
