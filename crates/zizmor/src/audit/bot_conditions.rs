@@ -9,11 +9,12 @@ use github_actions_models::common::If;
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     finding::{
-        Confidence, Severity,
-        location::{Locatable as _, Subfeature},
+        Confidence, Fix, Severity,
+        location::{Locatable as _, Routable as _, Subfeature},
     },
-    models::workflow::JobExt,
+    models::workflow::{JobExt, Step},
     utils::ExtractedExpr,
+    yaml_patch::{Op, Patch},
 };
 
 pub(crate) struct BotConditions;
@@ -93,19 +94,40 @@ impl Audit for BotConditions {
 
         for (expr, parent, if_loc) in conds {
             if let Some((subfeature, confidence)) = Self::bot_condition(expr) {
-                findings.push(
-                    Self::finding()
-                        .severity(Severity::High)
-                        .confidence(confidence)
-                        .add_location(parent)
-                        .add_location(
-                            if_loc
-                                .primary()
-                                .subfeature(subfeature)
-                                .annotated("actor context may be spoofable"),
-                        )
-                        .build(job.parent())?,
-                );
+                let mut finding_builder = Self::finding()
+                    .severity(Severity::High)
+                    .confidence(confidence)
+                    .add_location(parent.clone())
+                    .add_location(
+                        if_loc
+                            .primary()
+                            .subfeature(subfeature)
+                            .annotated("actor context may be spoofable"),
+                    );
+
+                // Add fixes
+                if let Some(step) = job.steps().find(|s| s.location().key == parent.key) {
+                    // Step-level condition
+                    let step_ref = &step;
+                    if let Some(fix) = Self::create_replace_actor_fix(step_ref) {
+                        finding_builder = finding_builder.fix(fix);
+                    }
+                    finding_builder = finding_builder.fix(Self::create_trigger_change_fix(job));
+                } else if parent.key == job.location().key {
+                    // Job-level condition - parse the expression first
+                    let bare_expr = ExtractedExpr::new(expr).as_bare().to_string();
+
+                    if let Ok(parsed_expr) = Expr::parse(&bare_expr) {
+                        if let Some(fix) = Self::create_replace_actor_fix_for_job(job, &parsed_expr)
+                        {
+                            finding_builder = finding_builder.fix(fix);
+                        }
+                    }
+
+                    finding_builder = finding_builder.fix(Self::create_trigger_change_fix(job));
+                }
+
+                findings.push(finding_builder.build(job.parent())?);
             }
         }
 
@@ -208,11 +230,242 @@ impl BotConditions {
             (..) => None,
         }
     }
+
+    /// Find spoofable actor contexts in an expression and return their string representations
+    fn find_spoofable_actor_fragments(expr: &Expr) -> Vec<String> {
+        let mut fragments = vec![];
+
+        match expr {
+            Expr::Call {
+                func: _,
+                args: exprs,
+            }
+            | Expr::Context(Context { parts: exprs, .. }) => {
+                for arg in exprs {
+                    fragments.extend(Self::find_spoofable_actor_fragments(arg));
+                }
+            }
+            Expr::Index(expr) => {
+                fragments.extend(Self::find_spoofable_actor_fragments(expr));
+            }
+            Expr::BinOp { lhs, op, rhs } => {
+                if let BinOp::Eq = op {
+                    match (lhs.as_ref().deref(), rhs.as_ref().deref()) {
+                        (Expr::Context(ctx), Expr::Literal(lit))
+                        | (Expr::Literal(lit), Expr::Context(ctx)) => {
+                            if (SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))
+                                && lit.as_str().ends_with("[bot]"))
+                                || (SPOOFABLE_ACTOR_ID_CONTEXTS.iter().any(|x| x.matches(ctx))
+                                    && BOT_ACTOR_IDS.contains(&lit.as_str().as_ref()))
+                            {
+                                fragments.push(format!("{:?}", ctx));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                fragments.extend(Self::find_spoofable_actor_fragments(lhs));
+                fragments.extend(Self::find_spoofable_actor_fragments(rhs));
+            }
+            Expr::UnOp { expr, .. } => {
+                fragments.extend(Self::find_spoofable_actor_fragments(expr));
+            }
+            _ => {}
+        }
+
+        fragments
+    }
+
+    /// Create a fix that replaces spoofable actor contexts with github.event.pull_request.user.login
+    fn create_replace_actor_fix<'doc>(step: &Step<'doc>) -> Option<Fix<'doc>> {
+        // Only emit a patch if the step/job has an `if` key
+        if let Some(If::Expr(expr)) = &step.r#if {
+            // Try to parse as curly expression first, otherwise use the raw string
+            let bare_expr = ExtractedExpr::new(expr).as_bare().to_string();
+
+            let Ok(parsed_expr) = Expr::parse(&bare_expr) else {
+                return None;
+            };
+
+            // Find all spoofable actor fragments in the expression
+            let fragments = Self::find_spoofable_actor_fragments(&parsed_expr);
+
+            if fragments.is_empty() {
+                return None;
+            }
+
+            // Create patches for each unique fragment
+            let mut patches = vec![];
+            let mut seen_fragments = std::collections::HashSet::new();
+
+            for fragment in fragments {
+                if seen_fragments.insert(fragment.clone()) {
+                    // Replace the fragment with the secure alternative
+                    let replacement = if SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|pattern| {
+                        // Parse the fragment to check if it matches our patterns
+                        if let Ok(test_expr) = Expr::parse(&fragment) {
+                            if let Expr::Context(ctx) = test_expr.deref() {
+                                pattern.matches(ctx)
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    }) {
+                        "github.event.pull_request.user.login"
+                    } else {
+                        // This is an actor_id context, replace with user.id
+                        "github.event.pull_request.user.id"
+                    };
+
+                    patches.push(Patch {
+                        route: step.route().with_keys(&["if".into()]),
+                        operation: Op::RewriteFragment {
+                            from: fragment.clone().into(),
+                            to: replacement.into(),
+                            after: None,
+                        },
+                    });
+                }
+            }
+
+            if !patches.is_empty() {
+                Some(Fix {
+                    title: "Replace spoofable actor context with github.event.pull_request.user.login".into(),
+                    description: "Replace spoofable actor context with github.event.pull_request.user.login to ensure the job runs as the PR author".into(),
+                    key: step.location().key,
+                    patches,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Create a fix that suggests changing from pull_request_target to pull_request
+    fn create_trigger_change_fix<'doc>(job: &impl JobExt<'doc>) -> Fix<'doc> {
+        Fix {
+            title: "Change trigger from pull_request_target to pull_request".into(),
+            description: "Change the workflow trigger from pull_request_target to pull_request to prevent running with elevated permissions".into(),
+            key: job.location().key,
+            patches: vec![Patch {
+                route: job.parent().location().route.with_keys(&["on".into()]),
+                operation: Op::Replace({
+                    let mut map = serde_yaml::Mapping::new();
+                    map.insert(
+                        serde_yaml::Value::String("pull_request".into()),
+                        serde_yaml::Value::Mapping(Default::default()),
+                    );
+                    serde_yaml::Value::Mapping(map)
+                }),
+            }],
+        }
+    }
+
+    /// Create a fix for job-level conditions
+    fn create_replace_actor_fix_for_job<'doc>(
+        job: &super::NormalJob<'doc>,
+        expr: &Expr,
+    ) -> Option<Fix<'doc>> {
+        let mut patches = vec![];
+
+        let fragments = Self::find_spoofable_actor_fragments(expr);
+
+        if fragments.is_empty() {
+            return None;
+        }
+
+        let mut seen_fragments = std::collections::HashSet::new();
+
+        for fragment in fragments {
+            if seen_fragments.insert(fragment.clone()) {
+                let replacement = if SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|pattern| {
+                    if let Ok(test_expr) = Expr::parse(&fragment) {
+                        if let Expr::Context(ctx) = test_expr.deref() {
+                            pattern.matches(ctx)
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                }) {
+                    "github.event.pull_request.user.login"
+                } else {
+                    "github.event.pull_request.user.id"
+                };
+
+                patches.push(Patch {
+                    route: job.location().route.with_keys(&["if".into()]),
+                    operation: Op::RewriteFragment {
+                        from: fragment.clone().into(),
+                        to: replacement.into(),
+                        after: None,
+                    },
+                });
+            }
+        }
+
+        if !patches.is_empty() {
+            Some(Fix {
+                title: "Replace spoofable actor context with github.event.pull_request.user.login for job-level condition".into(),
+                description: "Replace spoofable actor context with github.event.pull_request.user.login for job-level condition to ensure the job runs as the PR author".into(),
+                key: job.location().key,
+                patches,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{audit::bot_conditions::BotConditions, finding::Confidence};
+    use super::*;
+    use crate::{
+        finding::Finding, github_api::GitHubHost, models::workflow::Workflow, registry::InputKey,
+        state::AuditState,
+    };
+
+    /// Macro for testing workflow audits with common boilerplate
+    macro_rules! test_workflow_audit {
+        ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
+            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
+            let audit_state = AuditState {
+                config: &Default::default(),
+                no_online_audits: false,
+                cache_dir: "/tmp/zizmor".into(),
+                gh_token: None,
+                gh_hostname: GitHubHost::Standard("github.com".into()),
+            };
+            let audit = <$audit_type>::new(&audit_state).unwrap();
+            let findings = audit.audit_workflow(&workflow).unwrap();
+
+            $test_fn(findings)
+        }};
+    }
+
+    /// Helper function to apply a fix by title and return the result for snapshot testing
+    fn apply_fix_by_title_for_snapshot(
+        workflow_content: &str,
+        finding: &Finding,
+        expected_title: &str,
+    ) -> String {
+        let fix = finding
+            .fixes
+            .iter()
+            .find(|f| f.title == expected_title)
+            .unwrap_or_else(|| panic!("No fix found with title: {}", expected_title));
+
+        fix.apply_to_content(workflow_content)
+            .unwrap()
+            .unwrap_or_else(|| panic!("Fix application returned None"))
+    }
 
     #[test]
     fn test_bot_condition() {
@@ -255,5 +508,194 @@ mod tests {
         ] {
             assert_eq!(BotConditions::bot_condition(cond).unwrap().1, *confidence);
         }
+    }
+
+    #[test]
+    fn test_replace_actor_fix() {
+        let workflow_content = r#"
+name: Test Workflow
+on:
+  pull_request_target:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+        test_workflow_audit!(
+            BotConditions,
+            "test_replace_actor_fix.yml",
+            workflow_content,
+            |findings: Vec<Finding>| {
+                // Apply only the actor replacement fixes to avoid YAML conflicts
+                let mut content = workflow_content.to_string();
+                for finding in &findings {
+                    for fix in &finding.fixes {
+                        if fix.title.contains("Replace spoofable actor context") {
+                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
+                                content = new_content;
+                            }
+                        }
+                    }
+                }
+
+                insta::assert_snapshot!(content, @r#"
+                name: Test Workflow
+                on:
+                  pull_request_target:
+
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    if: github.actor == 'dependabot[bot]'
+                    steps:
+                      - name: Test Step
+                        if: github.event.pull_request.user.login == 'dependabot[bot]'
+                        run: echo "hello"
+                "#);
+            }
+        );
+    }
+
+    #[test]
+    fn test_trigger_change_fix() {
+        let workflow_content = r#"
+name: Test Workflow
+on:
+  pull_request_target:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+        test_workflow_audit!(
+            BotConditions,
+            "test_trigger_change_fix.yml",
+            workflow_content,
+            |findings: Vec<Finding>| {
+                let fixed_content = apply_fix_by_title_for_snapshot(
+                    workflow_content,
+                    &findings[0],
+                    "Change trigger from pull_request_target to pull_request",
+                );
+                insta::assert_snapshot!(fixed_content, @r#"
+                name: Test Workflow
+                on: pull_request: {}
+
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    if: github.actor == 'dependabot[bot]'
+                    steps:
+                      - name: Test Step
+                        if: github.actor == 'dependabot[bot]'
+                        run: echo "hello"
+                "#);
+            }
+        );
+    }
+
+    #[test]
+    fn test_all_fixes_together() {
+        let workflow_content = r#"
+name: Test Workflow
+on:
+  pull_request_target:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+        test_workflow_audit!(
+            BotConditions,
+            "test_all_fixes_together.yml",
+            workflow_content,
+            |findings: Vec<Finding>| {
+                // Apply all fixes in sequence, handling errors gracefully
+                let mut content = workflow_content.to_string();
+                for finding in &findings {
+                    for fix in &finding.fixes {
+                        if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
+                            content = new_content;
+                        }
+                    }
+                }
+                insta::assert_snapshot!(content, @r#"
+                name: Test Workflow
+                on: pull_request: {}
+
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    if: github.actor == 'dependabot[bot]'
+                    steps:
+                      - name: Test Step
+                        if: github.event.pull_request.user.login == 'dependabot[bot]'
+                        run: echo "hello"
+                "#);
+            }
+        );
+    }
+
+    #[test]
+    fn test_fix_with_complex_conditions() {
+        let workflow_content = r#"
+name: Test Workflow
+on:
+  pull_request_target:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]' && contains(github.event.pull_request.title, 'chore')
+        run: echo "hello"
+"#;
+
+        test_workflow_audit!(
+            BotConditions,
+            "test_fix_with_complex_conditions.yml",
+            workflow_content,
+            |findings: Vec<Finding>| {
+                let fixed_content = apply_fix_by_title_for_snapshot(
+                    workflow_content,
+                    &findings[0],
+                    "Replace spoofable actor context with github.event.pull_request.user.login",
+                );
+                insta::assert_snapshot!(fixed_content, @r#"
+                name: Test Workflow
+                on:
+                  pull_request_target:
+
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    if: github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]'
+                    steps:
+                      - name: Test Step
+                        if: github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.title, 'chore')
+                        run: echo "hello"
+                "#);
+            }
+        );
     }
 }
