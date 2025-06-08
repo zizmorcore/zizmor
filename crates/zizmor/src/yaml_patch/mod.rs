@@ -997,7 +997,7 @@ foo:
 
         let reparsed = serde_yaml::from_str::<serde_yaml::Mapping>(content).unwrap();
         assert_eq!(
-            reparsed.get(&serde_yaml::Value::String("a".to_string())),
+            reparsed.get(serde_yaml::Value::String("a".to_string())),
             Some(&serde_yaml::Value::String("b".to_string()))
         );
     }

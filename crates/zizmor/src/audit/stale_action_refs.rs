@@ -8,7 +8,7 @@ use crate::{
     Persona,
     finding::{Confidence, Finding, Severity},
     github_api,
-    models::{CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
+    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
     state::AuditState,
 };
 

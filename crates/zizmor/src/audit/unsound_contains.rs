@@ -1,10 +1,10 @@
-use github_actions_expressions::{Expr, context::Context};
+use github_actions_expressions::{Expr, Literal, context::Context};
 use github_actions_models::common::{If, expr::ExplicitExpr};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     finding::{Confidence, Severity, location::Locatable as _},
-    models::JobExt,
+    models::workflow::JobExt as _,
 };
 
 // TODO: Merge this with the list in `template_injection.rs`?
@@ -81,7 +81,9 @@ impl UnsoundContains {
     ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>)> + 'a> {
         match expr {
             Expr::Call { func, args: exprs } if func == "contains" => match exprs.as_slice() {
-                [Expr::String(s), Expr::Context(c)] => Box::new(std::iter::once((s.as_str(), c))),
+                [Expr::Literal(Literal::String(s)), Expr::Context(c)] => {
+                    Box::new(std::iter::once((s.as_ref(), c)))
+                }
                 args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
             },
             Expr::Call {

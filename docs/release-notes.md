@@ -15,12 +15,22 @@ of `zizmor`.
   rather than just workflow definitions (#896)
 * The [use-trusted-publishing] audit now produces findings on composite
   action definitions, rather than just workflow definitions (#899)
+* The [bot-conditions] audit now detects more spoofable actor checks,
+  including checks against well-known user IDs for bot accounts (#905)
+* The [template-injection] and other audits now produce more precise
+  findings when analyzing `env` context accesses for static-ness (#911)
+* The [template-injection] audit now produces more precise findings
+  when analyzing `inputs` context accesses (#919)
 
 ### Bug Fixes 🐛
 
 * The [template-injection] audit no longer crashes when attempting to
   evaluate the static-ness of an environment context within a
   composite action `uses:` step (#887)
+* The [bot-conditions] audit now correctly analyzes index-style contexts,
+  e.g. `github['actor']` (#905)
+* Fixed a bug where `zizmor` would fail to parse expressions that
+  contained `>=` or `<=` (#916)
 
 ## 1.9.0
 

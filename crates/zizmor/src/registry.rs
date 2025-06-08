@@ -19,7 +19,7 @@ use crate::{
     audit::{Audit, AuditInput},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
-    models::{Action, Workflow},
+    models::{action::Action, workflow::Workflow},
 };
 
 #[derive(Error, Debug)]

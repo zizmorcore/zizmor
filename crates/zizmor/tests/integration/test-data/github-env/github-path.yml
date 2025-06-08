@@ -3,8 +3,11 @@ on:
 
 permissions: {}
 
+name: github-path
+
 jobs:
   vulnerable:
+    name: vulnerable
     runs-on: ubuntu-latest
 
     steps:

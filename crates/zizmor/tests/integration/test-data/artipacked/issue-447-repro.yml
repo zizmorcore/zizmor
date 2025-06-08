@@ -7,6 +7,7 @@ permissions: {}
 
 jobs:
   issue-447-repro:
+    name: issue-447-repro
     runs-on: ubuntu-latest
 
     steps:

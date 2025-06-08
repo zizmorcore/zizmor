@@ -5,6 +5,7 @@ permissions: {}
 
 jobs:
   issue-518-repro:
+    name: ISSUE-518-REPRO
     runs-on: ubuntu-latest
 
     steps:

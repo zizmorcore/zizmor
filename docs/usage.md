@@ -625,7 +625,7 @@ with @zizmorcore/zizmor-action. However, expert users or those who want
 more fine-grained control over their integration can also use the
 [Manual integration](#manual-integration) steps further below.
 
-#### With @zizmorcore/zizmor-action *&nbsp;*{.chip-recommended}
+#### With @zizmorcore/zizmor-action *&#8203;*{.chip .chip-recommended}
 
 To get started with @zizmorcore/zizmor-action, you can use the following
 workflow skeleton:
@@ -663,7 +663,7 @@ additional configuration options.
 
 [inputs-documentation]: https://github.com/zizmorcore/zizmor-action#inputs
 
-#### Manual integration *&nbsp;*{.chip-expert}
+#### Manual integration *&#8203;*{.chip .chip-expert}
 
 If you don't want to use @zizmorcore/zizmor-action, you can always
 use `zizmor` directly in your GitHub Actions workflows.
@@ -674,10 +674,10 @@ more explicit scaffolding.
 There are two main ways to manually integrate `zizmor` into your
 GitHub Actions setup:
 
-1. With `--format=sarif` via Advanced Security *&nbsp;*{.chip-recommended}
+1. With `--format=sarif` via Advanced Security *&#8203;*{.chip .chip-recommended}
 2. With `--format=github` via GitHub Annotations
 
-=== "With Advanced Security *&nbsp;*{.chip-recommended}"
+=== "With Advanced Security *&#8203;*{.chip .chip-recommended}"
 
     GitHub's Advanced Security and [code scanning functionality] supports
     [SARIF], which `zizmor` can produce via `--format=sarif`.

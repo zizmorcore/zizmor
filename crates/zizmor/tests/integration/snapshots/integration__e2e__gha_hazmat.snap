@@ -1,6 +1,7 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@33cd22cdd7823a5795768388aff977fe992b5aad\").run()?"
+snapshot_kind: text
 ---
  INFO collect_inputs: zizmor: collected 22 inputs from woodruffw/gha-hazmat
  INFO zizmor: skipping impostor-commit: offline audits only requested
@@ -145,32 +146,48 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:18:5
+  --> .github/workflows/bot-conditions.yml:16:3
    |
-18 |     if: github.actor == 'dependabot[bot]'
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+16 | /   hackme:
+17 | |     runs-on: ubuntu-latest
+18 | |     if: github.actor == 'dependabot[bot]'
+   | |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+19 | |     steps:
+...  |
+33 | |         run: echo hello
+34 | |         if: github.actor == 'notabot'
+   | |______________________________________^ this job
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:22:9
+  --> .github/workflows/bot-conditions.yml:20:9
    |
+20 |       - name: vulnerable-1
+   |         ^^^^^^^^^^^^^^^^^^ this step
+21 |         run: echo hello
 22 |         if: ${{ github.actor == 'dependabot[bot]' }}
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:26:9
+  --> .github/workflows/bot-conditions.yml:24:9
    |
+24 |       - name: vulnerable-2
+   |         ^^^^^^^^^^^^^^^^^^ this step
+25 |         run: echo hello
 26 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:30:9
+  --> .github/workflows/bot-conditions.yml:28:9
    |
+28 |       - name: vulnerable-3
+   |         ^^^^^^^^^^^^^^^^^^ this step
+29 |         run: echo hello
 30 |         if: github.actor == 'renovate[bot]'
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
@@ -864,7 +881,7 @@ error[template-injection]: code injection via template expansion
 53 | |           echo "doing a thing: ${{ inputs.hackme }}"
    | |____________________________________________________^ inputs.hackme may expand into attacker-controllable code
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 
 error[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:60:9
@@ -876,7 +893,7 @@ error[template-injection]: code injection via template expansion
 63 | |           echo "doing a thing: ${{ inputs.hackme-call }}"
    | |_________________________________________________________^ inputs.hackme-call may expand into attacker-controllable code
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 
 warning[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:82:9
@@ -1076,4 +1093,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-122 findings (27 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high
+123 findings (28 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high

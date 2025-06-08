@@ -1,9 +1,12 @@
 on: pull_request_target
 
+name: bot-conditions
+
 permissions: {}
 
 jobs:
   hackme:
+    name: hackme
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
     steps:
@@ -22,3 +25,36 @@ jobs:
       - name: not-vulnerable-4
         run: echo hello
         if: github.actor == 'notabot'
+
+      - name: vulnerable-5
+        run: echo hello
+        # ensure we're case insensitive
+        if: github.ACTOR == 'dependabot[bot]'
+
+      - name: vulnerable-6
+        run: echo hello
+        # ensure we detect unknown bots
+        if: github.actor == 'mystery[bot]'
+
+      - name: vulnerable-7
+        run: echo hello
+        # ensure we handle index-style contexts
+        if: github['actor'] == 'dependabot[bot]'
+
+      - name: vulnerable-8
+        run: echo hello
+        # ensure we handle index-style contexts with a different case
+        if: github['ACTOR'] == 'dependabot[bot]'
+
+      - name: vulnerable-9
+        run: echo hello
+        # ensure we handle actor ID checks
+        if: github.actor_id == 49699333
+
+      - name: vulnerable-10
+        run: echo hello
+        if: github['ACTOR_ID'] == 49699333
+
+      - name: vulnerable-11
+        run: echo hello
+        if: ${{ github.actor_id == '49699333' }}

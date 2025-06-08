@@ -324,24 +324,32 @@ pub(crate) enum Usage {
 mod tests {
     use std::str::FromStr;
 
+    use github_actions_expressions::context;
     use github_actions_models::workflow::job::Step;
 
     use super::{ActionCoordinate, StepCommon};
     use crate::{
-        finding::location::Locatable,
+        finding::location::{Locatable, SymbolicLocation},
         models::{
             coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
+            inputs::HasInputs,
             uses::RepositoryUsesPattern,
         },
     };
 
     // Test-only trait impls.
     impl<'doc> Locatable<'doc> for Step {
-        fn location(&self) -> crate::models::SymbolicLocation<'doc> {
+        fn location(&self) -> SymbolicLocation<'doc> {
             unreachable!()
         }
 
         fn location_with_name(&self) -> crate::finding::location::SymbolicLocation<'doc> {
+            unreachable!()
+        }
+    }
+
+    impl HasInputs for Step {
+        fn get_input(&self, _name: &str) -> Option<crate::models::inputs::Capability> {
             unreachable!()
         }
     }
@@ -351,7 +359,7 @@ mod tests {
             unreachable!()
         }
 
-        fn env_is_static(&self, _name: &str) -> bool {
+        fn env_is_static(&self, _ctx: &context::Context) -> bool {
             unreachable!()
         }
 

@@ -1,13 +1,13 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"github-env/issue-397-repro.yml\")).run()?"
 ---
 error[github-env]: dangerous use of environment file
-  --> @@INPUT@@:14:9
+  --> @@INPUT@@:17:9
    |
-14 | /         run: |
-15 | |           message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
-16 | |           echo "$message" >> $GITHUB_PATH
+17 | /         run: |
+18 | |           message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
+19 | |           echo "$message" >> $GITHUB_PATH
    | |_________________________________________^ write to GITHUB_PATH may allow code execution
    |
    = note: audit confidence → Low

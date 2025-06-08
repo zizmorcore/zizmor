@@ -1,12 +1,11 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().config(input_under_test(&format!(\"forbidden-uses/configs/{config}.yml\"))).input(input_under_test(\"forbidden-uses/forbidden-uses-menagerie.yml\")).run()?"
-snapshot_kind: text
 ---
 error[forbidden-uses]: forbidden action used
-  --> @@INPUT@@:14:9
+  --> @@INPUT@@:15:9
    |
-14 |       - uses: actions/checkout@v4
+15 |       - uses: actions/checkout@v4
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
    |
    = note: audit confidence → High

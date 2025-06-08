@@ -2,8 +2,11 @@ on: push
 
 permissions: {}
 
+name: jobs-broaden-permissions
+
 jobs:
   job1:
+    name: job1
     runs-on: ubuntu-latest
     permissions: read-all
     steps:
@@ -12,6 +15,7 @@ jobs:
           persist-credentials: false
 
   job2:
+    name: job2
     runs-on: ubuntu-latest
     permissions: write-all
     steps:

@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::Workflow;
+use crate::models::workflow::Workflow;
 use crate::state::AuditState;
 
 pub(crate) struct DangerousTriggers;
