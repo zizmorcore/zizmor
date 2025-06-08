@@ -2,6 +2,10 @@
 
 use anyhow::{Context as _, Error, anyhow};
 use camino::Utf8Path;
+use github_actions_expressions::{
+    Expr, Literal,
+    context::{Context, ContextPattern},
+};
 use github_actions_models::common::{
     Env,
     expr::{ExplicitExpr, LoE},
@@ -26,6 +30,266 @@ pub(crate) static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
     validator_for(&serde_json::from_str(include_str!("./data/github-workflow.json")).unwrap())
         .unwrap()
 });
+
+macro_rules! pat {
+    ($pat:expr) => {
+        ContextPattern::new($pat)
+    };
+}
+
+/// Default environment variables that are always present in GitHub Actions.
+/// These variables are provided by the runner itself and are presumed
+/// static *except* for `CI`, which can be overridden by the user.
+///
+/// This is stored as a four-tuple of the environment variable name,
+/// its environment context equivalent, its "real" context equivalent,
+/// if any, and a boolean indicating whether the variable is presumed static.
+///
+/// See: <https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables>
+pub(crate) static DEFAULT_ENVIRONMENT_VARIABLES: &[(
+    &str,
+    ContextPattern,
+    Option<ContextPattern>,
+    bool,
+)] = &[
+    ("CI", pat!("env.CI"), None, false),
+    (
+        "GITHUB_ACTION",
+        pat!("env.GITHUB_ACTION"),
+        Some(pat!("github.action")),
+        true,
+    ),
+    (
+        "GITHUB_ACTION_PATH",
+        pat!("env.GITHUB_ACTION_PATH"),
+        Some(pat!("github.action_path")),
+        true,
+    ),
+    (
+        "GITHUB_ACTION_REPOSITORY",
+        pat!("env.GITHUB_ACTION_REPOSITORY"),
+        Some(pat!("github.action_repository")),
+        true,
+    ),
+    ("GITHUB_ACTIONS", pat!("env.GITHUB_ACTIONS"), None, true),
+    (
+        "GITHUB_ACTOR",
+        pat!("env.GITHUB_ACTOR"),
+        Some(pat!("github.actor")),
+        true,
+    ),
+    (
+        "GITHUB_ACTOR_ID",
+        pat!("env.GITHUB_ACTOR_ID"),
+        Some(pat!("github.actor_id")),
+        true,
+    ),
+    (
+        "GITHUB_API_URL",
+        pat!("env.GITHUB_API_URL"),
+        Some(pat!("github.api_url")),
+        true,
+    ),
+    (
+        "GITHUB_BASE_REF",
+        pat!("env.GITHUB_BASE_REF"),
+        Some(pat!("github.base_ref")),
+        true,
+    ),
+    (
+        "GITHUB_ENV",
+        pat!("env.GITHUB_ENV"),
+        Some(pat!("github.env")),
+        true,
+    ),
+    (
+        "GITHUB_EVENT_NAME",
+        pat!("env.GITHUB_EVENT_NAME"),
+        Some(pat!("github.event_name")),
+        true,
+    ),
+    (
+        "GITHUB_EVENT_PATH",
+        pat!("env.GITHUB_EVENT_PATH"),
+        Some(pat!("github.event_path")),
+        true,
+    ),
+    (
+        "GITHUB_GRAPHQL_URL",
+        pat!("env.GITHUB_GRAPHQL_URL"),
+        Some(pat!("github.graphql_url")),
+        true,
+    ),
+    (
+        "GITHUB_HEAD_REF",
+        pat!("env.GITHUB_HEAD_REF"),
+        Some(pat!("github.head_ref")),
+        true,
+    ),
+    (
+        "GITHUB_JOB",
+        pat!("env.GITHUB_JOB"),
+        Some(pat!("github.job")),
+        true,
+    ),
+    ("GITHUB_OUTPUT", pat!("env.GITHUB_OUTPUT"), None, true),
+    (
+        "GITHUB_PATH",
+        pat!("env.GITHUB_PATH"),
+        Some(pat!("github.path")),
+        true,
+    ),
+    (
+        "GITHUB_REF",
+        pat!("env.GITHUB_REF"),
+        Some(pat!("github.ref")),
+        true,
+    ),
+    (
+        "GITHUB_REF_NAME",
+        pat!("env.GITHUB_REF_NAME"),
+        Some(pat!("github.ref_name")),
+        true,
+    ),
+    (
+        "GITHUB_REF_PROTECTED",
+        pat!("env.GITHUB_REF_PROTECTED"),
+        Some(pat!("github.ref_protected")),
+        true,
+    ),
+    (
+        "GITHUB_REF_TYPE",
+        pat!("env.GITHUB_REF_TYPE"),
+        Some(pat!("github.ref_type")),
+        true,
+    ),
+    (
+        "GITHUB_REPOSITORY",
+        pat!("env.GITHUB_REPOSITORY"),
+        Some(pat!("github.repository")),
+        true,
+    ),
+    (
+        "GITHUB_REPOSITORY_ID",
+        pat!("env.GITHUB_REPOSITORY_ID"),
+        Some(pat!("github.repository_id")),
+        true,
+    ),
+    (
+        "GITHUB_REPOSITORY_OWNER",
+        pat!("env.GITHUB_REPOSITORY_OWNER"),
+        Some(pat!("github.repository_owner")),
+        true,
+    ),
+    (
+        "GITHUB_REPOSITORY_OWNER_ID",
+        pat!("env.GITHUB_REPOSITORY_OWNER_ID"),
+        Some(pat!("github.repository_owner_id")),
+        true,
+    ),
+    (
+        "GITHUB_RUN_ATTEMPT",
+        pat!("env.GITHUB_RUN_ATTEMPT"),
+        Some(pat!("github.run_attempt")),
+        true,
+    ),
+    (
+        "GITHUB_RUN_ID",
+        pat!("env.GITHUB_RUN_ID"),
+        Some(pat!("github.run_id")),
+        true,
+    ),
+    (
+        "GITHUB_RUN_NUMBER",
+        pat!("env.GITHUB_RUN_NUMBER"),
+        Some(pat!("github.run_number")),
+        true,
+    ),
+    (
+        "GITHUB_SERVER_URL",
+        pat!("env.GITHUB_SERVER_URL"),
+        Some(pat!("github.server_url")),
+        true,
+    ),
+    (
+        "GITHUB_SHA",
+        pat!("env.GITHUB_SHA"),
+        Some(pat!("github.sha")),
+        true,
+    ),
+    (
+        "GITHUB_TRIGGERING_ACTOR",
+        pat!("env.GITHUB_TRIGGERING_ACTOR"),
+        Some(pat!("github.triggering_actor")),
+        true,
+    ),
+    (
+        "GITHUB_WORKFLOW",
+        pat!("env.GITHUB_WORKFLOW"),
+        Some(pat!("github.workflow")),
+        true,
+    ),
+    (
+        "GITHUB_WORKFLOW_REF",
+        pat!("env.GITHUB_WORKFLOW_REF"),
+        Some(pat!("github.workflow_ref")),
+        true,
+    ),
+    (
+        "GITHUB_WORKFLOW_SHA",
+        pat!("env.GITHUB_WORKFLOW_SHA"),
+        Some(pat!("github.workflow_sha")),
+        true,
+    ),
+    (
+        "GITHUB_WORKSPACE",
+        pat!("env.GITHUB_WORKSPACE"),
+        Some(pat!("github.workspace")),
+        true,
+    ),
+    (
+        "RUNNER_ARCH",
+        pat!("env.RUNNER_ARCH"),
+        Some(pat!("runner.arch")),
+        true,
+    ),
+    (
+        "RUNNER_DEBUG",
+        pat!("env.RUNNER_DEBUG"),
+        Some(pat!("runner.debug")),
+        true,
+    ),
+    (
+        "RUNNER_ENVIRONMENT",
+        pat!("env.RUNNER_ENVIRONMENT"),
+        Some(pat!("runner.environment")),
+        true,
+    ),
+    (
+        "RUNNER_NAME",
+        pat!("env.RUNNER_NAME"),
+        Some(pat!("runner.name")),
+        true,
+    ),
+    (
+        "RUNNER_OS",
+        pat!("env.RUNNER_OS"),
+        Some(pat!("runner.os")),
+        true,
+    ),
+    (
+        "RUNNER_TEMP",
+        pat!("env.RUNNER_TEMP"),
+        Some(pat!("runner.temp")),
+        true,
+    ),
+    (
+        "RUNNER_TOOL_CACHE",
+        pat!("env.RUNNER_TOOL_CACHE"),
+        Some(pat!("runner.tool_cache")),
+        true,
+    ),
+];
 
 fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Error {
     let mut message = String::new();
@@ -225,13 +489,48 @@ pub(crate) fn parse_expressions_from_input(
 
 /// Returns whether the given `env.name` environment access is "static,"
 /// i.e. is not influenced by another expression.
-pub(crate) fn env_is_static(name: &str, envs: &[&LoE<Env>]) -> bool {
+///
+/// NOTE: This function assumes that you pass it an `env`-prefixed
+/// context, e.g. `env.FOOBAR` or `env['FOOBAR']`. Passing it any other
+/// context does not have well-defined behavior.
+pub(crate) fn env_is_static(env_ctx: &Context, envs: &[&LoE<Env>]) -> bool {
+    // First, see if this environment context matches any of the default
+    // non-static environment variables.
+    for (_, env_ctx_pat, _, is_static) in DEFAULT_ENVIRONMENT_VARIABLES {
+        if env_ctx_pat.matches(env_ctx) {
+            return *is_static;
+        }
+    }
+
+    // Turn env.FOOBAR into FOOBAR.
+    // This is slightly annoying because we need to handle both
+    // `env.FOOBAR` and `env['FOOBAR']` syntaxes.
+    if env_ctx.parts.len() != 2 {
+        // We expect exactly `env.name` or `env['name']`.
+        // Something like `env.foo.bar` is syntactically valid but semantically
+        // nonsense, so we assume it's non-static.
+        return false;
+    }
+
+    let env_name = match &env_ctx.parts[1] {
+        Expr::Identifier(ident) => ident.as_str(),
+        Expr::Index(idx) => match idx.as_ref() {
+            Expr::Literal(Literal::String(s)) => s,
+            // Anything besides a string literal index is either not
+            // static (e.g. a computed index) or is semantically
+            // invalid (e.g. `env[1]`).
+            _ => return false,
+        },
+        _ => return false,
+    };
+
     for env in envs {
         match env {
             // Any `env:` that is wholly an expression cannot be static.
             LoE::Expr(_) => return false,
             LoE::Literal(env) => {
-                let Some(value) = env.get(name) else {
+                // TODO: We probably need to do a case-insensitive lookup here.
+                let Some(value) = env.get(env_name) else {
                     continue;
                 };
 
@@ -244,9 +543,12 @@ pub(crate) fn env_is_static(name: &str, envs: &[&LoE<Env>]) -> bool {
         }
     }
 
-    // No `env:` blocks explicitly contain this name, so it's trivially static.
-    // In practice this is probably an invalid workflow.
-    true
+    // If we don't have an explicit `env:` block containing this variable
+    // and it isn't a default variable, then we assume it's not static.
+    // This is probably slightly over sensitive, but assuming the opposite
+    // would leave open `GITHUB_ENV` interactions that we can't otherwise
+    // reason about.
+    false
 }
 
 /// Returns the name within the given `shell:` stanza.
@@ -262,12 +564,14 @@ pub(crate) fn normalize_shell(shell: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
+    use github_actions_expressions::Expr;
 
     use crate::{
         models::{Action, Workflow},
         registry::InputKey,
         utils::{
-            extract_expression, extract_expressions, normalize_shell, parse_expressions_from_input,
+            env_is_static, extract_expression, extract_expressions, normalize_shell,
+            parse_expressions_from_input,
         },
     };
 
@@ -419,6 +723,30 @@ jobs:
             ("/bin/bash -e {0}", "bash"),
         ] {
             assert_eq!(normalize_shell(actual), *expected)
+        }
+    }
+
+    #[test]
+    fn test_env_is_static_default() {
+        for (env_ctx, is_static) in &[
+            // CI is not static
+            ("env.CI", false),
+            // all other default environment contexts are static
+            ("env.GITHUB_ACTION", true),
+            ("env['GITHUB_ACTION']", true),
+            ("env.GITHUB_ACTIONS", true),
+            ("env.RUNNER_OS", true),
+            ("env.runner_os", true),
+            ("env['runner_os']", true),
+            // anything else not known by default is not static
+            ("env.UNKNOWN", false),
+            ("env['UNKNOWN']", false),
+        ] {
+            let Expr::Context(ctx) = Expr::parse(env_ctx).unwrap() else {
+                panic!("expected a context expression for {env_ctx}");
+            };
+
+            assert_eq!(env_is_static(&ctx, &[]), *is_static, "for {env_ctx}");
         }
     }
 }
