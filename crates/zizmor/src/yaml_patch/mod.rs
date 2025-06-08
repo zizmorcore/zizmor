@@ -2530,6 +2530,42 @@ strategy:
     }
 
     #[test]
+    fn test_add_to_multiline_flow_mapping() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: {
+      NODE_ENV: "production",
+      DEBUG: "true"
+    }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "LOG_LEVEL".to_string(),
+                value: serde_yaml::Value::String("info".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: {
+              NODE_ENV: "production",
+              DEBUG: "true",
+              LOG_LEVEL: "info"
+            }
+        "#);
+    }
+
+    #[test]
     fn test_complex_mixed_styles_permissions() {
         let original = r#"
 permissions:
