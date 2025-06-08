@@ -140,7 +140,7 @@ impl Audit for ImpostorCommit {
                             continue;
                         };
 
-                        if self.impostor(&uses)? {
+                        if self.impostor(uses)? {
                             findings.push(
                                 Self::finding()
                                     .severity(Severity::High)
@@ -160,7 +160,7 @@ impl Audit for ImpostorCommit {
                         continue;
                     };
 
-                    if self.impostor(&uses)? {
+                    if self.impostor(uses)? {
                         findings.push(
                             Self::finding()
                                 .severity(Severity::High)
@@ -187,7 +187,7 @@ impl Audit for ImpostorCommit {
             return Ok(findings);
         };
 
-        if self.impostor(&uses)? {
+        if self.impostor(uses)? {
             findings.push(
                 Self::finding()
                     .severity(Severity::High)

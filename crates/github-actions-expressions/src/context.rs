@@ -463,7 +463,7 @@ mod tests {
             ("foo.1", "foo[1]", false),                // .1 means a string key, not an index
         ] {
             let pattern =
-                ContextPattern::try_new(pattern).expect(&format!("invalid pattern: {pattern}"));
+                ContextPattern::try_new(pattern).unwrap_or_else(|| panic!("invalid pattern: {pattern}"));
             let ctx = Context::try_from(*ctx).unwrap();
             assert_eq!(pattern.matches(&ctx), *expected);
         }

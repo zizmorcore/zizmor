@@ -428,7 +428,7 @@ impl Audit for GitHubEnv {
         };
 
         // TODO: actually use the spanning information here.
-        for (dest, _span) in self.uses_github_env(&run, &shell)? {
+        for (dest, _span) in self.uses_github_env(run, shell)? {
             findings.push(
                 Self::finding()
                     .severity(Severity::High)
