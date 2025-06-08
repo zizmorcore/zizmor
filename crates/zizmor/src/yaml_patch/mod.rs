@@ -2530,6 +2530,33 @@ strategy:
     }
 
     #[test]
+    fn test_add_to_flow_mapping_trailing_comma() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: { NODE_ENV: "production", DEBUG: "true", }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "LOG_LEVEL".to_string(),
+                value: serde_yaml::Value::String("info".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: { NODE_ENV: "production", DEBUG: "true", LOG_LEVEL: "info" }
+        "#);
+    }
+
+    #[test]
     fn test_add_to_multiline_flow_mapping() {
         let original = r#"
 jobs:
@@ -2560,6 +2587,41 @@ jobs:
             env: {
               NODE_ENV: "production",
               DEBUG: "true",
+              LOG_LEVEL: "info"
+            }
+        "#);
+    }
+
+    #[test]
+    fn test_add_to_multiline_flow_mapping_funky() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: {
+      NODE_ENV: "production", DEBUG: "true",
+      BLAH: xyz
+    }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "LOG_LEVEL".to_string(),
+                value: serde_yaml::Value::String("info".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: {
+              NODE_ENV: "production",
+              DEBUG: "true",
+              BLAH: xyz,
               LOG_LEVEL: "info"
             }
         "#);
