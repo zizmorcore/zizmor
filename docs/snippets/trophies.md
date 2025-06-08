@@ -26,6 +26,7 @@
         - apache/airflow#50749
         - apache/iceberg-rust#1123
         - apache/opennlp#736
+        - apache/sedona#1976
 
 
 -   ![](https://github.com/artichoke.png?size=40){ width="40" loading=lazy align=left } artichoke

@@ -9,7 +9,7 @@ use github_actions_models::common::{If, expr::ExplicitExpr};
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     finding::{Confidence, Severity, location::Locatable as _},
-    models::JobExt,
+    models::workflow::JobExt,
 };
 
 pub(crate) struct BotConditions;
@@ -18,16 +18,16 @@ audit_meta!(BotConditions, "bot-conditions", "spoofable bot actor check");
 
 static SPOOFABLE_ACTOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
     vec![
-        ContextPattern::new("github.actor").unwrap(),
-        ContextPattern::new("github.triggering_actor").unwrap(),
-        ContextPattern::new("github.event.pull_request.sender.login").unwrap(),
+        ContextPattern::try_new("github.actor").unwrap(),
+        ContextPattern::try_new("github.triggering_actor").unwrap(),
+        ContextPattern::try_new("github.event.pull_request.sender.login").unwrap(),
     ]
 });
 
 static SPOOFABLE_ACTOR_ID_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
     vec![
-        ContextPattern::new("github.actor_id").unwrap(),
-        ContextPattern::new("github.event.pull_request.sender.id").unwrap(),
+        ContextPattern::try_new("github.actor_id").unwrap(),
+        ContextPattern::try_new("github.event.pull_request.sender.id").unwrap(),
     ]
 });
 

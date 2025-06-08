@@ -43,14 +43,6 @@ impl<'src> Context<'src> {
         parent.parent_of(self)
     }
 
-    /// Returns the tail of the context if the head matches the given string.
-    pub fn pop_if(&self, head: &str) -> Option<&str> {
-        match self.parts.first()? {
-            Expr::Identifier(ident) if ident == head => Some(self.raw.split_once('.')?.1),
-            _ => None,
-        }
-    }
-
     /// Returns the "pattern equivalent" of this context.
     ///
     /// This is a string that can be used to efficiently match the context,
@@ -138,37 +130,76 @@ impl<'src> TryFrom<&'src str> for ContextPattern<'src> {
     type Error = anyhow::Error;
 
     fn try_from(val: &'src str) -> anyhow::Result<Self> {
-        Self::new(val).ok_or_else(|| anyhow::anyhow!("invalid context pattern"))
+        Self::try_new(val).ok_or_else(|| anyhow::anyhow!("invalid context pattern"))
     }
 }
 
 impl<'src> ContextPattern<'src> {
-    /// Creates a new `ContextPattern` from the given string.
+    /// Creates a new [`ContextPattern`] from the given string.
+    ///
+    /// Panics if the pattern is invalid.
+    pub const fn new(pattern: &'src str) -> Self {
+        Self::try_new(pattern).expect("invalid context pattern; use try_new to handle errors")
+    }
+
+    /// Creates a new [`ContextPattern`] from the given string.
     ///
     /// Returns `None` if the pattern is invalid.
-    pub fn new(pattern: &'src str) -> Option<Self> {
-        let parts = pattern.split('.');
-        let mut count = 0;
-        for part in parts {
-            if part.is_empty() {
-                return None;
-            }
-
-            match part {
-                "*" => {}
-                // TODO: `bytes()` is probably a little faster.
-                _ if part
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') => {}
-                _ => return None,
-            }
-            count += 1;
+    pub const fn try_new(pattern: &'src str) -> Option<Self> {
+        let raw_pattern = pattern.as_bytes();
+        if raw_pattern.is_empty() {
+            return None;
         }
 
-        match count {
-            0 => None,
-            _ => Some(Self(pattern)),
+        let len = raw_pattern.len();
+
+        // State machine:
+        // - accept_reg: whether the next character can be a regular identifier character
+        // - accept_dot: whether the next character can be a dot
+        // - accept_star: whether the next character can be a star
+        let mut accept_reg = true;
+        let mut accept_dot = false;
+        let mut accept_star = false;
+
+        let mut idx = 0;
+        while idx < len {
+            accept_dot = accept_dot && idx != len - 1;
+
+            match raw_pattern[idx] {
+                b'.' => {
+                    if !accept_dot {
+                        return None;
+                    }
+
+                    accept_reg = true;
+                    accept_dot = false;
+                    accept_star = true;
+                }
+                b'*' => {
+                    if !accept_star {
+                        return None;
+                    }
+
+                    accept_reg = false;
+                    accept_star = false;
+                    accept_dot = true;
+                }
+                c if c.is_ascii_alphanumeric() || c == b'-' || c == b'_' => {
+                    if !accept_reg {
+                        return None;
+                    }
+
+                    accept_reg = true;
+                    accept_dot = true;
+                    accept_star = false;
+                }
+                _ => return None, // invalid character
+            }
+
+            idx += 1;
         }
+
+        Some(Self(pattern))
     }
 
     fn compare_part(pattern: &str, part: &Expr<'src>) -> bool {
@@ -285,21 +316,6 @@ mod tests {
     }
 
     #[test]
-    fn test_context_pop_if() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
-
-        for (case, expected) in &[
-            ("foo", Some("bar.baz")),
-            ("Foo", Some("bar.baz")),
-            ("FOO", Some("bar.baz")),
-            ("foo.", None),
-            ("bar", None),
-        ] {
-            assert_eq!(ctx.pop_if(case), *expected);
-        }
-    }
-
-    #[test]
     fn test_context_as_pattern() {
         for (case, expected) in &[
             // Basic cases.
@@ -353,7 +369,12 @@ mod tests {
             ("foo.*.*", Some("foo.*.*")),
             // Invalid patterns.
             ("", None),
+            ("*", None),
+            ("**", None),
+            (".**", None),
+            (".foo", None),
             ("foo.", None),
+            (".foo.", None),
             ("foo.**", None),
             (".", None),
             ("foo.bar.", None),
@@ -365,7 +386,7 @@ mod tests {
             ("❤", None),
             ("❤.*", None),
         ] {
-            assert_eq!(ContextPattern::new(case).map(|p| p.0), *expected);
+            assert_eq!(ContextPattern::try_new(case).map(|p| p.0), *expected);
         }
     }
 
@@ -391,7 +412,7 @@ mod tests {
                 false,
             ),
         ] {
-            let pattern = ContextPattern::new(pattern).unwrap();
+            let pattern = ContextPattern::try_new(pattern).unwrap();
             let ctx = Context::try_from(*ctx).unwrap();
             assert_eq!(pattern.parent_of(&ctx), *expected);
         }
@@ -402,7 +423,6 @@ mod tests {
         for (pattern, ctx, expected) in &[
             // Normal matches.
             ("foo", "foo", true),
-            ("*", "foo", true),
             ("foo.bar", "foo.bar", true),
             ("foo.bar.baz", "foo.bar.baz", true),
             ("foo.*", "foo.bar", true),
@@ -442,7 +462,8 @@ mod tests {
             ("foo.*.*", "foo.bar.baz.qux", false),     // pattern too short
             ("foo.1", "foo[1]", false),                // .1 means a string key, not an index
         ] {
-            let pattern = ContextPattern::new(pattern).unwrap();
+            let pattern = ContextPattern::try_new(pattern)
+                .unwrap_or_else(|| panic!("invalid pattern: {pattern}"));
             let ctx = Context::try_from(*ctx).unwrap();
             assert_eq!(pattern.matches(&ctx), *expected);
         }

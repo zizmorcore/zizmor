@@ -4,7 +4,7 @@ use github_actions_models::common::{If, expr::ExplicitExpr};
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     finding::{Confidence, Severity, location::Locatable as _},
-    models::JobExt,
+    models::workflow::JobExt as _,
 };
 
 // TODO: Merge this with the list in `template_injection.rs`?

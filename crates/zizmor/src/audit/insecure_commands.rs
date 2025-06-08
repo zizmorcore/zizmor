@@ -10,7 +10,7 @@ use super::{AuditLoadError, Job, audit_meta};
 use crate::audit::Audit;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Persona, Severity, location::SymbolicLocation};
-use crate::models::{AsDocument, Steps, Workflow};
+use crate::models::{AsDocument, workflow::Steps, workflow::Workflow};
 use crate::state::AuditState;
 
 pub(crate) struct InsecureCommands;
