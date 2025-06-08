@@ -1,5 +1,5 @@
 //! Enriching/context-bearing wrappers over GitHub Actions models
-//! from the `github-actions-models` crate.
+//! from [`github_actions_models`].
 
 use github_actions_expressions::context;
 use github_actions_models::common;

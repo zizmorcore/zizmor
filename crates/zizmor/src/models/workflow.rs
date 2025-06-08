@@ -1,3 +1,8 @@
+//! GitHub Actions workflow models.
+//!
+//! These models enrich the models under [`github_actions_models::workflow`],
+//! providing higher-level APIs for zizmor to use.
+
 use std::collections::HashMap;
 
 use anyhow::Context as _;
@@ -24,7 +29,7 @@ use crate::{
 
 /// Represents an entire GitHub Actions workflow.
 ///
-/// This type implements [`Deref`] for [`workflow::Workflow`],
+/// This type implements [`std::ops::Deref`] for [`workflow::Workflow`],
 /// providing access to the underlying data model.
 pub(crate) struct Workflow {
     /// This workflow's unique key into zizmor's runtime registry.
@@ -336,7 +341,7 @@ impl<'doc> Iterator for Jobs<'doc> {
 
 /// Represents an execution Matrix within a Job.
 ///
-/// This type implements [`Deref`] for [`job::NormalJob::strategy`], providing
+/// This type implements [`std::ops::Deref`] for [`job::NormalJob::strategy`], providing
 /// access to the underlying data model.
 #[derive(Clone)]
 pub(crate) struct Matrix<'doc> {
@@ -496,7 +501,7 @@ impl<'doc> Matrix<'doc> {
 
 /// Represents a single step in a normal workflow job.
 ///
-/// This type implements [`Deref`] for [`workflow::job::Step`], which
+/// This type implements [`std::ops::Deref`] for [`workflow::job::Step`], which
 /// provides access to the step's actual fields.
 #[derive(Clone)]
 pub(crate) struct Step<'doc> {

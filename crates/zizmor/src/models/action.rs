@@ -1,3 +1,8 @@
+//! GitHub Actions composite action models.
+//!
+//! These models enrich the models under [`github_actions_models::action`],
+//! providing higher-level APIs for zizmor to use.
+
 use anyhow::Context as _;
 use github_actions_expressions::context;
 use github_actions_models::{action, common, workflow::job::Strategy};
