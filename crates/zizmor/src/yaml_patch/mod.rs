@@ -1004,36 +1004,30 @@ mod tests {
 
     #[test]
     fn test_detect_yaml_style() {
-        // flow mapping cases
-        for case in &[
-            "{key: value}",
-            "{ key: value }",
-            "  { key: value }",
-            "  { key: value }  ",
-            "{ key: [x, y, z] }",
-        ] {
-            assert_eq!(YamlStyle::detect(case), YamlStyle::FlowMapping);
-        }
-
-        // flow sequence cases
-        for case in &[
-            "[item1, item2]",
-            "[ item1, item2 ]",
-            "  [ item1, item2 ]",
-            "  [ item1, item2 ]  ",
-        ] {
-            assert_eq!(YamlStyle::detect(case), YamlStyle::FlowSequence);
-        }
-
-        // multi line flow mapping cases
-        for case in &[
-            r#"
+        for (case, expected_style) in &[
+            // flow mapping cases
+            ("{key: value}", YamlStyle::FlowMapping),
+            ("{ key: value }", YamlStyle::FlowMapping),
+            ("  { key: value }", YamlStyle::FlowMapping),
+            ("  { key: value }  ", YamlStyle::FlowMapping),
+            ("{ key: [x, y, z] }", YamlStyle::FlowMapping),
+            // flow sequence cases
+            ("[item1, item2]", YamlStyle::FlowSequence),
+            ("[ item1, item2 ]", YamlStyle::FlowSequence),
+            ("  [ item1, item2 ]", YamlStyle::FlowSequence),
+            ("  [ item1, item2 ]  ", YamlStyle::FlowSequence),
+            // multi line flow mapping cases
+            (
+                r#"
 {
   key: value,
   key2: value2,
 }
 "#,
-            r#"
+                YamlStyle::MultilineFlowMapping,
+            ),
+            (
+                r#"
 
 {
   key: value,
@@ -1041,13 +1035,57 @@ mod tests {
 }
 
 "#,
-            r#"
+                YamlStyle::MultilineFlowMapping,
+            ),
+            (
+                r#"
 {
   foo: bar, baz: qux,
 }
 "#,
+                YamlStyle::MultilineFlowMapping,
+            ),
+            (
+                r#"
+[
+  a,
+  b,
+  c
+]
+"#,
+                YamlStyle::MultilineFlowSequence,
+            ),
+            (
+                r#"
+
+[
+  a,
+  b,
+  c
+]
+
+"#,
+                YamlStyle::MultilineFlowSequence,
+            ),
+            (
+                r#"
+[
+  a: 1,
+  b,
+  c,
+]
+"#,
+                YamlStyle::MultilineFlowSequence,
+            ),
+            ("\"foo\"", YamlStyle::DoubleQuoted),
+            (" \"foo\" ", YamlStyle::DoubleQuoted),
+            ("\'foo\'", YamlStyle::SingleQuoted),
+            (" \'foo\' ", YamlStyle::SingleQuoted),
+            ("foo", YamlStyle::PlainScalar),
+            ("  foo", YamlStyle::PlainScalar),
+            ("123", YamlStyle::PlainScalar),
         ] {
-            assert_eq!(YamlStyle::detect(case), YamlStyle::MultilineFlowMapping);
+            assert_eq!(YamlStyle::detect(case), *expected_style);
         }
     }
 
