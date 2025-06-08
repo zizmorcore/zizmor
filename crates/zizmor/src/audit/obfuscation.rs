@@ -7,7 +7,7 @@ use crate::{
         Finding,
         location::{Feature, Location},
     },
-    models::{CompositeStep, Step, StepCommon},
+    models::{StepCommon, action::CompositeStep, workflow::Step},
     utils::parse_expressions_from_input,
 };
 

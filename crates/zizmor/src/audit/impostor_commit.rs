@@ -12,7 +12,7 @@ use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Severity, location::Locatable as _},
     github_api::{self, ComparisonStatus},
-    models::{StepCommon, Workflow, uses::RepositoryUsesExt as _},
+    models::{StepCommon, uses::RepositoryUsesExt as _, workflow::Workflow},
     state::AuditState,
 };
 

@@ -4,7 +4,7 @@ use github_actions_models::common::Uses;
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::uses::RepositoryUsesPattern;
-use crate::models::{CompositeStep, Step, StepCommon};
+use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 use serde::Deserialize;
 
 pub(crate) struct ForbiddenUses {

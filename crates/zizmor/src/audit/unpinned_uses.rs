@@ -7,7 +7,7 @@ use serde::Deserialize;
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::uses::RepositoryUsesPattern;
-use crate::models::{CompositeStep, Step, StepCommon, uses::UsesExt as _};
+use crate::models::{StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step};
 
 pub(crate) struct UnpinnedUses {
     policies: UnpinnedUsesPolicies,

@@ -49,7 +49,7 @@ impl Audit for ExcessivePermissions {
 
     fn audit_workflow<'doc>(
         &self,
-        workflow: &'doc crate::models::Workflow,
+        workflow: &'doc crate::models::workflow::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 

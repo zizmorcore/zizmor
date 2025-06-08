@@ -567,7 +567,7 @@ mod tests {
     use github_actions_expressions::Expr;
 
     use crate::{
-        models::{Action, Workflow},
+        models::{action::Action, workflow::Workflow},
         registry::InputKey,
         utils::{
             env_is_static, extract_expression, extract_expressions, normalize_shell,

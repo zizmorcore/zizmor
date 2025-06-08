@@ -177,7 +177,7 @@ impl Audit for Artipacked {
 
     fn audit_action<'doc>(
         &self,
-        action: &'doc crate::models::Action,
+        action: &'doc crate::models::action::Action,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let steps = action.steps();
         self.process_steps(steps)
@@ -191,7 +191,9 @@ impl Audit for Artipacked {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{github_api::GitHubHost, models::Workflow, registry::InputKey, state::AuditState};
+    use crate::{
+        github_api::GitHubHost, models::workflow::Workflow, registry::InputKey, state::AuditState,
+    };
 
     /// Macro for testing workflow audits with common boilerplate
     ///

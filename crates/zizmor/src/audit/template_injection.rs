@@ -34,7 +34,9 @@ use crate::{
         Confidence, Finding, Fix, Persona, Severity,
         location::{Routable as _, SymbolicLocation},
     },
-    models::{self, CompositeStep, Step, StepCommon, uses::RepositoryUsesPattern},
+    models::{
+        self, StepCommon, action::CompositeStep, uses::RepositoryUsesPattern, workflow::Step,
+    },
     state::AuditState,
     utils::{DEFAULT_ENVIRONMENT_VARIABLES, extract_expressions},
     yaml_patch::{Op, Patch},
@@ -399,7 +401,7 @@ impl TemplateInjection {
                                             // that it's trivially not static.
                                             Some(LoE::Expr(_)) => false,
                                             // The matrix may expand to static values according to the context
-                                            Some(inner) => models::Matrix::new(inner)
+                                            Some(inner) => models::workflow::Matrix::new(inner)
                                                 .expands_to_static_values(context.as_str()),
                                             // Context specifies a matrix, but there is no matrix defined.
                                             // This is an invalid workflow so there's no point in flagging it.
@@ -510,7 +512,7 @@ mod tests {
     use crate::audit::Audit;
     use crate::audit::template_injection::{Capability, TemplateInjection};
     use crate::github_api::GitHubHost;
-    use crate::models::Workflow;
+    use crate::models::workflow::Workflow;
     use crate::registry::InputKey;
     use crate::state::AuditState;
 

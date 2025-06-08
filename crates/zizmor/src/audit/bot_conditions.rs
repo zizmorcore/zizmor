@@ -9,7 +9,7 @@ use github_actions_models::common::{If, expr::ExplicitExpr};
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     finding::{Confidence, Severity, location::Locatable as _},
-    models::JobExt,
+    models::workflow::JobExt,
 };
 
 pub(crate) struct BotConditions;

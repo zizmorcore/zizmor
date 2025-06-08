@@ -13,7 +13,7 @@ use tree_sitter::{
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::{JobExt as _, Step};
+use crate::models::{workflow::JobExt as _, workflow::Step};
 use crate::state::AuditState;
 use crate::utils;
 
