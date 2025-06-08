@@ -22,9 +22,26 @@ pub enum Error {
 pub enum YamlStyle {
     /// Block style collections and mappings
     Block,
-    /// Flow mapping style: { key: value, key2: value2 }
+    /// Multiline flow mapping style:
+    ///
+    /// ```yaml
+    /// {
+    ///   key: value,
+    ///   key2: value2
+    /// }
+    /// ```
+    MultilineFlowMapping,
+    /// Single-line flow mapping style: { key: value, key2: value2 }
     FlowMapping,
-    /// Flow sequence style: [ item1, item2, item3 ]
+    /// Multiline flow sequence style:
+    /// ```yaml
+    /// [
+    ///   item1,
+    ///   item2,
+    /// ]
+    /// ```
+    MultilineFlowSequence,
+    /// Single-line flow sequence style: [ item1, item2, item3 ]
     FlowSequence,
     /// Literal scalar style: |
     LiteralScalar,
@@ -42,13 +59,20 @@ impl YamlStyle {
     /// Detect the YAML style of a value from its string representation
     pub fn detect(content: &str) -> Self {
         let trimmed = content.trim();
+        let multiline = trimmed.contains('\n');
 
         // First check if the entire content is a flow mapping or sequence
         if trimmed.starts_with('{') && trimmed.ends_with('}') {
-            return YamlStyle::FlowMapping;
+            return match multiline {
+                true => YamlStyle::MultilineFlowMapping,
+                false => YamlStyle::FlowMapping,
+            };
         }
         if trimmed.starts_with('[') && trimmed.ends_with(']') {
-            return YamlStyle::FlowSequence;
+            return match multiline {
+                true => YamlStyle::MultilineFlowSequence,
+                false => YamlStyle::FlowSequence,
+            };
         }
 
         // Handle key-value pairs by extracting the value part
