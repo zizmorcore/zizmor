@@ -120,14 +120,14 @@ impl Audit for UseTrustedPublishing {
 
     fn audit_step<'doc>(
         &self,
-        step: &super::Step<'doc>,
+        step: &crate::models::workflow::Step<'doc>,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         self.process_step(step)
     }
 
     fn audit_composite_step<'doc>(
         &self,
-        step: &crate::models::CompositeStep<'doc>,
+        step: &crate::models::action::CompositeStep<'doc>,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }

@@ -16,7 +16,7 @@ use crate::{
     AuditState,
     finding::{Confidence, Persona, Severity},
 };
-use crate::{finding::location::Locatable as _, models::Matrix};
+use crate::{finding::location::Locatable as _, models::workflow::Matrix};
 
 pub(crate) struct SelfHostedRunner;
 
@@ -36,7 +36,7 @@ impl Audit for SelfHostedRunner {
 
     fn audit_workflow<'doc>(
         &self,
-        workflow: &'doc crate::models::Workflow,
+        workflow: &'doc crate::models::workflow::Workflow,
     ) -> Result<Vec<crate::finding::Finding<'doc>>> {
         let mut results = vec![];
 

@@ -13,7 +13,7 @@ use tree_sitter::{
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::{JobExt as _, Step};
+use crate::models::{workflow::JobExt as _, workflow::Step};
 use crate::state::AuditState;
 use crate::utils;
 
@@ -428,7 +428,7 @@ impl Audit for GitHubEnv {
         };
 
         // TODO: actually use the spanning information here.
-        for (dest, _span) in self.uses_github_env(run, shell)? {
+        for (dest, _span) in self.uses_github_env(&run, &shell)? {
             findings.push(
                 Self::finding()
                     .severity(Severity::High)

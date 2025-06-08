@@ -329,7 +329,7 @@ mod tests {
 
     use super::{ActionCoordinate, StepCommon};
     use crate::{
-        finding::location::Locatable,
+        finding::location::{Locatable, SymbolicLocation},
         models::{
             coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
             uses::RepositoryUsesPattern,
@@ -338,7 +338,7 @@ mod tests {
 
     // Test-only trait impls.
     impl<'doc> Locatable<'doc> for Step {
-        fn location(&self) -> crate::models::SymbolicLocation<'doc> {
+        fn location(&self) -> SymbolicLocation<'doc> {
             unreachable!()
         }
 

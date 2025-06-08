@@ -3,7 +3,7 @@ use github_actions_models::workflow::job::Secrets;
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     finding::{Confidence, location::Locatable as _},
-    models::JobExt as _,
+    models::workflow::JobExt as _,
 };
 
 pub(crate) struct SecretsInherit;

@@ -9,7 +9,8 @@ use yamlpath::Document;
 use crate::{
     finding::{Finding, FindingBuilder, location::SymbolicLocation},
     models::{
-        Action, AsDocument, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow,
+        AsDocument, action::Action, action::CompositeStep, workflow::Job, workflow::NormalJob,
+        workflow::ReusableWorkflowCallJob, workflow::Step, workflow::Workflow,
     },
     registry::InputKey,
     state::AuditState,

@@ -5,7 +5,7 @@ use crate::{
         Confidence, Finding, Persona, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
-    models::JobExt as _,
+    models::workflow::JobExt as _,
     state::AuditState,
 };
 
