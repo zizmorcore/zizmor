@@ -65,12 +65,36 @@ impl ActionCoordinate {
             ActionCoordinate::Configurable {
                 uses_pattern: _,
                 control,
-            } => match control.eval(with) {
-                ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
-                ControlEvaluation::Satisfied => Some(Usage::DirectOptIn),
-                ControlEvaluation::NotSatisfied => None,
-                ControlEvaluation::Conditional => Some(Usage::ConditionalOptIn),
-            },
+            } => {
+                let eval = control.eval(with);
+                match control {
+                    ControlExpr::Single {
+                        toggle: Toggle::OptOut,
+                        ..
+                    } => match eval {
+                        ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
+                        ControlEvaluation::NotSatisfied => Some(Usage::DirectOptIn), // OptOut: NotSatisfied means caching is enabled
+                        ControlEvaluation::Satisfied => None, // OptOut: Satisfied means caching is disabled
+                        ControlEvaluation::Conditional => Some(Usage::ConditionalOptIn),
+                    },
+                    ControlExpr::Single {
+                        toggle: Toggle::OptIn,
+                        ..
+                    } => match eval {
+                        ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
+                        ControlEvaluation::Satisfied => Some(Usage::DirectOptIn), // OptIn: Satisfied means caching is enabled
+                        ControlEvaluation::NotSatisfied => None, // OptIn: NotSatisfied means caching is disabled
+                        ControlEvaluation::Conditional => Some(Usage::ConditionalOptIn),
+                    },
+                    // For All/Any, fallback to previous logic
+                    _ => match eval {
+                        ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
+                        ControlEvaluation::Satisfied => Some(Usage::DirectOptIn),
+                        ControlEvaluation::NotSatisfied => None,
+                        ControlEvaluation::Conditional => Some(Usage::ConditionalOptIn),
+                    },
+                }
+            }
             // The mere presence of this `uses:` implies the expected usage semantics.
             ActionCoordinate::NotConfigurable(_) => Some(Usage::Always),
         }
@@ -279,20 +303,89 @@ impl ControlExpr {
             } => {
                 // If the controlling field is not present, the default dictates the semantics.
                 if let Some(field_value) = with.get(*field_name) {
-                    match field_value.to_string().as_str() {
-                        "false" if matches!(field_type, ControlFieldType::Boolean) => {
-                            match toggle {
-                                Toggle::OptIn => ControlEvaluation::NotSatisfied,
-                                Toggle::OptOut => ControlEvaluation::Satisfied,
+                    match (toggle, field_type) {
+                        (Toggle::OptOut, ControlFieldType::String) => {
+                            // Use EnvValue::csharp_trueish for robust true/false detection
+                            if field_value.csharp_trueish() {
+                                ControlEvaluation::NotSatisfied
+                            } else if match field_value {
+                                github_actions_models::common::EnvValue::Boolean(false) => true,
+                                github_actions_models::common::EnvValue::String(s) => {
+                                    s.trim().eq_ignore_ascii_case("false")
+                                }
+                                _ => false,
+                            } {
+                                ControlEvaluation::Satisfied
+                            } else {
+                                // Fallback to previous logic for expressions, etc.
+                                let value_str = field_value.to_string();
+                                match ExplicitExpr::from_curly(&value_str) {
+                                    None => ControlEvaluation::NotSatisfied,
+                                    Some(_) => ControlEvaluation::Conditional,
+                                }
                             }
                         }
-                        other => match ExplicitExpr::from_curly(other) {
-                            None => match toggle {
-                                Toggle::OptIn => ControlEvaluation::Satisfied,
-                                Toggle::OptOut => ControlEvaluation::NotSatisfied,
-                            },
-                            Some(_) => ControlEvaluation::Conditional,
-                        },
+                        (Toggle::OptIn, ControlFieldType::Boolean) => {
+                            if field_value.csharp_trueish() {
+                                ControlEvaluation::Satisfied
+                            } else if match field_value {
+                                github_actions_models::common::EnvValue::Boolean(false) => true,
+                                github_actions_models::common::EnvValue::String(s) => {
+                                    s.trim().eq_ignore_ascii_case("false")
+                                }
+                                _ => false,
+                            } {
+                                ControlEvaluation::NotSatisfied
+                            } else {
+                                let value_str = field_value.to_string();
+                                match ExplicitExpr::from_curly(&value_str) {
+                                    None => ControlEvaluation::Satisfied,
+                                    Some(_) => ControlEvaluation::Conditional,
+                                }
+                            }
+                        }
+                        (Toggle::OptOut, ControlFieldType::Boolean) => {
+                            if match field_value {
+                                github_actions_models::common::EnvValue::Boolean(false) => true,
+                                github_actions_models::common::EnvValue::String(s) => {
+                                    s.trim().eq_ignore_ascii_case("false")
+                                }
+                                _ => false,
+                            } {
+                                ControlEvaluation::Satisfied
+                            } else if field_value.csharp_trueish() {
+                                ControlEvaluation::NotSatisfied
+                            } else {
+                                let value_str = field_value.to_string();
+                                match ExplicitExpr::from_curly(&value_str) {
+                                    None => ControlEvaluation::NotSatisfied,
+                                    Some(_) => ControlEvaluation::Conditional,
+                                }
+                            }
+                        }
+                        (Toggle::OptIn, ControlFieldType::String) => {
+                            if let github_actions_models::common::EnvValue::String(s) = field_value
+                            {
+                                if !s.is_empty() {
+                                    ControlEvaluation::Satisfied
+                                } else {
+                                    match ExplicitExpr::from_curly(s) {
+                                        None => ControlEvaluation::NotSatisfied,
+                                        Some(_) => ControlEvaluation::Conditional,
+                                    }
+                                }
+                            } else {
+                                let value_str = field_value.to_string();
+                                if !value_str.is_empty() {
+                                    ControlEvaluation::Satisfied
+                                } else {
+                                    match ExplicitExpr::from_curly(&value_str) {
+                                        None => ControlEvaluation::NotSatisfied,
+                                        Some(_) => ControlEvaluation::Conditional,
+                                    }
+                                }
+                            }
+                        }
                     }
                 } else if *enabled_by_default {
                     ControlEvaluation::DefaultSatisfied
