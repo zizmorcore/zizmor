@@ -2,8 +2,11 @@ on: release
 
 permissions: {}
 
+name: caching-enabled-by-default
+
 jobs:
   publish-crate:
+    name: publish-crate
     runs-on: ubuntu-24.04
 
     steps:

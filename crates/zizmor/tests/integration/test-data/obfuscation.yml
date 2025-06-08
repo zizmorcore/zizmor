@@ -6,6 +6,7 @@ permissions: {}
 
 jobs:
   obfuscated-uses:
+    name: obfuscated-uses
     runs-on: ubuntu-latest
     steps:
       # trailing slash
@@ -22,6 +23,7 @@ jobs:
       - uses: actions/cache/save/../save@v4
 
   obfuscated-exprs:
+    name: obfuscated-exprs
     runs-on: ubuntu-latest
     steps:
       # trivially reducible expressions

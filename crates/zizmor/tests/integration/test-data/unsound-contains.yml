@@ -6,10 +6,13 @@ on:
       some_value:
         required: true
 
+name: unsound-contains
+
 permissions: {}
 
 jobs:
   hackme:
+    name: hackme
     runs-on: ubuntu-latest
     steps:
       - name: vulnerable-1

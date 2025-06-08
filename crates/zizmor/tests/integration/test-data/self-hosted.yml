@@ -3,10 +3,13 @@
 on:
   push:
 
+name: self-hosted
+
 permissions: {}
 
 jobs:
   whops:
+    name: whops
     runs-on: [self-hosted, my-ubuntu-box]
 
     steps:

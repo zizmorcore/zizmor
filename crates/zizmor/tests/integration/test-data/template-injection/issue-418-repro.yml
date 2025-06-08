@@ -10,6 +10,7 @@ permissions: {}
 
 jobs:
   stop:
+    name: stop
     runs-on: ubuntu-latest
     env:
       COMMENT_ID: "1234"

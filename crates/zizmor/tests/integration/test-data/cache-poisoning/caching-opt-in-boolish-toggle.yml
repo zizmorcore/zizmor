@@ -3,10 +3,13 @@
 
 on: release
 
+name: caching-opt-in-boolish-toggle
+
 permissions: {}
 
 jobs:
   publish-crate:
+    name: publish-crate
     runs-on: ubuntu-24.04
 
     steps:

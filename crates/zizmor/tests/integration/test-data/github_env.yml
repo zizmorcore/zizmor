@@ -1,10 +1,13 @@
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers]
 
+name: github_env
+
 permissions: {}
 
 jobs:
   vulnerable:
+    name: vulnerable
     runs-on: ubuntu-latest
 
     steps:

@@ -1,5 +1,7 @@
 on: push
 
+name: workflow-write-explicit
+
 # Each of these is flagged as too broad.
 permissions:
   contents: write
@@ -8,6 +10,7 @@ permissions:
 
 jobs:
   job1:
+    name: job1
     runs-on: ubuntu-latest
     # not flagged because it's within the job scope
     permissions:
@@ -18,6 +21,7 @@ jobs:
           persist-credentials: false
 
   job2:
+    name: job2
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683

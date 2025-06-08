@@ -3,10 +3,13 @@
 on:
   push:
 
+name: self-hosted-matrix-exclusion
+
 permissions: {}
 
 jobs:
   ok:
+    name: ok
     runs-on: ${{ matrix.os }}
 
     strategy:
