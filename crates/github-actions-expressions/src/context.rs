@@ -462,8 +462,8 @@ mod tests {
             ("foo.*.*", "foo.bar.baz.qux", false),     // pattern too short
             ("foo.1", "foo[1]", false),                // .1 means a string key, not an index
         ] {
-            let pattern =
-                ContextPattern::try_new(pattern).unwrap_or_else(|| panic!("invalid pattern: {pattern}"));
+            let pattern = ContextPattern::try_new(pattern)
+                .unwrap_or_else(|| panic!("invalid pattern: {pattern}"));
             let ctx = Context::try_from(*ctx).unwrap();
             assert_eq!(pattern.matches(&ctx), *expected);
         }
