@@ -1003,6 +1003,55 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_detect_yaml_style() {
+        // flow mapping cases
+        for case in &[
+            "{key: value}",
+            "{ key: value }",
+            "  { key: value }",
+            "  { key: value }  ",
+            "{ key: [x, y, z] }",
+        ] {
+            assert_eq!(YamlStyle::detect(case), YamlStyle::FlowMapping);
+        }
+
+        // flow sequence cases
+        for case in &[
+            "[item1, item2]",
+            "[ item1, item2 ]",
+            "  [ item1, item2 ]",
+            "  [ item1, item2 ]  ",
+        ] {
+            assert_eq!(YamlStyle::detect(case), YamlStyle::FlowSequence);
+        }
+
+        // multi line flow mapping cases
+        for case in &[
+            r#"
+{
+  key: value,
+  key2: value2,
+}
+"#,
+            r#"
+
+{
+  key: value,
+  key2: value2,
+}
+
+"#,
+            r#"
+{
+  foo: bar, baz: qux,
+}
+"#,
+        ] {
+            assert_eq!(YamlStyle::detect(case), YamlStyle::MultilineFlowMapping);
+        }
+    }
+
+    #[test]
     fn test_reparse_exact_extracted() {
         let original = r#"
 foo:
