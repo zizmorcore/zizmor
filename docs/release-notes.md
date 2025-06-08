@@ -18,7 +18,9 @@ of `zizmor`.
 * The [bot-conditions] audit now detects more spoofable actor checks,
   including checks against well-known user IDs for bot accounts (#905)
 * The [template-injection] and other audits now produce more precise
-  results when analyzing `env` context accesses for static-ness (#911)
+  findings when analyzing `env` context accesses for static-ness (#911)
+* The [template-injection] audit now produces more precise findings
+  when analyzing `inputs` context accesses (#919)
 
 ### Bug Fixes 🐛
 
