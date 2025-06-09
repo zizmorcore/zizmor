@@ -178,6 +178,22 @@ impl From<Node<'_>> for Location {
     }
 }
 
+/// Describes the feature's kind, i.e. whether it's a block/flow aggregate
+/// or a scalar value.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FeatureKind {
+    /// A block-style mapping, e.g. `foo: bar`.
+    BlockMapping,
+    /// A block-style sequence, e.g. `- foo`.
+    BlockSequence,
+    /// A flow-style mapping, e.g. `{foo: bar}`.
+    FlowMapping,
+    /// A flow-style sequence, e.g. `[foo, bar]`.
+    FlowSequence,
+    /// Any sort of scalar value.
+    Scalar,
+}
+
 /// Represents the result of a successful query.
 #[derive(Debug)]
 pub struct Feature<'tree> {
@@ -198,8 +214,29 @@ impl Feature<'_> {
         self._node.parent().map(Feature::from)
     }
 
-    // TODO: `kind()` to return the node's kind, including block/flow
-    // disposition.
+    /// Return this feature's [`FeatureKind`].
+    pub fn kind(&self) -> FeatureKind {
+        // TODO: Use node kind IDs instead of string matching.
+
+        // Our feature's underlying node is often a
+        // `block_node` or `flow_node`, which is a container
+        // for the real kind of node we're interested in.
+        let node = match self._node.kind() {
+            "block_node" | "flow_node" => self._node.child(0).unwrap(),
+            _ => self._node,
+        };
+
+        match node.kind() {
+            "block_mapping" => FeatureKind::BlockMapping,
+            "block_sequence" => FeatureKind::BlockSequence,
+            "flow_mapping" => FeatureKind::FlowMapping,
+            "flow_sequence" => FeatureKind::FlowSequence,
+            "plain_scalar" | "single_quote_scalar" | "double_quote_scalar" | "block_scalar" => {
+                FeatureKind::Scalar
+            }
+            kind => todo!("{kind}"),
+        }
+    }
 }
 
 impl<'tree> From<Node<'tree>> for Feature<'tree> {
@@ -623,7 +660,9 @@ impl Document {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Component, Document, Query, QueryBuilder};
+    use std::vec;
+
+    use crate::{Component, Document, FeatureKind, Query, QueryBuilder};
 
     #[test]
     fn test_query_parent() {
@@ -764,5 +803,144 @@ bar: # outside
         };
         let feature = doc.query_pretty(&query).unwrap();
         assert_eq!(doc.feature_comments(&feature), &["# quux"]);
+    }
+
+    #[test]
+    fn test_feature_kind() {
+        let doc = r#"
+block-mapping:
+  foo: bar
+
+"block-mapping-quoted":
+  foo: bar
+
+block-sequence:
+  - foo
+  - bar
+
+"block-sequence-quoted":
+  - foo
+  - bar
+
+flow-mapping: {foo: bar}
+
+flow-sequence: [foo, bar]
+
+scalars:
+  - abc
+  - 'abc'
+  - "abc"
+  - 123
+  - -123
+  - 123.456
+  - true
+  - false
+  - null
+  - |
+    multiline
+    text
+  - >
+    folded
+    text
+
+nested:
+  foo:
+    - bar
+    - baz
+    - { a: b }
+    - { c: }
+"#;
+        let doc = Document::new(doc).unwrap();
+
+        for (query, expected_kind) in &[
+            (
+                vec![Component::Key("block-mapping")],
+                FeatureKind::BlockMapping,
+            ),
+            (
+                vec![Component::Key("block-mapping-quoted")],
+                FeatureKind::BlockMapping,
+            ),
+            (
+                vec![Component::Key("block-sequence")],
+                FeatureKind::BlockSequence,
+            ),
+            (
+                vec![Component::Key("block-sequence-quoted")],
+                FeatureKind::BlockSequence,
+            ),
+            (
+                vec![Component::Key("flow-mapping")],
+                FeatureKind::FlowMapping,
+            ),
+            (
+                vec![Component::Key("flow-sequence")],
+                FeatureKind::FlowSequence,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(0)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(1)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(2)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(3)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(4)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(5)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(6)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(7)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(8)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(9)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(10)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![
+                    Component::Key("nested"),
+                    Component::Key("foo"),
+                    Component::Index(2),
+                ],
+                FeatureKind::FlowMapping,
+            ),
+            (
+                vec![
+                    Component::Key("nested"),
+                    Component::Key("foo"),
+                    Component::Index(3),
+                ],
+                FeatureKind::FlowMapping,
+            ),
+        ] {
+            let query = Query::new(query.clone()).unwrap();
+            let feature = doc.query_exact(&query).unwrap().unwrap();
+            assert_eq!(feature.kind(), *expected_kind);
+        }
     }
 }
