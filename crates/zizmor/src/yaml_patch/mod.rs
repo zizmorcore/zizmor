@@ -303,101 +303,28 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 return handle_root_level_addition(content, key, value);
             }
 
-            let feature = route_to_feature_pretty(&patch.route, &doc)?;
+            let style = YamlStyle::detect(&patch.route, &doc)?;
+            let feature = route_to_feature_exact(&patch.route, &doc)?;
 
-            // Detect the target's YAML style
-            let target_style = YamlStyle::detect(&patch.route, &doc)?;
-
-            // Check if we're adding to a flow mapping
-            if target_style == YamlStyle::FlowMapping {
-                return handle_flow_mapping_addition(content, &feature, key, value);
-            }
-
-            // Convert the new value to YAML string for block style handling
-            let new_value_str = if matches!(value, serde_yaml::Value::Sequence(_)) {
-                // For sequences, use flow-aware serialization to maintain consistency
-                serialize_yaml_value_for_flow_context(value)?
-            } else {
-                serialize_yaml_value(value)?
-            };
-            let new_value_str = new_value_str.trim_end(); // Remove trailing newline
-
-            // Check if we're adding to a list item by examining the path
-            let is_list_item = matches!(patch.route.last(), Some(RouteComponent::Index(_)));
-
-            // Determine the appropriate indentation
-            let indent = if is_list_item {
-                // For list items, we need to match the indentation of other keys in the same item
-                // The feature extraction gives us the content without the leading "- " part,
-                // so we need to use the leading whitespace of the step itself plus 2 spaces
-                let leading_whitespace =
-                    extract_leading_whitespace(content, feature.location.byte_span.0);
-                format!("{}  ", leading_whitespace)
-            } else {
-                // For regular mappings, add 2 spaces to current indentation
-                let leading_whitespace =
-                    extract_leading_whitespace(content, feature.location.byte_span.0);
-                format!("{}  ", leading_whitespace)
-            };
-
-            // Format the new entry
-            let final_entry = if let serde_yaml::Value::Mapping(mapping) = &value {
-                if mapping.is_empty() {
-                    // For empty mappings, format inline
-                    format!("\n{}{}: {}", indent, key, new_value_str)
-                } else {
-                    // For non-empty mappings, format as a nested structure
-                    let value_lines: Vec<&str> = new_value_str.lines().collect();
-                    let mut result = format!("\n{}{}:", indent, key);
-                    for line in value_lines.iter() {
-                        if !line.trim().is_empty() {
-                            result.push('\n');
-                            result.push_str(&indent);
-                            result.push_str("  "); // 2 spaces for nested content
-                            result.push_str(line.trim_start());
-                        }
-                    }
-                    result
+            match style {
+                YamlStyle::BlockMapping => handle_block_mapping_addition(
+                    &doc,
+                    &patch,
+                    content,
+                    &feature.unwrap(),
+                    key,
+                    value,
+                ),
+                YamlStyle::MultilineFlowMapping => todo!(),
+                YamlStyle::FlowMapping => {
+                    handle_flow_mapping_addition(content, &feature.unwrap(), key, value)
                 }
-            } else if new_value_str.contains('\n') {
-                // Handle multiline values
-                let indented_value = indent_multiline_yaml(new_value_str, &indent);
-                format!("\n{}{}: {}", indent, key, indented_value)
-            } else {
-                format!("\n{}{}: {}", indent, key, new_value_str)
-            };
-
-            // Find the insertion point
-            let insertion_point = if is_list_item {
-                // For list items, we need to find the end of the actual step content,
-                // not including trailing comments that yamlpath may have included
-                find_step_content_end(content, &feature, &doc)
-            } else {
-                feature.location.byte_span.1
-            };
-
-            // Check if we need to add a newline before the entry
-            // If the content at insertion point already ends with a newline, don't add another
-            let needs_leading_newline = if insertion_point > 0 {
-                content.chars().nth(insertion_point - 1) != Some('\n')
-            } else {
-                true
-            };
-
-            let final_entry_to_insert = if needs_leading_newline {
-                final_entry
-            } else {
-                // Remove the leading newline since there's already one
-                final_entry
-                    .strip_prefix('\n')
-                    .unwrap_or(&final_entry)
-                    .to_string()
-            };
-
-            // Insert the new entry
-            let mut result = content.to_string();
-            result.insert_str(insertion_point, &final_entry_to_insert);
-            Ok(result)
+                YamlStyle::Empty => todo!(),
+                _ => Err(Error::InvalidOperation(format!(
+                    "add operation is not against non-mapping route: {:?}",
+                    patch.route
+                ))),
+            }
         }
 
         Op::MergeInto { key, value } => {
@@ -598,6 +525,99 @@ fn indent_multiline_yaml(content: &str, base_indent: &str) -> String {
         }
     }
     result
+}
+
+fn handle_block_mapping_addition(
+    doc: &yamlpath::Document,
+    patch: &Patch,
+    content: &str,
+    feature: &yamlpath::Feature,
+    key: &str,
+    value: &serde_yaml::Value,
+) -> Result<String, Error> {
+    // Convert the new value to YAML string for block style handling
+    let new_value_str = if matches!(value, serde_yaml::Value::Sequence(_)) {
+        // For sequences, use flow-aware serialization to maintain consistency
+        serialize_yaml_value_for_flow_context(value)?
+    } else {
+        serialize_yaml_value(value)?
+    };
+    let new_value_str = new_value_str.trim_end(); // Remove trailing newline
+
+    // Check if we're adding to a list item by examining the path
+    let is_list_item = matches!(patch.route.last(), Some(RouteComponent::Index(_)));
+
+    // Determine the appropriate indentation
+    let indent = if is_list_item {
+        // For list items, we need to match the indentation of other keys in the same item
+        // The feature extraction gives us the content without the leading "- " part,
+        // so we need to use the leading whitespace of the step itself plus 2 spaces
+        let leading_whitespace = extract_leading_whitespace(content, feature.location.byte_span.0);
+        format!("{}  ", leading_whitespace)
+    } else {
+        // For regular mappings, add 2 spaces to current indentation
+        let leading_whitespace = extract_leading_whitespace(content, feature.location.byte_span.0);
+        format!("{}", leading_whitespace)
+    };
+
+    // Format the new entry
+    let final_entry = if let serde_yaml::Value::Mapping(mapping) = &value {
+        if mapping.is_empty() {
+            // For empty mappings, format inline
+            format!("\n{}{}: {}", indent, key, new_value_str)
+        } else {
+            // For non-empty mappings, format as a nested structure
+            let value_lines: Vec<&str> = new_value_str.lines().collect();
+            let mut result = format!("\n{}{}:", indent, key);
+            for line in value_lines.iter() {
+                if !line.trim().is_empty() {
+                    result.push('\n');
+                    result.push_str(&indent);
+                    result.push_str("  "); // 2 spaces for nested content
+                    result.push_str(line.trim_start());
+                }
+            }
+            result
+        }
+    } else if new_value_str.contains('\n') {
+        // Handle multiline values
+        let indented_value = indent_multiline_yaml(new_value_str, &indent);
+        format!("\n{}{}: {}", indent, key, indented_value)
+    } else {
+        format!("\n{}{}: {}", indent, key, new_value_str)
+    };
+
+    // Find the insertion point
+    let insertion_point = if is_list_item {
+        // For list items, we need to find the end of the actual step content,
+        // not including trailing comments that yamlpath may have included
+        find_step_content_end(content, &feature, &doc)
+    } else {
+        feature.location.byte_span.1
+    };
+
+    // Check if we need to add a newline before the entry
+    // If the content at insertion point already ends with a newline, don't add another
+    let needs_leading_newline = if insertion_point > 0 {
+        content.chars().nth(insertion_point - 1) != Some('\n')
+    } else {
+        true
+    };
+
+    let final_entry_to_insert = if needs_leading_newline {
+        final_entry
+    } else {
+        // Remove the leading newline since there's already one
+        final_entry
+            .strip_prefix('\n')
+            .unwrap_or(&final_entry)
+            .to_string()
+    };
+
+    // Insert the new entry
+    let mut result = content.to_string();
+    result.insert_str(insertion_point, &final_entry_to_insert);
+    Ok(result)
 }
 
 /// Handle adding a key-value pair to a flow mapping while preserving flow style
