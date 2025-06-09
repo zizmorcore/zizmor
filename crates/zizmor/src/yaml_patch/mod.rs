@@ -306,7 +306,6 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             let feature = route_to_feature_pretty(&patch.route, &doc)?;
 
             // Detect the target's YAML style
-            let current_content = doc.extract(&feature);
             let target_style = YamlStyle::detect(&patch.route, &doc)?;
 
             // Check if we're adding to a flow mapping
