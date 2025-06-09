@@ -900,6 +900,14 @@ github.event.changes.old_issue.sub_issues_summary.percent_completed,fixed
 github.event.changes.old_issue.sub_issues_summary.total,fixed
 github.event.changes.old_issue.timeline_url,structured
 github.event.changes.old_issue.title,arbitrary
+github.event.changes.old_issue.type.color,fixed
+github.event.changes.old_issue.type.created_at,fixed
+github.event.changes.old_issue.type.description,arbitrary
+github.event.changes.old_issue.type.id,fixed
+github.event.changes.old_issue.type.is_enabled,fixed
+github.event.changes.old_issue.type.name,arbitrary
+github.event.changes.old_issue.type.node_id,arbitrary
+github.event.changes.old_issue.type.updated_at,fixed
 github.event.changes.old_issue.updated_at,fixed
 github.event.changes.old_issue.url,structured
 github.event.changes.old_issue.user.avatar_url,structured
@@ -1054,7 +1062,6 @@ github.event.changes.tag_name.from,arbitrary
 github.event.changes.title.from,arbitrary
 github.event.check_run.app,fixed
 github.event.check_run.app.client_id,arbitrary
-github.event.check_run.app.client_secret,arbitrary
 github.event.check_run.app.created_at,fixed
 github.event.check_run.app.description,arbitrary
 github.event.check_run.app.events.*,arbitrary
@@ -1091,7 +1098,6 @@ github.event.check_run.app.owner.updated_at,fixed
 github.event.check_run.app.owner.url,structured
 github.event.check_run.app.owner.user_view_type,arbitrary
 github.event.check_run.app.owner.website_url,structured
-github.event.check_run.app.pem,arbitrary
 github.event.check_run.app.permissions.*,arbitrary
 github.event.check_run.app.permissions.checks,arbitrary
 github.event.check_run.app.permissions.contents,arbitrary
@@ -1100,10 +1106,8 @@ github.event.check_run.app.permissions.issues,arbitrary
 github.event.check_run.app.permissions.metadata,arbitrary
 github.event.check_run.app.slug,arbitrary
 github.event.check_run.app.updated_at,fixed
-github.event.check_run.app.webhook_secret,arbitrary
 github.event.check_run.check_suite.after,arbitrary
 github.event.check_run.check_suite.app.client_id,arbitrary
-github.event.check_run.check_suite.app.client_secret,arbitrary
 github.event.check_run.check_suite.app.created_at,fixed
 github.event.check_run.check_suite.app.description,arbitrary
 github.event.check_run.check_suite.app.events.*,arbitrary
@@ -1140,7 +1144,6 @@ github.event.check_run.check_suite.app.owner.updated_at,fixed
 github.event.check_run.check_suite.app.owner.url,structured
 github.event.check_run.check_suite.app.owner.user_view_type,arbitrary
 github.event.check_run.check_suite.app.owner.website_url,structured
-github.event.check_run.check_suite.app.pem,arbitrary
 github.event.check_run.check_suite.app.permissions.*,arbitrary
 github.event.check_run.check_suite.app.permissions.checks,arbitrary
 github.event.check_run.check_suite.app.permissions.contents,arbitrary
@@ -1149,7 +1152,6 @@ github.event.check_run.check_suite.app.permissions.issues,arbitrary
 github.event.check_run.check_suite.app.permissions.metadata,arbitrary
 github.event.check_run.check_suite.app.slug,arbitrary
 github.event.check_run.check_suite.app.updated_at,fixed
-github.event.check_run.check_suite.app.webhook_secret,arbitrary
 github.event.check_run.check_suite.before,arbitrary
 github.event.check_run.check_suite.conclusion,fixed
 github.event.check_run.check_suite.created_at,fixed
@@ -1309,7 +1311,6 @@ github.event.check_run.deployment.node_id,arbitrary
 github.event.check_run.deployment.original_environment,arbitrary
 github.event.check_run.deployment.performed_via_github_app,fixed
 github.event.check_run.deployment.performed_via_github_app.client_id,arbitrary
-github.event.check_run.deployment.performed_via_github_app.client_secret,arbitrary
 github.event.check_run.deployment.performed_via_github_app.created_at,fixed
 github.event.check_run.deployment.performed_via_github_app.description,arbitrary
 github.event.check_run.deployment.performed_via_github_app.events.*,arbitrary
@@ -1346,7 +1347,6 @@ github.event.check_run.deployment.performed_via_github_app.owner.updated_at,fixe
 github.event.check_run.deployment.performed_via_github_app.owner.url,structured
 github.event.check_run.deployment.performed_via_github_app.owner.user_view_type,arbitrary
 github.event.check_run.deployment.performed_via_github_app.owner.website_url,structured
-github.event.check_run.deployment.performed_via_github_app.pem,arbitrary
 github.event.check_run.deployment.performed_via_github_app.permissions.*,arbitrary
 github.event.check_run.deployment.performed_via_github_app.permissions.checks,arbitrary
 github.event.check_run.deployment.performed_via_github_app.permissions.contents,arbitrary
@@ -1355,7 +1355,6 @@ github.event.check_run.deployment.performed_via_github_app.permissions.issues,ar
 github.event.check_run.deployment.performed_via_github_app.permissions.metadata,arbitrary
 github.event.check_run.deployment.performed_via_github_app.slug,arbitrary
 github.event.check_run.deployment.performed_via_github_app.updated_at,fixed
-github.event.check_run.deployment.performed_via_github_app.webhook_secret,arbitrary
 github.event.check_run.deployment.production_environment,fixed
 github.event.check_run.deployment.repository_url,structured
 github.event.check_run.deployment.statuses_url,structured
@@ -1525,7 +1524,6 @@ github.event.comment.parent_id,fixed
 github.event.comment.path,arbitrary
 github.event.comment.performed_via_github_app,fixed
 github.event.comment.performed_via_github_app.client_id,arbitrary
-github.event.comment.performed_via_github_app.client_secret,arbitrary
 github.event.comment.performed_via_github_app.created_at,fixed
 github.event.comment.performed_via_github_app.description,arbitrary
 github.event.comment.performed_via_github_app.events.*,arbitrary
@@ -1562,7 +1560,6 @@ github.event.comment.performed_via_github_app.owner.updated_at,fixed
 github.event.comment.performed_via_github_app.owner.url,structured
 github.event.comment.performed_via_github_app.owner.user_view_type,arbitrary
 github.event.comment.performed_via_github_app.owner.website_url,structured
-github.event.comment.performed_via_github_app.pem,arbitrary
 github.event.comment.performed_via_github_app.permissions.*,arbitrary
 github.event.comment.performed_via_github_app.permissions.checks,arbitrary
 github.event.comment.performed_via_github_app.permissions.contents,arbitrary
@@ -1571,7 +1568,6 @@ github.event.comment.performed_via_github_app.permissions.issues,arbitrary
 github.event.comment.performed_via_github_app.permissions.metadata,arbitrary
 github.event.comment.performed_via_github_app.slug,arbitrary
 github.event.comment.performed_via_github_app.updated_at,fixed
-github.event.comment.performed_via_github_app.webhook_secret,arbitrary
 github.event.comment.position,fixed
 github.event.comment.pull_request_review_id,fixed
 github.event.comment.pull_request_url,structured
@@ -2001,6 +1997,16 @@ github.event.discussion.user.subscriptions_url,structured
 github.event.discussion.user.type,fixed
 github.event.discussion.user.url,structured
 github.event.discussion.user.user_view_type,arbitrary
+github.event.enterprise.avatar_url,structured
+github.event.enterprise.created_at,fixed
+github.event.enterprise.description,arbitrary
+github.event.enterprise.html_url,structured
+github.event.enterprise.id,fixed
+github.event.enterprise.name,arbitrary
+github.event.enterprise.node_id,arbitrary
+github.event.enterprise.slug,arbitrary
+github.event.enterprise.updated_at,fixed
+github.event.enterprise.website_url,structured
 github.event.forced,fixed
 github.event.forkee.allow_auto_merge,fixed
 github.event.forkee.allow_forking,fixed
@@ -2597,6 +2603,8 @@ github.event.pull_request.base.repo.assignees_url,arbitrary
 github.event.pull_request.base.repo.blobs_url,arbitrary
 github.event.pull_request.base.repo.branches_url,arbitrary
 github.event.pull_request.base.repo.clone_url,arbitrary
+github.event.pull_request.base.repo.code_search_index_status.lexical_commit_sha,arbitrary
+github.event.pull_request.base.repo.code_search_index_status.lexical_search_ok,fixed
 github.event.pull_request.base.repo.collaborators_url,arbitrary
 github.event.pull_request.base.repo.comments_url,arbitrary
 github.event.pull_request.base.repo.commits_url,arbitrary
@@ -2766,6 +2774,8 @@ github.event.pull_request.head.repo.assignees_url,arbitrary
 github.event.pull_request.head.repo.blobs_url,arbitrary
 github.event.pull_request.head.repo.branches_url,arbitrary
 github.event.pull_request.head.repo.clone_url,arbitrary
+github.event.pull_request.head.repo.code_search_index_status.lexical_commit_sha,arbitrary
+github.event.pull_request.head.repo.code_search_index_status.lexical_search_ok,fixed
 github.event.pull_request.head.repo.collaborators_url,arbitrary
 github.event.pull_request.head.repo.comments_url,arbitrary
 github.event.pull_request.head.repo.commits_url,arbitrary
@@ -3279,6 +3289,7 @@ github.event.registry_package.updated_at,arbitrary
 github.event.release.assets.*.browser_download_url,structured
 github.event.release.assets.*.content_type,arbitrary
 github.event.release.assets.*.created_at,fixed
+github.event.release.assets.*.digest,arbitrary
 github.event.release.assets.*.download_count,fixed
 github.event.release.assets.*.id,fixed
 github.event.release.assets.*.label,arbitrary
