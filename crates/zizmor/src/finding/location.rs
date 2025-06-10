@@ -87,10 +87,6 @@ impl<'doc> Route<'doc> {
 
         Some(builder.build())
     }
-
-    pub(crate) fn last(&self) -> Option<&RouteComponent<'doc>> {
-        self.components.last()
-    }
 }
 
 impl<'doc> From<Vec<RouteComponent<'doc>>> for Route<'doc> {
@@ -102,10 +98,12 @@ impl<'doc> From<Vec<RouteComponent<'doc>>> for Route<'doc> {
 #[macro_export]
 macro_rules! route {
     ($($key:expr),* $(,)?) => {
-        Route::from(vec![$(RouteComponent::from($key)),*])
+        crate::finding::location::Route::from(
+            vec![$(crate::finding::location::RouteComponent::from($key)),*]
+        )
     };
     () => {
-        Route::new()
+        crate::finding::location::Route::new()
     };
 }
 

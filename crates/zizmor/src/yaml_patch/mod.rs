@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use line_index::{LineCol, TextRange, TextSize};
 
-use crate::finding::location::{Route, RouteComponent};
+use crate::finding::location::Route;
 
 /// Error types for YAML patch operations
 #[derive(thiserror::Error, Debug)]
@@ -313,14 +313,9 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             let feature_content = doc.extract(&feature);
 
             let updated_feature = match style {
-                Style::BlockMapping => handle_block_mapping_addition(
-                    feature_content,
-                    &doc,
-                    patch,
-                    &feature,
-                    key,
-                    value,
-                ),
+                Style::BlockMapping => {
+                    handle_block_mapping_addition(feature_content, &doc, &feature, key, value)
+                }
                 Style::FlowMapping => handle_flow_mapping_addition(feature_content, key, value),
                 // TODO: Remove this limitation.
                 Style::MultilineFlowMapping => Err(Error::InvalidOperation(format!(
@@ -568,6 +563,73 @@ fn line_span(doc: &yamlpath::Document, pos: usize) -> core::ops::Range<usize> {
     doc.line_index().line(line).unwrap().into()
 }
 
+/// Extract the number of leading spaces need to align a block item with
+/// its surrounding context.
+///
+/// This takes into account block sequences, e.g. where the mapping is
+/// a child of a list item and needs to be properly aligned with the list
+/// item's other content.
+fn extract_leading_indentation_for_block_item<'doc>(
+    doc: &'doc yamlpath::Document,
+    feature: &yamlpath::Feature,
+) -> usize {
+    let line_range = line_span(doc, feature.location.byte_span.0);
+
+    // NOTE: We trim the end since trailing whitespace doesn't count,
+    // and we don't watch to match on the line's newline.
+    let line_content = &doc.source()[line_range].trim_end();
+
+    let mut accept_dash = true;
+    for (idx, b) in line_content.bytes().enumerate() {
+        match b {
+            b' ' => {
+                accept_dash = true;
+            }
+            b'-' => {
+                if accept_dash {
+                    accept_dash = false;
+                } else {
+                    return idx - 1;
+                }
+            }
+            _ => {
+                // If we accepted a dash last and we're on a non-dash/non-space,
+                // then the last dash was part of a scalar.
+                if !accept_dash {
+                    return idx - 1;
+                } else {
+                    return idx;
+                }
+            }
+        }
+    }
+
+    // If we've reached the end of the line without hitting a non-space
+    // or non-dash, then we have a funky line item like:
+    //
+    // ```yaml
+    //   -
+    //     foo: bar
+    // ```
+    //
+    // In which case our expected leading indentation the length plus one.
+    //
+    // This is reliable in practice but not technically sound, since the
+    // user might have written:
+    //
+    // ```yaml
+    //   -
+    //       foo: bar
+    // ```
+    //
+    // In which case we'll attempt to insert at the wrong indentation, and
+    // probably produce invalid YAML.
+    //
+    // The trick there would probably be to walk forward on the feature's
+    // lines and grab the first non-empty, non-comment line's leading whitespace.
+    line_content.len() + 1
+}
+
 /// Extract leading whitespace from the beginning of the line containing
 /// the given feature.
 fn extract_leading_whitespace<'doc>(
@@ -611,7 +673,6 @@ fn indent_multiline_yaml(content: &str, base_indent: &str) -> String {
 fn handle_block_mapping_addition(
     feature_content: &str,
     doc: &yamlpath::Document,
-    patch: &Patch,
     feature: &yamlpath::Feature,
     key: &str,
     value: &serde_yaml::Value,
@@ -625,19 +686,8 @@ fn handle_block_mapping_addition(
     };
     let new_value_str = new_value_str.trim_end(); // Remove trailing newline
 
-    // Check if we're adding to a list item by examining the path
-    let is_list_item = matches!(patch.route.last(), Some(RouteComponent::Index(_)));
-
     // Determine the appropriate indentation
-    let indent = if is_list_item {
-        // For list items, we need to match the indentation of other keys in the same item
-        // The feature extraction gives us the content without the leading "- " part,
-        // so we need to use the leading whitespace of the step itself plus 2 spaces
-        let leading_whitespace = extract_leading_whitespace(doc, feature);
-        &format!("{}  ", leading_whitespace)
-    } else {
-        extract_leading_whitespace(doc, feature)
-    };
+    let indent = " ".repeat(extract_leading_indentation_for_block_item(doc, feature));
 
     // Format the new entry
     let mut final_entry = if let serde_yaml::Value::Mapping(mapping) = &value {
@@ -651,7 +701,7 @@ fn handle_block_mapping_addition(
             for line in value_lines {
                 if !line.trim().is_empty() {
                     result.push('\n');
-                    result.push_str(indent);
+                    result.push_str(&indent);
                     result.push_str("  "); // 2 spaces for nested content
                     result.push_str(line.trim_start());
                 }
@@ -660,7 +710,7 @@ fn handle_block_mapping_addition(
         }
     } else if new_value_str.contains('\n') {
         // Handle multiline values
-        let indented_value = indent_multiline_yaml(new_value_str, indent);
+        let indented_value = indent_multiline_yaml(new_value_str, &indent);
         format!("\n{indent}{key}: {indented_value}")
     } else {
         format!("\n{indent}{key}: {new_value_str}")
@@ -1637,7 +1687,73 @@ jobs:
     }
 
     #[test]
-    fn test_whitespace_extraction() {
+    fn test_extract_leading_indentation_for_block_item() {
+        let doc = r#"
+foo:
+  - four:
+
+bar:
+  -    foo: abc
+       bar: abc
+
+two:
+  abc:
+  def:
+
+tricky-a:
+  - -abc:
+
+tricky-b:
+  - --abc:
+
+tricky-c:
+  - -123:
+
+tricky-d:
+  - - abc: # nested block list
+
+tricky-e:
+    - - - --abc:
+
+tricky-f:
+  -
+    foo:
+
+tricky-g:
+  -
+      foo: bar
+
+nested:
+  - foo: bar
+    baz:
+      - abc: def
+"#;
+
+        let doc = yamlpath::Document::new(doc).unwrap();
+
+        for (route, expected) in &[
+            (route!("foo", 0), 4),
+            (route!("bar", 0), 7),
+            (route!("two"), 2),
+            (route!("tricky-a"), 4),
+            (route!("tricky-b"), 4),
+            (route!("tricky-c"), 4),
+            (route!("tricky-d"), 6),
+            (route!("tricky-e"), 10),
+            (route!("tricky-f"), 4),
+            (route!("tricky-g"), 4), // BUG, should be 6
+            (route!("nested", 0, "baz", 0), 8),
+        ] {
+            let feature = route_to_feature_exact(route, &doc).unwrap().unwrap();
+            assert_eq!(
+                extract_leading_indentation_for_block_item(&doc, &feature),
+                *expected
+            );
+        }
+    }
+
+    #[test]
+    fn test_extract_leading_whitespace() {
         let doc = r#"
 two:
   four:
@@ -2849,6 +2965,72 @@ foo:
             qux: xyz
             # another comment
         # some nonsense here
+        ");
+    }
+
+    #[test]
+    fn test_add_to_block_mapping_in_block_list() {
+        let original = r#"
+matrix:
+  include:
+    - os: ubuntu-latest
+      node: 18
+    - os: macos-latest
+      node: 20
+"#;
+
+        let operations = vec![Patch {
+            route: route!("matrix", "include", 0),
+            operation: Op::Add {
+                key: "arch".to_string(),
+                value: serde_yaml::Value::String("x64".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        matrix:
+          include:
+            - os: ubuntu-latest
+              node: 18
+              arch: x64
+            - os: macos-latest
+              node: 20
+        ");
+    }
+
+    #[test]
+    fn test_add_to_block_mapping_in_block_list_funky_indentation() {
+        let original = r#"
+matrix:
+   include:
+      -   os: ubuntu-latest
+          node: 18
+      -   os: macos-latest
+          node: 20
+"#;
+
+        let operations = vec![Patch {
+            route: route!("matrix", "include", 0),
+            operation: Op::Add {
+                key: "arch".to_string(),
+                value: serde_yaml::Value::String("x64".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
+        insta::assert_snapshot!(result, @r"
+        matrix:
+           include:
+              -   os: ubuntu-latest
+                  node: 18
+                  arch: x64
+              -   os: macos-latest
+                  node: 20
         ");
     }
 
