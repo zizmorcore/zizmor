@@ -777,14 +777,6 @@ fn handle_flow_mapping_addition(
     let mut existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(feature_content)
         .map_err(Error::Serialization)?;
 
-    // TODO: test
-    if existing_mapping.contains_key(key) {
-        return Err(Error::InvalidOperation(format!(
-            "key '{}' already exists in mapping",
-            key
-        )));
-    }
-
     existing_mapping.insert(key.into(), value.clone());
 
     let updated_content = serialize_flow(&serde_yaml::Value::Mapping(existing_mapping))?;
