@@ -64,7 +64,7 @@ impl YamlStyle {
     ///
     /// Assumes that [`content`] is a well-formed YAML serialization.
     pub fn detect(route: &Route, doc: &yamlpath::Document) -> Result<Self, Error> {
-        let Some(feature) = route_to_feature_exact(&route, &doc)? else {
+        let Some(feature) = route_to_feature_exact(route, doc)? else {
             return Ok(YamlStyle::Empty);
         };
 
@@ -318,7 +318,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 YamlStyle::BlockMapping => handle_block_mapping_addition(
                     feature_content,
                     &doc,
-                    &patch,
+                    patch,
                     &feature,
                     key,
                     value,
@@ -595,7 +595,7 @@ fn handle_block_mapping_addition(
             for line in value_lines.iter() {
                 if !line.trim().is_empty() {
                     result.push('\n');
-                    result.push_str(&indent);
+                    result.push_str(indent);
                     result.push_str("  "); // 2 spaces for nested content
                     result.push_str(line.trim_start());
                 }
@@ -604,7 +604,7 @@ fn handle_block_mapping_addition(
         }
     } else if new_value_str.contains('\n') {
         // Handle multiline values
-        let indented_value = indent_multiline_yaml(new_value_str, &indent);
+        let indented_value = indent_multiline_yaml(new_value_str, indent);
         format!("\n{}{}: {}", indent, key, indented_value)
     } else {
         format!("\n{}{}: {}", indent, key, new_value_str)
@@ -614,7 +614,7 @@ fn handle_block_mapping_addition(
     let insertion_point = if is_list_item {
         // For list items, we need to find the end of the actual step content,
         // not including trailing comments that yamlpath may have included
-        find_content_end(&feature, &doc)
+        find_content_end(feature, doc)
     } else {
         feature.location.byte_span.1
     };
@@ -796,7 +796,7 @@ fn apply_mapping_replacement(
     _key: &str,
     value: &serde_yaml::Value,
 ) -> Result<String, Error> {
-    let feature = route_to_feature_pretty(route, &doc)?;
+    let feature = route_to_feature_pretty(route, doc)?;
 
     // Extract the current content to see what we're working with
     let current_content_with_ws = doc.extract_with_leading_whitespace(&feature);
@@ -809,7 +809,7 @@ fn apply_mapping_replacement(
 
     if is_flow_mapping {
         // For flow mappings, use the existing flow mapping logic
-        let replacement = apply_value_replacement(&feature, &doc, value, false)?;
+        let replacement = apply_value_replacement(&feature, doc, value, false)?;
         let mut result = doc.source().to_string();
         result.replace_range(
             feature.location.byte_span.0..feature.location.byte_span.1,
@@ -865,7 +865,7 @@ fn apply_mapping_replacement(
         Ok(result)
     } else {
         // Not a key-value pair, use regular value replacement
-        let replacement = apply_value_replacement(&feature, &doc, value, false)?;
+        let replacement = apply_value_replacement(&feature, doc, value, false)?;
         let mut result = doc.source().to_string();
         result.replace_range(
             feature.location.byte_span.0..feature.location.byte_span.1,
@@ -957,8 +957,8 @@ fn apply_value_replacement(
         format!("{} {}", key_part, val_str.trim())
     } else {
         // This is just a value, replace it directly
-        let val_str = serialize_yaml_value(value)?;
-        val_str
+
+        serialize_yaml_value(value)?
     };
 
     Ok(replacement)
@@ -1163,7 +1163,7 @@ empty:
             ),
             (route!("empty", "foo"), YamlStyle::Empty),
         ] {
-            let style = YamlStyle::detect(&route, &doc).unwrap();
+            let style = YamlStyle::detect(route, &doc).unwrap();
             assert_eq!(style, *expected_style, "for route: {route:?}");
         }
     }
