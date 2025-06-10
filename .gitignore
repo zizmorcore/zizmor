@@ -7,3 +7,6 @@
 # IDEs / Editors
 .idea
 .DS_STORE
+
+# pending snapshots
+.*.pending-snap

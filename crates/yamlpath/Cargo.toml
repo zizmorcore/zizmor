@@ -15,6 +15,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+line-index.workspace = true
 thiserror.workspace = true
 tree-sitter.workspace = true
 tree-sitter-yaml = { workspace = true }

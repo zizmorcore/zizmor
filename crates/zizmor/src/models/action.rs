@@ -6,7 +6,6 @@
 use anyhow::Context as _;
 use github_actions_expressions::context;
 use github_actions_models::{action, common, workflow::job::Strategy};
-use line_index::LineIndex;
 use terminal_link::Link;
 
 use crate::{
@@ -29,7 +28,6 @@ pub(crate) struct Action {
     pub(crate) key: InputKey,
     pub(crate) link: Option<String>,
     document: yamlpath::Document,
-    pub(crate) line_index: LineIndex,
     inner: action::Action,
 }
 
@@ -68,8 +66,6 @@ impl Action {
         let document = yamlpath::Document::new(&contents)
             .context("failed to load internal pathing document")?;
 
-        let line_index = LineIndex::new(&contents);
-
         let link = match key {
             InputKey::Local(_) => None,
             InputKey::Remote(_) => {
@@ -82,7 +78,6 @@ impl Action {
             key,
             link,
             document,
-            line_index,
             inner,
         })
     }

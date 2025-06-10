@@ -16,7 +16,6 @@ use github_actions_models::{
     },
 };
 use indexmap::IndexMap;
-use line_index::LineIndex;
 use terminal_link::Link;
 
 use crate::{
@@ -40,7 +39,6 @@ pub(crate) struct Workflow {
     /// A clickable (OSC 8) link to this workflow, if remote.
     pub(crate) link: Option<String>,
     document: yamlpath::Document,
-    pub(crate) line_index: LineIndex,
     inner: workflow::Workflow,
 }
 
@@ -128,8 +126,6 @@ impl Workflow {
         let document = yamlpath::Document::new(&contents)
             .context("failed to load internal pathing document")?;
 
-        let line_index = LineIndex::new(&contents);
-
         let link = match key {
             InputKey::Local(_) => None,
             InputKey::Remote(_) => {
@@ -142,7 +138,6 @@ impl Workflow {
             link,
             key,
             document,
-            line_index,
             inner,
         })
     }

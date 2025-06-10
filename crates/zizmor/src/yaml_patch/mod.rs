@@ -2,9 +2,9 @@
 
 use std::borrow::Cow;
 
-use anyhow::Result;
+use line_index::{LineCol, TextRange, TextSize};
 
-use crate::finding::location::{Route, RouteComponent};
+use crate::finding::location::Route;
 
 /// Error types for YAML patch operations
 #[derive(thiserror::Error, Debug)]
@@ -15,6 +15,87 @@ pub enum Error {
     Serialization(#[from] serde_yaml::Error),
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
+}
+
+/// Represents different YAML styles for a feature.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Style {
+    /// Block style mappings
+    BlockMapping,
+    /// Block style sequences
+    BlockSequence,
+    /// Multiline flow mapping style:
+    ///
+    /// ```yaml
+    /// {
+    ///   key: value,
+    ///   key2: value2
+    /// }
+    /// ```
+    MultilineFlowMapping,
+    /// Single-line flow mapping style: { key: value, key2: value2 }
+    FlowMapping,
+    /// Multiline flow sequence style:
+    /// ```yaml
+    /// [
+    ///   item1,
+    ///   item2,
+    /// ]
+    /// ```
+    MultilineFlowSequence,
+    /// Single-line flow sequence style: [ item1, item2, item3 ]
+    FlowSequence,
+    /// Literal scalar style: |
+    MultilineLiteralScalar,
+    /// Folded scalar style: >
+    MultilineFoldedScalar,
+    /// Double quoted scalar style: "value"
+    DoubleQuoted,
+    /// Single quoted scalar style: 'value'
+    SingleQuoted,
+    /// Plain scalar style: value
+    PlainScalar,
+    /// An empty feature, e.g. the value part of `foo:`
+    Empty,
+}
+
+impl Style {
+    /// Detect the YAML style of document feature.
+    pub fn detect(route: &Route, doc: &yamlpath::Document) -> Result<Self, Error> {
+        let Some(feature) = route_to_feature_exact(route, doc)? else {
+            return Ok(Style::Empty);
+        };
+
+        let content = doc.extract(&feature);
+        let trimmed = content.trim().as_bytes();
+        let multiline = trimmed.contains(&b'\n');
+
+        match feature.kind() {
+            yamlpath::FeatureKind::BlockMapping => Ok(Style::BlockMapping),
+            yamlpath::FeatureKind::BlockSequence => Ok(Style::BlockSequence),
+            yamlpath::FeatureKind::FlowMapping => {
+                if multiline {
+                    Ok(Style::MultilineFlowMapping)
+                } else {
+                    Ok(Style::FlowMapping)
+                }
+            }
+            yamlpath::FeatureKind::FlowSequence => {
+                if multiline {
+                    Ok(Style::MultilineFlowSequence)
+                } else {
+                    Ok(Style::FlowSequence)
+                }
+            }
+            yamlpath::FeatureKind::Scalar => match trimmed[0] {
+                b'|' => Ok(Style::MultilineLiteralScalar),
+                b'>' => Ok(Style::MultilineFoldedScalar),
+                b'"' => Ok(Style::DoubleQuoted),
+                b'\'' => Ok(Style::SingleQuoted),
+                _ => Ok(Style::PlainScalar),
+            },
+        }
+    }
 }
 
 /// Represents a single YAML patch.
@@ -193,7 +274,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             let feature = route_to_feature_pretty(&patch.route, &doc)?;
 
             // Get the replacement content
-            let replacement = apply_value_replacement(content, &feature, &doc, value, true)?;
+            let replacement = apply_value_replacement(&feature, &doc, value, true)?;
 
             // Extract the current content to calculate spans
             let current_content = doc.extract(&feature);
@@ -222,87 +303,37 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 return handle_root_level_addition(content, key, value);
             }
 
-            let feature = route_to_feature_pretty(&patch.route, &doc)?;
-
-            // Convert the new value to YAML string
-            let new_value_str = serialize_yaml_value(value)?;
-            let new_value_str = new_value_str.trim_end(); // Remove trailing newline
-
-            // Check if we're adding to a list item by examining the path
-            let is_list_item = matches!(patch.route.last(), Some(RouteComponent::Index(_)));
-
-            // Determine the appropriate indentation
-            let indent = if is_list_item {
-                // For list items, we need to match the indentation of other keys in the same item
-                // The feature extraction gives us the content without the leading "- " part,
-                // so we need to use the leading whitespace of the step itself plus 2 spaces
-                let leading_whitespace =
-                    extract_leading_whitespace(content, feature.location.byte_span.0);
-                format!("{}  ", leading_whitespace)
-            } else {
-                // For regular mappings, add 2 spaces to current indentation
-                let leading_whitespace =
-                    extract_leading_whitespace(content, feature.location.byte_span.0);
-                format!("{}  ", leading_whitespace)
+            let style = Style::detect(&patch.route, &doc)?;
+            let Some(feature) = route_to_feature_exact(&patch.route, &doc)? else {
+                return Err(Error::InvalidOperation(format!(
+                    "no existing mapping at {route:?}",
+                    route = patch.route
+                )));
             };
+            let feature_content = doc.extract(&feature);
 
-            // Format the new entry
-            let final_entry = if let serde_yaml::Value::Mapping(mapping) = &value {
-                if mapping.is_empty() {
-                    // For empty mappings, format inline
-                    format!("\n{}{}: {}", indent, key, new_value_str)
-                } else {
-                    // For non-empty mappings, format as a nested structure
-                    let value_lines: Vec<&str> = new_value_str.lines().collect();
-                    let mut result = format!("\n{}{}:", indent, key);
-                    for line in value_lines.iter() {
-                        if !line.trim().is_empty() {
-                            result.push('\n');
-                            result.push_str(&indent);
-                            result.push_str("  "); // 2 spaces for nested content
-                            result.push_str(line.trim_start());
-                        }
-                    }
-                    result
+            let updated_feature = match style {
+                Style::BlockMapping => {
+                    handle_block_mapping_addition(feature_content, &doc, &feature, key, value)
                 }
-            } else if new_value_str.contains('\n') {
-                // Handle multiline values
-                let indented_value = indent_multiline_yaml(new_value_str, &indent);
-                format!("\n{}{}: {}", indent, key, indented_value)
-            } else {
-                format!("\n{}{}: {}", indent, key, new_value_str)
-            };
+                Style::FlowMapping => handle_flow_mapping_addition(feature_content, key, value),
+                // TODO: Remove this limitation.
+                Style::MultilineFlowMapping => Err(Error::InvalidOperation(format!(
+                    "add operation is not permitted against multiline flow mapping route: {:?}",
+                    patch.route
+                ))),
+                _ => Err(Error::InvalidOperation(format!(
+                    "add operation is not permitted against non-mapping route: {:?}",
+                    patch.route
+                ))),
+            }?;
 
-            // Find the insertion point
-            let insertion_point = if is_list_item {
-                // For list items, we need to find the end of the actual step content,
-                // not including trailing comments that yamlpath may have included
-                find_step_content_end(content, &feature, &doc)
-            } else {
-                feature.location.byte_span.1
-            };
-
-            // Check if we need to add a newline before the entry
-            // If the content at insertion point already ends with a newline, don't add another
-            let needs_leading_newline = if insertion_point > 0 {
-                content.chars().nth(insertion_point - 1) != Some('\n')
-            } else {
-                true
-            };
-
-            let final_entry_to_insert = if needs_leading_newline {
-                final_entry
-            } else {
-                // Remove the leading newline since there's already one
-                final_entry
-                    .strip_prefix('\n')
-                    .unwrap_or(&final_entry)
-                    .to_string()
-            };
-
-            // Insert the new entry
+            // Replace the content in the document
             let mut result = content.to_string();
-            result.insert_str(insertion_point, &final_entry_to_insert);
+            result.replace_range(
+                feature.location.byte_span.0..feature.location.byte_span.1,
+                &updated_feature,
+            );
             Ok(result)
         }
 
@@ -349,7 +380,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
 
                             // Use a custom replacement that preserves the key structure
                             return apply_mapping_replacement(
-                                content,
+                                &doc,
                                 &existing_key_route,
                                 key,
                                 &serde_yaml::Value::Mapping(merged_mapping),
@@ -391,8 +422,16 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             let feature = route_to_feature_pretty(&patch.route, &doc)?;
 
             // For removal, we need to remove the entire line including leading whitespace
-            let start_pos = find_line_start(content, feature.location.byte_span.0);
-            let end_pos = find_line_end(content, feature.location.byte_span.1);
+            // TODO: This isn't sound, e.g. removing `b:` from `{a: a, b: b}` will
+            // remove the entire line.
+            let start_pos = {
+                let range = line_span(&doc, feature.location.byte_span.0);
+                range.start
+            };
+            let end_pos = {
+                let range = line_span(&doc, feature.location.byte_span.1);
+                range.end
+            };
 
             let mut result = content.to_string();
             result.replace_range(start_pos..end_pos, "");
@@ -427,28 +466,185 @@ fn serialize_yaml_value(value: &serde_yaml::Value) -> Result<String, Error> {
     Ok(yaml_str.trim_end().to_string()) // Remove trailing newline
 }
 
-/// Extract leading whitespace from the beginning of the line containing the given position
-fn extract_leading_whitespace(content: &str, pos: usize) -> String {
-    let line_start = find_line_start(content, pos);
-    let line_content = &content[line_start..];
+/// Serialize a [`serde_yaml::Value`] to a YAML string in flow layout.
+///
+/// This serializes only a restricted subset of YAML: tags are not
+/// supported, and mapping keys must be strings.
+fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
+    let mut buf = String::new();
+    fn serialize_inner(value: &serde_yaml::Value, buf: &mut String) -> Result<(), Error> {
+        match value {
+            serde_yaml::Value::Null => {
+                // serde_yaml puts a trailing newline on this for some reasons
+                // so we do it manually.
+                buf.push_str("null");
+                Ok(())
+            }
+            serde_yaml::Value::Bool(b) => {
+                buf.push_str(if *b { "true" } else { "false" });
+                Ok(())
+            }
+            serde_yaml::Value::Number(n) => {
+                buf.push_str(&n.to_string());
+                Ok(())
+            }
+            serde_yaml::Value::String(s) => {
+                // Note: there are other plain-scalar-safe chars, but this is fine
+                // for a first approximation.
+                if s.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+                {
+                    buf.push_str(s);
+                } else {
+                    // Dumb hack: serde_yaml will always produce a reasonable-enough
+                    // single-line string scalar for us.
+                    buf.push_str(
+                        &serde_json::to_string(s)
+                            .map_err(|e| Error::InvalidOperation(e.to_string()))?,
+                    );
+                }
 
-    line_content
-        .chars()
-        .take_while(|&c| c == ' ' || c == '\t')
-        .collect()
+                Ok(())
+            }
+            serde_yaml::Value::Sequence(values) => {
+                // Serialize sequence in flow style: [item1, item2, item3]
+                buf.push('[');
+                for (i, item) in values.iter().enumerate() {
+                    if i > 0 {
+                        buf.push_str(", ");
+                    }
+                    serialize_inner(item, buf)?;
+                }
+                buf.push(']');
+                Ok(())
+            }
+            serde_yaml::Value::Mapping(mapping) => {
+                // Serialize mapping in flow style: { key1: value1, key2: value2 }
+                buf.push_str("{ ");
+                for (i, (key, value)) in mapping.iter().enumerate() {
+                    if i > 0 {
+                        buf.push_str(", ");
+                    }
+                    if !matches!(key, serde_yaml::Value::String(_)) {
+                        return Err(Error::InvalidOperation(format!(
+                            "mapping keys must be strings, found: {:?}",
+                            key
+                        )));
+                    }
+                    serialize_inner(key, buf)?;
+
+                    buf.push_str(": ");
+                    if !matches!(value, serde_yaml::Value::Null) {
+                        // Skip the null part of `key: null`, since `key: `
+                        // is more idiomatic.
+                        serialize_inner(value, buf)?;
+                    }
+                }
+                buf.push_str(" }");
+                Ok(())
+            }
+            serde_yaml::Value::Tagged(tagged_value) => Err(Error::InvalidOperation(format!(
+                "cannot serialize tagged value: {:?}",
+                tagged_value
+            ))),
+        }
+    }
+
+    serialize_inner(value, &mut buf)?;
+    Ok(buf)
 }
 
-/// Find the start of the line containing the given position
-fn find_line_start(content: &str, pos: usize) -> usize {
-    content[..pos].rfind('\n').map(|i| i + 1).unwrap_or(0)
+/// Given a document and a position, return the span of the line containing that position.
+///
+/// Panics if the position is invalid.
+fn line_span(doc: &yamlpath::Document, pos: usize) -> core::ops::Range<usize> {
+    let pos = TextSize::new(pos as u32);
+    let LineCol { line, .. } = doc.line_index().line_col(pos);
+    doc.line_index().line(line).unwrap().into()
 }
 
-/// Find the end of the line containing the given position
-fn find_line_end(content: &str, pos: usize) -> usize {
-    content[pos..]
-        .find('\n')
-        .map(|i| pos + i + 1)
-        .unwrap_or(content.len())
+/// Extract the number of leading spaces need to align a block item with
+/// its surrounding context.
+///
+/// This takes into account block sequences, e.g. where the mapping is
+/// a child of a list item and needs to be properly aligned with the list
+/// item's other content.
+fn extract_leading_indentation_for_block_item(
+    doc: &yamlpath::Document,
+    feature: &yamlpath::Feature,
+) -> usize {
+    let line_range = line_span(doc, feature.location.byte_span.0);
+
+    // NOTE: We trim the end since trailing whitespace doesn't count,
+    // and we don't watch to match on the line's newline.
+    let line_content = &doc.source()[line_range].trim_end();
+
+    let mut accept_dash = true;
+    for (idx, b) in line_content.bytes().enumerate() {
+        match b {
+            b' ' => {
+                accept_dash = true;
+            }
+            b'-' => {
+                if accept_dash {
+                    accept_dash = false;
+                } else {
+                    return idx - 1;
+                }
+            }
+            _ => {
+                // If we accepted a dash last and we're on a non-dash/non-space,
+                // then the last dash was part of a scalar.
+                if !accept_dash {
+                    return idx - 1;
+                } else {
+                    return idx;
+                }
+            }
+        }
+    }
+
+    // If we've reached the end of the line without hitting a non-space
+    // or non-dash, then we have a funky line item like:
+    //
+    // ```yaml
+    //   -
+    //     foo: bar
+    // ```
+    //
+    // In which case our expected leading indentation the length plus one.
+    //
+    // This is reliable in practice but not technically sound, since the
+    // user might have written:
+    //
+    // ```yaml
+    //   -
+    //       foo: bar
+    // ```
+    //
+    // In which case we'll attempt to insert at the wrong indentation, and
+    // probably produce invalid YAML.
+    //
+    // The trick there would probably be to walk forward on the feature's
+    // lines and grab the first non-empty, non-comment line's leading whitespace.
+    line_content.len() + 1
+}
+
+/// Extract leading whitespace from the beginning of the line containing
+/// the given feature.
+fn extract_leading_whitespace<'doc>(
+    doc: &'doc yamlpath::Document,
+    feature: &yamlpath::Feature,
+) -> &'doc str {
+    let line_range = line_span(doc, feature.location.byte_span.0);
+    let line_content = &doc.source()[line_range];
+
+    let end = line_content
+        .bytes()
+        .position(|b| b != b' ')
+        .unwrap_or(line_content.len());
+
+    &line_content[..end]
 }
 
 /// Indent multi-line YAML content to match the target indentation
@@ -474,41 +670,142 @@ fn indent_multiline_yaml(content: &str, base_indent: &str) -> String {
     result
 }
 
-/// Find the end of actual step content, excluding trailing comments
-#[allow(clippy::needless_range_loop)]
-fn find_step_content_end(
-    _content: &str,
-    feature: &yamlpath::Feature,
+fn handle_block_mapping_addition(
+    feature_content: &str,
     doc: &yamlpath::Document,
-) -> usize {
-    let feature_content = doc.extract(feature);
-    let feature_start = feature.location.byte_span.0;
+    feature: &yamlpath::Feature,
+    key: &str,
+    value: &serde_yaml::Value,
+) -> Result<String, Error> {
+    // Convert the new value to YAML string for block style handling
+    let new_value_str = if matches!(value, serde_yaml::Value::Sequence(_)) {
+        // For sequences, use flow-aware serialization to maintain consistency
+        serialize_flow(value)?
+    } else {
+        serialize_yaml_value(value)?
+    };
+    let new_value_str = new_value_str.trim_end(); // Remove trailing newline
 
-    // Split the feature content into lines to analyze
-    let lines: Vec<&str> = feature_content.lines().collect();
+    // Determine the appropriate indentation
+    let indent = " ".repeat(extract_leading_indentation_for_block_item(doc, feature));
 
-    // Find the last line that contains actual YAML content (not a comment or empty line)
-    for (i, line) in lines.iter().enumerate().rev() {
-        let trimmed = line.trim();
-        if !trimmed.is_empty() && !trimmed.starts_with('#') {
-            // This is the last line with actual content
-            // Calculate its position relative to the start of the feature
-            let mut current_pos = 0;
-
-            for j in 0..=i {
-                if j == i {
-                    // This is our target line, find the end of it
-                    current_pos += lines[j].len();
-                    return feature_start + current_pos;
-                } else {
-                    current_pos += lines[j].len() + 1; // +1 for newline
+    // Format the new entry
+    let mut final_entry = if let serde_yaml::Value::Mapping(mapping) = &value {
+        if mapping.is_empty() {
+            // For empty mappings, format inline
+            format!("\n{indent}{key}: {new_value_str}")
+        } else {
+            // For non-empty mappings, format as a nested structure
+            let value_lines = new_value_str.lines();
+            let mut result = format!("\n{indent}{key}:");
+            for line in value_lines {
+                if !line.trim().is_empty() {
+                    result.push('\n');
+                    result.push_str(&indent);
+                    result.push_str("  "); // 2 spaces for nested content
+                    result.push_str(line.trim_start());
                 }
             }
+            result
+        }
+    } else if new_value_str.contains('\n') {
+        // Handle multiline values
+        let indented_value = indent_multiline_yaml(new_value_str, &indent);
+        format!("\n{indent}{key}: {indented_value}")
+    } else {
+        format!("\n{indent}{key}: {new_value_str}")
+    };
+
+    // Figure out the insertion point.
+    // To do this, we find the end of the feature's content, i.e.
+    // the last non-empty, non-comment line in the feature.
+    let insertion_point = find_content_end(feature, doc);
+
+    // If our insertion point is before the end of the feature,
+    // we need to insert a newline to preserve the flow of any
+    // trailing comments.
+    if insertion_point < feature.location.byte_span.1 {
+        final_entry.push('\n');
+    }
+
+    // Check if we need to add a newline before the entry
+    // If the content at insertion point already ends with a newline, don't add another
+    let needs_leading_newline = if insertion_point > 0 {
+        doc.source().chars().nth(insertion_point - 1) != Some('\n')
+    } else {
+        true
+    };
+
+    let final_entry_to_insert = if needs_leading_newline {
+        final_entry
+    } else {
+        // Remove the leading newline since there's already one
+        final_entry
+            .strip_prefix('\n')
+            .unwrap_or(&final_entry)
+            .to_string()
+    };
+
+    // Insert the final entry into the feature's content.
+    // To do this, we need to readjust the insertion point using
+    // the feature's start as the bias.
+    let bias = feature.location.byte_span.0;
+    let relative_insertion_point = insertion_point - bias;
+
+    let mut updated_feature = feature_content.to_string();
+    updated_feature.insert_str(relative_insertion_point, &final_entry_to_insert);
+
+    Ok(updated_feature)
+}
+
+/// Handle adding a key-value pair to a flow mapping while preserving flow style
+fn handle_flow_mapping_addition(
+    feature_content: &str,
+    key: &str,
+    value: &serde_yaml::Value,
+) -> Result<String, Error> {
+    // Our strategy for flow mappings is to deserialize the existing feature,
+    // add the new key-value pair, and then serialize it back.
+    // This is probably slightly slower than just string manipulation,
+    // but it saves us a lot of special-casing around trailing commas,
+    // empty mapping forms, etc.
+    //
+    // We can get away with this because, unlike block mappings, single
+    // line flow mappings can't contain comments or (much) other user
+    // significant formatting.
+
+    let mut existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(feature_content)
+        .map_err(Error::Serialization)?;
+
+    existing_mapping.insert(key.into(), value.clone());
+
+    let updated_content = serialize_flow(&serde_yaml::Value::Mapping(existing_mapping))?;
+
+    Ok(updated_content)
+}
+
+/// Find the end of actual step content, excluding trailing comments
+fn find_content_end(feature: &yamlpath::Feature, doc: &yamlpath::Document) -> usize {
+    let lines: Vec<_> = doc
+        .line_index()
+        .lines(TextRange::new(
+            (feature.location.byte_span.0 as u32).into(),
+            (feature.location.byte_span.1 as u32).into(),
+        ))
+        .collect();
+
+    // Walk over the feature's lines in reverse, and return the absolute
+    // position of the end of the last non-empty, non-comment line
+    for line in lines.into_iter().rev() {
+        let line_content = &doc.source()[line];
+        let trimmed = line_content.trim();
+
+        if !trimmed.is_empty() && !trimmed.starts_with('#') {
+            return line.end().into();
         }
     }
 
-    // Fallback to original end if no content found
-    feature.location.byte_span.1
+    feature.location.byte_span.1 // Fallback to original end if no content found
 }
 
 /// Handle root-level additions and merges by finding the best insertion point at the document root
@@ -590,71 +887,138 @@ fn handle_root_level_addition(
 
 /// Apply a mapping replacement that preserves the key structure
 fn apply_mapping_replacement(
-    content: &str,
+    doc: &yamlpath::Document,
     route: &Route<'_>,
     _key: &str,
     value: &serde_yaml::Value,
 ) -> Result<String, Error> {
-    let doc = yamlpath::Document::new(content)?;
-    let feature = route_to_feature_pretty(route, &doc)?;
+    let feature = route_to_feature_pretty(route, doc)?;
 
-    // Get the replacement content using the shared function (without multiline literal support)
-    let replacement = apply_value_replacement(content, &feature, &doc, value, false)?;
-
-    // Extract the current content to calculate spans
-    let current_content = doc.extract(&feature);
+    // Extract the current content to see what we're working with
     let current_content_with_ws = doc.extract_with_leading_whitespace(&feature);
 
-    // Find the span to replace - use the span with leading whitespace if it's a key-value pair
-    let (start_span, end_span) = if current_content_with_ws.contains(':') {
-        // Replace the entire key-value pair span
-        let ws_start =
-            feature.location.byte_span.0 - (current_content_with_ws.len() - current_content.len());
-        (ws_start, feature.location.byte_span.1)
-    } else {
-        // Replace just the value
-        (feature.location.byte_span.0, feature.location.byte_span.1)
-    };
+    // Check if this is a flow mapping that should be handled specially
+    let trimmed_content = current_content_with_ws.trim();
+    let is_flow_mapping = trimmed_content.starts_with('{')
+        && trimmed_content.ends_with('}')
+        && !trimmed_content.contains('\n');
 
-    // Replace the content
-    let mut result = content.to_string();
-    result.replace_range(start_span..end_span, &replacement);
-    Ok(result)
+    if is_flow_mapping {
+        // For flow mappings, use the existing flow mapping logic
+        let replacement = apply_value_replacement(&feature, doc, value, false)?;
+        let mut result = doc.source().to_string();
+        result.replace_range(
+            feature.location.byte_span.0..feature.location.byte_span.1,
+            &replacement,
+        );
+        return Ok(result);
+    }
+
+    // For block mappings, we need to preserve the structure properly
+    if let Some(colon_pos) = current_content_with_ws.find(':') {
+        // This is a key-value pair like "env:\n  EXISTING_VAR: value"
+        let key_part = &current_content_with_ws[..colon_pos + 1]; // "env:"
+
+        // Get the indentation level for the mapping content
+        let leading_whitespace = extract_leading_whitespace(doc, &feature);
+        let content_indent = format!("{}  ", leading_whitespace); // Add 2 spaces for mapping content
+
+        // Serialize the new mapping value and indent it properly
+        let new_value_str = serialize_yaml_value(value)?;
+        let new_value_str = new_value_str.trim_end();
+
+        // Format the mapping content with proper indentation
+        let indented_content = if let serde_yaml::Value::Mapping(mapping) = value {
+            if mapping.is_empty() {
+                " {}".to_string() // Empty mapping as inline
+            } else {
+                // Format as block mapping
+                let mut formatted_lines = Vec::new();
+                for (k, v) in mapping {
+                    let key_str = match k {
+                        serde_yaml::Value::String(s) => s.clone(),
+                        _ => serde_yaml::to_string(k)?.trim().to_string(),
+                    };
+                    let val_str = serialize_yaml_value(v)?;
+                    let val_str = val_str.trim();
+                    formatted_lines.push(format!("{}{}: {}", content_indent, key_str, val_str));
+                }
+                format!("\n{}", formatted_lines.join("\n"))
+            }
+        } else {
+            // Not a mapping, format as regular value
+            format!(" {}", new_value_str)
+        };
+
+        let replacement = format!("{}{}", key_part, indented_content);
+
+        // Calculate spans for replacement
+        let ws_start = feature.location.byte_span.0
+            - (current_content_with_ws.len() - current_content_with_ws.trim_start().len());
+
+        let mut result = doc.source().to_string();
+        result.replace_range(ws_start..feature.location.byte_span.1, &replacement);
+        Ok(result)
+    } else {
+        // Not a key-value pair, use regular value replacement
+        let replacement = apply_value_replacement(&feature, doc, value, false)?;
+        let mut result = doc.source().to_string();
+        result.replace_range(
+            feature.location.byte_span.0..feature.location.byte_span.1,
+            &replacement,
+        );
+        Ok(result)
+    }
 }
 
 /// Apply a value replacement at the given feature location, preserving key structure and formatting
 fn apply_value_replacement(
-    content: &str,
     feature: &yamlpath::Feature,
     doc: &yamlpath::Document,
     value: &serde_yaml::Value,
     support_multiline_literals: bool,
 ) -> Result<String, Error> {
-    // Convert the new value to YAML string
-    let new_value_str = serialize_yaml_value(value)?;
-    let new_value_str = new_value_str.trim_end(); // Remove trailing newline
-
     // Extract the current content to see what we're replacing
-    let current_content = doc.extract(feature);
     let current_content_with_ws = doc.extract_with_leading_whitespace(feature);
+
+    // Get the byte span for precise replacement
+    let start_byte = feature.location.byte_span.0;
+    let end_byte = feature.location.byte_span.1;
+
+    // Check if we're in a flow mapping context by examining the extracted content
+    // For true flow mappings, the entire content should be a single-line flow mapping
+    let trimmed_content = current_content_with_ws.trim();
+    let is_flow_mapping = trimmed_content.starts_with('{')
+        && trimmed_content.ends_with('}')
+        && !trimmed_content.contains('\n');
+
+    if is_flow_mapping {
+        // Handle flow mapping replacement - we need to be more surgical
+        return handle_flow_mapping_value_replacement(
+            doc.source(),
+            start_byte,
+            end_byte,
+            current_content_with_ws,
+            value,
+        );
+    }
 
     // For mapping values, we need to preserve the key part
     let replacement = if let Some(colon_pos) = current_content_with_ws.find(':') {
         // This is a key-value pair, preserve the key and whitespace
         let key_part = &current_content_with_ws[..colon_pos + 1];
+        let value_part = &current_content_with_ws[colon_pos + 1..];
 
         if support_multiline_literals {
             // Check if this is a multiline YAML string (contains |)
-            let after_colon = &current_content_with_ws[colon_pos + 1..];
-            let is_multiline_literal = after_colon.trim_start().starts_with('|');
+            let is_multiline_literal = value_part.trim_start().starts_with('|');
 
             if is_multiline_literal {
                 // Check if this is a multiline string value
                 if let serde_yaml::Value::String(string_content) = value {
                     if string_content.contains('\n') {
                         // For multiline literal blocks, use the raw string content
-                        let leading_whitespace =
-                            extract_leading_whitespace(content, feature.location.byte_span.0);
+                        let leading_whitespace = extract_leading_whitespace(doc, feature);
                         let content_indent = format!("{}  ", leading_whitespace); // Key indent + 2 spaces for content
 
                         // Format as: key: |\n  content\n  more content
@@ -671,82 +1035,67 @@ fn apply_value_replacement(
                             .join("\n");
 
                         // Find the position of | in the original content and include it
-                        let pipe_pos = after_colon.find('|').unwrap();
+                        let pipe_pos = value_part.find('|').unwrap();
                         let key_with_pipe = &current_content_with_ws
-                            [..colon_pos + 1 + after_colon[..pipe_pos].len() + 1];
+                            [..colon_pos + 1 + value_part[..pipe_pos].len() + 1];
                         return Ok(format!(
                             "{}\n{}",
                             key_with_pipe.trim_end(),
                             indented_content
                         ));
-                    } else {
-                        // Single line string, treat as regular key-value pair
-                        return Ok(format!("{} {}", key_part, new_value_str));
                     }
-                } else {
-                    // Not a string value, treat as regular key-value pair
-                    return Ok(format!("{} {}", key_part, new_value_str));
                 }
             }
         }
 
-        // Regular key-value pair handling
-        if let serde_yaml::Value::Mapping(mapping) = value {
-            if mapping.is_empty() {
-                // For empty mappings, format inline
-                format!("{} {}", key_part, "{}")
-            } else {
-                // For non-empty mappings, format as a nested structure
-                let leading_whitespace =
-                    extract_leading_whitespace(content, feature.location.byte_span.0);
-                let content_indent = format!("{}  ", leading_whitespace); // Key indent + 2 spaces for content
-
-                if support_multiline_literals {
-                    // Use the more sophisticated formatting from Replace operation
-                    let value_lines: Vec<&str> = new_value_str.lines().collect();
-                    let mut result = format!("{}:", key_part.trim_end().trim_end_matches(':'));
-                    for line in value_lines.iter() {
-                        if !line.trim().is_empty() {
-                            result.push('\n');
-                            result.push_str(&content_indent);
-                            result.push_str(line.trim_start());
-                        }
-                    }
-                    result
-                } else {
-                    // Use the simpler formatting from apply_mapping_replacement
-                    let mut result = key_part.trim_end().to_string();
-                    for (k, v) in mapping {
-                        let key_str = match k {
-                            serde_yaml::Value::String(s) => s.clone(),
-                            _ => serialize_yaml_value(k)?.trim().to_string(),
-                        };
-                        let value_str = serialize_yaml_value(v)?;
-                        let value_str = value_str.trim_end();
-                        result.push('\n');
-                        result.push_str(&content_indent);
-                        result.push_str(&key_str);
-                        result.push_str(": ");
-                        result.push_str(value_str);
-                    }
-                    result
-                }
-            }
-        } else {
-            // For non-mapping values, use simple concatenation
-            format!("{} {}", key_part, new_value_str)
-        }
+        // Regular block style - use standard formatting
+        let val_str = serialize_yaml_value(value)?;
+        format!("{} {}", key_part, val_str.trim())
     } else {
         // This is just a value, replace it directly
-        let leading_whitespace = extract_leading_whitespace(content, feature.location.byte_span.0);
-        if current_content.contains('\n') {
-            indent_multiline_yaml(new_value_str, &leading_whitespace)
-        } else {
-            new_value_str.to_string()
-        }
+
+        serialize_yaml_value(value)?
     };
 
     Ok(replacement)
+}
+
+/// Handle value replacement within flow mappings more precisely
+fn handle_flow_mapping_value_replacement(
+    _content: &str,
+    _start_byte: usize,
+    _end_byte: usize,
+    current_content: &str,
+    value: &serde_yaml::Value,
+) -> Result<String, Error> {
+    let val_str = serialize_yaml_value(value)?;
+    let val_str = val_str.trim();
+
+    // Parse the flow mapping content to understand the structure
+    let trimmed = current_content.trim();
+
+    // Case 1: { key: } - has colon, empty value
+    if let Some(colon_pos) = trimmed.find(':') {
+        let before_colon = &trimmed[..colon_pos];
+        let after_colon = &trimmed[colon_pos + 1..];
+
+        // Check if there's already a value after the colon (excluding the closing brace)
+        let value_part = after_colon.trim().trim_end_matches('}').trim();
+
+        if value_part.is_empty() {
+            // Case: { key: } -> { key: value }
+            let key_part = before_colon.trim_start_matches('{').trim();
+            Ok(format!("{{ {}: {} }}", key_part, val_str))
+        } else {
+            // Case: { key: oldvalue } -> { key: newvalue }
+            let key_part = before_colon.trim_start_matches('{').trim();
+            Ok(format!("{{ {}: {} }}", key_part, val_str))
+        }
+    } else {
+        // Case 2: { key } - no colon, bare key -> { key: value }
+        let key_part = trimmed.trim_start_matches('{').trim_end_matches('}').trim();
+        Ok(format!("{{ {}: {} }}", key_part, val_str))
+    }
 }
 
 #[cfg(test)]
@@ -754,6 +1103,193 @@ mod tests {
     use crate::route;
 
     use super::*;
+
+    #[test]
+    fn test_serialize_flow() {
+        let doc = r#"
+foo:
+  bar:
+  baz: qux
+  abc:
+    - def
+    - ghi
+    - null
+    - ~
+    - |
+      abcd
+      efgh
+
+flow: [1, 2, 3, {more: 456, evenmore: "abc\ndef"}]
+"#;
+
+        let value: serde_yaml::Value = serde_yaml::from_str(doc).unwrap();
+        let serialized = serialize_flow(&value).unwrap();
+
+        // serialized is valid YAML
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&serialized).is_ok());
+
+        insta::assert_snapshot!(serialized, @r#"{ foo: { bar: , baz: qux, abc: [def, ghi, null, null, "abcd\nefgh\n"] }, flow: [1, 2, 3, { more: 456, evenmore: "abc\ndef" }] }"#);
+    }
+
+    #[test]
+    fn test_detect_style() {
+        let doc = r#"
+block-mapping-a:
+  foo: bar
+  baz: qux
+
+"block-mapping-b":
+  foo: bar
+
+block-sequence-a:
+  - item1
+  - item2
+  - item3
+
+"block-sequence-b":
+  - item1
+  - item2
+  - item3
+
+flow-mapping-a: { a: b, c: d }
+flow-mapping-b: { a: b, c: d, }
+flow-mapping-c: {
+  a: b,
+  c: d
+}
+flow-mapping-d: {
+  a: b,
+  c: d,
+}
+flow-mapping-e: {
+  a: b, c: d,
+}
+flow-mapping-f: { abc }
+flow-mapping-g: { abc: }
+
+flow-sequence-a: [item1, item2, item3]
+flow-sequence-b: [ item1, item2, item3 ]
+flow-sequence-c: [
+  item1,
+  item2,
+  item3
+]
+flow-sequence-d: [
+  item1,
+  item2,
+  item3,
+]
+
+scalars:
+  - 123
+  - abc
+  - "abc"
+  - 'abc'
+  - -123
+  - '{abc}'
+  - '[abc]'
+  - abc def
+
+multiline-scalars:
+  literal-a: |
+    abcd
+  literal-b: |-
+    abcd
+  literal-c: |+
+    abcd
+  literal-d: |2
+    abcd
+  literal-e: |-2
+    abcd
+
+  folded-a: >
+    abcd
+  folded-b: >-
+    abcd
+  folded-c: >+
+    abcd
+  folded-d: >2
+    abcd
+  folded-e: >-2
+    abcd
+
+empty:
+  foo:
+
+"#;
+
+        let doc = yamlpath::Document::new(doc).unwrap();
+
+        for (route, expected_style) in &[
+            (route!("block-mapping-a"), Style::BlockMapping),
+            (route!("block-mapping-b"), Style::BlockMapping),
+            (route!("block-sequence-a"), Style::BlockSequence),
+            (route!("block-sequence-b"), Style::BlockSequence),
+            (route!("flow-mapping-a"), Style::FlowMapping),
+            (route!("flow-mapping-b"), Style::FlowMapping),
+            (route!("flow-mapping-c"), Style::MultilineFlowMapping),
+            (route!("flow-mapping-d"), Style::MultilineFlowMapping),
+            (route!("flow-mapping-e"), Style::MultilineFlowMapping),
+            (route!("flow-mapping-f"), Style::FlowMapping),
+            (route!("flow-mapping-g"), Style::FlowMapping),
+            (route!("flow-sequence-a"), Style::FlowSequence),
+            (route!("flow-sequence-b"), Style::FlowSequence),
+            (route!("flow-sequence-c"), Style::MultilineFlowSequence),
+            (route!("flow-sequence-d"), Style::MultilineFlowSequence),
+            (route!("scalars", 0), Style::PlainScalar),
+            (route!("scalars", 1), Style::PlainScalar),
+            (route!("scalars", 2), Style::DoubleQuoted),
+            (route!("scalars", 3), Style::SingleQuoted),
+            (route!("scalars", 4), Style::PlainScalar),
+            (route!("scalars", 5), Style::SingleQuoted),
+            (route!("scalars", 6), Style::SingleQuoted),
+            (route!("scalars", 7), Style::PlainScalar),
+            (
+                route!("multiline-scalars", "literal-a"),
+                Style::MultilineLiteralScalar,
+            ),
+            (
+                route!("multiline-scalars", "literal-b"),
+                Style::MultilineLiteralScalar,
+            ),
+            (
+                route!("multiline-scalars", "literal-c"),
+                Style::MultilineLiteralScalar,
+            ),
+            (
+                route!("multiline-scalars", "literal-d"),
+                Style::MultilineLiteralScalar,
+            ),
+            (
+                route!("multiline-scalars", "literal-e"),
+                Style::MultilineLiteralScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-a"),
+                Style::MultilineFoldedScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-b"),
+                Style::MultilineFoldedScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-c"),
+                Style::MultilineFoldedScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-d"),
+                Style::MultilineFoldedScalar,
+            ),
+            (
+                route!("multiline-scalars", "folded-e"),
+                Style::MultilineFoldedScalar,
+            ),
+            (route!("empty", "foo"), Style::Empty),
+        ] {
+            let style = Style::detect(route, &doc).unwrap();
+            assert_eq!(style, *expected_style, "for route: {route:?}");
+        }
+    }
 
     #[test]
     fn test_reparse_exact_extracted() {
@@ -919,7 +1455,6 @@ foo:
     }
 
     #[test]
-    #[ignore = "not yet fixed"]
     fn test_yaml_path_replace_empty_flow_value() {
         let original = r#"
     foo: { bar: }
@@ -936,7 +1471,6 @@ foo:
     }
 
     #[test]
-    #[ignore = "not yet fixed"]
     fn test_yaml_path_replace_empty_flow_value_no_colon() {
         let original = r#"
         foo: { bar }
@@ -1049,7 +1583,6 @@ permissions:
     }
 
     #[test]
-    #[ignore = "not yet fixed"]
     fn test_yaml_patch_add_preserves_flow_mapping_formatting() {
         let original = r#"
 foo: { bar: abc }
@@ -1065,9 +1598,7 @@ foo: { bar: abc }
 
         let result = apply_yaml_patches(original, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
-        foo: { bar: abc, baz: qux }
-        "#);
+        insta::assert_snapshot!(result, @"foo: { bar: abc, baz: qux }");
     }
 
     #[test]
@@ -1148,25 +1679,147 @@ jobs:
     }
 
     #[test]
-    fn test_whitespace_extraction() {
-        let content = "line1\n  indented\n    more-indented";
-        assert_eq!(extract_leading_whitespace(content, 6), "  ");
-        assert_eq!(extract_leading_whitespace(content, 17), "    ");
-        assert_eq!(extract_leading_whitespace(content, 0), "");
+    fn test_extract_leading_indentation_for_block_item() {
+        let doc = r#"
+foo:
+  - four:
+
+bar:
+  -    foo: abc
+       bar: abc
+
+two:
+  abc:
+  def:
+
+tricky-a:
+  - -abc:
+
+tricky-b:
+  - --abc:
+
+tricky-c:
+  - -123:
+
+tricky-d:
+  - - abc: # nested block list
+
+tricky-e:
+    - - - --abc:
+
+tricky-f:
+  -
+    foo:
+
+tricky-g:
+  -
+      foo: bar
+
+nested:
+  - foo: bar
+    baz:
+      - abc: def
+"#;
+
+        let doc = yamlpath::Document::new(doc).unwrap();
+
+        for (route, expected) in &[
+            (route!("foo", 0), 4),
+            (route!("bar", 0), 7),
+            (route!("two"), 2),
+            (route!("tricky-a"), 4),
+            (route!("tricky-b"), 4),
+            (route!("tricky-c"), 4),
+            (route!("tricky-d"), 6),
+            (route!("tricky-e"), 10),
+            (route!("tricky-f"), 4),
+            (route!("tricky-g"), 4), // BUG, should be 6
+            (route!("nested", 0, "baz", 0), 8),
+        ] {
+            let feature = route_to_feature_exact(route, &doc).unwrap().unwrap();
+            assert_eq!(
+                extract_leading_indentation_for_block_item(&doc, &feature),
+                *expected
+            );
+        }
     }
 
     #[test]
-    fn test_line_boundaries() {
-        let content = "line1\nline2\nline3";
-        assert_eq!(find_line_start(content, 0), 0);
-        assert_eq!(find_line_start(content, 3), 0);
-        assert_eq!(find_line_start(content, 6), 6);
-        assert_eq!(find_line_start(content, 9), 6);
+    fn test_extract_leading_whitespace() {
+        let doc = r#"
+two:
+  four:
+    six:
+      also-six: also eight
+"#;
+        let doc = yamlpath::Document::new(doc).unwrap();
 
-        assert_eq!(find_line_end(content, 0), 6);
-        assert_eq!(find_line_end(content, 3), 6);
-        assert_eq!(find_line_end(content, 6), 12);
-        assert_eq!(find_line_end(content, 15), 17);
+        // Test leading whitespace extraction for various routes
+        // The features are extracted in "exact" mode below, so the indentation
+        // corresponds to the body rather than the key.
+        for (route, expected) in &[
+            (route!(), ""),
+            (route!("two"), "  "),
+            (route!("two", "four"), "    "),
+            (route!("two", "four", "six"), "      "),
+            (route!("two", "four", "six", "also-six"), "      "),
+        ] {
+            let feature = route_to_feature_exact(route, &doc).unwrap().unwrap();
+
+            assert_eq!(extract_leading_whitespace(&doc, &feature), *expected);
+        }
+    }
+
+    #[test]
+    fn test_find_content_end() {
+        let doc = r#"
+foo:
+  bar: baz
+  abc: def # comment
+  # comment
+
+interior-spaces:
+  - foo
+
+  - bar
+  # hello
+  - baz # hello
+  # hello
+# hello
+
+normal:
+  foo: bar
+"#;
+
+        let doc = yamlpath::Document::new(doc).unwrap();
+
+        let feature = route_to_feature_exact(&route!("foo"), &doc)
+            .unwrap()
+            .unwrap();
+        let end = find_content_end(&feature, &doc);
+
+        insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @r"
+        bar: baz
+          abc: def # comment
+        ");
+
+        let feature = route_to_feature_exact(&route!("interior-spaces"), &doc)
+            .unwrap()
+            .unwrap();
+        let end = find_content_end(&feature, &doc);
+        insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @r"
+        - foo
+
+          - bar
+          # hello
+          - baz # hello
+        ");
+
+        let feature = route_to_feature_exact(&route!("normal"), &doc)
+            .unwrap()
+            .unwrap();
+        let end = find_content_end(&feature, &doc);
+        insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @"foo: bar");
     }
 
     #[test]
@@ -1658,9 +2311,9 @@ jobs:
       - name: Test step
         run: echo "hello"
         env:
-          EXISTING_VAR: existing_value"#;
+          EXISTING_VAR: existing_value
+          ANOTHER_VAR: another_value"#;
 
-        // Apply MergeInto operation for env key (should replace existing)
         let operations = vec![Patch {
             route: route!("jobs", "test", "steps", 0),
             operation: Op::MergeInto {
@@ -1678,7 +2331,11 @@ jobs:
 
         let result = apply_yaml_patches(original, &operations).unwrap();
 
+        // Verify the result is valid YAML
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
         // Should only have one env: key
+        assert_eq!(result.matches("env:").count(), 1);
         insta::assert_snapshot!(result, @r#"
         jobs:
           test:
@@ -1688,6 +2345,7 @@ jobs:
                 run: echo "hello"
                 env:
                   EXISTING_VAR: existing_value
+                  ANOTHER_VAR: another_value
                   NEW_VAR: new_value
         "#);
     }
@@ -1718,6 +2376,10 @@ jobs:
         }];
 
         let result = apply_yaml_patches(original, &operations).unwrap();
+
+        // Verify the result is valid YAML
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
         insta::assert_snapshot!(result, @r#"
         jobs:
           test:
@@ -1795,7 +2457,7 @@ jobs:
         }
 
         // Test leading whitespace extraction function
-        let leading_ws = extract_leading_whitespace(original, step_feature.location.byte_span.0);
+        let leading_ws = extract_leading_whitespace(&doc, &step_feature);
         assert!(
             !leading_ws.is_empty(),
             "Leading whitespace should not be empty for indented step"
@@ -2156,6 +2818,458 @@ jobs:
                 shell: bash
                 env:
                   GITHUB_REF_NAME: ${{ github.ref_name }}
+        "#);
+    }
+
+    #[test]
+    fn test_mixed_flow_block_styles_github_workflow() {
+        // GitHub Action workflow with mixed flow and block styles similar to the user's example
+        let original = r#"
+name: CI
+on:
+  push:
+    branches: [main]   # Flow sequence inside block mapping
+  pull_request: { branches: [main, develop] }  # Flow mapping with flow sequence
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 18 }  # Flow mapping in block list
+          - os: macos-latest                 # Block mapping in block list
+            node: 20
+            extra_flags: ["--verbose"]       # Flow sequence in block mapping
+          - { os: windows-latest, node: 16, extra_flags: ["--silent", "--prod"] }  # Mixed flow
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with: { fetch-depth: 0 }           # Flow mapping in block context
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+"#;
+
+        // Test adding to the flow mapping in pull_request trigger
+        let operations = vec![Patch {
+            route: route!("on", "pull_request"),
+            operation: Op::Add {
+                key: "types".to_string(),
+                value: serde_yaml::Value::Sequence(vec![
+                    serde_yaml::Value::String("opened".to_string()),
+                    serde_yaml::Value::String("synchronize".to_string()),
+                ]),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        // Verify the result is valid YAML
+        if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(&result) {
+            panic!("Invalid YAML: {}", e);
+        }
+
+        insta::assert_snapshot!(result, @r#"
+        name: CI
+        on:
+          push:
+            branches: [main]   # Flow sequence inside block mapping
+          pull_request: { branches: [main, develop], types: [opened, synchronize] }  # Flow mapping with flow sequence
+
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            strategy:
+              matrix:
+                include:
+                  - { os: ubuntu-latest, node: 18 }  # Flow mapping in block list
+                  - os: macos-latest                 # Block mapping in block list
+                    node: 20
+                    extra_flags: ["--verbose"]       # Flow sequence in block mapping
+                  - { os: windows-latest, node: 16, extra_flags: ["--silent", "--prod"] }  # Mixed flow
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+                with: { fetch-depth: 0 }           # Flow mapping in block context
+              - name: Setup Node
+                uses: actions/setup-node@v4
+                with:
+                  node-version: ${{ matrix.node }}
+                  cache: npm
+        "#);
+    }
+
+    #[test]
+    fn test_replace_value_in_flow_mapping_within_block_context() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        with: { timeout: 300 }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "steps", 0, "with", "timeout"),
+            operation: Op::Replace(serde_yaml::Value::Number(serde_yaml::Number::from(600))),
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Test step
+                with: { timeout: 600 }
+        "#);
+    }
+
+    #[test]
+    fn test_add_nested_mapping_with_comments() {
+        let original = r#"
+foo:
+  bar:
+    baz: abc # comment
+    # another comment
+# some nonsense here
+"#;
+
+        let operations = vec![Patch {
+            route: route!("foo", "bar"),
+            operation: Op::Add {
+                key: "qux".to_string(),
+                value: serde_yaml::Value::String("xyz".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        foo:
+          bar:
+            baz: abc # comment
+            qux: xyz
+            # another comment
+        # some nonsense here
+        ");
+    }
+
+    #[test]
+    fn test_add_to_block_mapping_in_block_list() {
+        let original = r#"
+matrix:
+  include:
+    - os: ubuntu-latest
+      node: 18
+    - os: macos-latest
+      node: 20
+"#;
+
+        let operations = vec![Patch {
+            route: route!("matrix", "include", 0),
+            operation: Op::Add {
+                key: "arch".to_string(),
+                value: serde_yaml::Value::String("x64".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        matrix:
+          include:
+            - os: ubuntu-latest
+              node: 18
+              arch: x64
+            - os: macos-latest
+              node: 20
+        ");
+    }
+
+    #[test]
+    fn test_add_to_block_mapping_in_block_list_funky_indentation() {
+        let original = r#"
+matrix:
+   include:
+      -   os: ubuntu-latest
+          node: 18
+      -   os: macos-latest
+          node: 20
+"#;
+
+        let operations = vec![Patch {
+            route: route!("matrix", "include", 0),
+            operation: Op::Add {
+                key: "arch".to_string(),
+                value: serde_yaml::Value::String("x64".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
+        insta::assert_snapshot!(result, @r"
+        matrix:
+           include:
+              -   os: ubuntu-latest
+                  node: 18
+                  arch: x64
+              -   os: macos-latest
+                  node: 20
+        ");
+    }
+
+    #[test]
+    fn test_add_to_flow_mapping_nested_in_block_list() {
+        let original = r#"
+strategy:
+  matrix:
+    include:
+      - { os: ubuntu-latest, node: 18 }
+      - { os: macos-latest, node: 20 }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("strategy", "matrix", "include", 0),
+            operation: Op::Add {
+                key: "arch".to_string(),
+                value: serde_yaml::Value::String("x64".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        strategy:
+          matrix:
+            include:
+              - { os: ubuntu-latest, node: 18, arch: x64 }
+              - { os: macos-latest, node: 20 }
+        ");
+    }
+
+    #[test]
+    fn test_add_to_flow_mapping_trailing_comma() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: { NODE_ENV: "production", DEBUG: "true", }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "LOG_LEVEL".to_string(),
+                value: serde_yaml::Value::String("info".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: { NODE_ENV: production, DEBUG: true, LOG_LEVEL: info }
+        ");
+    }
+
+    #[test]
+    fn test_add_to_flow_mapping_trailing_comment() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: { NODE_ENV: "production", DEBUG: "true" } # trailing comment
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "LOG_LEVEL".to_string(),
+                value: serde_yaml::Value::String("info".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        // The trailing comment should be preserved after the mapping
+        insta::assert_snapshot!(result, @r"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: { NODE_ENV: production, DEBUG: true, LOG_LEVEL: info } # trailing comment
+        ");
+    }
+
+    #[test]
+    #[ignore = "known issue"]
+    fn test_add_to_multiline_flow_mapping() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: {
+      NODE_ENV: "production",
+      DEBUG: "true"
+    }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "LOG_LEVEL".to_string(),
+                value: serde_yaml::Value::String("info".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: {
+              NODE_ENV: "production",
+              DEBUG: "true",
+              LOG_LEVEL: "info"
+            }
+        "#);
+    }
+
+    #[test]
+    #[ignore = "known issue"]
+    fn test_add_to_multiline_flow_mapping_funky() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: {
+      NODE_ENV: "production", DEBUG: "true",
+      BLAH: xyz
+    }
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "LOG_LEVEL".to_string(),
+                value: serde_yaml::Value::String("info".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: {
+              NODE_ENV: "production",
+              DEBUG: "true",
+              BLAH: xyz,
+              LOG_LEVEL: "info"
+            }
+        "#);
+    }
+
+    #[test]
+    fn test_complex_mixed_styles_permissions() {
+        let original = r#"
+permissions:
+  contents: read
+  actions: { read: true, write: false }  # Flow mapping in block context
+  packages: write
+"#;
+
+        let operations = vec![Patch {
+            route: route!("permissions", "actions"),
+            operation: Op::Add {
+                key: "delete".to_string(),
+                value: serde_yaml::Value::Bool(true),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        permissions:
+          contents: read
+          actions: { read: true, write: false, delete: true }  # Flow mapping in block context
+          packages: write
+        "#);
+    }
+
+    #[test]
+    fn test_preserve_flow_sequence_in_block_mapping() {
+        let original = r#"
+on:
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 0 * * *"
+"#;
+
+        let operations = vec![Patch {
+            route: route!("on", "push"),
+            operation: Op::Add {
+                key: "tags".to_string(),
+                value: serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
+                    "v*".to_string(),
+                )]),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        on:
+          push:
+            branches: [main, develop]
+            tags: ["v*"]
+          schedule:
+            - cron: "0 0 * * *"
+        "#);
+    }
+
+    #[test]
+    fn test_empty_flow_mapping_expansion() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: {}
+    steps:
+      - run: echo "test"
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "NODE_ENV".to_string(),
+                value: serde_yaml::Value::String("test".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: { NODE_ENV: test }
+            steps:
+              - run: echo "test"
         "#);
     }
 }

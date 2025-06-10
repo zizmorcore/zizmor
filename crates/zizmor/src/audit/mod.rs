@@ -56,8 +56,8 @@ impl AuditInput {
 
     pub(crate) fn line_index(&self) -> &LineIndex {
         match self {
-            AuditInput::Workflow(workflow) => &workflow.line_index,
-            AuditInput::Action(action) => &action.line_index,
+            AuditInput::Workflow(workflow) => workflow.as_document().line_index(),
+            AuditInput::Action(action) => action.as_document().line_index(),
         }
     }
 
