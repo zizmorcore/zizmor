@@ -482,15 +482,17 @@ fn serialize_yaml_flow(value: &serde_yaml::Value) -> Result<String, Error> {
     fn serialize_inner(value: &serde_yaml::Value, buf: &mut String) -> Result<(), Error> {
         match value {
             serde_yaml::Value::Null | serde_yaml::Value::Bool(_) | serde_yaml::Value::Number(_) => {
-                Ok(buf.push_str(&serde_yaml::to_string(value)?))
+                buf.push_str(&serde_yaml::to_string(value)?);
+                Ok(())
             }
             serde_yaml::Value::String(s) => {
                 // Dumb hack: serde_yaml will always produce a reasonable-enough
                 // single-line string scalar for us.
-                Ok(buf.push_str(
+                buf.push_str(
                     &serde_json::to_string(s)
                         .map_err(|e| Error::InvalidOperation(e.to_string()))?,
-                ))
+                );
+                Ok(())
             }
             serde_yaml::Value::Sequence(values) => {
                 // Serialize sequence in flow style: [item1, item2, item3]
