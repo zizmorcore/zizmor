@@ -724,8 +724,6 @@ fn handle_flow_mapping_addition(
     // We can get away with this because, unlike block mappings, single
     // line flow mappings can't contain comments or (much) other user
     // significant formatting.
-    //
-    // TODO: handle trailing comment, e.g. `{ key: value, key2: value2 } # comment`
 
     let mut existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(feature_content)
         .map_err(Error::Serialization)?;
@@ -2908,6 +2906,34 @@ jobs:
           test:
             runs-on: ubuntu-latest
             env: { NODE_ENV: production, DEBUG: true, LOG_LEVEL: info }
+        ");
+    }
+
+    #[test]
+    fn test_add_to_flow_mapping_trailing_comment() {
+        let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: { NODE_ENV: "production", DEBUG: "true" } # trailing comment
+"#;
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "env"),
+            operation: Op::Add {
+                key: "LOG_LEVEL".to_string(),
+                value: serde_yaml::Value::String("info".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        // The trailing comment should be preserved after the mapping
+        insta::assert_snapshot!(result, @r"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env: { NODE_ENV: production, DEBUG: true, LOG_LEVEL: info } # trailing comment
         ");
     }
 
