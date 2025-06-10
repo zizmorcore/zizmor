@@ -526,7 +526,7 @@ fn serialize_yaml_flow(value: &serde_yaml::Value) -> Result<String, Error> {
             }
             serde_yaml::Value::Mapping(mapping) => {
                 // Serialize mapping in flow style: { key1: value1, key2: value2 }
-                buf.push('{');
+                buf.push_str("{ ");
                 for (i, (key, value)) in mapping.iter().enumerate() {
                     if i > 0 {
                         buf.push_str(", ");
@@ -546,7 +546,7 @@ fn serialize_yaml_flow(value: &serde_yaml::Value) -> Result<String, Error> {
                         serialize_inner(value, buf)?;
                     }
                 }
-                buf.push('}');
+                buf.push_str(" }");
                 Ok(())
             }
             serde_yaml::Value::Tagged(tagged_value) => Err(Error::InvalidOperation(format!(
@@ -740,35 +740,7 @@ fn handle_flow_mapping_addition(
 
     existing_mapping.insert(key.into(), value.clone());
 
-    // Find the closing brace position
-    let closing_brace_pos = feature_content.rfind('}').ok_or_else(|| {
-        Error::InvalidOperation("No closing brace found in flow mapping".to_string())
-    })?;
-
-    // Check if the mapping is empty (just has { })
-    let content_inside_braces =
-        &feature_content[feature_content.find('{').unwrap() + 1..closing_brace_pos].trim();
-    let is_empty = content_inside_braces.is_empty();
-
-    // Serialize the new value using flow context-aware serialization
-    let new_value_str = serialize_yaml_flow(value)?;
-    let new_value_str = new_value_str.trim();
-
-    // Create the new key-value pair
-    let new_pair = format!("{}: {}", key, new_value_str);
-
-    // Create the updated flow mapping content
-    let updated_content = if is_empty {
-        // Empty mapping: { } -> { key: value }
-        feature_content.replace("{}", &format!("{{ {} }}", new_pair))
-    } else {
-        // Non-empty mapping: { existing } -> { existing, key: value }
-        let before_brace = &feature_content[..closing_brace_pos].trim_end();
-        let after_brace = &feature_content[closing_brace_pos..];
-
-        // Standard flow mapping format: { key1: val1, key2: val2 }
-        format!("{}, {} {}", before_brace, new_pair, after_brace)
-    };
+    let updated_content = serialize_yaml_flow(&serde_yaml::Value::Mapping(existing_mapping))?;
 
     Ok(updated_content)
 }
@@ -1117,7 +1089,7 @@ flow: [1, 2, 3, {more: 456, evenmore: "abc\ndef"}]
         // serialized is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&serialized).is_ok());
 
-        insta::assert_snapshot!(serialized, @r#"{foo: {bar: , baz: qux, abc: [def, ghi, null, null, "abcd\nefgh\n"]}, flow: [1, 2, 3, {more: 456, evenmore: "abc\ndef"}]}"#);
+        insta::assert_snapshot!(serialized, @r#"{ foo: { bar: , baz: qux, abc: [def, ghi, null, null, "abcd\nefgh\n"] }, flow: [1, 2, 3, { more: 456, evenmore: "abc\ndef" }] }"#);
     }
 
     #[test]
