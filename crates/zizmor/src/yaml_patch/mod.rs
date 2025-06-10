@@ -512,15 +512,21 @@ fn line_span(doc: &yamlpath::Document, pos: usize) -> core::ops::Range<usize> {
     doc.line_index().line(line).unwrap().into()
 }
 
-/// Extract leading whitespace from the beginning of the line containing the given position
-fn extract_leading_whitespace(doc: &yamlpath::Document, pos: usize) -> String {
-    let line_range = line_span(doc, pos);
+/// Extract leading whitespace from the beginning of the line containing
+/// the given feature.
+fn extract_leading_whitespace<'doc>(
+    doc: &'doc yamlpath::Document,
+    feature: &yamlpath::Feature,
+) -> &'doc str {
+    let line_range = line_span(doc, feature.location.byte_span.0);
     let line_content = &doc.source()[line_range];
 
-    line_content
-        .chars()
-        .take_while(|&c| c == ' ' || c == '\t')
-        .collect()
+    let end = line_content
+        .bytes()
+        .position(|b| b != b' ')
+        .unwrap_or(line_content.len());
+
+    &line_content[..end]
 }
 
 /// Indent multi-line YAML content to match the target indentation
@@ -571,10 +577,10 @@ fn handle_block_mapping_addition(
         // For list items, we need to match the indentation of other keys in the same item
         // The feature extraction gives us the content without the leading "- " part,
         // so we need to use the leading whitespace of the step itself plus 2 spaces
-        let leading_whitespace = extract_leading_whitespace(doc, feature.location.byte_span.0);
-        format!("{}  ", leading_whitespace)
+        let leading_whitespace = extract_leading_whitespace(doc, feature);
+        &format!("{}  ", leading_whitespace)
     } else {
-        extract_leading_whitespace(doc, feature.location.byte_span.0)
+        extract_leading_whitespace(doc, feature)
     };
 
     // Format the new entry
@@ -818,7 +824,7 @@ fn apply_mapping_replacement(
         let key_part = &current_content_with_ws[..colon_pos + 1]; // "env:"
 
         // Get the indentation level for the mapping content
-        let leading_whitespace = extract_leading_whitespace(doc, feature.location.byte_span.0);
+        let leading_whitespace = extract_leading_whitespace(doc, &feature);
         let content_indent = format!("{}  ", leading_whitespace); // Add 2 spaces for mapping content
 
         // Serialize the new mapping value and indent it properly
@@ -916,8 +922,7 @@ fn apply_value_replacement(
                 if let serde_yaml::Value::String(string_content) = value {
                     if string_content.contains('\n') {
                         // For multiline literal blocks, use the raw string content
-                        let leading_whitespace =
-                            extract_leading_whitespace(doc, feature.location.byte_span.0);
+                        let leading_whitespace = extract_leading_whitespace(doc, feature);
                         let content_indent = format!("{}  ", leading_whitespace); // Key indent + 2 spaces for content
 
                         // Format as: key: |\n  content\n  more content
@@ -1562,12 +1567,11 @@ two:
 "#;
         let doc = yamlpath::Document::new(doc).unwrap();
 
-        assert_eq!(extract_leading_whitespace(&doc, 1), "");
-
         // Test leading whitespace extraction for various routes
         // The features are extracted in "exact" mode below, so the indentation
         // corresponds to the body rather than the key.
         for (route, expected) in &[
+            (route!(), ""),
             (route!("two"), "  "),
             (route!("two", "four"), "    "),
             (route!("two", "four", "six"), "      "),
@@ -1575,10 +1579,7 @@ two:
         ] {
             let feature = route_to_feature_exact(route, &doc).unwrap().unwrap();
 
-            assert_eq!(
-                extract_leading_whitespace(&doc, feature.location.byte_span.0),
-                *expected
-            );
+            assert_eq!(extract_leading_whitespace(&doc, &feature), *expected);
         }
     }
 
@@ -2269,7 +2270,7 @@ jobs:
         }
 
         // Test leading whitespace extraction function
-        let leading_ws = extract_leading_whitespace(&doc, step_feature.location.byte_span.0);
+        let leading_ws = extract_leading_whitespace(&doc, &step_feature);
         assert!(
             !leading_ws.is_empty(),
             "Leading whitespace should not be empty for indented step"
