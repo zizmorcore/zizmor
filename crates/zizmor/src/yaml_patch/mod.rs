@@ -506,6 +506,8 @@ fn serialize_yaml_value_for_flow_context(value: &serde_yaml::Value) -> Result<St
 }
 
 /// Given a document and a position, return the span of the line containing that position.
+///
+/// Panics if the position is invalid.
 fn line_span(doc: &yamlpath::Document, pos: usize) -> core::ops::Range<usize> {
     let pos = TextSize::new(pos as u32);
     let LineCol { line, .. } = doc.line_index().line_col(pos);
@@ -584,15 +586,15 @@ fn handle_block_mapping_addition(
     };
 
     // Format the new entry
-    let final_entry = if let serde_yaml::Value::Mapping(mapping) = &value {
+    let mut final_entry = if let serde_yaml::Value::Mapping(mapping) = &value {
         if mapping.is_empty() {
             // For empty mappings, format inline
-            format!("\n{}{}: {}", indent, key, new_value_str)
+            format!("\n{indent}{key}: {new_value_str}")
         } else {
             // For non-empty mappings, format as a nested structure
-            let value_lines: Vec<&str> = new_value_str.lines().collect();
-            let mut result = format!("\n{}{}:", indent, key);
-            for line in value_lines.iter() {
+            let value_lines = new_value_str.lines();
+            let mut result = format!("\n{indent}{key}:");
+            for line in value_lines {
                 if !line.trim().is_empty() {
                     result.push('\n');
                     result.push_str(indent);
@@ -605,19 +607,22 @@ fn handle_block_mapping_addition(
     } else if new_value_str.contains('\n') {
         // Handle multiline values
         let indented_value = indent_multiline_yaml(new_value_str, indent);
-        format!("\n{}{}: {}", indent, key, indented_value)
+        format!("\n{indent}{key}: {indented_value}")
     } else {
-        format!("\n{}{}: {}", indent, key, new_value_str)
+        format!("\n{indent}{key}: {new_value_str}")
     };
 
-    // Find the insertion point
-    let insertion_point = if is_list_item {
-        // For list items, we need to find the end of the actual step content,
-        // not including trailing comments that yamlpath may have included
-        find_content_end(feature, doc)
-    } else {
-        feature.location.byte_span.1
-    };
+    // Figure out the insertion point.
+    // To do this, we find the end of the feature's content, i.e.
+    // the last non-empty, non-comment line in the feature.
+    let insertion_point = find_content_end(feature, doc);
+
+    // If our insertion point is before the end of the feature,
+    // we need to insert a newline to preserve the flow of any
+    // trailing comments.
+    if insertion_point < feature.location.byte_span.1 {
+        final_entry.push('\n');
+    }
 
     // Check if we need to add a newline before the entry
     // If the content at insertion point already ends with a newline, don't add another
@@ -2744,6 +2749,36 @@ jobs:
               - name: Test step
                 with: { timeout: 600 }
         "#);
+    }
+
+    #[test]
+    fn test_add_nested_mapping_with_comments() {
+        let original = r#"
+foo:
+  bar:
+    baz: abc # comment
+    # another comment
+# some nonsense here
+"#;
+
+        let operations = vec![Patch {
+            route: route!("foo", "bar"),
+            operation: Op::Add {
+                key: "qux".to_string(),
+                value: serde_yaml::Value::String("xyz".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations).unwrap();
+
+        insta::assert_snapshot!(result, @r"
+        foo:
+          bar:
+            baz: abc # comment
+            qux: xyz
+            # another comment
+        # some nonsense here
+        ");
     }
 
     #[test]
