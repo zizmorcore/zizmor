@@ -569,8 +569,8 @@ fn line_span(doc: &yamlpath::Document, pos: usize) -> core::ops::Range<usize> {
 /// This takes into account block sequences, e.g. where the mapping is
 /// a child of a list item and needs to be properly aligned with the list
 /// item's other content.
-fn extract_leading_indentation_for_block_item<'doc>(
-    doc: &'doc yamlpath::Document,
+fn extract_leading_indentation_for_block_item(
+    doc: &yamlpath::Document,
     feature: &yamlpath::Feature,
 ) -> usize {
     let line_range = line_span(doc, feature.location.byte_span.0);

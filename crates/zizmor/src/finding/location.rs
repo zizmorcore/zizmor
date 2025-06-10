@@ -98,12 +98,12 @@ impl<'doc> From<Vec<RouteComponent<'doc>>> for Route<'doc> {
 #[macro_export]
 macro_rules! route {
     ($($key:expr),* $(,)?) => {
-        crate::finding::location::Route::from(
-            vec![$(crate::finding::location::RouteComponent::from($key)),*]
+        $crate::finding::location::Route::from(
+            vec![$($crate::finding::location::RouteComponent::from($key)),*]
         )
     };
     () => {
-        crate::finding::location::Route::new()
+        $crate::finding::location::Route::new()
     };
 }
 
