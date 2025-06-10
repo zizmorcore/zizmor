@@ -235,7 +235,7 @@ impl Feature<'_> {
             "plain_scalar" | "single_quote_scalar" | "double_quote_scalar" | "block_scalar" => {
                 FeatureKind::Scalar
             }
-            kind => todo!("{kind}"),
+            kind => unreachable!("unexpected feature kind: {kind}"),
         }
     }
 }

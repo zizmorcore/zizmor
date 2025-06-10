@@ -17,9 +17,9 @@ pub enum Error {
     InvalidOperation(String),
 }
 
-/// Represents different YAML style formats for collections and scalars
+/// Represents different YAML styles for a feature.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum YamlStyle {
+pub enum Style {
     /// Block style mappings
     BlockMapping,
     /// Block style sequences
@@ -59,13 +59,11 @@ pub enum YamlStyle {
     Empty,
 }
 
-impl YamlStyle {
-    /// Detect the YAML style of a value from its string representation
-    ///
-    /// Assumes that [`content`] is a well-formed YAML serialization.
+impl Style {
+    /// Detect the YAML style of document feature.
     pub fn detect(route: &Route, doc: &yamlpath::Document) -> Result<Self, Error> {
         let Some(feature) = route_to_feature_exact(route, doc)? else {
-            return Ok(YamlStyle::Empty);
+            return Ok(Style::Empty);
         };
 
         let content = doc.extract(&feature);
@@ -73,28 +71,28 @@ impl YamlStyle {
         let multiline = trimmed.contains(&b'\n');
 
         match feature.kind() {
-            yamlpath::FeatureKind::BlockMapping => Ok(YamlStyle::BlockMapping),
-            yamlpath::FeatureKind::BlockSequence => Ok(YamlStyle::BlockSequence),
+            yamlpath::FeatureKind::BlockMapping => Ok(Style::BlockMapping),
+            yamlpath::FeatureKind::BlockSequence => Ok(Style::BlockSequence),
             yamlpath::FeatureKind::FlowMapping => {
                 if multiline {
-                    Ok(YamlStyle::MultilineFlowMapping)
+                    Ok(Style::MultilineFlowMapping)
                 } else {
-                    Ok(YamlStyle::FlowMapping)
+                    Ok(Style::FlowMapping)
                 }
             }
             yamlpath::FeatureKind::FlowSequence => {
                 if multiline {
-                    Ok(YamlStyle::MultilineFlowSequence)
+                    Ok(Style::MultilineFlowSequence)
                 } else {
-                    Ok(YamlStyle::FlowSequence)
+                    Ok(Style::FlowSequence)
                 }
             }
             yamlpath::FeatureKind::Scalar => match trimmed[0] {
-                b'|' => Ok(YamlStyle::MultilineLiteralScalar),
-                b'>' => Ok(YamlStyle::MultilineFoldedScalar),
-                b'"' => Ok(YamlStyle::DoubleQuoted),
-                b'\'' => Ok(YamlStyle::SingleQuoted),
-                _ => Ok(YamlStyle::PlainScalar),
+                b'|' => Ok(Style::MultilineLiteralScalar),
+                b'>' => Ok(Style::MultilineFoldedScalar),
+                b'"' => Ok(Style::DoubleQuoted),
+                b'\'' => Ok(Style::SingleQuoted),
+                _ => Ok(Style::PlainScalar),
             },
         }
     }
@@ -305,7 +303,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 return handle_root_level_addition(content, key, value);
             }
 
-            let style = YamlStyle::detect(&patch.route, &doc)?;
+            let style = Style::detect(&patch.route, &doc)?;
             let Some(feature) = route_to_feature_exact(&patch.route, &doc)? else {
                 return Err(Error::InvalidOperation(format!(
                     "no existing mapping at {route:?}",
@@ -315,7 +313,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             let feature_content = doc.extract(&feature);
 
             let updated_feature = match style {
-                YamlStyle::BlockMapping => handle_block_mapping_addition(
+                Style::BlockMapping => handle_block_mapping_addition(
                     feature_content,
                     &doc,
                     patch,
@@ -323,9 +321,9 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                     key,
                     value,
                 ),
-                YamlStyle::FlowMapping => handle_flow_mapping_addition(feature_content, key, value),
+                Style::FlowMapping => handle_flow_mapping_addition(feature_content, key, value),
                 // TODO: Remove this limitation.
-                YamlStyle::MultilineFlowMapping => Err(Error::InvalidOperation(format!(
+                Style::MultilineFlowMapping => Err(Error::InvalidOperation(format!(
                     "add operation is not permitted against multiline flow mapping route: {:?}",
                     patch.route
                 ))),
@@ -477,7 +475,7 @@ fn serialize_yaml_value(value: &serde_yaml::Value) -> Result<String, Error> {
 ///
 /// This serializes only a restricted subset of YAML: tags are not
 /// supported, and mapping keys must be strings.
-fn serialize_yaml_flow(value: &serde_yaml::Value) -> Result<String, Error> {
+fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
     let mut buf = String::new();
     fn serialize_inner(value: &serde_yaml::Value, buf: &mut String) -> Result<(), Error> {
         match value {
@@ -621,7 +619,7 @@ fn handle_block_mapping_addition(
     // Convert the new value to YAML string for block style handling
     let new_value_str = if matches!(value, serde_yaml::Value::Sequence(_)) {
         // For sequences, use flow-aware serialization to maintain consistency
-        serialize_yaml_flow(value)?
+        serialize_flow(value)?
     } else {
         serialize_yaml_value(value)?
     };
@@ -739,7 +737,7 @@ fn handle_flow_mapping_addition(
 
     existing_mapping.insert(key.into(), value.clone());
 
-    let updated_content = serialize_yaml_flow(&serde_yaml::Value::Mapping(existing_mapping))?;
+    let updated_content = serialize_flow(&serde_yaml::Value::Mapping(existing_mapping))?;
 
     Ok(updated_content)
 }
@@ -1065,7 +1063,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_serialize_yaml_flow() {
+    fn test_serialize_flow() {
         let doc = r#"
 foo:
   bar:
@@ -1083,7 +1081,7 @@ flow: [1, 2, 3, {more: 456, evenmore: "abc\ndef"}]
 "#;
 
         let value: serde_yaml::Value = serde_yaml::from_str(doc).unwrap();
-        let serialized = serialize_yaml_flow(&value).unwrap();
+        let serialized = serialize_flow(&value).unwrap();
 
         // serialized is valid YAML
         assert!(serde_yaml::from_str::<serde_yaml::Value>(&serialized).is_ok());
@@ -1092,7 +1090,7 @@ flow: [1, 2, 3, {more: 456, evenmore: "abc\ndef"}]
     }
 
     #[test]
-    fn test_detect_yaml_style() {
+    fn test_detect_style() {
         let doc = r#"
 block-mapping-a:
   foo: bar
@@ -1181,72 +1179,72 @@ empty:
         let doc = yamlpath::Document::new(doc).unwrap();
 
         for (route, expected_style) in &[
-            (route!("block-mapping-a"), YamlStyle::BlockMapping),
-            (route!("block-mapping-b"), YamlStyle::BlockMapping),
-            (route!("block-sequence-a"), YamlStyle::BlockSequence),
-            (route!("block-sequence-b"), YamlStyle::BlockSequence),
-            (route!("flow-mapping-a"), YamlStyle::FlowMapping),
-            (route!("flow-mapping-b"), YamlStyle::FlowMapping),
-            (route!("flow-mapping-c"), YamlStyle::MultilineFlowMapping),
-            (route!("flow-mapping-d"), YamlStyle::MultilineFlowMapping),
-            (route!("flow-mapping-e"), YamlStyle::MultilineFlowMapping),
-            (route!("flow-mapping-f"), YamlStyle::FlowMapping),
-            (route!("flow-mapping-g"), YamlStyle::FlowMapping),
-            (route!("flow-sequence-a"), YamlStyle::FlowSequence),
-            (route!("flow-sequence-b"), YamlStyle::FlowSequence),
-            (route!("flow-sequence-c"), YamlStyle::MultilineFlowSequence),
-            (route!("flow-sequence-d"), YamlStyle::MultilineFlowSequence),
-            (route!("scalars", 0), YamlStyle::PlainScalar),
-            (route!("scalars", 1), YamlStyle::PlainScalar),
-            (route!("scalars", 2), YamlStyle::DoubleQuoted),
-            (route!("scalars", 3), YamlStyle::SingleQuoted),
-            (route!("scalars", 4), YamlStyle::PlainScalar),
-            (route!("scalars", 5), YamlStyle::SingleQuoted),
-            (route!("scalars", 6), YamlStyle::SingleQuoted),
-            (route!("scalars", 7), YamlStyle::PlainScalar),
+            (route!("block-mapping-a"), Style::BlockMapping),
+            (route!("block-mapping-b"), Style::BlockMapping),
+            (route!("block-sequence-a"), Style::BlockSequence),
+            (route!("block-sequence-b"), Style::BlockSequence),
+            (route!("flow-mapping-a"), Style::FlowMapping),
+            (route!("flow-mapping-b"), Style::FlowMapping),
+            (route!("flow-mapping-c"), Style::MultilineFlowMapping),
+            (route!("flow-mapping-d"), Style::MultilineFlowMapping),
+            (route!("flow-mapping-e"), Style::MultilineFlowMapping),
+            (route!("flow-mapping-f"), Style::FlowMapping),
+            (route!("flow-mapping-g"), Style::FlowMapping),
+            (route!("flow-sequence-a"), Style::FlowSequence),
+            (route!("flow-sequence-b"), Style::FlowSequence),
+            (route!("flow-sequence-c"), Style::MultilineFlowSequence),
+            (route!("flow-sequence-d"), Style::MultilineFlowSequence),
+            (route!("scalars", 0), Style::PlainScalar),
+            (route!("scalars", 1), Style::PlainScalar),
+            (route!("scalars", 2), Style::DoubleQuoted),
+            (route!("scalars", 3), Style::SingleQuoted),
+            (route!("scalars", 4), Style::PlainScalar),
+            (route!("scalars", 5), Style::SingleQuoted),
+            (route!("scalars", 6), Style::SingleQuoted),
+            (route!("scalars", 7), Style::PlainScalar),
             (
                 route!("multiline-scalars", "literal-a"),
-                YamlStyle::MultilineLiteralScalar,
+                Style::MultilineLiteralScalar,
             ),
             (
                 route!("multiline-scalars", "literal-b"),
-                YamlStyle::MultilineLiteralScalar,
+                Style::MultilineLiteralScalar,
             ),
             (
                 route!("multiline-scalars", "literal-c"),
-                YamlStyle::MultilineLiteralScalar,
+                Style::MultilineLiteralScalar,
             ),
             (
                 route!("multiline-scalars", "literal-d"),
-                YamlStyle::MultilineLiteralScalar,
+                Style::MultilineLiteralScalar,
             ),
             (
                 route!("multiline-scalars", "literal-e"),
-                YamlStyle::MultilineLiteralScalar,
+                Style::MultilineLiteralScalar,
             ),
             (
                 route!("multiline-scalars", "folded-a"),
-                YamlStyle::MultilineFoldedScalar,
+                Style::MultilineFoldedScalar,
             ),
             (
                 route!("multiline-scalars", "folded-b"),
-                YamlStyle::MultilineFoldedScalar,
+                Style::MultilineFoldedScalar,
             ),
             (
                 route!("multiline-scalars", "folded-c"),
-                YamlStyle::MultilineFoldedScalar,
+                Style::MultilineFoldedScalar,
             ),
             (
                 route!("multiline-scalars", "folded-d"),
-                YamlStyle::MultilineFoldedScalar,
+                Style::MultilineFoldedScalar,
             ),
             (
                 route!("multiline-scalars", "folded-e"),
-                YamlStyle::MultilineFoldedScalar,
+                Style::MultilineFoldedScalar,
             ),
-            (route!("empty", "foo"), YamlStyle::Empty),
+            (route!("empty", "foo"), Style::Empty),
         ] {
-            let style = YamlStyle::detect(route, &doc).unwrap();
+            let style = Style::detect(route, &doc).unwrap();
             assert_eq!(style, *expected_style, "for route: {route:?}");
         }
     }
