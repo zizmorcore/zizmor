@@ -13,6 +13,7 @@
 #![allow(clippy::redundant_field_names)]
 #![forbid(unsafe_code)]
 
+use line_index::LineIndex;
 use thiserror::Error;
 use tree_sitter::{Language, Node, Parser, Tree};
 
@@ -268,6 +269,7 @@ enum QueryMode {
 pub struct Document {
     source: String,
     tree: Tree,
+    line_index: LineIndex,
     document_id: u16,
     block_node_id: u16,
     flow_node_id: u16,
@@ -301,9 +303,12 @@ impl Document {
             return Err(QueryError::InvalidInput);
         }
 
+        let line_index = LineIndex::new(&source);
+
         Ok(Self {
             source,
             tree,
+            line_index,
             document_id: language.id_for_node_kind("document", true),
             block_node_id: language.id_for_node_kind("block_node", true),
             flow_node_id: language.id_for_node_kind("flow_node", true),
@@ -316,6 +321,12 @@ impl Document {
             block_sequence_item_id: language.id_for_node_kind("block_sequence_item", true),
             comment_id: language.id_for_node_kind("comment", true),
         })
+    }
+
+    /// Returns a [`LineIndex`] for this document, which can be used
+    /// to efficiently map between byte offsets and line coordinates.
+    pub fn line_index(&self) -> &LineIndex {
+        &self.line_index
     }
 
     /// Return a view of the original YAML source that this document was

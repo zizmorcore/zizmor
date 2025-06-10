@@ -2,6 +2,8 @@
 
 use std::borrow::Cow;
 
+use line_index::{LineCol, TextRange, TextSize};
+
 use crate::finding::location::{Route, RouteComponent};
 
 /// Error types for YAML patch operations
@@ -274,7 +276,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             let feature = route_to_feature_pretty(&patch.route, &doc)?;
 
             // Get the replacement content
-            let replacement = apply_value_replacement(content, &feature, &doc, value, true)?;
+            let replacement = apply_value_replacement(&feature, &doc, value, true)?;
 
             // Extract the current content to calculate spans
             let current_content = doc.extract(&feature);
@@ -304,27 +306,42 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             }
 
             let style = YamlStyle::detect(&patch.route, &doc)?;
-            let feature = route_to_feature_exact(&patch.route, &doc)?;
+            let Some(feature) = route_to_feature_exact(&patch.route, &doc)? else {
+                return Err(Error::InvalidOperation(format!(
+                    "no existing mapping at {route:?}",
+                    route = patch.route
+                )));
+            };
+            let feature_content = doc.extract(&feature);
 
-            match style {
+            let updated_feature = match style {
                 YamlStyle::BlockMapping => handle_block_mapping_addition(
+                    feature_content,
                     &doc,
                     &patch,
-                    content,
-                    &feature.unwrap(),
+                    &feature,
                     key,
                     value,
                 ),
-                YamlStyle::MultilineFlowMapping => todo!(),
-                YamlStyle::FlowMapping => {
-                    handle_flow_mapping_addition(content, &feature.unwrap(), key, value)
-                }
-                YamlStyle::Empty => todo!(),
-                _ => Err(Error::InvalidOperation(format!(
-                    "add operation is not against non-mapping route: {:?}",
+                YamlStyle::FlowMapping => handle_flow_mapping_addition(feature_content, key, value),
+                // TODO: Remove this limitation.
+                YamlStyle::MultilineFlowMapping => Err(Error::InvalidOperation(format!(
+                    "add operation is not permitted against multiline flow mapping route: {:?}",
                     patch.route
                 ))),
-            }
+                _ => Err(Error::InvalidOperation(format!(
+                    "add operation is not permitted against non-mapping route: {:?}",
+                    patch.route
+                ))),
+            }?;
+
+            // Replace the content in the document
+            let mut result = content.to_string();
+            result.replace_range(
+                feature.location.byte_span.0..feature.location.byte_span.1,
+                &updated_feature,
+            );
+            Ok(result)
         }
 
         Op::MergeInto { key, value } => {
@@ -370,7 +387,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
 
                             // Use a custom replacement that preserves the key structure
                             return apply_mapping_replacement(
-                                content,
+                                &doc,
                                 &existing_key_route,
                                 key,
                                 &serde_yaml::Value::Mapping(merged_mapping),
@@ -412,8 +429,16 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             let feature = route_to_feature_pretty(&patch.route, &doc)?;
 
             // For removal, we need to remove the entire line including leading whitespace
-            let start_pos = find_line_start(content, feature.location.byte_span.0);
-            let end_pos = find_line_end(content, feature.location.byte_span.1);
+            // TODO: This isn't sound, e.g. removing `b:` from `{a: a, b: b}` will
+            // remove the entire line.
+            let start_pos = {
+                let range = line_span(&doc, feature.location.byte_span.0);
+                range.start
+            };
+            let end_pos = {
+                let range = line_span(&doc, feature.location.byte_span.1);
+                range.end
+            };
 
             let mut result = content.to_string();
             result.replace_range(start_pos..end_pos, "");
@@ -480,28 +505,22 @@ fn serialize_yaml_value_for_flow_context(value: &serde_yaml::Value) -> Result<St
     }
 }
 
+/// Given a document and a position, return the span of the line containing that position.
+fn line_span(doc: &yamlpath::Document, pos: usize) -> core::ops::Range<usize> {
+    let pos = TextSize::new(pos as u32);
+    let LineCol { line, .. } = doc.line_index().line_col(pos);
+    doc.line_index().line(line).unwrap().into()
+}
+
 /// Extract leading whitespace from the beginning of the line containing the given position
-fn extract_leading_whitespace(content: &str, pos: usize) -> String {
-    let line_start = find_line_start(content, pos);
-    let line_content = &content[line_start..];
+fn extract_leading_whitespace(doc: &yamlpath::Document, pos: usize) -> String {
+    let line_range = line_span(doc, pos);
+    let line_content = &doc.source()[line_range];
 
     line_content
         .chars()
         .take_while(|&c| c == ' ' || c == '\t')
         .collect()
-}
-
-/// Find the start of the line containing the given position
-fn find_line_start(content: &str, pos: usize) -> usize {
-    content[..pos].rfind('\n').map(|i| i + 1).unwrap_or(0)
-}
-
-/// Find the end of the line containing the given position
-fn find_line_end(content: &str, pos: usize) -> usize {
-    content[pos..]
-        .find('\n')
-        .map(|i| pos + i + 1)
-        .unwrap_or(content.len())
 }
 
 /// Indent multi-line YAML content to match the target indentation
@@ -528,9 +547,9 @@ fn indent_multiline_yaml(content: &str, base_indent: &str) -> String {
 }
 
 fn handle_block_mapping_addition(
+    feature_content: &str,
     doc: &yamlpath::Document,
     patch: &Patch,
-    content: &str,
     feature: &yamlpath::Feature,
     key: &str,
     value: &serde_yaml::Value,
@@ -552,12 +571,10 @@ fn handle_block_mapping_addition(
         // For list items, we need to match the indentation of other keys in the same item
         // The feature extraction gives us the content without the leading "- " part,
         // so we need to use the leading whitespace of the step itself plus 2 spaces
-        let leading_whitespace = extract_leading_whitespace(content, feature.location.byte_span.0);
+        let leading_whitespace = extract_leading_whitespace(doc, feature.location.byte_span.0);
         format!("{}  ", leading_whitespace)
     } else {
-        // For regular mappings, add 2 spaces to current indentation
-        let leading_whitespace = extract_leading_whitespace(content, feature.location.byte_span.0);
-        format!("{}", leading_whitespace)
+        extract_leading_whitespace(doc, feature.location.byte_span.0)
     };
 
     // Format the new entry
@@ -591,7 +608,7 @@ fn handle_block_mapping_addition(
     let insertion_point = if is_list_item {
         // For list items, we need to find the end of the actual step content,
         // not including trailing comments that yamlpath may have included
-        find_step_content_end(content, &feature, &doc)
+        find_content_end(&feature, &doc)
     } else {
         feature.location.byte_span.1
     };
@@ -599,7 +616,7 @@ fn handle_block_mapping_addition(
     // Check if we need to add a newline before the entry
     // If the content at insertion point already ends with a newline, don't add another
     let needs_leading_newline = if insertion_point > 0 {
-        content.chars().nth(insertion_point - 1) != Some('\n')
+        doc.source().chars().nth(insertion_point - 1) != Some('\n')
     } else {
         true
     };
@@ -614,30 +631,32 @@ fn handle_block_mapping_addition(
             .to_string()
     };
 
-    // Insert the new entry
-    let mut result = content.to_string();
-    result.insert_str(insertion_point, &final_entry_to_insert);
-    Ok(result)
+    // Insert the final entry into the feature's content.
+    // To do this, we need to readjust the insertion point using
+    // the feature's start as the bias.
+    let bias = feature.location.byte_span.0;
+    let relative_insertion_point = insertion_point - bias;
+
+    let mut updated_feature = feature_content.to_string();
+    updated_feature.insert_str(relative_insertion_point, &final_entry_to_insert);
+
+    Ok(updated_feature)
 }
 
 /// Handle adding a key-value pair to a flow mapping while preserving flow style
 fn handle_flow_mapping_addition(
-    content: &str,
-    feature: &yamlpath::Feature,
+    feature_content: &str,
     key: &str,
     value: &serde_yaml::Value,
 ) -> Result<String, Error> {
-    let current_content =
-        content[feature.location.byte_span.0..feature.location.byte_span.1].to_string();
-
     // Find the closing brace position
-    let closing_brace_pos = current_content.rfind('}').ok_or_else(|| {
+    let closing_brace_pos = feature_content.rfind('}').ok_or_else(|| {
         Error::InvalidOperation("No closing brace found in flow mapping".to_string())
     })?;
 
     // Check if the mapping is empty (just has { })
     let content_inside_braces =
-        &current_content[current_content.find('{').unwrap() + 1..closing_brace_pos].trim();
+        &feature_content[feature_content.find('{').unwrap() + 1..closing_brace_pos].trim();
     let is_empty = content_inside_braces.is_empty();
 
     // Serialize the new value using flow context-aware serialization
@@ -650,60 +669,41 @@ fn handle_flow_mapping_addition(
     // Create the updated flow mapping content
     let updated_content = if is_empty {
         // Empty mapping: { } -> { key: value }
-        current_content.replace("{}", &format!("{{ {} }}", new_pair))
+        feature_content.replace("{}", &format!("{{ {} }}", new_pair))
     } else {
         // Non-empty mapping: { existing } -> { existing, key: value }
-        let before_brace = &current_content[..closing_brace_pos].trim_end();
-        let after_brace = &current_content[closing_brace_pos..];
+        let before_brace = &feature_content[..closing_brace_pos].trim_end();
+        let after_brace = &feature_content[closing_brace_pos..];
 
         // Standard flow mapping format: { key1: val1, key2: val2 }
         format!("{}, {} {}", before_brace, new_pair, after_brace)
     };
 
-    // Replace the content in the document
-    let mut result = content.to_string();
-    result.replace_range(
-        feature.location.byte_span.0..feature.location.byte_span.1,
-        &updated_content,
-    );
-    Ok(result)
+    Ok(updated_content)
 }
 
 /// Find the end of actual step content, excluding trailing comments
-#[allow(clippy::needless_range_loop)]
-fn find_step_content_end(
-    _content: &str,
-    feature: &yamlpath::Feature,
-    doc: &yamlpath::Document,
-) -> usize {
-    let feature_content = doc.extract(feature);
-    let feature_start = feature.location.byte_span.0;
+fn find_content_end(feature: &yamlpath::Feature, doc: &yamlpath::Document) -> usize {
+    let lines: Vec<_> = doc
+        .line_index()
+        .lines(TextRange::new(
+            (feature.location.byte_span.0 as u32).into(),
+            (feature.location.byte_span.1 as u32).into(),
+        ))
+        .collect();
 
-    // Split the feature content into lines to analyze
-    let lines: Vec<&str> = feature_content.lines().collect();
+    // Walk over the feature's lines in reverse, and return the absolute
+    // position of the end of the last non-empty, non-comment line
+    for line in lines.into_iter().rev() {
+        let line_content = &doc.source()[line];
+        let trimmed = line_content.trim();
 
-    // Find the last line that contains actual YAML content (not a comment or empty line)
-    for (i, line) in lines.iter().enumerate().rev() {
-        let trimmed = line.trim();
         if !trimmed.is_empty() && !trimmed.starts_with('#') {
-            // This is the last line with actual content
-            // Calculate its position relative to the start of the feature
-            let mut current_pos = 0;
-
-            for j in 0..=i {
-                if j == i {
-                    // This is our target line, find the end of it
-                    current_pos += lines[j].len();
-                    return feature_start + current_pos;
-                } else {
-                    current_pos += lines[j].len() + 1; // +1 for newline
-                }
-            }
+            return line.end().into();
         }
     }
 
-    // Fallback to original end if no content found
-    feature.location.byte_span.1
+    feature.location.byte_span.1 // Fallback to original end if no content found
 }
 
 /// Handle root-level additions and merges by finding the best insertion point at the document root
@@ -785,12 +785,11 @@ fn handle_root_level_addition(
 
 /// Apply a mapping replacement that preserves the key structure
 fn apply_mapping_replacement(
-    content: &str,
+    doc: &yamlpath::Document,
     route: &Route<'_>,
     _key: &str,
     value: &serde_yaml::Value,
 ) -> Result<String, Error> {
-    let doc = yamlpath::Document::new(content)?;
     let feature = route_to_feature_pretty(route, &doc)?;
 
     // Extract the current content to see what we're working with
@@ -804,8 +803,8 @@ fn apply_mapping_replacement(
 
     if is_flow_mapping {
         // For flow mappings, use the existing flow mapping logic
-        let replacement = apply_value_replacement(content, &feature, &doc, value, false)?;
-        let mut result = content.to_string();
+        let replacement = apply_value_replacement(&feature, &doc, value, false)?;
+        let mut result = doc.source().to_string();
         result.replace_range(
             feature.location.byte_span.0..feature.location.byte_span.1,
             &replacement,
@@ -819,7 +818,7 @@ fn apply_mapping_replacement(
         let key_part = &current_content_with_ws[..colon_pos + 1]; // "env:"
 
         // Get the indentation level for the mapping content
-        let leading_whitespace = extract_leading_whitespace(content, feature.location.byte_span.0);
+        let leading_whitespace = extract_leading_whitespace(doc, feature.location.byte_span.0);
         let content_indent = format!("{}  ", leading_whitespace); // Add 2 spaces for mapping content
 
         // Serialize the new mapping value and indent it properly
@@ -855,13 +854,13 @@ fn apply_mapping_replacement(
         let ws_start = feature.location.byte_span.0
             - (current_content_with_ws.len() - current_content_with_ws.trim_start().len());
 
-        let mut result = content.to_string();
+        let mut result = doc.source().to_string();
         result.replace_range(ws_start..feature.location.byte_span.1, &replacement);
         Ok(result)
     } else {
         // Not a key-value pair, use regular value replacement
-        let replacement = apply_value_replacement(content, &feature, &doc, value, false)?;
-        let mut result = content.to_string();
+        let replacement = apply_value_replacement(&feature, &doc, value, false)?;
+        let mut result = doc.source().to_string();
         result.replace_range(
             feature.location.byte_span.0..feature.location.byte_span.1,
             &replacement,
@@ -872,7 +871,6 @@ fn apply_mapping_replacement(
 
 /// Apply a value replacement at the given feature location, preserving key structure and formatting
 fn apply_value_replacement(
-    content: &str,
     feature: &yamlpath::Feature,
     doc: &yamlpath::Document,
     value: &serde_yaml::Value,
@@ -895,7 +893,7 @@ fn apply_value_replacement(
     if is_flow_mapping {
         // Handle flow mapping replacement - we need to be more surgical
         return handle_flow_mapping_value_replacement(
-            content,
+            doc.source(),
             start_byte,
             end_byte,
             current_content_with_ws,
@@ -919,7 +917,7 @@ fn apply_value_replacement(
                     if string_content.contains('\n') {
                         // For multiline literal blocks, use the raw string content
                         let leading_whitespace =
-                            extract_leading_whitespace(content, feature.location.byte_span.0);
+                            extract_leading_whitespace(doc, feature.location.byte_span.0);
                         let content_indent = format!("{}  ", leading_whitespace); // Key indent + 2 spaces for content
 
                         // Format as: key: |\n  content\n  more content
@@ -1556,24 +1554,84 @@ jobs:
 
     #[test]
     fn test_whitespace_extraction() {
-        let content = "line1\n  indented\n    more-indented";
-        assert_eq!(extract_leading_whitespace(content, 6), "  ");
-        assert_eq!(extract_leading_whitespace(content, 17), "    ");
-        assert_eq!(extract_leading_whitespace(content, 0), "");
+        let doc = r#"
+two:
+  four:
+    six:
+      also-six: also eight
+"#;
+        let doc = yamlpath::Document::new(doc).unwrap();
+
+        assert_eq!(extract_leading_whitespace(&doc, 1), "");
+
+        // Test leading whitespace extraction for various routes
+        // The features are extracted in "exact" mode below, so the indentation
+        // corresponds to the body rather than the key.
+        for (route, expected) in &[
+            (route!("two"), "  "),
+            (route!("two", "four"), "    "),
+            (route!("two", "four", "six"), "      "),
+            (route!("two", "four", "six", "also-six"), "      "),
+        ] {
+            let feature = route_to_feature_exact(route, &doc).unwrap().unwrap();
+
+            assert_eq!(
+                extract_leading_whitespace(&doc, feature.location.byte_span.0),
+                *expected
+            );
+        }
     }
 
     #[test]
-    fn test_line_boundaries() {
-        let content = "line1\nline2\nline3";
-        assert_eq!(find_line_start(content, 0), 0);
-        assert_eq!(find_line_start(content, 3), 0);
-        assert_eq!(find_line_start(content, 6), 6);
-        assert_eq!(find_line_start(content, 9), 6);
+    fn test_find_content_end() {
+        let doc = r#"
+foo:
+  bar: baz
+  abc: def # comment
+  # comment
 
-        assert_eq!(find_line_end(content, 0), 6);
-        assert_eq!(find_line_end(content, 3), 6);
-        assert_eq!(find_line_end(content, 6), 12);
-        assert_eq!(find_line_end(content, 15), 17);
+interior-spaces:
+  - foo
+
+  - bar
+  # hello
+  - baz # hello
+  # hello
+# hello
+
+normal:
+  foo: bar
+"#;
+
+        let doc = yamlpath::Document::new(doc).unwrap();
+
+        let feature = route_to_feature_exact(&route!("foo"), &doc)
+            .unwrap()
+            .unwrap();
+        let end = find_content_end(&feature, &doc);
+
+        insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @r"
+        bar: baz
+          abc: def # comment
+        ");
+
+        let feature = route_to_feature_exact(&route!("interior-spaces"), &doc)
+            .unwrap()
+            .unwrap();
+        let end = find_content_end(&feature, &doc);
+        insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @r"
+        - foo
+
+          - bar
+          # hello
+          - baz # hello
+        ");
+
+        let feature = route_to_feature_exact(&route!("normal"), &doc)
+            .unwrap()
+            .unwrap();
+        let end = find_content_end(&feature, &doc);
+        insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @"foo: bar");
     }
 
     #[test]
@@ -2211,7 +2269,7 @@ jobs:
         }
 
         // Test leading whitespace extraction function
-        let leading_ws = extract_leading_whitespace(original, step_feature.location.byte_span.0);
+        let leading_ws = extract_leading_whitespace(&doc, step_feature.location.byte_span.0);
         assert!(
             !leading_ws.is_empty(),
             "Leading whitespace should not be empty for indented step"

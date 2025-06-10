@@ -21,6 +21,14 @@ testcase:
   flow3: { emptykey: }
   flow4: { emptykey }
 
+  comments:
+    foo: bar # hello
+    abc: def # world
+    # another
+    ghi:
+      foo: bar # comment
+      baz: qux # another comment
+
 
 queries:
   - query: [foo]
@@ -64,3 +72,17 @@ queries:
   - query: [flow4, emptykey]
     mode: exact
     expected: "emptykey"
+
+  - query: [comments, foo]
+    mode: exact
+    expected: bar
+  
+  - query: [comments, abc]
+    mode: exact
+    expected: def
+
+  - query: [comments, ghi]
+    mode: exact
+    expected: |2-
+            foo: bar # comment
+            baz: qux # another comment
