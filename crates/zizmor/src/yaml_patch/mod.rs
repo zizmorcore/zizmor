@@ -484,7 +484,8 @@ fn serialize_yaml_flow(value: &serde_yaml::Value) -> Result<String, Error> {
             serde_yaml::Value::Null => {
                 // serde_yaml puts a trailing newline on this for some reasons
                 // so we do it manually.
-                Ok(buf.push_str("null"))
+                buf.push_str("null");
+                Ok(())
             }
             serde_yaml::Value::Bool(b) => {
                 buf.push_str(if *b { "true" } else { "false" });
