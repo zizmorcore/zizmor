@@ -263,6 +263,7 @@
 
     ??? example "Examples"
         - fpgmaas/deptry#972
+        - fpgmaas/deptry#1161
 
 
 -   ![](https://github.com/freeCodeCamp.png?size=40){ width="40" loading=lazy align=left } freeCodeCamp
@@ -501,6 +502,14 @@
         - kanidm/kanidm#3430
 
 
+-   ![](https://github.com/libssh2.png?size=40){ width="40" loading=lazy align=left } libssh2
+
+    ---
+
+    ??? example "Examples"
+        - libssh2/libssh2#1609
+
+
 -   ![](https://github.com/lmstudio-ai.png?size=40){ width="40" loading=lazy align=left } lmstudio-ai
 
     ---
@@ -718,6 +727,7 @@
 
     ??? example "Examples"
         - orion-rs/orion#441
+        - orion-rs/orion#490
 
 
 -   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
