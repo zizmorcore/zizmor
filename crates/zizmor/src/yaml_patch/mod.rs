@@ -2885,7 +2885,6 @@ strategy:
     }
 
     #[test]
-    #[ignore = "known issue"]
     fn test_add_to_flow_mapping_trailing_comma() {
         let original = r#"
 jobs:
@@ -2904,12 +2903,12 @@ jobs:
 
         let result = apply_yaml_patches(original, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result, @r"
         jobs:
           test:
             runs-on: ubuntu-latest
-            env: { NODE_ENV: "production", DEBUG: "true", LOG_LEVEL: "info" }
-        "#);
+            env: { NODE_ENV: production, DEBUG: true, LOG_LEVEL: info }
+        ");
     }
 
     #[test]
