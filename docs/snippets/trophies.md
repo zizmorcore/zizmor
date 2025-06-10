@@ -608,6 +608,7 @@
     ---
 
     ??? example "Examples"
+        - mongodb/django-mongodb-backend#315
         - mongodb/motor#312
         - mongodb/mongo-python-driver#2001
 
@@ -627,6 +628,7 @@
     ??? example "Examples"
         - mozilla/fxa#18628
         - mozilla/neqo#2413
+        - mozilla/neqo#2721
 
 
 -   ![](https://github.com/narwhals-dev.png?size=40){ width="40" loading=lazy align=left } narwhals-dev

@@ -139,11 +139,13 @@ microsoft/vscode-jupyter#16622
 mkuf/prind#183
 mne-tools/mne-python#13011
 MoarVM/MoarVM#1875
+mongodb/django-mongodb-backend#315
 mongodb/motor#312
 mongodb/mongo-python-driver#2001
 mongodb-labs/flask-pymongo#170
 mozilla/fxa#18628
 mozilla/neqo#2413
+mozilla/neqo#2721
 narwhals-dev/narwhals#1567
 NetApp/harvest#3247
 nextcloud/user_saml#947
