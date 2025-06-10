@@ -481,17 +481,35 @@ fn serialize_yaml_flow(value: &serde_yaml::Value) -> Result<String, Error> {
     let mut buf = String::new();
     fn serialize_inner(value: &serde_yaml::Value, buf: &mut String) -> Result<(), Error> {
         match value {
-            serde_yaml::Value::Null | serde_yaml::Value::Bool(_) | serde_yaml::Value::Number(_) => {
-                buf.push_str(&serde_yaml::to_string(value)?);
+            serde_yaml::Value::Null => {
+                // serde_yaml puts a trailing newline on this for some reasons
+                // so we do it manually.
+                Ok(buf.push_str("null"))
+            }
+            serde_yaml::Value::Bool(b) => {
+                buf.push_str(if *b { "true" } else { "false" });
+                Ok(())
+            }
+            serde_yaml::Value::Number(n) => {
+                buf.push_str(&n.to_string());
                 Ok(())
             }
             serde_yaml::Value::String(s) => {
-                // Dumb hack: serde_yaml will always produce a reasonable-enough
-                // single-line string scalar for us.
-                buf.push_str(
-                    &serde_json::to_string(s)
-                        .map_err(|e| Error::InvalidOperation(e.to_string()))?,
-                );
+                // Note: there are other plain-scalar-safe chars, but this is fine
+                // for a first approximation.
+                if s.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+                {
+                    buf.push_str(s);
+                } else {
+                    // Dumb hack: serde_yaml will always produce a reasonable-enough
+                    // single-line string scalar for us.
+                    buf.push_str(
+                        &serde_json::to_string(s)
+                            .map_err(|e| Error::InvalidOperation(e.to_string()))?,
+                    );
+                }
+
                 Ok(())
             }
             serde_yaml::Value::Sequence(values) => {
@@ -520,8 +538,13 @@ fn serialize_yaml_flow(value: &serde_yaml::Value) -> Result<String, Error> {
                         )));
                     }
                     serialize_inner(key, buf)?;
+
                     buf.push_str(": ");
-                    serialize_inner(value, buf)?;
+                    if !matches!(value, serde_yaml::Value::Null) {
+                        // Skip the null part of `key: null`, since `key: `
+                        // is more idiomatic.
+                        serialize_inner(value, buf)?;
+                    }
                 }
                 buf.push('}');
                 Ok(())
@@ -1071,7 +1094,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_serialize_yaml_flow() {}
+    fn test_serialize_yaml_flow() {
+        let doc = r#"
+foo:
+  bar:
+  baz: qux
+  abc:
+    - def
+    - ghi
+    - null
+    - ~
+    - |
+      abcd
+      efgh
+
+flow: [1, 2, 3, {more: 456, evenmore: "abc\ndef"}]
+"#;
+
+        let value: serde_yaml::Value = serde_yaml::from_str(doc).unwrap();
+        let serialized = serialize_yaml_flow(&value).unwrap();
+
+        // serialized is valid YAML
+        assert!(serde_yaml::from_str::<serde_yaml::Value>(&serialized).is_ok());
+
+        insta::assert_snapshot!(serialized, @r#"{foo: {bar: , baz: qux, abc: [def, ghi, null, null, "abcd\nefgh\n"]}, flow: [1, 2, 3, {more: 456, evenmore: "abc\ndef"}]}"#);
+    }
 
     #[test]
     fn test_detect_yaml_style() {
@@ -1540,7 +1587,7 @@ foo: { bar: abc }
 
         let result = apply_yaml_patches(original, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"foo: { bar: abc, baz: "qux" }"#);
+        insta::assert_snapshot!(result, @"foo: { bar: abc, baz: qux }");
     }
 
     #[test]
@@ -2753,7 +2800,7 @@ jobs:
         on:
           push:
             branches: [main]   # Flow sequence inside block mapping
-          pull_request: { branches: [main, develop], types: ["opened", "synchronize"] }  # Flow mapping with flow sequence
+          pull_request: { branches: [main, develop], types: [opened, synchronize] }  # Flow mapping with flow sequence
 
         jobs:
           test:
@@ -2856,13 +2903,13 @@ strategy:
 
         let result = apply_yaml_patches(original, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result, @r"
         strategy:
           matrix:
             include:
-              - { os: ubuntu-latest, node: 18, arch: "x64" }
+              - { os: ubuntu-latest, node: 18, arch: x64 }
               - { os: macos-latest, node: 20 }
-        "#);
+        ");
     }
 
     #[test]
@@ -3050,7 +3097,7 @@ jobs:
         jobs:
           test:
             runs-on: ubuntu-latest
-            env: { NODE_ENV: "test" }
+            env: { NODE_ENV: test }
             steps:
               - run: echo "test"
         "#);
