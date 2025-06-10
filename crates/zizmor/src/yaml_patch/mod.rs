@@ -473,36 +473,66 @@ fn serialize_yaml_value(value: &serde_yaml::Value) -> Result<String, Error> {
     Ok(yaml_str.trim_end().to_string()) // Remove trailing newline
 }
 
-/// Serialize a serde_yaml::Value to a YAML string in flow style for sequences when in flow context
-fn serialize_yaml_value_for_flow_context(value: &serde_yaml::Value) -> Result<String, Error> {
-    match value {
-        serde_yaml::Value::Sequence(seq) => {
-            // Serialize sequence in flow style: [item1, item2, item3]
-            let items: Result<Vec<String>, Error> = seq
-                .iter()
-                .map(|item| {
-                    match item {
-                        serde_yaml::Value::String(s) => Ok(s.clone()),
-                        serde_yaml::Value::Number(n) => Ok(n.to_string()),
-                        serde_yaml::Value::Bool(b) => Ok(b.to_string()),
-                        serde_yaml::Value::Null => Ok("null".to_string()),
-                        _ => {
-                            // For complex nested values, serialize them normally
-                            let serialized = serde_yaml::to_string(item)?;
-                            Ok(serialized.trim().to_string())
-                        }
+/// Serialize a [`serde_yaml::Value`] to a YAML string in flow layout.
+///
+/// This serializes only a restricted subset of YAML: tags are not
+/// supported, and mapping keys must be strings.
+fn serialize_yaml_flow(value: &serde_yaml::Value) -> Result<String, Error> {
+    let mut buf = String::new();
+    fn serialize_inner(value: &serde_yaml::Value, buf: &mut String) -> Result<(), Error> {
+        match value {
+            serde_yaml::Value::Null | serde_yaml::Value::Bool(_) | serde_yaml::Value::Number(_) => {
+                Ok(buf.push_str(&serde_yaml::to_string(value)?))
+            }
+            serde_yaml::Value::String(s) => {
+                // Dumb hack: serde_yaml will always produce a reasonable-enough
+                // single-line string scalar for us.
+                Ok(buf.push_str(
+                    &serde_json::to_string(s)
+                        .map_err(|e| Error::InvalidOperation(e.to_string()))?,
+                ))
+            }
+            serde_yaml::Value::Sequence(values) => {
+                // Serialize sequence in flow style: [item1, item2, item3]
+                buf.push('[');
+                for (i, item) in values.iter().enumerate() {
+                    if i > 0 {
+                        buf.push_str(", ");
                     }
-                })
-                .collect();
-
-            let items = items?;
-            Ok(format!("[{}]", items.join(", ")))
-        }
-        _ => {
-            // For non-sequences, use normal serialization
-            serialize_yaml_value(value)
+                    serialize_inner(item, buf)?;
+                }
+                buf.push(']');
+                Ok(())
+            }
+            serde_yaml::Value::Mapping(mapping) => {
+                // Serialize mapping in flow style: { key1: value1, key2: value2 }
+                buf.push('{');
+                for (i, (key, value)) in mapping.iter().enumerate() {
+                    if i > 0 {
+                        buf.push_str(", ");
+                    }
+                    if !matches!(key, serde_yaml::Value::String(_)) {
+                        return Err(Error::InvalidOperation(format!(
+                            "mapping keys must be strings, found: {:?}",
+                            key
+                        )));
+                    }
+                    serialize_inner(key, buf)?;
+                    buf.push_str(": ");
+                    serialize_inner(value, buf)?;
+                }
+                buf.push('}');
+                Ok(())
+            }
+            serde_yaml::Value::Tagged(tagged_value) => Err(Error::InvalidOperation(format!(
+                "cannot serialize tagged value: {:?}",
+                tagged_value
+            ))),
         }
     }
+
+    serialize_inner(value, &mut buf)?;
+    Ok(buf)
 }
 
 /// Given a document and a position, return the span of the line containing that position.
@@ -565,7 +595,7 @@ fn handle_block_mapping_addition(
     // Convert the new value to YAML string for block style handling
     let new_value_str = if matches!(value, serde_yaml::Value::Sequence(_)) {
         // For sequences, use flow-aware serialization to maintain consistency
-        serialize_yaml_value_for_flow_context(value)?
+        serialize_yaml_flow(value)?
     } else {
         serialize_yaml_value(value)?
     };
@@ -660,6 +690,31 @@ fn handle_flow_mapping_addition(
     key: &str,
     value: &serde_yaml::Value,
 ) -> Result<String, Error> {
+    // Our strategy for flow mappings is to deserialize the existing feature,
+    // add the new key-value pair, and then serialize it back.
+    // This is probably slightly slower than just string manipulation,
+    // but it saves us a lot of special-casing around trailing commas,
+    // empty mapping forms, etc.
+    //
+    // We can get away with this because, unlike block mappings, single
+    // line flow mappings can't contain comments or (much) other user
+    // significant formatting.
+    //
+    // TODO: handle trailing comment, e.g. `{ key: value, key2: value2 } # comment`
+
+    let mut existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(feature_content)
+        .map_err(Error::Serialization)?;
+
+    // TODO: test
+    if existing_mapping.contains_key(key) {
+        return Err(Error::InvalidOperation(format!(
+            "key '{}' already exists in mapping",
+            key
+        )));
+    }
+
+    existing_mapping.insert(key.into(), value.clone());
+
     // Find the closing brace position
     let closing_brace_pos = feature_content.rfind('}').ok_or_else(|| {
         Error::InvalidOperation("No closing brace found in flow mapping".to_string())
@@ -671,7 +726,7 @@ fn handle_flow_mapping_addition(
     let is_empty = content_inside_braces.is_empty();
 
     // Serialize the new value using flow context-aware serialization
-    let new_value_str = serialize_yaml_value_for_flow_context(value)?;
+    let new_value_str = serialize_yaml_flow(value)?;
     let new_value_str = new_value_str.trim();
 
     // Create the new key-value pair
@@ -1012,6 +1067,9 @@ mod tests {
     use crate::route;
 
     use super::*;
+
+    #[test]
+    fn test_serialize_yaml_flow() {}
 
     #[test]
     fn test_detect_yaml_style() {
@@ -1480,9 +1538,7 @@ foo: { bar: abc }
 
         let result = apply_yaml_patches(original, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
-        foo: { bar: abc, baz: qux }
-        "#);
+        insta::assert_snapshot!(result, @r#"foo: { bar: abc, baz: "qux" }"#);
     }
 
     #[test]
@@ -2685,9 +2741,6 @@ jobs:
 
         let result = apply_yaml_patches(original, &operations).unwrap();
 
-        // Debug: print the result to see what went wrong
-        println!("Result:\n{}", result);
-
         // Verify the result is valid YAML
         if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(&result) {
             panic!("Invalid YAML: {}", e);
@@ -2698,7 +2751,7 @@ jobs:
         on:
           push:
             branches: [main]   # Flow sequence inside block mapping
-          pull_request: { branches: [main, develop], types: [opened, synchronize] }  # Flow mapping with flow sequence
+          pull_request: { branches: [main, develop], types: ["opened", "synchronize"] }  # Flow mapping with flow sequence
 
         jobs:
           test:
@@ -2805,7 +2858,7 @@ strategy:
         strategy:
           matrix:
             include:
-              - { os: ubuntu-latest, node: 18, arch: x64 }
+              - { os: ubuntu-latest, node: 18, arch: "x64" }
               - { os: macos-latest, node: 20 }
         "#);
     }
@@ -2964,7 +3017,7 @@ on:
         on:
           push:
             branches: [main, develop]
-            tags: [v*]
+            tags: ["v*"]
           schedule:
             - cron: "0 0 * * *"
         "#);
@@ -2995,7 +3048,7 @@ jobs:
         jobs:
           test:
             runs-on: ubuntu-latest
-            env: { NODE_ENV: test }
+            env: { NODE_ENV: "test" }
             steps:
               - run: echo "test"
         "#);
