@@ -55,44 +55,38 @@ pub enum Style {
     SingleQuoted,
     /// Plain scalar style: value
     PlainScalar,
-    /// An empty feature, e.g. the value part of `foo:`
-    Empty,
 }
 
 impl Style {
-    /// Detect the YAML style of document feature.
-    pub fn detect(route: &Route, doc: &yamlpath::Document) -> Result<Self, Error> {
-        let Some(feature) = route_to_feature_exact(route, doc)? else {
-            return Ok(Style::Empty);
-        };
-
-        let content = doc.extract(&feature);
+    /// Given a feature and its document, determine the style of the feature.
+    pub fn from_feature(feature: &yamlpath::Feature, doc: &yamlpath::Document) -> Self {
+        let content = doc.extract(feature);
         let trimmed = content.trim().as_bytes();
         let multiline = trimmed.contains(&b'\n');
 
         match feature.kind() {
-            yamlpath::FeatureKind::BlockMapping => Ok(Style::BlockMapping),
-            yamlpath::FeatureKind::BlockSequence => Ok(Style::BlockSequence),
+            yamlpath::FeatureKind::BlockMapping => Style::BlockMapping,
+            yamlpath::FeatureKind::BlockSequence => Style::BlockSequence,
             yamlpath::FeatureKind::FlowMapping => {
                 if multiline {
-                    Ok(Style::MultilineFlowMapping)
+                    Style::MultilineFlowMapping
                 } else {
-                    Ok(Style::FlowMapping)
+                    Style::FlowMapping
                 }
             }
             yamlpath::FeatureKind::FlowSequence => {
                 if multiline {
-                    Ok(Style::MultilineFlowSequence)
+                    Style::MultilineFlowSequence
                 } else {
-                    Ok(Style::FlowSequence)
+                    Style::FlowSequence
                 }
             }
             yamlpath::FeatureKind::Scalar => match trimmed[0] {
-                b'|' => Ok(Style::MultilineLiteralScalar),
-                b'>' => Ok(Style::MultilineFoldedScalar),
-                b'"' => Ok(Style::DoubleQuoted),
-                b'\'' => Ok(Style::SingleQuoted),
-                _ => Ok(Style::PlainScalar),
+                b'|' => Style::MultilineLiteralScalar,
+                b'>' => Style::MultilineFoldedScalar,
+                b'"' => Style::DoubleQuoted,
+                b'\'' => Style::SingleQuoted,
+                _ => Style::PlainScalar,
             },
         }
     }
@@ -153,8 +147,15 @@ pub enum Op<'doc> {
     },
     /// Replace the value at the given path
     Replace(serde_yaml::Value),
-    /// Add a new key-value pair at the given path. The path should point to a mapping,
-    /// or use "/" for root-level additions. Maintains proper indentation and formatting.
+    /// Add a new key-value pair at the given path.
+    ///
+    /// The route should point to a mapping.
+    ///
+    /// Limitations:
+    ///
+    /// - The mapping must be a block mapping or single-line flow mapping.
+    ///   Multi-line flow mappings are not currently supported.
+    /// - The key must not already exist in the targeted mapping.
     Add {
         key: String,
         value: serde_yaml::Value,
@@ -296,20 +297,19 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             result.replace_range(start_span..end_span, &replacement);
             Ok(result)
         }
-
         Op::Add { key, value } => {
-            if patch.route.is_root() {
-                // Handle root-level additions specially
-                return handle_root_level_addition(content, key, value);
-            }
-
-            let style = Style::detect(&patch.route, &doc)?;
-            let Some(feature) = route_to_feature_exact(&patch.route, &doc)? else {
-                return Err(Error::InvalidOperation(format!(
-                    "no existing mapping at {route:?}",
-                    route = patch.route
-                )));
+            let feature = if patch.route.is_root() {
+                doc.top_feature()?
+            } else {
+                route_to_feature_exact(&patch.route, &doc)?.ok_or_else(|| {
+                    Error::InvalidOperation(format!(
+                        "no existing mapping at {route:?}",
+                        route = patch.route
+                    ))
+                })?
             };
+
+            let style = Style::from_feature(&feature, &doc);
             let feature_content = doc.extract(&feature);
 
             let updated_feature = match style {
@@ -336,7 +336,6 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             );
             Ok(result)
         }
-
         Op::MergeInto { key, value } => {
             if patch.route.is_root() {
                 // Handle root-level merges specially
@@ -411,7 +410,6 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 },
             )
         }
-
         Op::Remove => {
             if patch.route.is_root() {
                 return Err(Error::InvalidOperation(
@@ -1284,9 +1282,9 @@ empty:
                 route!("multiline-scalars", "folded-e"),
                 Style::MultilineFoldedScalar,
             ),
-            (route!("empty", "foo"), Style::Empty),
         ] {
-            let style = Style::detect(route, &doc).unwrap();
+            let feature = route_to_feature_exact(route, &doc).unwrap().unwrap();
+            let style = Style::from_feature(&feature, &doc);
             assert_eq!(style, *expected_style, "for route: {route:?}");
         }
     }
