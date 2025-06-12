@@ -376,10 +376,7 @@ impl Document {
     ///
     /// All errors become `false`.
     pub fn query_exists(&self, query: &Query) -> bool {
-        match self.query_node(query, QueryMode::Exact) {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        self.query_node(query, QueryMode::Exact).is_ok()
     }
 
     /// Perform a query on the current document, returning a `Feature`
