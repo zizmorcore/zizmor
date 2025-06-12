@@ -16,6 +16,7 @@ use crate::{
     state::AuditState,
 };
 
+pub(crate) mod anonymous_definition;
 pub(crate) mod artipacked;
 pub(crate) mod bot_conditions;
 pub(crate) mod cache_poisoning;
