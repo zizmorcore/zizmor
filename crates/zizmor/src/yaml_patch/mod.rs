@@ -1331,7 +1331,7 @@ foo:
     }
 
     #[test]
-    fn test_yaml_path_rewrite_fragment_single_line() {
+    fn test_rewrite_fragment_single_line() {
         let original = r#"
 foo:
   bar: 'echo "foo: ${{ foo }}"'
@@ -1355,7 +1355,7 @@ foo:
     }
 
     #[test]
-    fn test_yaml_path_rewrite_fragment_multi_line() {
+    fn test_rewrite_fragment_multi_line() {
         let original = r#"
 foo:
   bar: |
@@ -1406,7 +1406,7 @@ foo:
     }
 
     #[test]
-    fn test_yaml_path_rewrite_fragment_multi_line_in_list() {
+    fn test_rewrite_fragment_multi_line_in_list() {
         let original = r#"
 jobs:
   test:
@@ -1450,7 +1450,7 @@ jobs:
     }
 
     #[test]
-    fn test_yaml_path_replace_empty_block_value() {
+    fn test_replace_empty_block_value() {
         let original = r#"
 foo:
   bar:
@@ -1470,7 +1470,7 @@ foo:
     }
 
     #[test]
-    fn test_yaml_path_replace_empty_flow_value() {
+    fn test_replace_empty_flow_value() {
         let original = r#"
     foo: { bar: }
     "#;
@@ -1486,7 +1486,7 @@ foo:
     }
 
     #[test]
-    fn test_yaml_path_replace_empty_flow_value_no_colon() {
+    fn test_replace_empty_flow_value_no_colon() {
         let original = r#"
         foo: { bar }
         "#;
@@ -1502,7 +1502,7 @@ foo:
     }
 
     #[test]
-    fn test_yaml_path_replace_multiline_string() {
+    fn test_replace_multiline_string() {
         let original = r#"
 foo:
   bar:
@@ -1640,7 +1640,7 @@ foo: { bar: abc }
     }
 
     #[test]
-    fn test_yaml_patch_remove_preserves_structure() {
+    fn test_remove_preserves_structure() {
         let original = r#"
 permissions:
   contents: read  # Keep this comment
@@ -3222,7 +3222,7 @@ jobs:
     }
 
     #[test]
-    fn test_complex_mixed_styles_permissions() {
+    fn test_add_complex_mixed_styles_permissions() {
         let original = r#"
 permissions:
   contents: read
@@ -3249,7 +3249,7 @@ permissions:
     }
 
     #[test]
-    fn test_preserve_flow_sequence_in_block_mapping() {
+    fn test_add_preserve_flow_sequence_in_block_mapping() {
         let original = r#"
 on:
   push:
@@ -3281,7 +3281,7 @@ on:
     }
 
     #[test]
-    fn test_empty_flow_mapping_expansion() {
+    fn test_add_empty_flow_mapping_expansion() {
         let original = r#"
 jobs:
   test:
