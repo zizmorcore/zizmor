@@ -605,7 +605,6 @@ fn run() -> Result<ExitCode> {
         }};
     }
 
-    register_audit!(audit::anonymous_definition::AnonymousDefinition);
     register_audit!(audit::artipacked::Artipacked);
     register_audit!(audit::unsound_contains::UnsoundContains);
     register_audit!(audit::excessive_permissions::ExcessivePermissions);
@@ -629,6 +628,7 @@ fn run() -> Result<ExitCode> {
     register_audit!(audit::obfuscation::Obfuscation);
     register_audit!(audit::stale_action_refs::StaleActionRefs);
     register_audit!(audit::unpinned_images::UnpinnedImages);
+    register_audit!(audit::anonymous_definition::AnonymousDefinition);
 
     let mut results = FindingRegistry::new(&app, &config);
     {

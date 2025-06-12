@@ -15,7 +15,7 @@ const ANONYMOUS_DEFINITION_JOB_SEVERITY: Severity = Severity::Informational;
 audit_meta!(
     AnonymousDefinition,
     "anonymous-definition",
-    "workflow or action definitions without a name"
+    "workflow or action definition without a name"
 );
 
 impl Audit for AnonymousDefinition {
@@ -34,7 +34,7 @@ impl Audit for AnonymousDefinition {
                 Self::finding()
                     .severity(ANONYMOUS_DEFINITION_WORKFLOW_SEVERITY)
                     .confidence(Confidence::High)
-                    .persona(Persona::default())
+                    .persona(Persona::Pedantic)
                     .add_location(workflow.location().primary())
                     .build(workflow)?,
             );
@@ -56,10 +56,7 @@ impl Audit for AnonymousDefinition {
                         );
                     }
                 }
-                Job::ReusableWorkflowCallJob(_) => {
-                    // No finding for reusable workflow calls without a name.
-                    // This is because they are not defined in the workflow itself.
-                }
+                _ => continue,
             }
         }
 
