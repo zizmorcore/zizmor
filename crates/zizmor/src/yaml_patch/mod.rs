@@ -298,6 +298,23 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             Ok(result)
         }
         Op::Add { key, value } => {
+            // Check to see whether `key` is already present within the route.
+            // NOTE: Safe unwrap, since `with_keys` ensures we always have at
+            // least one component.
+            let key_query = patch
+                .route
+                .with_keys(&[key.as_str().into()])
+                .to_query()
+                .unwrap();
+
+            if doc.query_exists(&key_query) {
+                return Err(Error::InvalidOperation(format!(
+                    "key '{key}' already exists at {route:?}",
+                    key = key,
+                    route = patch.route
+                )));
+            }
+
             let feature = if patch.route.is_root() {
                 doc.top_feature()?
             } else {
@@ -1554,7 +1571,30 @@ jobs:
     }
 
     #[test]
-    fn test_yaml_patch_add_preserves_formatting() {
+    fn test_add_rejects_duplicate_key() {
+        let original = r#"
+        foo:
+            bar: abc
+        "#;
+
+        let operations = vec![Patch {
+            route: route!("foo"),
+            operation: Op::Add {
+                key: "bar".to_string(),
+                value: serde_yaml::Value::String("def".to_string()),
+            },
+        }];
+
+        let result = apply_yaml_patches(original, &operations);
+
+        // Should return an error about duplicate key
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("key 'bar' already exists at"));
+    }
+
+    #[test]
+    fn test_add_preserves_formatting() {
         let original = r#"
 permissions:
   contents: read
@@ -1581,7 +1621,7 @@ permissions:
     }
 
     #[test]
-    fn test_yaml_patch_add_preserves_flow_mapping_formatting() {
+    fn test_add_preserves_flow_mapping_formatting() {
         let original = r#"
 foo: { bar: abc }
 "#;
@@ -2109,7 +2149,7 @@ jobs:
     }
 
     #[test]
-    fn test_root_level_addition_preserves_formatting() {
+    fn test_add_root_level_preserves_formatting() {
         let original = r#"# GitHub Actions Workflow
 name: CI
 on: push
@@ -2146,8 +2186,8 @@ jobs:
     }
 
     #[test]
-    fn test_root_level_path_handling() {
-        // Test that root path "/" is handled correctly
+    fn test_add_root_level_path_handling() {
+        // Test that root path is handled correctly
         let original = r#"name: Test
 on: push
 jobs:

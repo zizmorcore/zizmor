@@ -371,6 +371,17 @@ impl Document {
         self.range_spanned_by_comment(offset, offset)
     }
 
+    /// Perform a query on the current document, returning `true`
+    /// if the query succeeds (i.e. references an existing feature).
+    ///
+    /// All errors become `false`.
+    pub fn query_exists(&self, query: &Query) -> bool {
+        match self.query_node(query, QueryMode::Exact) {
+            Ok(_) => true,
+            Err(_) => false,
+        }
+    }
+
     /// Perform a query on the current document, returning a `Feature`
     /// if the query succeeds.
     ///
