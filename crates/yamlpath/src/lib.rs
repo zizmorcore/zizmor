@@ -343,6 +343,15 @@ impl Document {
         self.tree.root_node().into()
     }
 
+    /// Returns a [`Feature`] for the topmost semantic object in this document.
+    ///
+    /// This is typically useful as a "fallback" feature, e.g. for positioning
+    /// relative to the "top" of the document.
+    pub fn top_feature(&self) -> Result<Feature, QueryError> {
+        let top_node = self.top_object()?;
+        Ok(top_node.into())
+    }
+
     /// Returns whether the given range is spanned by a comment node.
     ///
     /// The comment node must fully span the range; a range that ends
@@ -360,6 +369,14 @@ impl Document {
     /// Returns whether the given offset is within a comment node's span.
     pub fn offset_inside_comment(&self, offset: usize) -> bool {
         self.range_spanned_by_comment(offset, offset)
+    }
+
+    /// Perform a query on the current document, returning `true`
+    /// if the query succeeds (i.e. references an existing feature).
+    ///
+    /// All errors become `false`.
+    pub fn query_exists(&self, query: &Query) -> bool {
+        self.query_node(query, QueryMode::Exact).is_ok()
     }
 
     /// Perform a query on the current document, returning a `Feature`
@@ -507,7 +524,9 @@ impl Document {
         )
     }
 
-    fn query_node(&self, query: &Query, mode: QueryMode) -> Result<Node, QueryError> {
+    /// Returns the topmost semantic object in the YAML document,
+    /// i.e. the node corresponding to the first block or flow feature.
+    fn top_object(&self) -> Result<Node, QueryError> {
         // All tree-sitter-yaml trees start with a `stream` node.
         let stream = self.tree.root_node();
 
@@ -528,7 +547,11 @@ impl Document {
             .find(|c| c.kind_id() == self.block_node_id || c.kind_id() == self.flow_node_id)
             .ok_or_else(|| QueryError::Other("document has no block_node or flow_node".into()))?;
 
-        let mut key_node = top_node;
+        Ok(top_node)
+    }
+
+    fn query_node(&self, query: &Query, mode: QueryMode) -> Result<Node, QueryError> {
+        let mut key_node = self.top_object()?;
         for component in &query.route {
             match self.descend(&key_node, component) {
                 Ok(next) => key_node = next,
