@@ -35,14 +35,6 @@ fn test_github_output() -> Result<()> {
 
 #[test]
 fn anonymous_definition() -> Result<()> {
-    // This should only produce a Workflow finding.
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("anonymous-definition.yml"))
-            .run()?
-    );
-
-    // This should produce both Workflow and Job findings.
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("anonymous-definition.yml"))

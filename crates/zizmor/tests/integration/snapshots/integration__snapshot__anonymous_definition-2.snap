@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"anonymous-definition.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
-help[anonymous-definition]: workflow or action definitions without a name
+help[anonymous-definition]: workflow or action definition without a name
   --> @@INPUT@@:1:1
    |
  1 | / # see https://github.com/zizmorcore/zizmor/issues/795
@@ -14,7 +14,7 @@ help[anonymous-definition]: workflow or action definitions without a name
    |
    = note: audit confidence → High
 
-info[anonymous-definition]: workflow or action definitions without a name
+info[anonymous-definition]: workflow or action definition without a name
   --> @@INPUT@@:17:3
    |
 17 | /   will-trigger:
