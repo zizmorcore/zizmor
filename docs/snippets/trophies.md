@@ -697,6 +697,7 @@
 
     ??? example "Examples"
         - open-edge-platform/geti#162
+        - open-edge-platform/geti-sdk#603
 
 
 -   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
@@ -974,6 +975,14 @@
         - reubeno/brush#535
 
 
+-   ![](https://github.com/rkyv.png?size=40){ width="40" loading=lazy align=left } rkyv
+
+    ---
+
+    ??? example "Examples"
+        - rkyv/rkyv#611
+
+
 -   ![](https://github.com/rolldown.png?size=40){ width="40" loading=lazy align=left } rolldown
 
     ---
@@ -999,6 +1008,7 @@
         - rust-lang/crates.io#10176
         - rust-lang/crates.io#11203
         - rust-lang/rust-clippy#13933
+        - rust-lang/this-week-in-rust#6721
 
 
 -   ![](https://github.com/rustls.png?size=40){ width="40" loading=lazy align=left } rustls
