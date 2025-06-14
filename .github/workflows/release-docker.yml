@@ -78,9 +78,9 @@ jobs:
 
       - name: Export digest
         run: |
-          mkdir -p ${{ runner.temp }}/digests
+          mkdir -p "${RUNNER_TEMP}/digests"
           digest="${DIGEST}"
-          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+          touch "${RUNNER_TEMP}/digests/${digest#sha256:}"
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
 
@@ -93,6 +93,7 @@ jobs:
           retention-days: 1
 
   merge:
+    name: Merge image builds
     needs: build
     runs-on: ubuntu-latest
 
@@ -149,7 +150,7 @@ jobs:
           docker buildx imagetools create \
             "${annotations[@]}" \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.ZIZMOR_IMAGE }}@sha256:%s ' *)
+            $(printf "${ZIZMOR_IMAGE}@sha256:%s " *)
 
       - name: Inspect image
         run: |

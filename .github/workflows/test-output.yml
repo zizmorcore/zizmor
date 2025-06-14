@@ -12,6 +12,7 @@ permissions: {}
 
 jobs:
   test-sarif-presentation:
+    name: Test SARIF presentation
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'test-sarif-presentation')
     permissions:
@@ -48,6 +49,7 @@ jobs:
             })
 
   test-github-presentation:
+    name: Test GitHub annotations presentation
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'test-github-presentation')
     permissions: {}
