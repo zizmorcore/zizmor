@@ -20,12 +20,12 @@ Legend:
 |-----------------|------------------|---------------|----------------|--------------------|--------------|
 | Workflow, Action | N/A              | v1.10.0       | ✅             | ❌                 | ❌            |
 
-Detects workflows or action definitions that omit a `name:` field.
+Detects workflows or action definitions that lack a `name:` field.
 
-GitHub explicitly allows workflows to omit the `name:` field, and (undocumented)
-permits the same for action definitions. When `name:` is omitted, the
-workflow or action is rendered anonymously in the GitHub Actions UI, making
-it harder to understand which definition is running.
+GitHub explicitly allows workflows to omit the `name:` field, and allows (but
+doesn't document) the same for action definitions. When `name:` is omitted, the
+workflow or action is rendered anonymously in the GitHub Actions UI, making it
+harder to understand which definition is running.
 
 !!! note
 

@@ -860,3 +860,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [unpinned-images]: ./audits.md#unpinned-images
 [insecure-commands]: ./audits.md#insecure-commands
 [use-trusted-publishing]: ./audits.md#use-trusted-publishing
+[anonymous-definition]: ./audits.md#anonymous-definition
