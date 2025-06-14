@@ -3,7 +3,10 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    ops::{Deref, Range},
+};
 
 use crate::context::Context;
 
@@ -131,6 +134,49 @@ impl<'src> Literal<'src> {
     }
 }
 
+/// Represents a `[start, end)` span for a source expression.
+#[derive(Debug, PartialEq)]
+pub struct Span {
+    /// The start of the span, inclusive.
+    pub start: usize,
+    /// The end of the span, exclusive.
+    pub end: usize,
+}
+
+impl From<pest::Span<'_>> for Span {
+    fn from(span: pest::Span<'_>) -> Self {
+        Self {
+            start: span.start(),
+            end: span.end(),
+        }
+    }
+}
+
+/// An expression along with its source span.
+#[derive(Debug, PartialEq)]
+pub struct SpannedExpr<'src> {
+    pub(crate) span: Span,
+    pub(crate) expr: Expr<'src>,
+}
+
+impl<'a> SpannedExpr<'a> {
+    /// Creates a new `SpannedExpr` from an expression and its span.
+    pub fn new(span: impl Into<Span>, expr: Expr<'a>) -> Self {
+        Self {
+            expr,
+            span: span.into(),
+        }
+    }
+}
+
+impl<'a> Deref for SpannedExpr<'a> {
+    type Target = Expr<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.expr
+    }
+}
+
 /// Represents a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
 pub enum Expr<'src> {
@@ -143,29 +189,29 @@ pub enum Expr<'src> {
         /// The function name, e.g. `foo` in `foo()`.
         func: Function<'src>,
         /// The function's arguments.
-        args: Vec<Expr<'src>>,
+        args: Vec<SpannedExpr<'src>>,
     },
     /// A context identifier component, e.g. `github` in `github.actor`.
     Identifier(Identifier<'src>),
     /// A context index component, e.g. `[0]` in `foo[0]`.
-    Index(Box<Expr<'src>>),
+    Index(Box<SpannedExpr<'src>>),
     /// A full context reference.
     Context(Context<'src>),
     /// A binary operation, either logical or arithmetic.
     BinOp {
         /// The LHS of the binop.
-        lhs: Box<Expr<'src>>,
+        lhs: Box<SpannedExpr<'src>>,
         /// The binary operator.
         op: BinOp,
         /// The RHS of the binop.
-        rhs: Box<Expr<'src>>,
+        rhs: Box<SpannedExpr<'src>>,
     },
     /// A unary operation. Negation (`!`) is currently the only `UnOp`.
     UnOp {
         /// The unary operator.
         op: UnOp,
         /// The expression to apply the operator to.
-        expr: Box<Expr<'src>>,
+        expr: Box<SpannedExpr<'src>>,
     },
 }
 
@@ -176,7 +222,7 @@ impl<'src> Expr<'src> {
     }
 
     /// Convenience API for making an [`Expr::Context`].
-    fn context(r: &'src str, components: impl Into<Vec<Expr<'src>>>) -> Self {
+    fn context(r: &'src str, components: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
         Self::Context(Context::new(r, components))
     }
 
@@ -218,7 +264,7 @@ impl<'src> Expr<'src> {
                     || func == "startsWith"
                     || func == "endsWith"
                 {
-                    args.iter().all(Expr::constant_reducible)
+                    args.iter().all(|e| e.constant_reducible())
                 } else {
                     // TODO: fromJSON(toJSON(...)) and vice versa.
                     false
@@ -307,7 +353,7 @@ impl<'src> Expr<'src> {
     }
 
     /// Parses the given string into an expression.
-    pub fn parse(expr: &str) -> Result<Expr> {
+    pub fn parse(expr: &str) -> Result<SpannedExpr> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?
             .next()
@@ -316,7 +362,7 @@ impl<'src> Expr<'src> {
             .next()
             .unwrap();
 
-        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<Expr>> {
+        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr>> {
             // We're parsing a pest grammar, which isn't left-recursive.
             // As a result, we have constructions like
             // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
@@ -330,26 +376,34 @@ impl<'src> Expr<'src> {
 
             match pair.as_rule() {
                 Rule::or_expr => {
+                    let span = pair.as_span();
                     let mut pairs = pair.into_inner();
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
-                        Ok(Expr::BinOp {
-                            lhs: expr,
-                            op: BinOp::Or,
-                            rhs: parse_pair(next)?,
-                        }
+                        Ok(SpannedExpr::new(
+                            span,
+                            Expr::BinOp {
+                                lhs: expr,
+                                op: BinOp::Or,
+                                rhs: parse_pair(next)?,
+                            },
+                        )
                         .into())
                     })
                 }
                 Rule::and_expr => {
+                    let span = pair.as_span();
                     let mut pairs = pair.into_inner();
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
-                        Ok(Expr::BinOp {
-                            lhs: expr,
-                            op: BinOp::And,
-                            rhs: parse_pair(next)?,
-                        }
+                        Ok(SpannedExpr::new(
+                            span,
+                            Expr::BinOp {
+                                lhs: expr,
+                                op: BinOp::And,
+                                rhs: parse_pair(next)?,
+                            },
+                        )
                         .into())
                     })
                 }
@@ -357,6 +411,7 @@ impl<'src> Expr<'src> {
                     // eq_expr matches both `==` and `!=` and captures
                     // them in the `eq_op` capture, so we fold with
                     // two-tuples of (eq_op, comp_expr).
+                    let span = pair.as_span();
                     let mut pairs = pair.into_inner();
                     let lhs = parse_pair(pairs.next().unwrap())?;
 
@@ -371,16 +426,20 @@ impl<'src> Expr<'src> {
                             _ => unreachable!(),
                         };
 
-                        Ok(Expr::BinOp {
-                            lhs: expr,
-                            op: eq_op,
-                            rhs: parse_pair(comp_expr)?,
-                        }
+                        Ok(SpannedExpr::new(
+                            span,
+                            Expr::BinOp {
+                                lhs: expr,
+                                op: eq_op,
+                                rhs: parse_pair(comp_expr)?,
+                            },
+                        )
                         .into())
                     })
                 }
                 Rule::comp_expr => {
                     // Same as eq_expr, but with comparison operators.
+                    let span = pair.as_span();
                     let mut pairs = pair.into_inner();
                     let lhs = parse_pair(pairs.next().unwrap())?;
 
@@ -397,23 +456,30 @@ impl<'src> Expr<'src> {
                             _ => unreachable!(),
                         };
 
-                        Ok(Expr::BinOp {
-                            lhs: expr,
-                            op: eq_op,
-                            rhs: parse_pair(unary_expr)?,
-                        }
+                        Ok(SpannedExpr::new(
+                            span,
+                            Expr::BinOp {
+                                lhs: expr,
+                                op: eq_op,
+                                rhs: parse_pair(unary_expr)?,
+                            },
+                        )
                         .into())
                     })
                 }
                 Rule::unary_expr => {
                     let mut pairs = pair.into_inner();
                     let pair = pairs.next().unwrap();
+                    let span = pair.as_span();
 
                     match pair.as_rule() {
-                        Rule::unary_op => Ok(Expr::UnOp {
-                            op: UnOp::Not,
-                            expr: parse_pair(pairs.next().unwrap())?,
-                        }
+                        Rule::unary_op => Ok(SpannedExpr::new(
+                            span,
+                            Expr::UnOp {
+                                op: UnOp::Not,
+                                expr: parse_pair(pairs.next().unwrap())?,
+                            },
+                        )
                         .into()),
                         Rule::primary_expr => parse_pair(pair),
                         _ => unreachable!(),
@@ -423,23 +489,35 @@ impl<'src> Expr<'src> {
                     // Punt back to the top level match to keep things simple.
                     parse_pair(pair.into_inner().next().unwrap())
                 }
-                Rule::number => Ok(Box::new(pair.as_str().parse::<f64>().unwrap().into())),
+                Rule::number => Ok(SpannedExpr::new(
+                    pair.as_span(),
+                    pair.as_str().parse::<f64>().unwrap().into(),
+                )
+                .into()),
                 Rule::string => {
                     // string -> string_inner
+                    let span = pair.as_span();
                     let string_inner = pair.into_inner().next().unwrap().as_str();
 
                     // Optimization: if our string literal doesn't have any
                     // escaped quotes in it, we can save ourselves a clone.
                     if !string_inner.contains('\'') {
-                        Ok(Box::new(string_inner.into()))
+                        Ok(SpannedExpr::new(span, string_inner.into()).into())
                     } else {
-                        Ok(Box::new(string_inner.replace("''", "'").into()))
+                        Ok(SpannedExpr::new(span, string_inner.replace("''", "'").into()).into())
                     }
                 }
-                Rule::boolean => Ok(Box::new(pair.as_str().parse::<bool>().unwrap().into())),
-                Rule::null => Ok(Expr::Literal(Literal::Null).into()),
-                Rule::star => Ok(Expr::Star.into()),
+                Rule::boolean => Ok(SpannedExpr::new(
+                    pair.as_span(),
+                    pair.as_str().parse::<bool>().unwrap().into(),
+                )
+                .into()),
+                Rule::null => {
+                    Ok(SpannedExpr::new(pair.as_span(), Expr::Literal(Literal::Null)).into())
+                }
+                Rule::star => Ok(SpannedExpr::new(pair.as_span(), Expr::Star).into()),
                 Rule::function_call => {
+                    let span = pair.as_span();
                     let mut pairs = pair.into_inner();
 
                     let identifier = pairs.next().unwrap();
@@ -447,31 +525,39 @@ impl<'src> Expr<'src> {
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
-                    Ok(Expr::Call {
-                        func: Function(identifier.as_str()),
-                        args,
-                    }
+                    Ok(SpannedExpr::new(
+                        span,
+                        Expr::Call {
+                            func: Function(identifier.as_str()),
+                            args,
+                        },
+                    )
                     .into())
                 }
-                Rule::identifier => Ok(Expr::ident(pair.as_str()).into()),
-                Rule::index => {
-                    Ok(Expr::Index(parse_pair(pair.into_inner().next().unwrap())?).into())
+                Rule::identifier => {
+                    Ok(SpannedExpr::new(pair.as_span(), Expr::ident(pair.as_str())).into())
                 }
+                Rule::index => Ok(SpannedExpr::new(
+                    pair.as_span(),
+                    Expr::Index(parse_pair(pair.into_inner().next().unwrap())?),
+                )
+                .into()),
                 Rule::context => {
+                    let span = pair.as_span();
                     let raw = pair.as_str();
                     let pairs = pair.into_inner();
 
-                    let mut inner: Vec<Expr> = pairs
+                    let mut inner: Vec<SpannedExpr> = pairs
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
                     // NOTE(ww): Annoying specialization: the `context` rule
                     // wholly encloses the `function_call` rule, so we clean up
                     // the AST slightly to turn `Context { Call }` into just `Call`.
-                    if inner.len() == 1 && matches!(inner[0], Expr::Call { .. }) {
+                    if inner.len() == 1 && matches!(inner[0].expr, Expr::Call { .. }) {
                         Ok(inner.remove(0).into())
                     } else {
-                        Ok(Expr::context(raw, inner).into())
+                        Ok(SpannedExpr::new(span, Expr::context(raw, inner)).into())
                     }
                 }
                 r => panic!("unrecognized rule: {r:?}"),
