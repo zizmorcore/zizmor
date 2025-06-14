@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   linux:
+    name: Build Linux wheels (manylinux)
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -52,6 +53,7 @@ jobs:
           path: dist
 
   musllinux:
+    name: Build Linux wheels (musllinux)
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -81,6 +83,7 @@ jobs:
           path: dist
 
   windows:
+    name: Build Windows wheels
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -105,6 +108,7 @@ jobs:
           path: dist
 
   macos:
+    name: Build macOS wheels
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -129,6 +133,7 @@ jobs:
           path: dist
 
   sdist:
+    name: Build source distribution
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

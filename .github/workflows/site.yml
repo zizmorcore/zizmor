@@ -1,4 +1,4 @@
-name: Deploy zizmor site 🌐
+name: Deploy zizmor documentation site 🌐
 
 on:
   push:
@@ -15,6 +15,7 @@ permissions: {}
 
 jobs:
   deploy:
+    name: Deploy zizmor documentation to GitHub Pages 🌐
     permissions:
       contents: read
       pages: write
