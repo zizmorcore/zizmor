@@ -643,6 +643,7 @@ permissions: {}
 
 jobs:
   zizmor:
+    name: Run zizmor 🌈
     runs-on: ubuntu-latest
     permissions:
       security-events: write
