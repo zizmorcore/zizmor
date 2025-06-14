@@ -34,6 +34,18 @@ fn test_github_output() -> Result<()> {
 }
 
 #[test]
+fn anonymous_definition() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("anonymous-definition.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
 fn artipacked() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()

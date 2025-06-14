@@ -1,7 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@33cd22cdd7823a5795768388aff977fe992b5aad\").run()?"
-snapshot_kind: text
 ---
  INFO collect_inputs: zizmor: collected 22 inputs from woodruffw/gha-hazmat
  INFO zizmor: skipping impostor-commit: offline audits only requested
@@ -1093,4 +1092,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-123 findings (28 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high
+172 findings (77 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high

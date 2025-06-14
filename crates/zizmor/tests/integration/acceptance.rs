@@ -40,6 +40,21 @@ fn catches_inlined_ignore() -> anyhow::Result<()> {
 }
 
 #[test]
+fn audit_anonymous_definition() -> anyhow::Result<()> {
+    let auditable = input_under_test("anonymous-definition.yml");
+
+    let cli_args = ["--persona=pedantic", &auditable];
+
+    let execution = zizmor().args(cli_args).output()?;
+    assert_eq!(execution.status.code(), Some(12));
+
+    let findings = serde_json::from_slice(&execution.stdout)?;
+    assert_value_match(&findings, "$[0].determinations.confidence", "High");
+
+    Ok(())
+}
+
+#[test]
 fn audit_artipacked() -> anyhow::Result<()> {
     let auditable = input_under_test("artipacked.yml");
     let cli_args = [&auditable];

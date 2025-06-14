@@ -1,5 +1,5 @@
 ---
-source: tests/integration/e2e.rs
+source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw-experiments/zizmor-bug-726@a038d1a35\").run()?"
 ---
  INFO collect_inputs: zizmor: collected 6 inputs from woodruffw-experiments/zizmor-bug-726
@@ -14,4 +14,4 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-onlin
  INFO audit: zizmor: 🌈 completed .github/workflows/hello.yml
  INFO audit: zizmor: 🌈 completed arbitrary/subdir/.github/workflows/hello.yml
  INFO audit: zizmor: 🌈 completed arbitrary/subdir/custom-action/action.yml
-No findings to report. Good job!
+No findings to report. Good job! (2 suppressed)

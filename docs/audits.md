@@ -14,6 +14,52 @@ Legend:
 |----------|------------------|---------------|----------------|--------------------|--------------|
 | The kind of audit ("Workflow" or "Action") | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit needs to be explicitly enabled via configuration or an API token | The audit supports custom configuration |
 
+## `anonymous-definition`
+
+| Type            | Examples         | Introduced in | Works offline | Enabled by default | Configurable |
+|-----------------|------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action | N/A              | v1.10.0       | ✅             | ❌                 | ❌            |
+
+Detects workflows or action definitions that lack a `name:` field.
+
+GitHub explicitly allows workflows to omit the `name:` field, and allows (but
+doesn't document) the same for action definitions. When `name:` is omitted, the
+workflow or action is rendered anonymously in the GitHub Actions UI, making it
+harder to understand which definition is running.
+
+!!! note
+
+    This is a `--pedantic` only audit, due to a lack of security impact.
+
+### Remediation
+
+Add a `name:` field to your workflow or action.
+
+=== "Before :warning:"
+
+    ```yaml title="anonymous-definition.yml" hl_lines="7"
+    on: push
+
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+        steps:
+          - run: echo "Hello!"
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="anonymous-definition.yml" hl_lines="7-9"
+    name: Echo Test
+    on: push
+
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+        steps:
+          - run: echo "Hello!"
+    ```
+
 ## `artipacked`
 
 | Type     | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |

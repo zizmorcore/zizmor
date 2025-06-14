@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [anonymous-definition] detects unnamed workflows and actions.
+  Definitions without a `name:` field appear anonymously in the GitHub Actions
+  UI, making them harder to distinguish (#937)
+
 ### Enhancements 🌱
 
 * The [artipacked] audit now produces findings on composite action definitions,
@@ -854,3 +860,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [unpinned-images]: ./audits.md#unpinned-images
 [insecure-commands]: ./audits.md#insecure-commands
 [use-trusted-publishing]: ./audits.md#use-trusted-publishing
+[anonymous-definition]: ./audits.md#anonymous-definition
