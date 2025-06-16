@@ -196,6 +196,7 @@ impl Workflow {
             annotation: "this workflow".to_string(),
             link: None,
             route: Route::new(),
+            subfeature: None,
             kind: Default::default(),
         }
     }

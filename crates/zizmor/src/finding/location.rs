@@ -107,6 +107,14 @@ macro_rules! route {
     };
 }
 
+/// Represents a "subfeature" of a symbolic location, such as a substring
+/// within a YAML string.
+#[derive(Serialize, Clone, Debug)]
+pub(crate) struct Subfeature<'doc> {
+    pub(crate) after: usize,
+    pub(crate) fragment: &'doc str,
+}
+
 /// Represents a symbolic location.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct SymbolicLocation<'doc> {
@@ -125,6 +133,9 @@ pub(crate) struct SymbolicLocation<'doc> {
     /// A symbolic route (of keys and indices) to the final location.
     pub(crate) route: Route<'doc>,
 
+    /// An optional subfeature for the symbolic location.
+    pub(crate) subfeature: Option<Subfeature<'doc>>,
+
     /// The kind of location.
     pub(crate) kind: LocationKind,
 }
@@ -136,8 +147,15 @@ impl<'doc> SymbolicLocation<'doc> {
             annotation: self.annotation.clone(),
             link: None,
             route: self.route.with_keys(keys),
+            subfeature: None,
             kind: self.kind,
         }
+    }
+
+    /// Adds a subfeature to the current `SymbolicLocation`.
+    pub(crate) fn subfeature(mut self, subfeature: Subfeature<'doc>) -> SymbolicLocation<'doc> {
+        self.subfeature = Some(subfeature);
+        self
     }
 
     /// Adds a human-readable annotation to the current `SymbolicLocation`.

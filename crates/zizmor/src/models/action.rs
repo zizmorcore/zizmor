@@ -97,6 +97,7 @@ impl Action {
             annotation: "this action".to_string(),
             link: None,
             route: Route::new(),
+            subfeature: None,
             kind: Default::default(),
         }
     }
