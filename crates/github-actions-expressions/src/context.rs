@@ -3,7 +3,7 @@
 
 use crate::Literal;
 
-use super::Expr;
+use super::{Expr, SpannedExpr};
 
 /// Represents a context in a GitHub Actions expression.
 ///
@@ -11,15 +11,15 @@ use super::Expr;
 /// although they can also be a "call" context like `fromJSON(...).foo.bar`,
 /// i.e. where the head of the context is a function call rather than an
 /// identifier.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Context<'src> {
     raw: &'src str,
     /// The individual parts of the context.
-    pub parts: Vec<Expr<'src>>,
+    pub parts: Vec<SpannedExpr<'src>>,
 }
 
 impl<'src> Context<'src> {
-    pub(crate) fn new(raw: &'src str, parts: impl Into<Vec<Expr<'src>>>) -> Self {
+    pub(crate) fn new(raw: &'src str, parts: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
         Self {
             raw,
             parts: parts.into(),
@@ -52,13 +52,13 @@ impl<'src> Context<'src> {
     /// Returns `None` if the context has more than one tail part,
     /// or if the context's head part is not an identifier.
     pub fn single_tail(&self) -> Option<&str> {
-        if self.parts.len() != 2 || !matches!(self.parts[0], Expr::Identifier(_)) {
+        if self.parts.len() != 2 || !matches!(*self.parts[0], Expr::Identifier(_)) {
             return None;
         }
 
-        match &self.parts[1] {
+        match &self.parts[1].inner {
             Expr::Identifier(ident) => Some(ident.as_str()),
-            Expr::Index(idx) => match idx.as_ref() {
+            Expr::Index(idx) => match &idx.inner {
                 Expr::Literal(Literal::String(idx)) => Some(idx),
                 _ => None,
             },
@@ -79,7 +79,7 @@ impl<'src> Context<'src> {
             match part {
                 Expr::Identifier(ident) => pattern.push_str(ident.0),
                 Expr::Star => pattern.push('*'),
-                Expr::Index(idx) => match idx.as_ref() {
+                Expr::Index(idx) => match &idx.inner {
                     // foo['bar'] -> foo.bar
                     Expr::Literal(Literal::String(idx)) => pattern.push_str(idx),
                     // any kind of numeric or computed index, e.g.:
@@ -100,7 +100,7 @@ impl<'src> Context<'src> {
         let mut parts = self.parts.iter().peekable();
 
         let head = parts.next()?;
-        if matches!(head, Expr::Call { .. }) {
+        if matches!(**head, Expr::Call { .. }) {
             return None;
         }
 
@@ -112,12 +112,6 @@ impl<'src> Context<'src> {
 
         pattern.make_ascii_lowercase();
         Some(pattern)
-    }
-}
-
-impl PartialEq for Context<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.raw.eq_ignore_ascii_case(other.raw)
     }
 }
 
@@ -231,7 +225,7 @@ impl<'src> ContextPattern<'src> {
         } else {
             match part {
                 Expr::Identifier(part) => pattern.eq_ignore_ascii_case(part.0),
-                Expr::Index(part) => match part.as_ref() {
+                Expr::Index(part) => match &part.inner {
                     Expr::Literal(Literal::String(part)) => pattern.eq_ignore_ascii_case(part),
                     _ => false,
                 },
@@ -294,7 +288,7 @@ mod tests {
         fn try_from(val: &'a str) -> anyhow::Result<Self> {
             let expr = Expr::parse(val)?;
 
-            match expr {
+            match expr.inner {
                 Expr::Context(ctx) => Ok(ctx),
                 _ => Err(anyhow::anyhow!("expected context, found {:?}", expr)),
             }
