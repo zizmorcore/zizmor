@@ -1,4 +1,6 @@
-use github_actions_expressions::Expr;
+use std::ops::Deref;
+
+use github_actions_expressions::{Expr, SpannedExpr};
 
 use crate::{
     finding::{
@@ -62,10 +64,10 @@ impl Audit for OverprovisionedSecrets {
 }
 
 impl OverprovisionedSecrets {
-    fn secrets_expansions(expr: &Expr) -> Vec<()> {
+    fn secrets_expansions(expr: &SpannedExpr) -> Vec<()> {
         let mut results = vec![];
 
-        match expr {
+        match &expr.expr {
             Expr::Call { func, args } => {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
@@ -73,7 +75,7 @@ impl OverprovisionedSecrets {
                 if func == "toJSON"
                     && args
                         .iter()
-                        .any(|arg| matches!(arg, Expr::Context(ctx) if ctx == "secrets"))
+                        .any(|arg| matches!(arg.deref(), Expr::Context(ctx) if ctx == "secrets"))
                 {
                     results.push(());
                 } else {
@@ -82,14 +84,19 @@ impl OverprovisionedSecrets {
             }
             Expr::Index(expr) => results.extend(Self::secrets_expansions(expr)),
             Expr::Context(ctx) => {
-                match (ctx.parts.first(), ctx.parts.get(1)) {
+                match ctx.parts.as_slice() {
                     // Look for `secrets[...]` accesses where the index component
                     // is not a literal.
-                    (Some(Expr::Identifier(ident)), Some(Expr::Index(idx)))
-                        if ident == "secrets" && !matches!(idx.as_ref(), Expr::Literal(_)) =>
-                    {
-                        results.push(())
-                    }
+                    [
+                        SpannedExpr {
+                            span: _,
+                            expr: Expr::Identifier(ident),
+                        },
+                        SpannedExpr {
+                            span: _,
+                            expr: Expr::Index(idx),
+                        },
+                    ] if ident == "secrets" && !idx.is_literal() => results.push(()),
                     _ => results.extend(ctx.parts.iter().flat_map(Self::secrets_expansions)),
                 }
             }

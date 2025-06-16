@@ -1,4 +1,4 @@
-use std::sync::LazyLock;
+use std::{ops::Deref, sync::LazyLock};
 
 use github_actions_expressions::{
     BinOp, Expr, UnOp,
@@ -130,7 +130,7 @@ impl BotConditions {
                     (bc_lhs || bc_rhs, true)
                 }
                 // == is trivially dominating.
-                BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
+                BinOp::Eq => match (lhs.as_ref().deref(), rhs.as_ref().deref()) {
                     (Expr::Context(ctx), Expr::Literal(lit))
                     | (Expr::Literal(lit), Expr::Context(ctx)) => {
                         if (SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))

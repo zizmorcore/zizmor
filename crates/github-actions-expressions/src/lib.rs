@@ -3,10 +3,7 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-use std::{
-    borrow::Cow,
-    ops::{Deref, Range},
-};
+use std::{borrow::Cow, ops::Deref};
 
 use crate::context::Context;
 
@@ -152,16 +149,33 @@ impl From<pest::Span<'_>> for Span {
     }
 }
 
+impl From<std::ops::Range<usize>> for Span {
+    fn from(range: std::ops::Range<usize>) -> Self {
+        Self {
+            start: range.start,
+            end: range.end,
+        }
+    }
+}
+
 /// An expression along with its source span.
+///
+/// Important: Because of how our parser works internally, an expression's
+/// span is its *rule*'s span, which can be larger than the expression itself.
+/// For example, `foo || bar || baz` is covered by a single rule, so each
+/// decomposed `Expr::BinOp` within it will have the same span despite
+/// logically having different sub-spans of the parent rule's span.
 #[derive(Debug, PartialEq)]
 pub struct SpannedExpr<'src> {
-    pub(crate) span: Span,
-    pub(crate) expr: Expr<'src>,
+    /// The expression's source span.
+    pub span: Span,
+    /// The expression itself.
+    pub expr: Expr<'src>,
 }
 
 impl<'a> SpannedExpr<'a> {
     /// Creates a new `SpannedExpr` from an expression and its span.
-    pub fn new(span: impl Into<Span>, expr: Expr<'a>) -> Self {
+    pub(crate) fn new(span: impl Into<Span>, expr: Expr<'a>) -> Self {
         Self {
             expr,
             span: span.into(),
@@ -227,7 +241,7 @@ impl<'src> Expr<'src> {
     }
 
     /// Returns whether the expression is a literal.
-    fn is_literal(&self) -> bool {
+    pub fn is_literal(&self) -> bool {
         matches!(self, Expr::Literal(_))
     }
 
@@ -468,9 +482,9 @@ impl<'src> Expr<'src> {
                     })
                 }
                 Rule::unary_expr => {
+                    let span = pair.as_span();
                     let mut pairs = pair.into_inner();
                     let pair = pairs.next().unwrap();
-                    let span = pair.as_span();
 
                     match pair.as_rule() {
                         Rule::unary_op => Ok(SpannedExpr::new(
@@ -600,7 +614,7 @@ mod tests {
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use crate::Literal;
+    use crate::{Literal, SpannedExpr};
 
     use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
@@ -615,7 +629,7 @@ mod tests {
         ];
 
         for (expr, borrows) in cases {
-            let Expr::Literal(Literal::String(s)) = Expr::parse(expr).unwrap() else {
+            let Expr::Literal(Literal::String(s)) = &*Expr::parse(expr).unwrap() else {
                 panic!("expected a literal string expression for {expr}");
             };
 
@@ -642,7 +656,7 @@ mod tests {
         ];
 
         for (expr, expected) in cases {
-            let Expr::Literal(expr) = Expr::parse(expr).unwrap() else {
+            let Expr::Literal(expr) = &*Expr::parse(expr).unwrap() else {
                 panic!("expected a literal expression for {expr}");
             };
 
@@ -787,159 +801,262 @@ mod tests {
         let cases = &[
             (
                 "!true || false || true",
-                Expr::BinOp {
-                    lhs: Expr::BinOp {
-                        lhs: Expr::UnOp {
-                            op: UnOp::Not,
-                            expr: Box::new(true.into()),
-                        }
+                SpannedExpr::new(
+                    0..22,
+                    Expr::BinOp {
+                        lhs: SpannedExpr::new(
+                            0..22,
+                            Expr::BinOp {
+                                lhs: SpannedExpr::new(
+                                    0..5,
+                                    Expr::UnOp {
+                                        op: UnOp::Not,
+                                        expr: SpannedExpr::new(1..5, true.into()).into(),
+                                    },
+                                )
+                                .into(),
+                                op: BinOp::Or,
+                                rhs: SpannedExpr::new(9..14, false.into()).into(),
+                            },
+                        )
                         .into(),
                         op: BinOp::Or,
-                        rhs: Box::new(false.into()),
-                    }
-                    .into(),
-                    op: BinOp::Or,
-                    rhs: Box::new(true.into()),
-                },
+                        rhs: SpannedExpr::new(18..22, true.into()).into(),
+                    },
+                ),
             ),
-            ("'foo '' bar'", "foo ' bar".into()),
-            ("('foo '' bar')", "foo ' bar".into()),
-            ("((('foo '' bar')))", "foo ' bar".into()),
+            (
+                "'foo '' bar'",
+                SpannedExpr::new(0..12, Expr::Literal(Literal::String("foo ' bar".into()))),
+            ),
+            (
+                "('foo '' bar')",
+                SpannedExpr::new(1..13, Expr::Literal(Literal::String("foo ' bar".into()))),
+            ),
+            (
+                "((('foo '' bar')))",
+                SpannedExpr::new(3..15, Expr::Literal(Literal::String("foo ' bar".into()))),
+            ),
             (
                 "foo(1, 2, 3)",
-                Expr::Call {
-                    func: Function("foo"),
-                    args: vec![1.0.into(), 2.0.into(), 3.0.into()],
-                },
+                SpannedExpr::new(
+                    0..12,
+                    Expr::Call {
+                        func: Function("foo"),
+                        args: vec![
+                            SpannedExpr::new(4..5, 1.0.into()),
+                            SpannedExpr::new(7..8, 2.0.into()),
+                            SpannedExpr::new(10..11, 3.0.into()),
+                        ],
+                    },
+                ),
             ),
             (
                 "foo.bar.baz",
-                Expr::context(
-                    "foo.bar.baz",
-                    [Expr::ident("foo"), Expr::ident("bar"), Expr::ident("baz")],
+                SpannedExpr::new(
+                    0..11,
+                    Expr::context(
+                        "foo.bar.baz",
+                        vec![
+                            SpannedExpr::new(0..3, Expr::ident("foo")),
+                            SpannedExpr::new(4..7, Expr::ident("bar")),
+                            SpannedExpr::new(8..11, Expr::ident("baz")),
+                        ],
+                    ),
                 ),
             ),
             (
                 "foo.bar.baz[1][2]",
-                Expr::context(
-                    "foo.bar.baz[1][2]",
-                    [
-                        Expr::ident("foo"),
-                        Expr::ident("bar"),
-                        Expr::ident("baz"),
-                        Expr::Index(Box::new(1.0.into())),
-                        Expr::Index(Box::new(2.0.into())),
-                    ],
+                SpannedExpr::new(
+                    0..17,
+                    Expr::context(
+                        "foo.bar.baz[1][2]",
+                        vec![
+                            SpannedExpr::new(0..3, Expr::ident("foo")),
+                            SpannedExpr::new(4..7, Expr::ident("bar")),
+                            SpannedExpr::new(8..11, Expr::ident("baz")),
+                            SpannedExpr::new(
+                                11..14,
+                                Expr::Index(Box::new(SpannedExpr::new(12..13, 1.0.into()))),
+                            ),
+                            SpannedExpr::new(
+                                14..17,
+                                Expr::Index(Box::new(SpannedExpr::new(15..16, 2.0.into()))),
+                            ),
+                        ],
+                    ),
                 ),
             ),
             (
                 "foo.bar.baz[*]",
-                Expr::context(
-                    "foo.bar.baz[*]",
-                    [
-                        Expr::ident("foo"),
-                        Expr::ident("bar"),
-                        Expr::ident("baz"),
-                        Expr::Index(Expr::Star.into()),
-                    ],
+                SpannedExpr::new(
+                    0..14,
+                    Expr::context(
+                        "foo.bar.baz[*]",
+                        [
+                            SpannedExpr::new(0..3, Expr::ident("foo")),
+                            SpannedExpr::new(4..7, Expr::ident("bar")),
+                            SpannedExpr::new(8..11, Expr::ident("baz")),
+                            SpannedExpr::new(
+                                11..14,
+                                Expr::Index(Box::new(SpannedExpr::new(12..13, Expr::Star))),
+                            ),
+                        ],
+                    ),
                 ),
             ),
             (
                 "vegetables.*.ediblePortions",
-                Expr::context(
-                    "vegetables.*.ediblePortions",
-                    vec![
-                        Expr::ident("vegetables"),
-                        Expr::Star,
-                        Expr::ident("ediblePortions"),
-                    ],
+                SpannedExpr::new(
+                    0..27,
+                    Expr::context(
+                        "vegetables.*.ediblePortions",
+                        vec![
+                            SpannedExpr::new(0..10, Expr::ident("vegetables")),
+                            SpannedExpr::new(11..12, Expr::Star),
+                            SpannedExpr::new(13..27, Expr::ident("ediblePortions")),
+                        ],
+                    ),
                 ),
             ),
             (
                 // Sanity check for our associativity: the top level Expr here
                 // should be `BinOp::Or`.
                 "github.ref == 'refs/heads/main' && 'value_for_main_branch' || 'value_for_other_branches'",
-                Expr::BinOp {
-                    lhs: Expr::BinOp {
-                        lhs: Expr::BinOp {
-                            lhs: Expr::context(
-                                "github.ref",
-                                [Expr::ident("github"), Expr::ident("ref")],
-                            )
-                            .into(),
-                            op: BinOp::Eq,
-                            rhs: Box::new("refs/heads/main".into()),
-                        }
-                        .into(),
-                        op: BinOp::And,
-                        rhs: Box::new("value_for_main_branch".into()),
-                    }
-                    .into(),
-                    op: BinOp::Or,
-                    rhs: Box::new("value_for_other_branches".into()),
-                },
+                SpannedExpr::new(
+                    0..88,
+                    Expr::BinOp {
+                        lhs: Box::new(SpannedExpr::new(
+                            0..59,
+                            Expr::BinOp {
+                                lhs: Box::new(SpannedExpr::new(
+                                    0..32,
+                                    Expr::BinOp {
+                                        lhs: Box::new(SpannedExpr::new(
+                                            0..10,
+                                            Expr::context(
+                                                "github.ref",
+                                                vec![
+                                                    SpannedExpr::new(0..6, Expr::ident("github")),
+                                                    SpannedExpr::new(7..10, Expr::ident("ref")),
+                                                ],
+                                            ),
+                                        )),
+                                        op: BinOp::Eq,
+                                        rhs: Box::new(SpannedExpr::new(
+                                            14..31,
+                                            Expr::Literal(Literal::String(
+                                                "refs/heads/main".into(),
+                                            )),
+                                        )),
+                                    },
+                                )),
+                                op: BinOp::And,
+                                rhs: Box::new(SpannedExpr::new(
+                                    35..58,
+                                    Expr::Literal(Literal::String("value_for_main_branch".into())),
+                                )),
+                            },
+                        )),
+                        op: BinOp::Or,
+                        rhs: Box::new(SpannedExpr::new(
+                            62..88,
+                            Expr::Literal(Literal::String("value_for_other_branches".into())),
+                        )),
+                    },
+                ),
             ),
             (
                 "(true || false) == true",
-                Expr::BinOp {
-                    lhs: Expr::BinOp {
-                        lhs: Box::new(true.into()),
-                        op: BinOp::Or,
-                        rhs: Box::new(false.into()),
-                    }
-                    .into(),
-                    op: BinOp::Eq,
-                    rhs: Box::new(true.into()),
-                },
+                SpannedExpr::new(
+                    0..23,
+                    Expr::BinOp {
+                        lhs: Box::new(SpannedExpr::new(
+                            1..14,
+                            Expr::BinOp {
+                                lhs: Box::new(SpannedExpr::new(1..5, true.into())),
+                                op: BinOp::Or,
+                                rhs: Box::new(SpannedExpr::new(9..14, false.into())),
+                            },
+                        )),
+                        op: BinOp::Eq,
+                        rhs: Box::new(SpannedExpr::new(19..23, true.into())),
+                    },
+                ),
             ),
             (
                 "!(!true || false)",
-                Expr::UnOp {
-                    op: UnOp::Not,
-                    expr: Expr::BinOp {
-                        lhs: Expr::UnOp {
-                            op: UnOp::Not,
-                            expr: Box::new(true.into()),
-                        }
-                        .into(),
-                        op: BinOp::Or,
-                        rhs: Box::new(false.into()),
-                    }
-                    .into(),
-                },
+                SpannedExpr::new(
+                    0..17,
+                    Expr::UnOp {
+                        op: UnOp::Not,
+                        expr: Box::new(SpannedExpr::new(
+                            2..16,
+                            Expr::BinOp {
+                                lhs: Box::new(SpannedExpr::new(
+                                    2..7,
+                                    Expr::UnOp {
+                                        op: UnOp::Not,
+                                        expr: Box::new(SpannedExpr::new(3..7, true.into())),
+                                    },
+                                )),
+                                op: BinOp::Or,
+                                rhs: Box::new(SpannedExpr::new(11..16, false.into())),
+                            },
+                        )),
+                    },
+                ),
             ),
             (
                 "foobar[format('{0}', 'event')]",
-                Expr::context(
-                    "foobar[format('{0}', 'event')]",
-                    [
-                        Expr::ident("foobar"),
-                        Expr::Index(
-                            Expr::Call {
-                                func: Function("format"),
-                                args: vec!["{0}".into(), "event".into()],
-                            }
-                            .into(),
-                        ),
-                    ],
+                SpannedExpr::new(
+                    0..30,
+                    Expr::context(
+                        "foobar[format('{0}', 'event')]",
+                        [
+                            SpannedExpr::new(0..6, Expr::ident("foobar")),
+                            SpannedExpr::new(
+                                6..30,
+                                Expr::Index(Box::new(SpannedExpr::new(
+                                    7..29,
+                                    Expr::Call {
+                                        func: Function("format"),
+                                        args: vec![
+                                            SpannedExpr::new(14..19, Expr::from("{0}")),
+                                            SpannedExpr::new(21..28, Expr::from("event")),
+                                        ],
+                                    },
+                                ))),
+                            ),
+                        ],
+                    ),
                 ),
             ),
             (
                 "github.actor_id == '49699333'",
-                Expr::BinOp {
-                    lhs: Expr::context(
-                        "github.actor_id",
-                        [Expr::ident("github"), Expr::ident("actor_id")],
-                    )
-                    .into(),
-                    op: BinOp::Eq,
-                    rhs: Box::new("49699333".into()),
-                },
+                SpannedExpr::new(
+                    0..29,
+                    Expr::BinOp {
+                        lhs: SpannedExpr::new(
+                            0..15,
+                            Expr::context(
+                                "github.actor_id",
+                                vec![
+                                    SpannedExpr::new(0..6, Expr::ident("github")),
+                                    SpannedExpr::new(7..15, Expr::ident("actor_id")),
+                                ],
+                            ),
+                        )
+                        .into(),
+                        op: BinOp::Eq,
+                        rhs: Box::new(SpannedExpr::new(19..29, Expr::from("49699333"))),
+                    },
+                ),
             ),
         ];
 
         for (case, expr) in cases {
-            assert_eq!(Expr::parse(case).unwrap(), *expr);
+            assert_eq!(*expr, Expr::parse(case).unwrap());
         }
     }
 

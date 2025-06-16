@@ -724,7 +724,7 @@ jobs:
             ("env.UNKNOWN", false),
             ("env['UNKNOWN']", false),
         ] {
-            let Expr::Context(ctx) = Expr::parse(env_ctx).unwrap() else {
+            let Expr::Context(ctx) = &*Expr::parse(env_ctx).unwrap() else {
                 panic!("expected a context expression for {env_ctx}");
             };
 

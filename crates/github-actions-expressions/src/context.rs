@@ -11,7 +11,7 @@ use super::{Expr, SpannedExpr};
 /// although they can also be a "call" context like `fromJSON(...).foo.bar`,
 /// i.e. where the head of the context is a function call rather than an
 /// identifier.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Context<'src> {
     raw: &'src str,
     /// The individual parts of the context.
@@ -112,12 +112,6 @@ impl<'src> Context<'src> {
 
         pattern.make_ascii_lowercase();
         Some(pattern)
-    }
-}
-
-impl PartialEq for Context<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.raw.eq_ignore_ascii_case(other.raw)
     }
 }
 

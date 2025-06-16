@@ -15,7 +15,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{collections::HashMap, env, sync::LazyLock};
+use std::{collections::HashMap, env, ops::Deref, sync::LazyLock};
 
 use fst::Map;
 use github_actions_expressions::{Expr, Literal, context::Context};
@@ -163,7 +163,7 @@ impl TemplateInjection {
         // variable, e.g. `secrets.GITHUB_JOB` should not become `GITHUB_JOB`.
 
         for part in ctx_parts {
-            match part {
+            match part.deref() {
                 // We don't support turning call-led contexts into variable names.
                 Expr::Call { .. } => return None,
                 Expr::Identifier(ident) => {
@@ -175,7 +175,7 @@ impl TemplateInjection {
                 Expr::Index(idx) => {
                     // We support string, numeric, and star indices;
                     // everything else is presumed computed.
-                    match idx.as_ref() {
+                    match idx.as_ref().deref() {
                         // FIXME: Annoying soundness hole here: index-style
                         // literal keys can be anything, not just valid identifiers.
                         // The right thing to do here is to parse these literals
@@ -1014,7 +1014,7 @@ jobs:
             ),
         ] {
             let expr = Expr::parse(ctx).unwrap();
-            let Expr::Context(ctx) = expr else {
+            let Expr::Context(ctx) = &*expr else {
                 panic!("Expected context expression, got: {expr:?}");
             };
 
