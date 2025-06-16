@@ -728,7 +728,7 @@ jobs:
                 panic!("expected a context expression for {env_ctx}");
             };
 
-            assert_eq!(env_is_static(&ctx, &[]), *is_static, "for {env_ctx}");
+            assert_eq!(env_is_static(ctx, &[]), *is_static, "for {env_ctx}");
         }
     }
 }

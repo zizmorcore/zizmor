@@ -67,7 +67,7 @@ impl OverprovisionedSecrets {
     fn secrets_expansions(expr: &SpannedExpr) -> Vec<()> {
         let mut results = vec![];
 
-        match &expr.expr {
+        match &expr.inner {
             Expr::Call { func, args } => {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
@@ -90,11 +90,11 @@ impl OverprovisionedSecrets {
                     [
                         SpannedExpr {
                             span: _,
-                            expr: Expr::Identifier(ident),
+                            inner: Expr::Identifier(ident),
                         },
                         SpannedExpr {
                             span: _,
-                            expr: Expr::Index(idx),
+                            inner: Expr::Index(idx),
                         },
                     ] if ident == "secrets" && !idx.is_literal() => results.push(()),
                     _ => results.extend(ctx.parts.iter().flat_map(Self::secrets_expansions)),

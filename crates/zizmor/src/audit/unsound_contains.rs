@@ -86,11 +86,11 @@ impl UnsoundContains {
                 [
                     SpannedExpr {
                         span: _,
-                        expr: Expr::Literal(Literal::String(s)),
+                        inner: Expr::Literal(Literal::String(s)),
                     },
                     SpannedExpr {
                         span: _,
-                        expr: Expr::Context(c),
+                        inner: Expr::Context(c),
                     },
                 ] => Box::new(std::iter::once((s.as_ref(), c))),
                 args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),

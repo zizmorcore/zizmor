@@ -170,14 +170,14 @@ pub struct SpannedExpr<'src> {
     /// The expression's source span.
     pub span: Span,
     /// The expression itself.
-    pub expr: Expr<'src>,
+    pub inner: Expr<'src>,
 }
 
 impl<'a> SpannedExpr<'a> {
     /// Creates a new `SpannedExpr` from an expression and its span.
-    pub(crate) fn new(span: impl Into<Span>, expr: Expr<'a>) -> Self {
+    pub(crate) fn new(span: impl Into<Span>, inner: Expr<'a>) -> Self {
         Self {
-            expr,
+            inner,
             span: span.into(),
         }
     }
@@ -187,7 +187,7 @@ impl<'a> Deref for SpannedExpr<'a> {
     type Target = Expr<'a>;
 
     fn deref(&self) -> &Self::Target {
-        &self.expr
+        &self.inner
     }
 }
 
@@ -568,7 +568,7 @@ impl<'src> Expr<'src> {
                     // NOTE(ww): Annoying specialization: the `context` rule
                     // wholly encloses the `function_call` rule, so we clean up
                     // the AST slightly to turn `Context { Call }` into just `Call`.
-                    if inner.len() == 1 && matches!(inner[0].expr, Expr::Call { .. }) {
+                    if inner.len() == 1 && matches!(inner[0].inner, Expr::Call { .. }) {
                         Ok(inner.remove(0).into())
                     } else {
                         Ok(SpannedExpr::new(span, Expr::context(raw, inner)).into())

@@ -1019,7 +1019,7 @@ jobs:
             };
 
             assert_eq!(
-                TemplateInjection::context_to_env_var(&ctx).as_deref(),
+                TemplateInjection::context_to_env_var(ctx).as_deref(),
                 expected
             );
         }

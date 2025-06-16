@@ -56,9 +56,9 @@ impl<'src> Context<'src> {
             return None;
         }
 
-        match &self.parts[1].expr {
+        match &self.parts[1].inner {
             Expr::Identifier(ident) => Some(ident.as_str()),
-            Expr::Index(idx) => match &idx.expr {
+            Expr::Index(idx) => match &idx.inner {
                 Expr::Literal(Literal::String(idx)) => Some(idx),
                 _ => None,
             },
@@ -79,7 +79,7 @@ impl<'src> Context<'src> {
             match part {
                 Expr::Identifier(ident) => pattern.push_str(ident.0),
                 Expr::Star => pattern.push('*'),
-                Expr::Index(idx) => match &idx.expr {
+                Expr::Index(idx) => match &idx.inner {
                     // foo['bar'] -> foo.bar
                     Expr::Literal(Literal::String(idx)) => pattern.push_str(idx),
                     // any kind of numeric or computed index, e.g.:
@@ -225,7 +225,7 @@ impl<'src> ContextPattern<'src> {
         } else {
             match part {
                 Expr::Identifier(part) => pattern.eq_ignore_ascii_case(part.0),
-                Expr::Index(part) => match &part.expr {
+                Expr::Index(part) => match &part.inner {
                     Expr::Literal(Literal::String(part)) => pattern.eq_ignore_ascii_case(part),
                     _ => false,
                 },
@@ -288,7 +288,7 @@ mod tests {
         fn try_from(val: &'a str) -> anyhow::Result<Self> {
             let expr = Expr::parse(val)?;
 
-            match expr.expr {
+            match expr.inner {
                 Expr::Context(ctx) => Ok(ctx),
                 _ => Err(anyhow::anyhow!("expected context, found {:?}", expr)),
             }
