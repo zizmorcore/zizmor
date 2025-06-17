@@ -437,7 +437,7 @@ impl Document {
     /// not encapsulated by the feature itself.
     ///
     /// Panics if the feature's span is invalid.
-    pub fn extract_with_leading_whitespace(&self, feature: &Feature) -> &str {
+    pub fn extract_with_leading_whitespace<'a>(&'a self, feature: &Feature) -> &'a str {
         let mut start_idx = feature.location.byte_span.0;
         let pre_slice = &self.source[0..start_idx];
         if let Some(last_newline) = pre_slice.rfind('\n') {

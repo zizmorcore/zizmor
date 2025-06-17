@@ -195,30 +195,43 @@ impl<'doc> SymbolicLocation<'doc> {
         self,
         document: &'doc yamlpath::Document,
     ) -> anyhow::Result<Location<'doc>> {
-        // If we don't have a path into the workflow, all
-        // we have is the workflow itself.
-        let feature = if self.route.components.is_empty() {
-            document.root()
-        } else {
-            let mut builder = yamlpath::QueryBuilder::new();
+        let (extracted, feature) = match &self.subfeature {
+            Some(subfeature) => {
+                // If we have a subfeature, we have to extract its exact
+                // parent feature.
+                let feature = match self.route.to_query() {
+                    Some(query) => document.query_exact(&query)?.ok_or_else(|| {
+                        // This should never fail in practice, unless our
+                        // route is malformed or ends in a key-only feature
+                        // (e.g. `foo:`). The latter shouldn't really happen,
+                        // since there's no meaningful subfeature in that case.
+                        anyhow::anyhow!(
+                            "failed to extract exact feature for symbolic location: {}",
+                            self.annotation
+                        )
+                    })?,
+                    None => document.root(),
+                };
 
-            for component in &self.route.components {
-                builder = match component {
-                    RouteComponent::Key(key) => builder.key(key),
-                    RouteComponent::Index(idx) => builder.index(*idx),
-                }
+                let extracted = document.extract(&feature);
+
+                (extracted, feature)
             }
+            None => {
+                let feature = match self.route.to_query() {
+                    Some(query) => document.query_pretty(&query)?,
+                    None => document.root(),
+                };
 
-            let query = builder.build();
-
-            document.query_pretty(&query)?
+                (document.extract_with_leading_whitespace(&feature), feature)
+            }
         };
 
         Ok(Location {
             symbolic: self,
             concrete: Feature {
                 location: ConcreteLocation::from(&feature.location),
-                feature: document.extract_with_leading_whitespace(&feature),
+                feature: extracted,
                 comments: document
                     .feature_comments(&feature)
                     .into_iter()
