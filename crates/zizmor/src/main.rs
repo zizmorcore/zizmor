@@ -7,7 +7,7 @@ use std::{
 };
 
 use annotate_snippets::{Level, Renderer};
-use anstream::{eprintln, stream::IsTerminal};
+use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
 use audit::{Audit, AuditLoadError};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -23,6 +23,7 @@ use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
 use registry::{AuditRegistry, FindingRegistry, InputKey, InputKind, InputRegistry};
 use state::AuditState;
+use terminal_link::Link;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
@@ -38,6 +39,10 @@ mod registry;
 mod state;
 mod utils;
 mod yaml_patch;
+
+// TODO: Dedupe this with the top-level `sponsors.json` used by the
+// README + docs site.
+const THANKS: &[(&str, &str)] = &[("Grafana Labs", "https://grafana.com")];
 
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
@@ -132,6 +137,10 @@ struct App {
     /// Generate tab completion scripts for the specified shell.
     #[arg(long, value_enum, value_name = "SHELL", exclusive = true)]
     completions: Option<Shell>,
+
+    /// Emit thank-you messages for zizmor's sponsors.
+    #[arg(long, exclusive = true)]
+    thanks: bool,
 
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
@@ -490,6 +499,15 @@ fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
     let mut app = App::parse();
+
+    if app.thanks {
+        println!("zizmor's development is sustained by our generous sponsors:");
+        for (name, url) in THANKS {
+            let link = Link::new(name, url);
+            println!("🌈 {link}")
+        }
+        return Ok(ExitCode::SUCCESS);
+    }
 
     if let Some(shell) = app.completions {
         let mut cmd = App::command();

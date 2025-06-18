@@ -67,7 +67,7 @@ Astral
 <a href="https://grafana.com/">
 <img src="https://avatars.githubusercontent.com/u/7195757?s=100&v=4" width="100px">
 <br>
-Grafana
+Grafana Labs
 </a>
 </td>
 </tr>
