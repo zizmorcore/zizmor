@@ -46,6 +46,8 @@ Options:
           Fail instead of warning on syntax and schema errors in collected inputs
       --completions <SHELL>
           Generate tab completion scripts for the specified shell [possible values: bash, elvish, fish, nushell, powershell, zsh]
+      --thanks
+          Emit thank-you messages for zizmor's sponsors
   -h, --help
           Print help (see more with '--help')
   -V, --version

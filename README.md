@@ -63,6 +63,13 @@ See [our contributing guide!](./CONTRIBUTING.md)
 Astral
 </a>
 </td>
+<td align="center" valign="top" width="15%">
+<a href="https://grafana.com/">
+<img src="https://avatars.githubusercontent.com/u/7195757?s=100&v=4" width="100px">
+<br>
+Grafana Labs
+</a>
+</td>
 </tr>
 </tbody>
 </table>
