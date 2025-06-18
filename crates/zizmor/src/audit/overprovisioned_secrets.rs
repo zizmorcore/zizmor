@@ -89,12 +89,12 @@ impl OverprovisionedSecrets {
                     // is not a literal.
                     [
                         SpannedExpr {
-                            span: _,
                             inner: Expr::Identifier(ident),
+                            ..
                         },
                         SpannedExpr {
-                            span: _,
                             inner: Expr::Index(idx),
+                            ..
                         },
                     ] if ident == "secrets" && !idx.is_literal() => results.push(()),
                     _ => results.extend(ctx.parts.iter().flat_map(Self::secrets_expansions)),

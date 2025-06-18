@@ -85,12 +85,12 @@ impl UnsoundContains {
             Expr::Call { func, args: exprs } if func == "contains" => match exprs.as_slice() {
                 [
                     SpannedExpr {
-                        span: _,
                         inner: Expr::Literal(Literal::String(s)),
+                        ..
                     },
                     SpannedExpr {
-                        span: _,
                         inner: Expr::Context(c),
+                        ..
                     },
                 ] => Box::new(std::iter::once((s.as_ref(), c))),
                 args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
