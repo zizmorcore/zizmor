@@ -2,7 +2,7 @@
 
 use std::{ops::Range, sync::LazyLock};
 
-use crate::{audit::AuditInput, models::AsDocument as _, registry::InputKey};
+use crate::{audit::AuditInput, models::AsDocument, registry::InputKey};
 use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
@@ -195,7 +195,7 @@ impl<'doc> SymbolicLocation<'doc> {
         self,
         document: &'doc yamlpath::Document,
     ) -> anyhow::Result<Location<'doc>> {
-        let (extracted, feature) = match &self.subfeature {
+        let (extracted, location, feature) = match &self.subfeature {
             Some(subfeature) => {
                 // If we have a subfeature, we have to extract its exact
                 // parent feature.
@@ -215,7 +215,26 @@ impl<'doc> SymbolicLocation<'doc> {
 
                 let extracted = document.extract(&feature);
 
-                (extracted, feature)
+                let subfeature_span = {
+                    let bias = feature.location.byte_span.0;
+                    let start = &extracted[subfeature.after..]
+                        .find(subfeature.fragment)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "failed to find subfeature '{}' in feature '{}'",
+                                subfeature.fragment,
+                                extracted
+                            )
+                        })?;
+
+                    (start + bias)..(start + bias + subfeature.fragment.len())
+                };
+
+                (
+                    extracted,
+                    ConcreteLocation::from_span(subfeature_span, document),
+                    feature,
+                )
             }
             None => {
                 let feature = match self.route.to_query() {
@@ -223,14 +242,18 @@ impl<'doc> SymbolicLocation<'doc> {
                     None => document.root(),
                 };
 
-                (document.extract_with_leading_whitespace(&feature), feature)
+                (
+                    document.extract_with_leading_whitespace(&feature),
+                    ConcreteLocation::from(&feature.location),
+                    feature,
+                )
             }
         };
 
         Ok(Location {
             symbolic: self,
             concrete: Feature {
-                location: ConcreteLocation::from(&feature.location),
+                location,
                 feature: extracted,
                 comments: document
                     .feature_comments(&feature)
@@ -300,6 +323,20 @@ impl ConcreteLocation {
             start_point,
             end_point,
             offset_span,
+        }
+    }
+
+    pub(crate) fn from_span(span: Range<usize>, doc: &yamlpath::Document) -> Self {
+        let start = TextSize::new(span.start as u32);
+        let end = TextSize::new(span.end as u32);
+
+        let start_point = doc.line_index().line_col(start);
+        let end_point = doc.line_index().line_col(end);
+
+        Self {
+            start_point: start_point.into(),
+            end_point: end_point.into(),
+            offset_span: span.clone(),
         }
     }
 }
