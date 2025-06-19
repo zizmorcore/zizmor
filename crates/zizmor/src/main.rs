@@ -471,7 +471,6 @@ fn collect_inputs(
             registry.register(kind, contents, key)?;
         } else if input_path.is_dir() {
             collect_from_dir(input_path, mode, &mut registry)?;
-            // collect_from_repo_dir(input_path, input_path, mode, &mut registry)?;
         } else {
             // If this input isn't a file or directory, it's probably an
             // `owner/repo(@ref)?` slug.

@@ -337,13 +337,27 @@ impl FromStr for DockerUses {
     }
 }
 
+/// Wraps a `de::Error::custom` call to log the same error as
+/// a `tracing::error!` event.
+///
+/// This is useful when doing custom deserialization within untagged
+/// enum variants, since serde loses track of the original error.
+pub(crate) fn custom_error<'de, D>(msg: impl Display) -> D::Error
+where
+    D: Deserializer<'de>,
+{
+    let msg = msg.to_string();
+    tracing::error!(msg);
+    de::Error::custom(msg)
+}
+
 /// Deserialize an ordinary step `uses:`.
 pub(crate) fn step_uses<'de, D>(de: D) -> Result<Uses, D::Error>
 where
     D: Deserializer<'de>,
 {
     let uses = <&str>::deserialize(de)?;
-    Uses::from_str(uses).map_err(de::Error::custom)
+    Uses::from_str(uses).map_err(custom_error::<D>)
 }
 
 /// Deserialize a reusable workflow step `uses:`
@@ -357,7 +371,7 @@ where
         Uses::Repository(ref repo) => {
             // Remote reusable workflows must be pinned.
             if repo.git_ref.is_none() {
-                Err(de::Error::custom(
+                Err(custom_error::<D>(
                     "repo action must have `@<ref>` in reusable workflow",
                 ))
             } else {
@@ -370,7 +384,7 @@ where
             // a path component in local actions uses, just not local reusable
             // workflow uses.
             if local.path.contains('@') {
-                Err(de::Error::custom(
+                Err(custom_error::<D>(
                     "local reusable workflow reference can't specify `@<ref>`",
                 ))
             } else {
@@ -378,7 +392,7 @@ where
             }
         }
         // `docker://` is never valid in reusable workflow uses.
-        Uses::Docker(_) => Err(de::Error::custom(
+        Uses::Docker(_) => Err(custom_error::<D>(
             "docker action invalid in reusable workflow `uses`",
         )),
     }
