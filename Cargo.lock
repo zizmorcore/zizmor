@@ -802,6 +802,7 @@ dependencies = [
  "indexmap",
  "serde",
  "serde_yaml",
+ "tracing",
 ]
 
 [[package]]

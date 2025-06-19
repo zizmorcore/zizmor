@@ -1,11 +1,11 @@
 //! Workflow jobs.
 
 use indexmap::IndexMap;
-use serde::{Deserialize, de};
+use serde::Deserialize;
 use serde_yaml::Value;
 
 use crate::common::expr::{BoE, LoE};
-use crate::common::{Env, If, Permissions, Uses};
+use crate::common::{Env, If, Permissions, Uses, custom_error};
 
 use super::{Concurrency, Defaults};
 
@@ -65,7 +65,7 @@ impl<'de> Deserialize<'de> for RunsOn {
         // has either a `group` or at least one label here.
         if let RunsOn::Group { group, labels } = &runs_on {
             if group.is_none() && labels.is_empty() {
-                return Err(de::Error::custom(
+                return Err(custom_error::<D>(
                     "runs-on must provide either `group` or one or more `labels`",
                 ));
             }

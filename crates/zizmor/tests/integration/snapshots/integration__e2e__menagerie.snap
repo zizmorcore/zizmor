@@ -1,5 +1,5 @@
 ---
-source: tests/integration/e2e.rs
+source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().output(OutputMode::Both).input(input_under_test(\"e2e-menagerie\")).run()?"
 ---
  INFO zizmor: skipping impostor-commit: can't run without a GitHub API token
