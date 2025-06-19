@@ -98,6 +98,7 @@ impl Action {
             annotation: "this action".to_string(),
             link: None,
             route: Route::new(),
+            subfeature: None,
             kind: Default::default(),
         }
     }
@@ -198,7 +199,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         None
     }
 
-    fn body(&self) -> StepBodyCommon {
+    fn body(&self) -> StepBodyCommon<'doc> {
         match &self.body {
             action::StepBody::Uses { uses, with } => StepBodyCommon::Uses { uses, with },
             action::StepBody::Run {

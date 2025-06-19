@@ -29,6 +29,8 @@ of `zizmor`.
   when analyzing `inputs` context accesses (#919)
 * zizmor now produces more descriptive error messages when it fails to
   parse a workflow or action definition (#956)
+* The [bot-conditions] audit now returns precise spans for flagged
+  actor checks, instead of flagging the entire `if:` value (#949)
 
 ### Bug Fixes 🐛
 

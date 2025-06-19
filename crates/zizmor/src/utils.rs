@@ -3,10 +3,7 @@
 use anyhow::{Context as _, Error, anyhow};
 use camino::Utf8Path;
 use github_actions_expressions::context::{Context, ContextPattern};
-use github_actions_models::common::{
-    Env,
-    expr::{ExplicitExpr, LoE},
-};
+use github_actions_models::common::{Env, expr::LoE};
 use jsonschema::{
     BasicOutput::{Invalid, Valid},
     Validator,
@@ -397,6 +394,61 @@ pub(crate) fn split_patterns(patterns: &str) -> impl Iterator<Item = &str> {
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
 }
 
+/// Represents an expression that has been extracted from some surrounding
+/// text, but has not been parsed yet.
+///
+/// Depending on the context, this may be a "bare" expression or a "fenced"
+/// expression internally.
+pub(crate) struct ExtractedExpr<'a> {
+    inner: &'a str,
+    fenced: bool,
+}
+
+impl<'a> ExtractedExpr<'a> {
+    /// Creates a new [`ExtractedExpr`] from the given expression,
+    /// which may be either fenced or bare.
+    pub(crate) fn new(expr: &'a str) -> Self {
+        Self::from_fenced(expr).unwrap_or_else(|| Self::from_bare(expr))
+    }
+
+    /// Creates a new [`ExtractedExpr`] from a fenced expression.
+    fn from_fenced(expr: &'a str) -> Option<Self> {
+        expr.strip_prefix("${{")
+            .and_then(|e| e.strip_suffix("}}"))
+            .map(|_| ExtractedExpr {
+                inner: expr,
+                fenced: true,
+            })
+    }
+
+    /// Creates a new [`ExtractedExpr`] from a bare expression.
+    fn from_bare(expr: &'a str) -> Self {
+        ExtractedExpr {
+            inner: expr,
+            fenced: false,
+        }
+    }
+
+    /// Returns the extracted expression as a "bare" expression,
+    /// i.e. without any fencing.
+    pub(crate) fn as_bare(&self) -> &'a str {
+        if self.fenced {
+            self.inner
+                .strip_prefix("${{")
+                .and_then(|e| e.strip_suffix("}}"))
+                .expect("invariant violated: not a fenced expression")
+        } else {
+            self.inner
+        }
+    }
+
+    // Returns the extracted expression exactly as it was extracted,
+    // including any fencing.
+    pub(crate) fn as_raw(&self) -> &str {
+        self.inner
+    }
+}
+
 /// Parse an expression from the given free-form text, starting
 /// at the given offset. The returned span is absolute.
 ///
@@ -405,7 +457,10 @@ pub(crate) fn split_patterns(patterns: &str) -> impl Iterator<Item = &str> {
 ///
 /// Adapted roughly from GitHub's `parseScalar`:
 /// See: <https://github.com/actions/languageservices/blob/3a8c29c2d/workflow-parser/src/templates/template-reader.ts#L448>
-fn extract_expression(text: &str, offset: usize) -> Option<(ExplicitExpr, Range<usize>)> {
+fn extract_expression<'a>(
+    text: &'a str,
+    offset: usize,
+) -> Option<(ExtractedExpr<'a>, Range<usize>)> {
     let view = &text[offset..];
     let start = view.find("${{")?;
 
@@ -423,14 +478,14 @@ fn extract_expression(text: &str, offset: usize) -> Option<(ExplicitExpr, Range<
 
     end.map(|end| {
         (
-            ExplicitExpr::from_curly(&view[start..=end]).unwrap(),
+            ExtractedExpr::from_fenced(&view[start..=end]).unwrap(),
             start + offset..end + offset + 1,
         )
     })
 }
 
 /// Extract zero or more expressions from the given free-form text.
-pub(crate) fn extract_expressions(text: &str) -> Vec<(ExplicitExpr, Range<usize>)> {
+pub(crate) fn extract_expressions<'a>(text: &'a str) -> Vec<(ExtractedExpr<'a>, Range<usize>)> {
     let mut exprs = vec![];
     let mut offset = 0;
 
@@ -453,9 +508,9 @@ pub(crate) fn extract_expressions(text: &str) -> Vec<(ExplicitExpr, Range<usize>
 /// Unlike `extract_expressions`, this function performs some semantic
 /// filtering over the raw input. For example, it skip ignore expressions
 /// that are inside comments.
-pub(crate) fn parse_expressions_from_input(
-    input: &AuditInput,
-) -> Vec<(ExplicitExpr, Range<usize>)> {
+pub(crate) fn parse_expressions_from_input<'doc>(
+    input: &'doc AuditInput,
+) -> Vec<(ExtractedExpr<'doc>, Range<usize>)> {
     let text = input.as_document().source();
     let doc = input.as_document();
 
@@ -592,15 +647,15 @@ mod tests {
     #[test]
     fn test_extract_expression() {
         let exprs = &[
-            ("${{ foo }}", "foo", 0..10),
-            ("${{ foo }}${{ bar }}", "foo", 0..10),
-            ("leading ${{ foo }} trailing", "foo", 8..18),
+            ("${{ foo }}", " foo ", 0..10),
+            ("${{ foo }}${{ bar }}", " foo ", 0..10),
+            ("leading ${{ foo }} trailing", " foo ", 8..18),
             (
                 "leading ${{ '${{ quoted! }}' }} trailing",
-                "'${{ quoted! }}'",
+                " '${{ quoted! }}' ",
                 8..31,
             ),
-            ("${{ 'es''cape' }}", "'es''cape'", 0..17),
+            ("${{ 'es''cape' }}", " 'es''cape' ", 0..17),
         ];
 
         for (text, expected_expr, expected_span) in exprs {
@@ -626,7 +681,7 @@ mod tests {
             );
             let exprs = extract_expressions(raw)
                 .into_iter()
-                .map(|(e, _)| e.as_curly().to_string())
+                .map(|(e, _)| e.as_raw().to_string())
                 .collect::<Vec<_>>();
 
             assert_eq!(exprs, *expected)
@@ -654,10 +709,11 @@ runs:
 "#;
 
         let action = Action::from_string(action.into(), InputKey::local("fake", None)?)?;
+        let action = action.into();
 
-        let exprs = parse_expressions_from_input(&action.into());
+        let exprs = parse_expressions_from_input(&action);
         assert_eq!(exprs.len(), 1);
-        assert_eq!(exprs[0].0.as_curly().to_string(), "${{ '' }}");
+        assert_eq!(exprs[0].0.as_raw().to_string(), "${{ '' }}");
 
         let workflow = r#"
 # ${{ 'don''t parse me' }}

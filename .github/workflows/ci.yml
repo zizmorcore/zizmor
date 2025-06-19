@@ -39,6 +39,8 @@ jobs:
 
     - name: Test dependencies
       run: |
+        # Don't waste time on man-db updates
+        sudo apt-get remove --purge man-db
         # Needed for tty-tests
         sudo apt install -y expect
 

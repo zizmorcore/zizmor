@@ -1384,7 +1384,7 @@ foo:
             echo "foo: ${{ foo }}"
         "#);
 
-        // Now test with not_before set to skip the first occurrence
+        // Now test with after set to skip the first occurrence
         let operations = vec![Patch {
             route: route!("foo", "bar"),
             operation: Op::RewriteFragment {

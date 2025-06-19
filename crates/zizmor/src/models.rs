@@ -50,7 +50,7 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
     fn strategy(&self) -> Option<&Strategy>;
 
     /// Returns a [`StepBodyCommon`] for this step.
-    fn body(&self) -> StepBodyCommon;
+    fn body(&self) -> StepBodyCommon<'doc>;
 
     /// Returns the document which contains this step.
     fn document(&self) -> &'doc yamlpath::Document;

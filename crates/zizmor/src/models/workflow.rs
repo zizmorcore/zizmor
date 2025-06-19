@@ -197,6 +197,7 @@ impl Workflow {
             annotation: "this workflow".to_string(),
             link: None,
             route: Route::new(),
+            subfeature: None,
             kind: Default::default(),
         }
     }
@@ -620,7 +621,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         self.job().strategy.as_ref()
     }
 
-    fn body(&self) -> StepBodyCommon {
+    fn body(&self) -> StepBodyCommon<'doc> {
         match &self.body {
             StepBody::Uses { uses, with } => StepBodyCommon::Uses { uses, with },
             StepBody::Run {
