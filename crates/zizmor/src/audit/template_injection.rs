@@ -471,7 +471,7 @@ impl TemplateInjection {
 
         for (script, script_loc) in Self::scripts_with_location(step) {
             for (context, fix, severity, confidence, persona) in
-                self.injectable_template_expressions(&script, step)
+                self.injectable_template_expressions(script, step)
             {
                 let mut finding_builder = Self::finding()
                     .severity(severity)
