@@ -405,6 +405,12 @@ pub(crate) struct ExtractedExpr<'a> {
 }
 
 impl<'a> ExtractedExpr<'a> {
+    /// Creates a new [`ExtractedExpr`] from the given expression,
+    /// which may be either fenced or bare.
+    pub(crate) fn new(expr: &'a str) -> Self {
+        Self::from_fenced(expr).unwrap_or_else(|| Self::from_bare(expr))
+    }
+
     /// Creates a new [`ExtractedExpr`] from a fenced expression.
     pub(crate) fn from_fenced(expr: &'a str) -> Option<Self> {
         expr.strip_prefix("${{")
@@ -425,7 +431,7 @@ impl<'a> ExtractedExpr<'a> {
 
     /// Returns the extracted expression as a "bare" expression,
     /// i.e. without any fencing.
-    pub(crate) fn as_bare(&self) -> &str {
+    pub(crate) fn as_bare(&self) -> &'a str {
         if self.fenced {
             self.inner
                 .strip_prefix("${{")

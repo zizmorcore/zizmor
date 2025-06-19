@@ -4,12 +4,16 @@ use github_actions_expressions::{
     BinOp, Expr, SpannedExpr, UnOp,
     context::{Context, ContextPattern},
 };
-use github_actions_models::common::{If, expr::ExplicitExpr};
+use github_actions_models::common::If;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    finding::{Confidence, Severity, location::Locatable as _},
+    finding::{
+        Confidence, Severity,
+        location::{Locatable as _, Subfeature},
+    },
     models::workflow::JobExt,
+    utils::ExtractedExpr,
 };
 
 pub(crate) struct BotConditions;
@@ -88,13 +92,18 @@ impl Audit for BotConditions {
         }
 
         for (expr, parent, if_loc) in conds {
-            if let Some(confidence) = Self::bot_condition(expr) {
+            if let Some((subfeature, confidence)) = Self::bot_condition(expr) {
                 findings.push(
                     Self::finding()
                         .severity(Severity::High)
                         .confidence(confidence)
                         .add_location(parent)
-                        .add_location(if_loc.primary().annotated("actor context may be spoofable"))
+                        .add_location(
+                            if_loc
+                                .primary()
+                                .subfeature(subfeature)
+                                .annotated("actor context may be spoofable"),
+                        )
                         .build(job.parent())?,
                 );
             }
@@ -177,14 +186,10 @@ impl BotConditions {
         }
     }
 
-    fn bot_condition(expr: &str) -> Option<Confidence> {
-        // TODO: Remove clones here.
-        let bare = match ExplicitExpr::from_curly(expr) {
-            Some(raw_expr) => raw_expr.as_bare().to_string(),
-            None => expr.to_string(),
-        };
+    fn bot_condition<'doc>(expr: &'doc str) -> Option<(Subfeature<'doc>, Confidence)> {
+        let unparsed = ExtractedExpr::new(expr);
 
-        let Ok(expr) = Expr::parse(&bare) else {
+        let Ok(expr) = Expr::parse(unparsed.as_bare()) else {
             tracing::warn!("couldn't parse expression: {expr}");
             return None;
         };
@@ -196,9 +201,9 @@ impl BotConditions {
         // always passes if the actor is dependabot[bot].
         match Self::walk_tree_for_bot_condition(&expr, true) {
             // We have a bot condition and it dominates the expression.
-            (Some(_), true) => Some(Confidence::High),
+            (Some(expr), true) => Some((expr.into(), Confidence::High)),
             // We have a bot condition but it doesn't dominate the expression.
-            (Some(_), false) => Some(Confidence::Medium),
+            (Some(expr), false) => Some((expr.into(), Confidence::Medium)),
             // No bot condition.
             (..) => None,
         }
@@ -248,7 +253,7 @@ mod tests {
                 Confidence::Medium,
             ),
         ] {
-            assert_eq!(BotConditions::bot_condition(cond).unwrap(), *confidence);
+            assert_eq!(BotConditions::bot_condition(cond).unwrap().1, *confidence);
         }
     }
 }

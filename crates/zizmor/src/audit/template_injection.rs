@@ -20,10 +20,7 @@ use std::{collections::HashMap, env, ops::Deref, sync::LazyLock};
 use fst::Map;
 use github_actions_expressions::{Expr, Literal, context::Context};
 use github_actions_models::{
-    common::{
-        EnvValue, RepositoryUses, Uses,
-        expr::{ExplicitExpr, LoE},
-    },
+    common::{EnvValue, RepositoryUses, Uses, expr::LoE},
     workflow::job::Strategy,
 };
 use itertools::Itertools as _;
