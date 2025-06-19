@@ -759,6 +759,14 @@
         - oxc-project/oxc-resolver#373
 
 
+-   ![](https://github.com/philips-software.png?size=40){ width="40" loading=lazy align=left } philips-software
+
+    ---
+
+    ??? example "Examples"
+        - philips-software/amp-devcontainer#830
+
+
 -   ![](https://github.com/PlasmaPy.png?size=40){ width="40" loading=lazy align=left } PlasmaPy
 
     ---
