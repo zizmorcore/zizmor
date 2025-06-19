@@ -201,9 +201,11 @@ impl BotConditions {
         // always passes if the actor is dependabot[bot].
         match Self::walk_tree_for_bot_condition(&expr, true) {
             // We have a bot condition and it dominates the expression.
-            (Some(expr), true) => Some((expr.into(), Confidence::High)),
+            (Some(expr), true) => Some((Subfeature::from_spanned_expr(expr, 0), Confidence::High)),
             // We have a bot condition but it doesn't dominate the expression.
-            (Some(expr), false) => Some((expr.into(), Confidence::Medium)),
+            (Some(expr), false) => {
+                Some((Subfeature::from_spanned_expr(expr, 0), Confidence::Medium))
+            }
             // No bot condition.
             (..) => None,
         }

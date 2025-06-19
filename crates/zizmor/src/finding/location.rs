@@ -116,10 +116,10 @@ pub(crate) struct Subfeature<'doc> {
     pub(crate) fragment: &'doc str,
 }
 
-impl<'doc> From<&SpannedExpr<'doc>> for Subfeature<'doc> {
-    fn from(expr: &SpannedExpr<'doc>) -> Self {
+impl<'doc> Subfeature<'doc> {
+    pub(crate) fn from_spanned_expr(expr: &SpannedExpr<'doc>, bias: usize) -> Subfeature<'doc> {
         Self {
-            after: expr.span.start,
+            after: expr.span.start + bias,
             fragment: expr.raw,
         }
     }
