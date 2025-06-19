@@ -21,7 +21,7 @@ use fst::Map;
 use github_actions_expressions::{Expr, Literal, context::Context};
 use github_actions_models::{
     common::{
-        RepositoryUses, Uses,
+        EnvValue, RepositoryUses, Uses,
         expr::{ExplicitExpr, LoE},
     },
     workflow::job::Strategy,
@@ -39,7 +39,7 @@ use crate::{
         workflow::Step,
     },
     state::AuditState,
-    utils::{DEFAULT_ENVIRONMENT_VARIABLES, extract_expressions},
+    utils::{DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_expressions},
     yaml_patch::{Op, Patch},
 };
 
@@ -104,7 +104,7 @@ impl TemplateInjection {
 
     fn scripts_with_location<'doc>(
         step: &impl StepCommon<'doc>,
-    ) -> Vec<(String, SymbolicLocation<'doc>)> {
+    ) -> Vec<(&'doc str, SymbolicLocation<'doc>)> {
         match step.body() {
             models::StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
@@ -113,16 +113,24 @@ impl TemplateInjection {
                 .iter()
                 .filter_map(|input| {
                     let input = *input;
-                    with.get(input).map(|script| {
-                        (
-                            script.to_string(),
-                            step.location().with_keys(&["with".into(), input.into()]),
-                        )
-                    })
+                    with.get(input)
+                        .and_then(|script| {
+                            if let EnvValue::String(script) = script {
+                                Some(script.as_str())
+                            } else {
+                                None
+                            }
+                        })
+                        .map(|script| {
+                            (
+                                script,
+                                step.location().with_keys(&["with".into(), input.into()]),
+                            )
+                        })
                 })
                 .collect(),
             models::StepBodyCommon::Run { run, .. } => {
-                vec![(run.to_string(), step.location().with_keys(&["run".into()]))]
+                vec![(run, step.location().with_keys(&["run".into()]))]
             }
             _ => vec![],
         }
@@ -213,7 +221,7 @@ impl TemplateInjection {
     /// Attempts to produce a `Fix` for a given expression.
     fn attempt_fix<'doc>(
         &self,
-        raw: &ExplicitExpr,
+        raw: &ExtractedExpr<'doc>,
         parsed: &Expr,
         step: &impl StepCommon<'doc>,
     ) -> Option<Fix<'doc>> {
@@ -268,11 +276,8 @@ impl TemplateInjection {
                 route: step.route(),
                 operation: Op::MergeInto {
                     key: "env".to_string(),
-                    value: serde_yaml::to_value(HashMap::from([(
-                        env_var.as_str(),
-                        raw.as_curly(),
-                    )]))
-                    .unwrap(),
+                    value: serde_yaml::to_value(HashMap::from([(env_var.as_str(), raw.as_raw())]))
+                        .unwrap(),
                 },
             });
         }
@@ -287,13 +292,13 @@ impl TemplateInjection {
 
     fn injectable_template_expressions<'doc>(
         &self,
-        script: &str,
+        script: &'doc str,
         step: &impl StepCommon<'doc>,
     ) -> Vec<(String, Option<Fix<'doc>>, Severity, Confidence, Persona)> {
         let mut bad_expressions = vec![];
         for (expr, _) in extract_expressions(script) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
-                tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
+                tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_raw());
                 continue;
             };
 
@@ -301,7 +306,7 @@ impl TemplateInjection {
             // since any expression in a code context is a code smell,
             // even if unexploitable.
             bad_expressions.push((
-                expr.as_curly().into(),
+                expr.as_raw().into(),
                 // Intentionally not providing a fix here,
                 None,
                 Severity::Unknown,

@@ -199,7 +199,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         None
     }
 
-    fn body(&self) -> StepBodyCommon {
+    fn body(&self) -> StepBodyCommon<'doc> {
         match &self.body {
             action::StepBody::Uses { uses, with } => StepBodyCommon::Uses { uses, with },
             action::StepBody::Run {
