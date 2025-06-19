@@ -27,6 +27,8 @@ of `zizmor`.
   findings when analyzing `env` context accesses for static-ness (#911)
 * The [template-injection] audit now produces more precise findings
   when analyzing `inputs` context accesses (#919)
+* zizmor now produces more descriptive error messages when it fails to
+  parse a workflow or action definition (#956)
 
 ### Bug Fixes 🐛
 
