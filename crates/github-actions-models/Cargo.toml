@@ -19,5 +19,6 @@ workspace = true
 indexmap.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]

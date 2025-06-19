@@ -355,7 +355,7 @@ where
                 // We the JSON schema `validator` to separate these.
                 Ok(raw_value) => match validator.apply(&raw_value).basic() {
                     Valid(_) => Err(e)
-                        .context("this strongly suggests a bug in zizmor; please report it!")
+                        .context("this suggests a bug in zizmor; please report it!")
                         .map_err(InputError::Model),
                     Invalid(errors) => Err(InputError::Schema(parse_validation_errors(errors))),
                 },
