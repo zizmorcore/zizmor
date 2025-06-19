@@ -3,6 +3,7 @@
 use std::{ops::Range, sync::LazyLock};
 
 use crate::{audit::AuditInput, models::AsDocument, registry::InputKey};
+use github_actions_expressions::SpannedExpr;
 use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
@@ -113,6 +114,15 @@ macro_rules! route {
 pub(crate) struct Subfeature<'doc> {
     pub(crate) after: usize,
     pub(crate) fragment: &'doc str,
+}
+
+impl<'doc> From<&SpannedExpr<'doc>> for Subfeature<'doc> {
+    fn from(expr: &SpannedExpr<'doc>) -> Self {
+        Self {
+            after: expr.span.start,
+            fragment: expr.raw,
+        }
+    }
 }
 
 /// Represents a symbolic location.
