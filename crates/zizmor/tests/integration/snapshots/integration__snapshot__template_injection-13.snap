@@ -3,10 +3,15 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"template-injection/issue-883-repro/action.yml\")).run()?"
 ---
 note[template-injection]: code injection via template expansion
-  --> @@INPUT@@:39:9
+  --> @@INPUT@@:48:53
    |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       -------------------------------------------------------------------------------- note: action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
 39 |         script: |
-   |         ------ note: this code block
+   |         ------ note: via this input
 40 |           import base64
 ...
 47 |
@@ -16,10 +21,15 @@ note[template-injection]: code injection via template expansion
    = note: audit confidence → Low
 
 help[template-injection]: code injection via template expansion
-  --> @@INPUT@@:39:9
+  --> @@INPUT@@:56:26
    |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       -------------------------------------------------------------------------------- help: action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
 39 |         script: |
-   |         ------ help: this code block
+   |         ------ help: via this input
 40 |           import base64
 ...
 55 |           output = (
@@ -29,10 +39,15 @@ help[template-injection]: code injection via template expansion
    = note: audit confidence → High
 
 help[template-injection]: code injection via template expansion
-  --> @@INPUT@@:39:9
+  --> @@INPUT@@:57:29
    |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       -------------------------------------------------------------------------------- help: action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
 39 |         script: |
-   |         ------ help: this code block
+   |         ------ help: via this input
 40 |           import base64
 ...
 56 |               ${{ toJson(env.CUSTOM_OUTPUT) }}
@@ -42,10 +57,15 @@ help[template-injection]: code injection via template expansion
    = note: audit confidence → High
 
 note[template-injection]: code injection via template expansion
-  --> @@INPUT@@:39:9
+  --> @@INPUT@@:60:19
    |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       -------------------------------------------------------------------------------- note: action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
 39 |         script: |
-   |         ------ note: this code block
+   |         ------ note: via this input
 40 |           import base64
 ...
 59 |           data = (
@@ -55,10 +75,15 @@ note[template-injection]: code injection via template expansion
    = note: audit confidence → Low
 
 error[template-injection]: code injection via template expansion
-  --> @@INPUT@@:39:9
+  --> @@INPUT@@:65:32
    |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
 39 |         script: |
-   |         ^^^^^^ this code block
+   |         ^^^^^^ via this input
 40 |           import base64
 ...
 64 |           change_note = chango_instance.build_github_event_change_note(
@@ -68,10 +93,13 @@ error[template-injection]: code injection via template expansion
    = note: audit confidence → High
 
 help[template-injection]: code injection via template expansion
-   --> @@INPUT@@:106:9
+   --> @@INPUT@@:110:33
     |
+104 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+    |       -------------------------------------------------------------------------------- help: action accepts arbitrary code
+105 |       with:
 106 |         script: |
-    |         ------ help: this code block
+    |         ------ help: via this input
 107 |           import base64
 108 |           from pathlib import Path
 109 |
@@ -81,10 +109,13 @@ help[template-injection]: code injection via template expansion
     = note: audit confidence → High
 
 help[template-injection]: code injection via template expansion
-   --> @@INPUT@@:106:9
+   --> @@INPUT@@:111:34
     |
+104 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+    |       -------------------------------------------------------------------------------- help: action accepts arbitrary code
+105 |       with:
 106 |         script: |
-    |         ------ help: this code block
+    |         ------ help: via this input
 107 |           import base64
 ...
 110 |           file_path = Path("${{ env.CHANGE_NOTE_PATH }}")

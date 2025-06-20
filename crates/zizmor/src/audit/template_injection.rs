@@ -15,7 +15,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{collections::HashMap, env, ops::Deref, sync::LazyLock};
+use std::{collections::HashMap, env, ops::Deref, sync::LazyLock, vec};
 
 use fst::Map;
 use github_actions_expressions::{Expr, Literal, context::Context};
@@ -99,9 +99,16 @@ impl TemplateInjection {
             .unwrap_or(&[])
     }
 
+    /// Returns a list of three-tuples containing the script body,
+    /// script location, and any related locations for a step that's
+    /// known to be a template injection sink.
     fn scripts_with_location<'doc>(
         step: &impl StepCommon<'doc>,
-    ) -> Vec<(&'doc str, SymbolicLocation<'doc>)> {
+    ) -> Vec<(
+        &'doc str,
+        SymbolicLocation<'doc>,
+        Vec<SymbolicLocation<'doc>>,
+    )> {
         match step.body() {
             models::StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
@@ -124,12 +131,33 @@ impl TemplateInjection {
                             (
                                 script,
                                 step.location().with_keys(&["with".into(), input.into()]),
+                                vec![
+                                    // TODO: Plumb the step name/id as a related
+                                    // location here and below; this will require us
+                                    // to add it to StepCommon.
+                                    step.location()
+                                        .with_keys(&["uses".into()])
+                                        .annotated("action accepts arbitrary code"),
+                                    step.location()
+                                        .with_keys(&["with".into(), input.into()])
+                                        .annotated("via this input")
+                                        .key_only(),
+                                ],
                             )
                         })
                 })
                 .collect(),
             models::StepBodyCommon::Run { run, .. } => {
-                vec![(run, step.location().with_keys(&["run".into()]))]
+                vec![(
+                    run,
+                    step.location().with_keys(&["run".into()]),
+                    vec![
+                        step.location()
+                            .with_keys(&["run".into()])
+                            .annotated("this run block")
+                            .key_only(),
+                    ],
+                )]
             }
             _ => vec![],
         }
@@ -501,7 +529,7 @@ impl TemplateInjection {
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
-        for (script, script_loc) in Self::scripts_with_location(step) {
+        for (script, script_loc, related_locs) in Self::scripts_with_location(step) {
             for (subfeature, fix, severity, confidence, persona) in
                 self.injectable_template_expressions(script, step)
             {
@@ -510,7 +538,6 @@ impl TemplateInjection {
                     .confidence(confidence)
                     .persona(persona)
                     .add_location(step.location().hidden())
-                    .add_location(script_loc.clone().annotated("this code block").key_only())
                     .add_location(
                         script_loc
                             .clone()
@@ -518,6 +545,10 @@ impl TemplateInjection {
                             .subfeature(subfeature)
                             .annotated(format!("may expand into attacker-controllable code")),
                     );
+
+                for related_loc in &related_locs {
+                    finding_builder = finding_builder.add_location(related_loc.clone());
+                }
 
                 if let Some(fix) = fix {
                     finding_builder = finding_builder.fix(fix);

@@ -3,40 +3,49 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"template-injection/pr-425-backstop/action.yml\")).run()?"
 ---
 error[template-injection]: code injection via template expansion
-  --> @@INPUT@@:13:7
+  --> @@INPUT@@:14:19
    |
 13 |       run: |
-   |       ^^^ this code block
+   |       ^^^ this run block
 14 |         hello ${{ inputs.expandme }}
    |                   ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
 error[template-injection]: code injection via template expansion
-  --> @@INPUT@@:20:9
+  --> @@INPUT@@:20:29
    |
+18 |       uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action accepts arbitrary code
+19 |       with:
 20 |         script: return "${{ inputs.expandme }}"
    |         ^^^^^^              ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |         |
-   |         this code block
+   |         via this input
    |
    = note: audit confidence → High
 
 error[template-injection]: code injection via template expansion
-  --> @@INPUT@@:25:9
+  --> @@INPUT@@:26:27
    |
+23 |       uses: azure/cli@089eac9d8cc39f5d003e94f8b65efc51076c9cbd
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action accepts arbitrary code
+24 |       with:
 25 |         inlineScript: |
-   |         ^^^^^^^^^^^^ this code block
+   |         ^^^^^^^^^^^^ via this input
 26 |           echo "hello ${{ inputs.expandme }}"
    |                           ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
 error[template-injection]: code injection via template expansion
-  --> @@INPUT@@:31:9
+  --> @@INPUT@@:31:56
    |
+29 |       uses: azure/powershell
+   |       ^^^^^^^^^^^^^^^^^^^^^^ action accepts arbitrary code
+30 |       with:
 31 |         inlineScript: Get-AzVM -ResourceGroupName "${{ inputs.expandme }}"
-   |         ^^^^^^^^^^^^ this code block                   ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |         ^^^^^^^^^^^^ via this input                    ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
