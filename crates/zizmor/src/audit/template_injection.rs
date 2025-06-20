@@ -543,7 +543,7 @@ impl TemplateInjection {
                             .clone()
                             .primary()
                             .subfeature(subfeature)
-                            .annotated(format!("may expand into attacker-controllable code")),
+                            .annotated("may expand into attacker-controllable code".to_string()),
                     );
 
                 for related_loc in &related_locs {
