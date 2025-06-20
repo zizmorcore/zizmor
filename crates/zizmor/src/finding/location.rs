@@ -117,6 +117,10 @@ pub(crate) struct Subfeature<'doc> {
 }
 
 impl<'doc> Subfeature<'doc> {
+    pub(crate) fn new(after: usize, fragment: &'doc str) -> Self {
+        Self { after, fragment }
+    }
+
     pub(crate) fn from_spanned_expr(expr: &SpannedExpr<'doc>, bias: usize) -> Subfeature<'doc> {
         Self {
             after: expr.span.start + bias,
@@ -226,7 +230,6 @@ impl<'doc> SymbolicLocation<'doc> {
                 let extracted = document.extract(&feature);
 
                 let subfeature_span = {
-                    let bias = feature.location.byte_span.0;
                     let start = &extracted[subfeature.after..]
                         .find(subfeature.fragment)
                         .ok_or_else(|| {
@@ -236,6 +239,8 @@ impl<'doc> SymbolicLocation<'doc> {
                                 extracted
                             )
                         })?;
+
+                    let bias = feature.location.byte_span.0 + subfeature.after;
 
                     (start + bias)..(start + bias + subfeature.fragment.len())
                 };

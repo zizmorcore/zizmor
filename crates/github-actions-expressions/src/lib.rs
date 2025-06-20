@@ -132,7 +132,7 @@ impl<'src> Literal<'src> {
 }
 
 /// Represents a `[start, end)` span for a source expression.
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Span {
     /// The start of the span, inclusive.
     pub start: usize,
@@ -183,6 +183,54 @@ impl<'a> SpannedExpr<'a> {
             raw,
             span: span.into(),
         }
+    }
+
+    /// Returns the contexts in this expression that directly flow into the
+    /// expression's evaluation.
+    ///
+    /// For example `${{ foo.bar }}` returns `foo.bar` since the value
+    /// of `foo.bar` flows into the evaluation. On the other hand,
+    /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
+    /// since the value of `foo.bar` flows into a boolean evaluation
+    /// that gets expanded.
+    pub fn dataflow_contexts(&self) -> Vec<(&Context<'a>, Span)> {
+        let mut contexts = vec![];
+
+        match self.deref() {
+            Expr::Call { func, args } => {
+                // These functions, when evaluated, produce an evaluation
+                // that includes some or all of the contexts listed in
+                // their arguments.
+                if func == "toJSON" || func == "format" || func == "join" {
+                    for arg in args {
+                        contexts.extend(arg.dataflow_contexts());
+                    }
+                }
+            }
+            // NOTE: We intentionally don't handle the `func(...).foo.bar`
+            // case differently here, since a call followed by a
+            // context access *can* flow into the evaluation.
+            // For example, `${{ fromJSON(something) }}` evaluates to
+            // `Object` but `${{ fromJSON(something).foo }}` evaluates
+            // to the contents of `something.foo`.
+            Expr::Context(ctx) => contexts.push((ctx, self.span)),
+            Expr::BinOp { lhs, op, rhs } => match op {
+                // With && only the RHS can flow into the evaluation as a context
+                // (rather than a boolean).
+                BinOp::And => {
+                    contexts.extend(rhs.dataflow_contexts());
+                }
+                // With || either the LHS or RHS can flow into the evaluation as a context.
+                BinOp::Or => {
+                    contexts.extend(lhs.dataflow_contexts());
+                    contexts.extend(rhs.dataflow_contexts());
+                }
+                _ => (),
+            },
+            _ => (),
+        }
+
+        contexts
     }
 }
 
@@ -319,54 +367,6 @@ impl<'src> Expr<'src> {
             Expr::Index(expr) => expr.has_constant_reducible_subexpr(),
             _ => false,
         }
-    }
-
-    /// Returns the contexts in this expression that directly flow into the
-    /// expression's evaluation.
-    ///
-    /// For example `${{ foo.bar }}` returns `foo.bar` since the value
-    /// of `foo.bar` flows into the evaluation. On the other hand,
-    /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
-    /// since the value of `foo.bar` flows into a boolean evaluation
-    /// that gets expanded.
-    pub fn dataflow_contexts(&self) -> Vec<&Context<'src>> {
-        let mut contexts = vec![];
-
-        match self {
-            Expr::Call { func, args } => {
-                // These functions, when evaluated, produce an evaluation
-                // that includes some or all of the contexts listed in
-                // their arguments.
-                if func == "toJSON" || func == "format" || func == "join" {
-                    for arg in args {
-                        contexts.extend(arg.dataflow_contexts());
-                    }
-                }
-            }
-            // NOTE: We intentionally don't handle the `func(...).foo.bar`
-            // case differently here, since a call followed by a
-            // context access *can* flow into the evaluation.
-            // For example, `${{ fromJSON(something) }}` evaluates to
-            // `Object` but `${{ fromJSON(something).foo }}` evaluates
-            // to the contents of `something.foo`.
-            Expr::Context(ctx) => contexts.push(ctx),
-            Expr::BinOp { lhs, op, rhs } => match op {
-                // With && only the RHS can flow into the evaluation as a context
-                // (rather than a boolean).
-                BinOp::And => {
-                    contexts.extend(rhs.dataflow_contexts());
-                }
-                // With || either the LHS or RHS can flow into the evaluation as a context.
-                BinOp::Or => {
-                    contexts.extend(lhs.dataflow_contexts());
-                    contexts.extend(rhs.dataflow_contexts());
-                }
-                _ => (),
-            },
-            _ => (),
-        }
-
-        contexts
     }
 
     /// Parses the given string into an expression.
@@ -1209,10 +1209,22 @@ mod tests {
     fn test_expr_dataflow_contexts() -> Result<()> {
         // Trivial cases.
         let expr = Expr::parse("foo.bar")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.0)
+                .collect::<Vec<_>>(),
+            ["foo.bar"]
+        );
 
         let expr = Expr::parse("foo.bar[1]")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar[1]"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.0)
+                .collect::<Vec<_>>(),
+            ["foo.bar[1]"]
+        );
 
         // No dataflow due to a boolean expression.
         let expr = Expr::parse("foo.bar == 'bar'")?;
@@ -1220,26 +1232,59 @@ mod tests {
 
         // ||: all contexts potentially expand into the evaluation.
         let expr = Expr::parse("foo.bar || abc || d.e.f")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar", "abc", "d.e.f"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.0)
+                .collect::<Vec<_>>(),
+            ["foo.bar", "abc", "d.e.f"]
+        );
 
         // &&: only the RHS context(s) expand into the evaluation.
         let expr = Expr::parse("foo.bar && abc && d.e.f")?;
-        assert_eq!(expr.dataflow_contexts(), ["d.e.f"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.0)
+                .collect::<Vec<_>>(),
+            ["d.e.f"]
+        );
 
         let expr = Expr::parse("foo.bar == 'bar' && foo.bar || 'false'")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.0)
+                .collect::<Vec<_>>(),
+            ["foo.bar"]
+        );
 
         let expr = Expr::parse("foo.bar == 'bar' && foo.bar || foo.baz")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar", "foo.baz"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.0)
+                .collect::<Vec<_>>(),
+            ["foo.bar", "foo.baz"]
+        );
 
         let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id")?;
         assert_eq!(
-            expr.dataflow_contexts(),
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.0)
+                .collect::<Vec<_>>(),
             ["fromJson(steps.runs.outputs.data).workflow_runs[0].id"]
         );
 
         let expr = Expr::parse("format('{0} {1} {2}', foo.bar, tojson(github), toJSON(github))")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar", "github", "github"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.0)
+                .collect::<Vec<_>>(),
+            ["foo.bar", "github", "github"]
+        );
 
         Ok(())
     }
