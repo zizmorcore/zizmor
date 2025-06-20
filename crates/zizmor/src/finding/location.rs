@@ -129,6 +129,18 @@ impl<'doc> Subfeature<'doc> {
     }
 }
 
+/// The kind of feature referred to by a symbolic location.
+#[derive(Serialize, Clone, Debug)]
+pub(crate) enum SymbolicFeature<'doc> {
+    /// A "normal" feature, i.e. a whole extracted YAML feature.
+    Normal,
+    /// A "subfeature", i.e. a subspan of a normal feature.
+    Subfeature(Subfeature<'doc>),
+    /// A "key-only" feature, i.e. one where we only want the feature
+    /// for the key, without including any value.
+    KeyOnly,
+}
+
 /// Represents a symbolic location.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct SymbolicLocation<'doc> {
@@ -147,8 +159,7 @@ pub(crate) struct SymbolicLocation<'doc> {
     /// A symbolic route (of keys and indices) to the final location.
     pub(crate) route: Route<'doc>,
 
-    /// An optional subfeature for the symbolic location.
-    pub(crate) subfeature: Option<Subfeature<'doc>>,
+    pub(crate) feature_kind: SymbolicFeature<'doc>,
 
     /// The kind of location.
     pub(crate) kind: LocationKind,
@@ -161,14 +172,20 @@ impl<'doc> SymbolicLocation<'doc> {
             annotation: self.annotation.clone(),
             link: None,
             route: self.route.with_keys(keys),
-            subfeature: None,
+            feature_kind: SymbolicFeature::Normal,
             kind: self.kind,
         }
     }
 
     /// Adds a subfeature to the current `SymbolicLocation`.
     pub(crate) fn subfeature(mut self, subfeature: Subfeature<'doc>) -> SymbolicLocation<'doc> {
-        self.subfeature = Some(subfeature);
+        self.feature_kind = SymbolicFeature::Subfeature(subfeature);
+        self
+    }
+
+    /// Mark this symbolic location as a "key-only" feature,
+    pub(crate) fn key_only(mut self) -> SymbolicLocation<'doc> {
+        self.feature_kind = SymbolicFeature::KeyOnly;
         self
     }
 
@@ -209,8 +226,8 @@ impl<'doc> SymbolicLocation<'doc> {
         self,
         document: &'doc yamlpath::Document,
     ) -> anyhow::Result<Location<'doc>> {
-        let (extracted, location, feature) = match &self.subfeature {
-            Some(subfeature) => {
+        let (extracted, location, feature) = match &self.feature_kind {
+            SymbolicFeature::Subfeature(subfeature) => {
                 // If we have a subfeature, we have to extract its exact
                 // parent feature.
                 let feature = match self.route.to_query() {
@@ -251,7 +268,7 @@ impl<'doc> SymbolicLocation<'doc> {
                     feature,
                 )
             }
-            None => {
+            SymbolicFeature::Normal => {
                 let feature = match self.route.to_query() {
                     Some(query) => document.query_pretty(&query)?,
                     None => document.root(),
@@ -259,6 +276,21 @@ impl<'doc> SymbolicLocation<'doc> {
 
                 (
                     document.extract_with_leading_whitespace(&feature),
+                    ConcreteLocation::from(&feature.location),
+                    feature,
+                )
+            }
+            SymbolicFeature::KeyOnly => {
+                let feature = match self.route.to_query() {
+                    Some(query) => document.query_key_only(&query)?,
+                    None => {
+                        // NOTE: Technically API misuse; maybe we should panic instead?
+                        anyhow::bail!("can't concretize a key-only route without a query");
+                    }
+                };
+
+                (
+                    document.extract(&feature),
                     ConcreteLocation::from(&feature.location),
                     feature,
                 )

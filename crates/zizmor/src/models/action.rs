@@ -10,7 +10,7 @@ use terminal_link::Link;
 
 use crate::{
     InputKey,
-    finding::location::{Locatable, Route, SymbolicLocation},
+    finding::location::{Locatable, Route, SymbolicFeature, SymbolicLocation},
     models::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
@@ -98,7 +98,7 @@ impl Action {
             annotation: "this action".to_string(),
             link: None,
             route: Route::new(),
-            subfeature: None,
+            feature_kind: SymbolicFeature::Normal,
             kind: Default::default(),
         }
     }

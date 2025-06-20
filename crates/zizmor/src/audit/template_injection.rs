@@ -510,7 +510,7 @@ impl TemplateInjection {
                     .confidence(confidence)
                     .persona(persona)
                     .add_location(step.location().hidden())
-                    // .add_location(step.location_with_name())
+                    .add_location(script_loc.clone().annotated("this code block").key_only())
                     .add_location(
                         script_loc
                             .clone()
