@@ -179,7 +179,10 @@ impl Audit for Artipacked {
         &self,
         action: &'doc crate::models::action::Action,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
-        let steps = action.steps();
+        let Some(steps) = action.steps() else {
+            return Ok(vec![]);
+        };
+
         self.process_steps(steps)
     }
 
