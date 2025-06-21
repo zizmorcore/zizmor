@@ -1,0 +1,27 @@
+name: example
+on: push
+
+permissions: {}
+
+jobs:
+  inject-me:
+    name: inject-me
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: |
+          echo ${{
+            some.ctx
+            && foo.bar
+            || baz.qux
+          }}
+
+      - name: TSAN option setup
+        run: |
+          echo "TSAN_OPTIONS=log_path=${GITHUB_WORKSPACE}/tsan_log suppressions=${GITHUB_WORKSPACE}/Tools/tsan/suppressions${{
+              fromJSON(inputs.free-threading)
+              && '_free_threading'
+              || ''
+            }}.txt handle_segv=0" >> "$GITHUB_ENV"
+          echo "CC=clang" >> "$GITHUB_ENV"
+          echo "CXX=clang++" >> "$GITHUB_ENV"

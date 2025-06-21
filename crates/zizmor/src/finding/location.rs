@@ -246,7 +246,48 @@ impl<'doc> SymbolicLocation<'doc> {
 
                 let extracted = document.extract(&feature);
 
-                let subfeature_span = {
+                let subfeature_span = if subfeature.fragment.contains('\n') {
+                    // Subfeatures with newlines need to be extracted more
+                    // gingerly: the actual YAML feature is likely to be something
+                    // like a multi-line string, which has syntactic indentation
+                    // that won't match the subfeature's fragment.
+                    //
+                    // To account for this, we split the extracted feature
+                    // into lines. We then find the start of the subfeature
+                    // on the "first" line (past `after`) and the end of the
+                    // subfeature on the "last" line.
+
+                    let mut fragment_lines = subfeature.fragment.lines();
+                    let first_line = fragment_lines.next().unwrap();
+                    // tracing::error!(first_line);
+                    let last_line = fragment_lines.next_back().unwrap();
+                    // tracing::error!(last_line);
+
+                    let start_bias = feature.location.byte_span.0 + subfeature.after;
+                    let start =
+                        &extracted[subfeature.after..]
+                            .find(first_line)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "failed to find subfeature '{}' in feature '{}'",
+                                    first_line,
+                                    extracted
+                                )
+                            })?;
+
+                    let end_bias = start_bias + start;
+                    let end = &extracted[(subfeature.after + start)..]
+                        .find(last_line)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "failed to find subfeature '{}' in feature '{}'",
+                                last_line,
+                                extracted
+                            )
+                        })?;
+
+                    (start_bias + start)..(end_bias + end)
+                } else {
                     let start = &extracted[subfeature.after..]
                         .find(subfeature.fragment)
                         .ok_or_else(|| {
