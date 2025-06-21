@@ -1,0 +1,10 @@
+name: "backstop for PR #960"
+
+description: |
+  a backstop for PR #960 to ensure we don't crash on non-composite actions
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - lol

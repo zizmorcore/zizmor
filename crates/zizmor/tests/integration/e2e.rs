@@ -236,3 +236,17 @@ fn invalid_inputs() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn pr_960_backstop() -> Result<()> {
+    // Backstop test for PR #960.
+
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Both)
+            .input(input_under_test("pr-960-backstop"))
+            .run()?
+    );
+
+    Ok(())
+}
