@@ -70,6 +70,13 @@ Astral
 Grafana Labs
 </a>
 </td>
+<td align="center" valign="top" width="15%">
+<a href="https://trailofbits.com/">
+<img src="https://avatars.githubusercontent.com/u/2314423?s=100&v=4" width="100px">
+<br>
+Trail of Bits
+</a>
+</td>
 </tr>
 </tbody>
 </table>
