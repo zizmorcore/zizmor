@@ -1,6 +1,5 @@
 //! Core namespace for zizmor's audits.
 
-use github_actions_models::action;
 use line_index::LineIndex;
 use thiserror::Error;
 use tracing::instrument;
@@ -247,8 +246,8 @@ pub(crate) trait Audit: AuditCore {
     fn audit_action<'doc>(&self, action: &'doc Action) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
 
-        if matches!(action.runs, action::Runs::Composite(_)) {
-            for step in action.steps() {
+        if let Some(steps) = action.steps() {
+            for step in steps {
                 results.extend(self.audit_composite_step(&step)?);
             }
         }

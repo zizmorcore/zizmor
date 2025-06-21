@@ -83,8 +83,9 @@ impl Action {
         })
     }
 
-    /// A [`CompositeSteps`] iterator over this workflow's constituent [`CompositeStep`]s.
-    pub(crate) fn steps(&self) -> CompositeSteps<'_> {
+    /// Returns a [`CompositeSteps`] iterator over this actions's constituent
+    /// [`CompositeStep`]s, or `None` if the action is not a composite action.
+    pub(crate) fn steps(&self) -> Option<CompositeSteps<'_>> {
         CompositeSteps::new(self)
     }
 
@@ -111,16 +112,14 @@ pub(crate) struct CompositeSteps<'a> {
 }
 
 impl<'a> CompositeSteps<'a> {
-    /// Create a new [`CompositeSteps`].
-    ///
-    /// Invariant: panics if the given [`Action`] is not a composite action.
-    fn new(action: &'a Action) -> Self {
+    /// Create a new [`CompositeSteps`], or `None` if the action is not a composite action.
+    fn new(action: &'a Action) -> Option<Self> {
         match &action.inner.runs {
-            action::Runs::Composite(composite) => Self {
+            action::Runs::Composite(composite) => Some(Self {
                 inner: composite.steps.iter().enumerate(),
                 parent: action,
-            },
-            _ => panic!("API misuse: can't call steps() on a non-composite action"),
+            }),
+            _ => None,
         }
     }
 }
