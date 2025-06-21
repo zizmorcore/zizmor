@@ -28,7 +28,7 @@ error[bot-conditions]: spoofable bot actor check
    |         ^^^^^^^^^^^^^^^^^^ this step
 14 |         run: echo hello
 15 |         if: ${{ github.actor == 'dependabot[bot]' }}
-   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
@@ -39,7 +39,7 @@ error[bot-conditions]: spoofable bot actor check
    |         ^^^^^^^^^^^^^^^^^^ this step
 18 |         run: echo hello
 19 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
-   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → Medium
 
@@ -132,7 +132,7 @@ error[bot-conditions]: spoofable bot actor check
    |         ^^^^^^^^^^^^^^^^^^^ this step
 59 |         run: echo hello
 60 |         if: ${{ github.actor_id == '49699333' }}
-   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 

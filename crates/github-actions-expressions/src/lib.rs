@@ -169,7 +169,12 @@ impl From<std::ops::Range<usize>> for Span {
 pub struct SpannedExpr<'src> {
     /// The expression's source span.
     pub span: Span,
-    /// The expression's unparsed form.
+    /// The expression's unparsed form, as it appears in the source.
+    ///
+    /// This is recorded exactly as it appears in the source, *except*
+    /// that leading and trailing whitespace is stripped. This is stripped
+    /// because it's (1) non-semantic, and (2) can cause all kinds of issues
+    /// when attempting to map expressions back to YAML source features.
     pub raw: &'src str,
     /// The expression itself.
     pub inner: Expr<'src>,
@@ -180,7 +185,7 @@ impl<'a> SpannedExpr<'a> {
     pub(crate) fn new(span: impl Into<Span>, raw: &'a str, inner: Expr<'a>) -> Self {
         Self {
             inner,
-            raw,
+            raw: raw.trim(),
             span: span.into(),
         }
     }
@@ -978,11 +983,11 @@ mod tests {
                     Expr::BinOp {
                         lhs: Box::new(SpannedExpr::new(
                             0..59,
-                            "github.ref == 'refs/heads/main' && 'value_for_main_branch' ",
+                            "github.ref == 'refs/heads/main' && 'value_for_main_branch'",
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
                                     0..32,
-                                    "github.ref == 'refs/heads/main' ",
+                                    "github.ref == 'refs/heads/main'",
                                     Expr::BinOp {
                                         lhs: Box::new(SpannedExpr::new(
                                             0..10,

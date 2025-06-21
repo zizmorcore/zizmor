@@ -252,16 +252,24 @@ impl<'doc> SymbolicLocation<'doc> {
                     // like a multi-line string, which has syntactic indentation
                     // that won't match the subfeature's fragment.
                     //
-                    // To account for this, we split the extracted feature
+                    // To account for this, we split the subfeature's fragment
                     // into lines. We then find the start of the subfeature
-                    // on the "first" line (past `after`) and the end of the
-                    // subfeature on the "last" line.
+                    // by matching its first line against the extracted
+                    // feature (past `after`), and the end of the subfeatyre
+                    // by matching its last line against the extracted
+                    // feature anywhere after our start.
+                    //
+                    // This approach isn't entirely sound, since it assumes
+                    // that the last line of the subfeature's fragment is
+                    // unique within the extracted feature. When the fragment
+                    // isn't unique, this produces a misleading (prematurely
+                    // truncated) span.
+                    //
+                    // TODO: Think of a better approach here.
 
                     let mut fragment_lines = subfeature.fragment.lines();
                     let first_line = fragment_lines.next().unwrap();
-                    // tracing::error!(first_line);
                     let last_line = fragment_lines.next_back().unwrap();
-                    // tracing::error!(last_line);
 
                     let start_bias = feature.location.byte_span.0 + subfeature.after;
                     let start =
@@ -269,7 +277,7 @@ impl<'doc> SymbolicLocation<'doc> {
                             .find(first_line)
                             .ok_or_else(|| {
                                 anyhow::anyhow!(
-                                    "failed to find subfeature '{}' in feature '{}'",
+                                    "failed to find subfeature start '{}' in feature '{}'",
                                     first_line,
                                     extracted
                                 )
@@ -280,7 +288,7 @@ impl<'doc> SymbolicLocation<'doc> {
                         .find(last_line)
                         .ok_or_else(|| {
                             anyhow::anyhow!(
-                                "failed to find subfeature '{}' in feature '{}'",
+                                "failed to find subfeature end '{}' in feature '{}'",
                                 last_line,
                                 extracted
                             )
