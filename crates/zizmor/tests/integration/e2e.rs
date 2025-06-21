@@ -240,6 +240,7 @@ fn invalid_inputs() -> Result<()> {
 #[test]
 fn pr_960_backstop() -> Result<()> {
     // Backstop test for PR #960.
+    // See: https://github.com/zizmorcore/zizmor/pull/960
 
     insta::assert_snapshot!(
         zizmor()
