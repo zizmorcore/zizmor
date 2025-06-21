@@ -1,0 +1,32 @@
+testcase:
+  foo: bar
+
+  a:
+    b: c
+
+  flow: { foo: bar }
+
+  flow2: { emptykey: }
+
+  flow3: { emptykey }
+
+queries:
+  - query: [foo]
+    mode: key-only
+    expected: "  foo"
+
+  - query: [a, b]
+    mode: key-only
+    expected: "    b"
+
+  - query: [flow, foo]
+    mode: key-only
+    expected: "foo"
+
+  - query: [flow2, emptykey]
+    mode: key-only
+    expected: "emptykey"
+
+  - query: [flow3, emptykey]
+    mode: key-only
+    expected: "emptykey"

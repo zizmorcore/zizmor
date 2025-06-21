@@ -404,6 +404,15 @@ fn template_injection() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "template-injection/multiline-expression.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
     Ok(())
 }
 

@@ -117,12 +117,28 @@ pub(crate) struct Subfeature<'doc> {
 }
 
 impl<'doc> Subfeature<'doc> {
+    pub(crate) fn new(after: usize, fragment: &'doc str) -> Self {
+        Self { after, fragment }
+    }
+
     pub(crate) fn from_spanned_expr(expr: &SpannedExpr<'doc>, bias: usize) -> Subfeature<'doc> {
         Self {
             after: expr.span.start + bias,
             fragment: expr.raw,
         }
     }
+}
+
+/// The kind of feature referred to by a symbolic location.
+#[derive(Serialize, Clone, Debug)]
+pub(crate) enum SymbolicFeature<'doc> {
+    /// A "normal" feature, i.e. a whole extracted YAML feature.
+    Normal,
+    /// A "subfeature", i.e. a subspan of a normal feature.
+    Subfeature(Subfeature<'doc>),
+    /// A "key-only" feature, i.e. one where we only want the feature
+    /// for the key, without including any value.
+    KeyOnly,
 }
 
 /// Represents a symbolic location.
@@ -143,8 +159,7 @@ pub(crate) struct SymbolicLocation<'doc> {
     /// A symbolic route (of keys and indices) to the final location.
     pub(crate) route: Route<'doc>,
 
-    /// An optional subfeature for the symbolic location.
-    pub(crate) subfeature: Option<Subfeature<'doc>>,
+    pub(crate) feature_kind: SymbolicFeature<'doc>,
 
     /// The kind of location.
     pub(crate) kind: LocationKind,
@@ -157,14 +172,20 @@ impl<'doc> SymbolicLocation<'doc> {
             annotation: self.annotation.clone(),
             link: None,
             route: self.route.with_keys(keys),
-            subfeature: None,
+            feature_kind: SymbolicFeature::Normal,
             kind: self.kind,
         }
     }
 
     /// Adds a subfeature to the current `SymbolicLocation`.
     pub(crate) fn subfeature(mut self, subfeature: Subfeature<'doc>) -> SymbolicLocation<'doc> {
-        self.subfeature = Some(subfeature);
+        self.feature_kind = SymbolicFeature::Subfeature(subfeature);
+        self
+    }
+
+    /// Mark this symbolic location as a "key-only" feature,
+    pub(crate) fn key_only(mut self) -> SymbolicLocation<'doc> {
+        self.feature_kind = SymbolicFeature::KeyOnly;
         self
     }
 
@@ -205,8 +226,8 @@ impl<'doc> SymbolicLocation<'doc> {
         self,
         document: &'doc yamlpath::Document,
     ) -> anyhow::Result<Location<'doc>> {
-        let (extracted, location, feature) = match &self.subfeature {
-            Some(subfeature) => {
+        let (extracted, location, feature) = match &self.feature_kind {
+            SymbolicFeature::Subfeature(subfeature) => {
                 // If we have a subfeature, we have to extract its exact
                 // parent feature.
                 let feature = match self.route.to_query() {
@@ -225,8 +246,56 @@ impl<'doc> SymbolicLocation<'doc> {
 
                 let extracted = document.extract(&feature);
 
-                let subfeature_span = {
-                    let bias = feature.location.byte_span.0;
+                let subfeature_span = if subfeature.fragment.contains('\n') {
+                    // Subfeatures with newlines need to be extracted more
+                    // gingerly: the actual YAML feature is likely to be something
+                    // like a multi-line string, which has syntactic indentation
+                    // that won't match the subfeature's fragment.
+                    //
+                    // To account for this, we split the subfeature's fragment
+                    // into lines. We then find the start of the subfeature
+                    // by matching its first line against the extracted
+                    // feature (past `after`), and the end of the subfeatyre
+                    // by matching its last line against the extracted
+                    // feature anywhere after our start.
+                    //
+                    // This approach isn't entirely sound, since it assumes
+                    // that the last line of the subfeature's fragment is
+                    // unique within the extracted feature. When the fragment
+                    // isn't unique, this produces a misleading (prematurely
+                    // truncated) span.
+                    //
+                    // TODO: Think of a better approach here.
+
+                    let mut fragment_lines = subfeature.fragment.lines();
+                    let first_line = fragment_lines.next().unwrap();
+                    let last_line = fragment_lines.next_back().unwrap();
+
+                    let start_bias = feature.location.byte_span.0 + subfeature.after;
+                    let start =
+                        &extracted[subfeature.after..]
+                            .find(first_line)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "failed to find subfeature start '{}' in feature '{}'",
+                                    first_line,
+                                    extracted
+                                )
+                            })?;
+
+                    let end_bias = start_bias + start;
+                    let end = &extracted[(subfeature.after + start)..]
+                        .find(last_line)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "failed to find subfeature end '{}' in feature '{}'",
+                                last_line,
+                                extracted
+                            )
+                        })?;
+
+                    (start_bias + start)..(end_bias + end)
+                } else {
                     let start = &extracted[subfeature.after..]
                         .find(subfeature.fragment)
                         .ok_or_else(|| {
@@ -237,6 +306,8 @@ impl<'doc> SymbolicLocation<'doc> {
                             )
                         })?;
 
+                    let bias = feature.location.byte_span.0 + subfeature.after;
+
                     (start + bias)..(start + bias + subfeature.fragment.len())
                 };
 
@@ -246,7 +317,7 @@ impl<'doc> SymbolicLocation<'doc> {
                     feature,
                 )
             }
-            None => {
+            SymbolicFeature::Normal => {
                 let feature = match self.route.to_query() {
                     Some(query) => document.query_pretty(&query)?,
                     None => document.root(),
@@ -254,6 +325,21 @@ impl<'doc> SymbolicLocation<'doc> {
 
                 (
                     document.extract_with_leading_whitespace(&feature),
+                    ConcreteLocation::from(&feature.location),
+                    feature,
+                )
+            }
+            SymbolicFeature::KeyOnly => {
+                let feature = match self.route.to_query() {
+                    Some(query) => document.query_key_only(&query)?,
+                    None => {
+                        // NOTE: Technically API misuse; maybe we should panic instead?
+                        anyhow::bail!("can't concretize a key-only route without a query");
+                    }
+                };
+
+                (
+                    document.extract(&feature),
                     ConcreteLocation::from(&feature.location),
                     feature,
                 )

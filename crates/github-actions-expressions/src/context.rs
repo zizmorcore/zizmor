@@ -27,7 +27,7 @@ impl<'src> Context<'src> {
     }
 
     /// Returns the raw string representation of the context.
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'src str {
         self.raw
     }
 

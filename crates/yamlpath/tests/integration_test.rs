@@ -62,6 +62,7 @@ fn run_testcase(path: &Path) {
         let feature = match q.mode.as_deref() {
             Some("pretty") | None => Some(document.query_pretty(&query).unwrap()),
             Some("exact") => document.query_exact(&query).unwrap(),
+            Some("key-only") => Some(document.query_key_only(&query).unwrap()),
             Some(o) => panic!("invalid testcase mode: {o}"),
         };
 
