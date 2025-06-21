@@ -661,6 +661,11 @@ fn run() -> Result<ExitCode> {
         for (_, input) in registry.iter_inputs() {
             Span::current().pb_set_message(input.key().filename());
             for (name, audit) in audit_registry.iter_audits() {
+                tracing::debug!(
+                    "running {name} on {input}",
+                    name = name,
+                    input = input.key()
+                );
                 results.extend(audit.audit(input).with_context(|| {
                     format!("{name} failed on {input}", input = input.key().filename())
                 })?);
