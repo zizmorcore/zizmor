@@ -149,7 +149,7 @@ impl Artipacked {
                 When 'persist-credentials' is true (the default), the GITHUB_TOKEN persists in the local git config \
                 after checkout, which may be inadvertently leaked through subsequent actions like artifact uploads. \
                 Setting 'persist-credentials: false' ensures that credentials don't persist beyond the checkout step itself.".to_string(),
-            _key: step.location().key,
+            key: step.location().key,
             patches: vec![
                 Patch {
                     route: step.route(),
