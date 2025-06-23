@@ -138,11 +138,7 @@ impl Client {
         let refs = repository.references()?;
 
         Ok(refs
-            .enumerate()
-            .filter_map(|(_, r)| match r {
-                Ok(r) => Some(r),
-                Err(_) => None,
-            })
+            .filter_map(|r| r.ok())
             .map(|r| {
                 let name = r.name().unwrap_or("");
                 let oid = r.peel_to_commit().unwrap().id().to_string();
@@ -177,24 +173,24 @@ impl Client {
             .get(&format!("{owner}/{repo}"))
         {
             Some(path) => {
-                let repository = Repository::open(path)?;
-                repository
+                
+                Repository::open(path)?
             }
             None => match path.exists() {
                 true => {
                     self.run_fetch(&path).await?;
-                    let repository = Repository::open(&path)?;
-                    repository
+                    
+                    Repository::open(&path)?
                 }
                 false => {
-                    let repository = RepoBuilder::new()
+                    
+                    RepoBuilder::new()
                         .bare(true)
                         .clone(
                             &self.host.to_repo_url(owner, repo, self.token.clone()),
                             &path,
                         )
-                        .with_context(|| format!("couldn't clone repo {owner}/{repo}"))?;
-                    repository
+                        .with_context(|| format!("couldn't clone repo {owner}/{repo}"))?
                 }
             },
         };
@@ -217,7 +213,7 @@ impl Client {
 
         let refspecs = remote.fetch_refspecs()?;
         let mut normalized_refspecs = vec![];
-        for spec in refspecs.iter().filter_map(|r| r).map(|s| s.to_string()) {
+        for spec in refspecs.iter().flatten().map(|s| s.to_string()) {
             normalized_refspecs.push(spec);
         }
         remote.fetch(&normalized_refspecs, None, None)?;
@@ -247,10 +243,7 @@ impl Client {
         let mut branches = vec![];
 
         for reference in refs.iter() {
-            match reference {
-                Ref::Branch(branch) => branches.push(branch.clone()),
-                _ => {}
-            }
+            if let Ref::Branch(branch) = reference { branches.push(branch.clone()) }
         }
 
         Ok(branches)
@@ -264,10 +257,7 @@ impl Client {
         let refs = self.list_refs(owner, repo).await?;
 
         for reference in refs.iter() {
-            match reference {
-                Ref::Tag(tag) => tags.push(tag.clone()),
-                _ => {}
-            }
+            if let Ref::Tag(tag) = reference { tags.push(tag.clone()) }
         }
 
         Ok(tags)
