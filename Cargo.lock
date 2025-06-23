@@ -2837,9 +2837,9 @@ checksum = "c4013970217383f67b18aef68f6fb2e8d409bc5755227092d32efb0422ba24b8"
 
 [[package]]
 name = "tree-sitter-powershell"
-version = "0.25.2"
+version = "0.25.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "377974a9bbd11ef11aa298d60def669f78b579d11745066a59bc4167e53d360b"
+checksum = "e265a36be4ab388c842629bef61fb719c83f9be3241db92288d064ed425758ba"
 dependencies = [
  "cc",
  "tree-sitter-language",
