@@ -115,7 +115,7 @@ impl UnsoundContains {
         }
     }
 
-    fn unsound_contains<'a>(expr: &'a str) -> Vec<(Severity, String)> {
+    fn unsound_contains(expr: &str) -> Vec<(Severity, String)> {
         let bare = ExtractedExpr::new(expr).as_bare();
 
         Expr::parse(bare)
