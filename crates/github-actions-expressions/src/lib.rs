@@ -131,13 +131,26 @@ impl<'src> Literal<'src> {
     }
 }
 
+// TODO: Move this type to some kind of common crate? It's useful to have
+// a single span type everywhere, instead of the current mash of span helpers
+// and ranges we have throughout zizmor.
 /// Represents a `[start, end)` span for a source expression.
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Span {
     /// The start of the span, inclusive.
     pub start: usize,
     /// The end of the span, exclusive.
     pub end: usize,
+}
+
+impl Span {
+    /// Adjust this span by the given bias.
+    pub fn adjust(self, bias: usize) -> Self {
+        Self {
+            start: self.start + bias,
+            end: self.end + bias,
+        }
+    }
 }
 
 impl From<pest::Span<'_>> for Span {
@@ -158,6 +171,12 @@ impl From<std::ops::Range<usize>> for Span {
     }
 }
 
+impl From<Span> for std::ops::Range<usize> {
+    fn from(span: Span) -> Self {
+        span.start..span.end
+    }
+}
+
 /// An expression along with its source span.
 ///
 /// Important: Because of how our parser works internally, an expression's
@@ -169,7 +188,12 @@ impl From<std::ops::Range<usize>> for Span {
 pub struct SpannedExpr<'src> {
     /// The expression's source span.
     pub span: Span,
-    /// The expression's unparsed form.
+    /// The expression's unparsed form, as it appears in the source.
+    ///
+    /// This is recorded exactly as it appears in the source, *except*
+    /// that leading and trailing whitespace is stripped. This is stripped
+    /// because it's (1) non-semantic, and (2) can cause all kinds of issues
+    /// when attempting to map expressions back to YAML source features.
     pub raw: &'src str,
     /// The expression itself.
     pub inner: Expr<'src>,
@@ -180,9 +204,57 @@ impl<'a> SpannedExpr<'a> {
     pub(crate) fn new(span: impl Into<Span>, raw: &'a str, inner: Expr<'a>) -> Self {
         Self {
             inner,
-            raw,
+            raw: raw.trim(),
             span: span.into(),
         }
+    }
+
+    /// Returns the contexts in this expression that directly flow into the
+    /// expression's evaluation.
+    ///
+    /// For example `${{ foo.bar }}` returns `foo.bar` since the value
+    /// of `foo.bar` flows into the evaluation. On the other hand,
+    /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
+    /// since the value of `foo.bar` flows into a boolean evaluation
+    /// that gets expanded.
+    pub fn dataflow_contexts(&self) -> Vec<(&Context<'a>, Span, &'a str)> {
+        let mut contexts = vec![];
+
+        match self.deref() {
+            Expr::Call { func, args } => {
+                // These functions, when evaluated, produce an evaluation
+                // that includes some or all of the contexts listed in
+                // their arguments.
+                if func == "toJSON" || func == "format" || func == "join" {
+                    for arg in args {
+                        contexts.extend(arg.dataflow_contexts());
+                    }
+                }
+            }
+            // NOTE: We intentionally don't handle the `func(...).foo.bar`
+            // case differently here, since a call followed by a
+            // context access *can* flow into the evaluation.
+            // For example, `${{ fromJSON(something) }}` evaluates to
+            // `Object` but `${{ fromJSON(something).foo }}` evaluates
+            // to the contents of `something.foo`.
+            Expr::Context(ctx) => contexts.push((ctx, self.span, self.raw)),
+            Expr::BinOp { lhs, op, rhs } => match op {
+                // With && only the RHS can flow into the evaluation as a context
+                // (rather than a boolean).
+                BinOp::And => {
+                    contexts.extend(rhs.dataflow_contexts());
+                }
+                // With || either the LHS or RHS can flow into the evaluation as a context.
+                BinOp::Or => {
+                    contexts.extend(lhs.dataflow_contexts());
+                    contexts.extend(rhs.dataflow_contexts());
+                }
+                _ => (),
+            },
+            _ => (),
+        }
+
+        contexts
     }
 }
 
@@ -239,8 +311,8 @@ impl<'src> Expr<'src> {
     }
 
     /// Convenience API for making an [`Expr::Context`].
-    fn context(r: &'src str, components: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
-        Self::Context(Context::new(r, components))
+    fn context(components: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
+        Self::Context(Context::new(components))
     }
 
     /// Returns whether the expression is a literal.
@@ -319,54 +391,6 @@ impl<'src> Expr<'src> {
             Expr::Index(expr) => expr.has_constant_reducible_subexpr(),
             _ => false,
         }
-    }
-
-    /// Returns the contexts in this expression that directly flow into the
-    /// expression's evaluation.
-    ///
-    /// For example `${{ foo.bar }}` returns `foo.bar` since the value
-    /// of `foo.bar` flows into the evaluation. On the other hand,
-    /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
-    /// since the value of `foo.bar` flows into a boolean evaluation
-    /// that gets expanded.
-    pub fn dataflow_contexts(&self) -> Vec<&Context<'src>> {
-        let mut contexts = vec![];
-
-        match self {
-            Expr::Call { func, args } => {
-                // These functions, when evaluated, produce an evaluation
-                // that includes some or all of the contexts listed in
-                // their arguments.
-                if func == "toJSON" || func == "format" || func == "join" {
-                    for arg in args {
-                        contexts.extend(arg.dataflow_contexts());
-                    }
-                }
-            }
-            // NOTE: We intentionally don't handle the `func(...).foo.bar`
-            // case differently here, since a call followed by a
-            // context access *can* flow into the evaluation.
-            // For example, `${{ fromJSON(something) }}` evaluates to
-            // `Object` but `${{ fromJSON(something).foo }}` evaluates
-            // to the contents of `something.foo`.
-            Expr::Context(ctx) => contexts.push(ctx),
-            Expr::BinOp { lhs, op, rhs } => match op {
-                // With && only the RHS can flow into the evaluation as a context
-                // (rather than a boolean).
-                BinOp::And => {
-                    contexts.extend(rhs.dataflow_contexts());
-                }
-                // With || either the LHS or RHS can flow into the evaluation as a context.
-                BinOp::Or => {
-                    contexts.extend(lhs.dataflow_contexts());
-                    contexts.extend(rhs.dataflow_contexts());
-                }
-                _ => (),
-            },
-            _ => (),
-        }
-
-        contexts
     }
 
     /// Parses the given string into an expression.
@@ -593,7 +617,7 @@ impl<'src> Expr<'src> {
                     if inner.len() == 1 && matches!(inner[0].inner, Expr::Call { .. }) {
                         Ok(inner.remove(0).into())
                     } else {
-                        Ok(SpannedExpr::new(span, raw, Expr::context(raw, inner)).into())
+                        Ok(SpannedExpr::new(span, raw, Expr::context(inner)).into())
                     }
                 }
                 r => panic!("unrecognized rule: {r:?}"),
@@ -777,6 +801,10 @@ mod tests {
         (github.event_name == 'pull_request_target' &&
         (github.event.action == 'ready_for_review' || github.event.label.name == 'automerge-skip')))";
 
+        let multiline2 = "foo.bar.baz[
+        0
+        ]";
+
         let cases = &[
             "fromJSON(inputs.free-threading) && '--disable-gil' || ''",
             "foo || bar || baz",
@@ -803,6 +831,9 @@ mod tests {
             "1 > 1",
             "1 >= 1",
             "matrix.node_version >= 20",
+            "true||false",
+            multiline2,
+            "fromJSON( github.event.inputs.hmm ) [ 0 ]",
         ];
 
         for case in cases {
@@ -894,14 +925,11 @@ mod tests {
                 SpannedExpr::new(
                     0..11,
                     "foo.bar.baz",
-                    Expr::context(
-                        "foo.bar.baz",
-                        vec![
-                            SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
-                            SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
-                            SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
-                        ],
-                    ),
+                    Expr::context(vec![
+                        SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
+                        SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
+                        SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
+                    ]),
                 ),
             ),
             (
@@ -909,24 +937,21 @@ mod tests {
                 SpannedExpr::new(
                     0..17,
                     "foo.bar.baz[1][2]",
-                    Expr::context(
-                        "foo.bar.baz[1][2]",
-                        vec![
-                            SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
-                            SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
-                            SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
-                            SpannedExpr::new(
-                                11..14,
-                                "[1]",
-                                Expr::Index(Box::new(SpannedExpr::new(12..13, "1", 1.0.into()))),
-                            ),
-                            SpannedExpr::new(
-                                14..17,
-                                "[2]",
-                                Expr::Index(Box::new(SpannedExpr::new(15..16, "2", 2.0.into()))),
-                            ),
-                        ],
-                    ),
+                    Expr::context(vec![
+                        SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
+                        SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
+                        SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
+                        SpannedExpr::new(
+                            11..14,
+                            "[1]",
+                            Expr::Index(Box::new(SpannedExpr::new(12..13, "1", 1.0.into()))),
+                        ),
+                        SpannedExpr::new(
+                            14..17,
+                            "[2]",
+                            Expr::Index(Box::new(SpannedExpr::new(15..16, "2", 2.0.into()))),
+                        ),
+                    ]),
                 ),
             ),
             (
@@ -934,19 +959,16 @@ mod tests {
                 SpannedExpr::new(
                     0..14,
                     "foo.bar.baz[*]",
-                    Expr::context(
-                        "foo.bar.baz[*]",
-                        [
-                            SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
-                            SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
-                            SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
-                            SpannedExpr::new(
-                                11..14,
-                                "[*]",
-                                Expr::Index(Box::new(SpannedExpr::new(12..13, "*", Expr::Star))),
-                            ),
-                        ],
-                    ),
+                    Expr::context([
+                        SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
+                        SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
+                        SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
+                        SpannedExpr::new(
+                            11..14,
+                            "[*]",
+                            Expr::Index(Box::new(SpannedExpr::new(12..13, "*", Expr::Star))),
+                        ),
+                    ]),
                 ),
             ),
             (
@@ -954,18 +976,11 @@ mod tests {
                 SpannedExpr::new(
                     0..27,
                     "vegetables.*.ediblePortions",
-                    Expr::context(
-                        "vegetables.*.ediblePortions",
-                        vec![
-                            SpannedExpr::new(0..10, "vegetables", Expr::ident("vegetables")),
-                            SpannedExpr::new(11..12, "*", Expr::Star),
-                            SpannedExpr::new(
-                                13..27,
-                                "ediblePortions",
-                                Expr::ident("ediblePortions"),
-                            ),
-                        ],
-                    ),
+                    Expr::context(vec![
+                        SpannedExpr::new(0..10, "vegetables", Expr::ident("vegetables")),
+                        SpannedExpr::new(11..12, "*", Expr::Star),
+                        SpannedExpr::new(13..27, "ediblePortions", Expr::ident("ediblePortions")),
+                    ]),
                 ),
             ),
             (
@@ -978,30 +993,23 @@ mod tests {
                     Expr::BinOp {
                         lhs: Box::new(SpannedExpr::new(
                             0..59,
-                            "github.ref == 'refs/heads/main' && 'value_for_main_branch' ",
+                            "github.ref == 'refs/heads/main' && 'value_for_main_branch'",
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
                                     0..32,
-                                    "github.ref == 'refs/heads/main' ",
+                                    "github.ref == 'refs/heads/main'",
                                     Expr::BinOp {
                                         lhs: Box::new(SpannedExpr::new(
                                             0..10,
                                             "github.ref",
-                                            Expr::context(
-                                                "github.ref",
-                                                vec![
-                                                    SpannedExpr::new(
-                                                        0..6,
-                                                        "github",
-                                                        Expr::ident("github"),
-                                                    ),
-                                                    SpannedExpr::new(
-                                                        7..10,
-                                                        "ref",
-                                                        Expr::ident("ref"),
-                                                    ),
-                                                ],
-                                            ),
+                                            Expr::context(vec![
+                                                SpannedExpr::new(
+                                                    0..6,
+                                                    "github",
+                                                    Expr::ident("github"),
+                                                ),
+                                                SpannedExpr::new(7..10, "ref", Expr::ident("ref")),
+                                            ]),
                                         )),
                                         op: BinOp::Eq,
                                         rhs: Box::new(SpannedExpr::new(
@@ -1081,31 +1089,24 @@ mod tests {
                 SpannedExpr::new(
                     0..30,
                     "foobar[format('{0}', 'event')]",
-                    Expr::context(
-                        "foobar[format('{0}', 'event')]",
-                        [
-                            SpannedExpr::new(0..6, "foobar", Expr::ident("foobar")),
-                            SpannedExpr::new(
-                                6..30,
-                                "[format('{0}', 'event')]",
-                                Expr::Index(Box::new(SpannedExpr::new(
-                                    7..29,
-                                    "format('{0}', 'event')",
-                                    Expr::Call {
-                                        func: Function("format"),
-                                        args: vec![
-                                            SpannedExpr::new(14..19, "'{0}'", Expr::from("{0}")),
-                                            SpannedExpr::new(
-                                                21..28,
-                                                "'event'",
-                                                Expr::from("event"),
-                                            ),
-                                        ],
-                                    },
-                                ))),
-                            ),
-                        ],
-                    ),
+                    Expr::context([
+                        SpannedExpr::new(0..6, "foobar", Expr::ident("foobar")),
+                        SpannedExpr::new(
+                            6..30,
+                            "[format('{0}', 'event')]",
+                            Expr::Index(Box::new(SpannedExpr::new(
+                                7..29,
+                                "format('{0}', 'event')",
+                                Expr::Call {
+                                    func: Function("format"),
+                                    args: vec![
+                                        SpannedExpr::new(14..19, "'{0}'", Expr::from("{0}")),
+                                        SpannedExpr::new(21..28, "'event'", Expr::from("event")),
+                                    ],
+                                },
+                            ))),
+                        ),
+                    ]),
                 ),
             ),
             (
@@ -1117,13 +1118,10 @@ mod tests {
                         lhs: SpannedExpr::new(
                             0..15,
                             "github.actor_id",
-                            Expr::context(
-                                "github.actor_id",
-                                vec![
-                                    SpannedExpr::new(0..6, "github", Expr::ident("github")),
-                                    SpannedExpr::new(7..15, "actor_id", Expr::ident("actor_id")),
-                                ],
-                            ),
+                            Expr::context(vec![
+                                SpannedExpr::new(0..6, "github", Expr::ident("github")),
+                                SpannedExpr::new(7..15, "actor_id", Expr::ident("actor_id")),
+                            ]),
                         )
                         .into(),
                         op: BinOp::Eq,
@@ -1209,10 +1207,22 @@ mod tests {
     fn test_expr_dataflow_contexts() -> Result<()> {
         // Trivial cases.
         let expr = Expr::parse("foo.bar")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.2)
+                .collect::<Vec<_>>(),
+            ["foo.bar"]
+        );
 
         let expr = Expr::parse("foo.bar[1]")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar[1]"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.2)
+                .collect::<Vec<_>>(),
+            ["foo.bar[1]"]
+        );
 
         // No dataflow due to a boolean expression.
         let expr = Expr::parse("foo.bar == 'bar'")?;
@@ -1220,26 +1230,59 @@ mod tests {
 
         // ||: all contexts potentially expand into the evaluation.
         let expr = Expr::parse("foo.bar || abc || d.e.f")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar", "abc", "d.e.f"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.2)
+                .collect::<Vec<_>>(),
+            ["foo.bar", "abc", "d.e.f"]
+        );
 
         // &&: only the RHS context(s) expand into the evaluation.
         let expr = Expr::parse("foo.bar && abc && d.e.f")?;
-        assert_eq!(expr.dataflow_contexts(), ["d.e.f"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.2)
+                .collect::<Vec<_>>(),
+            ["d.e.f"]
+        );
 
         let expr = Expr::parse("foo.bar == 'bar' && foo.bar || 'false'")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.2)
+                .collect::<Vec<_>>(),
+            ["foo.bar"]
+        );
 
         let expr = Expr::parse("foo.bar == 'bar' && foo.bar || foo.baz")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar", "foo.baz"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.2)
+                .collect::<Vec<_>>(),
+            ["foo.bar", "foo.baz"]
+        );
 
         let expr = Expr::parse("fromJson(steps.runs.outputs.data).workflow_runs[0].id")?;
         assert_eq!(
-            expr.dataflow_contexts(),
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.2)
+                .collect::<Vec<_>>(),
             ["fromJson(steps.runs.outputs.data).workflow_runs[0].id"]
         );
 
         let expr = Expr::parse("format('{0} {1} {2}', foo.bar, tojson(github), toJSON(github))")?;
-        assert_eq!(expr.dataflow_contexts(), ["foo.bar", "github", "github"]);
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.2)
+                .collect::<Vec<_>>(),
+            ["foo.bar", "github", "github"]
+        );
 
         Ok(())
     }

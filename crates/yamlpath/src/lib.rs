@@ -260,6 +260,12 @@ enum QueryMode {
     /// For example, querying `foo: bar` for `foo` will return
     /// `foo: bar` instead of just `bar`.
     Pretty,
+    /// For queries that terminate in a key, make the extracted
+    /// feature only that key, rather than both the key and value ("pretty"),
+    /// or just the value ("exact").
+    ///
+    /// For example, querying `foo: bar` for `foo` will return `foo`.
+    KeyOnly,
     /// Make extracted features as "exact" as possible, e.g. by
     /// including only the exact span of the query result.
     Exact,
@@ -414,6 +420,25 @@ impl Document {
         }
     }
 
+    /// Perform a query on the current document, returning a `Feature`
+    /// if the query succeeds.
+    ///
+    /// The feature is extracted in "key only" mode, meaning that it'll
+    /// contain only the key of a mapping, rather than the
+    /// key and value ("pretty") or just the value ("exact").
+    ///
+    /// For example, querying `foo: bar` for `foo` will return
+    /// just `foo` instead of `foo: bar` or `bar`.
+    pub fn query_key_only(&self, query: &Query) -> Result<Feature, QueryError> {
+        if !matches!(query.route.last(), Some(Component::Key(_))) {
+            return Err(QueryError::Other(
+                "query must end with a key component for key-only queries".into(),
+            ));
+        }
+
+        self.query_node(query, QueryMode::KeyOnly).map(|n| n.into())
+    }
+
     /// Returns a string slice of the original document corresponding to
     /// the given [`Feature`].
     ///
@@ -551,13 +576,68 @@ impl Document {
     }
 
     fn query_node(&self, query: &Query, mode: QueryMode) -> Result<Node, QueryError> {
-        let mut key_node = self.top_object()?;
+        let mut focus_node = self.top_object()?;
         for component in &query.route {
-            match self.descend(&key_node, component) {
-                Ok(next) => key_node = next,
+            match self.descend(&focus_node, component) {
+                Ok(next) => focus_node = next,
                 Err(e) => return Err(e),
             }
         }
+
+        focus_node = match mode {
+            QueryMode::Pretty => {
+                // If we're in "pretty" mode, we want to return the
+                // block/flow pair node that contains the key.
+                // This results in a (subjectively) more intuitive extracted feature,
+                // since `foo: bar` gets extracted for `foo` instead of just `bar`.
+                //
+                // NOTE: We might already be on the block/flow pair if we terminated
+                // with an absent value, in which case we don't need to do this cleanup.
+                if matches!(query.route.last(), Some(Component::Key(_)))
+                    && focus_node.kind_id() != self.block_mapping_pair_id
+                    && focus_node.kind_id() != self.flow_pair_id
+                {
+                    focus_node.parent().unwrap()
+                } else {
+                    focus_node
+                }
+            }
+            QueryMode::KeyOnly => {
+                // If we're in "key only" mode, we need to walk back up to
+                // the parent block/flow pair node that contains the key,
+                // and isolate on the key child instead.
+
+                // If we're already on block/flow pair, then we're already
+                // the key's parent.
+                let parent_node = if focus_node.kind_id() == self.block_mapping_pair_id
+                    || focus_node.kind_id() == self.flow_pair_id
+                {
+                    focus_node
+                } else {
+                    focus_node.parent().unwrap()
+                };
+
+                if parent_node.kind_id() == self.flow_mapping_id {
+                    // Handle the annoying `foo: { key }` case, where our "parent"
+                    // is actually a `flow_mapping` instead of a proper block/flow pair.
+                    // To handle this, we get the first `flow_node` child of the
+                    // flow_mapping, which is the "key".
+                    let mut cur = parent_node.walk();
+                    parent_node
+                        .named_children(&mut cur)
+                        .find(|n| n.kind_id() == self.flow_node_id)
+                        .ok_or_else(|| {
+                            QueryError::MissingChildField(parent_node.kind().into(), "flow_node")
+                        })?
+                } else {
+                    parent_node.child_by_field_name("key").ok_or_else(|| {
+                        QueryError::MissingChildField(parent_node.kind().into(), "key")
+                    })?
+                }
+            }
+            // Nothing special to do in exact mode.
+            QueryMode::Exact => focus_node,
+        };
 
         // If we're extracting "pretty" features, we clean up the final
         // node a bit to have it point to the parent `block_mapping_pair`.
@@ -568,12 +648,12 @@ impl Document {
         // with an absent value, in which case we don't need to do this cleanup.
         if matches!(mode, QueryMode::Pretty)
             && matches!(query.route.last(), Some(Component::Key(_)))
-            && key_node.kind_id() != self.block_mapping_pair_id
+            && focus_node.kind_id() != self.block_mapping_pair_id
         {
-            key_node = key_node.parent().unwrap()
+            focus_node = focus_node.parent().unwrap()
         }
 
-        Ok(key_node)
+        Ok(focus_node)
     }
 
     fn descend<'b>(&self, node: &Node<'b>, component: &Component) -> Result<Node<'b>, QueryError> {

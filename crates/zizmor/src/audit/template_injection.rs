@@ -15,7 +15,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{collections::HashMap, env, ops::Deref, sync::LazyLock};
+use std::{collections::HashMap, env, ops::Deref, sync::LazyLock, vec};
 
 use fst::Map;
 use github_actions_expressions::{Expr, Literal, context::Context};
@@ -29,7 +29,7 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
-        location::{Routable as _, SymbolicLocation},
+        location::{Routable as _, Subfeature, SymbolicLocation},
     },
     models::{
         self, StepCommon, action::CompositeStep, inputs::Capability, uses::RepositoryUsesPattern,
@@ -99,9 +99,16 @@ impl TemplateInjection {
             .unwrap_or(&[])
     }
 
+    /// Returns a list of three-tuples containing the script body,
+    /// script location, and any related locations for a step that's
+    /// known to be a template injection sink.
     fn scripts_with_location<'doc>(
         step: &impl StepCommon<'doc>,
-    ) -> Vec<(&'doc str, SymbolicLocation<'doc>)> {
+    ) -> Vec<(
+        &'doc str,
+        SymbolicLocation<'doc>,
+        Vec<SymbolicLocation<'doc>>,
+    )> {
         match step.body() {
             models::StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
@@ -112,6 +119,8 @@ impl TemplateInjection {
                     let input = *input;
                     with.get(input)
                         .and_then(|script| {
+                            // Non-string env values can't contain expressions,
+                            // so we skip them.
                             if let EnvValue::String(script) = script {
                                 Some(script.as_str())
                             } else {
@@ -122,12 +131,33 @@ impl TemplateInjection {
                             (
                                 script,
                                 step.location().with_keys(&["with".into(), input.into()]),
+                                vec![
+                                    // TODO: Plumb the step name/id as a related
+                                    // location here and below; this will require us
+                                    // to add it to StepCommon.
+                                    step.location()
+                                        .with_keys(&["uses".into()])
+                                        .annotated("action accepts arbitrary code"),
+                                    step.location()
+                                        .with_keys(&["with".into(), input.into()])
+                                        .annotated("via this input")
+                                        .key_only(),
+                                ],
                             )
                         })
                 })
                 .collect(),
             models::StepBodyCommon::Run { run, .. } => {
-                vec![(run, step.location().with_keys(&["run".into()]))]
+                vec![(
+                    run,
+                    step.location().with_keys(&["run".into()]),
+                    vec![
+                        step.location()
+                            .with_keys(&["run".into()])
+                            .annotated("this run block")
+                            .key_only(),
+                    ],
+                )]
             }
             _ => vec![],
         }
@@ -291,9 +321,15 @@ impl TemplateInjection {
         &self,
         script: &'doc str,
         step: &impl StepCommon<'doc>,
-    ) -> Vec<(String, Option<Fix<'doc>>, Severity, Confidence, Persona)> {
+    ) -> Vec<(
+        Subfeature<'doc>,
+        Option<Fix<'doc>>,
+        Severity,
+        Confidence,
+        Persona,
+    )> {
         let mut bad_expressions = vec![];
-        for (expr, _) in extract_expressions(script) {
+        for (expr, expr_span) in extract_expressions(script) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_raw());
                 continue;
@@ -303,15 +339,15 @@ impl TemplateInjection {
             // since any expression in a code context is a code smell,
             // even if unexploitable.
             bad_expressions.push((
-                expr.as_raw().into(),
-                // Intentionally not providing a fix here,
+                Subfeature::new(expr_span.start, &parsed),
+                // Intentionally not providing a fix here.
                 None,
                 Severity::Unknown,
                 Confidence::Unknown,
                 Persona::Pedantic,
             ));
 
-            for context in parsed.dataflow_contexts() {
+            for (context, context_span, raw_ctx) in parsed.dataflow_contexts() {
                 // Try and turn our context into a pattern for
                 // matching against the FST.
                 match context.as_pattern().as_deref() {
@@ -324,7 +360,7 @@ impl TemplateInjection {
                             // structure, but not fully arbitrary.
                             Some(Capability::Structured) => {
                                 bad_expressions.push((
-                                    context.as_str().into(),
+                                    Subfeature::new(expr_span.start + context_span.start, raw_ctx),
                                     self.attempt_fix(&expr, &parsed, step),
                                     Severity::Medium,
                                     Confidence::High,
@@ -335,7 +371,7 @@ impl TemplateInjection {
                             // fully attacker-controllable.
                             Some(Capability::Arbitrary) => {
                                 bad_expressions.push((
-                                    context.as_str().into(),
+                                    Subfeature::new(expr_span.start + context_span.start, raw_ctx),
                                     self.attempt_fix(&expr, &parsed, step),
                                     Severity::High,
                                     Confidence::High,
@@ -367,7 +403,10 @@ impl TemplateInjection {
                                     };
 
                                     bad_expressions.push((
-                                        context.as_str().into(),
+                                        Subfeature::new(
+                                            expr_span.start + context_span.start,
+                                            raw_ctx,
+                                        ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         severity,
                                         confidence,
@@ -378,7 +417,10 @@ impl TemplateInjection {
 
                                     if !env_is_static {
                                         bad_expressions.push((
-                                            context.as_str().into(),
+                                            Subfeature::new(
+                                                expr_span.start + context_span.start,
+                                                raw_ctx,
+                                            ),
                                             self.attempt_fix(&expr, &parsed, step),
                                             Severity::Low,
                                             Confidence::High,
@@ -388,7 +430,10 @@ impl TemplateInjection {
                                         // Emit a pedantic finding even if we think the env context
                                         // expansion is probably static.
                                         bad_expressions.push((
-                                            context.as_str().into(),
+                                            Subfeature::new(
+                                                expr_span.start + context_span.start,
+                                                raw_ctx,
+                                            ),
                                             self.attempt_fix(&expr, &parsed, step),
                                             Severity::Unknown,
                                             Confidence::High,
@@ -399,7 +444,10 @@ impl TemplateInjection {
                                     // TODO: Filter these more finely; not everything in the event
                                     // context is actually attacker-controllable.
                                     bad_expressions.push((
-                                        context.as_str().into(),
+                                        Subfeature::new(
+                                            expr_span.start + context_span.start,
+                                            raw_ctx,
+                                        ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         Severity::High,
                                         Confidence::High,
@@ -413,7 +461,7 @@ impl TemplateInjection {
                                             Some(LoE::Expr(_)) => false,
                                             // The matrix may expand to static values according to the context
                                             Some(inner) => models::workflow::Matrix::new(inner)
-                                                .expands_to_static_values(context.as_str()),
+                                                .expands_to_static_values(context),
                                             // Context specifies a matrix, but there is no matrix defined.
                                             // This is an invalid workflow so there's no point in flagging it.
                                             None => continue,
@@ -421,7 +469,10 @@ impl TemplateInjection {
 
                                         if !matrix_is_static {
                                             bad_expressions.push((
-                                                context.as_str().into(),
+                                                Subfeature::new(
+                                                    expr_span.start + context_span.start,
+                                                    raw_ctx,
+                                                ),
                                                 self.attempt_fix(&expr, &parsed, step),
                                                 Severity::Medium,
                                                 Confidence::Medium,
@@ -434,7 +485,10 @@ impl TemplateInjection {
                                     // All other contexts are typically not attacker controllable,
                                     // but may be in obscure cases.
                                     bad_expressions.push((
-                                        context.as_str().into(),
+                                        Subfeature::new(
+                                            expr_span.start + context_span.start,
+                                            raw_ctx,
+                                        ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         Severity::Informational,
                                         Confidence::Low,
@@ -449,7 +503,7 @@ impl TemplateInjection {
                         // we almost certainly have something like
                         // `call(...).foo.bar`.
                         bad_expressions.push((
-                            context.as_str().into(),
+                            Subfeature::new(expr_span.start + context_span.start, raw_ctx),
                             self.attempt_fix(&expr, &parsed, step),
                             Severity::Informational,
                             Confidence::Low,
@@ -469,8 +523,8 @@ impl TemplateInjection {
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
-        for (script, script_loc) in Self::scripts_with_location(step) {
-            for (context, fix, severity, confidence, persona) in
+        for (script, script_loc, related_locs) in Self::scripts_with_location(step) {
+            for (subfeature, fix, severity, confidence, persona) in
                 self.injectable_template_expressions(script, step)
             {
                 let mut finding_builder = Self::finding()
@@ -478,10 +532,17 @@ impl TemplateInjection {
                     .confidence(confidence)
                     .persona(persona)
                     .add_location(step.location().hidden())
-                    .add_location(step.location_with_name())
-                    .add_location(script_loc.clone().primary().annotated(format!(
-                        "{context} may expand into attacker-controllable code"
-                    )));
+                    .add_location(
+                        script_loc
+                            .clone()
+                            .primary()
+                            .subfeature(subfeature)
+                            .annotated("may expand into attacker-controllable code".to_string()),
+                    );
+
+                for related_loc in &related_locs {
+                    finding_builder = finding_builder.add_location(related_loc.clone());
+                }
 
                 if let Some(fix) = fix {
                     finding_builder = finding_builder.fix(fix);

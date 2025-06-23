@@ -13,22 +13,24 @@ use super::{Expr, SpannedExpr};
 /// identifier.
 #[derive(Debug, PartialEq)]
 pub struct Context<'src> {
-    raw: &'src str,
     /// The individual parts of the context.
     pub parts: Vec<SpannedExpr<'src>>,
 }
 
 impl<'src> Context<'src> {
-    pub(crate) fn new(raw: &'src str, parts: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
+    pub(crate) fn new(parts: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
         Self {
-            raw,
             parts: parts.into(),
         }
     }
 
-    /// Returns the raw string representation of the context.
-    pub fn as_str(&self) -> &str {
-        self.raw
+    /// Returns whether the context matches the given pattern exactly.
+    pub fn matches(&self, pattern: impl TryInto<ContextPattern<'src>>) -> bool {
+        let Ok(pattern) = pattern.try_into() else {
+            return false;
+        };
+
+        pattern.matches(self)
     }
 
     /// Returns whether the context is a child of the given pattern.
@@ -95,7 +97,7 @@ impl<'src> Context<'src> {
         //    identifiers? Problem: case normalization.
         // 2. Use `regex-automata` to return a case insensitive
         //    automation here?
-        let mut pattern = String::with_capacity(self.raw.len());
+        let mut pattern = String::new();
 
         let mut parts = self.parts.iter().peekable();
 
@@ -112,12 +114,6 @@ impl<'src> Context<'src> {
 
         pattern.make_ascii_lowercase();
         Some(pattern)
-    }
-}
-
-impl PartialEq<str> for Context<'_> {
-    fn eq(&self, other: &str) -> bool {
-        self.raw.eq_ignore_ascii_case(other)
     }
 }
 
@@ -296,14 +292,6 @@ mod tests {
     }
 
     #[test]
-    fn test_context_eq() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
-        assert_eq!(&ctx, "foo.bar.baz");
-        assert_eq!(&ctx, "FOO.BAR.BAZ");
-        assert_eq!(&ctx, "Foo.Bar.Baz");
-    }
-
-    #[test]
     fn test_context_child_of() {
         let ctx = Context::try_from("foo.bar.baz").unwrap();
 
@@ -381,6 +369,15 @@ mod tests {
             ("foo[1][2][3]", Some("foo.*.*.*")),
             ("foo.bar[abc]", Some("foo.bar.*")),
             ("foo.bar[abc()]", Some("foo.bar.*")),
+            // Whitespace.
+            ("foo . bar", Some("foo.bar")),
+            ("foo . bar . baz", Some("foo.bar.baz")),
+            ("foo . bar . baz_baz", Some("foo.bar.baz_baz")),
+            ("foo . bar . baz-baz", Some("foo.bar.baz-baz")),
+            ("foo .*", Some("foo.*")),
+            ("foo . bar .*", Some("foo.bar.*")),
+            ("foo .* . baz", Some("foo.*.baz")),
+            ("foo .* .*", Some("foo.*.*")),
             // Invalid cases
             ("foo().bar", None),
         ] {
