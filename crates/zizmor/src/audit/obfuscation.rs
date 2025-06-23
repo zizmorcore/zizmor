@@ -3,8 +3,11 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use crate::{
     Confidence, Severity,
-    finding::{Feature, Finding, Location},
-    models::{CompositeStep, Step, StepCommon},
+    finding::{
+        Finding,
+        location::{Feature, Location},
+    },
+    models::{StepCommon, action::CompositeStep, workflow::Step},
     utils::parse_expressions_from_input,
 };
 

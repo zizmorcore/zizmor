@@ -9,6 +9,7 @@ permissions: {}
 
 jobs:
   check-for-new-version:
+    name: Check for new zizmor version in Wolfi OS
     runs-on: ubuntu-latest
     # this job does not make sense on forks
     if: ${{ github.repository_owner == 'zizmorcore' }}

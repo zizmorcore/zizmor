@@ -6,6 +6,7 @@ permissions: {}
 
 jobs:
   some-dangerous-job:
+    name: some-dangerous-job
     runs-on: ubuntu-latest
     env:
       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
@@ -13,6 +14,7 @@ jobs:
       - run: echo "don't do this"
 
   env-via-matrix:
+    name: env-via-matrix
     runs-on: ubuntu-latest
     strategy:
       matrix:

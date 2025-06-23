@@ -1,20 +1,21 @@
 //! Core namespace for zizmor's audits.
 
-use github_actions_models::action;
 use line_index::LineIndex;
 use thiserror::Error;
 use tracing::instrument;
 use yamlpath::Document;
 
 use crate::{
-    finding::{Finding, FindingBuilder, SymbolicLocation},
+    finding::{Finding, FindingBuilder, location::SymbolicLocation},
     models::{
-        Action, AsDocument, CompositeStep, Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow,
+        AsDocument, action::Action, action::CompositeStep, workflow::Job, workflow::NormalJob,
+        workflow::ReusableWorkflowCallJob, workflow::Step, workflow::Workflow,
     },
     registry::InputKey,
     state::AuditState,
 };
 
+pub(crate) mod anonymous_definition;
 pub(crate) mod artipacked;
 pub(crate) mod bot_conditions;
 pub(crate) mod cache_poisoning;
@@ -55,8 +56,8 @@ impl AuditInput {
 
     pub(crate) fn line_index(&self) -> &LineIndex {
         match self {
-            AuditInput::Workflow(workflow) => &workflow.line_index,
-            AuditInput::Action(action) => &action.line_index,
+            AuditInput::Workflow(workflow) => workflow.as_document().line_index(),
+            AuditInput::Action(action) => action.as_document().line_index(),
         }
     }
 
@@ -67,7 +68,7 @@ impl AuditInput {
         }
     }
 
-    pub(crate) fn location(&self) -> SymbolicLocation {
+    pub(crate) fn location(&self) -> SymbolicLocation<'_> {
         match self {
             AuditInput::Workflow(workflow) => workflow.location(),
             AuditInput::Action(action) => action.location(),
@@ -245,8 +246,8 @@ pub(crate) trait Audit: AuditCore {
     fn audit_action<'doc>(&self, action: &'doc Action) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
 
-        if matches!(action.runs, action::Runs::Composite(_)) {
-            for step in action.steps() {
+        if let Some(steps) = action.steps() {
+            for step in steps {
                 results.extend(self.audit_composite_step(&step)?);
             }
         }

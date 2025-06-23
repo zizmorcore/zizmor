@@ -11,7 +11,8 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::finding::Finding;
-use crate::models::{CompositeStep, JobExt as _, StepCommon};
+use crate::finding::location::Locatable as _;
+use crate::models::{StepCommon, action::CompositeStep};
 use crate::{
     finding::{Confidence, Severity},
     github_api,
@@ -69,7 +70,7 @@ impl Audit for RefConfusion {
 
     fn audit_workflow<'doc>(
         &self,
-        workflow: &'doc crate::models::Workflow,
+        workflow: &'doc crate::models::workflow::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 

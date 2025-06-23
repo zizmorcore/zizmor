@@ -145,34 +145,50 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:18:5
+  --> .github/workflows/bot-conditions.yml:16:3
    |
-18 |     if: github.actor == 'dependabot[bot]'
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+16 | /   hackme:
+17 | |     runs-on: ubuntu-latest
+18 | |     if: github.actor == 'dependabot[bot]'
+   | |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+19 | |     steps:
+...  |
+33 | |         run: echo hello
+34 | |         if: github.actor == 'notabot'
+   | |______________________________________^ this job
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:22:9
+  --> .github/workflows/bot-conditions.yml:20:9
    |
+20 |       - name: vulnerable-1
+   |         ^^^^^^^^^^^^^^^^^^ this step
+21 |         run: echo hello
 22 |         if: ${{ github.actor == 'dependabot[bot]' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:26:9
+  --> .github/workflows/bot-conditions.yml:24:9
    |
+24 |       - name: vulnerable-2
+   |         ^^^^^^^^^^^^^^^^^^ this step
+25 |         run: echo hello
 26 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
-  --> .github/workflows/bot-conditions.yml:30:9
+  --> .github/workflows/bot-conditions.yml:28:9
    |
+28 |       - name: vulnerable-3
+   |         ^^^^^^^^^^^^^^^^^^ this step
+29 |         run: echo hello
 30 |         if: github.actor == 'renovate[bot]'
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
 
@@ -843,76 +859,66 @@ warning[excessive-permissions]: overly broad permissions
     = note: audit confidence → Medium
 
 error[template-injection]: code injection via template expansion
-  --> .github/workflows/template-injection.yml:45:9
+  --> .github/workflows/template-injection.yml:48:36
    |
-45 |         - name: vulnerable-1
-   |           ^^^^^^^^^^^^^^^^^^ this step
-46 |           # NOT OK: attacker controlled issue title
-47 | /         run: |
-48 | |           echo "issue created: ${{ github.event.issue.title }}"
-   | |_______________________________________________________________^ github.event.issue.title may expand into attacker-controllable code
+47 |         run: |
+   |         ^^^ this run block
+48 |           echo "issue created: ${{ github.event.issue.title }}"
+   |                                    ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
 error[template-injection]: code injection via template expansion
-  --> .github/workflows/template-injection.yml:50:9
+  --> .github/workflows/template-injection.yml:53:36
    |
-50 |         - name: vulnerable-2
-   |           ^^^^^^^^^^^^^^^^^^ this step
-51 |           # NOT OK: attacker controlled workflow_dispatch input
-52 | /         run: |
-53 | |           echo "doing a thing: ${{ inputs.hackme }}"
-   | |____________________________________________________^ inputs.hackme may expand into attacker-controllable code
+52 |         run: |
+   |         ^^^ this run block
+53 |           echo "doing a thing: ${{ inputs.hackme }}"
+   |                                    ^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 
 error[template-injection]: code injection via template expansion
-  --> .github/workflows/template-injection.yml:60:9
+  --> .github/workflows/template-injection.yml:63:36
    |
-60 |         - name: vulnerable-4
-   |           ^^^^^^^^^^^^^^^^^^ this step
-61 |           # NOT OK: `workflow_call` inputs may or may not be trusted
-62 | /         run: |
-63 | |           echo "doing a thing: ${{ inputs.hackme-call }}"
-   | |_________________________________________________________^ inputs.hackme-call may expand into attacker-controllable code
+62 |         run: |
+   |         ^^^ this run block
+63 |           echo "doing a thing: ${{ inputs.hackme-call }}"
+   |                                    ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 
 warning[template-injection]: code injection via template expansion
-  --> .github/workflows/template-injection.yml:82:9
+  --> .github/workflows/template-injection.yml:85:36
    |
-82 |         - name: vulnerable-8
-   |           ------------------ this step
-83 |           # NOT OK: matrix.dynamic is dynamic
-84 | /         run: |
-85 | |           echo "doing a thing: ${{ matrix.dynamic }}"
-   | |_____________________________________________________- matrix.dynamic may expand into attacker-controllable code
+84 |         run: |
+   |         --- this run block
+85 |           echo "doing a thing: ${{ matrix.dynamic }}"
+   |                                    -------------- may expand into attacker-controllable code
    |
    = note: audit confidence → Medium
 
 warning[template-injection]: code injection via template expansion
-   --> .github/workflows/template-injection.yml:104:9
+   --> .github/workflows/template-injection.yml:107:36
     |
-104 |         - name: vulnerable-11
-    |           ------------------- this step
-105 |           # NOT OK: entire matrix is dynamic
-106 | /         run: |
-107 | |           echo "doing a thing: ${{ matrix.unknown-key }}"
-    | |_________________________________________________________- matrix.unknown-key may expand into attacker-controllable code
+106 |         run: |
+    |         --- this run block
+107 |           echo "doing a thing: ${{ matrix.unknown-key }}"
+    |                                    ------------------ may expand into attacker-controllable code
     |
     = note: audit confidence → Medium
 
 error[template-injection]: code injection via template expansion
-   --> .github/workflows/template-injection.yml:114:9
+   --> .github/workflows/template-injection.yml:119:40
     |
-114 |         - name: vulnerable-12
-    |           ^^^^^^^^^^^^^^^^^^^ this step
-115 |           uses: actions/github-script@v7
-116 |           with:
-117 |             # NOT OK: attacker-controlled issue title
-118 | /           script: |
-119 | |             return "doing a thing: ${{ github.event.issue.title }}"
-    | |___________________________________________________________________^ github.event.issue.title may expand into attacker-controllable code
+115 |         uses: actions/github-script@v7
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action accepts arbitrary code
+116 |         with:
+117 |           # NOT OK: attacker-controlled issue title
+118 |           script: |
+    |           ^^^^^^ via this input
+119 |             return "doing a thing: ${{ github.event.issue.title }}"
+    |                                        ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
     |
     = note: audit confidence → High
 
@@ -1076,4 +1082,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-122 findings (27 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high
+172 findings (77 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high

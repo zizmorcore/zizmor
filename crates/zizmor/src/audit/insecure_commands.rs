@@ -8,8 +8,9 @@ use github_actions_models::workflow::job::StepBody;
 
 use super::{AuditLoadError, Job, audit_meta};
 use crate::audit::Audit;
-use crate::finding::{Confidence, Finding, Persona, Severity, SymbolicLocation};
-use crate::models::{AsDocument, JobExt as _, StepCommon, Steps, Workflow};
+use crate::finding::location::Locatable as _;
+use crate::finding::{Confidence, Finding, Persona, Severity, location::SymbolicLocation};
+use crate::models::{AsDocument, workflow::Steps, workflow::Workflow};
 use crate::state::AuditState;
 
 pub(crate) struct InsecureCommands;
@@ -74,13 +75,12 @@ impl InsecureCommands {
                     run: _,
                     working_directory: _,
                     shell: _,
-                    env,
                 } = &step.deref().body
                 else {
                     return None;
                 };
 
-                match env {
+                match &step.env {
                     // The entire environment block is an expression, which we
                     // can't follow (for now). Emit an auditor-only finding.
                     LoE::Expr(_) => {
@@ -143,11 +143,11 @@ impl Audit for InsecureCommands {
     ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
-        let action::StepBody::Run { env, .. } = &step.body else {
+        let action::StepBody::Run { .. } = &step.body else {
             return Ok(findings);
         };
 
-        match env {
+        match &step.env {
             LoE::Expr(_) => {
                 findings.push(self.insecure_commands_maybe_present(step.action(), step.location())?)
             }

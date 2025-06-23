@@ -3,10 +3,13 @@ on:
     branches:
       - "release-v2.0.0"
 
+name: workflow-release-branch-trigger
+
 permissions: {}
 
 jobs:
   publish:
+    name: publish
     runs-on: ubuntu-latest
     steps:
       - name: Project Checkout

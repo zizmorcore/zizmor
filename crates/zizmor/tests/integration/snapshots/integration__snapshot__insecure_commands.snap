@@ -3,18 +3,18 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"insecure-commands.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 error[insecure-commands]: execution of insecure workflow commands is enabled
-  --> @@INPUT@@:10:5
+  --> @@INPUT@@:11:5
    |
-10 | /     env:
-11 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+11 | /     env:
+12 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
    | |___________________________________________^ insecure commands enabled here
    |
    = note: audit confidence → High
 
 error[insecure-commands]: execution of insecure workflow commands is enabled
-  --> @@INPUT@@:24:9
+  --> @@INPUT@@:26:9
    |
-24 |         env: ${{ matrix.env }}
+26 |         env: ${{ matrix.env }}
    |         ^^^^^^^^^^^^^^^^^^^^^^ non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS
    |
    = note: audit confidence → Low

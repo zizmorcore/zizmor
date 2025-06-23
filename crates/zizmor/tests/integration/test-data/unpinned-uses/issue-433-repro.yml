@@ -8,6 +8,7 @@ permissions: {}
 
 jobs:
   issue-433-repro:
+    name: issue-433-repro
     runs-on: ubuntu-latest
     steps:
       - name: no-finding-1

@@ -1,9 +1,12 @@
 on: release
 
+name: cache-poisoning
+
 permissions: {}
 
 jobs:
   publish:
+    name: publish
     runs-on: ubuntu-latest
     steps:
       - name: Setup uv

@@ -1,0 +1,127 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"template-injection/issue-883-repro/action.yml\")).run()?"
+---
+note[template-injection]: code injection via template expansion
+  --> @@INPUT@@:48:53
+   |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       -------------------------------------------------------------------------------- note: action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
+39 |         script: |
+   |         ------ note: via this input
+40 |           import base64
+...
+47 |
+48 |           chango_instance = get_chango_instance(${{ inputs.pyproject-toml }})
+   |                                                     --------------------- note: may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+
+help[template-injection]: code injection via template expansion
+  --> @@INPUT@@:56:26
+   |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       -------------------------------------------------------------------------------- help: action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
+39 |         script: |
+   |         ------ help: via this input
+40 |           import base64
+...
+55 |           output = (
+56 |               ${{ toJson(env.CUSTOM_OUTPUT) }}
+   |                          ----------------- help: may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> @@INPUT@@:57:29
+   |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       -------------------------------------------------------------------------------- help: action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
+39 |         script: |
+   |         ------ help: via this input
+40 |           import base64
+...
+56 |               ${{ toJson(env.CUSTOM_OUTPUT) }}
+57 |               or ${{ toJson(env.DEFAULT_OUTPUT) }}
+   |                             ------------------ help: may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+note[template-injection]: code injection via template expansion
+  --> @@INPUT@@:60:19
+   |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       -------------------------------------------------------------------------------- note: action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
+39 |         script: |
+   |         ------ note: via this input
+40 |           import base64
+...
+59 |           data = (
+60 |               ${{ inputs.data }}
+   |                   ----------- note: may expand into attacker-controllable code
+   |
+   = note: audit confidence → Low
+
+error[template-injection]: code injection via template expansion
+  --> @@INPUT@@:65:32
+   |
+34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action accepts arbitrary code
+35 |       env:
+...
+38 |       with:
+39 |         script: |
+   |         ^^^^^^ via this input
+40 |           import base64
+...
+64 |           change_note = chango_instance.build_github_event_change_note(
+65 |               event=${{ toJson(github.event) }},
+   |                                ^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> @@INPUT@@:110:33
+    |
+104 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+    |       -------------------------------------------------------------------------------- help: action accepts arbitrary code
+105 |       with:
+106 |         script: |
+    |         ------ help: via this input
+107 |           import base64
+108 |           from pathlib import Path
+109 |
+110 |           file_path = Path("${{ env.CHANGE_NOTE_PATH }}")
+    |                                 -------------------- help: may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> @@INPUT@@:111:34
+    |
+104 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
+    |       -------------------------------------------------------------------------------- help: action accepts arbitrary code
+105 |       with:
+106 |         script: |
+    |         ------ help: via this input
+107 |           import base64
+...
+110 |           file_path = Path("${{ env.CHANGE_NOTE_PATH }}")
+111 |           encoded_content = "${{ env.CHANGE_NOTE_CONTENT }}"
+    |                                  ----------------------- help: may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+14 findings (7 suppressed): 2 unknown, 0 informational, 4 low, 0 medium, 1 high

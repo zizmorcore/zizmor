@@ -6,6 +6,7 @@ permissions: {}
 
 jobs:
   false-positive-menagerie:
+    name: false-positive-menagerie
     runs-on: ubuntu-latest
 
     steps:

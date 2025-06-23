@@ -1,51 +1,51 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"unpinned-images.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
 error[unpinned-images]: unpinned image references
-  --> @@INPUT@@:16:7
+  --> @@INPUT@@:19:7
    |
-16 |       image: fake.example.com/example
+19 |       image: fake.example.com/example
    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> @@INPUT@@:24:9
+  --> @@INPUT@@:28:9
    |
-24 |         image: fake.example.com/redis
+28 |         image: fake.example.com/redis
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> @@INPUT@@:31:7
+  --> @@INPUT@@:36:7
    |
-31 |       image: fake.example.com/example:latest
+36 |       image: fake.example.com/example:latest
    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> @@INPUT@@:39:9
+  --> @@INPUT@@:45:9
    |
-39 |         image: fake.example.com/redis:latest
+45 |         image: fake.example.com/redis:latest
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> @@INPUT@@:46:7
+  --> @@INPUT@@:53:7
    |
-46 |       image: fake.example.com/example:0.0.348
+53 |       image: fake.example.com/example:0.0.348
    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> @@INPUT@@:54:9
+  --> @@INPUT@@:62:9
    |
-54 |         image: fake.example.com/redis:7.4.3
+62 |         image: fake.example.com/redis:7.4.3
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
    |
    = note: audit confidence → High

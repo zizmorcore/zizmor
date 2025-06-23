@@ -3,10 +3,10 @@ use std::{collections::HashMap, sync::LazyLock};
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
-use crate::models::JobExt as _;
+use crate::finding::location::Locatable as _;
 use crate::{
     AuditState,
-    finding::{Confidence, Persona, Severity, SymbolicLocation},
+    finding::{Confidence, Persona, Severity, location::SymbolicLocation},
 };
 
 // Subjective mapping of permissions to severities, when given `write` access.
@@ -49,7 +49,7 @@ impl Audit for ExcessivePermissions {
 
     fn audit_workflow<'doc>(
         &self,
-        workflow: &'doc crate::models::Workflow,
+        workflow: &'doc crate::models::workflow::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 

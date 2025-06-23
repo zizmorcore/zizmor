@@ -4,9 +4,11 @@ use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 
 use crate::audit::{Audit, audit_meta};
+use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
+use crate::models::StepCommon;
 use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
-use crate::models::{JobExt as _, NormalJob, Step, StepCommon, Steps};
+use crate::models::workflow::{JobExt as _, NormalJob, Step, Steps};
 use crate::state::AuditState;
 
 use super::AuditLoadError;

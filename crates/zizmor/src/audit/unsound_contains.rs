@@ -1,10 +1,13 @@
-use github_actions_expressions::{Expr, context::Context};
-use github_actions_models::common::{If, expr::ExplicitExpr};
+use std::ops::Deref;
+
+use github_actions_expressions::{Expr, Literal, SpannedExpr, context::Context};
+use github_actions_models::common::If;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    finding::{Confidence, Severity},
-    models::{JobExt, StepCommon as _},
+    finding::{Confidence, Severity, location::Locatable as _},
+    models::workflow::JobExt as _,
+    utils::ExtractedExpr,
 };
 
 // TODO: Merge this with the list in `template_injection.rs`?
@@ -77,11 +80,20 @@ impl Audit for UnsoundContains {
 
 impl UnsoundContains {
     fn walk_tree_for_unsound_contains<'a>(
-        expr: &'a Expr,
-    ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>)> + 'a> {
-        match expr {
+        expr: &'a SpannedExpr,
+    ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>, &'a str)> + 'a> {
+        match expr.deref() {
             Expr::Call { func, args: exprs } if func == "contains" => match exprs.as_slice() {
-                [Expr::String(s), Expr::Context(c)] => Box::new(std::iter::once((s.as_str(), c))),
+                [
+                    SpannedExpr {
+                        inner: Expr::Literal(Literal::String(s)),
+                        ..
+                    },
+                    ctx_expr @ SpannedExpr {
+                        inner: Expr::Context(c),
+                        ..
+                    },
+                ] => Box::new(std::iter::once((s.as_ref(), c, ctx_expr.raw))),
                 args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
             },
             Expr::Call {
@@ -104,16 +116,13 @@ impl UnsoundContains {
     }
 
     fn unsound_contains(expr: &str) -> Vec<(Severity, String)> {
-        let bare = match ExplicitExpr::from_curly(expr) {
-            Some(raw_expr) => raw_expr.as_bare().to_string(),
-            None => expr.to_string(),
-        };
+        let bare = ExtractedExpr::new(expr).as_bare();
 
-        Expr::parse(&bare)
+        Expr::parse(bare)
             .inspect_err(|_err| tracing::warn!("couldn't parse expression: {expr}"))
             .iter()
             .flat_map(|expression| Self::walk_tree_for_unsound_contains(expression))
-            .map(|(_s, ctx)| {
+            .map(|(_s, ctx, raw_ctx)| {
                 let severity = if USER_CONTROLLABLE_CONTEXTS
                     .iter()
                     .any(|item| ctx.child_of(*item))
@@ -122,7 +131,7 @@ impl UnsoundContains {
                 } else {
                     Severity::Informational
                 };
-                (severity, ctx.as_str().to_string())
+                (severity, raw_ctx.into())
             })
             .collect()
     }

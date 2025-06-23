@@ -8,6 +8,7 @@ permissions: {}
 
 jobs:
   issue-642-true-positive:
+    name: issue-642-true-positive
     runs-on: ubuntu-latest
     steps:
       - name: Set up Docker Buildx
@@ -23,6 +24,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   issue-642-true-negative:
+    name: issue-642-true-negative
     runs-on: ubuntu-latest
     steps:
       - name: Set up Docker Buildx

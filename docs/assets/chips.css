@@ -1,0 +1,25 @@
+.chip {
+    display: inline-block;
+    color: white;
+    padding: 0px 6px;
+    border-radius: 10px;
+    font-size: small;
+    vertical-align: middle;
+    font-style: normal;
+}
+
+.chip-recommended {
+    background: green;
+}
+
+.chip-recommended::before {
+    content: "recommended";
+}
+
+.chip-expert {
+    background: blue;
+}
+
+.chip-expert::before {
+    content: "for experts";
+}

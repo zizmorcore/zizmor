@@ -1,8 +1,11 @@
 use anyhow::Result;
 
 use crate::{
-    finding::{Confidence, Finding, Persona, Severity, SymbolicLocation},
-    models::JobExt as _,
+    finding::{
+        Confidence, Finding, Persona, Severity,
+        location::{Locatable as _, SymbolicLocation},
+    },
+    models::workflow::JobExt as _,
     state::AuditState,
 };
 

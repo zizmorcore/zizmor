@@ -1,8 +1,10 @@
-use github_actions_expressions::{Expr, context::Context};
+use std::ops::Deref;
+
+use github_actions_expressions::{Expr, SpannedExpr, context::Context};
 
 use crate::{
     Confidence, Severity,
-    finding::{Feature, Location},
+    finding::location::{Feature, Location},
     utils::parse_expressions_from_input,
 };
 
@@ -60,19 +62,19 @@ impl Audit for UnredactedSecrets {
 }
 
 impl UnredactedSecrets {
-    fn secret_leakages(expr: &Expr) -> Vec<()> {
+    fn secret_leakages(expr: &SpannedExpr) -> Vec<()> {
         let mut results = vec![];
 
         // We're looking for patterns like `fromJSON(secrets.foo)`,
         // since these mutate the secret value (e.g. by JSON decoding it)
         // and therefore bypass GitHub's redaction mechanism.
 
-        match expr {
+        match expr.deref() {
             Expr::Call { func, args } => {
                 if func == "fromJSON"
-                    && args
-                        .iter()
-                        .any(|arg| matches!(arg, Expr::Context(ctx) if ctx.child_of("secrets")))
+                    && args.iter().any(
+                        |arg| matches!(arg.deref(), Expr::Context(ctx) if ctx.child_of("secrets")),
+                    )
                 {
                     results.push(());
                 } else {

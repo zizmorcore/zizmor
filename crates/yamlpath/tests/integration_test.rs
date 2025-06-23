@@ -25,6 +25,7 @@ enum QueryComponent {
 #[derive(Deserialize)]
 struct TestcaseQuery {
     query: Vec<QueryComponent>,
+    mode: Option<String>,
     expected: String,
 }
 
@@ -55,12 +56,23 @@ fn run_testcase(path: &Path) {
     let testcase = serde_yaml::from_str::<Testcase>(&raw_testcase).unwrap();
 
     for q in &testcase.queries {
+        let document = Document::new(raw_testcase.clone()).unwrap();
         let query: Query = q.into();
+
+        let feature = match q.mode.as_deref() {
+            Some("pretty") | None => Some(document.query_pretty(&query).unwrap()),
+            Some("exact") => document.query_exact(&query).unwrap(),
+            Some("key-only") => Some(document.query_key_only(&query).unwrap()),
+            Some(o) => panic!("invalid testcase mode: {o}"),
+        };
+
         let expected = q.expected.as_str();
 
-        let document = Document::new(raw_testcase.clone()).unwrap();
-        let feature = document.query(&query).unwrap();
-
-        assert_eq!(document.extract_with_leading_whitespace(&feature), expected)
+        match feature {
+            Some(feature) => {
+                assert_eq!(document.extract_with_leading_whitespace(&feature), expected)
+            }
+            None => assert_eq!(expected, "<<empty>>"),
+        }
     }
 }

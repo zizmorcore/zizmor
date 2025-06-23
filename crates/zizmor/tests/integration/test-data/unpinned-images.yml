@@ -7,10 +7,13 @@ on:
       - master
   workflow_dispatch:
 
+name: unpinned-images
+
 permissions: {}
 
 jobs:
   unpinned-container-image:
+    name: unpinned-container-image
     runs-on: ubuntu-latest
     container:
       image: fake.example.com/example
@@ -18,6 +21,7 @@ jobs:
       - run: echo 'vulnerable!'
 
   unpinned-service-container-image:
+    name: unpinned-service-container-image
     runs-on: ubuntu-latest
     services:
       redis:
@@ -26,6 +30,7 @@ jobs:
       - run: echo 'vulnerable!'
 
   unpinned-container-image-latest:
+    name: unpinned-container-image-latest
     runs-on: ubuntu-latest
     container:
       image: fake.example.com/example:latest
@@ -33,6 +38,7 @@ jobs:
       - run: echo 'vulnerable!'
 
   unpinned-service-container-image-latest:
+    name: unpinned-service-container-image-latest
     runs-on: ubuntu-latest
     services:
       redis:
@@ -41,6 +47,7 @@ jobs:
       - run: echo 'vulnerable!'
 
   tag-pinned-container-image:
+    name: tag-pinned-container-image
     runs-on: ubuntu-latest
     container:
       image: fake.example.com/example:0.0.348
@@ -48,6 +55,7 @@ jobs:
       - run: echo 'not vulnerable!'
 
   tag-pinned-service-container-image:
+    name: tag-pinned-service-container-image
     runs-on: ubuntu-latest
     services:
       redis:
@@ -56,6 +64,7 @@ jobs:
       - run: echo 'not vulnerable!'
 
   hash-pinned-container-image:
+    name: hash-pinned-container-image
     runs-on: ubuntu-latest
     container:
       image: fake.example.com/example@sha256:bfadbbcb25fd75c30c295843f1a861414f46c080f0f1d0c5cd93843c88edabcf
@@ -63,6 +72,7 @@ jobs:
       - run: echo 'not vulnerable!'
 
   hash-pinned-service-container-image:
+    name: hash-pinned-service-container-image
     runs-on: ubuntu-latest
     services:
       redis:

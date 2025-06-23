@@ -5,8 +5,7 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
-    finding::{Confidence, Severity},
-    models::JobExt as _,
+    finding::{Confidence, Severity, location::Locatable as _},
     state::AuditState,
 };
 
@@ -28,7 +27,7 @@ impl Audit for HardcodedContainerCredentials {
 
     fn audit_workflow<'doc>(
         &self,
-        workflow: &'doc crate::models::Workflow,
+        workflow: &'doc crate::models::workflow::Workflow,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 

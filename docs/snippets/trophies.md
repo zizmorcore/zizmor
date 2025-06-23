@@ -22,8 +22,11 @@
 
     ??? example "Examples"
         - apache/airflow#45408
+        - apache/airflow#47258
         - apache/airflow#50749
+        - apache/iceberg-rust#1123
         - apache/opennlp#736
+        - apache/sedona#1976
 
 
 -   ![](https://github.com/artichoke.png?size=40){ width="40" loading=lazy align=left } artichoke
@@ -120,6 +123,14 @@
         - canonical/testflinger#630
 
 
+-   ![](https://github.com/certbot.png?size=40){ width="40" loading=lazy align=left } certbot
+
+    ---
+
+    ??? example "Examples"
+        - certbot/josepy#193
+
+
 -   ![](https://github.com/cunla.png?size=40){ width="40" loading=lazy align=left } cunla
 
     ---
@@ -136,6 +147,7 @@
         - curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
         - curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
         - curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
+        - curl/curl@17a669426f36b467dfd945b4b35f6211598b7977
         - curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
 
 
@@ -259,6 +271,7 @@
 
     ??? example "Examples"
         - fpgmaas/deptry#972
+        - fpgmaas/deptry#1161
 
 
 -   ![](https://github.com/freeCodeCamp.png?size=40){ width="40" loading=lazy align=left } freeCodeCamp
@@ -497,6 +510,14 @@
         - kanidm/kanidm#3430
 
 
+-   ![](https://github.com/libssh2.png?size=40){ width="40" loading=lazy align=left } libssh2
+
+    ---
+
+    ??? example "Examples"
+        - libssh2/libssh2#1609
+
+
 -   ![](https://github.com/lmstudio-ai.png?size=40){ width="40" loading=lazy align=left } lmstudio-ai
 
     ---
@@ -595,6 +616,7 @@
     ---
 
     ??? example "Examples"
+        - mongodb/django-mongodb-backend#315
         - mongodb/motor#312
         - mongodb/mongo-python-driver#2001
 
@@ -614,6 +636,7 @@
     ??? example "Examples"
         - mozilla/fxa#18628
         - mozilla/neqo#2413
+        - mozilla/neqo#2721
 
 
 -   ![](https://github.com/narwhals-dev.png?size=40){ width="40" loading=lazy align=left } narwhals-dev
@@ -682,6 +705,7 @@
 
     ??? example "Examples"
         - open-edge-platform/geti#162
+        - open-edge-platform/geti-sdk#603
 
 
 -   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
@@ -714,6 +738,7 @@
 
     ??? example "Examples"
         - orion-rs/orion#441
+        - orion-rs/orion#490
 
 
 -   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
@@ -734,12 +759,28 @@
         - oxc-project/oxc-resolver#373
 
 
+-   ![](https://github.com/philips-software.png?size=40){ width="40" loading=lazy align=left } philips-software
+
+    ---
+
+    ??? example "Examples"
+        - philips-software/amp-devcontainer#830
+
+
 -   ![](https://github.com/PlasmaPy.png?size=40){ width="40" loading=lazy align=left } PlasmaPy
 
     ---
 
     ??? example "Examples"
         - PlasmaPy/PlasmaPy#2975
+
+
+-   ![](https://github.com/PowerDNS.png?size=40){ width="40" loading=lazy align=left } PowerDNS
+
+    ---
+
+    ??? example "Examples"
+        - PowerDNS/pdns#15600
 
 
 -   ![](https://github.com/praetorian-inc.png?size=40){ width="40" loading=lazy align=left } praetorian-inc
@@ -840,6 +881,8 @@
 
     ??? example "Examples"
         - pytest-dev/pytest#13062
+        - pytest-dev/pytest-django#1211
+        - pytest-dev/pytest-django#1214
 
 
 -   ![](https://github.com/python.png?size=40){ width="40" loading=lazy align=left } python
@@ -939,6 +982,23 @@
         - quarkslab/quokka#46
 
 
+-   ![](https://github.com/reubeno.png?size=40){ width="40" loading=lazy align=left } reubeno
+
+    ---
+
+    ??? example "Examples"
+        - reubeno/brush#534
+        - reubeno/brush#535
+
+
+-   ![](https://github.com/rkyv.png?size=40){ width="40" loading=lazy align=left } rkyv
+
+    ---
+
+    ??? example "Examples"
+        - rkyv/rkyv#611
+
+
 -   ![](https://github.com/rolldown.png?size=40){ width="40" loading=lazy align=left } rolldown
 
     ---
@@ -964,6 +1024,7 @@
         - rust-lang/crates.io#10176
         - rust-lang/crates.io#11203
         - rust-lang/rust-clippy#13933
+        - rust-lang/this-week-in-rust#6721
 
 
 -   ![](https://github.com/rustls.png?size=40){ width="40" loading=lazy align=left } rustls

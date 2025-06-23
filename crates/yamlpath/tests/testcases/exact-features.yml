@@ -1,0 +1,88 @@
+testcase:
+  foo: bar
+  abc:
+    def: ghi
+    lol: { foo: foo }
+    lol2: { foo: }
+
+  even:
+    deeper:
+      block: |
+        foo
+        bar baz
+
+  flow:
+    - list: >-
+        abc
+
+  flow2:
+    emptykey:
+
+  flow3: { emptykey: }
+  flow4: { emptykey }
+
+  comments:
+    foo: bar # hello
+    abc: def # world
+    # another
+    ghi:
+      foo: bar # comment
+      baz: qux # another comment
+
+
+queries:
+  - query: [foo]
+    mode: exact
+    expected: bar
+
+  - query: [abc, def]
+    mode: exact
+    expected: ghi
+
+  - query: [abc, lol]
+    mode: exact
+    expected: '{ foo: foo }'
+  
+  - query: [abc, lol2]
+    mode: exact
+    expected: '{ foo: }'
+
+  - query: [even, deeper, block]
+    mode: exact
+    expected: |2-
+      |
+              foo
+              bar baz
+
+  - query: [flow, 0, list]
+    mode: exact
+    expected: |2-
+      >-
+              abc
+
+  - query: [flow2, emptykey]
+    mode: exact
+    expected: "<<empty>>"
+
+  - query: [flow3, emptykey]
+    mode: exact
+    expected: "<<empty>>"
+
+  # BUG: should be "<<empty>>"
+  - query: [flow4, emptykey]
+    mode: exact
+    expected: "emptykey"
+
+  - query: [comments, foo]
+    mode: exact
+    expected: bar
+  
+  - query: [comments, abc]
+    mode: exact
+    expected: def
+
+  - query: [comments, ghi]
+    mode: exact
+    expected: |2-
+            foo: bar # comment
+            baz: qux # another comment

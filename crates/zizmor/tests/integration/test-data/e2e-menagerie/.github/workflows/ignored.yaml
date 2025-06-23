@@ -7,6 +7,7 @@ permissions: {}
 
 jobs:
   dummy:
+    name: dummy
     runs-on: ubuntu-latest
     steps:
       - run: echo 'ignored'

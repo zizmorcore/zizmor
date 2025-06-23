@@ -1,17 +1,55 @@
-use github_actions_expressions::{BinOp, Expr, UnOp, context::Context};
-use github_actions_models::common::{If, expr::ExplicitExpr};
+use std::{ops::Deref, sync::LazyLock};
+
+use github_actions_expressions::{
+    BinOp, Expr, SpannedExpr, UnOp,
+    context::{Context, ContextPattern},
+};
+use github_actions_models::common::If;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    finding::{Confidence, Severity},
-    models::{JobExt, StepCommon},
+    finding::{
+        Confidence, Severity,
+        location::{Locatable as _, Subfeature},
+    },
+    models::workflow::JobExt,
+    utils::ExtractedExpr,
 };
 
 pub(crate) struct BotConditions;
 
 audit_meta!(BotConditions, "bot-conditions", "spoofable bot actor check");
 
-const SPOOFABLE_ACTOR_CONTEXTS: &[&str] = &["github.actor", "github.triggering_actor"];
+static SPOOFABLE_ACTOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        ContextPattern::try_new("github.actor").unwrap(),
+        ContextPattern::try_new("github.triggering_actor").unwrap(),
+        ContextPattern::try_new("github.event.pull_request.sender.login").unwrap(),
+    ]
+});
+
+static SPOOFABLE_ACTOR_ID_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        ContextPattern::try_new("github.actor_id").unwrap(),
+        ContextPattern::try_new("github.event.pull_request.sender.id").unwrap(),
+    ]
+});
+
+// A list of known bot actor IDs; we need to hardcode these because they
+// have no equivalent `[bot]' suffix check.
+//
+// Stored as strings because every equality is stringly-typed
+// in GHA expressions anyways.
+//
+// NOTE: This list also contains non-user IDs like integration IDs.
+// The thinking there is that users will sometimes confuse the two,
+// so we should flag them as well.
+const BOT_ACTOR_IDS: &[&str] = &[
+    "29110",    //dependabot[bot]'s integration ID
+    "49699333", // dependabot[bot]
+    "27856297", // dependabot-preview[bot]
+    "29139614", // renovate[bot]
+];
 
 impl Audit for BotConditions {
     fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
@@ -36,24 +74,34 @@ impl Audit for BotConditions {
 
         let mut conds = vec![];
         if let Some(If::Expr(expr)) = &job.r#if {
-            conds.push((expr, job.location()));
+            conds.push((
+                expr,
+                job.location_with_name(),
+                job.location().with_keys(&["if".into()]),
+            ));
         }
 
         for step in job.steps() {
             if let Some(If::Expr(expr)) = &step.r#if {
-                conds.push((expr, step.location()));
+                conds.push((
+                    expr,
+                    step.location_with_name(),
+                    step.location().with_keys(&["if".into()]),
+                ));
             }
         }
 
-        for (expr, loc) in conds {
-            if let Some(confidence) = Self::bot_condition(expr) {
+        for (expr, parent, if_loc) in conds {
+            if let Some((subfeature, confidence)) = Self::bot_condition(expr) {
                 findings.push(
                     Self::finding()
                         .severity(Severity::High)
                         .confidence(confidence)
+                        .add_location(parent)
                         .add_location(
-                            loc.with_keys(&["if".into()])
+                            if_loc
                                 .primary()
+                                .subfeature(subfeature)
                                 .annotated("actor context may be spoofable"),
                         )
                         .build(job.parent())?,
@@ -66,11 +114,15 @@ impl Audit for BotConditions {
 }
 
 impl BotConditions {
-    fn walk_tree_for_bot_condition(expr: &Expr, dominating: bool) -> (bool, bool) {
-        match expr {
+    fn walk_tree_for_bot_condition<'a, 'src>(
+        expr: &'a SpannedExpr<'src>,
+        dominating: bool,
+    ) -> (Option<&'a SpannedExpr<'src>>, bool) {
+        match expr.deref() {
             // We can't easily analyze the call's semantics, but we can
             // check to see if any of the call's arguments are
             // bot conditions. We treat a call as non-dominating always.
+            // TODO: Should probably check some variant of `contains` here.
             Expr::Call {
                 func: _,
                 args: exprs,
@@ -78,8 +130,8 @@ impl BotConditions {
             | Expr::Context(Context { parts: exprs, .. }) => exprs
                 .iter()
                 .map(|arg| Self::walk_tree_for_bot_condition(arg, false))
-                .reduce(|(bc, _), (bc_next, _)| (bc || bc_next, false))
-                .unwrap_or((false, dominating)),
+                .reduce(|(bc, _), (bc_next, _)| (bc.or(bc_next), false))
+                .unwrap_or((None, dominating)),
             Expr::Index(expr) => Self::walk_tree_for_bot_condition(expr, dominating),
             Expr::BinOp { lhs, op, rhs } => match op {
                 // || is dominating.
@@ -87,27 +139,27 @@ impl BotConditions {
                     let (bc_lhs, _) = Self::walk_tree_for_bot_condition(lhs, true);
                     let (bc_rhs, _) = Self::walk_tree_for_bot_condition(rhs, true);
 
-                    (bc_lhs || bc_rhs, true)
+                    (bc_lhs.or(bc_rhs), true)
                 }
                 // == is trivially dominating.
-                BinOp::Eq => match (lhs.as_ref(), rhs.as_ref()) {
-                    (Expr::Context(ctx), Expr::String(s))
-                    | (Expr::String(s), Expr::Context(ctx)) => {
-                        // NOTE: Can't use `contains` here because we need
-                        // Context's `PartialEq` for case insensitive matching.
-                        if SPOOFABLE_ACTOR_CONTEXTS.iter().any(|x| ctx == *x)
-                            && s.ends_with("[bot]")
+                BinOp::Eq => match (lhs.as_ref().deref(), rhs.as_ref().deref()) {
+                    (Expr::Context(ctx), Expr::Literal(lit))
+                    | (Expr::Literal(lit), Expr::Context(ctx)) => {
+                        if (SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))
+                            && lit.as_str().ends_with("[bot]"))
+                            || (SPOOFABLE_ACTOR_ID_CONTEXTS.iter().any(|x| x.matches(ctx))
+                                && BOT_ACTOR_IDS.contains(&lit.as_str().as_ref()))
                         {
-                            (true, true)
+                            ((Some(expr)), true)
                         } else {
-                            (false, true)
+                            (None, true)
                         }
                     }
-                    (lhs, rhs) => {
+                    (_, _) => {
                         let (bc_lhs, _) = Self::walk_tree_for_bot_condition(lhs, true);
                         let (bc_rhs, _) = Self::walk_tree_for_bot_condition(rhs, true);
 
-                        (bc_lhs || bc_rhs, true)
+                        (bc_lhs.or(bc_rhs), true)
                     }
                 },
                 // Every other binop is non-dominating.
@@ -115,7 +167,7 @@ impl BotConditions {
                     let (bc_lhs, _) = Self::walk_tree_for_bot_condition(lhs, false);
                     let (bc_rhs, _) = Self::walk_tree_for_bot_condition(rhs, false);
 
-                    (bc_lhs || bc_rhs, false)
+                    (bc_lhs.or(bc_rhs), false)
                 }
             },
             Expr::UnOp { op, expr } => match op {
@@ -130,18 +182,14 @@ impl BotConditions {
                 // an explicitly toggled condition, and `None` for no condition.
                 UnOp::Not => Self::walk_tree_for_bot_condition(expr, false),
             },
-            _ => (false, dominating),
+            _ => (None, dominating),
         }
     }
 
-    fn bot_condition(expr: &str) -> Option<Confidence> {
-        // TODO: Remove clones here.
-        let bare = match ExplicitExpr::from_curly(expr) {
-            Some(raw_expr) => raw_expr.as_bare().to_string(),
-            None => expr.to_string(),
-        };
+    fn bot_condition<'doc>(expr: &'doc str) -> Option<(Subfeature<'doc>, Confidence)> {
+        let unparsed = ExtractedExpr::new(expr);
 
-        let Ok(expr) = Expr::parse(&bare) else {
+        let Ok(expr) = Expr::parse(unparsed.as_bare()) else {
             tracing::warn!("couldn't parse expression: {expr}");
             return None;
         };
@@ -153,9 +201,9 @@ impl BotConditions {
         // always passes if the actor is dependabot[bot].
         match Self::walk_tree_for_bot_condition(&expr, true) {
             // We have a bot condition and it dominates the expression.
-            (true, true) => Some(Confidence::High),
+            (Some(expr), true) => Some((Subfeature::new(0, expr), Confidence::High)),
             // We have a bot condition but it doesn't dominate the expression.
-            (true, false) => Some(Confidence::Medium),
+            (Some(expr), false) => Some((Subfeature::new(0, expr), Confidence::Medium)),
             // No bot condition.
             (..) => None,
         }
@@ -205,7 +253,7 @@ mod tests {
                 Confidence::Medium,
             ),
         ] {
-            assert_eq!(BotConditions::bot_condition(cond).unwrap(), *confidence);
+            assert_eq!(BotConditions::bot_condition(cond).unwrap().1, *confidence);
         }
     }
 }

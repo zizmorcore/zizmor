@@ -1567,6 +1567,33 @@
                   },
                   "additionalProperties": false
                 },
+                "outputs": {
+                  "$comment": "https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onworkflow_calloutputs",
+                  "description": "When using the workflow_call keyword, you can optionally specify inputs that are passed to the called workflow from the caller workflow.",
+                  "type": "object",
+                  "patternProperties": {
+                    "^[_a-zA-Z][a-zA-Z0-9_-]*$": {
+                      "$comment": "https://docs.github.com/en/actions/sharing-automations/creating-actions/metadata-syntax-for-github-actions#outputsoutput_id",
+                      "description": "A string identifier to associate with the output. The value of <output_id> is a map of the output's metadata. The <output_id> must be a unique identifier within the outputs object. The <output_id> must start with a letter or _ and contain only alphanumeric characters, -, or _.",
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "$comment": "https://docs.github.com/en/actions/sharing-automations/creating-actions/metadata-syntax-for-github-actions#outputsoutput_iddescription",
+                          "description": "A string description of the output parameter.",
+                          "type": "string"
+                        },
+                        "value": {
+                          "$comment": "https://docs.github.com/en/actions/sharing-automations/creating-actions/metadata-syntax-for-github-actions#outputsoutput_idvalue",
+                          "description": "The value that the output parameter will be mapped to. You can set this to a string or an expression with context. For example, you can use the steps context to set the value of an output to the output value of a step.",
+                          "type": "string"
+                        }
+                      },
+                      "required": ["value"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                },
                 "secrets": {
                   "$comment": "https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#onworkflow_callsecrets",
                   "description": "A map of the secrets that can be used in the called workflow. Within the called workflow, you can use the secrets context to refer to a secret.",

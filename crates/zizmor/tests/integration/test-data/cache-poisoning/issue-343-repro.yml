@@ -11,6 +11,7 @@ permissions: {}
 
 jobs:
   goreleaser:
+    name: goreleaser
     runs-on: ubuntu-latest
     permissions:
       contents: write

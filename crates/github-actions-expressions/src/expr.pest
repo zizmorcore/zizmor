@@ -33,7 +33,7 @@ comp_expr = {
     unary_expr ~ (comp_op ~ unary_expr)*
   | ("(" ~ or_expr ~ ")")
 }
-comp_op   = { ">" | ">=" | "<" | "<=" }
+comp_op   = { ">=" | ">" | "<=" | "<" }
 
 /// Unary operations, including the base case for expressions.
 // HACK: `unary_op ~ or_expr` ensures that we handle non-trivial
@@ -70,7 +70,7 @@ boolean = { "true" | "false" }
 null = { "null" }
 
 /// Context references (e.g., github.event.issue.number)
-context = ${ (function_call | identifier) ~ (("." ~ (identifier | star)) | index)* }
+context = { (function_call | identifier) ~ (("." ~ (identifier | star)) | index)* }
 
 /// A star within a context component.
 star = { "*" }

@@ -19,7 +19,7 @@ use crate::{
     audit::{Audit, AuditInput},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
-    models::{Action, Workflow},
+    models::{action::Action, workflow::Workflow},
 };
 
 #[derive(Error, Debug)]
@@ -204,6 +204,8 @@ impl InputRegistry {
         contents: String,
         key: InputKey,
     ) -> anyhow::Result<()> {
+        tracing::debug!("registering {kind:?} input as with key {key}");
+
         let input: Result<AuditInput, InputError> = match kind {
             InputKind::Workflow => Workflow::from_string(contents, key).map(|wf| wf.into()),
             InputKind::Action => Action::from_string(contents, key).map(|a| a.into()),

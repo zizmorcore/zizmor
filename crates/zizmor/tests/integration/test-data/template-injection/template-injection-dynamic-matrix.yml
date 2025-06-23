@@ -8,6 +8,7 @@ permissions: {}
 
 jobs:
   not-ok:
+    name: not-ok
     runs-on: ubuntu-latest
 
     strategy:

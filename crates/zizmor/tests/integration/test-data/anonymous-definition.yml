@@ -1,0 +1,20 @@
+# see https://github.com/zizmorcore/zizmor/issues/795
+
+# Name of the workflow is purposefully left blank for this test.
+
+on:
+  issues:
+
+permissions: {}
+
+jobs:
+  no-trigger:
+    name: This is a test job that will not trigger 
+    runs-on: ubuntu-latest
+    steps:
+      - run: "echo this job will not trigger"
+
+  will-trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - run: "echo this job will trigger"

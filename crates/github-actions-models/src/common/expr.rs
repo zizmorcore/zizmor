@@ -12,11 +12,8 @@ impl ExplicitExpr {
     ///
     /// Returns `None` if the input is not a valid explicit expression.
     pub fn from_curly(expr: impl Into<String>) -> Option<Self> {
-        // Invariant preservation: we store the full string, but
-        // we expect it to be a well-formed expression.
         let expr = expr.into();
-        let trimmed = expr.trim();
-        if !trimmed.starts_with("${{") || !trimmed.ends_with("}}") {
+        if !expr.starts_with("${{") || !expr.ends_with("}}") {
             return None;
         }
 
@@ -101,6 +98,8 @@ mod tests {
             "not an expression",
             "${{ missing end ",
             "missing beginning }}",
+            " ${{ leading whitespace }}",
+            "${{ trailing whitespace }} ",
         ];
 
         for case in cases {
@@ -111,9 +110,18 @@ mod tests {
 
     #[test]
     fn test_expr() {
-        let expr = "\"  ${{ foo }} \\t \"";
-        let expr: ExplicitExpr = serde_yaml::from_str(expr).unwrap();
-        assert_eq!(expr.as_bare(), "foo");
+        for (case, expected) in &[
+            ("${{ foo }}", "foo"),
+            ("${{ foo.bar }}", "foo.bar"),
+            ("${{ foo['bar'] }}", "foo['bar']"),
+            ("${{foo}}", "foo"),
+            ("${{    foo}}", "foo"),
+            ("${{    foo     }}", "foo"),
+        ] {
+            let case = format!("\"{case}\"");
+            let expr: ExplicitExpr = serde_yaml::from_str(&case).unwrap();
+            assert_eq!(expr.as_bare(), *expected);
+        }
     }
 
     #[test]

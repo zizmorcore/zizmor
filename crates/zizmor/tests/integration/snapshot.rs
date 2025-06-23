@@ -34,6 +34,18 @@ fn test_github_output() -> Result<()> {
 }
 
 #[test]
+fn anonymous_definition() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("anonymous-definition.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
 fn artipacked() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
@@ -54,6 +66,13 @@ fn artipacked() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("artipacked/issue-447-repro.yml"))
+            .args(["--persona=auditor"])
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("artipacked/demo-action/action.yml"))
             .args(["--persona=auditor"])
             .run()?
     );
@@ -243,6 +262,25 @@ fn unpinned_uses() -> Result<()> {
 }
 
 #[test]
+fn use_trusted_publishing() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "use-trusted-publishing/demo-action/action.yml"
+            ))
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
 fn insecure_commands() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
@@ -355,6 +393,23 @@ fn template_injection() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("template-injection/pwsh-script.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "template-injection/issue-883-repro/action.yml"
+            ))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "template-injection/multiline-expression.yml"
+            ))
+            .args(["--persona=pedantic"])
             .run()?
     );
 

@@ -28,14 +28,12 @@ docs/snippets/sponsors.html: docs/snippets/sponsors.json docs/snippets/render-sp
 
 .PHONY: refresh-schemas
 refresh-schemas:
-	curl https://json.schemastore.org/github-workflow.json > crates/zizmor/src/data/github-workflow.json
-	curl https://json.schemastore.org/github-action.json > crates/zizmor/src/data/github-action.json
+	curl https://www.schemastore.org/github-workflow.json > crates/zizmor/src/data/github-workflow.json
+	curl https://www.schemastore.org/github-action.json > crates/zizmor/src/data/github-action.json
 
 .PHONY: webhooks-to-contexts
-webhooks-to-contexts: support/known-safe-contexts.txt
-
-support/known-safe-contexts.txt: support/webhooks-to-contexts.py
-	$<
+webhooks-to-contexts:
+	support/webhooks-to-contexts.py
 
 .PHONY: codeql-injection-sinks
 codeql-injection-sinks: crates/zizmor/data/codeql-injection-sinks.json

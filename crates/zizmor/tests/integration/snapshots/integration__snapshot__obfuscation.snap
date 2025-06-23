@@ -3,113 +3,97 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"obfuscation.yml\")).run()?"
 ---
 help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:12:9
+  --> @@INPUT@@:13:9
    |
-12 |       - uses: actions/checkout/@v4
+13 |       - uses: actions/checkout/@v4
    |         -------------------------- help: actions reference contains empty component
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:15:9
+  --> @@INPUT@@:16:9
    |
-15 |       - uses: actions/checkout////@v4
+16 |       - uses: actions/checkout////@v4
    |         ----------------------------- help: actions reference contains empty component
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:15:9
+  --> @@INPUT@@:16:9
    |
-15 |       - uses: actions/checkout////@v4
+16 |       - uses: actions/checkout////@v4
    |         ----------------------------- help: actions reference contains empty component
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:15:9
+  --> @@INPUT@@:16:9
    |
-15 |       - uses: actions/checkout////@v4
+16 |       - uses: actions/checkout////@v4
    |         ----------------------------- help: actions reference contains empty component
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:15:9
+  --> @@INPUT@@:16:9
    |
-15 |       - uses: actions/checkout////@v4
+16 |       - uses: actions/checkout////@v4
    |         ----------------------------- help: actions reference contains empty component
-   |
-   = note: audit confidence → High
-
-help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:18:9
-   |
-18 |       - uses: github/codeql-action/./init@v2
-   |         ------------------------------------ help: actions reference contains '.'
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:19:9
    |
-19 |       - uses: actions/checkout/.@v4
+19 |       - uses: github/codeql-action/./init@v2
+   |         ------------------------------------ help: actions reference contains '.'
+   |
+   = note: audit confidence → High
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:20:9
+   |
+20 |       - uses: actions/checkout/.@v4
    |         --------------------------- help: actions reference contains '.'
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:22:9
+  --> @@INPUT@@:23:9
    |
-22 |       - uses: actions/cache/save/../save@v4
+23 |       - uses: actions/cache/save/../save@v4
    |         ----------------------------------- help: actions reference contains '..'
-   |
-   = note: audit confidence → High
-
-help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:29:16
-   |
-29 |           echo ${{ '' }}
-   |                --------- help: expression can be replaced by its static evaluation
-   |
-   = note: audit confidence → High
-
-help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:30:16
-   |
-30 |           echo ${{ 'a' }}
-   |                ---------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:31:16
    |
-31 |           echo ${{ true }}
-   |                ----------- help: expression can be replaced by its static evaluation
+31 |           echo ${{ '' }}
+   |                --------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:32:16
    |
-32 |           echo ${{ true && false }}
-   |                -------------------- help: expression can be replaced by its static evaluation
+32 |           echo ${{ 'a' }}
+   |                ---------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:33:16
    |
-33 |           echo ${{ true || false }}
-   |                -------------------- help: expression can be replaced by its static evaluation
+33 |           echo ${{ true }}
+   |                ----------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:34:16
    |
-34 |           echo ${{ 1 > 2 || true }}
+34 |           echo ${{ true && false }}
    |                -------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
@@ -117,71 +101,87 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:35:16
    |
-35 |           echo ${{ 1 != 2}}
+35 |           echo ${{ true || false }}
+   |                -------------------- help: expression can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:36:16
+   |
+36 |           echo ${{ 1 > 2 || true }}
+   |                -------------------- help: expression can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:37:16
+   |
+37 |           echo ${{ 1 != 2}}
    |                ------------ help: expression can be replaced by its static evaluation
-   |
-   = note: audit confidence → High
-
-help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:39:16
-   |
-39 |           echo ${{ format('{0}', 'abc') }}
-   |                --------------------------- help: expression can be replaced by its static evaluation
-   |
-   = note: audit confidence → High
-
-help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:40:16
-   |
-40 |           echo ${{ format('{0} {1}', 'abc', 'def') }}
-   |                -------------------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:41:16
    |
-41 |           echo ${{ format('{0} {1}', 'abc', format('{0}', 'def')) }}
-   |                ----------------------------------------------------- help: expression can be replaced by its static evaluation
+41 |           echo ${{ format('{0}', 'abc') }}
+   |                --------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:42:16
    |
-42 |           echo ${{ startsWith('abc', 'a') }}
-   |                ----------------------------- help: expression can be replaced by its static evaluation
+42 |           echo ${{ format('{0} {1}', 'abc', 'def') }}
+   |                -------------------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:43:16
    |
-43 |           echo ${{ ENDSWITH('abc', 'c') }}
-   |                --------------------------- help: expression can be replaced by its static evaluation
+43 |           echo ${{ format('{0} {1}', 'abc', format('{0}', 'def')) }}
+   |                ----------------------------------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:48:16
+  --> @@INPUT@@:44:16
    |
-48 |           echo ${{ format('{0}, {1}', github.event.number, format('{0}', 'abc')) }}
-   |                -------------------------------------------------------------------- help: expression contains constant-reducible subexpression
+44 |           echo ${{ startsWith('abc', 'a') }}
+   |                ----------------------------- help: expression can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:45:16
+   |
+45 |           echo ${{ ENDSWITH('abc', 'c') }}
+   |                --------------------------- help: expression can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:50:16
    |
-50 |           echo ${{ format('{0}, {1}', github.event.number, format('{0} {1}', github.event.number, true || false)) }}
-   |                ----------------------------------------------------------------------------------------------------- help: expression contains constant-reducible subexpression
+50 |           echo ${{ format('{0}, {1}', github.event.number, format('{0}', 'abc')) }}
+   |                -------------------------------------------------------------------- help: expression contains constant-reducible subexpression
    |
    = note: audit confidence → High
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:52:16
    |
-52 |           echo ${{ foobar[format('{0}', 'event')]}}
+52 |           echo ${{ format('{0}, {1}', github.event.number, format('{0} {1}', github.event.number, true || false)) }}
+   |                ----------------------------------------------------------------------------------------------------- help: expression contains constant-reducible subexpression
+   |
+   = note: audit confidence → High
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:54:16
+   |
+54 |           echo ${{ foobar[format('{0}', 'event')]}}
    |                ------------------------------------ help: expression contains constant-reducible subexpression
    |
    = note: audit confidence → High

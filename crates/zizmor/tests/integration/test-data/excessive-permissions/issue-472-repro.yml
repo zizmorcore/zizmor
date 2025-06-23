@@ -10,6 +10,7 @@ on:
 
 jobs:
   job1:
+    name: job1
     # no non-pedantic job-level permissions finding, since
     # the workflow is reusable-only
     runs-on: ubuntu-24.04
@@ -17,6 +18,7 @@ jobs:
       - run: echo hello
 
   job2:
+    name: job2
     # normal permissions finding here, since callers are always
     # responsible for setting permissions, even if the workflow
     # is reusable-only

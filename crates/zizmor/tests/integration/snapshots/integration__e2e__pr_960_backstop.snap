@@ -1,0 +1,11 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().output(OutputMode::Both).input(input_under_test(\"pr-960-backstop\")).run()?"
+---
+ INFO zizmor: skipping impostor-commit: can't run without a GitHub API token
+ INFO zizmor: skipping ref-confusion: can't run without a GitHub API token
+ INFO zizmor: skipping known-vulnerable-actions: can't run without a GitHub API token
+ INFO zizmor: skipping forbidden-uses: audit not configured
+ INFO zizmor: skipping stale-action-refs: can't run without a GitHub API token
+ INFO audit: zizmor: 🌈 completed @@INPUT@@/action.yml
+No findings to report. Good job!

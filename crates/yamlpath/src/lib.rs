@@ -13,6 +13,7 @@
 #![allow(clippy::redundant_field_names)]
 #![forbid(unsafe_code)]
 
+use line_index::LineIndex;
 use thiserror::Error;
 use tree_sitter::{Language, Node, Parser, Tree};
 
@@ -178,6 +179,22 @@ impl From<Node<'_>> for Location {
     }
 }
 
+/// Describes the feature's kind, i.e. whether it's a block/flow aggregate
+/// or a scalar value.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FeatureKind {
+    /// A block-style mapping, e.g. `foo: bar`.
+    BlockMapping,
+    /// A block-style sequence, e.g. `- foo`.
+    BlockSequence,
+    /// A flow-style mapping, e.g. `{foo: bar}`.
+    FlowMapping,
+    /// A flow-style sequence, e.g. `[foo, bar]`.
+    FlowSequence,
+    /// Any sort of scalar value.
+    Scalar,
+}
+
 /// Represents the result of a successful query.
 #[derive(Debug)]
 pub struct Feature<'tree> {
@@ -187,9 +204,40 @@ pub struct Feature<'tree> {
     /// The exact location of the query result.
     pub location: Location,
 
-    /// The "context" location for the quest result.
+    /// The "context" location for the query result.
     /// This is typically the surrounding mapping or list structure.
     pub context: Option<Location>,
+}
+
+impl Feature<'_> {
+    /// Return this feature's parent feature, if it has one.
+    pub fn parent(&self) -> Option<Feature<'_>> {
+        self._node.parent().map(Feature::from)
+    }
+
+    /// Return this feature's [`FeatureKind`].
+    pub fn kind(&self) -> FeatureKind {
+        // TODO: Use node kind IDs instead of string matching.
+
+        // Our feature's underlying node is often a
+        // `block_node` or `flow_node`, which is a container
+        // for the real kind of node we're interested in.
+        let node = match self._node.kind() {
+            "block_node" | "flow_node" => self._node.child(0).unwrap(),
+            _ => self._node,
+        };
+
+        match node.kind() {
+            "block_mapping" => FeatureKind::BlockMapping,
+            "block_sequence" => FeatureKind::BlockSequence,
+            "flow_mapping" => FeatureKind::FlowMapping,
+            "flow_sequence" => FeatureKind::FlowSequence,
+            "plain_scalar" | "single_quote_scalar" | "double_quote_scalar" | "block_scalar" => {
+                FeatureKind::Scalar
+            }
+            kind => unreachable!("unexpected feature kind: {kind}"),
+        }
+    }
 }
 
 impl<'tree> From<Node<'tree>> for Feature<'tree> {
@@ -202,10 +250,32 @@ impl<'tree> From<Node<'tree>> for Feature<'tree> {
     }
 }
 
+/// Configures how features are extracted from a YAML document
+/// during queries.
+#[derive(Copy, Clone, Debug)]
+enum QueryMode {
+    /// Make extracted features as "pretty" as possible, e.g. by
+    /// including components that humans subjectively consider relevant.
+    ///
+    /// For example, querying `foo: bar` for `foo` will return
+    /// `foo: bar` instead of just `bar`.
+    Pretty,
+    /// For queries that terminate in a key, make the extracted
+    /// feature only that key, rather than both the key and value ("pretty"),
+    /// or just the value ("exact").
+    ///
+    /// For example, querying `foo: bar` for `foo` will return `foo`.
+    KeyOnly,
+    /// Make extracted features as "exact" as possible, e.g. by
+    /// including only the exact span of the query result.
+    Exact,
+}
+
 /// Represents a queryable YAML document.
 pub struct Document {
     source: String,
     tree: Tree,
+    line_index: LineIndex,
     document_id: u16,
     block_node_id: u16,
     flow_node_id: u16,
@@ -239,9 +309,12 @@ impl Document {
             return Err(QueryError::InvalidInput);
         }
 
+        let line_index = LineIndex::new(&source);
+
         Ok(Self {
             source,
             tree,
+            line_index,
             document_id: language.id_for_node_kind("document", true),
             block_node_id: language.id_for_node_kind("block_node", true),
             flow_node_id: language.id_for_node_kind("flow_node", true),
@@ -256,6 +329,12 @@ impl Document {
         })
     }
 
+    /// Returns a [`LineIndex`] for this document, which can be used
+    /// to efficiently map between byte offsets and line coordinates.
+    pub fn line_index(&self) -> &LineIndex {
+        &self.line_index
+    }
+
     /// Return a view of the original YAML source that this document was
     /// loaded from.
     pub fn source(&self) -> &str {
@@ -268,6 +347,15 @@ impl Document {
     /// a span of the entire document.
     pub fn root(&self) -> Feature {
         self.tree.root_node().into()
+    }
+
+    /// Returns a [`Feature`] for the topmost semantic object in this document.
+    ///
+    /// This is typically useful as a "fallback" feature, e.g. for positioning
+    /// relative to the "top" of the document.
+    pub fn top_feature(&self) -> Result<Feature, QueryError> {
+        let top_node = self.top_object()?;
+        Ok(top_node.into())
     }
 
     /// Returns whether the given range is spanned by a comment node.
@@ -289,15 +377,66 @@ impl Document {
         self.range_spanned_by_comment(offset, offset)
     }
 
+    /// Perform a query on the current document, returning `true`
+    /// if the query succeeds (i.e. references an existing feature).
+    ///
+    /// All errors become `false`.
+    pub fn query_exists(&self, query: &Query) -> bool {
+        self.query_node(query, QueryMode::Exact).is_ok()
+    }
+
     /// Perform a query on the current document, returning a `Feature`
     /// if the query succeeds.
-    pub fn query(&self, query: &Query) -> Result<Feature, QueryError> {
-        // TODO: Figure out comment extraction. This is made annoying
-        // by the fact that comments aren't parented in obvious places on
-        // the tree, e.g. `[a, b, [c]] # foo` has a comment adjacent to the
-        // top sequence when we may be querying for the `c` in the innermost
-        // sequence.
-        self.query_node(query).map(|n| n.into())
+    ///
+    /// The feature is extracted in "pretty" mode, meaning that it'll
+    /// contain a subjectively relevant "pretty" span rather than the
+    /// exact span of the query result.
+    ///
+    /// For example, querying `foo: bar` for `foo` will return
+    /// `foo: bar` instead of just `bar`.
+    pub fn query_pretty(&self, query: &Query) -> Result<Feature, QueryError> {
+        self.query_node(query, QueryMode::Pretty).map(|n| n.into())
+    }
+
+    /// Perform a query on the current document, returning a `Feature`
+    /// if the query succeeds. Returns `None` if the query
+    /// succeeds, but matches an absent value (e.g. `foo:`).
+    ///
+    /// The feature is extracted in "exact" mode, meaning that it'll
+    /// contain the exact span of the query result.
+    ///
+    /// For example, querying `foo: bar` for `foo` will return
+    /// just `bar` instead of `foo: bar`.
+    pub fn query_exact(&self, query: &Query) -> Result<Option<Feature>, QueryError> {
+        let node = self.query_node(query, QueryMode::Exact)?;
+
+        if node.kind_id() == self.block_mapping_pair_id || node.kind_id() == self.flow_pair_id {
+            // If the query matches a mapping pair, we return None,
+            // since this indicates an absent value.
+            Ok(None)
+        } else {
+            // Otherwise, we return the node as a feature.
+            Ok(Some(node.into()))
+        }
+    }
+
+    /// Perform a query on the current document, returning a `Feature`
+    /// if the query succeeds.
+    ///
+    /// The feature is extracted in "key only" mode, meaning that it'll
+    /// contain only the key of a mapping, rather than the
+    /// key and value ("pretty") or just the value ("exact").
+    ///
+    /// For example, querying `foo: bar` for `foo` will return
+    /// just `foo` instead of `foo: bar` or `bar`.
+    pub fn query_key_only(&self, query: &Query) -> Result<Feature, QueryError> {
+        if !matches!(query.route.last(), Some(Component::Key(_))) {
+            return Err(QueryError::Other(
+                "query must end with a key component for key-only queries".into(),
+            ));
+        }
+
+        self.query_node(query, QueryMode::KeyOnly).map(|n| n.into())
     }
 
     /// Returns a string slice of the original document corresponding to
@@ -323,7 +462,7 @@ impl Document {
     /// not encapsulated by the feature itself.
     ///
     /// Panics if the feature's span is invalid.
-    pub fn extract_with_leading_whitespace(&self, feature: &Feature) -> &str {
+    pub fn extract_with_leading_whitespace<'a>(&'a self, feature: &Feature) -> &'a str {
         let mut start_idx = feature.location.byte_span.0;
         let pre_slice = &self.source[0..start_idx];
         if let Some(last_newline) = pre_slice.rfind('\n') {
@@ -410,7 +549,9 @@ impl Document {
         )
     }
 
-    fn query_node(&self, query: &Query) -> Result<Node, QueryError> {
+    /// Returns the topmost semantic object in the YAML document,
+    /// i.e. the node corresponding to the first block or flow feature.
+    fn top_object(&self) -> Result<Node, QueryError> {
         // All tree-sitter-yaml trees start with a `stream` node.
         let stream = self.tree.root_node();
 
@@ -431,28 +572,88 @@ impl Document {
             .find(|c| c.kind_id() == self.block_node_id || c.kind_id() == self.flow_node_id)
             .ok_or_else(|| QueryError::Other("document has no block_node or flow_node".into()))?;
 
-        let mut key_node = top_node;
+        Ok(top_node)
+    }
+
+    fn query_node(&self, query: &Query, mode: QueryMode) -> Result<Node, QueryError> {
+        let mut focus_node = self.top_object()?;
         for component in &query.route {
-            match self.descend(&key_node, component) {
-                Ok(next) => key_node = next,
+            match self.descend(&focus_node, component) {
+                Ok(next) => focus_node = next,
                 Err(e) => return Err(e),
             }
         }
 
-        // If we're ending on a key and not an index, we clean up the final
+        focus_node = match mode {
+            QueryMode::Pretty => {
+                // If we're in "pretty" mode, we want to return the
+                // block/flow pair node that contains the key.
+                // This results in a (subjectively) more intuitive extracted feature,
+                // since `foo: bar` gets extracted for `foo` instead of just `bar`.
+                //
+                // NOTE: We might already be on the block/flow pair if we terminated
+                // with an absent value, in which case we don't need to do this cleanup.
+                if matches!(query.route.last(), Some(Component::Key(_)))
+                    && focus_node.kind_id() != self.block_mapping_pair_id
+                    && focus_node.kind_id() != self.flow_pair_id
+                {
+                    focus_node.parent().unwrap()
+                } else {
+                    focus_node
+                }
+            }
+            QueryMode::KeyOnly => {
+                // If we're in "key only" mode, we need to walk back up to
+                // the parent block/flow pair node that contains the key,
+                // and isolate on the key child instead.
+
+                // If we're already on block/flow pair, then we're already
+                // the key's parent.
+                let parent_node = if focus_node.kind_id() == self.block_mapping_pair_id
+                    || focus_node.kind_id() == self.flow_pair_id
+                {
+                    focus_node
+                } else {
+                    focus_node.parent().unwrap()
+                };
+
+                if parent_node.kind_id() == self.flow_mapping_id {
+                    // Handle the annoying `foo: { key }` case, where our "parent"
+                    // is actually a `flow_mapping` instead of a proper block/flow pair.
+                    // To handle this, we get the first `flow_node` child of the
+                    // flow_mapping, which is the "key".
+                    let mut cur = parent_node.walk();
+                    parent_node
+                        .named_children(&mut cur)
+                        .find(|n| n.kind_id() == self.flow_node_id)
+                        .ok_or_else(|| {
+                            QueryError::MissingChildField(parent_node.kind().into(), "flow_node")
+                        })?
+                } else {
+                    parent_node.child_by_field_name("key").ok_or_else(|| {
+                        QueryError::MissingChildField(parent_node.kind().into(), "key")
+                    })?
+                }
+            }
+            // Nothing special to do in exact mode.
+            QueryMode::Exact => focus_node,
+        };
+
+        // If we're extracting "pretty" features, we clean up the final
         // node a bit to have it point to the parent `block_mapping_pair`.
         // This results in a (subjectively) more intuitive extracted feature,
         // since `foo: bar` gets extracted for `foo` instead of just `bar`.
         //
         // NOTE: We might already be on the block_mapping_pair if we terminated
         // with an absent value, in which case we don't need to do this cleanup.
-        if matches!(query.route.last(), Some(Component::Key(_)))
-            && key_node.kind_id() != self.block_mapping_pair_id
+        if matches!(mode, QueryMode::Pretty)
+            && matches!(query.route.last(), Some(Component::Key(_)))
+            && focus_node.kind_id() != self.block_mapping_pair_id
         {
-            key_node = key_node.parent().unwrap()
+            focus_node = focus_node.parent().unwrap()
         }
 
-        Ok(key_node)
+        Ok(focus_node)
     }
 
     fn descend<'b>(&self, node: &Node<'b>, component: &Component) -> Result<Node<'b>, QueryError> {
@@ -483,15 +684,18 @@ impl Document {
     fn descend_mapping<'b>(&self, node: &Node<'b>, expected: &str) -> Result<Node<'b>, QueryError> {
         let mut cur = node.walk();
         for child in node.named_children(&mut cur) {
-            // Skip over any unexpected children, e.g. comments.
-            if child.kind_id() != self.flow_pair_id && child.kind_id() != self.block_mapping_pair_id
-            {
-                continue;
-            }
-
-            let key = child
-                .child_by_field_name("key")
-                .ok_or_else(|| QueryError::MissingChildField(child.kind().into(), "key"))?;
+            let key = match child.kind_id() {
+                // If we're on a `flow_pair` or `block_mapping_pair`, we
+                // need to get the `key` child.
+                id if id == self.flow_pair_id || id == self.block_mapping_pair_id => child
+                    .child_by_field_name("key")
+                    .ok_or_else(|| QueryError::MissingChildField(child.kind().into(), "key"))?,
+                // NOTE: Annoying edge case: if we have a flow mapping
+                // like `{ foo }`, then `foo` is a `flow_node` instead
+                // of a `flow_pair`.
+                id if id == self.flow_node_id => child,
+                _ => continue,
+            };
 
             // NOTE: To get the key's actual value, we need to get down to its
             // inner scalar. This is slightly annoying, since keys can be
@@ -570,7 +774,9 @@ impl Document {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Component, Document, Query, QueryBuilder};
+    use std::vec;
+
+    use crate::{Component, Document, FeatureKind, Query, QueryBuilder};
 
     #[test]
     fn test_query_parent() {
@@ -669,7 +875,7 @@ baz:
         };
 
         assert_eq!(
-            doc.extract_with_leading_whitespace(&doc.query(&query).unwrap()),
+            doc.extract_with_leading_whitespace(&doc.query_pretty(&query).unwrap()),
             "{d: e}"
         );
     }
@@ -694,7 +900,7 @@ bar: # outside
         let query = Query {
             route: vec![Component::Key("root")],
         };
-        let feature = doc.query(&query).unwrap();
+        let feature = doc.query_pretty(&query).unwrap();
         assert_eq!(
             doc.feature_comments(&feature),
             &["# rootlevel", "# foo", "# bar", "# baz", "# quux"]
@@ -709,7 +915,146 @@ bar: # outside
                 Component::Index(1),
             ],
         };
-        let feature = doc.query(&query).unwrap();
+        let feature = doc.query_pretty(&query).unwrap();
         assert_eq!(doc.feature_comments(&feature), &["# quux"]);
+    }
+
+    #[test]
+    fn test_feature_kind() {
+        let doc = r#"
+block-mapping:
+  foo: bar
+
+"block-mapping-quoted":
+  foo: bar
+
+block-sequence:
+  - foo
+  - bar
+
+"block-sequence-quoted":
+  - foo
+  - bar
+
+flow-mapping: {foo: bar}
+
+flow-sequence: [foo, bar]
+
+scalars:
+  - abc
+  - 'abc'
+  - "abc"
+  - 123
+  - -123
+  - 123.456
+  - true
+  - false
+  - null
+  - |
+    multiline
+    text
+  - >
+    folded
+    text
+
+nested:
+  foo:
+    - bar
+    - baz
+    - { a: b }
+    - { c: }
+"#;
+        let doc = Document::new(doc).unwrap();
+
+        for (query, expected_kind) in &[
+            (
+                vec![Component::Key("block-mapping")],
+                FeatureKind::BlockMapping,
+            ),
+            (
+                vec![Component::Key("block-mapping-quoted")],
+                FeatureKind::BlockMapping,
+            ),
+            (
+                vec![Component::Key("block-sequence")],
+                FeatureKind::BlockSequence,
+            ),
+            (
+                vec![Component::Key("block-sequence-quoted")],
+                FeatureKind::BlockSequence,
+            ),
+            (
+                vec![Component::Key("flow-mapping")],
+                FeatureKind::FlowMapping,
+            ),
+            (
+                vec![Component::Key("flow-sequence")],
+                FeatureKind::FlowSequence,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(0)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(1)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(2)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(3)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(4)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(5)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(6)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(7)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(8)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(9)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![Component::Key("scalars"), Component::Index(10)],
+                FeatureKind::Scalar,
+            ),
+            (
+                vec![
+                    Component::Key("nested"),
+                    Component::Key("foo"),
+                    Component::Index(2),
+                ],
+                FeatureKind::FlowMapping,
+            ),
+            (
+                vec![
+                    Component::Key("nested"),
+                    Component::Key("foo"),
+                    Component::Index(3),
+                ],
+                FeatureKind::FlowMapping,
+            ),
+        ] {
+            let query = Query::new(query.clone()).unwrap();
+            let feature = doc.query_exact(&query).unwrap().unwrap();
+            assert_eq!(feature.kind(), *expected_kind);
+        }
     }
 }

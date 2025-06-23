@@ -1,15 +1,10 @@
-use std::ops::Deref;
-
-use github_actions_models::{
-    common::{EnvValue, Uses},
-    workflow::job::StepBody,
-};
+use github_actions_models::common::{EnvValue, Uses};
 use indexmap::IndexMap;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{Confidence, Severity},
-    models::{StepCommon, uses::RepositoryUsesExt as _},
+    finding::{Confidence, Finding, Severity},
+    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
 };
 
@@ -30,6 +25,58 @@ audit_meta!(
 );
 
 impl UseTrustedPublishing {
+    fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        let mut findings = vec![];
+
+        let StepBodyCommon::Uses {
+            uses: Uses::Repository(uses),
+            with,
+        } = &step.body()
+        else {
+            return Ok(findings);
+        };
+
+        let candidate = Self::finding()
+            .severity(Severity::Informational)
+            .confidence(Confidence::High)
+            .add_location(
+                step.location()
+                    .primary()
+                    .with_keys(&["uses".into()])
+                    .annotated("this step"),
+            );
+
+        if uses.matches("pypa/gh-action-pypi-publish")
+            && self.pypi_publish_uses_manual_credentials(with)
+        {
+            findings.push(
+                candidate
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(&["with".into(), "password".into()])
+                            .annotated(USES_MANUAL_CREDENTIAL),
+                    )
+                    .build(step)?,
+            );
+        } else if ((uses.matches("rubygems/release-gem"))
+            && self.release_gem_uses_manual_credentials(with))
+            || (uses.matches("rubygems/configure-rubygems-credential")
+                && self.rubygems_credential_uses_manual_credentials(with))
+        {
+            findings.push(
+                candidate
+                    .add_location(step.location().primary().annotated(USES_MANUAL_CREDENTIAL))
+                    .build(step)?,
+            );
+        }
+
+        Ok(findings)
+    }
+
     fn pypi_publish_uses_manual_credentials(&self, with: &IndexMap<String, EnvValue>) -> bool {
         // `password` implies the step isn't using Trusted Publishing,
         // but we also need to check `repository-url` to prevent false-positives
@@ -73,53 +120,15 @@ impl Audit for UseTrustedPublishing {
 
     fn audit_step<'doc>(
         &self,
-        step: &super::Step<'doc>,
+        step: &crate::models::workflow::Step<'doc>,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
-        let mut findings = vec![];
+        self.process_step(step)
+    }
 
-        let StepBody::Uses {
-            uses: Uses::Repository(uses),
-            with,
-        } = &step.deref().body
-        else {
-            return Ok(findings);
-        };
-
-        let candidate = Self::finding()
-            .severity(Severity::Informational)
-            .confidence(Confidence::High)
-            .add_location(
-                step.location()
-                    .primary()
-                    .with_keys(&["uses".into()])
-                    .annotated("this step"),
-            );
-
-        if uses.matches("pypa/gh-action-pypi-publish")
-            && self.pypi_publish_uses_manual_credentials(with)
-        {
-            findings.push(
-                candidate
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(&["with".into(), "password".into()])
-                            .annotated(USES_MANUAL_CREDENTIAL),
-                    )
-                    .build(step.workflow())?,
-            );
-        } else if ((uses.matches("rubygems/release-gem"))
-            && self.release_gem_uses_manual_credentials(with))
-            || (uses.matches("rubygems/configure-rubygems-credential")
-                && self.rubygems_credential_uses_manual_credentials(with))
-        {
-            findings.push(
-                candidate
-                    .add_location(step.location().primary().annotated(USES_MANUAL_CREDENTIAL))
-                    .build(step.workflow())?,
-            );
-        }
-
-        Ok(findings)
+    fn audit_composite_step<'doc>(
+        &self,
+        step: &crate::models::action::CompositeStep<'doc>,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        self.process_step(step)
     }
 }

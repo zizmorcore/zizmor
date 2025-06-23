@@ -5,6 +5,7 @@ permissions: {}
 
 jobs:
   menagerie:
+    name: menagerie
     runs-on: ubuntu-latest
 
     steps:

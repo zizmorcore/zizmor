@@ -44,7 +44,7 @@ impl ActionCoordinate {
     /// while the `Some(_)` variants indicate various (potential) usages (such as being implicitly
     /// enabled, or explicitly enabled, or potentially enabled by a template expansion that
     /// can't be directly analyzed).
-    pub(crate) fn usage<'s>(&self, step: &impl StepCommon<'s>) -> Option<Usage> {
+    pub(crate) fn usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
         let uses_pattern = self.uses_pattern();
 
         let StepBodyCommon::Uses {
@@ -324,73 +324,72 @@ pub(crate) enum Usage {
 mod tests {
     use std::str::FromStr;
 
-    use github_actions_models::workflow::job::Step;
-
-    use super::{ActionCoordinate, StepCommon};
-    use crate::models::{
-        coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
-        uses::RepositoryUsesPattern,
+    use super::ActionCoordinate;
+    use crate::{
+        models::{
+            coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
+            uses::RepositoryUsesPattern,
+            workflow::{Job, Workflow},
+        },
+        registry::InputKey,
     };
-
-    // Test-only trait impl.
-    impl<'s> StepCommon<'s> for Step {
-        fn env_is_static(&self, _name: &str) -> bool {
-            unreachable!()
-        }
-
-        fn uses(&self) -> Option<&github_actions_models::common::Uses> {
-            unreachable!()
-        }
-
-        fn strategy(&self) -> Option<&github_actions_models::workflow::job::Strategy> {
-            unreachable!()
-        }
-
-        fn body(&self) -> super::StepBodyCommon {
-            match &self.body {
-                github_actions_models::workflow::job::StepBody::Uses { uses, with } => {
-                    super::StepBodyCommon::Uses { uses, with }
-                }
-                github_actions_models::workflow::job::StepBody::Run {
-                    run,
-                    working_directory,
-                    shell,
-                    env,
-                } => super::StepBodyCommon::Run {
-                    run,
-                    _working_directory: working_directory.as_deref(),
-                    _shell: shell.as_deref(),
-                    _env: env,
-                },
-            }
-        }
-
-        fn location(&self) -> crate::models::SymbolicLocation<'s> {
-            unreachable!()
-        }
-
-        fn location_with_name(&self) -> crate::finding::SymbolicLocation<'s> {
-            unreachable!()
-        }
-
-        fn document(&self) -> &'s yamlpath::Document {
-            unreachable!()
-        }
-    }
 
     #[test]
     fn test_usage() {
+        let workflow = r#"
+name: test_usage
+on: push
+jobs:
+  test_usage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: foo/bar      # 0
+
+      - uses: foo/bar@v1   # 1
+
+      - uses: not/thesame  # 2
+        with:
+          set-me: true
+
+      - uses: not/thesame  # 3
+
+      - uses: foo/bar      # 4
+        with:
+          set-me: true
+
+      - uses: foo/bar      # 5
+        with:
+          set-me: false
+
+      - uses: foo/bar      # 6
+        with:
+          disable-cache: true
+
+      - uses: foo/bar      # 7
+        with:
+          disable-cache: false
+"#;
+
+        let workflow =
+            Workflow::from_string(workflow.into(), InputKey::local("dummy", None).unwrap())
+                .unwrap();
+
+        let Job::NormalJob(job) = workflow.jobs().next().unwrap() else {
+            panic!("Expected a normal job");
+        };
+
+        let steps = job.steps().collect::<Vec<_>>();
+
         // Trivial case: no usage is possible, since the coordinate's `uses:`
         // does not match the step.
         let coord =
             ActionCoordinate::NotConfigurable(RepositoryUsesPattern::from_str("foo/bar").unwrap());
-        let step: Step = serde_yaml::from_str("uses: not/thesame").unwrap();
-        assert_eq!(coord.usage(&step), None);
+        let step = &steps[3];
+        assert_eq!(coord.usage(step), None);
 
         // Trivial cases: coordinate is not configurable and matches the `uses:`.
-        for step in &["uses: foo/bar", "uses: foo/bar@v1"] {
-            let step: Step = serde_yaml::from_str(step).unwrap();
-            assert_eq!(coord.usage(&step), Some(Usage::Always));
+        for step in &[&steps[0], &steps[1]] {
+            assert_eq!(coord.usage(*step), Some(Usage::Always));
         }
 
         // Coordinate `uses:` matches but is not enabled by default and is
@@ -399,32 +398,32 @@ mod tests {
             uses_pattern: RepositoryUsesPattern::from_str("foo/bar").unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::Boolean, false),
         };
-        let step: Step = serde_yaml::from_str("uses: foo/bar").unwrap();
-        assert_eq!(coord.usage(&step), None);
+        let step = &steps[0];
+        assert_eq!(coord.usage(step), None);
 
         // Coordinate `uses:` matches and is explicitly toggled on.
-        let step: Step = serde_yaml::from_str("uses: foo/bar\nwith:\n  set-me: true").unwrap();
-        assert_eq!(coord.usage(&step), Some(Usage::DirectOptIn));
+        let step = &steps[4];
+        assert_eq!(coord.usage(step), Some(Usage::DirectOptIn));
 
         // Coordinate `uses:` matches but is explicitly toggled off.
-        let step: Step = serde_yaml::from_str("uses: foo/bar\nwith:\n  set-me: false").unwrap();
-        assert_eq!(coord.usage(&step), None);
+        let step = &steps[5];
+        assert_eq!(coord.usage(step), None);
 
         // Coordinate `uses:` matches and is enabled by default.
         let coord = ActionCoordinate::Configurable {
             uses_pattern: RepositoryUsesPattern::from_str("foo/bar").unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::Boolean, true),
         };
-        let step: Step = serde_yaml::from_str("uses: foo/bar").unwrap();
-        assert_eq!(coord.usage(&step), Some(Usage::DefaultActionBehaviour));
+        let step = &steps[0];
+        assert_eq!(coord.usage(step), Some(Usage::DefaultActionBehaviour));
 
         // Coordinate `uses:` matches and is explicitly toggled on.
-        let step: Step = serde_yaml::from_str("uses: foo/bar\nwith:\n  set-me: true").unwrap();
-        assert_eq!(coord.usage(&step), Some(Usage::DirectOptIn));
+        let step = &steps[4];
+        assert_eq!(coord.usage(step), Some(Usage::DirectOptIn));
 
         // Coordinate `uses:` matches but is explicitly toggled off, despite default enablement.
-        let step: Step = serde_yaml::from_str("uses: foo/bar\nwith:\n  set-me: false").unwrap();
-        assert_eq!(coord.usage(&step), None);
+        let step = &steps[5];
+        assert_eq!(coord.usage(step), None);
 
         // Coordinate `uses:` matches and has an opt-out toggle, which does not affect
         // the default.
@@ -437,17 +436,15 @@ mod tests {
                 false,
             ),
         };
-        let step: Step = serde_yaml::from_str("uses: foo/bar").unwrap();
-        assert_eq!(coord.usage(&step), None);
+        let step = &steps[0];
+        assert_eq!(coord.usage(step), None);
 
         // Coordinate `uses:` matches and the opt-out inverts the match, clearing it.
-        let step: Step =
-            serde_yaml::from_str("uses: foo/bar\nwith:\n  disable-cache: true").unwrap();
-        assert_eq!(coord.usage(&step), None);
+        let step = &steps[6];
+        assert_eq!(coord.usage(step), None);
 
         // Coordinate `uses:` matches and the opt-out inverts the match, clearing it.
-        let step: Step =
-            serde_yaml::from_str("uses: foo/bar\nwith:\n  disable-cache: false").unwrap();
-        assert_eq!(coord.usage(&step), Some(Usage::DirectOptIn));
+        let step = &steps[7];
+        assert_eq!(coord.usage(step), Some(Usage::DirectOptIn));
     }
 }

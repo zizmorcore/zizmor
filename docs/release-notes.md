@@ -9,6 +9,44 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [anonymous-definition] detects unnamed workflows and actions.
+  Definitions without a `name:` field appear anonymously in the GitHub Actions
+  UI, making them harder to distinguish (#937)
+
+### Enhancements 🌱
+
+* The [artipacked] audit now produces findings on composite action definitions,
+  rather than just workflow definitions (#896)
+* The [use-trusted-publishing] audit now produces findings on composite
+  action definitions, rather than just workflow definitions (#899)
+* The [bot-conditions] audit now detects more spoofable actor checks,
+  including checks against well-known user IDs for bot accounts (#905)
+* The [template-injection] and other audits now produce more precise
+  findings when analyzing `env` context accesses for static-ness (#911)
+* The [template-injection] audit now produces more precise findings
+  when analyzing `inputs` context accesses (#919)
+* zizmor now produces more descriptive error messages when it fails to
+  parse a workflow or action definition (#956)
+* The [bot-conditions] audit now returns precise spans for flagged
+  actor checks, instead of flagging the entire `if:` value (#949)
+* The [template-injection] audit now returns precise spans for flagged
+  contexts and expressions, instead of flagging the entire script block
+  (#958)
+
+### Bug Fixes 🐛
+
+* The [template-injection] audit no longer crashes when attempting to
+  evaluate the static-ness of an environment context within a
+  composite action `uses:` step (#887)
+* The [bot-conditions] audit now correctly analyzes index-style contexts,
+  e.g. `github['actor']` (#905)
+* Fixed a bug where `zizmor` would fail to parse expressions that
+  contained `>=` or `<=` (#916)
+* Fixed a bug where `zizmor` would fail to parse expressions containing
+  contexts with interstitial whitespace (#958)
+
 ## 1.9.0
 
 ### New Features 🌈
@@ -830,3 +868,5 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [unsound-contains]: ./audits.md#unsound-contains
 [unpinned-images]: ./audits.md#unpinned-images
 [insecure-commands]: ./audits.md#insecure-commands
+[use-trusted-publishing]: ./audits.md#use-trusted-publishing
+[anonymous-definition]: ./audits.md#anonymous-definition

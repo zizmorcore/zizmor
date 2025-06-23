@@ -87,7 +87,7 @@ jobs:
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
+        uses: Homebrew/actions/setup-homebrew@main
         with:
           core: true
           cask: false
@@ -127,7 +127,7 @@ jobs:
           echo reason="${DISPATCH_REBOTTLE_REASON}"
 
       - name: Pre-test steps
-        uses: Homebrew/actions/pre-build@master
+        uses: Homebrew/actions/pre-build@main
         with:
           bottles-directory: ${{ env.BOTTLES_DIR }}
 
@@ -141,7 +141,7 @@ jobs:
 
       - name: Post-build steps
         if: always()
-        uses: Homebrew/actions/post-build@master
+        uses: Homebrew/actions/post-build@main
         with:
           runner: ${{ matrix.runner }}
           bottles-directory: ${{ env.BOTTLES_DIR }}
@@ -173,7 +173,7 @@ jobs:
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
+        uses: Homebrew/actions/setup-homebrew@main
         with:
           core: true
           cask: false
@@ -188,12 +188,12 @@ jobs:
 
       - name: Setup git
         id: git-user-config
-        uses: Homebrew/actions/git-user-config@master
+        uses: Homebrew/actions/git-user-config@main
         with:
           username: ${{ (github.actor != 'github-actions[bot]' && github.actor) || 'BrewTestBot' }}
 
       - name: Set up commit signing
-        uses: Homebrew/actions/setup-commit-signing@master
+        uses: Homebrew/actions/setup-commit-signing@main
         with:
           signing_key: ${{ secrets.BREWTESTBOT_GPG_SIGNING_SUBKEY }}
 
@@ -221,7 +221,7 @@ jobs:
           echo "head_sha=$(git -C "$HOMEBREW_CORE_PATH" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Push commits
-        uses: Homebrew/actions/git-try-push@master
+        uses: Homebrew/actions/git-try-push@main
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           directory: ${{steps.set-up-homebrew.outputs.repository-path}}
@@ -233,7 +233,7 @@ jobs:
 
       - name: Open PR with bottle commit
         id: create-pr
-        uses: Homebrew/actions/create-pull-request@master
+        uses: Homebrew/actions/create-pull-request@main
         with:
           token: ${{secrets.HOMEBREW_GITHUB_PUBLIC_REPO_TOKEN}}
           base: ${{github.ref}}
@@ -316,7 +316,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Post comment on failure
-        uses: Homebrew/actions/post-comment@master
+        uses: Homebrew/actions/post-comment@main
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           issue: ${{inputs.issue}}

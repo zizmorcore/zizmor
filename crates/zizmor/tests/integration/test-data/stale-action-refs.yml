@@ -5,6 +5,7 @@ permissions: {}
 
 jobs:
   non-stale:
+    name: non-stale
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@main
@@ -22,6 +23,7 @@ jobs:
         persist-credentials: false
 
   stale:
+    name: stale
     runs-on: ubuntu-latest
     steps:
     # non-tagged commit

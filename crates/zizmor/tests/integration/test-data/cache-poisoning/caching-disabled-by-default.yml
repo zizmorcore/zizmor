@@ -2,8 +2,11 @@ on: release
 
 permissions: {}
 
+name: caching-disabled-by-default
+
 jobs:
   publish:
+    name: publish
     runs-on: ubuntu-latest
     steps:
       - name: Project Checkout

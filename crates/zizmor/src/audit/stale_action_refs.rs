@@ -8,7 +8,7 @@ use crate::{
     Persona,
     finding::{Confidence, Finding, Severity},
     github_api,
-    models::{CompositeStep, Step, StepCommon, uses::RepositoryUsesExt as _},
+    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
     state::AuditState,
 };
 
@@ -34,7 +34,7 @@ impl StaleActionRefs {
         Ok(tag.is_none())
     }
 
-    fn process_step<'w>(&self, step: &impl StepCommon<'w>) -> Result<Vec<Finding<'w>>> {
+    fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
