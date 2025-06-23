@@ -3,7 +3,7 @@
 use std::{ops::Range, sync::LazyLock};
 
 use crate::{audit::AuditInput, models::AsDocument, registry::InputKey};
-use github_actions_expressions::{Span, SpannedExpr, context::Context};
+use github_actions_expressions::{Span, SpannedExpr};
 use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
@@ -183,9 +183,9 @@ impl<'doc> From<&SpannedExpr<'doc>> for Fragment<'doc> {
     }
 }
 
-impl<'doc> From<&Context<'doc>> for Fragment<'doc> {
-    fn from(ctx: &Context<'doc>) -> Self {
-        Self::new(ctx.as_str())
+impl<'doc> From<&'doc str> for Fragment<'doc> {
+    fn from(fragment: &'doc str) -> Self {
+        Self::new(fragment)
     }
 }
 
@@ -592,7 +592,7 @@ impl<'doc> Location<'doc> {
 
 #[cfg(test)]
 mod tests {
-    use github_actions_expressions::{Expr, SpannedExpr};
+    use github_actions_expressions::Expr;
 
     use crate::finding::location::Fragment;
 
@@ -667,21 +667,13 @@ mod tests {
 
     #[test]
     fn test_fragment_from_context() {
-        for (expr, expected) in &[
+        for (ctx, expected) in &[
             ("foo.bar", "foo.bar"),
             ("foo . bar", "foo . bar"),
             ("foo['bar']", "foo['bar']"),
             ("foo [\n'bar'\n]", r"foo\s+\[\s+'bar'\s+\]"),
         ] {
-            let SpannedExpr {
-                inner: Expr::Context(ctx),
-                ..
-            } = Expr::parse(expr).unwrap()
-            else {
-                panic!("expected context expression");
-            };
-
-            match Fragment::from(&ctx) {
+            match Fragment::from(*ctx) {
                 Fragment::Raw(actual) => assert_eq!(actual, *expected),
                 Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
             }

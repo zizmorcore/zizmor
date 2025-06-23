@@ -347,7 +347,7 @@ impl TemplateInjection {
                 Persona::Pedantic,
             ));
 
-            for (context, context_span) in parsed.dataflow_contexts() {
+            for (context, context_span, raw_ctx) in parsed.dataflow_contexts() {
                 // Try and turn our context into a pattern for
                 // matching against the FST.
                 match context.as_pattern().as_deref() {
@@ -360,7 +360,7 @@ impl TemplateInjection {
                             // structure, but not fully arbitrary.
                             Some(Capability::Structured) => {
                                 bad_expressions.push((
-                                    Subfeature::new(expr_span.start + context_span.start, context),
+                                    Subfeature::new(expr_span.start + context_span.start, raw_ctx),
                                     self.attempt_fix(&expr, &parsed, step),
                                     Severity::Medium,
                                     Confidence::High,
@@ -371,7 +371,7 @@ impl TemplateInjection {
                             // fully attacker-controllable.
                             Some(Capability::Arbitrary) => {
                                 bad_expressions.push((
-                                    Subfeature::new(expr_span.start + context_span.start, context),
+                                    Subfeature::new(expr_span.start + context_span.start, raw_ctx),
                                     self.attempt_fix(&expr, &parsed, step),
                                     Severity::High,
                                     Confidence::High,
@@ -405,7 +405,7 @@ impl TemplateInjection {
                                     bad_expressions.push((
                                         Subfeature::new(
                                             expr_span.start + context_span.start,
-                                            context,
+                                            raw_ctx,
                                         ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         severity,
@@ -419,7 +419,7 @@ impl TemplateInjection {
                                         bad_expressions.push((
                                             Subfeature::new(
                                                 expr_span.start + context_span.start,
-                                                context,
+                                                raw_ctx,
                                             ),
                                             self.attempt_fix(&expr, &parsed, step),
                                             Severity::Low,
@@ -432,7 +432,7 @@ impl TemplateInjection {
                                         bad_expressions.push((
                                             Subfeature::new(
                                                 expr_span.start + context_span.start,
-                                                context,
+                                                raw_ctx,
                                             ),
                                             self.attempt_fix(&expr, &parsed, step),
                                             Severity::Unknown,
@@ -446,7 +446,7 @@ impl TemplateInjection {
                                     bad_expressions.push((
                                         Subfeature::new(
                                             expr_span.start + context_span.start,
-                                            context,
+                                            raw_ctx,
                                         ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         Severity::High,
@@ -461,7 +461,7 @@ impl TemplateInjection {
                                             Some(LoE::Expr(_)) => false,
                                             // The matrix may expand to static values according to the context
                                             Some(inner) => models::workflow::Matrix::new(inner)
-                                                .expands_to_static_values(context.as_str()),
+                                                .expands_to_static_values(context),
                                             // Context specifies a matrix, but there is no matrix defined.
                                             // This is an invalid workflow so there's no point in flagging it.
                                             None => continue,
@@ -471,7 +471,7 @@ impl TemplateInjection {
                                             bad_expressions.push((
                                                 Subfeature::new(
                                                     expr_span.start + context_span.start,
-                                                    context,
+                                                    raw_ctx,
                                                 ),
                                                 self.attempt_fix(&expr, &parsed, step),
                                                 Severity::Medium,
@@ -487,7 +487,7 @@ impl TemplateInjection {
                                     bad_expressions.push((
                                         Subfeature::new(
                                             expr_span.start + context_span.start,
-                                            context,
+                                            raw_ctx,
                                         ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         Severity::Informational,
@@ -503,7 +503,7 @@ impl TemplateInjection {
                         // we almost certainly have something like
                         // `call(...).foo.bar`.
                         bad_expressions.push((
-                            Subfeature::new(expr_span.start + context_span.start, context),
+                            Subfeature::new(expr_span.start + context_span.start, raw_ctx),
                             self.attempt_fix(&expr, &parsed, step),
                             Severity::Informational,
                             Confidence::Low,

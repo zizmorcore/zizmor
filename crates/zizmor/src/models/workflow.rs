@@ -5,8 +5,8 @@
 
 use std::collections::HashMap;
 
-use anyhow::Context;
-use github_actions_expressions::context;
+use anyhow::Context as _;
+use github_actions_expressions::context::{self, Context};
 use github_actions_models::{
     common::{self, expr::LoE},
     workflow::{
@@ -438,14 +438,14 @@ impl<'doc> Matrix<'doc> {
     }
 
     /// Checks whether some expanded path leads to an expression
-    pub(crate) fn expands_to_static_values(&self, context: &str) -> bool {
+    pub(crate) fn expands_to_static_values(&self, context: &Context) -> bool {
         let expands_to_expression = self.expanded_values.iter().any(|(path, expansion)| {
             // Each expanded value in the matrix might be an expression, or contain
             // one or more expressions (e.g. `foo-${{ bar }}-${{ baz }}`). So we
             // need to check for *any* expression in the expanded value,
             // not just that it starts and ends with the expression delimiters.
             let expansion_contains_expression = !extract_expressions(expansion).is_empty();
-            context == path && expansion_contains_expression
+            context.matches(path.as_str()) && expansion_contains_expression
         });
 
         !expands_to_expression

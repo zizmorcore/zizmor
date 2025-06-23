@@ -73,9 +73,9 @@ impl OverprovisionedSecrets {
                 // to be a finding? Are there any other functions that users
                 // would plausibly call with the entire `secrets` object?
                 if func == "toJSON"
-                    && args
-                        .iter()
-                        .any(|arg| matches!(arg.deref(), Expr::Context(ctx) if ctx == "secrets"))
+                    && args.iter().any(
+                        |arg| matches!(arg.deref(), Expr::Context(ctx) if ctx.matches("secrets")),
+                    )
                 {
                     results.push(());
                 } else {

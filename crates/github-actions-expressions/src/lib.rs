@@ -217,7 +217,7 @@ impl<'a> SpannedExpr<'a> {
     /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
     /// since the value of `foo.bar` flows into a boolean evaluation
     /// that gets expanded.
-    pub fn dataflow_contexts(&self) -> Vec<(&Context<'a>, Span)> {
+    pub fn dataflow_contexts(&self) -> Vec<(&Context<'a>, Span, &'a str)> {
         let mut contexts = vec![];
 
         match self.deref() {
@@ -237,7 +237,7 @@ impl<'a> SpannedExpr<'a> {
             // For example, `${{ fromJSON(something) }}` evaluates to
             // `Object` but `${{ fromJSON(something).foo }}` evaluates
             // to the contents of `something.foo`.
-            Expr::Context(ctx) => contexts.push((ctx, self.span)),
+            Expr::Context(ctx) => contexts.push((ctx, self.span, self.raw)),
             Expr::BinOp { lhs, op, rhs } => match op {
                 // With && only the RHS can flow into the evaluation as a context
                 // (rather than a boolean).
@@ -311,8 +311,8 @@ impl<'src> Expr<'src> {
     }
 
     /// Convenience API for making an [`Expr::Context`].
-    fn context(r: &'src str, components: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
-        Self::Context(Context::new(r, components))
+    fn context(components: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
+        Self::Context(Context::new(components))
     }
 
     /// Returns whether the expression is a literal.
@@ -617,7 +617,7 @@ impl<'src> Expr<'src> {
                     if inner.len() == 1 && matches!(inner[0].inner, Expr::Call { .. }) {
                         Ok(inner.remove(0).into())
                     } else {
-                        Ok(SpannedExpr::new(span, raw, Expr::context(raw, inner)).into())
+                        Ok(SpannedExpr::new(span, raw, Expr::context(inner)).into())
                     }
                 }
                 r => panic!("unrecognized rule: {r:?}"),
@@ -925,14 +925,11 @@ mod tests {
                 SpannedExpr::new(
                     0..11,
                     "foo.bar.baz",
-                    Expr::context(
-                        "foo.bar.baz",
-                        vec![
-                            SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
-                            SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
-                            SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
-                        ],
-                    ),
+                    Expr::context(vec![
+                        SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
+                        SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
+                        SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
+                    ]),
                 ),
             ),
             (
@@ -940,24 +937,21 @@ mod tests {
                 SpannedExpr::new(
                     0..17,
                     "foo.bar.baz[1][2]",
-                    Expr::context(
-                        "foo.bar.baz[1][2]",
-                        vec![
-                            SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
-                            SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
-                            SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
-                            SpannedExpr::new(
-                                11..14,
-                                "[1]",
-                                Expr::Index(Box::new(SpannedExpr::new(12..13, "1", 1.0.into()))),
-                            ),
-                            SpannedExpr::new(
-                                14..17,
-                                "[2]",
-                                Expr::Index(Box::new(SpannedExpr::new(15..16, "2", 2.0.into()))),
-                            ),
-                        ],
-                    ),
+                    Expr::context(vec![
+                        SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
+                        SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
+                        SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
+                        SpannedExpr::new(
+                            11..14,
+                            "[1]",
+                            Expr::Index(Box::new(SpannedExpr::new(12..13, "1", 1.0.into()))),
+                        ),
+                        SpannedExpr::new(
+                            14..17,
+                            "[2]",
+                            Expr::Index(Box::new(SpannedExpr::new(15..16, "2", 2.0.into()))),
+                        ),
+                    ]),
                 ),
             ),
             (
@@ -965,19 +959,16 @@ mod tests {
                 SpannedExpr::new(
                     0..14,
                     "foo.bar.baz[*]",
-                    Expr::context(
-                        "foo.bar.baz[*]",
-                        [
-                            SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
-                            SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
-                            SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
-                            SpannedExpr::new(
-                                11..14,
-                                "[*]",
-                                Expr::Index(Box::new(SpannedExpr::new(12..13, "*", Expr::Star))),
-                            ),
-                        ],
-                    ),
+                    Expr::context([
+                        SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
+                        SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
+                        SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
+                        SpannedExpr::new(
+                            11..14,
+                            "[*]",
+                            Expr::Index(Box::new(SpannedExpr::new(12..13, "*", Expr::Star))),
+                        ),
+                    ]),
                 ),
             ),
             (
@@ -985,18 +976,11 @@ mod tests {
                 SpannedExpr::new(
                     0..27,
                     "vegetables.*.ediblePortions",
-                    Expr::context(
-                        "vegetables.*.ediblePortions",
-                        vec![
-                            SpannedExpr::new(0..10, "vegetables", Expr::ident("vegetables")),
-                            SpannedExpr::new(11..12, "*", Expr::Star),
-                            SpannedExpr::new(
-                                13..27,
-                                "ediblePortions",
-                                Expr::ident("ediblePortions"),
-                            ),
-                        ],
-                    ),
+                    Expr::context(vec![
+                        SpannedExpr::new(0..10, "vegetables", Expr::ident("vegetables")),
+                        SpannedExpr::new(11..12, "*", Expr::Star),
+                        SpannedExpr::new(13..27, "ediblePortions", Expr::ident("ediblePortions")),
+                    ]),
                 ),
             ),
             (
@@ -1018,21 +1002,14 @@ mod tests {
                                         lhs: Box::new(SpannedExpr::new(
                                             0..10,
                                             "github.ref",
-                                            Expr::context(
-                                                "github.ref",
-                                                vec![
-                                                    SpannedExpr::new(
-                                                        0..6,
-                                                        "github",
-                                                        Expr::ident("github"),
-                                                    ),
-                                                    SpannedExpr::new(
-                                                        7..10,
-                                                        "ref",
-                                                        Expr::ident("ref"),
-                                                    ),
-                                                ],
-                                            ),
+                                            Expr::context(vec![
+                                                SpannedExpr::new(
+                                                    0..6,
+                                                    "github",
+                                                    Expr::ident("github"),
+                                                ),
+                                                SpannedExpr::new(7..10, "ref", Expr::ident("ref")),
+                                            ]),
                                         )),
                                         op: BinOp::Eq,
                                         rhs: Box::new(SpannedExpr::new(
@@ -1112,31 +1089,24 @@ mod tests {
                 SpannedExpr::new(
                     0..30,
                     "foobar[format('{0}', 'event')]",
-                    Expr::context(
-                        "foobar[format('{0}', 'event')]",
-                        [
-                            SpannedExpr::new(0..6, "foobar", Expr::ident("foobar")),
-                            SpannedExpr::new(
-                                6..30,
-                                "[format('{0}', 'event')]",
-                                Expr::Index(Box::new(SpannedExpr::new(
-                                    7..29,
-                                    "format('{0}', 'event')",
-                                    Expr::Call {
-                                        func: Function("format"),
-                                        args: vec![
-                                            SpannedExpr::new(14..19, "'{0}'", Expr::from("{0}")),
-                                            SpannedExpr::new(
-                                                21..28,
-                                                "'event'",
-                                                Expr::from("event"),
-                                            ),
-                                        ],
-                                    },
-                                ))),
-                            ),
-                        ],
-                    ),
+                    Expr::context([
+                        SpannedExpr::new(0..6, "foobar", Expr::ident("foobar")),
+                        SpannedExpr::new(
+                            6..30,
+                            "[format('{0}', 'event')]",
+                            Expr::Index(Box::new(SpannedExpr::new(
+                                7..29,
+                                "format('{0}', 'event')",
+                                Expr::Call {
+                                    func: Function("format"),
+                                    args: vec![
+                                        SpannedExpr::new(14..19, "'{0}'", Expr::from("{0}")),
+                                        SpannedExpr::new(21..28, "'event'", Expr::from("event")),
+                                    ],
+                                },
+                            ))),
+                        ),
+                    ]),
                 ),
             ),
             (
@@ -1148,13 +1118,10 @@ mod tests {
                         lhs: SpannedExpr::new(
                             0..15,
                             "github.actor_id",
-                            Expr::context(
-                                "github.actor_id",
-                                vec![
-                                    SpannedExpr::new(0..6, "github", Expr::ident("github")),
-                                    SpannedExpr::new(7..15, "actor_id", Expr::ident("actor_id")),
-                                ],
-                            ),
+                            Expr::context(vec![
+                                SpannedExpr::new(0..6, "github", Expr::ident("github")),
+                                SpannedExpr::new(7..15, "actor_id", Expr::ident("actor_id")),
+                            ]),
                         )
                         .into(),
                         op: BinOp::Eq,
@@ -1243,7 +1210,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.0)
+                .map(|t| t.2)
                 .collect::<Vec<_>>(),
             ["foo.bar"]
         );
@@ -1252,7 +1219,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.0)
+                .map(|t| t.2)
                 .collect::<Vec<_>>(),
             ["foo.bar[1]"]
         );
@@ -1266,7 +1233,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.0)
+                .map(|t| t.2)
                 .collect::<Vec<_>>(),
             ["foo.bar", "abc", "d.e.f"]
         );
@@ -1276,7 +1243,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.0)
+                .map(|t| t.2)
                 .collect::<Vec<_>>(),
             ["d.e.f"]
         );
@@ -1285,7 +1252,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.0)
+                .map(|t| t.2)
                 .collect::<Vec<_>>(),
             ["foo.bar"]
         );
@@ -1294,7 +1261,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.0)
+                .map(|t| t.2)
                 .collect::<Vec<_>>(),
             ["foo.bar", "foo.baz"]
         );
@@ -1303,7 +1270,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.0)
+                .map(|t| t.2)
                 .collect::<Vec<_>>(),
             ["fromJson(steps.runs.outputs.data).workflow_runs[0].id"]
         );
@@ -1312,7 +1279,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.0)
+                .map(|t| t.2)
                 .collect::<Vec<_>>(),
             ["foo.bar", "github", "github"]
         );

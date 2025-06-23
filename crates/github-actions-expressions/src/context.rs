@@ -13,22 +13,24 @@ use super::{Expr, SpannedExpr};
 /// identifier.
 #[derive(Debug, PartialEq)]
 pub struct Context<'src> {
-    raw: &'src str,
     /// The individual parts of the context.
     pub parts: Vec<SpannedExpr<'src>>,
 }
 
 impl<'src> Context<'src> {
-    pub(crate) fn new(raw: &'src str, parts: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
+    pub(crate) fn new(parts: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
         Self {
-            raw: raw.trim(),
             parts: parts.into(),
         }
     }
 
-    /// Returns the raw string representation of the context.
-    pub fn as_str(&self) -> &'src str {
-        self.raw
+    /// Returns whether the context matches the given pattern exactly.
+    pub fn matches(&self, pattern: impl TryInto<ContextPattern<'src>>) -> bool {
+        let Ok(pattern) = pattern.try_into() else {
+            return false;
+        };
+
+        pattern.matches(self)
     }
 
     /// Returns whether the context is a child of the given pattern.
@@ -95,7 +97,7 @@ impl<'src> Context<'src> {
         //    identifiers? Problem: case normalization.
         // 2. Use `regex-automata` to return a case insensitive
         //    automation here?
-        let mut pattern = String::with_capacity(self.raw.len());
+        let mut pattern = String::new();
 
         let mut parts = self.parts.iter().peekable();
 
@@ -112,12 +114,6 @@ impl<'src> Context<'src> {
 
         pattern.make_ascii_lowercase();
         Some(pattern)
-    }
-}
-
-impl PartialEq<str> for Context<'_> {
-    fn eq(&self, other: &str) -> bool {
-        self.raw.eq_ignore_ascii_case(other)
     }
 }
 
@@ -293,14 +289,6 @@ mod tests {
                 _ => Err(anyhow::anyhow!("expected context, found {:?}", expr)),
             }
         }
-    }
-
-    #[test]
-    fn test_context_eq() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
-        assert_eq!(&ctx, "foo.bar.baz");
-        assert_eq!(&ctx, "FOO.BAR.BAZ");
-        assert_eq!(&ctx, "Foo.Bar.Baz");
     }
 
     #[test]
