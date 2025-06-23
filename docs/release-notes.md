@@ -31,6 +31,9 @@ of `zizmor`.
   parse a workflow or action definition (#956)
 * The [bot-conditions] audit now returns precise spans for flagged
   actor checks, instead of flagging the entire `if:` value (#949)
+* The [template-injection] audit now returns precise spans for flagged
+  contexts and expressions, instead of flagging the entire script block
+  (#958)
 
 ### Bug Fixes 🐛
 
