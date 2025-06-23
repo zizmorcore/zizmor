@@ -60,7 +60,7 @@ tracing-indicatif = "0.3.9"
 tracing-subscriber = "0.3.19"
 tree-sitter = "0.25.6"
 tree-sitter-bash = "0.23.3"
-tree-sitter-powershell = "0.25.2"
+tree-sitter-powershell = "0.25.6"
 yamlpath = { path = "crates/yamlpath", version = "0.21.0" }
 tree-sitter-yaml = "0.7.1"
 
