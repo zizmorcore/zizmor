@@ -131,6 +131,9 @@ impl<'src> Literal<'src> {
     }
 }
 
+// TODO: Move this type to some kind of common crate? It's useful to have
+// a single span type everywhere, instead of the current mash of span helpers
+// and ranges we have throughout zizmor.
 /// Represents a `[start, end)` span for a source expression.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Span {
@@ -138,6 +141,16 @@ pub struct Span {
     pub start: usize,
     /// The end of the span, exclusive.
     pub end: usize,
+}
+
+impl Span {
+    /// Adjust this span by the given bias.
+    pub fn adjust(self, bias: usize) -> Self {
+        Self {
+            start: self.start + bias,
+            end: self.end + bias,
+        }
+    }
 }
 
 impl From<pest::Span<'_>> for Span {
@@ -155,6 +168,12 @@ impl From<std::ops::Range<usize>> for Span {
             start: range.start,
             end: range.end,
         }
+    }
+}
+
+impl From<Span> for std::ops::Range<usize> {
+    fn from(span: Span) -> Self {
+        span.start..span.end
     }
 }
 
@@ -782,6 +801,10 @@ mod tests {
         (github.event_name == 'pull_request_target' &&
         (github.event.action == 'ready_for_review' || github.event.label.name == 'automerge-skip')))";
 
+        let multiline2 = "foo.bar.baz[
+        0
+        ]";
+
         let cases = &[
             "fromJSON(inputs.free-threading) && '--disable-gil' || ''",
             "foo || bar || baz",
@@ -808,6 +831,9 @@ mod tests {
             "1 > 1",
             "1 >= 1",
             "matrix.node_version >= 20",
+            "true||false",
+            multiline2,
+            "fromJSON( github.event.inputs.hmm ) [ 0 ]",
         ];
 
         for case in cases {

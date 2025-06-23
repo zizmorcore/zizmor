@@ -41,6 +41,8 @@ of `zizmor`.
   e.g. `github['actor']` (#905)
 * Fixed a bug where `zizmor` would fail to parse expressions that
   contained `>=` or `<=` (#916)
+* Fixed a bug where `zizmor` would fail to parse expressions containing
+  contexts with interstitial whitespace (#958)
 
 ## 1.9.0
 

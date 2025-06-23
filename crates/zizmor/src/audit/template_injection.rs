@@ -339,7 +339,7 @@ impl TemplateInjection {
             // since any expression in a code context is a code smell,
             // even if unexploitable.
             bad_expressions.push((
-                Subfeature::from_spanned_expr(&parsed, expr_span.start),
+                Subfeature::new(expr_span.start, &parsed),
                 // Intentionally not providing a fix here.
                 None,
                 Severity::Unknown,
@@ -360,10 +360,7 @@ impl TemplateInjection {
                             // structure, but not fully arbitrary.
                             Some(Capability::Structured) => {
                                 bad_expressions.push((
-                                    Subfeature::new(
-                                        expr_span.start + context_span.start,
-                                        context.as_str(),
-                                    ),
+                                    Subfeature::new(expr_span.start + context_span.start, context),
                                     self.attempt_fix(&expr, &parsed, step),
                                     Severity::Medium,
                                     Confidence::High,
@@ -374,10 +371,7 @@ impl TemplateInjection {
                             // fully attacker-controllable.
                             Some(Capability::Arbitrary) => {
                                 bad_expressions.push((
-                                    Subfeature::new(
-                                        expr_span.start + context_span.start,
-                                        context.as_str(),
-                                    ),
+                                    Subfeature::new(expr_span.start + context_span.start, context),
                                     self.attempt_fix(&expr, &parsed, step),
                                     Severity::High,
                                     Confidence::High,
@@ -411,7 +405,7 @@ impl TemplateInjection {
                                     bad_expressions.push((
                                         Subfeature::new(
                                             expr_span.start + context_span.start,
-                                            context.as_str(),
+                                            context,
                                         ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         severity,
@@ -425,7 +419,7 @@ impl TemplateInjection {
                                         bad_expressions.push((
                                             Subfeature::new(
                                                 expr_span.start + context_span.start,
-                                                context.as_str(),
+                                                context,
                                             ),
                                             self.attempt_fix(&expr, &parsed, step),
                                             Severity::Low,
@@ -438,7 +432,7 @@ impl TemplateInjection {
                                         bad_expressions.push((
                                             Subfeature::new(
                                                 expr_span.start + context_span.start,
-                                                context.as_str(),
+                                                context,
                                             ),
                                             self.attempt_fix(&expr, &parsed, step),
                                             Severity::Unknown,
@@ -452,7 +446,7 @@ impl TemplateInjection {
                                     bad_expressions.push((
                                         Subfeature::new(
                                             expr_span.start + context_span.start,
-                                            context.as_str(),
+                                            context,
                                         ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         Severity::High,
@@ -477,7 +471,7 @@ impl TemplateInjection {
                                             bad_expressions.push((
                                                 Subfeature::new(
                                                     expr_span.start + context_span.start,
-                                                    context.as_str(),
+                                                    context,
                                                 ),
                                                 self.attempt_fix(&expr, &parsed, step),
                                                 Severity::Medium,
@@ -493,7 +487,7 @@ impl TemplateInjection {
                                     bad_expressions.push((
                                         Subfeature::new(
                                             expr_span.start + context_span.start,
-                                            context.as_str(),
+                                            context,
                                         ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         Severity::Informational,
@@ -509,7 +503,7 @@ impl TemplateInjection {
                         // we almost certainly have something like
                         // `call(...).foo.bar`.
                         bad_expressions.push((
-                            Subfeature::new(expr_span.start + context_span.start, context.as_str()),
+                            Subfeature::new(expr_span.start + context_span.start, context),
                             self.attempt_fix(&expr, &parsed, step),
                             Severity::Informational,
                             Confidence::Low,

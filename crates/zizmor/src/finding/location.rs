@@ -3,7 +3,7 @@
 use std::{ops::Range, sync::LazyLock};
 
 use crate::{audit::AuditInput, models::AsDocument, registry::InputKey};
-use github_actions_expressions::SpannedExpr;
+use github_actions_expressions::{Span, SpannedExpr, context::Context};
 use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
@@ -108,23 +108,120 @@ macro_rules! route {
     };
 }
 
+/// Represent's a subfeature's fragment.
+///
+/// This is used to locate a subfeature's exact location within a surrounding
+/// feature.
+#[derive(Serialize, Clone, Debug)]
+pub(crate) enum Fragment<'doc> {
+    /// A raw subfeature fragment.
+    ///
+    /// This is useful primarily for matching an exact fragment within
+    /// a larger feature, e.g. a string literal.
+    ///
+    /// It *shouldn't* be used to match things like expressions, since they
+    /// might contain whitespace that won't exactly match the surrounding
+    /// feature. For that, [`Fragment::Regex`] is appropriate.
+    Raw(&'doc str),
+    /// A regular expression for matching a subfeature.
+    ///
+    /// This is useful primarily for matching any kind of subfeature that
+    /// might contain multiple lines, e.g. a multi-line GitHub Actions
+    /// expression, since the subfeature's indentation won't necessarily match
+    /// the surrounding feature's YAML-level indentation.
+    Regex(#[serde(serialize_with = "Fragment::serialize_regex")] regex::Regex),
+}
+
+impl<'doc> Fragment<'doc> {
+    fn serialize_regex<S>(regex: &regex::Regex, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let pattern = regex.as_str();
+        serializer.serialize_str(pattern)
+    }
+
+    /// Create a new [`Fragment`] from the given string.
+    ///
+    /// The created fragment's behavior depends on whether the input
+    /// contains newlines or not: if there are no newlines then the fragment
+    /// is a "raw" fragment that gets matched verbatim. If there are newlines,
+    /// then the fragment is a "regex" fragment that allows a degree of
+    /// whitespace malleability to allow for matching against a YAML feature
+    /// with its own syntactically relevant whitespace.
+    fn new(fragment: &'doc str) -> Self {
+        if !fragment.contains('\n') {
+            // Silly optimization: we don't need to build up a pattern for this
+            // expression if it doesn't have any newlines.
+            Fragment::Raw(fragment)
+        } else {
+            // We turn a spanned expression into a regular expression by
+            // replacing all whitespace with `\\s+`.
+            //
+            // This is a ridiculous overapproximation of the actual difference
+            // in expected whitespace, but it works well enough and saves
+            // us having to walk the expression's nodes and build up a more
+            // precise pattern manually (which ends up being nontrivial,
+            // since our current AST doesn't preserve parentheses).
+            //
+            // This approach is not strictly correct, since it doesn't distinguish
+            // between syntactical whitespace and whitespace within e.g.
+            // string literals.
+            let escaped = regex::escape(fragment);
+
+            static WHITESPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").unwrap());
+            let regex = WHITESPACE.replace_all(&escaped, "\\s+");
+
+            Fragment::Regex(Regex::new(&regex).unwrap())
+        }
+    }
+}
+
+impl<'doc> From<&SpannedExpr<'doc>> for Fragment<'doc> {
+    fn from(expr: &SpannedExpr<'doc>) -> Self {
+        Self::new(expr.raw)
+    }
+}
+
+impl<'doc> From<&Context<'doc>> for Fragment<'doc> {
+    fn from(ctx: &Context<'doc>) -> Self {
+        Self::new(ctx.as_str())
+    }
+}
+
 /// Represents a "subfeature" of a symbolic location, such as a substring
 /// within a YAML string.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct Subfeature<'doc> {
     pub(crate) after: usize,
-    pub(crate) fragment: &'doc str,
+    pub(crate) fragment: Fragment<'doc>,
 }
 
 impl<'doc> Subfeature<'doc> {
-    pub(crate) fn new(after: usize, fragment: &'doc str) -> Self {
-        Self { after, fragment }
+    pub(crate) fn new(after: usize, fragment: impl Into<Fragment<'doc>>) -> Self {
+        Self {
+            after,
+            fragment: fragment.into(),
+        }
     }
 
-    pub(crate) fn from_spanned_expr(expr: &SpannedExpr<'doc>, bias: usize) -> Subfeature<'doc> {
-        Self {
-            after: expr.span.start + bias,
-            fragment: expr.raw,
+    /// Locate this subfeature within the given feature.
+    ///
+    /// Returns the subfeature's span within the feature, or `None` if it
+    /// can't be found. The returned span is relative to the feature's
+    /// start.
+    fn locate_within(&self, feature: &str) -> Option<Span> {
+        let bias = self.after;
+        let focus = &feature[bias..];
+
+        match &self.fragment {
+            Fragment::Raw(fragment) => focus.find(fragment).map(|start| {
+                let end = start + fragment.len();
+                Span::from(start..end).adjust(bias)
+            }),
+            Fragment::Regex(regex) => regex
+                .find(focus)
+                .map(|m| Span::from(m.range()).adjust(bias)),
         }
     }
 }
@@ -246,74 +343,18 @@ impl<'doc> SymbolicLocation<'doc> {
 
                 let extracted = document.extract(&feature);
 
-                let subfeature_span = if subfeature.fragment.contains('\n') {
-                    // Subfeatures with newlines need to be extracted more
-                    // gingerly: the actual YAML feature is likely to be something
-                    // like a multi-line string, which has syntactic indentation
-                    // that won't match the subfeature's fragment.
-                    //
-                    // To account for this, we split the subfeature's fragment
-                    // into lines. We then find the start of the subfeature
-                    // by matching its first line against the extracted
-                    // feature (past `after`), and the end of the subfeatyre
-                    // by matching its last line against the extracted
-                    // feature anywhere after our start.
-                    //
-                    // This approach isn't entirely sound, since it assumes
-                    // that the last line of the subfeature's fragment is
-                    // unique within the extracted feature. When the fragment
-                    // isn't unique, this produces a misleading (prematurely
-                    // truncated) span.
-                    //
-                    // TODO: Think of a better approach here.
-
-                    let mut fragment_lines = subfeature.fragment.lines();
-                    let first_line = fragment_lines.next().unwrap();
-                    let last_line = fragment_lines.next_back().unwrap();
-
-                    let start_bias = feature.location.byte_span.0 + subfeature.after;
-                    let start =
-                        &extracted[subfeature.after..]
-                            .find(first_line)
-                            .ok_or_else(|| {
-                                anyhow::anyhow!(
-                                    "failed to find subfeature start '{}' in feature '{}'",
-                                    first_line,
-                                    extracted
-                                )
-                            })?;
-
-                    let end_bias = start_bias + start;
-                    let end = &extracted[(subfeature.after + start)..]
-                        .find(last_line)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "failed to find subfeature end '{}' in feature '{}'",
-                                last_line,
-                                extracted
-                            )
-                        })?;
-
-                    (start_bias + start)..(end_bias + end)
-                } else {
-                    let start = &extracted[subfeature.after..]
-                        .find(subfeature.fragment)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "failed to find subfeature '{}' in feature '{}'",
-                                subfeature.fragment,
-                                extracted
-                            )
-                        })?;
-
-                    let bias = feature.location.byte_span.0 + subfeature.after;
-
-                    (start + bias)..(start + bias + subfeature.fragment.len())
-                };
+                let subfeature_span = subfeature
+                    .locate_within(extracted)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "failed to locate subfeature '{subfeature:?}' in feature '{extracted}'",
+                        )
+                    })?
+                    .adjust(feature.location.byte_span.0);
 
                 (
                     extracted,
-                    ConcreteLocation::from_span(subfeature_span, document),
+                    ConcreteLocation::from_span(subfeature_span.into(), document),
                     feature,
                 )
             }
@@ -551,6 +592,10 @@ impl<'doc> Location<'doc> {
 
 #[cfg(test)]
 mod tests {
+    use github_actions_expressions::{Expr, SpannedExpr};
+
+    use crate::finding::location::Fragment;
+
     use super::Comment;
 
     #[test]
@@ -597,6 +642,49 @@ mod tests {
                 *ignores,
                 "{comment} does not ignore {rule}"
             )
+        }
+    }
+
+    #[test]
+    fn test_fragment_from_expr() {
+        for (expr, expected) in &[
+            ("foo==bar", "foo==bar"),
+            ("foo    ==   bar", "foo    ==   bar"),
+            ("foo == bar", r"foo == bar"),
+            ("foo(bar)", "foo(bar)"),
+            ("foo(bar, baz)", "foo(bar, baz)"),
+            ("foo (bar, baz)", "foo (bar, baz)"),
+            ("a . b . c . d", "a . b . c . d"),
+            ("true \n && \n false", r"true\s+\&\&\s+false"),
+        ] {
+            let expr = Expr::parse(expr).unwrap();
+            match Fragment::from(&expr) {
+                Fragment::Raw(actual) => assert_eq!(actual, *expected),
+                Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
+            };
+        }
+    }
+
+    #[test]
+    fn test_fragment_from_context() {
+        for (expr, expected) in &[
+            ("foo.bar", "foo.bar"),
+            ("foo . bar", "foo . bar"),
+            ("foo['bar']", "foo['bar']"),
+            ("foo [\n'bar'\n]", r"foo\s+\[\s+'bar'\s+\]"),
+        ] {
+            let SpannedExpr {
+                inner: Expr::Context(ctx),
+                ..
+            } = Expr::parse(expr).unwrap()
+            else {
+                panic!("expected context expression");
+            };
+
+            match Fragment::from(&ctx) {
+                Fragment::Raw(actual) => assert_eq!(actual, *expected),
+                Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
+            }
         }
     }
 }

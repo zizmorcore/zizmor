@@ -11,7 +11,7 @@ note[template-injection]: code injection via template expansion
 14 | /             some.ctx
 15 | |             && foo.bar
 16 | |             || baz.qux
-   | |__________- note: may expand into attacker-controllable code
+   | |______________________- note: may expand into attacker-controllable code
    |
    = note: audit confidence → Unknown
 
@@ -49,7 +49,7 @@ note[template-injection]: code injection via template expansion
 22 | /               fromJSON(inputs.free-threading)
 23 | |               && '_free_threading'
 24 | |               || ''
-   | |__________- note: may expand into attacker-controllable code
+   | |___________________- note: may expand into attacker-controllable code
    |
    = note: audit confidence → Unknown
 

@@ -21,7 +21,7 @@ pub struct Context<'src> {
 impl<'src> Context<'src> {
     pub(crate) fn new(raw: &'src str, parts: impl Into<Vec<SpannedExpr<'src>>>) -> Self {
         Self {
-            raw,
+            raw: raw.trim(),
             parts: parts.into(),
         }
     }
@@ -381,6 +381,15 @@ mod tests {
             ("foo[1][2][3]", Some("foo.*.*.*")),
             ("foo.bar[abc]", Some("foo.bar.*")),
             ("foo.bar[abc()]", Some("foo.bar.*")),
+            // Whitespace.
+            ("foo . bar", Some("foo.bar")),
+            ("foo . bar . baz", Some("foo.bar.baz")),
+            ("foo . bar . baz_baz", Some("foo.bar.baz_baz")),
+            ("foo . bar . baz-baz", Some("foo.bar.baz-baz")),
+            ("foo .*", Some("foo.*")),
+            ("foo . bar .*", Some("foo.bar.*")),
+            ("foo .* . baz", Some("foo.*.baz")),
+            ("foo .* .*", Some("foo.*.*")),
             // Invalid cases
             ("foo().bar", None),
         ] {
