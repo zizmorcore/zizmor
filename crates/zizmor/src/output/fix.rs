@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 
-use anstream::{eprintln, println};
 use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
@@ -27,7 +26,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
     }
 
     if fixes_by_input.is_empty() {
-        println!("No fixes available to apply.");
+        anstream::println!("No fixes available to apply.");
         return Ok(());
     }
 
@@ -91,14 +90,14 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
 
         // Only proceed if there are changes to apply
         if current_content != original_content {
-            println!("{}", "\nFixes".to_string().green().bold());
+            anstream::println!("{}", "\nFixes".to_string().green().bold());
             let num_fixes = file_applied_fixes.len();
             for (ident, fix, finding) in file_applied_fixes {
                 let line_info = format!(
                     " at line {}",
                     finding.primary_location().concrete.location.start_point.row + 1
                 );
-                println!(
+                anstream::println!(
                     "  - {}{}: {}",
                     format_severity_and_rule(&finding.determinations.severity, ident),
                     line_info,
@@ -109,7 +108,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
             std::fs::write(file_path, &current_content)
                 .with_context(|| format!("failed to update {file_path}"))?;
 
-            println!("Applied {} fixes to {}", num_fixes, file_path);
+            anstream::println!("Applied {} fixes to {}", num_fixes, file_path);
             applied_fixes.push((file_path, num_fixes));
         }
     }
@@ -126,22 +125,22 @@ fn print_summary(
     applied_fixes: &[(&Utf8PathBuf, usize)],
     failed_fixes: &[(&str, &Utf8PathBuf, String)],
 ) {
-    println!("\n{}", "Fix Summary".green().bold());
+    anstream::println!("\n{}", "Fix Summary".green().bold());
 
     if !applied_fixes.is_empty() {
-        println!(
+        anstream::println!(
             "Successfully applied fixes to {} files:",
             applied_fixes.len()
         );
         for (file_path, num_fixes) in applied_fixes {
-            println!("  {}: {} fixes", file_path, num_fixes);
+            anstream::println!("  {}: {} fixes", file_path, num_fixes);
         }
     }
 
     if !failed_fixes.is_empty() {
-        println!("Failed to apply {} fixes:", failed_fixes.len());
+        anstream::println!("Failed to apply {} fixes:", failed_fixes.len());
         for (ident, file_path, error) in failed_fixes {
-            println!("  {}: {} ({})", ident, file_path, error);
+            anstream::println!("  {}: {} ({})", ident, file_path, error);
         }
     }
 }
