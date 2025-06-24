@@ -461,85 +461,14 @@ impl BotConditions {
     }
 
     /// Create a fix that replaces spoofable actor contexts with github.event.pull_request.user.login
-    fn create_replace_actor_fix<'doc>(step: &Step<'doc>) -> Option<Fix<'doc>> {
-        // Only emit a patch if the step/job has an `if` key
-        if let Some(If::Expr(expr)) = &step.r#if {
-            // Try to parse as curly expression first, otherwise use the raw string
-            let bare_expr = ExtractedExpr::new(expr).as_bare().to_string();
-
-            let Ok(parsed_expr) = Expr::parse(&bare_expr) else {
-                return None;
-            };
-
-            // Find all spoofable actor fragments in the expression
-            let fragments = Self::find_spoofable_actor_fragments(&parsed_expr);
-
-            if fragments.is_empty() {
-                return None;
-            }
-
-            // Get appropriate contexts based on workflow triggers
-            let (actor_name_context, actor_id_context) =
-                Self::get_user_contexts_for_triggers(step.workflow());
-
-            // Create patches for each unique fragment
-            let mut patches = vec![];
-            let mut seen_fragments = std::collections::HashSet::new();
-
-            for fragment in fragments {
-                if seen_fragments.insert(fragment.clone()) {
-                    // Replace the fragment with the secure alternative
-                    let replacement = if SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|pattern| {
-                        // Parse the fragment to check if it matches our patterns
-                        if let Ok(test_expr) = Expr::parse(&fragment) {
-                            if let Expr::Context(ctx) = test_expr.deref() {
-                                pattern.matches(ctx)
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    }) {
-                        actor_name_context.clone()
-                    } else {
-                        // This is an actor_id context, replace with user.id
-                        actor_id_context.clone()
-                    };
-
-                    patches.push(Patch {
-                        route: step.route().with_keys(&["if".into()]),
-                        operation: Op::RewriteFragment {
-                            from: fragment.clone().into(),
-                            to: replacement.into(),
-                            after: None,
-                        },
-                    });
-                }
-            }
-
-            if !patches.is_empty() {
-                Some(Fix {
-                    title: format!("Replace spoofable actor context with {}", actor_name_context),
-                    description: format!("Replace spoofable actor context with {} to ensure the job runs as the event author", actor_name_context),
-                    key: step.location().key,
-                    patches,
-                })
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
-    /// Create a fix for job-level conditions
-    fn create_replace_actor_fix_for_job<'doc>(
-        job: &super::NormalJob<'doc>,
+    /// Create a fix to replace spoofable actor contexts with event-specific contexts
+    fn create_replace_actor_fix_internal<'doc>(
+        workflow: &'doc Workflow,
         expr: &Expr,
+        route: crate::finding::location::Route<'doc>,
+        key: &'doc crate::registry::InputKey,
+        context_description: &str,
     ) -> Option<Fix<'doc>> {
-        let mut patches = vec![];
-
         let fragments = Self::find_spoofable_actor_fragments(expr);
 
         if fragments.is_empty() {
@@ -548,8 +477,9 @@ impl BotConditions {
 
         // Get appropriate contexts based on workflow triggers
         let (actor_name_context, actor_id_context) =
-            Self::get_user_contexts_for_triggers(job.parent());
+            Self::get_user_contexts_for_triggers(workflow);
 
+        let mut patches = vec![];
         let mut seen_fragments = std::collections::HashSet::new();
 
         for fragment in fragments {
@@ -571,7 +501,7 @@ impl BotConditions {
                 };
 
                 patches.push(Patch {
-                    route: job.location().route.with_keys(&["if".into()]),
+                    route: route.with_keys(&["if".into()]),
                     operation: Op::RewriteFragment {
                         from: fragment.clone().into(),
                         to: replacement.into(),
@@ -583,14 +513,50 @@ impl BotConditions {
 
         if !patches.is_empty() {
             Some(Fix {
-                title: format!("Replace spoofable actor context with {} for job-level condition", actor_name_context),
-                description: format!("Replace spoofable actor context with {} for job-level condition to ensure the job runs as the event author", actor_name_context),
-                key: job.location().key,
+                title: format!("Replace spoofable actor context with {}{}", actor_name_context, context_description),
+                description: format!("Replace spoofable actor context with {}{} to ensure the job runs as the event author", actor_name_context, context_description),
+                key,
                 patches,
             })
         } else {
             None
         }
+    }
+
+    fn create_replace_actor_fix<'doc>(step: &Step<'doc>) -> Option<Fix<'doc>> {
+        // Only emit a patch if the step/job has an `if` key
+        if let Some(If::Expr(expr)) = &step.r#if {
+            // Try to parse as curly expression first, otherwise use the raw string
+            let bare_expr = ExtractedExpr::new(expr).as_bare().to_string();
+
+            let Ok(parsed_expr) = Expr::parse(&bare_expr) else {
+                return None;
+            };
+
+            Self::create_replace_actor_fix_internal(
+                step.workflow(),
+                &parsed_expr,
+                step.route(),
+                &step.workflow().key,
+                "",
+            )
+        } else {
+            None
+        }
+    }
+
+    /// Create a fix for job-level conditions
+    fn create_replace_actor_fix_for_job<'doc>(
+        job: &super::NormalJob<'doc>,
+        expr: &Expr,
+    ) -> Option<Fix<'doc>> {
+        Self::create_replace_actor_fix_internal(
+            job.parent(),
+            expr,
+            job.location().route,
+            &job.parent().key,
+            " for job-level condition",
+        )
     }
 }
 
