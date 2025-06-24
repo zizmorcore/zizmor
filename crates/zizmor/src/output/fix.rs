@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use anstream::{eprintln, println};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
 
@@ -106,15 +106,11 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
                 );
             }
 
-            match std::fs::write(file_path, &current_content) {
-                Ok(_) => {
-                    applied_fixes.push((file_path, num_fixes));
-                    println!("Applied {} fixes to {}", num_fixes, file_path);
-                }
-                Err(e) => {
-                    eprintln!("Failed to write {}: {}", file_path, e);
-                }
-            }
+            std::fs::write(file_path, &current_content)
+                .with_context(|| format!("failed to update {file_path}"))?;
+
+            println!("Applied {} fixes to {}", num_fixes, file_path);
+            applied_fixes.push((file_path, num_fixes));
         }
     }
 
