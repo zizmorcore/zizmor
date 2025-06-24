@@ -4,7 +4,10 @@ use github_actions_expressions::{
     BinOp, Expr, SpannedExpr, UnOp,
     context::{Context, ContextPattern},
 };
-use github_actions_models::common::If;
+use github_actions_models::{
+    common::If,
+    workflow::event::{BareEvent, OptionalBody},
+};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
@@ -12,7 +15,7 @@ use crate::{
         Confidence, Fix, Severity,
         location::{Locatable as _, Routable as _, Subfeature},
     },
-    models::workflow::{JobExt, Step},
+    models::workflow::{JobExt, Step, Workflow},
     utils::ExtractedExpr,
     yaml_patch::{Op, Patch},
 };
@@ -66,10 +69,8 @@ impl Audit for BotConditions {
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
-        // TODO: Consider other triggers as well?
-        // In practice we expect to mostly see this problem with `pull_request_target`
-        // triggers inside of "automerge this Dependabot PR"-style workflows.
-        if !job.parent().has_pull_request_target() {
+        // Check if this workflow has events where bot conditions are relevant
+        if !Self::has_relevant_events(job.parent()) {
             return Ok(vec![]);
         }
 
@@ -136,6 +137,186 @@ impl Audit for BotConditions {
 }
 
 impl BotConditions {
+    /// Check if the workflow has events where bot conditions are relevant.
+    fn has_relevant_events(workflow: &Workflow) -> bool {
+        use github_actions_models::workflow::Trigger;
+
+        match &workflow.on {
+            Trigger::BareEvent(event) => Self::is_relevant_event(event),
+            Trigger::BareEvents(event_list) => {
+                event_list.iter().any(|event| Self::is_relevant_event(event))
+            }
+            Trigger::Events(event_map) => {
+                !matches!(event_map.issue_comment, OptionalBody::Missing) ||
+                !matches!(event_map.pull_request, OptionalBody::Missing) ||
+                !matches!(event_map.pull_request_target, OptionalBody::Missing) ||
+                !matches!(event_map.discussion_comment, OptionalBody::Missing) ||
+                !matches!(event_map.pull_request_review, OptionalBody::Missing) ||
+                !matches!(event_map.pull_request_review_comment, OptionalBody::Missing) ||
+                !matches!(event_map.issues, OptionalBody::Missing) ||
+                !matches!(event_map.discussion, OptionalBody::Missing) ||
+                !matches!(event_map.release, OptionalBody::Missing) ||
+                !matches!(event_map.push, OptionalBody::Missing) ||
+                !matches!(event_map.milestone, OptionalBody::Missing) ||
+                !matches!(event_map.label, OptionalBody::Missing) ||
+                !matches!(event_map.project, OptionalBody::Missing) ||
+                !matches!(event_map.watch, OptionalBody::Missing)
+            }
+        }
+    }
+
+    /// Check if a specific event type is relevant for bot condition checks.
+    fn is_relevant_event(event: &BareEvent) -> bool {
+        matches!(event,
+            BareEvent::IssueComment |
+            BareEvent::DiscussionComment |
+            BareEvent::PullRequestReview |
+            BareEvent::PullRequestReviewComment |
+            BareEvent::Issues |
+            BareEvent::Discussion |
+            BareEvent::PullRequest |
+            BareEvent::PullRequestTarget |
+            BareEvent::Release |
+            BareEvent::Create |
+            BareEvent::Delete |
+            BareEvent::Push |
+            BareEvent::Milestone |
+            BareEvent::Label |
+            BareEvent::Project |
+            BareEvent::Fork |
+            BareEvent::Watch |
+            BareEvent::Public
+        )
+    }
+
+    /// Get appropriate user context paths based on workflow trigger events.
+    /// Returns (actor_name_context, actor_id_context) for the given workflow.
+    fn get_user_contexts_for_triggers(workflow: &Workflow) -> (String, String) {
+        use github_actions_models::workflow::Trigger;
+
+        // Check for single specific event types first
+        match &workflow.on {
+            Trigger::BareEvent(event) => {
+                return Self::get_contexts_for_event(event);
+            }
+            Trigger::BareEvents(event_list) => {
+                if event_list.len() == 1 {
+                    return Self::get_contexts_for_event(&event_list[0]);
+                }
+            }
+            Trigger::Events(event_map) => {
+                if event_map.count() == 1 {
+                    // Check each possible event type
+                    if !matches!(event_map.issue_comment, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::IssueComment);
+                    }
+                    if !matches!(event_map.pull_request, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::PullRequest);
+                    }
+                    if !matches!(event_map.pull_request_target, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::PullRequestTarget);
+                    }
+                    if !matches!(event_map.discussion_comment, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::DiscussionComment);
+                    }
+                    if !matches!(event_map.pull_request_review, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::PullRequestReview);
+                    }
+                    if !matches!(event_map.pull_request_review_comment, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::PullRequestReviewComment);
+                    }
+                    if !matches!(event_map.issues, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::Issues);
+                    }
+                    if !matches!(event_map.discussion, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::Discussion);
+                    }
+                    if !matches!(event_map.release, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::Release);
+                    }
+                    if !matches!(event_map.push, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::Push);
+                    }
+                    if !matches!(event_map.milestone, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::Milestone);
+                    }
+                    if !matches!(event_map.label, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::Label);
+                    }
+                    if !matches!(event_map.project, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::Project);
+                    }
+                    if !matches!(event_map.watch, OptionalBody::Missing) {
+                        return Self::get_contexts_for_event(&BareEvent::Watch);
+                    }
+                }
+            }
+        }
+
+        // For multiple events or unknown events, default to pull request context
+        ("github.event.pull_request.user.login".to_string(),
+         "github.event.pull_request.user.id".to_string())
+    }
+
+    /// Get context paths for a specific event type.
+    fn get_contexts_for_event(event: &BareEvent) -> (String, String) {
+        match event {
+            BareEvent::IssueComment => {
+                ("github.event.comment.user.login".to_string(),
+                 "github.event.comment.user.id".to_string())
+            }
+            BareEvent::DiscussionComment => {
+                ("github.event.comment.user.login".to_string(),
+                 "github.event.comment.user.id".to_string())
+            }
+            BareEvent::PullRequestReview => {
+                ("github.event.review.user.login".to_string(),
+                 "github.event.review.user.id".to_string())
+            }
+            BareEvent::PullRequestReviewComment => {
+                ("github.event.comment.user.login".to_string(),
+                 "github.event.comment.user.id".to_string())
+            }
+            BareEvent::Issues => {
+                ("github.event.issue.user.login".to_string(),
+                 "github.event.issue.user.id".to_string())
+            }
+            BareEvent::Discussion => {
+                ("github.event.discussion.user.login".to_string(),
+                 "github.event.discussion.user.id".to_string())
+            }
+            BareEvent::PullRequest | BareEvent::PullRequestTarget => {
+                ("github.event.pull_request.user.login".to_string(),
+                 "github.event.pull_request.user.id".to_string())
+            }
+            BareEvent::Release => {
+                ("github.event.release.author.login".to_string(),
+                 "github.event.release.author.id".to_string())
+            }
+            BareEvent::Create | BareEvent::Delete => {
+                ("github.event.sender.login".to_string(),
+                 "github.event.sender.id".to_string())
+            }
+            BareEvent::Push => {
+                ("github.event.pusher.name".to_string(),
+                 "github.event.pusher.email".to_string())
+            }
+            BareEvent::Milestone => {
+                ("github.event.milestone.creator.login".to_string(),
+                 "github.event.milestone.creator.id".to_string())
+            }
+            BareEvent::Label | BareEvent::Project | BareEvent::Fork | BareEvent::Watch | BareEvent::Public => {
+                ("github.event.sender.login".to_string(),
+                 "github.event.sender.id".to_string())
+            }
+            _ => {
+                // For unknown events, default to pull request context
+                ("github.event.pull_request.user.login".to_string(),
+                 "github.event.pull_request.user.id".to_string())
+            }
+        }
+    }
+
     fn walk_tree_for_bot_condition<'a, 'src>(
         expr: &'a SpannedExpr<'src>,
         dominating: bool,
@@ -258,7 +439,12 @@ impl BotConditions {
                                 || (SPOOFABLE_ACTOR_ID_CONTEXTS.iter().any(|x| x.matches(ctx))
                                     && BOT_ACTOR_IDS.contains(&lit.as_str().as_ref()))
                             {
-                                fragments.push(format!("{:?}", ctx));
+                                // Convert context to string representation
+                                let ctx_str = ctx.parts.iter()
+                                    .map(|part| part.raw)
+                                    .collect::<Vec<_>>()
+                                    .join(".");
+                                fragments.push(ctx_str);
                             }
                         }
                         _ => {}
@@ -295,6 +481,10 @@ impl BotConditions {
                 return None;
             }
 
+            // Get appropriate contexts based on workflow triggers
+            let (actor_name_context, actor_id_context) =
+                Self::get_user_contexts_for_triggers(step.workflow());
+
             // Create patches for each unique fragment
             let mut patches = vec![];
             let mut seen_fragments = std::collections::HashSet::new();
@@ -314,10 +504,10 @@ impl BotConditions {
                             false
                         }
                     }) {
-                        "github.event.pull_request.user.login"
+                        actor_name_context.clone()
                     } else {
                         // This is an actor_id context, replace with user.id
-                        "github.event.pull_request.user.id"
+                        actor_id_context.clone()
                     };
 
                     patches.push(Patch {
@@ -333,8 +523,8 @@ impl BotConditions {
 
             if !patches.is_empty() {
                 Some(Fix {
-                    title: "Replace spoofable actor context with github.event.pull_request.user.login".into(),
-                    description: "Replace spoofable actor context with github.event.pull_request.user.login to ensure the job runs as the PR author".into(),
+                    title: format!("Replace spoofable actor context with {}", actor_name_context),
+                    description: format!("Replace spoofable actor context with {} to ensure the job runs as the event author", actor_name_context),
                     key: step.location().key,
                     patches,
                 })
@@ -379,6 +569,10 @@ impl BotConditions {
             return None;
         }
 
+        // Get appropriate contexts based on workflow triggers
+        let (actor_name_context, actor_id_context) =
+            Self::get_user_contexts_for_triggers(job.parent());
+
         let mut seen_fragments = std::collections::HashSet::new();
 
         for fragment in fragments {
@@ -394,9 +588,9 @@ impl BotConditions {
                         false
                     }
                 }) {
-                    "github.event.pull_request.user.login"
+                    actor_name_context.clone()
                 } else {
-                    "github.event.pull_request.user.id"
+                    actor_id_context.clone()
                 };
 
                 patches.push(Patch {
@@ -412,8 +606,8 @@ impl BotConditions {
 
         if !patches.is_empty() {
             Some(Fix {
-                title: "Replace spoofable actor context with github.event.pull_request.user.login for job-level condition".into(),
-                description: "Replace spoofable actor context with github.event.pull_request.user.login for job-level condition to ensure the job runs as the PR author".into(),
+                title: format!("Replace spoofable actor context with {} for job-level condition", actor_name_context),
+                description: format!("Replace spoofable actor context with {} for job-level condition to ensure the job runs as the event author", actor_name_context),
                 key: job.location().key,
                 patches,
             })
@@ -650,6 +844,194 @@ jobs:
                         if: github.event.pull_request.user.login == 'dependabot[bot]'
                         run: echo "hello"
                 "#);
+            }
+        );
+    }
+
+    #[test]
+    fn test_event_specific_contexts() {
+        // Test issue_comment event
+        let issue_comment_workflow = r#"
+name: Test Issue Comment
+on: issue_comment
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+        test_workflow_audit!(
+            BotConditions,
+            "test_issue_comment.yml",
+            issue_comment_workflow,
+            |findings: Vec<Finding>| {
+                // Should suggest github.event.comment.user.login for issue_comment
+                let mut content = issue_comment_workflow.to_string();
+                for finding in &findings {
+                    for fix in &finding.fixes {
+                        if fix.title.contains("Replace spoofable actor context") {
+                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
+                                content = new_content;
+                            }
+                        }
+                    }
+                }
+
+                // Verify it suggests comment.user.login for issue_comment events
+                assert!(content.contains("github.event.comment.user.login"));
+            }
+        );
+
+        // Test pull_request_review event
+        let pr_review_workflow = r#"
+name: Test PR Review
+on: pull_request_review
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+        test_workflow_audit!(
+            BotConditions,
+            "test_pr_review.yml",
+            pr_review_workflow,
+            |findings: Vec<Finding>| {
+                // Should suggest github.event.review.user.login for pull_request_review
+                let mut content = pr_review_workflow.to_string();
+                for finding in &findings {
+                    for fix in &finding.fixes {
+                        if fix.title.contains("Replace spoofable actor context") {
+                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
+                                content = new_content;
+                            }
+                        }
+                    }
+                }
+
+                // Verify it suggests review.user.login for pull_request_review events
+                assert!(content.contains("github.event.review.user.login"));
+            }
+        );
+
+        // Test issues event
+        let issues_workflow = r#"
+name: Test Issues
+on: issues
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+        test_workflow_audit!(
+            BotConditions,
+            "test_issues.yml",
+            issues_workflow,
+            |findings: Vec<Finding>| {
+                // Should suggest github.event.issue.user.login for issues
+                let mut content = issues_workflow.to_string();
+                for finding in &findings {
+                    for fix in &finding.fixes {
+                        if fix.title.contains("Replace spoofable actor context") {
+                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
+                                content = new_content;
+                            }
+                        }
+                    }
+                }
+
+                // Verify it suggests issue.user.login for issues events
+                assert!(content.contains("github.event.issue.user.login"));
+            }
+        );
+
+        // Test release event
+        let release_workflow = r#"
+name: Test Release
+on: release
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+        test_workflow_audit!(
+            BotConditions,
+            "test_release.yml",
+            release_workflow,
+            |findings: Vec<Finding>| {
+                // Should suggest github.event.release.author.login for release
+                let mut content = release_workflow.to_string();
+                for finding in &findings {
+                    for fix in &finding.fixes {
+                        if fix.title.contains("Replace spoofable actor context") {
+                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
+                                content = new_content;
+                            }
+                        }
+                    }
+                }
+
+                // Verify it suggests release.author.login for release events
+                assert!(content.contains("github.event.release.author.login"));
+            }
+        );
+
+        // Test create event
+        let create_workflow = r#"
+name: Test Create
+on: create
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+        test_workflow_audit!(
+            BotConditions,
+            "test_create.yml",
+            create_workflow,
+            |findings: Vec<Finding>| {
+                // Should suggest github.event.sender.login for create
+                let mut content = create_workflow.to_string();
+                for finding in &findings {
+                    for fix in &finding.fixes {
+                        if fix.title.contains("Replace spoofable actor context") {
+                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
+                                content = new_content;
+                            }
+                        }
+                    }
+                }
+
+                // Verify it suggests sender.login for create events
+                assert!(content.contains("github.event.sender.login"));
             }
         );
     }
