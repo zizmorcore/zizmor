@@ -287,7 +287,7 @@ impl<'a> SpannedExpr<'a> {
             Expr::Index(spanned_expr) => {
                 // NOTE: We consider any non-literal, non-star index computed.
                 if !spanned_expr.is_literal() && !matches!(spanned_expr.inner, Expr::Star) {
-                    index_exprs.push(&self);
+                    index_exprs.push(self);
                 }
             }
             Expr::Context(context) => {
