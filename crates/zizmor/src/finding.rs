@@ -111,7 +111,8 @@ pub(crate) struct Fix<'doc> {
     /// A detailed description of the fix.
     #[allow(dead_code)]
     pub(crate) description: String,
-    pub(crate) _key: &'doc InputKey,
+    /// The key back into the input registry that this fix applies to.
+    pub(crate) key: &'doc InputKey,
     pub(crate) patches: Vec<Patch<'doc>>,
 }
 

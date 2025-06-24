@@ -59,7 +59,7 @@ pub(crate) struct LocalKey {
     /// The path's nondeterministic prefix, if any.
     prefix: Option<Utf8PathBuf>,
     /// The given path to the input. This can be absolute or relative.
-    given_path: Utf8PathBuf,
+    pub(crate) given_path: Utf8PathBuf,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]

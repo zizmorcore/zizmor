@@ -312,7 +312,7 @@ impl TemplateInjection {
         Some(Fix {
             title: "replace expression with environment variable".into(),
             description: "todo".into(),
-            _key: step.location().key,
+            key: step.location().key,
             patches,
         })
     }

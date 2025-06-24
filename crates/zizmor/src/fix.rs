@@ -1,35 +1,29 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
 
 use crate::{
     finding::{Finding, Fix},
     models::AsDocument,
-    registry::{FindingRegistry, InputRegistry},
+    registry::{FindingRegistry, InputKey, InputRegistry},
 };
 
 /// Apply fixes to files based on the provided configuration
 pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Result<()> {
-    // Collect all applicable fixes grouped by file
-    let mut file_fixes: HashMap<String, Vec<(&'static str, &Finding, &Fix)>> = HashMap::new();
-
+    // Group fixes by the input they're applied to.
+    let mut fixes_by_input: HashMap<&InputKey, Vec<(&Fix, &Finding)>> = HashMap::new();
     for finding in results.findings() {
-        if let Some(location) = finding.locations.first() {
-            let file_path = location.symbolic.key.presentation_path().to_string();
-            if !finding.fixes.is_empty() {
-                for fix in &finding.fixes {
-                    file_fixes.entry(file_path.clone()).or_default().push((
-                        finding.ident,
-                        finding,
-                        fix,
-                    ));
-                }
-            }
+        for fix in &finding.fixes {
+            fixes_by_input
+                .entry(fix.key)
+                .or_default()
+                .push((fix, finding));
         }
     }
 
-    if file_fixes.is_empty() {
+    if fixes_by_input.is_empty() {
         println!("No fixes available to apply.");
         return Ok(());
     }
@@ -38,18 +32,16 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
     let mut applied_fixes = Vec::new();
     let mut failed_fixes = Vec::new();
 
-    for (file_path, fixes) in &file_fixes {
+    for (input_key, fixes) in &fixes_by_input {
+        let InputKey::Local(local) = input_key else {
+            // We don't currently have the ability to apply fixes
+            // to remote inputs.
+            continue;
+        };
+
         // Get the original content from the registry instead of reading from disk
-        let input_key = fixes
-            .first()
-            .unwrap()
-            .1
-            .locations
-            .first()
-            .unwrap()
-            .symbolic
-            .key;
         let input = registry.get_input(input_key);
+        let file_path = &local.given_path;
         let original_content = input.as_document().source();
 
         let mut current_content = original_content.to_string();
@@ -58,16 +50,16 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
 
         // First, try to apply each fix independently to the original content
         // to collect which fixes can be applied successfully
-        for (ident, finding, fix) in fixes {
+        for (fix, finding) in fixes {
             match fix.apply_to_content(original_content) {
                 Ok(Some(_)) => {
-                    successful_fixes.push((*ident, *fix, *finding));
+                    successful_fixes.push((finding.ident, *fix, *finding));
                 }
                 Ok(None) => {
                     // Fix didn't apply (no changes needed)
                 }
                 Err(e) => {
-                    failed_fixes.push((*ident, file_path.clone(), format!("{}", e)));
+                    failed_fixes.push((finding.ident, file_path, format!("{}", e)));
                 }
             }
         }
@@ -87,7 +79,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
                     // with previously applied fixes. Record this as a failed fix.
                     failed_fixes.push((
                         ident,
-                        file_path.clone(),
+                        file_path,
                         format!("conflict after applying previous fixes: {}", e),
                     ));
                 }
@@ -110,7 +102,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
 
             match std::fs::write(file_path, &current_content) {
                 Ok(_) => {
-                    applied_fixes.push((file_path.to_string(), num_fixes));
+                    applied_fixes.push((file_path, num_fixes));
                     println!("Applied {} fixes to {}", num_fixes, file_path);
                 }
                 Err(e) => {
@@ -128,7 +120,10 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
     Ok(())
 }
 
-fn print_summary(applied_fixes: &[(String, usize)], failed_fixes: &[(&str, String, String)]) {
+fn print_summary(
+    applied_fixes: &[(&Utf8PathBuf, usize)],
+    failed_fixes: &[(&str, &Utf8PathBuf, String)],
+) {
     println!("\n{}", "Fix Summary".green().bold());
 
     if !applied_fixes.is_empty() {
