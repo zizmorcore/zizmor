@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use anstream::{eprintln, println};
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
