@@ -113,7 +113,6 @@ impl Audit for BotConditions {
                     if let Some(fix) = Self::create_replace_actor_fix(step_ref) {
                         finding_builder = finding_builder.fix(fix);
                     }
-                    finding_builder = finding_builder.fix(Self::create_trigger_change_fix(job));
                 } else if parent.key == job.location().key {
                     // Job-level condition - parse the expression first
                     let bare_expr = ExtractedExpr::new(expr).as_bare().to_string();
@@ -124,8 +123,6 @@ impl Audit for BotConditions {
                             finding_builder = finding_builder.fix(fix);
                         }
                     }
-
-                    finding_builder = finding_builder.fix(Self::create_trigger_change_fix(job));
                 }
 
                 findings.push(finding_builder.build(job.parent())?);
@@ -536,26 +533,6 @@ impl BotConditions {
         }
     }
 
-    /// Create a fix that suggests changing from pull_request_target to pull_request
-    fn create_trigger_change_fix<'doc>(job: &impl JobExt<'doc>) -> Fix<'doc> {
-        Fix {
-            title: "Change trigger from pull_request_target to pull_request".into(),
-            description: "Change the workflow trigger from pull_request_target to pull_request to prevent running with elevated permissions".into(),
-            key: job.location().key,
-            patches: vec![Patch {
-                route: job.parent().location().route.with_keys(&["on".into()]),
-                operation: Op::Replace({
-                    let mut map = serde_yaml::Mapping::new();
-                    map.insert(
-                        serde_yaml::Value::String("pull_request".into()),
-                        serde_yaml::Value::Mapping(Default::default()),
-                    );
-                    serde_yaml::Value::Mapping(map)
-                }),
-            }],
-        }
-    }
-
     /// Create a fix for job-level conditions
     fn create_replace_actor_fix_for_job<'doc>(
         job: &super::NormalJob<'doc>,
@@ -756,49 +733,7 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_trigger_change_fix() {
-        let workflow_content = r#"
-name: Test Workflow
-on:
-  pull_request_target:
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
-    steps:
-      - name: Test Step
-        if: github.actor == 'dependabot[bot]'
-        run: echo "hello"
-"#;
-
-        test_workflow_audit!(
-            BotConditions,
-            "test_trigger_change_fix.yml",
-            workflow_content,
-            |findings: Vec<Finding>| {
-                let fixed_content = apply_fix_by_title_for_snapshot(
-                    workflow_content,
-                    &findings[0],
-                    "Change trigger from pull_request_target to pull_request",
-                );
-                insta::assert_snapshot!(fixed_content, @r#"
-                name: Test Workflow
-                on: pull_request: {}
-
-                jobs:
-                  test:
-                    runs-on: ubuntu-latest
-                    if: github.actor == 'dependabot[bot]'
-                    steps:
-                      - name: Test Step
-                        if: github.actor == 'dependabot[bot]'
-                        run: echo "hello"
-                "#);
-            }
-        );
-    }
 
     #[test]
     fn test_all_fixes_together() {
@@ -833,7 +768,8 @@ jobs:
                 }
                 insta::assert_snapshot!(content, @r#"
                 name: Test Workflow
-                on: pull_request: {}
+                on:
+                  pull_request_target:
 
                 jobs:
                   test:
