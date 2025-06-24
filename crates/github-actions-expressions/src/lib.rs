@@ -270,6 +270,43 @@ impl<'a> SpannedExpr<'a> {
 
         contexts
     }
+
+    /// Returns any computed indices in this expression.
+    ///
+    /// A computed index is any index operation with a non-literal
+    /// evaluation, e.g. `foo[a.b.c]`.
+    pub fn computed_indices(&self) -> Vec<&SpannedExpr<'a>> {
+        let mut index_exprs = vec![];
+
+        match self.deref() {
+            Expr::Call { func: _, args } => {
+                for arg in args {
+                    index_exprs.extend(arg.computed_indices());
+                }
+            }
+            Expr::Index(spanned_expr) => {
+                // NOTE: We consider any non-literal, non-star index computed.
+                if !spanned_expr.is_literal() && !matches!(spanned_expr.inner, Expr::Star) {
+                    index_exprs.push(&self);
+                }
+            }
+            Expr::Context(context) => {
+                for part in &context.parts {
+                    index_exprs.extend(part.computed_indices());
+                }
+            }
+            Expr::BinOp { lhs, op: _, rhs } => {
+                index_exprs.extend(lhs.computed_indices());
+                index_exprs.extend(rhs.computed_indices());
+            }
+            Expr::UnOp { op: _, expr } => {
+                index_exprs.extend(expr.computed_indices());
+            }
+            _ => {}
+        }
+
+        index_exprs
+    }
 }
 
 impl<'a> Deref for SpannedExpr<'a> {
@@ -1309,6 +1346,33 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["foo.bar", "github", "github"]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_spannedexpr_computed_indices() -> Result<()> {
+        for (expr, computed_indices) in &[
+            ("foo.bar", vec![]),
+            ("foo.bar[1]", vec![]),
+            ("foo.bar[*]", vec![]),
+            ("foo.bar[abc]", vec!["[abc]"]),
+            (
+                "foo.bar[format('{0}', 'foo')]",
+                vec!["[format('{0}', 'foo')]"],
+            ),
+            ("foo.bar[abc].def[efg]", vec!["[abc]", "[efg]"]),
+        ] {
+            let expr = Expr::parse(expr)?;
+
+            assert_eq!(
+                expr.computed_indices()
+                    .iter()
+                    .map(|e| e.origin.raw)
+                    .collect::<Vec<_>>(),
+                *computed_indices
+            );
+        }
 
         Ok(())
     }

@@ -1,0 +1,16 @@
+name: computed-indices
+on: push
+
+permissions: {}
+
+jobs:
+  computed-indices:
+    name: computed-indices
+    runs-on: ubuntu-latest
+
+    steps:
+      # not detected because it's in a comment
+      # ${{ inputs[inputs.foo] }}
+      - if: ${{ inputs[inputs.foo] }}
+        run: |
+          echo "hello"
