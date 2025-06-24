@@ -152,6 +152,14 @@ impl Finding<'_> {
     pub(crate) fn visible_locations(&self) -> impl Iterator<Item = &Location<'_>> {
         self.locations.iter().filter(|l| !l.symbolic.is_hidden())
     }
+
+    pub(crate) fn primary_location(&self) -> &Location<'_> {
+        // NOTE: Safe unwrap because FindingBuilder::build ensures a primary location.
+        self.locations
+            .iter()
+            .find(|l| l.symbolic.is_primary())
+            .unwrap()
+    }
 }
 
 pub(crate) struct FindingBuilder<'doc> {

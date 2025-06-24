@@ -24,10 +24,7 @@ impl Severity {
 
 impl Finding<'_> {
     fn format_command(&self, sink: &mut impl io::Write) -> Result<()> {
-        let primary = self
-            .visible_locations()
-            .find(|l| l.symbolic.is_primary())
-            .unwrap();
+        let primary = self.primary_location();
 
         // NOTE: We intentionally only use the start line, since our spans
         // sometimes end at EOF and GitHub's annotations don't handle that

@@ -1,3 +1,5 @@
+//! Routines for applying fixes and reporting overall fix statuses.
+
 use std::collections::HashMap;
 
 use anyhow::Result;
@@ -91,7 +93,10 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
             println!("{}", "\nFixes".to_string().green().bold());
             let num_fixes = file_applied_fixes.len();
             for (ident, fix, finding) in file_applied_fixes {
-                let line_info = format!(" at line {}", get_primary_line_number(finding));
+                let line_info = format!(
+                    " at line {}",
+                    finding.primary_location().concrete.location.start_point.row + 1
+                );
                 println!(
                     "  - {}{}: {}",
                     format_severity_and_rule(&finding.determinations.severity, ident),
@@ -164,16 +169,4 @@ pub fn format_severity_and_rule(severity: &crate::finding::Severity, rule_name: 
         crate::finding::Severity::Medium => formatted.yellow().to_string(),
         crate::finding::Severity::High => formatted.red().to_string(),
     }
-}
-
-/// Get the primary line number for a finding
-/// Since finding builder APIs enforce the presence of a primary location, this is safe to unwrap
-pub fn get_primary_line_number(finding: &Finding) -> usize {
-    finding
-        .locations
-        .iter()
-        .find(|loc| loc.symbolic.is_primary())
-        .or_else(|| finding.locations.first())
-        .map(|loc| loc.concrete.location.start_point.row + 1) // Convert to 1-based line number
-        .unwrap()
 }

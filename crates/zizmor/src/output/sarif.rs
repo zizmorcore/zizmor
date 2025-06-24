@@ -98,11 +98,7 @@ fn build_results(findings: &[Finding]) -> Vec<SarifResult> {
 }
 
 fn build_result(finding: &Finding<'_>) -> SarifResult {
-    // NOTE: Safe unwrap because FindingBuilder::build ensures a primary location.
-    let primary = finding
-        .visible_locations()
-        .find(|l| l.symbolic.is_primary())
-        .unwrap();
+    let primary = finding.primary_location();
 
     SarifResult::builder()
         .rule_id(format!("zizmor/{id}", id = finding.ident))
