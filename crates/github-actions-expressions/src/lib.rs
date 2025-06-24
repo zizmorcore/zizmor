@@ -13,6 +13,7 @@ use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 
 pub mod context;
+pub mod visitor;
 
 // Isolates the ExprParser, Rule and other generated types
 // so that we can do `missing_docs` at the top-level.
@@ -177,15 +178,10 @@ impl From<Span> for std::ops::Range<usize> {
     }
 }
 
-/// An expression along with its source span.
-///
-/// Important: Because of how our parser works internally, an expression's
-/// span is its *rule*'s span, which can be larger than the expression itself.
-/// For example, `foo || bar || baz` is covered by a single rule, so each
-/// decomposed `Expr::BinOp` within it will have the same span despite
-/// logically having different sub-spans of the parent rule's span.
-#[derive(Debug, PartialEq)]
-pub struct SpannedExpr<'src> {
+/// Represents the origin of an expression, including its source span
+/// and unparsed form.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Origin<'src> {
     /// The expression's source span.
     pub span: Span,
     /// The expression's unparsed form, as it appears in the source.
@@ -195,18 +191,37 @@ pub struct SpannedExpr<'src> {
     /// because it's (1) non-semantic, and (2) can cause all kinds of issues
     /// when attempting to map expressions back to YAML source features.
     pub raw: &'src str,
+}
+
+impl<'a> Origin<'a> {
+    /// Create a new origin from the given span and raw form.
+    pub fn new(span: impl Into<Span>, raw: &'a str) -> Self {
+        Self {
+            span: span.into(),
+            raw: raw.trim(),
+        }
+    }
+}
+
+/// An expression along with its source origin (span and unparsed form).
+///
+/// Important: Because of how our parser works internally, an expression's
+/// span is its *rule*'s span, which can be larger than the expression itself.
+/// For example, `foo || bar || baz` is covered by a single rule, so each
+/// decomposed `Expr::BinOp` within it will have the same span despite
+/// logically having different sub-spans of the parent rule's span.
+#[derive(Debug, PartialEq)]
+pub struct SpannedExpr<'src> {
+    /// The expression's source origin.
+    pub origin: Origin<'src>,
     /// The expression itself.
     pub inner: Expr<'src>,
 }
 
 impl<'a> SpannedExpr<'a> {
     /// Creates a new `SpannedExpr` from an expression and its span.
-    pub(crate) fn new(span: impl Into<Span>, raw: &'a str, inner: Expr<'a>) -> Self {
-        Self {
-            inner,
-            raw: raw.trim(),
-            span: span.into(),
-        }
+    pub(crate) fn new(origin: Origin<'a>, inner: Expr<'a>) -> Self {
+        Self { origin, inner }
     }
 
     /// Returns the contexts in this expression that directly flow into the
@@ -217,7 +232,7 @@ impl<'a> SpannedExpr<'a> {
     /// `${{ foo.bar == 'abc' }}` returns no expanded contexts,
     /// since the value of `foo.bar` flows into a boolean evaluation
     /// that gets expanded.
-    pub fn dataflow_contexts(&self) -> Vec<(&Context<'a>, Span, &'a str)> {
+    pub fn dataflow_contexts(&self) -> Vec<(&Context<'a>, &Origin<'a>)> {
         let mut contexts = vec![];
 
         match self.deref() {
@@ -237,7 +252,7 @@ impl<'a> SpannedExpr<'a> {
             // For example, `${{ fromJSON(something) }}` evaluates to
             // `Object` but `${{ fromJSON(something).foo }}` evaluates
             // to the contents of `something.foo`.
-            Expr::Context(ctx) => contexts.push((ctx, self.span, self.raw)),
+            Expr::Context(ctx) => contexts.push((ctx, &self.origin)),
             Expr::BinOp { lhs, op, rhs } => match op {
                 // With && only the RHS can flow into the evaluation as a context
                 // (rather than a boolean).
@@ -422,8 +437,7 @@ impl<'src> Expr<'src> {
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(SpannedExpr::new(
-                            span,
-                            raw,
+                            Origin::new(span, raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: BinOp::Or,
@@ -439,8 +453,7 @@ impl<'src> Expr<'src> {
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(SpannedExpr::new(
-                            span,
-                            raw,
+                            Origin::new(span, raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: BinOp::And,
@@ -470,8 +483,7 @@ impl<'src> Expr<'src> {
                         };
 
                         Ok(SpannedExpr::new(
-                            span,
-                            raw,
+                            Origin::new(span, raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: eq_op,
@@ -501,8 +513,7 @@ impl<'src> Expr<'src> {
                         };
 
                         Ok(SpannedExpr::new(
-                            span,
-                            raw,
+                            Origin::new(span, raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: eq_op,
@@ -519,8 +530,7 @@ impl<'src> Expr<'src> {
 
                     match inner_pair.as_rule() {
                         Rule::unary_op => Ok(SpannedExpr::new(
-                            span,
-                            raw,
+                            Origin::new(span, raw),
                             Expr::UnOp {
                                 op: UnOp::Not,
                                 expr: parse_pair(pairs.next().unwrap())?,
@@ -536,8 +546,7 @@ impl<'src> Expr<'src> {
                     parse_pair(pair.into_inner().next().unwrap())
                 }
                 Rule::number => Ok(SpannedExpr::new(
-                    pair.as_span(),
-                    pair.as_str(),
+                    Origin::new(pair.as_span(), pair.as_str()),
                     pair.as_str().parse::<f64>().unwrap().into(),
                 )
                 .into()),
@@ -549,29 +558,30 @@ impl<'src> Expr<'src> {
                     // Optimization: if our string literal doesn't have any
                     // escaped quotes in it, we can save ourselves a clone.
                     if !string_inner.contains('\'') {
-                        Ok(SpannedExpr::new(span, raw, string_inner.into()).into())
+                        Ok(SpannedExpr::new(Origin::new(span, raw), string_inner.into()).into())
                     } else {
-                        Ok(
-                            SpannedExpr::new(span, raw, string_inner.replace("''", "'").into())
-                                .into(),
+                        Ok(SpannedExpr::new(
+                            Origin::new(span, raw),
+                            string_inner.replace("''", "'").into(),
                         )
+                        .into())
                     }
                 }
                 Rule::boolean => Ok(SpannedExpr::new(
-                    pair.as_span(),
-                    pair.as_str(),
+                    Origin::new(pair.as_span(), pair.as_str()),
                     pair.as_str().parse::<bool>().unwrap().into(),
                 )
                 .into()),
                 Rule::null => Ok(SpannedExpr::new(
-                    pair.as_span(),
-                    pair.as_str(),
+                    Origin::new(pair.as_span(), pair.as_str()),
                     Expr::Literal(Literal::Null),
                 )
                 .into()),
-                Rule::star => {
-                    Ok(SpannedExpr::new(pair.as_span(), pair.as_str(), Expr::Star).into())
-                }
+                Rule::star => Ok(SpannedExpr::new(
+                    Origin::new(pair.as_span(), pair.as_str()),
+                    Expr::Star,
+                )
+                .into()),
                 Rule::function_call => {
                     let (span, raw) = (pair.as_span(), pair.as_str());
                     let mut pairs = pair.into_inner();
@@ -582,8 +592,7 @@ impl<'src> Expr<'src> {
                         .collect::<Result<_, _>>()?;
 
                     Ok(SpannedExpr::new(
-                        span,
-                        raw,
+                        Origin::new(span, raw),
                         Expr::Call {
                             func: Function(identifier.as_str()),
                             args,
@@ -591,15 +600,13 @@ impl<'src> Expr<'src> {
                     )
                     .into())
                 }
-                Rule::identifier => {
-                    Ok(
-                        SpannedExpr::new(pair.as_span(), pair.as_str(), Expr::ident(pair.as_str()))
-                            .into(),
-                    )
-                }
+                Rule::identifier => Ok(SpannedExpr::new(
+                    Origin::new(pair.as_span(), pair.as_str()),
+                    Expr::ident(pair.as_str()),
+                )
+                .into()),
                 Rule::index => Ok(SpannedExpr::new(
-                    pair.as_span(),
-                    pair.as_str(),
+                    Origin::new(pair.as_span(), pair.as_str()),
                     Expr::Index(parse_pair(pair.into_inner().next().unwrap())?),
                 )
                 .into()),
@@ -617,7 +624,7 @@ impl<'src> Expr<'src> {
                     if inner.len() == 1 && matches!(inner[0].inner, Expr::Call { .. }) {
                         Ok(inner.remove(0).into())
                     } else {
-                        Ok(SpannedExpr::new(span, raw, Expr::context(inner)).into())
+                        Ok(SpannedExpr::new(Origin::new(span, raw), Expr::context(inner)).into())
                     }
                 }
                 r => panic!("unrecognized rule: {r:?}"),
@@ -660,7 +667,7 @@ mod tests {
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use crate::{Literal, SpannedExpr};
+    use crate::{Literal, Origin, SpannedExpr};
 
     use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
@@ -855,67 +862,65 @@ mod tests {
             (
                 "!true || false || true",
                 SpannedExpr::new(
-                    0..22,
-                    "!true || false || true",
+                    Origin::new(0..22, "!true || false || true"),
                     Expr::BinOp {
                         lhs: SpannedExpr::new(
-                            0..22,
-                            "!true || false || true",
+                            Origin::new(0..22, "!true || false || true"),
                             Expr::BinOp {
                                 lhs: SpannedExpr::new(
-                                    0..5,
-                                    "!true",
+                                    Origin::new(0..5, "!true"),
                                     Expr::UnOp {
                                         op: UnOp::Not,
-                                        expr: SpannedExpr::new(1..5, "true", true.into()).into(),
+                                        expr: SpannedExpr::new(
+                                            Origin::new(1..5, "true"),
+                                            true.into(),
+                                        )
+                                        .into(),
                                     },
                                 )
                                 .into(),
                                 op: BinOp::Or,
-                                rhs: SpannedExpr::new(9..14, "false", false.into()).into(),
+                                rhs: SpannedExpr::new(Origin::new(9..14, "false"), false.into())
+                                    .into(),
                             },
                         )
                         .into(),
                         op: BinOp::Or,
-                        rhs: SpannedExpr::new(18..22, "true", true.into()).into(),
+                        rhs: SpannedExpr::new(Origin::new(18..22, "true"), true.into()).into(),
                     },
                 ),
             ),
             (
                 "'foo '' bar'",
                 SpannedExpr::new(
-                    0..12,
-                    "'foo '' bar'",
+                    Origin::new(0..12, "'foo '' bar'"),
                     Expr::Literal(Literal::String("foo ' bar".into())),
                 ),
             ),
             (
                 "('foo '' bar')",
                 SpannedExpr::new(
-                    1..13,
-                    "'foo '' bar'",
+                    Origin::new(1..13, "'foo '' bar'"),
                     Expr::Literal(Literal::String("foo ' bar".into())),
                 ),
             ),
             (
                 "((('foo '' bar')))",
                 SpannedExpr::new(
-                    3..15,
-                    "'foo '' bar'",
+                    Origin::new(3..15, "'foo '' bar'"),
                     Expr::Literal(Literal::String("foo ' bar".into())),
                 ),
             ),
             (
                 "foo(1, 2, 3)",
                 SpannedExpr::new(
-                    0..12,
-                    "foo(1, 2, 3)",
+                    Origin::new(0..12, "foo(1, 2, 3)"),
                     Expr::Call {
                         func: Function("foo"),
                         args: vec![
-                            SpannedExpr::new(4..5, "1", 1.0.into()),
-                            SpannedExpr::new(7..8, "2", 2.0.into()),
-                            SpannedExpr::new(10..11, "3", 3.0.into()),
+                            SpannedExpr::new(Origin::new(4..5, "1"), 1.0.into()),
+                            SpannedExpr::new(Origin::new(7..8, "2"), 2.0.into()),
+                            SpannedExpr::new(Origin::new(10..11, "3"), 3.0.into()),
                         ],
                     },
                 ),
@@ -923,33 +928,35 @@ mod tests {
             (
                 "foo.bar.baz",
                 SpannedExpr::new(
-                    0..11,
-                    "foo.bar.baz",
+                    Origin::new(0..11, "foo.bar.baz"),
                     Expr::context(vec![
-                        SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
-                        SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
-                        SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
+                        SpannedExpr::new(Origin::new(0..3, "foo"), Expr::ident("foo")),
+                        SpannedExpr::new(Origin::new(4..7, "bar"), Expr::ident("bar")),
+                        SpannedExpr::new(Origin::new(8..11, "baz"), Expr::ident("baz")),
                     ]),
                 ),
             ),
             (
                 "foo.bar.baz[1][2]",
                 SpannedExpr::new(
-                    0..17,
-                    "foo.bar.baz[1][2]",
+                    Origin::new(0..17, "foo.bar.baz[1][2]"),
                     Expr::context(vec![
-                        SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
-                        SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
-                        SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
+                        SpannedExpr::new(Origin::new(0..3, "foo"), Expr::ident("foo")),
+                        SpannedExpr::new(Origin::new(4..7, "bar"), Expr::ident("bar")),
+                        SpannedExpr::new(Origin::new(8..11, "baz"), Expr::ident("baz")),
                         SpannedExpr::new(
-                            11..14,
-                            "[1]",
-                            Expr::Index(Box::new(SpannedExpr::new(12..13, "1", 1.0.into()))),
+                            Origin::new(11..14, "[1]"),
+                            Expr::Index(Box::new(SpannedExpr::new(
+                                Origin::new(12..13, "1"),
+                                1.0.into(),
+                            ))),
                         ),
                         SpannedExpr::new(
-                            14..17,
-                            "[2]",
-                            Expr::Index(Box::new(SpannedExpr::new(15..16, "2", 2.0.into()))),
+                            Origin::new(14..17, "[2]"),
+                            Expr::Index(Box::new(SpannedExpr::new(
+                                Origin::new(15..16, "2"),
+                                2.0.into(),
+                            ))),
                         ),
                     ]),
                 ),
@@ -957,16 +964,17 @@ mod tests {
             (
                 "foo.bar.baz[*]",
                 SpannedExpr::new(
-                    0..14,
-                    "foo.bar.baz[*]",
+                    Origin::new(0..14, "foo.bar.baz[*]"),
                     Expr::context([
-                        SpannedExpr::new(0..3, "foo", Expr::ident("foo")),
-                        SpannedExpr::new(4..7, "bar", Expr::ident("bar")),
-                        SpannedExpr::new(8..11, "baz", Expr::ident("baz")),
+                        SpannedExpr::new(Origin::new(0..3, "foo"), Expr::ident("foo")),
+                        SpannedExpr::new(Origin::new(4..7, "bar"), Expr::ident("bar")),
+                        SpannedExpr::new(Origin::new(8..11, "baz"), Expr::ident("baz")),
                         SpannedExpr::new(
-                            11..14,
-                            "[*]",
-                            Expr::Index(Box::new(SpannedExpr::new(12..13, "*", Expr::Star))),
+                            Origin::new(11..14, "[*]"),
+                            Expr::Index(Box::new(SpannedExpr::new(
+                                Origin::new(12..13, "*"),
+                                Expr::Star,
+                            ))),
                         ),
                     ]),
                 ),
@@ -974,12 +982,17 @@ mod tests {
             (
                 "vegetables.*.ediblePortions",
                 SpannedExpr::new(
-                    0..27,
-                    "vegetables.*.ediblePortions",
+                    Origin::new(0..27, "vegetables.*.ediblePortions"),
                     Expr::context(vec![
-                        SpannedExpr::new(0..10, "vegetables", Expr::ident("vegetables")),
-                        SpannedExpr::new(11..12, "*", Expr::Star),
-                        SpannedExpr::new(13..27, "ediblePortions", Expr::ident("ediblePortions")),
+                        SpannedExpr::new(
+                            Origin::new(0..10, "vegetables"),
+                            Expr::ident("vegetables"),
+                        ),
+                        SpannedExpr::new(Origin::new(11..12, "*"), Expr::Star),
+                        SpannedExpr::new(
+                            Origin::new(13..27, "ediblePortions"),
+                            Expr::ident("ediblePortions"),
+                        ),
                     ]),
                 ),
             ),
@@ -988,33 +1001,36 @@ mod tests {
                 // should be `BinOp::Or`.
                 "github.ref == 'refs/heads/main' && 'value_for_main_branch' || 'value_for_other_branches'",
                 SpannedExpr::new(
-                    0..88,
-                    "github.ref == 'refs/heads/main' && 'value_for_main_branch' || 'value_for_other_branches'",
+                    Origin::new(
+                        0..88,
+                        "github.ref == 'refs/heads/main' && 'value_for_main_branch' || 'value_for_other_branches'",
+                    ),
                     Expr::BinOp {
                         lhs: Box::new(SpannedExpr::new(
-                            0..59,
-                            "github.ref == 'refs/heads/main' && 'value_for_main_branch'",
+                            Origin::new(
+                                0..59,
+                                "github.ref == 'refs/heads/main' && 'value_for_main_branch'",
+                            ),
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
-                                    0..32,
-                                    "github.ref == 'refs/heads/main'",
+                                    Origin::new(0..32, "github.ref == 'refs/heads/main'"),
                                     Expr::BinOp {
                                         lhs: Box::new(SpannedExpr::new(
-                                            0..10,
-                                            "github.ref",
+                                            Origin::new(0..10, "github.ref"),
                                             Expr::context(vec![
                                                 SpannedExpr::new(
-                                                    0..6,
-                                                    "github",
+                                                    Origin::new(0..6, "github"),
                                                     Expr::ident("github"),
                                                 ),
-                                                SpannedExpr::new(7..10, "ref", Expr::ident("ref")),
+                                                SpannedExpr::new(
+                                                    Origin::new(7..10, "ref"),
+                                                    Expr::ident("ref"),
+                                                ),
                                             ]),
                                         )),
                                         op: BinOp::Eq,
                                         rhs: Box::new(SpannedExpr::new(
-                                            14..31,
-                                            "'refs/heads/main'",
+                                            Origin::new(14..31, "'refs/heads/main'"),
                                             Expr::Literal(Literal::String(
                                                 "refs/heads/main".into(),
                                             )),
@@ -1023,16 +1039,14 @@ mod tests {
                                 )),
                                 op: BinOp::And,
                                 rhs: Box::new(SpannedExpr::new(
-                                    35..58,
-                                    "'value_for_main_branch'",
+                                    Origin::new(35..58, "'value_for_main_branch'"),
                                     Expr::Literal(Literal::String("value_for_main_branch".into())),
                                 )),
                             },
                         )),
                         op: BinOp::Or,
                         rhs: Box::new(SpannedExpr::new(
-                            62..88,
-                            "'value_for_other_branches'",
+                            Origin::new(62..88, "'value_for_other_branches'"),
                             Expr::Literal(Literal::String("value_for_other_branches".into())),
                         )),
                     },
@@ -1041,44 +1055,51 @@ mod tests {
             (
                 "(true || false) == true",
                 SpannedExpr::new(
-                    0..23,
-                    "(true || false) == true",
+                    Origin::new(0..23, "(true || false) == true"),
                     Expr::BinOp {
                         lhs: Box::new(SpannedExpr::new(
-                            1..14,
-                            "true || false",
+                            Origin::new(1..14, "true || false"),
                             Expr::BinOp {
-                                lhs: Box::new(SpannedExpr::new(1..5, "true", true.into())),
+                                lhs: Box::new(SpannedExpr::new(
+                                    Origin::new(1..5, "true"),
+                                    true.into(),
+                                )),
                                 op: BinOp::Or,
-                                rhs: Box::new(SpannedExpr::new(9..14, "false", false.into())),
+                                rhs: Box::new(SpannedExpr::new(
+                                    Origin::new(9..14, "false"),
+                                    false.into(),
+                                )),
                             },
                         )),
                         op: BinOp::Eq,
-                        rhs: Box::new(SpannedExpr::new(19..23, "true", true.into())),
+                        rhs: Box::new(SpannedExpr::new(Origin::new(19..23, "true"), true.into())),
                     },
                 ),
             ),
             (
                 "!(!true || false)",
                 SpannedExpr::new(
-                    0..17,
-                    "!(!true || false)",
+                    Origin::new(0..17, "!(!true || false)"),
                     Expr::UnOp {
                         op: UnOp::Not,
                         expr: Box::new(SpannedExpr::new(
-                            2..16,
-                            "!true || false",
+                            Origin::new(2..16, "!true || false"),
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
-                                    2..7,
-                                    "!true",
+                                    Origin::new(2..7, "!true"),
                                     Expr::UnOp {
                                         op: UnOp::Not,
-                                        expr: Box::new(SpannedExpr::new(3..7, "true", true.into())),
+                                        expr: Box::new(SpannedExpr::new(
+                                            Origin::new(3..7, "true"),
+                                            true.into(),
+                                        )),
                                     },
                                 )),
                                 op: BinOp::Or,
-                                rhs: Box::new(SpannedExpr::new(11..16, "false", false.into())),
+                                rhs: Box::new(SpannedExpr::new(
+                                    Origin::new(11..16, "false"),
+                                    false.into(),
+                                )),
                             },
                         )),
                     },
@@ -1087,21 +1108,24 @@ mod tests {
             (
                 "foobar[format('{0}', 'event')]",
                 SpannedExpr::new(
-                    0..30,
-                    "foobar[format('{0}', 'event')]",
+                    Origin::new(0..30, "foobar[format('{0}', 'event')]"),
                     Expr::context([
-                        SpannedExpr::new(0..6, "foobar", Expr::ident("foobar")),
+                        SpannedExpr::new(Origin::new(0..6, "foobar"), Expr::ident("foobar")),
                         SpannedExpr::new(
-                            6..30,
-                            "[format('{0}', 'event')]",
+                            Origin::new(6..30, "[format('{0}', 'event')]"),
                             Expr::Index(Box::new(SpannedExpr::new(
-                                7..29,
-                                "format('{0}', 'event')",
+                                Origin::new(7..29, "format('{0}', 'event')"),
                                 Expr::Call {
                                     func: Function("format"),
                                     args: vec![
-                                        SpannedExpr::new(14..19, "'{0}'", Expr::from("{0}")),
-                                        SpannedExpr::new(21..28, "'event'", Expr::from("event")),
+                                        SpannedExpr::new(
+                                            Origin::new(14..19, "'{0}'"),
+                                            Expr::from("{0}"),
+                                        ),
+                                        SpannedExpr::new(
+                                            Origin::new(21..28, "'event'"),
+                                            Expr::from("event"),
+                                        ),
                                     ],
                                 },
                             ))),
@@ -1112,22 +1136,25 @@ mod tests {
             (
                 "github.actor_id == '49699333'",
                 SpannedExpr::new(
-                    0..29,
-                    "github.actor_id == '49699333'",
+                    Origin::new(0..29, "github.actor_id == '49699333'"),
                     Expr::BinOp {
                         lhs: SpannedExpr::new(
-                            0..15,
-                            "github.actor_id",
+                            Origin::new(0..15, "github.actor_id"),
                             Expr::context(vec![
-                                SpannedExpr::new(0..6, "github", Expr::ident("github")),
-                                SpannedExpr::new(7..15, "actor_id", Expr::ident("actor_id")),
+                                SpannedExpr::new(
+                                    Origin::new(0..6, "github"),
+                                    Expr::ident("github"),
+                                ),
+                                SpannedExpr::new(
+                                    Origin::new(7..15, "actor_id"),
+                                    Expr::ident("actor_id"),
+                                ),
                             ]),
                         )
                         .into(),
                         op: BinOp::Eq,
                         rhs: Box::new(SpannedExpr::new(
-                            19..29,
-                            "'49699333'",
+                            Origin::new(19..29, "'49699333'"),
                             Expr::from("49699333"),
                         )),
                     },
@@ -1210,7 +1237,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.2)
+                .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["foo.bar"]
         );
@@ -1219,7 +1246,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.2)
+                .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["foo.bar[1]"]
         );
@@ -1233,7 +1260,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.2)
+                .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["foo.bar", "abc", "d.e.f"]
         );
@@ -1243,7 +1270,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.2)
+                .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["d.e.f"]
         );
@@ -1252,7 +1279,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.2)
+                .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["foo.bar"]
         );
@@ -1261,7 +1288,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.2)
+                .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["foo.bar", "foo.baz"]
         );
@@ -1270,7 +1297,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.2)
+                .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["fromJson(steps.runs.outputs.data).workflow_runs[0].id"]
         );
@@ -1279,7 +1306,7 @@ mod tests {
         assert_eq!(
             expr.dataflow_contexts()
                 .iter()
-                .map(|t| t.2)
+                .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["foo.bar", "github", "github"]
         );

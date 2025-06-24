@@ -347,7 +347,7 @@ impl TemplateInjection {
                 Persona::Pedantic,
             ));
 
-            for (context, context_span, raw_ctx) in parsed.dataflow_contexts() {
+            for (context, origin) in parsed.dataflow_contexts() {
                 // Try and turn our context into a pattern for
                 // matching against the FST.
                 match context.as_pattern().as_deref() {
@@ -360,7 +360,10 @@ impl TemplateInjection {
                             // structure, but not fully arbitrary.
                             Some(Capability::Structured) => {
                                 bad_expressions.push((
-                                    Subfeature::new(expr_span.start + context_span.start, raw_ctx),
+                                    Subfeature::new(
+                                        expr_span.start + origin.span.start,
+                                        origin.raw,
+                                    ),
                                     self.attempt_fix(&expr, &parsed, step),
                                     Severity::Medium,
                                     Confidence::High,
@@ -371,7 +374,10 @@ impl TemplateInjection {
                             // fully attacker-controllable.
                             Some(Capability::Arbitrary) => {
                                 bad_expressions.push((
-                                    Subfeature::new(expr_span.start + context_span.start, raw_ctx),
+                                    Subfeature::new(
+                                        expr_span.start + origin.span.start,
+                                        origin.raw,
+                                    ),
                                     self.attempt_fix(&expr, &parsed, step),
                                     Severity::High,
                                     Confidence::High,
@@ -404,8 +410,8 @@ impl TemplateInjection {
 
                                     bad_expressions.push((
                                         Subfeature::new(
-                                            expr_span.start + context_span.start,
-                                            raw_ctx,
+                                            expr_span.start + origin.span.start,
+                                            origin.raw,
                                         ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         severity,
@@ -418,8 +424,8 @@ impl TemplateInjection {
                                     if !env_is_static {
                                         bad_expressions.push((
                                             Subfeature::new(
-                                                expr_span.start + context_span.start,
-                                                raw_ctx,
+                                                expr_span.start + origin.span.start,
+                                                origin.raw,
                                             ),
                                             self.attempt_fix(&expr, &parsed, step),
                                             Severity::Low,
@@ -431,8 +437,8 @@ impl TemplateInjection {
                                         // expansion is probably static.
                                         bad_expressions.push((
                                             Subfeature::new(
-                                                expr_span.start + context_span.start,
-                                                raw_ctx,
+                                                expr_span.start + origin.span.start,
+                                                origin.raw,
                                             ),
                                             self.attempt_fix(&expr, &parsed, step),
                                             Severity::Unknown,
@@ -445,8 +451,8 @@ impl TemplateInjection {
                                     // context is actually attacker-controllable.
                                     bad_expressions.push((
                                         Subfeature::new(
-                                            expr_span.start + context_span.start,
-                                            raw_ctx,
+                                            expr_span.start + origin.span.start,
+                                            origin.raw,
                                         ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         Severity::High,
@@ -470,8 +476,8 @@ impl TemplateInjection {
                                         if !matrix_is_static {
                                             bad_expressions.push((
                                                 Subfeature::new(
-                                                    expr_span.start + context_span.start,
-                                                    raw_ctx,
+                                                    expr_span.start + origin.span.start,
+                                                    origin.raw,
                                                 ),
                                                 self.attempt_fix(&expr, &parsed, step),
                                                 Severity::Medium,
@@ -486,8 +492,8 @@ impl TemplateInjection {
                                     // but may be in obscure cases.
                                     bad_expressions.push((
                                         Subfeature::new(
-                                            expr_span.start + context_span.start,
-                                            raw_ctx,
+                                            expr_span.start + origin.span.start,
+                                            origin.raw,
                                         ),
                                         self.attempt_fix(&expr, &parsed, step),
                                         Severity::Informational,
@@ -503,7 +509,7 @@ impl TemplateInjection {
                         // we almost certainly have something like
                         // `call(...).foo.bar`.
                         bad_expressions.push((
-                            Subfeature::new(expr_span.start + context_span.start, raw_ctx),
+                            Subfeature::new(expr_span.start + origin.span.start, origin.raw),
                             self.attempt_fix(&expr, &parsed, step),
                             Severity::Informational,
                             Confidence::Low,

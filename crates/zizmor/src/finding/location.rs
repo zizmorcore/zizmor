@@ -179,7 +179,7 @@ impl<'doc> Fragment<'doc> {
 
 impl<'doc> From<&SpannedExpr<'doc>> for Fragment<'doc> {
     fn from(expr: &SpannedExpr<'doc>) -> Self {
-        Self::new(expr.raw)
+        Self::new(expr.origin.raw)
     }
 }
 
