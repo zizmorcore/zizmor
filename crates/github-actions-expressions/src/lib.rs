@@ -13,7 +13,6 @@ use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 
 pub mod context;
-pub mod visitor;
 
 // Isolates the ExprParser, Rule and other generated types
 // so that we can do `missing_docs` at the top-level.
