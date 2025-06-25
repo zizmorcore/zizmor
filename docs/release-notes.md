@@ -34,6 +34,10 @@ of `zizmor`.
 * The [template-injection] audit now returns precise spans for flagged
   contexts and expressions, instead of flagging the entire script block
   (#958)
+* The [obfuscation] audit now returns precise spans for flagged expressions
+  (#969)
+* The [obfuscation] audit now detects computed indices (e.g.
+  `inputs.foo[inputs.bar]`) as a potentially obfuscatory pattern (#969)
 
 ### Bug Fixes 🐛
 

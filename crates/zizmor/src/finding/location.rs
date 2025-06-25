@@ -179,7 +179,7 @@ impl<'doc> Fragment<'doc> {
 
 impl<'doc> From<&SpannedExpr<'doc>> for Fragment<'doc> {
     fn from(expr: &SpannedExpr<'doc>) -> Self {
-        Self::new(expr.raw)
+        Self::new(expr.origin.raw)
     }
 }
 
@@ -533,6 +533,14 @@ pub(crate) struct Feature<'doc> {
 }
 
 impl<'doc> Feature<'doc> {
+    pub(crate) fn from_subfeature(subfeature: &Subfeature, input: &'doc AuditInput) -> Self {
+        let contents = input.as_document().source();
+
+        let span = subfeature.locate_within(contents).unwrap().into();
+
+        Self::from_span(&span, input)
+    }
+
     pub(crate) fn from_span(span: &Range<usize>, input: &'doc AuditInput) -> Self {
         let raw = input.as_document().source();
         let start = TextSize::new(span.start as u32);

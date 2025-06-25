@@ -1,0 +1,13 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"obfuscation/computed-indices.yml\")).args([\"--persona=pedantic\"]).run()?"
+---
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:14:23
+   |
+14 |       - if: ${{ inputs[inputs.foo] }}
+   |                       ------------ help: index expression is computed
+   |
+   = note: audit confidence → High
+
+1 finding: 0 unknown, 0 informational, 1 low, 0 medium, 0 high

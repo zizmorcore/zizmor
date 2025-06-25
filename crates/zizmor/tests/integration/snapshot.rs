@@ -757,6 +757,13 @@ fn forbidden_uses() -> Result<()> {
 fn obfuscation() -> Result<()> {
     insta::assert_snapshot!(zizmor().input(input_under_test("obfuscation.yml")).run()?);
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("obfuscation/computed-indices.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
     Ok(())
 }
 
