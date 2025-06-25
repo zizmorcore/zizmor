@@ -110,7 +110,7 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         // This ends up being OK since the only other thing we'd put here
         // is the finding's description, which is already in the rule's help message.
         // See https://github.com/zizmorcore/zizmor/issues/526 for context.
-        .message(&primary.symbolic.annotation)
+        .message(finding.desc)
         .locations(build_locations(std::iter::once(primary)))
         .related_locations(build_locations(
             finding
