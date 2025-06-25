@@ -131,12 +131,26 @@ impl Fix<'_> {
 
 #[derive(Serialize)]
 pub(crate) struct Finding<'doc> {
+    /// The audit ID for this finding, e.g. `template-injection`.
     pub(crate) ident: &'static str,
+    /// A short description of the finding, derived from the audit.
     pub(crate) desc: &'static str,
+    /// A URL linking to the documentation for this finding's audit.
     pub(crate) url: &'static str,
+    /// The confidence, severity, and persona of this finding.
     pub(crate) determinations: Determinations,
+    /// This finding's locations.
+    ///
+    /// Each location has both a concrete and a symbolic representation,
+    /// and carries metadata about how an output layer might choose to
+    /// present it.
     pub(crate) locations: Vec<Location<'doc>>,
+    /// Whether this finding is ignored, either via inline comments or
+    /// through a user's configuration.
     pub(crate) ignored: bool,
+    /// One or more suggested fixes for this finding. Because a finding
+    /// can span multiple inputs, each fix is associated with a specific
+    /// input via [`Fix::key`].
     #[serde(skip_serializing)]
     pub(crate) fixes: Vec<Fix<'doc>>,
 }

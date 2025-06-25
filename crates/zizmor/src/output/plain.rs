@@ -171,11 +171,16 @@ fn render_finding(registry: &InputRegistry, finding: &Finding) {
     );
     let confidence_footer = Level::Note.title(&confidence);
 
-    let message = Level::from(&finding.determinations.severity)
+    let mut message = Level::from(&finding.determinations.severity)
         .title(finding.desc)
         .id(&link)
         .snippets(finding_snippet(registry, finding))
         .footer(confidence_footer);
+
+    if !finding.fixes.is_empty() {
+        let fixes_footer = Level::Note.title("this finding can be auto-fixed with --fix");
+        message = message.footer(fixes_footer);
+    }
 
     let renderer = Renderer::styled();
     println!("{}", renderer.render(message));
