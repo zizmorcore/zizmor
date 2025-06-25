@@ -36,17 +36,12 @@ jobs:
           category: zizmor-test-sarif-presentation
 
       - name: Leave comment
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        with:
-          script: |
-            let url = `https://github.com/zizmorcore/zizmor/security/code-scanning?query=pr%3A${context.issue.number}+is%3Aopen+sort%3Acreated-desc`
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `:robot: Presentation results: <${url}>`
-            })
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          URL: "https://github.com/zizmorcore/zizmor/security/code-scanning?query=pr%3A${{ github.event.pull_request.number }}+is%3Aopen+sort%3Acreated-desc"
+        run: |
+          gh pr comment "${PR_NUMBER}" \
+            --body ":robot: SARIF results: ${URL}"
 
   test-github-presentation:
     name: Test GitHub annotations presentation
@@ -70,4 +65,4 @@ jobs:
             -- \
             --no-exit-codes \
             --format github \
-            tests/integration/test-data/several-vulnerabilities.yml
+            crates/zizmor/tests/integration/test-data/several-vulnerabilities.yml
