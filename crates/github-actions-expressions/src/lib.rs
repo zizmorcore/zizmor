@@ -307,6 +307,46 @@ impl<'a> SpannedExpr<'a> {
 
         index_exprs
     }
+
+    /// Like [`Expr::constant_reducible`], but for all subexpressions
+    /// rather than the top-level expression.
+    ///
+    /// This has slightly different semantics than `constant_reducible`:
+    /// it doesn't include "trivially" reducible expressions like literals,
+    /// since flagging these as reducible within a larger expression
+    /// would be misleading.
+    pub fn constant_reducible_subexprs(&self) -> Vec<&SpannedExpr<'a>> {
+        if !self.is_literal() && self.constant_reducible() {
+            return vec![self];
+        }
+
+        let mut subexprs = vec![];
+
+        match self.deref() {
+            Expr::Call { func: _, args } => {
+                for arg in args {
+                    subexprs.extend(arg.constant_reducible_subexprs());
+                }
+            }
+            Expr::Context(ctx) => {
+                // contexts themselves are never reducible, but they might
+                // contains reducible index subexpressions.
+                for part in &ctx.parts {
+                    subexprs.extend(part.constant_reducible_subexprs());
+                }
+            }
+            Expr::BinOp { lhs, op: _, rhs } => {
+                subexprs.extend(lhs.constant_reducible_subexprs());
+                subexprs.extend(rhs.constant_reducible_subexprs());
+            }
+            Expr::UnOp { op: _, expr } => subexprs.extend(expr.constant_reducible_subexprs()),
+
+            Expr::Index(expr) => subexprs.extend(expr.constant_reducible_subexprs()),
+            _ => {}
+        }
+
+        subexprs
+    }
 }
 
 impl<'a> Deref for SpannedExpr<'a> {
@@ -411,35 +451,6 @@ impl<'src> Expr<'src> {
                 }
             }
             // Everything else is presumed non-reducible.
-            _ => false,
-        }
-    }
-
-    /// Like [`Self::constant_reducible`], but for all subexpressions
-    /// rather than the top-level expression.
-    ///
-    /// This has slightly different semantics than `constant_reducible`:
-    /// it doesn't include "trivially" reducible expressions like literals,
-    /// since flagging these as reducible within a larger expression
-    /// would be misleading.
-    pub fn has_constant_reducible_subexpr(&self) -> bool {
-        if !self.is_literal() && self.constant_reducible() {
-            return true;
-        }
-
-        match self {
-            Expr::Call { func: _, args } => args.iter().any(|a| a.has_constant_reducible_subexpr()),
-            Expr::Context(ctx) => {
-                // contexts themselves are never reducible, but they might
-                // contains reducible index subexpressions.
-                ctx.parts.iter().any(|c| c.has_constant_reducible_subexpr())
-            }
-            Expr::BinOp { lhs, op: _, rhs } => {
-                lhs.has_constant_reducible_subexpr() || rhs.has_constant_reducible_subexpr()
-            }
-            Expr::UnOp { op: _, expr } => expr.has_constant_reducible_subexpr(),
-
-            Expr::Index(expr) => expr.has_constant_reducible_subexpr(),
             _ => false,
         }
     }
@@ -1261,7 +1272,7 @@ mod tests {
             ("foobar[format('{0}', 'event')]", true),
         ] {
             let expr = Expr::parse(expr)?;
-            assert_eq!(expr.has_constant_reducible_subexpr(), *reducible);
+            assert_eq!(!expr.constant_reducible_subexprs().is_empty(), *reducible);
         }
         Ok(())
     }

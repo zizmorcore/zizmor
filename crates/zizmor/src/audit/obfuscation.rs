@@ -70,12 +70,16 @@ impl Obfuscation {
                 expr.origin,
                 Persona::Regular,
             ));
-        } else if expr.has_constant_reducible_subexpr() {
-            annotations.push((
-                "expression contains constant-reducible subexpression",
-                expr.origin,
-                Persona::Regular,
-            ));
+        } else {
+            // Even if an expression is not itself constant reducible,
+            // it might contains reducible sub-expressions.
+            for subexpr in expr.constant_reducible_subexprs() {
+                annotations.push((
+                    "can be reduced to a constant",
+                    subexpr.origin,
+                    Persona::Regular,
+                ));
+            }
         }
 
         for index_expr in expr.computed_indices() {
