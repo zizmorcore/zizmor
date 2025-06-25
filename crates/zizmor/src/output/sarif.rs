@@ -3,10 +3,9 @@
 use std::collections::HashSet;
 
 use serde_sarif::sarif::{
-    ArtifactContent, ArtifactLocation, CodeFlow, Invocation, Location as SarifLocation,
-    LogicalLocation, Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region,
-    ReportingDescriptor, Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, ThreadFlow,
-    ThreadFlowLocation, Tool, ToolComponent,
+    ArtifactContent, ArtifactLocation, Invocation, Location as SarifLocation, LogicalLocation,
+    Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region, ReportingDescriptor,
+    Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, Tool, ToolComponent,
 };
 
 use crate::finding::{Finding, Severity, location::Location};
