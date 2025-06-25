@@ -115,6 +115,9 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         // instead -- GitHub seems to do a better job of rendering these,
         // but still doesn't do a great job of putting all of the locations
         // into the same render.
+        // TODO: Give related locations IDs and back-link to them in the
+        // main location's message -- GitHub renders these as modals that
+        // users can click through to see more context.
         .related_locations(build_locations(
             finding
                 .visible_locations()
