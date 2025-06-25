@@ -211,7 +211,7 @@ fn apply_single_patch(
     let content = document.source();
     match &patch.operation {
         Op::RewriteFragment { from, to, after } => {
-            let Some(feature) = route_to_feature_exact(&patch.route, &document)? else {
+            let Some(feature) = route_to_feature_exact(&patch.route, document)? else {
                 return Err(Error::InvalidOperation(format!(
                     "no pre-existing value to patch at {route:?}",
                     route = patch.route
@@ -256,10 +256,10 @@ fn apply_single_patch(
             yamlpath::Document::new(patched_content).map_err(Error::from)
         }
         Op::Replace(value) => {
-            let feature = route_to_feature_pretty(&patch.route, &document)?;
+            let feature = route_to_feature_pretty(&patch.route, document)?;
 
             // Get the replacement content
-            let replacement = apply_value_replacement(&feature, &document, value, true)?;
+            let replacement = apply_value_replacement(&feature, document, value, true)?;
 
             // Extract the current content to calculate spans
             let current_content = document.extract(&feature);
@@ -303,7 +303,7 @@ fn apply_single_patch(
             let feature = if patch.route.is_root() {
                 document.top_feature()?
             } else {
-                route_to_feature_exact(&patch.route, &document)?.ok_or_else(|| {
+                route_to_feature_exact(&patch.route, document)?.ok_or_else(|| {
                     Error::InvalidOperation(format!(
                         "no existing mapping at {route:?}",
                         route = patch.route
@@ -311,12 +311,12 @@ fn apply_single_patch(
                 })?
             };
 
-            let style = Style::from_feature(&feature, &document);
+            let style = Style::from_feature(&feature, document);
             let feature_content = document.extract(&feature);
 
             let updated_feature = match style {
                 Style::BlockMapping => {
-                    handle_block_mapping_addition(feature_content, &document, &feature, key, value)
+                    handle_block_mapping_addition(feature_content, document, &feature, key, value)
                 }
                 Style::FlowMapping => handle_flow_mapping_addition(feature_content, key, value),
                 // TODO: Remove this limitation.
@@ -347,7 +347,7 @@ fn apply_single_patch(
             // Check if the key already exists in the target mapping
             let existing_key_route = patch.route.with_keys(&[key.as_str().into()]);
 
-            if let Ok(existing_feature) = route_to_feature_pretty(&existing_key_route, &document) {
+            if let Ok(existing_feature) = route_to_feature_pretty(&existing_key_route, document) {
                 // Key exists, check if we need to merge mappings
                 if let serde_yaml::Value::Mapping(new_mapping) = &value {
                     // Try to parse the existing value as YAML to see if it's also a mapping
@@ -381,7 +381,7 @@ fn apply_single_patch(
 
                             // Use a custom replacement that preserves the key structure
                             return apply_mapping_replacement(
-                                &document,
+                                document,
                                 &existing_key_route,
                                 key,
                                 &serde_yaml::Value::Mapping(merged_mapping),
@@ -419,17 +419,17 @@ fn apply_single_patch(
                 ));
             }
 
-            let feature = route_to_feature_pretty(&patch.route, &document)?;
+            let feature = route_to_feature_pretty(&patch.route, document)?;
 
             // For removal, we need to remove the entire line including leading whitespace
             // TODO: This isn't sound, e.g. removing `b:` from `{a: a, b: b}` will
             // remove the entire line.
             let start_pos = {
-                let range = line_span(&document, feature.location.byte_span.0);
+                let range = line_span(document, feature.location.byte_span.0);
                 range.start
             };
             let end_pos = {
-                let range = line_span(&document, feature.location.byte_span.1);
+                let range = line_span(document, feature.location.byte_span.1);
                 range.end
             };
 
