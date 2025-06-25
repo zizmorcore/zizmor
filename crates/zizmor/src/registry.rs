@@ -359,11 +359,11 @@ impl<'a> FindingRegistry<'a> {
     pub(crate) fn suppressed(&self) -> &[Finding<'a>] {
         &self.suppressed
     }
-}
 
-impl From<FindingRegistry<'_>> for ExitCode {
-    fn from(value: FindingRegistry<'_>) -> Self {
-        match value.highest_seen_severity {
+    /// Returns an appropriate exit code based on the registry's
+    /// highest-seen severity.
+    pub(crate) fn exit_code(&self) -> ExitCode {
+        match self.highest_seen_severity {
             Some(sev) => match sev {
                 Severity::Unknown => ExitCode::from(10),
                 Severity::Informational => ExitCode::from(11),

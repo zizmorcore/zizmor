@@ -696,7 +696,7 @@ fn run() -> Result<ExitCode> {
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
         Ok(ExitCode::SUCCESS)
     } else {
-        Ok(results.into())
+        Ok(results.exit_code())
     }
 }
 
