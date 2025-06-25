@@ -786,7 +786,7 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "github-actions-expressions"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "anyhow",
  "itertools",
@@ -797,7 +797,7 @@ dependencies = [
 
 [[package]]
 name = "github-actions-models"
-version = "0.30.0"
+version = "0.31.0"
 dependencies = [
  "indexmap",
  "serde",
@@ -3439,7 +3439,7 @@ checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
 
 [[package]]
 name = "yamlpath"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "line-index",
  "serde",
