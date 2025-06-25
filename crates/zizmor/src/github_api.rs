@@ -212,29 +212,46 @@ impl Client {
     ) -> Result<Option<String>> {
         // GitHub Actions generally resolves branches before tags, so try
         // the repo's branches first.
+        if let Some(branch_ref) = self
+            ._get_ref(owner, repo, &format!("ref/heads/{git_ref}"))
+            .await?
+        {
+            // assert_eq!(branch_ref.object.r#type, Some(ObjectType::Commit));
+            return Ok(Some(branch_ref.object.sha));
+        }
+
+        let Some(mut tag_ref) = self
+            ._get_ref(owner, repo, &format!("ref/tags/{git_ref}"))
+            .await?
+        else {
+            return Ok(None);
+        };
+
+        while !matches!(tag_ref.object.r#type, Some(ObjectType::Commit)) {
+            let Some(next_ref) = self._get_ref(owner, repo, &tag_ref.object.sha).await? else {
+                return Ok(None);
+            };
+            tag_ref = next_ref;
+        }
+
+        return Ok(Some(tag_ref.object.sha));
+    }
+
+    pub(crate) async fn _get_ref(
+        &self,
+        owner: &str,
+        repo: &str,
+        git_ref: &str,
+    ) -> Result<Option<GitRef>> {
         let url = format!(
-            "{api_base}/repos/{owner}/{repo}/git/ref/heads/{git_ref}",
+            "{api_base}/repos/{owner}/{repo}/git/{git_ref}",
             api_base = self.api_base
         );
 
         let resp = self.http.get(url).send().await?;
         match resp.status() {
-            StatusCode::OK => Ok(Some(resp.json::<GitRef>().await?.object.sha)),
-            StatusCode::NOT_FOUND => {
-                let url = format!(
-                    "{api_base}/repos/{owner}/{repo}/git/ref/tags/{git_ref}",
-                    api_base = self.api_base
-                );
-
-                let resp = self.http.get(url).send().await?;
-                match resp.status() {
-                    StatusCode::OK => Ok(Some(resp.json::<GitRef>().await?.object.sha)),
-                    StatusCode::NOT_FOUND => Ok(None),
-                    s => Err(anyhow!(
-                        "{owner}/{repo}: error from GitHub API while accessing ref {git_ref}: {s}"
-                    )),
-                }
-            }
+            StatusCode::OK => Ok(Some(resp.json::<GitRef>().await?)),
+            StatusCode::NOT_FOUND => Ok(None),
             s => Err(anyhow!(
                 "{owner}/{repo}: error from GitHub API while accessing ref {git_ref}: {s}"
             )),
@@ -480,10 +497,18 @@ pub(crate) struct Tag {
     pub(crate) commit: Object,
 }
 
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum ObjectType {
+    Tag,
+    Commit,
+}
+
 /// Represents a git object.
 #[derive(Deserialize, Clone)]
 pub(crate) struct Object {
     pub(crate) sha: String,
+    pub(crate) r#type: Option<ObjectType>,
 }
 
 #[derive(Deserialize)]

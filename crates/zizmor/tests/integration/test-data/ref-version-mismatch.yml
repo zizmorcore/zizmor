@@ -1,0 +1,28 @@
+name: Ref Version Mismatch Test
+
+on: [push]
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # No finding, comment matches
+      - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.2
+
+      # No finding, no comment
+      - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
+
+      # No finding, symbolic ref
+      - uses: actions/setup-node@v3.8.2 # v3.8.2
+
+      # Finding: v3.8.1==5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d, v3.8.2==1a4442cacd436585916779262731d5b162bc6ec7
+      - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
+
+      # No finding, the comment does not resolve to a known tag
+      - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v300000.8.1
+
+      # No finding, the tag points to another tag that points to 9d47c6ad4b02e050fd481d890b2ea34778fd09d6
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
+
