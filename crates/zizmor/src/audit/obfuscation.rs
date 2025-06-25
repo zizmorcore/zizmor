@@ -1,11 +1,11 @@
-use github_actions_expressions::Expr;
+use github_actions_expressions::{Expr, Origin, SpannedExpr};
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use crate::{
     Confidence, Severity,
     finding::{
-        Finding,
-        location::{Feature, Location},
+        Finding, Persona,
+        location::{Feature, Location, Subfeature},
     },
     models::{StepCommon, action::CompositeStep, workflow::Step},
     utils::parse_expressions_from_input,
@@ -54,7 +54,10 @@ impl Obfuscation {
         annotations
     }
 
-    fn obfuscated_exprs(&self, expr: &Expr) -> Vec<&str> {
+    fn obfuscated_exprs<'src>(
+        &self,
+        expr: &SpannedExpr<'src>,
+    ) -> Vec<(&str, Origin<'src>, Persona)> {
         let mut annotations = vec![];
 
         // Check for some common expression obfuscation patterns.
@@ -62,9 +65,29 @@ impl Obfuscation {
         // Expressions that can be constant reduced should be simplified to
         // their evaluated form.
         if expr.constant_reducible() {
-            annotations.push("expression can be replaced by its static evaluation");
-        } else if expr.has_constant_reducible_subexpr() {
-            annotations.push("expression contains constant-reducible subexpression");
+            annotations.push((
+                "can be replaced by its static evaluation",
+                expr.origin,
+                Persona::Regular,
+            ));
+        } else {
+            // Even if an expression is not itself constant reducible,
+            // it might contains reducible sub-expressions.
+            for subexpr in expr.constant_reducible_subexprs() {
+                annotations.push((
+                    "can be reduced to a constant",
+                    subexpr.origin,
+                    Persona::Regular,
+                ));
+            }
+        }
+
+        for index_expr in expr.computed_indices() {
+            annotations.push((
+                "index expression is computed",
+                index_expr.origin,
+                Persona::Pedantic,
+            ));
         }
 
         // TODO: calculate call breadth/depth and flag above thresholds.
@@ -110,20 +133,24 @@ impl Audit for Obfuscation {
     fn audit_raw<'doc>(&self, input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
-        for (expr, span) in parse_expressions_from_input(input) {
+        for (expr, expr_span) in parse_expressions_from_input(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
 
-            for annotation in self.obfuscated_exprs(&parsed) {
+            for (annotation, origin, persona) in self.obfuscated_exprs(&parsed) {
+                let after = expr_span.start + origin.span.start;
+                let subfeature = Subfeature::new(after, origin.raw);
+
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
                         .severity(Severity::Low)
+                        .persona(persona)
                         .add_raw_location(Location::new(
                             input.location().annotated(annotation).primary(),
-                            Feature::from_span(&span, input),
+                            Feature::from_subfeature(&subfeature, input),
                         ))
                         .build(input)?,
                 );

@@ -93,7 +93,7 @@ impl UnsoundContains {
                         inner: Expr::Context(c),
                         ..
                     },
-                ] => Box::new(std::iter::once((s.as_ref(), c, ctx_expr.raw))),
+                ] => Box::new(std::iter::once((s.as_ref(), c, ctx_expr.origin.raw))),
                 args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
             },
             Expr::Call {

@@ -54,6 +54,15 @@ pub(crate) enum InputKind {
     Action,
 }
 
+impl std::fmt::Display for InputKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InputKind::Workflow => write!(f, "workflow"),
+            InputKind::Action => write!(f, "action"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct LocalKey {
     /// The path's nondeterministic prefix, if any.
@@ -204,11 +213,11 @@ impl InputRegistry {
         contents: String,
         key: InputKey,
     ) -> anyhow::Result<()> {
-        tracing::debug!("registering {kind:?} input as with key {key}");
+        tracing::debug!("registering {kind} input as with key {key}");
 
         let input: Result<AuditInput, InputError> = match kind {
-            InputKind::Workflow => Workflow::from_string(contents, key).map(|wf| wf.into()),
-            InputKind::Action => Action::from_string(contents, key).map(|a| a.into()),
+            InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(|wf| wf.into()),
+            InputKind::Action => Action::from_string(contents, key.clone()).map(|a| a.into()),
         };
 
         match input {
@@ -218,10 +227,10 @@ impl InputRegistry {
                 Ok(())
             }
             Err(e @ InputError::Schema { .. }) if !self.strict => {
-                tracing::warn!("failed to validate input as {kind:?}: {e}");
+                tracing::warn!("failed to validate input as {kind}: {e}");
                 Ok(())
             }
-            Err(e) => Err(anyhow!(e)).with_context(|| format!("failed to load input as {kind:?}")),
+            Err(e) => Err(anyhow!(e)).with_context(|| format!("failed to load {key} as {kind}")),
         }
     }
 
@@ -350,11 +359,11 @@ impl<'a> FindingRegistry<'a> {
     pub(crate) fn suppressed(&self) -> &[Finding<'a>] {
         &self.suppressed
     }
-}
 
-impl From<FindingRegistry<'_>> for ExitCode {
-    fn from(value: FindingRegistry<'_>) -> Self {
-        match value.highest_seen_severity {
+    /// Returns an appropriate exit code based on the registry's
+    /// highest-seen severity.
+    pub(crate) fn exit_code(&self) -> ExitCode {
+        match self.highest_seen_severity {
             Some(sev) => match sev {
                 Severity::Unknown => ExitCode::from(10),
                 Severity::Informational => ExitCode::from(11),

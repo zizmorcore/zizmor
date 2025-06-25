@@ -1,6 +1,8 @@
+//! Routines for applying fixes and reporting overall fix statuses.
+
 use std::collections::HashMap;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
 
@@ -24,7 +26,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
     }
 
     if fixes_by_input.is_empty() {
-        println!("No fixes available to apply.");
+        anstream::println!("No fixes available to apply.");
         return Ok(());
     }
 
@@ -39,46 +41,24 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
             continue;
         };
 
-        // Get the original content from the registry instead of reading from disk
         let input = registry.get_input(input_key);
         let file_path = &local.given_path;
-        let original_content = input.as_document().source();
 
-        let mut current_content = original_content.to_string();
         let mut file_applied_fixes = Vec::new();
-        let mut successful_fixes = Vec::new();
-
-        // First, try to apply each fix independently to the original content
-        // to collect which fixes can be applied successfully
-        for (fix, finding) in fixes {
-            match fix.apply_to_content(original_content) {
-                Ok(Some(_)) => {
-                    successful_fixes.push((finding.ident, *fix, *finding));
-                }
-                Ok(None) => {
-                    // Fix didn't apply (no changes needed)
-                }
-                Err(e) => {
-                    failed_fixes.push((finding.ident, file_path, format!("{}", e)));
-                }
-            }
-        }
+        let mut current_document = input.as_document().clone();
 
         // Then apply successful fixes sequentially, handling conflicts gracefully
-        for (ident, fix, finding) in successful_fixes {
-            match fix.apply_to_content(&current_content) {
-                Ok(Some(new_content)) => {
-                    current_content = new_content;
-                    file_applied_fixes.push((ident, fix, finding));
-                }
-                Ok(None) => {
-                    // Fix didn't apply to modified content (possibly due to conflicts)
+        for (fix, finding) in fixes {
+            match fix.apply(&current_document) {
+                Ok(new_document) => {
+                    current_document = new_document;
+                    file_applied_fixes.push((finding.ident, fix, finding));
                 }
                 Err(e) => {
                     // If the fix fails on modified content, it might be due to conflicts
                     // with previously applied fixes. Record this as a failed fix.
                     failed_fixes.push((
-                        ident,
+                        finding.ident,
                         file_path,
                         format!("conflict after applying previous fixes: {}", e),
                     ));
@@ -87,12 +67,15 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
         }
 
         // Only proceed if there are changes to apply
-        if current_content != original_content {
-            println!("{}", "\nFixes".to_string().green().bold());
+        if current_document.source() != input.as_document().source() {
+            anstream::println!("{}", "\nFixes".to_string().green().bold());
             let num_fixes = file_applied_fixes.len();
             for (ident, fix, finding) in file_applied_fixes {
-                let line_info = format!(" at line {}", get_primary_line_number(finding));
-                println!(
+                let line_info = format!(
+                    " at line {}",
+                    finding.primary_location().concrete.location.start_point.row + 1
+                );
+                anstream::println!(
                     "  - {}{}: {}",
                     format_severity_and_rule(&finding.determinations.severity, ident),
                     line_info,
@@ -100,15 +83,11 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
                 );
             }
 
-            match std::fs::write(file_path, &current_content) {
-                Ok(_) => {
-                    applied_fixes.push((file_path, num_fixes));
-                    println!("Applied {} fixes to {}", num_fixes, file_path);
-                }
-                Err(e) => {
-                    eprintln!("Failed to write {}: {}", file_path, e);
-                }
-            }
+            std::fs::write(file_path, current_document.source())
+                .with_context(|| format!("failed to update {file_path}"))?;
+
+            anstream::println!("Applied {} fixes to {}", num_fixes, file_path);
+            applied_fixes.push((file_path, num_fixes));
         }
     }
 
@@ -124,22 +103,22 @@ fn print_summary(
     applied_fixes: &[(&Utf8PathBuf, usize)],
     failed_fixes: &[(&str, &Utf8PathBuf, String)],
 ) {
-    println!("\n{}", "Fix Summary".green().bold());
+    anstream::println!("\n{}", "Fix Summary".green().bold());
 
     if !applied_fixes.is_empty() {
-        println!(
+        anstream::println!(
             "Successfully applied fixes to {} files:",
             applied_fixes.len()
         );
         for (file_path, num_fixes) in applied_fixes {
-            println!("  {}: {} fixes", file_path, num_fixes);
+            anstream::println!("  {}: {} fixes", file_path, num_fixes);
         }
     }
 
     if !failed_fixes.is_empty() {
-        println!("Failed to apply {} fixes:", failed_fixes.len());
+        anstream::println!("Failed to apply {} fixes:", failed_fixes.len());
         for (ident, file_path, error) in failed_fixes {
-            println!("  {}: {} ({})", ident, file_path, error);
+            anstream::println!("  {}: {} ({})", ident, file_path, error);
         }
     }
 }
@@ -164,16 +143,4 @@ pub fn format_severity_and_rule(severity: &crate::finding::Severity, rule_name: 
         crate::finding::Severity::Medium => formatted.yellow().to_string(),
         crate::finding::Severity::High => formatted.red().to_string(),
     }
-}
-
-/// Get the primary line number for a finding
-/// Since finding builder APIs enforce the presence of a primary location, this is safe to unwrap
-pub fn get_primary_line_number(finding: &Finding) -> usize {
-    finding
-        .locations
-        .iter()
-        .find(|loc| loc.symbolic.is_primary())
-        .or_else(|| finding.locations.first())
-        .map(|loc| loc.concrete.location.start_point.row + 1) // Convert to 1-based line number
-        .unwrap()
 }

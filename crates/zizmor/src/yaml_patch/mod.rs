@@ -172,69 +172,53 @@ pub enum Op<'doc> {
     Remove,
 }
 
-/// Apply YAML patch operations while preserving comments and formatting
+/// Apply a sequence of YAML patch operations to a YAML document.
+/// Returns a new YAML document with the patches applied.
 ///
-/// This function takes a YAML string and a list of patch operations, applying them
-/// while preserving all comments, formatting, and structure that isn't directly modified.
+/// Returns an error if the given YAML input is not valid, if a patch
+/// operation fails, or if the resulting YAML is malformed.
 ///
-/// # Operation Order
-///
-/// Operations are internally sorted by their byte positions and applied from the end
-/// of the document backwards to avoid invalidating byte positions during modification.
-/// This means the logical order of operations in the input vector is preserved, but
-/// the actual application order is optimized for correctness.
-///
-/// # Error Handling
-///
-/// Returns an error if:
-/// - The input YAML is not valid
-/// - Any path in the operations is invalid or not found
-/// - YAML serialization fails during value conversion
-pub fn apply_yaml_patches(content: &str, patches: &[Patch]) -> Result<String, Error> {
-    // Validate that the input YAML is parseable before attempting patches
-    if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(content) {
-        return Err(Error::InvalidOperation(format!(
-            "input is not valid YAML: {}",
-            e
-        )));
-    }
+/// Each patch is applied in the order given. The [`Patch`] APIs are
+/// designed to operate symbolically without absolute byte positions,
+/// so operations should not invalidate each other unless they actually
+/// conflict in terms of proposed changes.
+pub fn apply_yaml_patches(
+    document: &yamlpath::Document,
+    patches: &[Patch],
+) -> Result<yamlpath::Document, Error> {
+    let mut patches = patches.iter();
 
-    let mut result = content.to_string();
+    let mut next_document = {
+        let Some(patch) = patches.next() else {
+            return Err(Error::InvalidOperation("no patches provided".to_string()));
+        };
 
-    // Sort operations by byte position (reverse order) so we can apply them without
-    // invalidating subsequent positions
-    let mut positioned_ops = Vec::new();
+        apply_single_patch(document, patch)?
+    };
 
     for patch in patches {
-        let doc = yamlpath::Document::new(&result)?;
-        let feature = route_to_feature_pretty(&patch.route, &doc)?;
-        positioned_ops.push((feature.location.byte_span.0, patch));
+        next_document = apply_single_patch(&next_document, patch)?;
     }
 
-    // Sort by position (descending) so we apply changes from end to beginning
-    positioned_ops.sort_by(|a, b| b.0.cmp(&a.0));
-
-    for (_, op) in positioned_ops {
-        result = apply_single_patch(&result, op)?;
-    }
-
-    Ok(result)
+    Ok(next_document)
 }
 
 /// Apply a single YAML patch operation
-fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
-    let doc = yamlpath::Document::new(content)?;
-
+fn apply_single_patch(
+    document: &yamlpath::Document,
+    patch: &Patch,
+) -> Result<yamlpath::Document, Error> {
+    let content = document.source();
     match &patch.operation {
         Op::RewriteFragment { from, to, after } => {
-            let Some(feature) = route_to_feature_exact(&patch.route, &doc)? else {
+            let Some(feature) = route_to_feature_exact(&patch.route, document)? else {
                 return Err(Error::InvalidOperation(format!(
                     "no pre-existing value to patch at {route:?}",
                     route = patch.route
                 )));
             };
 
-            let extracted_feature = doc.extract(&feature);
+            let extracted_feature = document.extract(&feature);
 
             let bias = match after {
                 Some(after) => *after,
@@ -269,17 +253,17 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 &patched_feature,
             );
 
-            Ok(patched_content)
+            yamlpath::Document::new(patched_content).map_err(Error::from)
         }
         Op::Replace(value) => {
-            let feature = route_to_feature_pretty(&patch.route, &doc)?;
+            let feature = route_to_feature_pretty(&patch.route, document)?;
 
             // Get the replacement content
-            let replacement = apply_value_replacement(&feature, &doc, value, true)?;
+            let replacement = apply_value_replacement(&feature, document, value, true)?;
 
             // Extract the current content to calculate spans
-            let current_content = doc.extract(&feature);
-            let current_content_with_ws = doc.extract_with_leading_whitespace(&feature);
+            let current_content = document.extract(&feature);
+            let current_content_with_ws = document.extract_with_leading_whitespace(&feature);
 
             // Find the span to replace - use the span with leading whitespace if it's a key-value pair
             let (start_span, end_span) = if current_content_with_ws.contains(':') {
@@ -295,7 +279,8 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             // Replace the content
             let mut result = content.to_string();
             result.replace_range(start_span..end_span, &replacement);
-            Ok(result)
+
+            yamlpath::Document::new(result).map_err(Error::from)
         }
         Op::Add { key, value } => {
             // Check to see whether `key` is already present within the route.
@@ -307,7 +292,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 .to_query()
                 .unwrap();
 
-            if doc.query_exists(&key_query) {
+            if document.query_exists(&key_query) {
                 return Err(Error::InvalidOperation(format!(
                     "key '{key}' already exists at {route:?}",
                     key = key,
@@ -316,9 +301,9 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
             }
 
             let feature = if patch.route.is_root() {
-                doc.top_feature()?
+                document.top_feature()?
             } else {
-                route_to_feature_exact(&patch.route, &doc)?.ok_or_else(|| {
+                route_to_feature_exact(&patch.route, document)?.ok_or_else(|| {
                     Error::InvalidOperation(format!(
                         "no existing mapping at {route:?}",
                         route = patch.route
@@ -326,12 +311,12 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 })?
             };
 
-            let style = Style::from_feature(&feature, &doc);
-            let feature_content = doc.extract(&feature);
+            let style = Style::from_feature(&feature, document);
+            let feature_content = document.extract(&feature);
 
             let updated_feature = match style {
                 Style::BlockMapping => {
-                    handle_block_mapping_addition(feature_content, &doc, &feature, key, value)
+                    handle_block_mapping_addition(feature_content, document, &feature, key, value)
                 }
                 Style::FlowMapping => handle_flow_mapping_addition(feature_content, key, value),
                 // TODO: Remove this limitation.
@@ -351,22 +336,22 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 feature.location.byte_span.0..feature.location.byte_span.1,
                 &updated_feature,
             );
-            Ok(result)
+            yamlpath::Document::new(result).map_err(Error::from)
         }
         Op::MergeInto { key, value } => {
             if patch.route.is_root() {
                 // Handle root-level merges specially
-                return handle_root_level_addition(content, key, value);
+                return handle_root_level_addition(document, key, value);
             }
 
             // Check if the key already exists in the target mapping
             let existing_key_route = patch.route.with_keys(&[key.as_str().into()]);
 
-            if let Ok(existing_feature) = route_to_feature_pretty(&existing_key_route, &doc) {
+            if let Ok(existing_feature) = route_to_feature_pretty(&existing_key_route, document) {
                 // Key exists, check if we need to merge mappings
                 if let serde_yaml::Value::Mapping(new_mapping) = &value {
                     // Try to parse the existing value as YAML to see if it's also a mapping
-                    let existing_content = doc.extract(&existing_feature);
+                    let existing_content = document.extract(&existing_feature);
                     if let Ok(existing_value) =
                         serde_yaml::from_str::<serde_yaml::Value>(existing_content)
                     {
@@ -396,7 +381,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
 
                             // Use a custom replacement that preserves the key structure
                             return apply_mapping_replacement(
-                                &doc,
+                                document,
                                 &existing_key_route,
                                 key,
                                 &serde_yaml::Value::Mapping(merged_mapping),
@@ -407,7 +392,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
 
                 // Not both mappings, or parsing failed, just replace
                 return apply_single_patch(
-                    content,
+                    document,
                     &Patch {
                         route: existing_key_route,
                         operation: Op::Replace(value.clone()),
@@ -417,7 +402,7 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
 
             // Key doesn't exist, add it using Add operation
             apply_single_patch(
-                content,
+                document,
                 &Patch {
                     route: patch.route.clone(),
                     operation: Op::Add {
@@ -434,23 +419,23 @@ fn apply_single_patch(content: &str, patch: &Patch) -> Result<String, Error> {
                 ));
             }
 
-            let feature = route_to_feature_pretty(&patch.route, &doc)?;
+            let feature = route_to_feature_pretty(&patch.route, document)?;
 
             // For removal, we need to remove the entire line including leading whitespace
             // TODO: This isn't sound, e.g. removing `b:` from `{a: a, b: b}` will
             // remove the entire line.
             let start_pos = {
-                let range = line_span(&doc, feature.location.byte_span.0);
+                let range = line_span(document, feature.location.byte_span.0);
                 range.start
             };
             let end_pos = {
-                let range = line_span(&doc, feature.location.byte_span.1);
+                let range = line_span(document, feature.location.byte_span.1);
                 range.end
             };
 
             let mut result = content.to_string();
             result.replace_range(start_pos..end_pos, "");
-            Ok(result)
+            yamlpath::Document::new(result).map_err(Error::from)
         }
     }
 }
@@ -825,10 +810,12 @@ fn find_content_end(feature: &yamlpath::Feature, doc: &yamlpath::Document) -> us
 
 /// Handle root-level additions and merges by finding the best insertion point at the document root
 fn handle_root_level_addition(
-    content: &str,
+    document: &yamlpath::Document,
     key: &str,
     value: &serde_yaml::Value,
-) -> Result<String, Error> {
+) -> Result<yamlpath::Document, Error> {
+    let content = document.source();
+
     // Convert the new value to YAML string
     let new_value_str = serialize_yaml_value(value)?;
     let new_value_str = new_value_str.trim_end(); // Remove trailing newline
@@ -897,7 +884,7 @@ fn handle_root_level_addition(
         result.push_str(&new_entry);
     }
 
-    Ok(result)
+    yamlpath::Document::new(result).map_err(Error::from)
 }
 
 /// Apply a mapping replacement that preserves the key structure
@@ -906,7 +893,7 @@ fn apply_mapping_replacement(
     route: &Route<'_>,
     _key: &str,
     value: &serde_yaml::Value,
-) -> Result<String, Error> {
+) -> Result<yamlpath::Document, Error> {
     let feature = route_to_feature_pretty(route, doc)?;
 
     // Extract the current content to see what we're working with
@@ -926,7 +913,7 @@ fn apply_mapping_replacement(
             feature.location.byte_span.0..feature.location.byte_span.1,
             &replacement,
         );
-        return Ok(result);
+        return yamlpath::Document::new(result).map_err(Error::from);
     }
 
     // For block mappings, we need to preserve the structure properly
@@ -973,7 +960,7 @@ fn apply_mapping_replacement(
 
         let mut result = doc.source().to_string();
         result.replace_range(ws_start..feature.location.byte_span.1, &replacement);
-        Ok(result)
+        yamlpath::Document::new(result).map_err(Error::from)
     } else {
         // Not a key-value pair, use regular value replacement
         let replacement = apply_value_replacement(&feature, doc, value, false)?;
@@ -982,7 +969,7 @@ fn apply_mapping_replacement(
             feature.location.byte_span.0..feature.location.byte_span.1,
             &replacement,
         );
-        Ok(result)
+        yamlpath::Document::new(result).map_err(Error::from)
     }
 }
 
@@ -1337,6 +1324,8 @@ foo:
   bar: 'echo "foo: ${{ foo }}"'
 "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let operations = vec![Patch {
             route: route!("foo", "bar"),
             operation: Op::RewriteFragment {
@@ -1346,9 +1335,9 @@ foo:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result = apply_yaml_patches(&document, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         foo:
           bar: 'echo "foo: ${FOO}"'
         "#);
@@ -1364,6 +1353,8 @@ foo:
     echo "foo: ${{ foo }}"
 "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         // Only the first occurrence of `from` should be replaced
         let operations = vec![Patch {
             route: route!("foo", "bar"),
@@ -1374,9 +1365,9 @@ foo:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result = apply_yaml_patches(&document, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         foo:
           bar: |
             echo "foo: ${FOO}"
@@ -1394,9 +1385,9 @@ foo:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result = apply_yaml_patches(&document, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         foo:
           bar: |
             echo "foo: ${{ foo }}"
@@ -1417,6 +1408,8 @@ jobs:
           echo "bar: ${{ bar }}"
         "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let operations = vec![
             Patch {
                 route: route!("jobs", "test", "steps", 0, "run"),
@@ -1436,9 +1429,9 @@ jobs:
             },
         ];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result = apply_yaml_patches(&document, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -1456,14 +1449,16 @@ foo:
   bar:
 "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let operations = vec![Patch {
             route: route!("foo", "bar"),
             operation: Op::Replace(serde_yaml::Value::String("abc".to_string())),
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result = apply_yaml_patches(&document, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         foo:
           bar: abc
         ");
@@ -1475,14 +1470,16 @@ foo:
     foo: { bar: }
     "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let patches = vec![Patch {
             route: route!("foo", "bar"),
             operation: Op::Replace(serde_yaml::Value::String("abc".to_string())),
         }];
 
-        let result = apply_yaml_patches(original, &patches).unwrap();
+        let result = apply_yaml_patches(&document, &patches).unwrap();
 
-        insta::assert_snapshot!(result, @r"foo: { bar: abc }");
+        insta::assert_snapshot!(result.source(), @r"foo: { bar: abc }");
     }
 
     #[test]
@@ -1491,14 +1488,16 @@ foo:
         foo: { bar }
         "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let patches = vec![Patch {
             route: route!("foo", "bar"),
             operation: Op::Replace(serde_yaml::Value::String("abc".to_string())),
         }];
 
-        let result = apply_yaml_patches(original, &patches).unwrap();
+        let result = apply_yaml_patches(&document, &patches).unwrap();
 
-        insta::assert_snapshot!(result, @r"foo: { bar: abc }");
+        insta::assert_snapshot!(result.source(), @r"foo: { bar: abc }");
     }
 
     #[test]
@@ -1511,14 +1510,16 @@ foo:
       Replace me too.
 "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let operations = vec![Patch {
             route: route!("foo", "bar", "baz"),
             operation: Op::Replace("New content.\nMore new content.\n".into()),
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result = apply_yaml_patches(&document, &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         foo:
           bar:
             baz: |
@@ -1545,15 +1546,17 @@ jobs:
       - uses: actions/checkout@v4
 "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let operations = vec![Patch {
             route: route!("permissions", "contents"),
             operation: Op::Replace(serde_yaml::Value::String("write".to_string())),
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result = apply_yaml_patches(&document, &operations).unwrap();
 
         // Preserves all comments, but changes the value of `contents`
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         # This is a workflow file
         name: CI
         on: push
@@ -1577,6 +1580,8 @@ jobs:
             bar: abc
         "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let operations = vec![Patch {
             route: route!("foo"),
             operation: Op::Add {
@@ -1585,11 +1590,13 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations);
+        let result = apply_yaml_patches(&document, &operations);
 
         // Should return an error about duplicate key
         assert!(result.is_err());
-        let err = result.unwrap_err();
+        let Err(err) = result else {
+            panic!("expected an error");
+        };
         assert!(err.to_string().contains("key 'bar' already exists at"));
     }
 
@@ -1601,6 +1608,8 @@ permissions:
   actions: write
 "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let operations = vec![Patch {
             route: route!("permissions"),
             operation: Op::Add {
@@ -1609,10 +1618,10 @@ permissions:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result = apply_yaml_patches(&document, &operations).unwrap();
 
         // Preserves original content, adds new key while maintaining indentation
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         permissions:
           contents: read
           actions: write
@@ -1634,9 +1643,10 @@ foo: { bar: abc }
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @"foo: { bar: abc, baz: qux }");
+        insta::assert_snapshot!(result.source(), @"foo: { bar: abc, baz: qux }");
     }
 
     #[test]
@@ -1648,15 +1658,17 @@ permissions:
   issues: read
 "#;
 
+        let document = yamlpath::Document::new(original).unwrap();
+
         let operations = vec![Patch {
             route: route!("permissions", "actions"),
             operation: Op::Remove,
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result = apply_yaml_patches(&document, &operations).unwrap();
 
         // Preserves other content, removes the target line
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         permissions:
           contents: read  # Keep this comment
           issues: read
@@ -1695,10 +1707,11 @@ jobs:
             },
         ];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
         // All comments preserved, all changes applied
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         # Main configuration
         name: Test Workflow
         on:
@@ -1895,9 +1908,13 @@ jobs:
             },
         ];
 
-        let result = apply_yaml_patches(original_yaml, &operations).unwrap();
+        let result = apply_yaml_patches(
+            &yamlpath::Document::new(original_yaml).unwrap(),
+            &operations,
+        )
+        .unwrap();
 
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         # GitHub Actions Workflow
         name: CI
         on: push
@@ -1934,10 +1951,11 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
         // Empty mapping should be formatted inline
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         name: Test
         jobs:
           test:
@@ -1966,9 +1984,13 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(&original_with_newline, &operations).unwrap();
+        let result = apply_yaml_patches(
+            &yamlpath::Document::new(original_with_newline).unwrap(),
+            &operations,
+        )
+        .unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         name: Test
         jobs:
           test:
@@ -2056,10 +2078,11 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
         // The with section should be added to the first step correctly, not mixed with comments
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         steps:
           - name: Checkout
             uses: actions/checkout@v4
@@ -2169,9 +2192,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         # GitHub Actions Workflow
         name: CI
         on: push
@@ -2202,11 +2226,11 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations);
+        let result = apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations);
         assert!(result.is_ok());
 
         let result = result.unwrap();
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         name: Test
         on: push
         jobs:
@@ -2242,9 +2266,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         steps:
           - name: Step1
             uses: actions/checkout@v4
@@ -2283,8 +2308,9 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
-        insta::assert_snapshot!(result, @r#"
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2323,10 +2349,11 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
         // Should merge the new mapping with the existing one
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2367,14 +2394,12 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
-
-        // Verify the result is valid YAML
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
         // Should only have one env: key
-        assert_eq!(result.matches("env:").count(), 1);
-        insta::assert_snapshot!(result, @r#"
+        assert_eq!(result.source().matches("env:").count(), 1);
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2413,12 +2438,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        // Verify the result is valid YAML
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
-
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2510,12 +2533,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        // Assert that the result is valid YAML
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
-
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           build:
             runs-on: ubuntu-latest
@@ -2624,12 +2645,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        // Verify the result is valid YAML
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
-
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         name: Test
         on: push
         permissions: {}
@@ -2679,14 +2698,12 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
-
-        // Verify the result is valid YAML
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
         // Should only have one env: key
-        assert_eq!(result.matches("env:").count(), 1);
-        insta::assert_snapshot!(result, @r#"
+        assert_eq!(result.source().matches("env:").count(), 1);
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2729,12 +2746,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        // Verify the result is valid YAML
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
-
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2794,12 +2809,10 @@ jobs:
             },
         ];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        // Verify the result is valid YAML
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
-
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2841,12 +2854,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        // Verify the result is valid YAML
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
-
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2903,14 +2914,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        // Verify the result is valid YAML
-        if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(&result) {
-            panic!("Invalid YAML: {}", e);
-        }
-
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         name: CI
         on:
           push:
@@ -2956,9 +2963,10 @@ jobs:
             operation: Op::Replace(serde_yaml::Value::Number(serde_yaml::Number::from(600))),
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2986,9 +2994,10 @@ foo:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         foo:
           bar:
             baz: abc # comment
@@ -3017,9 +3026,10 @@ matrix:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         matrix:
           include:
             - os: ubuntu-latest
@@ -3049,11 +3059,10 @@ matrix:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
-
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         matrix:
            include:
               -   os: ubuntu-latest
@@ -3082,9 +3091,10 @@ strategy:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         strategy:
           matrix:
             include:
@@ -3110,9 +3120,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -3137,10 +3148,11 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
         // The trailing comment should be preserved after the mapping
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result.source(), @r"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -3169,11 +3181,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&result).is_ok());
-
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -3206,9 +3217,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -3238,9 +3250,10 @@ permissions:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         permissions:
           contents: read
           actions: { read: true, write: false, delete: true }  # Flow mapping in block context
@@ -3268,9 +3281,10 @@ on:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         on:
           push:
             branches: [main, develop]
@@ -3299,9 +3313,10 @@ jobs:
             },
         }];
 
-        let result = apply_yaml_patches(original, &operations).unwrap();
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result.source(), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest

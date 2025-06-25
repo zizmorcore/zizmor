@@ -31,7 +31,6 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 mod audit;
 mod config;
 mod finding;
-mod fix;
 mod github_api;
 mod models;
 mod output;
@@ -691,13 +690,13 @@ fn run() -> Result<ExitCode> {
     };
 
     if app.fix {
-        fix::apply_fixes(&results, &registry)?;
+        output::fix::apply_fixes(&results, &registry)?;
     }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
         Ok(ExitCode::SUCCESS)
     } else {
-        Ok(results.into())
+        Ok(results.exit_code())
     }
 }
 
