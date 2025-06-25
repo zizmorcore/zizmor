@@ -61,8 +61,7 @@ impl HasInputs for Action {
 impl Action {
     /// Load an action from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
-        let inner = from_str_with_validation(&contents, &ACTION_VALIDATOR)
-            .with_context(|| format!("failed to load action from {key}"))?;
+        let inner = from_str_with_validation(&contents, &ACTION_VALIDATOR)?;
 
         let document = yamlpath::Document::new(&contents)
             .context("failed to load internal pathing document")?;
