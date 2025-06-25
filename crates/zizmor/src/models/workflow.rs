@@ -121,8 +121,7 @@ impl HasInputs for Workflow {
 impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
-        let inner = from_str_with_validation(&contents, &WORKFLOW_VALIDATOR)
-            .with_context(|| format!("failed to load workflow from {key}"))?;
+        let inner = from_str_with_validation(&contents, &WORKFLOW_VALIDATOR)?;
 
         let document = yamlpath::Document::new(&contents)
             .context("failed to load internal pathing document")?;

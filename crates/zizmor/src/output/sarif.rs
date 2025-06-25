@@ -102,16 +102,21 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
 
     SarifResult::builder()
         .rule_id(format!("zizmor/{id}", id = finding.ident))
-        // NOTE: We use the primary location's annotation for the result's message.
-        // This is conceptually incorrect since the location's annotation should
-        // only be on the location itself. However, GitHub's SARIF viewer does not
-        // render location-level messages, so we use the primary location's message
-        // to ensure something reasonable is presented.
-        // This ends up being OK since the only other thing we'd put here
-        // is the finding's description, which is already in the rule's help message.
-        // See https://github.com/zizmorcore/zizmor/issues/526 for context.
-        .message(&primary.symbolic.annotation)
+        // NOTE: Between 1.4.0 and 1.9.0 we used the primary location's
+        // annotation for the message here. This produced a _slightly_
+        // nicer message in some cases, but also produced meaningless
+        // code security alert titles when the primary annotation was
+        // terse. So now we use the finding's description again, like
+        // we did before 1.4.0.
+        .message(finding.desc)
         .locations(build_locations(std::iter::once(primary)))
+        // TODO: Evaluate including the related locations via CodeFlows
+        // instead -- GitHub seems to do a better job of rendering these,
+        // but still doesn't do a great job of putting all of the locations
+        // into the same render.
+        // TODO: Give related locations IDs and back-link to them in the
+        // main location's message -- GitHub renders these as modals that
+        // users can click through to see more context.
         .related_locations(build_locations(
             finding
                 .visible_locations()
