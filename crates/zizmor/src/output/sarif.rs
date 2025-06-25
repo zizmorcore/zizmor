@@ -116,14 +116,10 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
                 .thread_flows(vec![
                     ThreadFlow::builder()
                         .locations(
-                            build_locations(
-                                finding
-                                    .visible_locations()
-                                    .filter(|l| !l.symbolic.is_primary()),
-                            )
-                            .into_iter()
-                            .map(|l| ThreadFlowLocation::builder().location(l).build())
-                            .collect::<Vec<_>>(),
+                            build_locations(finding.visible_locations())
+                                .into_iter()
+                                .map(|l| ThreadFlowLocation::builder().location(l).build())
+                                .collect::<Vec<_>>(),
                         )
                         .build(),
                 ])
