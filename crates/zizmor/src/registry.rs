@@ -34,8 +34,8 @@ pub(crate) enum InputError {
     Model(#[source] anyhow::Error),
     /// The input doesn't match the schema for the expected model.
     /// This typically indicates a user error.
-    #[error("input does not match expected validation schema: {0}")]
-    Schema(String),
+    #[error("input does not match expected validation schema")]
+    Schema(#[source] anyhow::Error),
     /// An I/O error occurred while loading the input.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),

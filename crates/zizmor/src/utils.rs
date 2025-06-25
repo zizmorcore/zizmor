@@ -1,6 +1,6 @@
 //! Helper routines.
 
-use anyhow::Context as _;
+use anyhow::{Context as _, Error, anyhow};
 use camino::Utf8Path;
 use github_actions_expressions::context::{Context, ContextPattern};
 use github_actions_models::common::{Env, expr::LoE};
@@ -285,7 +285,7 @@ pub(crate) static DEFAULT_ENVIRONMENT_VARIABLES: &[(
     ),
 ];
 
-fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> InputError {
+fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Error {
     let mut message = String::new();
 
     for error in errors {
@@ -310,7 +310,7 @@ fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> In
         }
     }
 
-    InputError::Schema(message)
+    anyhow!(message)
 }
 
 /// Like `serde_yaml::from_str`, but with a JSON schema validator
@@ -354,7 +354,7 @@ where
                     Valid(_) => Err(e)
                         .context("this suggests a bug in zizmor; please report it!")
                         .map_err(InputError::Model),
-                    Invalid(errors) => Err(parse_validation_errors(errors)),
+                    Invalid(errors) => Err(InputError::Schema(parse_validation_errors(errors))),
                 },
                 // Syntax error.
                 Err(e) => Err(InputError::Syntax(e.into())),
