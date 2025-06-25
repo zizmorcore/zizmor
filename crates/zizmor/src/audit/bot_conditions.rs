@@ -140,49 +140,50 @@ impl BotConditions {
 
         match &workflow.on {
             Trigger::BareEvent(event) => Self::is_relevant_event(event),
-            Trigger::BareEvents(event_list) => {
-                event_list.iter().any(|event| Self::is_relevant_event(event))
-            }
+            Trigger::BareEvents(event_list) => event_list
+                .iter()
+                .any(|event| Self::is_relevant_event(event)),
             Trigger::Events(event_map) => {
-                !matches!(event_map.issue_comment, OptionalBody::Missing) ||
-                !matches!(event_map.pull_request, OptionalBody::Missing) ||
-                !matches!(event_map.pull_request_target, OptionalBody::Missing) ||
-                !matches!(event_map.discussion_comment, OptionalBody::Missing) ||
-                !matches!(event_map.pull_request_review, OptionalBody::Missing) ||
-                !matches!(event_map.pull_request_review_comment, OptionalBody::Missing) ||
-                !matches!(event_map.issues, OptionalBody::Missing) ||
-                !matches!(event_map.discussion, OptionalBody::Missing) ||
-                !matches!(event_map.release, OptionalBody::Missing) ||
-                !matches!(event_map.push, OptionalBody::Missing) ||
-                !matches!(event_map.milestone, OptionalBody::Missing) ||
-                !matches!(event_map.label, OptionalBody::Missing) ||
-                !matches!(event_map.project, OptionalBody::Missing) ||
-                !matches!(event_map.watch, OptionalBody::Missing)
+                !matches!(event_map.issue_comment, OptionalBody::Missing)
+                    || !matches!(event_map.pull_request, OptionalBody::Missing)
+                    || !matches!(event_map.pull_request_target, OptionalBody::Missing)
+                    || !matches!(event_map.discussion_comment, OptionalBody::Missing)
+                    || !matches!(event_map.pull_request_review, OptionalBody::Missing)
+                    || !matches!(event_map.pull_request_review_comment, OptionalBody::Missing)
+                    || !matches!(event_map.issues, OptionalBody::Missing)
+                    || !matches!(event_map.discussion, OptionalBody::Missing)
+                    || !matches!(event_map.release, OptionalBody::Missing)
+                    || !matches!(event_map.push, OptionalBody::Missing)
+                    || !matches!(event_map.milestone, OptionalBody::Missing)
+                    || !matches!(event_map.label, OptionalBody::Missing)
+                    || !matches!(event_map.project, OptionalBody::Missing)
+                    || !matches!(event_map.watch, OptionalBody::Missing)
             }
         }
     }
 
     /// Check if a specific event type is relevant for bot condition checks.
     fn is_relevant_event(event: &BareEvent) -> bool {
-        matches!(event,
-            BareEvent::IssueComment |
-            BareEvent::DiscussionComment |
-            BareEvent::PullRequestReview |
-            BareEvent::PullRequestReviewComment |
-            BareEvent::Issues |
-            BareEvent::Discussion |
-            BareEvent::PullRequest |
-            BareEvent::PullRequestTarget |
-            BareEvent::Release |
-            BareEvent::Create |
-            BareEvent::Delete |
-            BareEvent::Push |
-            BareEvent::Milestone |
-            BareEvent::Label |
-            BareEvent::Project |
-            BareEvent::Fork |
-            BareEvent::Watch |
-            BareEvent::Public
+        matches!(
+            event,
+            BareEvent::IssueComment
+                | BareEvent::DiscussionComment
+                | BareEvent::PullRequestReview
+                | BareEvent::PullRequestReviewComment
+                | BareEvent::Issues
+                | BareEvent::Discussion
+                | BareEvent::PullRequest
+                | BareEvent::PullRequestTarget
+                | BareEvent::Release
+                | BareEvent::Create
+                | BareEvent::Delete
+                | BareEvent::Push
+                | BareEvent::Milestone
+                | BareEvent::Label
+                | BareEvent::Project
+                | BareEvent::Fork
+                | BareEvent::Watch
+                | BareEvent::Public
         )
     }
 
@@ -251,65 +252,73 @@ impl BotConditions {
         }
 
         // For multiple events or unknown events, default to pull request context
-        ("github.event.pull_request.user.login".to_string(),
-         "github.event.pull_request.user.id".to_string())
+        (
+            "github.event.pull_request.user.login".to_string(),
+            "github.event.pull_request.user.id".to_string(),
+        )
     }
 
     /// Get context paths for a specific event type.
     fn get_contexts_for_event(event: &BareEvent) -> (String, String) {
         match event {
-            BareEvent::IssueComment => {
-                ("github.event.comment.user.login".to_string(),
-                 "github.event.comment.user.id".to_string())
-            }
-            BareEvent::DiscussionComment => {
-                ("github.event.comment.user.login".to_string(),
-                 "github.event.comment.user.id".to_string())
-            }
-            BareEvent::PullRequestReview => {
-                ("github.event.review.user.login".to_string(),
-                 "github.event.review.user.id".to_string())
-            }
-            BareEvent::PullRequestReviewComment => {
-                ("github.event.comment.user.login".to_string(),
-                 "github.event.comment.user.id".to_string())
-            }
-            BareEvent::Issues => {
-                ("github.event.issue.user.login".to_string(),
-                 "github.event.issue.user.id".to_string())
-            }
-            BareEvent::Discussion => {
-                ("github.event.discussion.user.login".to_string(),
-                 "github.event.discussion.user.id".to_string())
-            }
-            BareEvent::PullRequest | BareEvent::PullRequestTarget => {
-                ("github.event.pull_request.user.login".to_string(),
-                 "github.event.pull_request.user.id".to_string())
-            }
-            BareEvent::Release => {
-                ("github.event.release.author.login".to_string(),
-                 "github.event.release.author.id".to_string())
-            }
-            BareEvent::Create | BareEvent::Delete => {
-                ("github.event.sender.login".to_string(),
-                 "github.event.sender.id".to_string())
-            }
-            BareEvent::Push => {
-                ("github.event.pusher.name".to_string(),
-                 "github.event.pusher.email".to_string())
-            }
-            BareEvent::Milestone => {
-                ("github.event.milestone.creator.login".to_string(),
-                 "github.event.milestone.creator.id".to_string())
-            }
-            BareEvent::Label | BareEvent::Project | BareEvent::Fork | BareEvent::Watch | BareEvent::Public => {
-                ("github.event.sender.login".to_string(),
-                 "github.event.sender.id".to_string())
-            }
+            BareEvent::IssueComment => (
+                "github.event.comment.user.login".to_string(),
+                "github.event.comment.user.id".to_string(),
+            ),
+            BareEvent::DiscussionComment => (
+                "github.event.comment.user.login".to_string(),
+                "github.event.comment.user.id".to_string(),
+            ),
+            BareEvent::PullRequestReview => (
+                "github.event.review.user.login".to_string(),
+                "github.event.review.user.id".to_string(),
+            ),
+            BareEvent::PullRequestReviewComment => (
+                "github.event.comment.user.login".to_string(),
+                "github.event.comment.user.id".to_string(),
+            ),
+            BareEvent::Issues => (
+                "github.event.issue.user.login".to_string(),
+                "github.event.issue.user.id".to_string(),
+            ),
+            BareEvent::Discussion => (
+                "github.event.discussion.user.login".to_string(),
+                "github.event.discussion.user.id".to_string(),
+            ),
+            BareEvent::PullRequest | BareEvent::PullRequestTarget => (
+                "github.event.pull_request.user.login".to_string(),
+                "github.event.pull_request.user.id".to_string(),
+            ),
+            BareEvent::Release => (
+                "github.event.release.author.login".to_string(),
+                "github.event.release.author.id".to_string(),
+            ),
+            BareEvent::Create | BareEvent::Delete => (
+                "github.event.sender.login".to_string(),
+                "github.event.sender.id".to_string(),
+            ),
+            BareEvent::Push => (
+                "github.event.pusher.name".to_string(),
+                "github.event.pusher.email".to_string(),
+            ),
+            BareEvent::Milestone => (
+                "github.event.milestone.creator.login".to_string(),
+                "github.event.milestone.creator.id".to_string(),
+            ),
+            BareEvent::Label
+            | BareEvent::Project
+            | BareEvent::Fork
+            | BareEvent::Watch
+            | BareEvent::Public => (
+                "github.event.sender.login".to_string(),
+                "github.event.sender.id".to_string(),
+            ),
             _ => {
                 // For unknown events, default to pull request context
-                ("github.event.pull_request.user.login".to_string(),
-                 "github.event.pull_request.user.id".to_string())
+                (
+                    "github.event.pull_request.user.login".to_string(),
+                    "github.event.pull_request.user.id".to_string(),
+                )
             }
         }
     }
@@ -437,8 +446,10 @@ impl BotConditions {
                                     && BOT_ACTOR_IDS.contains(&lit.as_str().as_ref()))
                             {
                                 // Convert context to string representation
-                                let ctx_str = ctx.parts.iter()
-                                    .map(|part| part.raw)
+                                let ctx_str = ctx
+                                    .parts
+                                    .iter()
+                                    .map(|part| part.origin.raw)
                                     .collect::<Vec<_>>()
                                     .join(".");
                                 fragments.push(ctx_str);
@@ -476,8 +487,7 @@ impl BotConditions {
         }
 
         // Get appropriate contexts based on workflow triggers
-        let (actor_name_context, actor_id_context) =
-            Self::get_user_contexts_for_triggers(workflow);
+        let (actor_name_context, actor_id_context) = Self::get_user_contexts_for_triggers(workflow);
 
         let mut patches = vec![];
         let mut seen_fragments = std::collections::HashSet::new();
@@ -513,8 +523,14 @@ impl BotConditions {
 
         if !patches.is_empty() {
             Some(Fix {
-                title: format!("Replace spoofable actor context with {}{}", actor_name_context, context_description),
-                description: format!("Replace spoofable actor context with {}{} to ensure the job runs as the event author", actor_name_context, context_description),
+                title: format!(
+                    "Replace spoofable actor context with {}{}",
+                    actor_name_context, context_description
+                ),
+                description: format!(
+                    "Replace spoofable actor context with {}{} to ensure the job runs as the event author",
+                    actor_name_context, context_description
+                ),
                 key,
                 patches,
             })
@@ -564,7 +580,10 @@ impl BotConditions {
 mod tests {
     use super::*;
     use crate::{
-        finding::Finding, github_api::GitHubHost, models::workflow::Workflow, registry::InputKey,
+        finding::Finding,
+        github_api::GitHubHost,
+        models::{AsDocument, workflow::Workflow},
+        registry::InputKey,
         state::AuditState,
     };
 
@@ -583,25 +602,23 @@ mod tests {
             let audit = <$audit_type>::new(&audit_state).unwrap();
             let findings = audit.audit_workflow(&workflow).unwrap();
 
-            $test_fn(findings)
+            $test_fn(&workflow, findings)
         }};
     }
 
     /// Helper function to apply a fix by title and return the result for snapshot testing
     fn apply_fix_by_title_for_snapshot(
-        workflow_content: &str,
+        document: &yamlpath::Document,
         finding: &Finding,
         expected_title: &str,
-    ) -> String {
+    ) -> yamlpath::Document {
         let fix = finding
             .fixes
             .iter()
             .find(|f| f.title == expected_title)
             .unwrap_or_else(|| panic!("No fix found with title: {}", expected_title));
 
-        fix.apply_to_content(workflow_content)
-            .unwrap()
-            .unwrap_or_else(|| panic!("Fix application returned None"))
+        fix.apply(document).unwrap()
     }
 
     #[test]
@@ -668,20 +685,20 @@ jobs:
             BotConditions,
             "test_replace_actor_fix.yml",
             workflow_content,
-            |findings: Vec<Finding>| {
+            |workflow: &Workflow, findings: Vec<Finding>| {
                 // Apply only the actor replacement fixes to avoid YAML conflicts
-                let mut content = workflow_content.to_string();
+                let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
                         if fix.title.contains("Replace spoofable actor context") {
-                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
-                                content = new_content;
+                            if let Ok(new_content) = fix.apply(&document) {
+                                document = new_content;
                             }
                         }
                     }
                 }
 
-                insta::assert_snapshot!(content, @r#"
+                insta::assert_snapshot!(document.source(), @r#"
                 name: Test Workflow
                 on:
                   pull_request_target:
@@ -698,8 +715,6 @@ jobs:
             }
         );
     }
-
-
 
     #[test]
     fn test_all_fixes_together() {
@@ -722,17 +737,17 @@ jobs:
             BotConditions,
             "test_all_fixes_together.yml",
             workflow_content,
-            |findings: Vec<Finding>| {
+            |workflow: &Workflow, findings: Vec<Finding>| {
                 // Apply all fixes in sequence, handling errors gracefully
-                let mut content = workflow_content.to_string();
+                let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
-                            content = new_content;
+                        if let Ok(new_document) = fix.apply(&document) {
+                            document = new_document;
                         }
                     }
                 }
-                insta::assert_snapshot!(content, @r#"
+                insta::assert_snapshot!(document.source(), @r#"
                 name: Test Workflow
                 on:
                   pull_request_target:
@@ -771,21 +786,33 @@ jobs:
             BotConditions,
             "test_issue_comment.yml",
             issue_comment_workflow,
-            |findings: Vec<Finding>| {
+            |workflow: &Workflow, findings: Vec<Finding>| {
                 // Should suggest github.event.comment.user.login for issue_comment
-                let mut content = issue_comment_workflow.to_string();
+                let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
                         if fix.title.contains("Replace spoofable actor context") {
-                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
-                                content = new_content;
+                            if let Ok(new_document) = fix.apply(&document) {
+                                document = new_document;
                             }
                         }
                     }
                 }
 
                 // Verify it suggests comment.user.login for issue_comment events
-                assert!(content.contains("github.event.comment.user.login"));
+                insta::assert_snapshot!(document.source(), @r#"
+                name: Test Issue Comment
+                on: issue_comment
+
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    if: github.actor == 'dependabot[bot]'
+                    steps:
+                      - name: Test Step
+                        if: github.event.comment.user.login == 'dependabot[bot]'
+                        run: echo "hello"
+                "#);
             }
         );
 
@@ -808,21 +835,33 @@ jobs:
             BotConditions,
             "test_pr_review.yml",
             pr_review_workflow,
-            |findings: Vec<Finding>| {
+            |workflow: &Workflow, findings: Vec<Finding>| {
                 // Should suggest github.event.review.user.login for pull_request_review
-                let mut content = pr_review_workflow.to_string();
+                let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
                         if fix.title.contains("Replace spoofable actor context") {
-                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
-                                content = new_content;
+                            if let Ok(new_document) = fix.apply(&document) {
+                                document = new_document;
                             }
                         }
                     }
                 }
 
                 // Verify it suggests review.user.login for pull_request_review events
-                assert!(content.contains("github.event.review.user.login"));
+                insta::assert_snapshot!(document.source(), @r#"
+                name: Test PR Review
+                on: pull_request_review
+
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    if: github.actor == 'dependabot[bot]'
+                    steps:
+                      - name: Test Step
+                        if: github.event.review.user.login == 'dependabot[bot]'
+                        run: echo "hello"
+                "#);
             }
         );
 
@@ -845,21 +884,33 @@ jobs:
             BotConditions,
             "test_issues.yml",
             issues_workflow,
-            |findings: Vec<Finding>| {
+            |workflow: &Workflow, findings: Vec<Finding>| {
                 // Should suggest github.event.issue.user.login for issues
-                let mut content = issues_workflow.to_string();
+                let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
                         if fix.title.contains("Replace spoofable actor context") {
-                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
-                                content = new_content;
+                            if let Ok(new_document) = fix.apply(&document) {
+                                document = new_document;
                             }
                         }
                     }
                 }
 
                 // Verify it suggests issue.user.login for issues events
-                assert!(content.contains("github.event.issue.user.login"));
+                insta::assert_snapshot!(document.source(), @r#"
+                name: Test Issues
+                on: issues
+
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    if: github.actor == 'dependabot[bot]'
+                    steps:
+                      - name: Test Step
+                        if: github.event.issue.user.login == 'dependabot[bot]'
+                        run: echo "hello"
+                "#);
             }
         );
 
@@ -882,21 +933,33 @@ jobs:
             BotConditions,
             "test_release.yml",
             release_workflow,
-            |findings: Vec<Finding>| {
+            |workflow: &Workflow, findings: Vec<Finding>| {
                 // Should suggest github.event.release.author.login for release
-                let mut content = release_workflow.to_string();
+                let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
                         if fix.title.contains("Replace spoofable actor context") {
-                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
-                                content = new_content;
+                            if let Ok(new_document) = fix.apply(&document) {
+                                document = new_document;
                             }
                         }
                     }
                 }
 
                 // Verify it suggests release.author.login for release events
-                assert!(content.contains("github.event.release.author.login"));
+                insta::assert_snapshot!(document.source(), @r#"
+                name: Test Release
+                on: release
+
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    if: github.actor == 'dependabot[bot]'
+                    steps:
+                      - name: Test Step
+                        if: github.event.release.author.login == 'dependabot[bot]'
+                        run: echo "hello"
+                "#);
             }
         );
 
@@ -919,21 +982,32 @@ jobs:
             BotConditions,
             "test_create.yml",
             create_workflow,
-            |findings: Vec<Finding>| {
+            |workflow: &Workflow, findings: Vec<Finding>| {
                 // Should suggest github.event.sender.login for create
-                let mut content = create_workflow.to_string();
+                let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
                         if fix.title.contains("Replace spoofable actor context") {
-                            if let Ok(Some(new_content)) = fix.apply_to_content(&content) {
-                                content = new_content;
+                            if let Ok(new_document) = fix.apply(&document) {
+                                document = new_document;
                             }
                         }
                     }
                 }
 
-                // Verify it suggests sender.login for create events
-                assert!(content.contains("github.event.sender.login"));
+                insta::assert_snapshot!(document.source(), @r#"
+                name: Test Create
+                on: create
+
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    if: github.actor == 'dependabot[bot]'
+                    steps:
+                      - name: Test Step
+                        if: github.event.sender.login == 'dependabot[bot]'
+                        run: echo "hello"
+                "#);
             }
         );
     }
@@ -959,13 +1033,13 @@ jobs:
             BotConditions,
             "test_fix_with_complex_conditions.yml",
             workflow_content,
-            |findings: Vec<Finding>| {
-                let fixed_content = apply_fix_by_title_for_snapshot(
-                    workflow_content,
+            |workflow: &Workflow, findings: Vec<Finding>| {
+                let fixed_document = apply_fix_by_title_for_snapshot(
+                    workflow.as_document(),
                     &findings[0],
                     "Replace spoofable actor context with github.event.pull_request.user.login",
                 );
-                insta::assert_snapshot!(fixed_content, @r#"
+                insta::assert_snapshot!(fixed_document.source(), @r#"
                 name: Test Workflow
                 on:
                   pull_request_target:
