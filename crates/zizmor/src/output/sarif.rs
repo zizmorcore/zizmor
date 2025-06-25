@@ -102,6 +102,12 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
 
     SarifResult::builder()
         .rule_id(format!("zizmor/{id}", id = finding.ident))
+        // NOTE: Between 1.4.0 and 1.9.0 we used the primary location's
+        // annotation for the message here. This produced a _slightly_
+        // nicer message in some cases, but also produced meaningless
+        // code security alert titles when the primary annotation was
+        // terse. So now we use the finding's description again, like
+        // we did before 1.4.0.
         .message(finding.desc)
         .locations(build_locations(std::iter::once(primary)))
         .related_locations(build_locations(
