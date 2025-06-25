@@ -118,10 +118,13 @@ pub(crate) struct Fix<'doc> {
 
 impl Fix<'_> {
     /// Apply the fix to the given file content.
-    pub(crate) fn apply_to_content(&self, old_content: &str) -> anyhow::Result<Option<String>> {
-        match yaml_patch::apply_yaml_patches(old_content, &self.patches) {
-            Ok(new_content) => Ok(Some(new_content)),
-            Err(e) => Err(anyhow!("YAML path failed: {e}")),
+    pub(crate) fn apply(
+        &self,
+        document: &yamlpath::Document,
+    ) -> anyhow::Result<yamlpath::Document> {
+        match yaml_patch::apply_yaml_patches(document, &self.patches) {
+            Ok(new_document) => Ok(new_document),
+            Err(e) => Err(anyhow!("fix failed: {e}")),
         }
     }
 }

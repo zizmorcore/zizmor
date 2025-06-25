@@ -272,6 +272,7 @@ enum QueryMode {
 }
 
 /// Represents a queryable YAML document.
+#[derive(Clone)]
 pub struct Document {
     source: String,
     tree: Tree,

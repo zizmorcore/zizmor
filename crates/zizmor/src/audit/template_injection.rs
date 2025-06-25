@@ -590,6 +590,7 @@ mod tests {
     use crate::audit::Audit;
     use crate::audit::template_injection::{Capability, TemplateInjection};
     use crate::github_api::GitHubHost;
+    use crate::models::AsDocument;
     use crate::models::workflow::Workflow;
     use crate::registry::InputKey;
     use crate::state::AuditState;
@@ -609,16 +610,16 @@ mod tests {
             let audit = <$audit_type>::new(&audit_state).unwrap();
             let findings = audit.audit_workflow(&workflow).unwrap();
 
-            $test_fn(findings)
+            $test_fn(&workflow, findings)
         }};
     }
 
     /// Helper function to apply a specific fix by title and return the result for snapshot testing
     fn apply_fix_by_title_for_snapshot(
-        workflow_content: &str,
+        document: &yamlpath::Document,
         finding: &crate::finding::Finding,
         expected_title: &str,
-    ) -> String {
+    ) -> yamlpath::Document {
         assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
 
         let fix = finding
@@ -629,7 +630,7 @@ mod tests {
                 panic!("Expected fix with title '{}' but not found", expected_title)
             });
 
-        fix.apply_to_content(workflow_content).unwrap().unwrap()
+        fix.apply(document).unwrap()
     }
 
     #[test]
@@ -649,7 +650,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_github_ref_name.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -662,11 +663,11 @@ jobs:
 
                 if let Some(finding) = finding_with_fix {
                     let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow_content,
+                        workflow.as_document(),
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content, @r#"
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
                     name: Test Template Injection
                     on: push
                     jobs:
@@ -700,7 +701,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_github_actor.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -713,11 +714,11 @@ jobs:
 
                 if let Some(finding) = finding_with_fix {
                     let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow_content,
+                        workflow.as_document(),
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content, @r#"
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
                     name: Test Template Injection
                     on: push
                     jobs:
@@ -753,7 +754,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_with_existing_env.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -766,11 +767,11 @@ jobs:
 
                 if let Some(finding) = finding_with_fix {
                     let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow_content,
+                        workflow.as_document(),
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content, @r#"
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
                     name: Test Template Injection
                     on: push
                     jobs:
@@ -808,7 +809,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_no_fix_for_action_sinks.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -844,7 +845,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_multiple_expressions.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find multiple template injections
                 assert!(!findings.is_empty());
 
@@ -857,7 +858,7 @@ jobs:
                 // Our comprehensive fix approach now handles all expressions in a single operation:
                 // All expressions in the script are replaced with environment variables,
                 // and all corresponding environment variables are defined in the env section.
-                let mut current_content = workflow_content.to_string();
+                let mut current_document = workflow.as_document().clone();
                 let findings_with_fixes: Vec<_> =
                     findings.iter().filter(|f| !f.fixes.is_empty()).collect();
 
@@ -873,13 +874,13 @@ jobs:
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
                     {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
-                            current_content = new_content;
+                        if let Ok(new_document) = fix.apply(&current_document) {
+                            current_document = new_document;
                         }
                     }
                 }
 
-                insta::assert_snapshot!(current_content, @r#"
+                insta::assert_snapshot!(current_document.source(), @r#"
                 name: Test Multiple Template Injections
                 on: push
                 jobs:
@@ -919,7 +920,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_duplicate_expressions.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -932,20 +933,20 @@ jobs:
                 );
 
                 // Apply each fix in sequence
-                let mut current_content = workflow_content.to_string();
+                let mut current_document = workflow.as_document().clone();
                 for finding in findings_with_fixes {
                     if let Some(fix) = finding
                         .fixes
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
                     {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
-                            current_content = new_content;
+                        if let Ok(new_document) = fix.apply(&current_document) {
+                            current_document = new_document;
                         }
                     }
                 }
 
-                insta::assert_snapshot!(current_content, @r#"
+                insta::assert_snapshot!(current_document.source(), @r#"
                 name: Test Duplicate Template Injections
                 on: push
                 jobs:
@@ -983,7 +984,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_equivalent_expressions.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -992,20 +993,20 @@ jobs:
                     findings.iter().filter(|f| !f.fixes.is_empty()).collect();
 
                 // Apply each fix in sequence
-                let mut current_content = workflow_content.to_string();
+                let mut current_document = workflow.as_document().clone();
                 for finding in findings_with_fixes {
                     if let Some(fix) = finding
                         .fixes
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
                     {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
-                            current_content = new_content;
+                        if let Ok(new_document) = fix.apply(&current_document) {
+                            current_document = new_document;
                         }
                     }
                 }
 
-                insta::assert_snapshot!(current_content, @r#"
+                insta::assert_snapshot!(current_document.source(), @r#"
                 name: Test Duplicate Template Injections
                 on: push
                 jobs:
