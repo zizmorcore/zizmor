@@ -3,9 +3,10 @@
 use std::collections::HashSet;
 
 use serde_sarif::sarif::{
-    ArtifactContent, ArtifactLocation, Invocation, Location as SarifLocation, LogicalLocation,
-    Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region, ReportingDescriptor,
-    Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, Tool, ToolComponent,
+    ArtifactContent, ArtifactLocation, CodeFlow, Invocation, Location as SarifLocation,
+    LogicalLocation, Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region,
+    ReportingDescriptor, Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, ThreadFlow,
+    ThreadFlowLocation, Tool, ToolComponent,
 };
 
 use crate::finding::{Finding, Severity, location::Location};
@@ -110,11 +111,29 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         // we did before 1.4.0.
         .message(finding.desc)
         .locations(build_locations(std::iter::once(primary)))
-        .related_locations(build_locations(
-            finding
-                .visible_locations()
-                .filter(|l| !l.symbolic.is_primary()),
-        ))
+        .code_flows(vec![
+            CodeFlow::builder()
+                .thread_flows(vec![
+                    ThreadFlow::builder()
+                        .locations(
+                            build_locations(
+                                finding
+                                    .visible_locations()
+                                    .filter(|l| !l.symbolic.is_primary()),
+                            )
+                            .into_iter()
+                            .map(|l| ThreadFlowLocation::builder().location(l).build())
+                            .collect::<Vec<_>>(),
+                        )
+                        .build(),
+                ])
+                .build(),
+        ])
+        // .related_locations(build_locations(
+        //     finding
+        //         .visible_locations()
+        //         .filter(|l| !l.symbolic.is_primary()),
+        // ))
         .level(ResultLevel::from(finding.determinations.severity))
         .kind(ResultKind::from(finding.determinations.severity))
         .build()
