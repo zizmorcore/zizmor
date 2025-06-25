@@ -6,5 +6,4 @@ fatal: no audit was performed
 failed to load input as Workflow
 
 Caused by:
-    0: input does not match expected validation schema
-    1: "lol" is not of type "object"
+    input does not match expected validation schema: "lol" is not of type "object"
