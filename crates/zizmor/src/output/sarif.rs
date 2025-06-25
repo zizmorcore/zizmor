@@ -102,14 +102,6 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
 
     SarifResult::builder()
         .rule_id(format!("zizmor/{id}", id = finding.ident))
-        // NOTE: We use the primary location's annotation for the result's message.
-        // This is conceptually incorrect since the location's annotation should
-        // only be on the location itself. However, GitHub's SARIF viewer does not
-        // render location-level messages, so we use the primary location's message
-        // to ensure something reasonable is presented.
-        // This ends up being OK since the only other thing we'd put here
-        // is the finding's description, which is already in the rule's help message.
-        // See https://github.com/zizmorcore/zizmor/issues/526 for context.
         .message(finding.desc)
         .locations(build_locations(std::iter::once(primary)))
         .related_locations(build_locations(
