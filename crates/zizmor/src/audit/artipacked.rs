@@ -234,7 +234,7 @@ mod tests {
         let fix = &finding.fixes[0];
         assert_eq!(fix.title, "Set persist-credentials: false");
 
-        fix.apply_to_content(workflow_content).unwrap().unwrap()
+        fix.apply(workflow_content).unwrap()
     }
 
     #[test]

@@ -53,12 +53,9 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
         // First, try to apply each fix independently to the original content
         // to collect which fixes can be applied successfully
         for (fix, finding) in fixes {
-            match fix.apply_to_content(original_content) {
-                Ok(Some(_)) => {
+            match fix.apply(original_content) {
+                Ok(_) => {
                     successful_fixes.push((finding.ident, *fix, *finding));
-                }
-                Ok(None) => {
-                    // Fix didn't apply (no changes needed)
                 }
                 Err(e) => {
                     failed_fixes.push((finding.ident, file_path, format!("{}", e)));
@@ -68,13 +65,10 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
 
         // Then apply successful fixes sequentially, handling conflicts gracefully
         for (ident, fix, finding) in successful_fixes {
-            match fix.apply_to_content(&current_content) {
-                Ok(Some(new_content)) => {
+            match fix.apply(&current_content) {
+                Ok(new_content) => {
                     current_content = new_content;
                     file_applied_fixes.push((ident, fix, finding));
-                }
-                Ok(None) => {
-                    // Fix didn't apply to modified content (possibly due to conflicts)
                 }
                 Err(e) => {
                     // If the fix fails on modified content, it might be due to conflicts

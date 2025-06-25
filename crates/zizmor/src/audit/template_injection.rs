@@ -629,7 +629,7 @@ mod tests {
                 panic!("Expected fix with title '{}' but not found", expected_title)
             });
 
-        fix.apply_to_content(workflow_content).unwrap().unwrap()
+        fix.apply(workflow_content).unwrap()
     }
 
     #[test]
@@ -873,7 +873,7 @@ jobs:
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
                     {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
+                        if let Ok(new_content) = fix.apply(&current_content) {
                             current_content = new_content;
                         }
                     }
@@ -939,7 +939,7 @@ jobs:
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
                     {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
+                        if let Ok(new_content) = fix.apply(&current_content) {
                             current_content = new_content;
                         }
                     }
@@ -999,7 +999,7 @@ jobs:
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
                     {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
+                        if let Ok(new_content) = fix.apply(&current_content) {
                             current_content = new_content;
                         }
                     }
