@@ -45,13 +45,13 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
         let file_path = &local.given_path;
 
         let mut file_applied_fixes = Vec::new();
-        let mut current_content = input.as_document().clone();
+        let mut current_document = input.as_document().clone();
 
         // Then apply successful fixes sequentially, handling conflicts gracefully
         for (fix, finding) in fixes {
-            match fix.apply(&current_content) {
-                Ok(new_content) => {
-                    current_content = new_content;
+            match fix.apply(&current_document) {
+                Ok(new_document) => {
+                    current_document = new_document;
                     file_applied_fixes.push((finding.ident, fix, finding));
                 }
                 Err(e) => {
@@ -67,7 +67,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
         }
 
         // Only proceed if there are changes to apply
-        if current_content.source() != input.as_document().source() {
+        if current_document.source() != input.as_document().source() {
             anstream::println!("{}", "\nFixes".to_string().green().bold());
             let num_fixes = file_applied_fixes.len();
             for (ident, fix, finding) in file_applied_fixes {
@@ -83,7 +83,7 @@ pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Resul
                 );
             }
 
-            std::fs::write(file_path, current_content.source())
+            std::fs::write(file_path, current_document.source())
                 .with_context(|| format!("failed to update {file_path}"))?;
 
             anstream::println!("Applied {} fixes to {}", num_fixes, file_path);
