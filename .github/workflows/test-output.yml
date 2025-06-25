@@ -37,6 +37,7 @@ jobs:
 
       - name: Leave comment
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           URL: "https://github.com/zizmorcore/zizmor/security/code-scanning?query=pr%3A${{ github.event.pull_request.number }}+is%3Aopen+sort%3Acreated-desc"
         run: |
