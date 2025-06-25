@@ -111,20 +111,10 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         // we did before 1.4.0.
         .message(finding.desc)
         .locations(build_locations(std::iter::once(primary)))
-        // .code_flows(vec![
-        //     CodeFlow::builder()
-        //         .thread_flows(vec![
-        //             ThreadFlow::builder()
-        //                 .locations(
-        //                     build_locations(finding.visible_locations())
-        //                         .into_iter()
-        //                         .map(|l| ThreadFlowLocation::builder().location(l).build())
-        //                         .collect::<Vec<_>>(),
-        //                 )
-        //                 .build(),
-        //         ])
-        //         .build(),
-        // ])
+        // TODO: Evaluate including the related locations via CodeFlows
+        // instead -- GitHub seems to do a better job of rendering these,
+        // but still doesn't do a great job of putting all of the locations
+        // into the same render.
         .related_locations(build_locations(
             finding
                 .visible_locations()
