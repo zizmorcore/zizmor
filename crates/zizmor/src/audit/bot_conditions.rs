@@ -142,7 +142,7 @@ impl BotConditions {
             Trigger::BareEvent(event) => Self::is_relevant_event(event),
             Trigger::BareEvents(event_list) => event_list
                 .iter()
-                .any(|event| Self::is_relevant_event(event)),
+                .any(Self::is_relevant_event),
             Trigger::Events(event_map) => {
                 !matches!(event_map.issue_comment, OptionalBody::Missing)
                     || !matches!(event_map.pull_request, OptionalBody::Missing)
