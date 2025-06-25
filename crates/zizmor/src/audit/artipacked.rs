@@ -195,7 +195,10 @@ impl Audit for Artipacked {
 mod tests {
     use super::*;
     use crate::{
-        github_api::GitHubHost, models::workflow::Workflow, registry::InputKey, state::AuditState,
+        github_api::GitHubHost,
+        models::{AsDocument, workflow::Workflow},
+        registry::InputKey,
+        state::AuditState,
     };
 
     /// Macro for testing workflow audits with common boilerplate
@@ -221,12 +224,15 @@ mod tests {
             let audit = <$audit_type>::new(&audit_state).unwrap();
             let findings = audit.audit_workflow(&workflow).unwrap();
 
-            $test_fn(findings)
+            $test_fn(&workflow, findings)
         }};
     }
 
     /// Helper function to apply a fix and return the result for snapshot testing
-    fn apply_fix_for_snapshot(workflow_content: &str, findings: Vec<Finding>) -> String {
+    fn apply_fix_for_snapshot(
+        document: &yamlpath::Document,
+        findings: Vec<Finding>,
+    ) -> yamlpath::Document {
         assert!(!findings.is_empty(), "Expected findings but got none");
         let finding = &findings[0];
         assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
@@ -234,7 +240,7 @@ mod tests {
         let fix = &finding.fixes[0];
         assert_eq!(fix.title, "Set persist-credentials: false");
 
-        fix.apply(workflow_content).unwrap()
+        fix.apply(document).unwrap()
     }
 
     #[test]
@@ -280,9 +286,9 @@ jobs:
             Artipacked,
             "test_fix_merges_into_existing_with_block.yml",
             workflow_content,
-            |findings| {
-                let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
-                insta::assert_snapshot!(fixed_content, @r"
+            |workflow: &Workflow, findings| {
+                let fixed = apply_fix_for_snapshot(workflow.as_document(), findings);
+                insta::assert_snapshot!(fixed.source(), @r"
                 name: Test Workflow
                 on: push
                 jobs:
@@ -327,9 +333,9 @@ jobs:
             Artipacked,
             "test_fix_creates_with_block_when_missing.yml",
             workflow_content,
-            |findings| {
-                let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
-                insta::assert_snapshot!(fixed_content, @r"
+            |workflow: &Workflow, findings| {
+                let fixed = apply_fix_for_snapshot(workflow.as_document(), findings);
+                insta::assert_snapshot!(fixed.source(), @r"
                 name: Test Workflow
                 on: push
                 jobs:
