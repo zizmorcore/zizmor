@@ -13,12 +13,24 @@ use crate::{
     registry::{FindingRegistry, InputKey, InputRegistry},
 };
 
+const FIX_MODE_WARNING: &str = "
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!                IMPORTANT WARNING             !!
+!!                                              !!
+!! Fix mode is EXPERIMENTAL!                    !!
+!! You will encounter bugs; please report them. !!
+!!                                              !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+";
+
 /// Apply all fixes associated with findings, filtered by the specified fix mode.
 pub fn apply_fixes(
     fix_mode: FixMode,
     results: &FindingRegistry,
     registry: &InputRegistry,
 ) -> Result<()> {
+    anstream::eprintln!("{}", FIX_MODE_WARNING.red().bold());
+
     let mut fixes_by_input: HashMap<&InputKey, Vec<(&Fix, &Finding)>> = HashMap::new();
     let mut total_fixes = 0;
     for finding in results.fixable_findings() {

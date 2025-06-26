@@ -116,8 +116,12 @@ pub(crate) enum FixDisposition {
 }
 
 /// Represents a suggested fix for a finding.
+///
+/// A fix is associated with a specific input via its [`Fix::key`],
+/// and contains one or more [`Patch`] operations to apply to the input.
 pub(crate) struct Fix<'doc> {
     /// A short title describing the fix.
+    #[allow(dead_code)]
     pub(crate) title: String,
     /// A detailed description of the fix.
     #[allow(dead_code)]
@@ -131,7 +135,7 @@ pub(crate) struct Fix<'doc> {
 }
 
 impl Fix<'_> {
-    /// Apply the fix to the given file content.
+    /// Apply the fix to the given document.
     pub(crate) fn apply(
         &self,
         document: &yamlpath::Document,
