@@ -74,26 +74,32 @@ impl Audit for BotConditions {
             return Ok(vec![]);
         }
 
+        // Track conditions with explicit categorization
         let mut conds = vec![];
+
+        // Job-level condition
         if let Some(If::Expr(expr)) = &job.r#if {
             conds.push((
                 expr,
                 job.location_with_name(),
                 job.location().with_keys(&["if".into()]),
+                true, // is_job_level
             ));
         }
 
+        // Step-level conditions
         for step in job.steps() {
             if let Some(If::Expr(expr)) = &step.r#if {
                 conds.push((
                     expr,
                     step.location_with_name(),
                     step.location().with_keys(&["if".into()]),
+                    false, // is_job_level
                 ));
             }
         }
 
-        for (expr, parent, if_loc) in conds {
+        for (expr, parent, if_loc, is_job_level) in conds {
             if let Some((subfeature, confidence)) = Self::bot_condition(expr) {
                 let mut finding_builder = Self::finding()
                     .severity(Severity::High)
@@ -106,20 +112,22 @@ impl Audit for BotConditions {
                             .annotated("actor context may be spoofable"),
                     );
 
-                // Add fixes
-                if let Some(step) = job.steps().find(|s| s.location().key == parent.key) {
-                    // Step-level condition
-                    let step_ref = &step;
-                    if let Some(fix) = Self::create_replace_actor_fix(step_ref) {
-                        finding_builder = finding_builder.fix(fix);
-                    }
-                } else if parent.key == job.location().key {
+                // Add fixes based on whether it's job-level or step-level
+                if is_job_level {
                     // Job-level condition - parse the expression first
                     let bare_expr = ExtractedExpr::new(expr).as_bare().to_string();
 
                     if let Ok(parsed_expr) = Expr::parse(&bare_expr) {
                         if let Some(fix) = Self::create_replace_actor_fix_for_job(job, &parsed_expr)
                         {
+                            finding_builder = finding_builder.fix(fix);
+                        }
+                    }
+                } else {
+                    // Step-level condition - find the corresponding step
+                    if let Some(step) = job.steps().find(|s| s.location().key == parent.key) {
+                        let step_ref = &step;
+                        if let Some(fix) = Self::create_replace_actor_fix(step_ref) {
                             finding_builder = finding_builder.fix(fix);
                         }
                     }
@@ -606,21 +614,6 @@ mod tests {
         }};
     }
 
-    /// Helper function to apply a fix by title and return the result for snapshot testing
-    fn apply_fix_by_title_for_snapshot(
-        document: &yamlpath::Document,
-        finding: &Finding,
-        expected_title: &str,
-    ) -> yamlpath::Document {
-        let fix = finding
-            .fixes
-            .iter()
-            .find(|f| f.title == expected_title)
-            .unwrap_or_else(|| panic!("No fix found with title: {}", expected_title));
-
-        fix.apply(document).unwrap()
-    }
-
     #[test]
     fn test_bot_condition() {
         for (cond, confidence) in &[
@@ -706,7 +699,7 @@ jobs:
                 jobs:
                   test:
                     runs-on: ubuntu-latest
-                    if: github.actor == 'dependabot[bot]'
+                    if: github.event.pull_request.user.login == 'dependabot[bot]'
                     steps:
                       - name: Test Step
                         if: github.event.pull_request.user.login == 'dependabot[bot]'
@@ -755,7 +748,7 @@ jobs:
                 jobs:
                   test:
                     runs-on: ubuntu-latest
-                    if: github.actor == 'dependabot[bot]'
+                    if: github.event.pull_request.user.login == 'dependabot[bot]'
                     steps:
                       - name: Test Step
                         if: github.event.pull_request.user.login == 'dependabot[bot]'
@@ -807,7 +800,7 @@ jobs:
                 jobs:
                   test:
                     runs-on: ubuntu-latest
-                    if: github.actor == 'dependabot[bot]'
+                    if: github.event.comment.user.login == 'dependabot[bot]'
                     steps:
                       - name: Test Step
                         if: github.event.comment.user.login == 'dependabot[bot]'
@@ -856,7 +849,7 @@ jobs:
                 jobs:
                   test:
                     runs-on: ubuntu-latest
-                    if: github.actor == 'dependabot[bot]'
+                    if: github.event.review.user.login == 'dependabot[bot]'
                     steps:
                       - name: Test Step
                         if: github.event.review.user.login == 'dependabot[bot]'
@@ -905,7 +898,7 @@ jobs:
                 jobs:
                   test:
                     runs-on: ubuntu-latest
-                    if: github.actor == 'dependabot[bot]'
+                    if: github.event.issue.user.login == 'dependabot[bot]'
                     steps:
                       - name: Test Step
                         if: github.event.issue.user.login == 'dependabot[bot]'
@@ -954,7 +947,7 @@ jobs:
                 jobs:
                   test:
                     runs-on: ubuntu-latest
-                    if: github.actor == 'dependabot[bot]'
+                    if: github.event.release.author.login == 'dependabot[bot]'
                     steps:
                       - name: Test Step
                         if: github.event.release.author.login == 'dependabot[bot]'
@@ -1002,7 +995,7 @@ jobs:
                 jobs:
                   test:
                     runs-on: ubuntu-latest
-                    if: github.actor == 'dependabot[bot]'
+                    if: github.event.sender.login == 'dependabot[bot]'
                     steps:
                       - name: Test Step
                         if: github.event.sender.login == 'dependabot[bot]'
@@ -1034,12 +1027,17 @@ jobs:
             "test_fix_with_complex_conditions.yml",
             workflow_content,
             |workflow: &Workflow, findings: Vec<Finding>| {
-                let fixed_document = apply_fix_by_title_for_snapshot(
-                    workflow.as_document(),
-                    &findings[0],
-                    "Replace spoofable actor context with github.event.pull_request.user.login",
-                );
-                insta::assert_snapshot!(fixed_document.source(), @r#"
+                // Apply all fixes
+                let mut document = workflow.as_document().clone();
+                for finding in &findings {
+                    for fix in &finding.fixes {
+                        if let Ok(new_document) = fix.apply(&document) {
+                            document = new_document;
+                        }
+                    }
+                }
+
+                insta::assert_snapshot!(document.source(), @r#"
                 name: Test Workflow
                 on:
                   pull_request_target:
@@ -1047,7 +1045,7 @@ jobs:
                 jobs:
                   test:
                     runs-on: ubuntu-latest
-                    if: github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]'
+                    if: github.event.pull_request.user.login == 'dependabot[bot]' || github.actor == 'renovate[bot]'
                     steps:
                       - name: Test Step
                         if: github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.title, 'chore')
