@@ -48,6 +48,7 @@ error[artipacked]: credential persistence through GitHub Actions artifacts
    | |________________________________________________________________________________________________^ may leak the credentials persisted above
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 warning[artipacked]: credential persistence through GitHub Actions artifacts
   --> .github/workflows/artipacked.yml:52:9
@@ -59,6 +60,7 @@ warning[artipacked]: credential persistence through GitHub Actions artifacts
    | |___________________________________________________________________- does not set persist-credentials: false
    |
    = note: audit confidence → Low
+   = note: this finding has an auto-fix
 
 error[artipacked]: credential persistence through GitHub Actions artifacts
   --> .github/workflows/artipacked.yml:77:9
@@ -78,6 +80,7 @@ error[artipacked]: credential persistence through GitHub Actions artifacts
    | |________________________________________^ may leak the credentials persisted above
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/artipacked.yml:1:1
@@ -867,6 +870,7 @@ error[template-injection]: code injection via template expansion
    |                                    ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:53:36
@@ -877,6 +881,7 @@ error[template-injection]: code injection via template expansion
    |                                    ^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:63:36
@@ -887,6 +892,7 @@ error[template-injection]: code injection via template expansion
    |                                    ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 warning[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:85:36
@@ -897,6 +903,7 @@ warning[template-injection]: code injection via template expansion
    |                                    -------------- may expand into attacker-controllable code
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 warning[template-injection]: code injection via template expansion
    --> .github/workflows/template-injection.yml:107:36
@@ -907,6 +914,7 @@ warning[template-injection]: code injection via template expansion
     |                                    ------------------ may expand into attacker-controllable code
     |
     = note: audit confidence → Medium
+    = note: this finding has an auto-fix
 
 error[template-injection]: code injection via template expansion
    --> .github/workflows/template-injection.yml:119:40
