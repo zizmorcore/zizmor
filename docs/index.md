@@ -16,7 +16,7 @@ Go right to our [Installation Steps](./installation.md), and then to
 learn more about how to use `zizmor` locally or in your CI/CD.
 
 <figure markdown="1">
-![](./assets/zizmor-demo.gif)
+![](https://zizmor.sh/assets/zizmor-demo.gif)
 </figure>
 
 ## Sponsors 💖

@@ -19,7 +19,7 @@ including:
 
 [and much more]: https://docs.zizmor.sh/audits/
 
-![zizmor demo](https://raw.githubusercontent.com/zizmorcore/zizmor/main/docs/assets/zizmor-demo.gif)
+![zizmor demo](https://zizmor.sh/assets/zizmor-demo.gif)
 
 See [`zizmor`'s documentation](https://docs.zizmor.sh/)
 for [installation steps], as well as a [quickstart] and
