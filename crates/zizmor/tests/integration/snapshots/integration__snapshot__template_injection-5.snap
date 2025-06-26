@@ -11,6 +11,7 @@ help[template-injection]: code injection via template expansion
    |                    ------- help: may expand into attacker-controllable code
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[template-injection]: code injection via template expansion
   --> @@INPUT@@:50:20
@@ -21,6 +22,7 @@ help[template-injection]: code injection via template expansion
    |                    ------- help: may expand into attacker-controllable code
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[template-injection]: code injection via template expansion
   --> @@INPUT@@:55:20
@@ -31,5 +33,6 @@ help[template-injection]: code injection via template expansion
    |                    -------- help: may expand into attacker-controllable code
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
-12 findings (9 suppressed): 0 unknown, 0 informational, 3 low, 0 medium, 0 high
+12 findings (9 suppressed, 3 fixable): 0 unknown, 0 informational, 3 low, 0 medium, 0 high

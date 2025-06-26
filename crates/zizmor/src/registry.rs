@@ -350,6 +350,19 @@ impl<'a> FindingRegistry<'a> {
         &self.findings
     }
 
+    /// Findings from [`FindingRegistry::findings`] that are fixable.
+    ///
+    /// A finding is considered fixable if it has at least one
+    /// fix, and all fixes are local (i.e. they don't reference remote inputs).
+    pub(crate) fn fixable_findings(&self) -> impl Iterator<Item = &Finding<'a>> {
+        self.findings.iter().filter(|f| {
+            !f.fixes.is_empty()
+                && f.fixes
+                    .iter()
+                    .all(|fix| matches!(fix.key, InputKey::Local(_)))
+        })
+    }
+
     /// All ignored findings.
     pub(crate) fn ignored(&self) -> &[Finding<'a>] {
         &self.ignored

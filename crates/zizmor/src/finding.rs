@@ -104,20 +104,38 @@ pub(crate) struct Determinations {
     pub(super) persona: Persona,
 }
 
+/// Represents the "disposition" of a fix.
+#[derive(Copy, Clone, Debug, Default)]
+pub(crate) enum FixDisposition {
+    /// The fix is safe to apply automatically.
+    #[allow(dead_code)]
+    Safe,
+    /// The fix should be applied with manual oversight.
+    #[default]
+    Unsafe,
+}
+
 /// Represents a suggested fix for a finding.
+///
+/// A fix is associated with a specific input via its [`Fix::key`],
+/// and contains one or more [`Patch`] operations to apply to the input.
 pub(crate) struct Fix<'doc> {
     /// A short title describing the fix.
+    #[allow(dead_code)]
     pub(crate) title: String,
     /// A detailed description of the fix.
     #[allow(dead_code)]
     pub(crate) description: String,
     /// The key back into the input registry that this fix applies to.
     pub(crate) key: &'doc InputKey,
+    /// The fix's disposition.
+    pub(crate) disposition: FixDisposition,
+    /// One or more YAML patches to apply as part of this fix.
     pub(crate) patches: Vec<Patch<'doc>>,
 }
 
 impl Fix<'_> {
-    /// Apply the fix to the given file content.
+    /// Apply the fix to the given document.
     pub(crate) fn apply(
         &self,
         document: &yamlpath::Document,
@@ -131,12 +149,26 @@ impl Fix<'_> {
 
 #[derive(Serialize)]
 pub(crate) struct Finding<'doc> {
+    /// The audit ID for this finding, e.g. `template-injection`.
     pub(crate) ident: &'static str,
+    /// A short description of the finding, derived from the audit.
     pub(crate) desc: &'static str,
+    /// A URL linking to the documentation for this finding's audit.
     pub(crate) url: &'static str,
+    /// The confidence, severity, and persona of this finding.
     pub(crate) determinations: Determinations,
+    /// This finding's locations.
+    ///
+    /// Each location has both a concrete and a symbolic representation,
+    /// and carries metadata about how an output layer might choose to
+    /// present it.
     pub(crate) locations: Vec<Location<'doc>>,
+    /// Whether this finding is ignored, either via inline comments or
+    /// through a user's configuration.
     pub(crate) ignored: bool,
+    /// One or more suggested fixes for this finding. Because a finding
+    /// can span multiple inputs, each fix is associated with a specific
+    /// input via [`Fix::key`].
     #[serde(skip_serializing)]
     pub(crate) fixes: Vec<Fix<'doc>>,
 }
