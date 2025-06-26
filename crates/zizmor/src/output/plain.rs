@@ -84,16 +84,26 @@ pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &Fi
     }
 
     let mut qualifiers = vec![];
+
     if !findings.ignored().is_empty() {
         qualifiers.push(format!(
             "{nignored} ignored",
             nignored = findings.ignored().len().bright_yellow()
         ));
     }
+
     if !findings.suppressed().is_empty() {
         qualifiers.push(format!(
             "{nsuppressed} suppressed",
             nsuppressed = findings.suppressed().len().bright_yellow()
+        ));
+    }
+
+    let nfixable = findings.fixable_findings().count();
+    if nfixable > 0 {
+        qualifiers.push(format!(
+            "{nfixable} fixable",
+            nfixable = nfixable.bright_green()
         ));
     }
 

@@ -108,6 +108,7 @@ pub(crate) struct Determinations {
 #[derive(Copy, Clone, Debug, Default)]
 pub(crate) enum FixDisposition {
     /// The fix is safe to apply automatically.
+    #[allow(dead_code)]
     Safe,
     /// The fix should be applied with manual oversight.
     #[default]
