@@ -453,7 +453,7 @@ sensitive `zizmor`'s analyses are:
       1 finding: 1 unknown, 0 informational, 0 low, 0 medium, 0 high
     ```
 
-## Auto-fixing results *&#8203;*{.chip .chip-experimental}
+## Auto-fixing results *&#8203;*{.chip .chip-experimental} { #auto-fixing-results }
 
 !!! warning
 
@@ -925,7 +925,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
-  rev: v1.9.0 # (1)!
+  rev: v1.10.0 # (1)!
   hooks:
   - id: zizmor
 ```
