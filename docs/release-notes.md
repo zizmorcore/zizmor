@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.10.0
+
 ### New Features 🌈
 
 * **New audit**: [anonymous-definition] detects unnamed workflows and actions.
