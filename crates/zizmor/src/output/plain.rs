@@ -188,7 +188,7 @@ fn render_finding(registry: &InputRegistry, finding: &Finding) {
         .footer(confidence_footer);
 
     if !finding.fixes.is_empty() {
-        let fixes_footer = Level::Note.title("this finding can be auto-fixed with --fix");
+        let fixes_footer = Level::Note.title("this finding has an auto-fix");
         message = message.footer(fixes_footer);
     }
 
