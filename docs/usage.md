@@ -453,7 +453,7 @@ sensitive `zizmor`'s analyses are:
       1 finding: 1 unknown, 0 informational, 0 low, 0 medium, 0 high
     ```
 
-## Auto-fixing results *&#8203;*{.chip .chip-experimental}
+## Auto-fixing results *&#8203;*{.chip .chip-experimental} { #auto-fixing-results }
 
 !!! warning
 
