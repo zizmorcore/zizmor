@@ -104,6 +104,16 @@ pub(crate) struct Determinations {
     pub(super) persona: Persona,
 }
 
+/// Represents the "disposition" of a fix.
+#[derive(Copy, Clone, Debug, Default)]
+pub(crate) enum FixDisposition {
+    /// The fix is safe to apply automatically.
+    Safe,
+    /// The fix should be applied with manual oversight.
+    #[default]
+    Unsafe,
+}
+
 /// Represents a suggested fix for a finding.
 pub(crate) struct Fix<'doc> {
     /// A short title describing the fix.
@@ -113,6 +123,9 @@ pub(crate) struct Fix<'doc> {
     pub(crate) description: String,
     /// The key back into the input registry that this fix applies to.
     pub(crate) key: &'doc InputKey,
+    /// The fix's disposition.
+    pub(crate) disposition: FixDisposition,
+    /// One or more YAML patches to apply as part of this fix.
     pub(crate) patches: Vec<Patch<'doc>>,
 }
 

@@ -137,17 +137,27 @@ struct App {
     #[arg(long, value_enum, value_name = "SHELL", exclusive = true)]
     completions: Option<Shell>,
 
-    /// Emit thank-you messages for zizmor's sponsors.
-    #[arg(long, exclusive = true)]
-    thanks: bool,
-
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
     naches: bool,
 
-    /// Apply fixes automatically if available.
-    #[arg(long, hide = true)]
-    fix: bool,
+    /// Fix findings automatically, when available.
+    #[arg(
+        long,
+        value_enum,
+        value_name = "MODE",
+        // NOTE: These attributes are needed to make `--fix` behave as the
+        // default for `--fix=safe`. Unlike other flags we don't support
+        // `--fix safe`, since `clap` can't disambiguate that.
+        num_args=0..=1,
+        require_equals = true,
+        default_missing_value = "safe",
+    )]
+    fix: Option<FixMode>,
+
+    /// Emit thank-you messages for zizmor's sponsors.
+    #[arg(long, exclusive = true)]
+    thanks: bool,
 
     /// The inputs to audit.
     ///
@@ -296,6 +306,16 @@ impl CollectionMode {
             CollectionMode::All | CollectionMode::Default | CollectionMode::ActionsOnly
         )
     }
+}
+
+#[derive(Copy, Clone, Debug, ValueEnum)]
+pub(crate) enum FixMode {
+    /// Apply only safe fixes (the default).
+    Safe,
+    /// Apply only unsafe fixes.
+    UnsafeOnly,
+    /// Apply all fixes, both safe and unsafe.
+    All,
 }
 
 fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
@@ -689,8 +709,8 @@ fn run() -> Result<ExitCode> {
         OutputFormat::Github => output::github::output(stdout(), results.findings())?,
     };
 
-    if app.fix {
-        output::fix::apply_fixes(&results, &registry)?;
+    if let Some(fix_mode) = app.fix {
+        output::fix::apply_fixes(fix_mode, &results, &registry)?;
     }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {

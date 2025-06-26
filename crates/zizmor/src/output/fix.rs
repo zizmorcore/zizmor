@@ -7,17 +7,28 @@ use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
 
 use crate::{
-    finding::{Finding, Fix},
+    FixMode,
+    finding::{Finding, Fix, FixDisposition},
     models::AsDocument,
     registry::{FindingRegistry, InputKey, InputRegistry},
 };
 
-/// Apply fixes to files based on the provided configuration
-pub fn apply_fixes(results: &FindingRegistry, registry: &InputRegistry) -> Result<()> {
-    // Group fixes by the input they're applied to.
+/// Apply all fixes associated with findings, filtered by the specified fix mode.
+pub fn apply_fixes(
+    fix_mode: FixMode,
+    results: &FindingRegistry,
+    registry: &InputRegistry,
+) -> Result<()> {
     let mut fixes_by_input: HashMap<&InputKey, Vec<(&Fix, &Finding)>> = HashMap::new();
     for finding in results.findings() {
         for fix in &finding.fixes {
+            let fix = match (fix_mode, fix.disposition) {
+                (FixMode::Safe, FixDisposition::Safe) => fix,
+                (FixMode::UnsafeOnly, FixDisposition::Unsafe) => fix,
+                (FixMode::All, _) => fix,
+                _ => continue,
+            };
+
             fixes_by_input
                 .entry(fix.key)
                 .or_default()
