@@ -792,3 +792,16 @@ fn unpinned_images() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn ref_version_mismatch() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .input(input_under_test("ref-version-mismatch.yml"))
+            .run()?
+    );
+
+    Ok(())
+}

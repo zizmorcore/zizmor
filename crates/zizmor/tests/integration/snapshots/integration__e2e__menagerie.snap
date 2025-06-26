@@ -7,6 +7,7 @@ expression: "zizmor().output(OutputMode::Both).input(input_under_test(\"e2e-mena
  INFO zizmor: skipping known-vulnerable-actions: can't run without a GitHub API token
  INFO zizmor: skipping forbidden-uses: audit not configured
  INFO zizmor: skipping stale-action-refs: can't run without a GitHub API token
+ INFO zizmor: skipping ref-version-mismatch: can't run without a GitHub API token
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/dummy-action-2/action.yml
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/another-dummy.yml
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/dummy.yml

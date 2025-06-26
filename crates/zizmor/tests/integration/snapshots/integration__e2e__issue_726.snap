@@ -8,6 +8,7 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-onlin
  INFO zizmor: skipping known-vulnerable-actions: offline audits only requested
  INFO zizmor: skipping forbidden-uses: audit not configured
  INFO zizmor: skipping stale-action-refs: offline audits only requested
+ INFO zizmor: skipping ref-version-mismatch: offline audits only requested
  INFO audit: zizmor: 🌈 completed .github/actions/custom-action/action.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/actions/custom-action/action.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/custom-action/action.yml

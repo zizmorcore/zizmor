@@ -2,7 +2,7 @@
 
 use std::{ops::Range, sync::LazyLock};
 
-use crate::{audit::AuditInput, models::AsDocument, registry::InputKey};
+use crate::{models::AsDocument, registry::InputKey};
 use github_actions_expressions::{Span, SpannedExpr};
 use line_index::{LineCol, TextSize};
 use regex::Regex;
@@ -519,6 +519,12 @@ impl Comment<'_> {
     }
 }
 
+impl AsRef<str> for Comment<'_> {
+    fn as_ref(&self) -> &str {
+        self.0
+    }
+}
+
 /// An extracted feature, along with its concrete location.
 #[derive(Serialize)]
 pub(crate) struct Feature<'doc> {
@@ -533,7 +539,10 @@ pub(crate) struct Feature<'doc> {
 }
 
 impl<'doc> Feature<'doc> {
-    pub(crate) fn from_subfeature(subfeature: &Subfeature, input: &'doc AuditInput) -> Self {
+    pub(crate) fn from_subfeature<'a>(
+        subfeature: &Subfeature,
+        input: &'a impl AsDocument<'a, 'doc>,
+    ) -> Self {
         let contents = input.as_document().source();
 
         let span = subfeature.locate_within(contents).unwrap().into();
@@ -541,13 +550,14 @@ impl<'doc> Feature<'doc> {
         Self::from_span(&span, input)
     }
 
-    pub(crate) fn from_span(span: &Range<usize>, input: &'doc AuditInput) -> Self {
+    pub(crate) fn from_span<'a>(span: &Range<usize>, input: &'a impl AsDocument<'a, 'doc>) -> Self {
+        let document = input.as_document();
         let raw = input.as_document().source();
         let start = TextSize::new(span.start as u32);
         let end = TextSize::new(span.end as u32);
 
-        let start_point = input.line_index().line_col(start);
-        let end_point = input.line_index().line_col(end);
+        let start_point = document.line_index().line_col(start);
+        let end_point = document.line_index().line_col(end);
 
         // Extract any comments within the feature's line span.
         //
@@ -562,7 +572,7 @@ impl<'doc> Feature<'doc> {
             .flat_map(|line| {
                 // NOTE: We don't really expect this to fail, since this
                 // line range comes from the line index itself.
-                let line = input.line_index().line(line)?;
+                let line = document.line_index().line(line)?;
                 // Chomp the trailing newline rather than enabling
                 // multi-line mode in ANY_COMMENT, on the theory that
                 // chomping is a little faster.
