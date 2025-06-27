@@ -492,9 +492,9 @@ impl BotConditions {
                         false
                     }
                 }) {
-                    actor_name_context.clone()
+                    actor_name_context
                 } else {
-                    actor_id_context.clone()
+                    actor_id_context
                 };
 
                 patches.push(Patch {
