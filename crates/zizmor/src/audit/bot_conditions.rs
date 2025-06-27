@@ -195,137 +195,114 @@ impl BotConditions {
 
     /// Get appropriate user context paths based on workflow trigger events.
     /// Returns (actor_name_context, actor_id_context) for the given workflow.
-    fn get_user_contexts_for_triggers(workflow: &Workflow) -> (String, String) {
+    fn get_user_contexts_for_triggers(workflow: &Workflow) -> Option<(&str, &str)> {
         use github_actions_models::workflow::Trigger;
 
         // Check for single specific event types first
         match &workflow.on {
-            Trigger::BareEvent(event) => {
-                return Self::get_contexts_for_event(event);
+            Trigger::BareEvent(event) => Self::get_contexts_for_event(event),
+            Trigger::BareEvents(event_list) if event_list.len() == 1 => {
+                Self::get_contexts_for_event(&event_list[0])
             }
-            Trigger::BareEvents(event_list) => {
-                if event_list.len() == 1 {
-                    return Self::get_contexts_for_event(&event_list[0]);
+            Trigger::Events(event_map) if event_map.count() == 1 => {
+                // Check each possible event type
+                if !matches!(event_map.issue_comment, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::IssueComment);
                 }
-            }
-            Trigger::Events(event_map) => {
-                if event_map.count() == 1 {
-                    // Check each possible event type
-                    if !matches!(event_map.issue_comment, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::IssueComment);
-                    }
-                    if !matches!(event_map.pull_request, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::PullRequest);
-                    }
-                    if !matches!(event_map.pull_request_target, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::PullRequestTarget);
-                    }
-                    if !matches!(event_map.discussion_comment, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::DiscussionComment);
-                    }
-                    if !matches!(event_map.pull_request_review, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::PullRequestReview);
-                    }
-                    if !matches!(event_map.pull_request_review_comment, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::PullRequestReviewComment);
-                    }
-                    if !matches!(event_map.issues, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::Issues);
-                    }
-                    if !matches!(event_map.discussion, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::Discussion);
-                    }
-                    if !matches!(event_map.release, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::Release);
-                    }
-                    if !matches!(event_map.push, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::Push);
-                    }
-                    if !matches!(event_map.milestone, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::Milestone);
-                    }
-                    if !matches!(event_map.label, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::Label);
-                    }
-                    if !matches!(event_map.project, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::Project);
-                    }
-                    if !matches!(event_map.watch, OptionalBody::Missing) {
-                        return Self::get_contexts_for_event(&BareEvent::Watch);
-                    }
+                if !matches!(event_map.pull_request, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::PullRequest);
                 }
-            }
-        }
+                if !matches!(event_map.pull_request_target, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::PullRequestTarget);
+                }
+                if !matches!(event_map.discussion_comment, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::DiscussionComment);
+                }
+                if !matches!(event_map.pull_request_review, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::PullRequestReview);
+                }
+                if !matches!(event_map.pull_request_review_comment, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::PullRequestReviewComment);
+                }
+                if !matches!(event_map.issues, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Issues);
+                }
+                if !matches!(event_map.discussion, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Discussion);
+                }
+                if !matches!(event_map.release, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Release);
+                }
+                if !matches!(event_map.push, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Push);
+                }
+                if !matches!(event_map.milestone, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Milestone);
+                }
+                if !matches!(event_map.label, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Label);
+                }
+                if !matches!(event_map.project, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Project);
+                }
+                if !matches!(event_map.watch, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Watch);
+                }
 
-        // For multiple events or unknown events, default to pull request context
-        (
-            "github.event.pull_request.user.login".to_string(),
-            "github.event.pull_request.user.id".to_string(),
-        )
+                None
+            }
+            _ => None,
+        }
     }
 
     /// Get context paths for a specific event type.
-    fn get_contexts_for_event(event: &BareEvent) -> (String, String) {
+    fn get_contexts_for_event(event: &BareEvent) -> Option<(&str, &str)> {
         match event {
-            BareEvent::IssueComment => (
-                "github.event.comment.user.login".to_string(),
-                "github.event.comment.user.id".to_string(),
-            ),
-            BareEvent::DiscussionComment => (
-                "github.event.comment.user.login".to_string(),
-                "github.event.comment.user.id".to_string(),
-            ),
-            BareEvent::PullRequestReview => (
-                "github.event.review.user.login".to_string(),
-                "github.event.review.user.id".to_string(),
-            ),
-            BareEvent::PullRequestReviewComment => (
-                "github.event.comment.user.login".to_string(),
-                "github.event.comment.user.id".to_string(),
-            ),
-            BareEvent::Issues => (
-                "github.event.issue.user.login".to_string(),
-                "github.event.issue.user.id".to_string(),
-            ),
-            BareEvent::Discussion => (
-                "github.event.discussion.user.login".to_string(),
-                "github.event.discussion.user.id".to_string(),
-            ),
-            BareEvent::PullRequest | BareEvent::PullRequestTarget => (
-                "github.event.pull_request.user.login".to_string(),
-                "github.event.pull_request.user.id".to_string(),
-            ),
-            BareEvent::Release => (
-                "github.event.release.author.login".to_string(),
-                "github.event.release.author.id".to_string(),
-            ),
-            BareEvent::Create | BareEvent::Delete => (
-                "github.event.sender.login".to_string(),
-                "github.event.sender.id".to_string(),
-            ),
-            BareEvent::Push => (
-                "github.event.pusher.name".to_string(),
-                "github.event.pusher.email".to_string(),
-            ),
-            BareEvent::Milestone => (
-                "github.event.milestone.creator.login".to_string(),
-                "github.event.milestone.creator.id".to_string(),
-            ),
+            BareEvent::IssueComment => Some((
+                "github.event.comment.user.login",
+                "github.event.comment.user.id",
+            )),
+            BareEvent::DiscussionComment => Some((
+                "github.event.comment.user.login",
+                "github.event.comment.user.id",
+            )),
+            BareEvent::PullRequestReview => Some((
+                "github.event.review.user.login",
+                "github.event.review.user.id",
+            )),
+            BareEvent::PullRequestReviewComment => Some((
+                "github.event.comment.user.login",
+                "github.event.comment.user.id",
+            )),
+            BareEvent::Issues => Some((
+                "github.event.issue.user.login",
+                "github.event.issue.user.id",
+            )),
+            BareEvent::Discussion => Some((
+                "github.event.discussion.user.login",
+                "github.event.discussion.user.id",
+            )),
+            BareEvent::PullRequest | BareEvent::PullRequestTarget => Some((
+                "github.event.pull_request.user.login",
+                "github.event.pull_request.user.id",
+            )),
+            BareEvent::Release => Some((
+                "github.event.release.author.login",
+                "github.event.release.author.id",
+            )),
+            BareEvent::Create | BareEvent::Delete => {
+                Some(("github.event.sender.login", "github.event.sender.id"))
+            }
+            BareEvent::Milestone => Some((
+                "github.event.milestone.creator.login",
+                "github.event.milestone.creator.id",
+            )),
             BareEvent::Label
             | BareEvent::Project
             | BareEvent::Fork
             | BareEvent::Watch
-            | BareEvent::Public => (
-                "github.event.sender.login".to_string(),
-                "github.event.sender.id".to_string(),
-            ),
-            _ => {
-                // For unknown events, default to pull request context
-                (
-                    "github.event.pull_request.user.login".to_string(),
-                    "github.event.pull_request.user.id".to_string(),
-                )
-            }
+            | BareEvent::Public => Some(("github.event.sender.login", "github.event.sender.id")),
+            _ => None,
         }
     }
 
@@ -493,7 +470,11 @@ impl BotConditions {
         }
 
         // Get appropriate contexts based on workflow triggers
-        let (actor_name_context, actor_id_context) = Self::get_user_contexts_for_triggers(workflow);
+        let Some((actor_name_context, actor_id_context)) =
+            Self::get_user_contexts_for_triggers(workflow)
+        else {
+            return None;
+        };
 
         let mut patches = vec![];
         let mut seen_fragments = std::collections::HashSet::new();
