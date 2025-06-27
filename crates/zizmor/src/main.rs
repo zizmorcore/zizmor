@@ -31,6 +31,8 @@ mod audit;
 mod config;
 mod finding;
 mod github_api;
+#[cfg(feature = "lsp")]
+mod lsp;
 mod models;
 mod output;
 mod registry;
@@ -46,6 +48,13 @@ const THANKS: &[(&str, &str)] = &[("Grafana Labs", "https://grafana.com")];
 #[derive(Parser)]
 #[command(about, version)]
 struct App {
+    /// Run in language server mode.
+    ///
+    /// This flag cannot be used with any other flags.
+    #[cfg(feature = "lsp")]
+    #[arg(long, exclusive = true)]
+    lsp: bool,
+
     /// Emit 'pedantic' findings.
     ///
     /// This is an alias for --persona=pedantic.
@@ -516,6 +525,12 @@ fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
     let mut app = App::parse();
+
+    #[cfg(feature = "lsp")]
+    if app.lsp {
+        lsp::run();
+        return Ok(ExitCode::SUCCESS);
+    }
 
     if app.thanks {
         println!("zizmor's development is sustained by our generous sponsors:");

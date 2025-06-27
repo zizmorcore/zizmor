@@ -262,7 +262,7 @@ impl InputRegistry {
 }
 
 pub(crate) struct AuditRegistry {
-    pub(crate) audits: IndexMap<&'static str, Box<dyn Audit>>,
+    pub(crate) audits: IndexMap<&'static str, Box<dyn Audit + Send + Sync>>,
 }
 
 impl AuditRegistry {
@@ -329,12 +329,24 @@ impl AuditRegistry {
         self.audits.len()
     }
 
-    pub(crate) fn register_audit(&mut self, ident: &'static str, audit: Box<dyn Audit>) {
+    pub(crate) fn register_audit(
+        &mut self,
+        ident: &'static str,
+        audit: Box<dyn Audit + Send + Sync>,
+    ) {
         self.audits.insert(ident, audit);
     }
 
-    pub(crate) fn iter_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit>> {
+    pub(crate) fn iter_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit + Send + Sync>> {
         self.audits.iter()
+    }
+}
+
+impl std::fmt::Debug for AuditRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AuditRegistry")
+            .field("audits", &self.audits.len())
+            .finish()
     }
 }
 

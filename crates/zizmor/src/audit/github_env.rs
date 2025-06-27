@@ -1,6 +1,5 @@
-use std::cell::RefCell;
 use std::ops::{Deref, Range};
-use std::sync::LazyLock;
+use std::sync::{LazyLock, RwLock};
 
 use anyhow::{Context, Result};
 use github_actions_models::action;
@@ -22,9 +21,12 @@ static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 pub(crate) struct GitHubEnv {
-    // NOTE: interior mutability used since Parser::parse requires &mut self
-    bash_parser: RefCell<Parser>,
-    pwsh_parser: RefCell<Parser>,
+    // Ideally we'd use a RefCell here, but the LSP mode requires that
+    // each Audit be Sync.
+    // TODO: Evaluate whether this is worth it. Maybe just loading a new parser
+    // each time would be just as fast?
+    bash_parser: RwLock<Parser>,
+    pwsh_parser: RwLock<Parser>,
 
     // cached queries
     bash_redirect_query: SpannedQuery,
@@ -182,7 +184,8 @@ impl GitHubEnv {
 
         let tree = self
             .bash_parser
-            .borrow_mut()
+            .write()
+            .unwrap()
             .parse(script_body, None)
             .context("failed to parse `run:` body as bash")?;
 
@@ -282,7 +285,8 @@ impl GitHubEnv {
     ) -> Result<Vec<(&'hay str, Range<usize>)>> {
         let tree = &self
             .pwsh_parser
-            .borrow_mut()
+            .write()
+            .unwrap()
             .parse(script_body, None)
             .context("failed to parse `run:` body as pwsh")?;
 
@@ -360,8 +364,8 @@ impl Audit for GitHubEnv {
             .map_err(AuditLoadError::Skip)?;
 
         Ok(Self {
-            bash_parser: RefCell::new(bash_parser),
-            pwsh_parser: RefCell::new(pwsh_parser),
+            bash_parser: RwLock::new(bash_parser),
+            pwsh_parser: RwLock::new(pwsh_parser),
             bash_redirect_query: SpannedQuery::new(BASH_REDIRECT_QUERY, &bash),
             bash_pipeline_query: SpannedQuery::new(BASH_PIPELINE_QUERY, &bash),
             pwsh_redirect_query: SpannedQuery::new(PWSH_REDIRECT_QUERY, &pwsh),
