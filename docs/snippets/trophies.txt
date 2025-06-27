@@ -187,6 +187,7 @@ pypi/warehouse#18103
 pymc-devs/pymc#7624
 pymc-devs/pytensor#1136
 pytest-dev/pytest#13062
+pytest-dev/pytest-asyncio#1122
 pytest-dev/pytest-django#1211
 pytest-dev/pytest-django#1214
 python/bedevere#652

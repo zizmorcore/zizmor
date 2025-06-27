@@ -9,11 +9,35 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.10.0
+
+This is a **huge** new release, with multiple new features, enhancements,
+and bugfixes!
+
 ### New Features 🌈
 
 * **New audit**: [anonymous-definition] detects unnamed workflows and actions.
   Definitions without a `name:` field appear anonymously in the GitHub Actions
   UI, making them harder to distinguish (#937)
+
+    Many thanks to @andrewpollack for implementing this audit!
+
+* **Auto-fix mode**: `zizmor` now **experimentally** supports `--fix=[MODE]`,
+  which enables the brand new auto-fix mode. This mode can automatically fix a
+  subset of `zizmor`'s findings. For this **experimental** release, auto-fixes
+  are available for findings from the following audits:
+
+    * [artipacked]: `zizmor` will attempt to add `#!yaml persist-credentials: false`
+      to `actions/checkout` steps that do not already have it.
+
+    * [template-injection]: `zizmor` will attempt to rewrite `#!yaml run:` blocks
+      containing `${{ foo.bar }}` to use `${FOO_BAR}` instead, and will
+      add an appropriate `#!yaml env:` block to set `FOO_BAR` to the expression's
+      evaluation.
+
+    Read more about the new auto-fix mode [in the documentation](./usage.md#auto-fixing-results).
+
+    Many thanks to @mostafa for implementing this feature!
 
 ### Enhancements 🌱
 

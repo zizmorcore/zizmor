@@ -150,6 +150,7 @@ impl Artipacked {
                 after checkout, which may be inadvertently leaked through subsequent actions like artifact uploads. \
                 Setting 'persist-credentials: false' ensures that credentials don't persist beyond the checkout step itself.".to_string(),
             key: step.location().key,
+            disposition: Default::default(),
             patches: vec![
                 Patch {
                     route: step.route(),

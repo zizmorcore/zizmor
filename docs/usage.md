@@ -453,6 +453,84 @@ sensitive `zizmor`'s analyses are:
       1 finding: 1 unknown, 0 informational, 0 low, 0 medium, 0 high
     ```
 
+## Auto-fixing results *&#8203;*{.chip .chip-experimental} { #auto-fixing-results }
+
+!!! warning
+
+    `zizmor`'s auto-fix mode is currently **experimental** and subject to
+    breaking changes.
+
+    You **will** encounter bugs while experimenting with it;
+    please [file them]!
+
+    [file them]: https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml
+
+!!! tip
+
+    `--fix=[MODE]` is available in `v1.10.0` and later.
+
+Starting with `v1.10.0`, `zizmor` can automatically fix a subset of its findings.
+
+Auto-fixable findings are marked with an additional `note:` annotation
+beneath their body, e.g.:
+
+```console hl_lines="10"
+error[template-injection]: code injection via template expansion
+  --> example.yml:18:36
+   |
+17 |       - run: |
+   |         ^^^ this run block
+18 |           echo "doing a thing: ${{ inputs.test }}"
+   |                                    ^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+```
+
+To attempt auto-fixes for *safe* fixes, you can use the `--fix` or
+`--fix=safe` option:
+
+```bash
+# these two are equivalent
+zizmor --fix example.yml
+zizmor --fix=safe example.yml
+```
+
+### Unsafe fixes
+
+!!! important
+
+    Unsafe fixes **must** be manually reviewed for semantic correctness.
+
+By default, `--fix` will only apply *safe* fixes, i.e. fixes that are
+safe to apply with minimal human oversight due to their low breakage risk.
+
+Not all changes are safe, however, and `zizmor` offers *unsafe* fixes
+for some findings as well. These fixes are *often* correct, but require
+human review.
+
+To apply *unsafe* fixes, you can either use `--fix=all` (to enable both
+safe and unsafe fixes) or `--fix=unsafe-only` (to enable only unsafe fixes):
+
+```bash
+zizmor --fix=all example.yml
+zizmor --fix=unsafe-only example.yml
+```
+
+### Limitations
+
+`zizmor`'s auto-fix mode has several limitations that are important
+to keep in mind:
+
+* **In-place modification**: `--fix=[MODE]` modifies fixable inputs
+  in-place, meaning that the original files will be modified.
+* **No remote fixes**: as a corollary to the above, `--fix=[MODE]`
+  does not support remote inputs (e.g. `zizmor example/example`).
+* **Format preservation**: `--fix=[MODE]` attempts to preserve
+  the original format of the input files, including exact indentation
+  and comments. However, this is ultimately a heuristic, and
+  some patches may not match the file's exact style.
+
 ## Filtering results
 
 There are two straightforward ways to filter `zizmor`'s results:
@@ -847,7 +925,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
 
 ```yaml
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
-  rev: v1.9.0 # (1)!
+  rev: v1.10.0 # (1)!
   hooks:
   - id: zizmor
 ```

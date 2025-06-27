@@ -89,6 +89,7 @@ impl Client {
             mode: CacheMode::Default,
             manager: CACacheManager {
                 path: cache_dir.into(),
+                remove_opts: Default::default(),
             },
             options: HttpCacheOptions {
                 cache_options: Some(CacheOptions {

@@ -313,6 +313,7 @@ impl TemplateInjection {
             title: "replace expression with environment variable".into(),
             description: "todo".into(),
             key: step.location().key,
+            disposition: Default::default(),
             patches,
         })
     }

@@ -881,6 +881,7 @@
 
     ??? example "Examples"
         - pytest-dev/pytest#13062
+        - pytest-dev/pytest-asyncio#1122
         - pytest-dev/pytest-django#1211
         - pytest-dev/pytest-django#1214
 

@@ -84,16 +84,26 @@ pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &Fi
     }
 
     let mut qualifiers = vec![];
+
     if !findings.ignored().is_empty() {
         qualifiers.push(format!(
             "{nignored} ignored",
             nignored = findings.ignored().len().bright_yellow()
         ));
     }
+
     if !findings.suppressed().is_empty() {
         qualifiers.push(format!(
             "{nsuppressed} suppressed",
             nsuppressed = findings.suppressed().len().bright_yellow()
+        ));
+    }
+
+    let nfixable = findings.fixable_findings().count();
+    if nfixable > 0 {
+        qualifiers.push(format!(
+            "{nfixable} fixable",
+            nfixable = nfixable.bright_green()
         ));
     }
 
@@ -171,11 +181,16 @@ fn render_finding(registry: &InputRegistry, finding: &Finding) {
     );
     let confidence_footer = Level::Note.title(&confidence);
 
-    let message = Level::from(&finding.determinations.severity)
+    let mut message = Level::from(&finding.determinations.severity)
         .title(finding.desc)
         .id(&link)
         .snippets(finding_snippet(registry, finding))
         .footer(confidence_footer);
+
+    if !finding.fixes.is_empty() {
+        let fixes_footer = Level::Note.title("this finding has an auto-fix");
+        message = message.footer(fixes_footer);
+    }
 
     let renderer = Renderer::styled();
     println!("{}", renderer.render(message));
