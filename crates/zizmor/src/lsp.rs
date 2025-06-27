@@ -87,7 +87,7 @@ impl LanguageServer for Backend {
         if let Some(text) = params.text {
             self.audit(LspDocumentCommon {
                 uri: params.text_document.uri,
-                text: text,
+                text,
                 version: None,
             })
             .await;
@@ -96,7 +96,7 @@ impl LanguageServer for Backend {
 }
 
 impl Backend {
-    async fn audit_inner<'a>(&self, params: LspDocumentCommon) -> anyhow::Result<()> {
+    async fn audit_inner(&self, params: LspDocumentCommon) -> anyhow::Result<()> {
         tracing::debug!("analyzing: {:?} (version={:?})", params.uri, params.version);
         let path = Utf8Path::new(params.uri.path());
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
@@ -152,7 +152,7 @@ impl Backend {
         Ok(())
     }
 
-    async fn audit<'a>(&self, params: LspDocumentCommon) {
+    async fn audit(&self, params: LspDocumentCommon) {
         if let Err(e) = self.audit_inner(params).await {
             self.client
                 .log_message(lsp_types::MessageType::ERROR, format!("audit failed: {e}"))
