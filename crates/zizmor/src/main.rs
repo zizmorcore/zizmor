@@ -543,7 +543,7 @@ fn run() -> Result<ExitCode> {
 
     #[cfg(feature = "lsp")]
     if app.lsp.lsp {
-        lsp::run();
+        lsp::run()?;
         return Ok(ExitCode::SUCCESS);
     }
 

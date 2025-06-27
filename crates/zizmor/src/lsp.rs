@@ -184,7 +184,7 @@ impl From<Point> for lsp_types::Position {
 }
 
 #[tokio::main]
-pub(crate) async fn run() {
+pub(crate) async fn run() -> anyhow::Result<()> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
@@ -198,9 +198,13 @@ pub(crate) async fn run() {
         gh_hostname: crate::GitHubHost::Standard("github.com".into()),
     };
 
+    let audits = AuditRegistry::default_audits(&audit_state)?;
     let (service, socket) = LspService::new(|client| Backend {
-        audit_registry: AuditRegistry::default_audits(&audit_state).unwrap(),
+        audit_registry: audits,
         client,
     });
+
     Server::new(stdin, stdout, socket).serve(service).await;
+
+    Ok(())
 }
