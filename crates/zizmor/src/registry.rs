@@ -16,11 +16,12 @@ use thiserror::Error;
 
 use crate::{
     App,
-    audit::{self, Audit, AuditInput},
+    audit::{self, Audit, AuditInput, AuditLoadError},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{action::Action, workflow::Workflow},
     state::AuditState,
+    tips,
 };
 
 #[derive(Error, Debug)]
@@ -272,7 +273,7 @@ impl AuditRegistry {
     }
 
     /// Constructs a new [`AuditRegistry`] with all default audits registered.
-    pub(crate) fn default_audits(audit_state: &AuditState) -> Self {
+    pub(crate) fn default_audits(audit_state: &AuditState) -> anyhow::Result<Self> {
         let mut registry = Self::empty();
 
         macro_rules! register_audit {
@@ -283,9 +284,15 @@ impl AuditRegistry {
                 use crate::audit::AuditCore as _;
                 match base::new(&audit_state) {
                     Ok(audit) => registry.register_audit(base::ident(), Box::new(audit)),
-                    Err(e) => tracing::info!(
-                        target: "zizmor", "skipping {audit}: {e}", audit = base::ident()
-                    ),
+                    Err(AuditLoadError::Skip(e)) => {
+                        tracing::info!("skipping {audit}: {e}", audit = base::ident())
+                    }
+                    Err(AuditLoadError::Fail(e)) => {
+                        return Err(anyhow::anyhow!(tips(
+                            format!("failed to load audit: {audit}", audit = base::ident()),
+                            &[format!("{e:#}"), format!("see: {url}", url = base::url())]
+                        )));
+                    }
                 }
             }};
         }
@@ -315,7 +322,7 @@ impl AuditRegistry {
         register_audit!(audit::unpinned_images::UnpinnedImages);
         register_audit!(audit::anonymous_definition::AnonymousDefinition);
 
-        registry
+        Ok(registry)
     }
 
     pub(crate) fn len(&self) -> usize {

@@ -317,7 +317,7 @@ pub(crate) enum FixMode {
     All,
 }
 
-fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
+pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
     let mut message = Level::Error.title(err.as_ref());
     for tip in tips {
         message = message.footer(Level::Note.title(tip.as_ref()));
@@ -619,7 +619,7 @@ fn run() -> Result<ExitCode> {
         &audit_state,
     )?;
 
-    let audit_registry = AuditRegistry::default_audits(&audit_state);
+    let audit_registry = AuditRegistry::default_audits(&audit_state)?;
 
     let mut results = FindingRegistry::new(&app, &config);
     {
