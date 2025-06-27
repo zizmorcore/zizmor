@@ -363,12 +363,17 @@ pub(crate) struct FindingRegistry<'a> {
 }
 
 impl<'a> FindingRegistry<'a> {
-    pub(crate) fn new(app: &App, config: &'a Config) -> Self {
+    pub(crate) fn new(
+        minimum_severity: Option<Severity>,
+        minimum_confidence: Option<Confidence>,
+        persona: Persona,
+        config: &'a Config,
+    ) -> Self {
         Self {
             config,
-            minimum_severity: app.min_severity,
-            minimum_confidence: app.min_confidence,
-            persona: app.persona,
+            minimum_severity,
+            minimum_confidence,
+            persona,
             suppressed: Default::default(),
             ignored: Default::default(),
             findings: Default::default(),

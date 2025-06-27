@@ -7,11 +7,16 @@ use tower_lsp::{Client, LanguageServer, LspService, Server};
 
 use crate::audit::AuditInput;
 use crate::config::Config;
+use crate::finding::location::Point;
+use crate::finding::{Persona, Severity};
+use crate::models::action::Action;
+use crate::models::workflow::Workflow;
+use crate::registry::{FindingRegistry, InputKey};
 use crate::{AuditRegistry, AuditState};
 
-struct LspDocumentCommon<'a> {
+struct LspDocumentCommon {
     uri: lsp_types::Url,
-    text: &'a str,
+    text: String,
     version: Option<i32>,
 }
 
@@ -87,9 +92,9 @@ impl LanguageServer for Backend {
 
     async fn did_open(&self, params: lsp_types::DidOpenTextDocumentParams) {
         tracing::debug!("did_open: {:?}", params);
-        self.analyze(LspDocumentCommon {
+        self.audit(LspDocumentCommon {
             uri: params.text_document.uri,
-            text: &params.text_document.text,
+            text: params.text_document.text,
             version: Some(params.text_document.version),
         })
         .await;
@@ -97,13 +102,14 @@ impl LanguageServer for Backend {
 
     async fn did_change(&self, params: lsp_types::DidChangeTextDocumentParams) {
         tracing::debug!("did_change: {:?}", params);
-        let Some(change) = params.content_changes.first() else {
+        let mut params = params;
+        let Some(change) = params.content_changes.pop() else {
             return;
         };
 
-        self.analyze(LspDocumentCommon {
+        self.audit(LspDocumentCommon {
             uri: params.text_document.uri,
-            text: &change.text,
+            text: change.text,
             version: Some(params.text_document.version),
         })
         .await;
@@ -111,10 +117,10 @@ impl LanguageServer for Backend {
 
     async fn did_save(&self, params: lsp_types::DidSaveTextDocumentParams) {
         tracing::debug!("did_save: {:?}", params);
-        if let Some(text) = &params.text {
-            self.analyze(LspDocumentCommon {
+        if let Some(text) = params.text {
+            self.audit(LspDocumentCommon {
                 uri: params.text_document.uri,
-                text: &text,
+                text: text,
                 version: None,
             })
             .await;
@@ -123,19 +129,90 @@ impl LanguageServer for Backend {
 }
 
 impl Backend {
-    async fn analyze<'a>(&self, params: LspDocumentCommon<'a>) {
+    async fn audit_inner<'a>(&self, params: LspDocumentCommon) -> anyhow::Result<()> {
         tracing::debug!("analyzing: {:?} (version={:?})", params.uri, params.version);
         let path = Utf8Path::new(params.uri.path());
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
-            todo!()
+            AuditInput::from(Action::from_string(
+                params.text,
+                InputKey::local(path, None)?,
+            )?)
         } else if matches!(path.extension(), Some("yml" | "yaml")) {
-            todo!()
+            AuditInput::from(Workflow::from_string(
+                params.text,
+                InputKey::local(path, None)?,
+            )?)
         } else {
-            return;
+            anyhow::bail!("asked to audit unexpected file: {path}");
         };
 
-        // self.client.publish_diagnostics(uri, diags, version)
-        todo!()
+        let config = Config::default();
+        let mut registry = FindingRegistry::new(None, None, Persona::Regular, &config);
+        for (_, audit) in self.audit_registry.iter_audits() {
+            registry.extend(audit.audit(&input)?);
+        }
+
+        let diagnostics = registry
+            .findings()
+            .iter()
+            .map(|finding| {
+                let primary = finding.primary_location();
+                lsp_types::Diagnostic {
+                    range: lsp_types::Range {
+                        start: primary.concrete.location.start_point.into(),
+                        end: primary.concrete.location.end_point.into(),
+                    },
+                    severity: Some(finding.determinations.severity.into()),
+                    code: Some(lsp_types::NumberOrString::String(finding.ident.into())),
+                    code_description: Some(lsp_types::CodeDescription {
+                        href: lsp_types::Url::parse(finding.url)
+                            .expect("finding contains an invalid URL somehow"),
+                    }),
+                    source: Some("zizmor".into()),
+                    message: finding.desc.into(),
+                    // TODO: Plumb non-primary locations here, maybe?
+                    related_information: None,
+                    tags: None,
+                    data: None,
+                }
+            })
+            .collect::<Vec<_>>();
+
+        self.client
+            .publish_diagnostics(params.uri, diagnostics, params.version)
+            .await;
+
+        Ok(())
+    }
+
+    async fn audit<'a>(&self, params: LspDocumentCommon) {
+        if let Err(e) = self.audit_inner(params).await {
+            self.client
+                .log_message(lsp_types::MessageType::ERROR, format!("audit failed: {e}"))
+                .await;
+        }
+    }
+}
+
+impl From<Severity> for lsp_types::DiagnosticSeverity {
+    fn from(value: Severity) -> Self {
+        // TODO: Does this mapping make sense?
+        match value {
+            Severity::Unknown => lsp_types::DiagnosticSeverity::HINT,
+            Severity::Informational => lsp_types::DiagnosticSeverity::INFORMATION,
+            Severity::Low => lsp_types::DiagnosticSeverity::WARNING,
+            Severity::Medium => lsp_types::DiagnosticSeverity::WARNING,
+            Severity::High => lsp_types::DiagnosticSeverity::ERROR,
+        }
+    }
+}
+
+impl From<Point> for lsp_types::Position {
+    fn from(value: Point) -> Self {
+        Self {
+            line: value.row as u32,
+            character: value.column as u32,
+        }
     }
 }
 

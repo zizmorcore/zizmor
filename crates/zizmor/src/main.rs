@@ -636,7 +636,8 @@ fn run() -> Result<ExitCode> {
 
     let audit_registry = AuditRegistry::default_audits(&audit_state)?;
 
-    let mut results = FindingRegistry::new(&app, &config);
+    let mut results =
+        FindingRegistry::new(app.min_severity, app.min_confidence, app.persona, &config);
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");
