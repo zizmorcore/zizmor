@@ -53,6 +53,7 @@ impl LanguageServer for Backend {
     }
 
     async fn shutdown(&self) -> Result<()> {
+        tracing::debug!("graceful shutdown requested");
         Ok(())
     }
 
