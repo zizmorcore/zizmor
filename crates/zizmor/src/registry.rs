@@ -15,7 +15,6 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
-    App,
     audit::{self, Audit, AuditInput, AuditLoadError},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},

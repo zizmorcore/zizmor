@@ -10,7 +10,7 @@ use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
 use camino::{Utf8Path, Utf8PathBuf};
-use clap::{CommandFactory, Parser, ValueEnum};
+use clap::{Args, CommandFactory, Parser, ValueEnum};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
@@ -48,12 +48,9 @@ const THANKS: &[(&str, &str)] = &[("Grafana Labs", "https://grafana.com")];
 #[derive(Parser)]
 #[command(about, version)]
 struct App {
-    /// Run in language server mode.
-    ///
-    /// This flag cannot be used with any other flags.
     #[cfg(feature = "lsp")]
-    #[arg(long, exclusive = true)]
-    lsp: bool,
+    #[command(flatten)]
+    lsp: LspArgs,
 
     /// Emit 'pedantic' findings.
     ///
@@ -175,6 +172,24 @@ struct App {
     /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
+}
+
+#[cfg(feature = "lsp")]
+#[derive(Args)]
+#[group(multiple = true, conflicts_with = "inputs")]
+struct LspArgs {
+    /// Run in language server mode.
+    ///
+    /// This flag cannot be used with any other flags.
+    #[arg(long)]
+    lsp: bool,
+
+    // This flag exists solely because VS Code's LSP client implementation
+    // insists on appending `--stdio` to the LSP server's arguments when
+    // using the 'stdio' transport. It has no actual meaning or use.
+    // See: <https://github.com/microsoft/vscode-languageserver-node/issues/1222
+    #[arg(long, hide = true)]
+    stdio: bool,
 }
 
 /// Shell with auto-generated completion script available.
@@ -527,7 +542,7 @@ fn run() -> Result<ExitCode> {
     let mut app = App::parse();
 
     #[cfg(feature = "lsp")]
-    if app.lsp {
+    if app.lsp.lsp {
         lsp::run();
         return Ok(ExitCode::SUCCESS);
     }

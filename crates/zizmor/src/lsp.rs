@@ -38,17 +38,8 @@ impl LanguageServer for Backend {
                 version: Some(env!("CARGO_PKG_VERSION").into()),
             }),
             capabilities: lsp_types::ServerCapabilities {
-                text_document_sync: Some(lsp_types::TextDocumentSyncCapability::Options(
-                    lsp_types::TextDocumentSyncOptions {
-                        open_close: Some(true),
-                        change: Some(lsp_types::TextDocumentSyncKind::FULL),
-                        save: Some(lsp_types::TextDocumentSyncSaveOptions::SaveOptions(
-                            lsp_types::SaveOptions {
-                                include_text: Some(true),
-                            },
-                        )),
-                        ..Default::default()
-                    },
+                text_document_sync: Some(lsp_types::TextDocumentSyncCapability::Kind(
+                    lsp_types::TextDocumentSyncKind::FULL,
                 )),
                 ..Default::default()
             },
@@ -56,31 +47,6 @@ impl LanguageServer for Backend {
     }
 
     async fn initialized(&self, _: lsp_types::InitializedParams) {
-        self.client
-            .register_capability(vec![lsp_types::Registration {
-                id: "zizmor-cap-textdocumentregistrationoptions".into(),
-                method: "textDocument/didOpen".into(),
-                register_options: Some(
-                    serde_json::to_value(lsp_types::TextDocumentRegistrationOptions {
-                        document_selector: Some(vec![
-                            lsp_types::DocumentFilter {
-                                language: Some("yaml".into()),
-                                scheme: None,
-                                pattern: Some("**/.github/workflows/*.{yml,yaml}".into()),
-                            },
-                            lsp_types::DocumentFilter {
-                                language: Some("yaml".into()),
-                                scheme: None,
-                                pattern: Some("**/action.{yml,yaml}".into()),
-                            },
-                        ]),
-                    })
-                    .unwrap(),
-                ),
-            }])
-            .await
-            .expect("failed to register text document capabilities with the LSP client");
-
         self.client
             .log_message(lsp_types::MessageType::INFO, "server initialized!")
             .await;
