@@ -69,11 +69,6 @@ impl Audit for BotConditions {
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
-        // Check if this workflow has events where bot conditions are relevant
-        if !Self::has_relevant_events(job.parent()) {
-            return Ok(vec![]);
-        }
-
         // Track conditions with explicit categorization
         let mut conds = vec![];
 
@@ -142,57 +137,6 @@ impl Audit for BotConditions {
 }
 
 impl BotConditions {
-    /// Check if the workflow has events where bot conditions are relevant.
-    fn has_relevant_events(workflow: &Workflow) -> bool {
-        use github_actions_models::workflow::Trigger;
-
-        match &workflow.on {
-            Trigger::BareEvent(event) => Self::is_relevant_event(event),
-            Trigger::BareEvents(event_list) => event_list.iter().any(Self::is_relevant_event),
-            Trigger::Events(event_map) => {
-                !matches!(event_map.issue_comment, OptionalBody::Missing)
-                    || !matches!(event_map.pull_request, OptionalBody::Missing)
-                    || !matches!(event_map.pull_request_target, OptionalBody::Missing)
-                    || !matches!(event_map.discussion_comment, OptionalBody::Missing)
-                    || !matches!(event_map.pull_request_review, OptionalBody::Missing)
-                    || !matches!(event_map.pull_request_review_comment, OptionalBody::Missing)
-                    || !matches!(event_map.issues, OptionalBody::Missing)
-                    || !matches!(event_map.discussion, OptionalBody::Missing)
-                    || !matches!(event_map.release, OptionalBody::Missing)
-                    || !matches!(event_map.push, OptionalBody::Missing)
-                    || !matches!(event_map.milestone, OptionalBody::Missing)
-                    || !matches!(event_map.label, OptionalBody::Missing)
-                    || !matches!(event_map.project, OptionalBody::Missing)
-                    || !matches!(event_map.watch, OptionalBody::Missing)
-            }
-        }
-    }
-
-    /// Check if a specific event type is relevant for bot condition checks.
-    fn is_relevant_event(event: &BareEvent) -> bool {
-        matches!(
-            event,
-            BareEvent::IssueComment
-                | BareEvent::DiscussionComment
-                | BareEvent::PullRequestReview
-                | BareEvent::PullRequestReviewComment
-                | BareEvent::Issues
-                | BareEvent::Discussion
-                | BareEvent::PullRequest
-                | BareEvent::PullRequestTarget
-                | BareEvent::Release
-                | BareEvent::Create
-                | BareEvent::Delete
-                | BareEvent::Push
-                | BareEvent::Milestone
-                | BareEvent::Label
-                | BareEvent::Project
-                | BareEvent::Fork
-                | BareEvent::Watch
-                | BareEvent::Public
-        )
-    }
-
     /// Get appropriate user context paths based on workflow trigger events.
     /// Returns (actor_name_context, actor_id_context) for the given workflow.
     fn get_user_contexts_for_triggers(workflow: &Workflow) -> Option<(&str, &str)> {
