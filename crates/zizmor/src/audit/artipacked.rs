@@ -144,29 +144,23 @@ impl Artipacked {
     /// Create a Fix for setting persist-credentials: false
     fn create_persist_credentials_fix<'doc>(step: &impl StepCommon<'doc>) -> Fix<'doc> {
         Fix {
-            title: "Set persist-credentials: false".to_string(),
-            description: "To prevent credential persistence, set 'persist-credentials: false' in this checkout step. \
-                When 'persist-credentials' is true (the default), the GITHUB_TOKEN persists in the local git config \
-                after checkout, which may be inadvertently leaked through subsequent actions like artifact uploads. \
-                Setting 'persist-credentials: false' ensures that credentials don't persist beyond the checkout step itself.".to_string(),
+            title: "set persist-credentials: false".to_string(),
             key: step.location().key,
             disposition: Default::default(),
-            patches: vec![
-                Patch {
-                    route: step.route(),
-                    operation: Op::MergeInto {
-                        key: "with".to_string(),
-                        value: {
-                            let mut with_map = serde_yaml::Mapping::new();
-                            with_map.insert(
-                                serde_yaml::Value::String("persist-credentials".to_string()),
-                                serde_yaml::Value::Bool(false),
-                            );
-                            serde_yaml::Value::Mapping(with_map)
-                        },
+            patches: vec![Patch {
+                route: step.route(),
+                operation: Op::MergeInto {
+                    key: "with".to_string(),
+                    value: {
+                        let mut with_map = serde_yaml::Mapping::new();
+                        with_map.insert(
+                            serde_yaml::Value::String("persist-credentials".to_string()),
+                            serde_yaml::Value::Bool(false),
+                        );
+                        serde_yaml::Value::Mapping(with_map)
                     },
-                }
-            ],
+                },
+            }],
         }
     }
 }
@@ -239,7 +233,7 @@ mod tests {
         assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
 
         let fix = &finding.fixes[0];
-        assert_eq!(fix.title, "Set persist-credentials: false");
+        assert_eq!(fix.title, "set persist-credentials: false");
 
         fix.apply(document).unwrap()
     }
@@ -248,14 +242,14 @@ mod tests {
     fn test_fix_title_and_description() {
         // Test that the fix has the expected title and description format
         // Since Step::new is private, we test this indirectly through the audit logic
-        let title = "Set persist-credentials: false";
+        let title = "set persist-credentials: false";
         let description_keywords = [
             "persist-credentials",
             "GITHUB_TOKEN",
             "credential persistence",
         ];
 
-        assert_eq!(title, "Set persist-credentials: false");
+        assert_eq!(title, "set persist-credentials: false");
         for keyword in description_keywords {
             // This is a basic smoke test - in practice, integration tests would verify the fix works
             assert!(!keyword.is_empty());

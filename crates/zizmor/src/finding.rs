@@ -123,9 +123,6 @@ pub(crate) struct Fix<'doc> {
     /// A short title describing the fix.
     #[allow(dead_code)]
     pub(crate) title: String,
-    /// A detailed description of the fix.
-    #[allow(dead_code)]
-    pub(crate) description: String,
     /// The key back into the input registry that this fix applies to.
     pub(crate) key: &'doc InputKey,
     /// The fix's disposition.
