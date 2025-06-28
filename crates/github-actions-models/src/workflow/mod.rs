@@ -62,7 +62,7 @@ pub struct Workflow {
 pub enum Trigger {
     BareEvent(event::BareEvent),
     BareEvents(Vec<event::BareEvent>),
-    Events(event::Events),
+    Events(Box<event::Events>),
 }
 
 #[derive(Deserialize, Debug)]
