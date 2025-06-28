@@ -382,7 +382,6 @@ impl BotConditions {
 
         Some(Fix {
             title: "replace spoofable actor context".into(),
-            description: "todo".into(),
             key: &workflow.key,
             disposition: FixDisposition::Safe,
             patches: vec![Patch {
