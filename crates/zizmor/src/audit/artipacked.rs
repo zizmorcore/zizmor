@@ -233,7 +233,7 @@ mod tests {
         assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
 
         let fix = &finding.fixes[0];
-        assert_eq!(fix.title, "Set persist-credentials: false");
+        assert_eq!(fix.title, "set persist-credentials: false");
 
         fix.apply(document).unwrap()
     }
@@ -242,14 +242,14 @@ mod tests {
     fn test_fix_title_and_description() {
         // Test that the fix has the expected title and description format
         // Since Step::new is private, we test this indirectly through the audit logic
-        let title = "Set persist-credentials: false";
+        let title = "set persist-credentials: false";
         let description_keywords = [
             "persist-credentials",
             "GITHUB_TOKEN",
             "credential persistence",
         ];
 
-        assert_eq!(title, "Set persist-credentials: false");
+        assert_eq!(title, "set persist-credentials: false");
         for keyword in description_keywords {
             // This is a basic smoke test - in practice, integration tests would verify the fix works
             assert!(!keyword.is_empty());
