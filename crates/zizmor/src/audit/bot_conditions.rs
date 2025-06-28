@@ -381,8 +381,8 @@ impl BotConditions {
         };
 
         Some(Fix {
-            title: "Replace spoofable actor context".into(),
-            description: "foo".into(),
+            title: "replace spoofable actor context".into(),
+            description: "todo".into(),
             key: &workflow.key,
             disposition: FixDisposition::Safe,
             patches: vec![Patch {
@@ -522,7 +522,7 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("Replace spoofable actor context") {
+                        if fix.title.contains("replace spoofable actor context") {
                             if let Ok(new_content) = fix.apply(&document) {
                                 document = new_content;
                             }
@@ -561,7 +561,7 @@ jobs:
     if: github.actor == 'dependabot[bot]'
     steps:
       - name: Test Step
-        if: github.actor == 'dependabot[bot]'
+        if: GITHUB['actor'] == 'dependabot[bot]'
         run: echo "hello"
 "#;
 
@@ -608,7 +608,7 @@ on: issue_comment
 jobs:
   test:
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    if: github.ACTOR == 'dependabot[bot]'
     steps:
       - name: Test Step
         if: github.actor == 'dependabot[bot]'
@@ -624,7 +624,7 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("Replace spoofable actor context") {
+                        if fix.title.contains("replace spoofable actor context") {
                             if let Ok(new_document) = fix.apply(&document) {
                                 document = new_document;
                             }
@@ -673,7 +673,7 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("Replace spoofable actor context") {
+                        if fix.title.contains("replace spoofable actor context") {
                             if let Ok(new_document) = fix.apply(&document) {
                                 document = new_document;
                             }
@@ -722,7 +722,7 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("Replace spoofable actor context") {
+                        if fix.title.contains("replace spoofable actor context") {
                             if let Ok(new_document) = fix.apply(&document) {
                                 document = new_document;
                             }
@@ -771,7 +771,7 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("Replace spoofable actor context") {
+                        if fix.title.contains("replace spoofable actor context") {
                             if let Ok(new_document) = fix.apply(&document) {
                                 document = new_document;
                             }
@@ -820,7 +820,7 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("Replace spoofable actor context") {
+                        if fix.title.contains("replace spoofable actor context") {
                             if let Ok(new_document) = fix.apply(&document) {
                                 document = new_document;
                             }
