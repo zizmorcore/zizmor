@@ -214,6 +214,12 @@ impl<'doc> Subfeature<'doc> {
         // NOTE: Our inputs are always valid UTF-8 but `after` may not
         // be a valid UTF-8 codepoint index, so everything below operates
         // on a byte slice.
+        // Why, you might ask, might `after` not be a valid codepoint index?
+        // Because `after` is a fuzzy anchor: we know our subfeature starts
+        // *somewhere* after `after`, but we don't know exactly where.
+        // This happens because we have a rough sense of where the subfeature
+        // is *after* YAML parsing, but we don't know exactly where it is
+        // in the original YAML feature due to significant whitespace.
         let feature = feature.as_bytes();
         let bias = self.after;
         let focus = &feature[bias..];

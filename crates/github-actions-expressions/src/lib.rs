@@ -134,7 +134,7 @@ impl<'src> Literal<'src> {
 // TODO: Move this type to some kind of common crate? It's useful to have
 // a single span type everywhere, instead of the current mash of span helpers
 // and ranges we have throughout zizmor.
-/// Represents a `[start, end)` span for a source expression.
+/// Represents a `[start, end)` byte span for a source expression.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Span {
     /// The start of the span, inclusive.
