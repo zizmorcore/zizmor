@@ -413,6 +413,13 @@ fn template_injection() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("template-injection/issue-988-repro.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
     Ok(())
 }
 

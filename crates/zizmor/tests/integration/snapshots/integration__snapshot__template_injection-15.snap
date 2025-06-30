@@ -1,0 +1,29 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"template-injection/issue-988-repro.yml\")).args([\"--persona=pedantic\"]).run()?"
+snapshot_kind: text
+---
+note[template-injection]: code injection via template expansion
+  --> @@INPUT@@:16:29
+   |
+13 |         run: |
+   |         --- note: this run block
+14 |           for index in {1..2}; do
+15 |             # ドドド
+16 |             event_name="${{ github.event_name }}"
+   |                             ----------------- note: may expand into attacker-controllable code
+   |
+   = note: audit confidence → Unknown
+
+note[template-injection]: code injection via template expansion
+  --> @@INPUT@@:27:57
+   |
+25 |         run: |
+   |         --- note: this run block
+26 |           curl -X POST https://api.example.com -H "Content-type: application/json" \
+27 |             -d "{\"text\":\"ドドド: https://github.com/${{ github.repository }}\"}"
+   |                                                            ----------------- note: may expand into attacker-controllable code
+   |
+   = note: audit confidence → Unknown
+
+2 findings: 2 unknown, 0 informational, 0 low, 0 medium, 0 high

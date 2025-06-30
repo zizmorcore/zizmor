@@ -161,6 +161,7 @@ error[bot-conditions]: spoofable bot actor check
    | |______________________________________^ this job
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> .github/workflows/bot-conditions.yml:20:9
@@ -172,6 +173,7 @@ error[bot-conditions]: spoofable bot actor check
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> .github/workflows/bot-conditions.yml:24:9
@@ -183,6 +185,7 @@ error[bot-conditions]: spoofable bot actor check
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> .github/workflows/bot-conditions.yml:28:9
@@ -194,6 +197,7 @@ error[bot-conditions]: spoofable bot actor check
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/cache-poisoning.yml:1:1

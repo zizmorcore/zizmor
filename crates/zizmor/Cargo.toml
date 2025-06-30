@@ -49,6 +49,7 @@ indicatif.workspace = true
 itertools.workspace = true
 jsonschema.workspace = true
 line-index.workspace = true
+memchr.workspace = true
 owo-colors.workspace = true
 regex.workspace = true
 reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls"] }
