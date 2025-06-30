@@ -1,0 +1,27 @@
+# https://github.com/zizmorcore/zizmor/issues/988
+name: Panic
+on:
+  pull_request: {}
+permissions: {}
+jobs:
+  example1:
+    name: "Example 1"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: "Panic occurred in file 'crates/zizmor/src/finding/location.rs' at line 215"
+        run: |
+          for index in {1..2}; do
+            # ドドド
+            event_name="${{ github.event_name }}"
+            echo "$index: $event_name"
+          done
+  example2:
+    name: "Example 2"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: "Panic occurred in file 'crates/zizmor/src/finding/location.rs' at line 215"
+        run: |
+          curl -X POST https://api.example.com -H "Content-type: application/json" \
+            -d "{\"text\":\"ドドド: https://github.com/${{ github.repository }}\"}"

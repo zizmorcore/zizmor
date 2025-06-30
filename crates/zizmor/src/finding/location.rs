@@ -129,11 +129,11 @@ pub(crate) enum Fragment<'doc> {
     /// might contain multiple lines, e.g. a multi-line GitHub Actions
     /// expression, since the subfeature's indentation won't necessarily match
     /// the surrounding feature's YAML-level indentation.
-    Regex(#[serde(serialize_with = "Fragment::serialize_regex")] regex::Regex),
+    Regex(#[serde(serialize_with = "Fragment::serialize_regex")] regex::bytes::Regex),
 }
 
 impl<'doc> Fragment<'doc> {
-    fn serialize_regex<S>(regex: &regex::Regex, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize_regex<S>(regex: &regex::bytes::Regex, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
@@ -172,7 +172,7 @@ impl<'doc> Fragment<'doc> {
             static WHITESPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").unwrap());
             let regex = WHITESPACE.replace_all(&escaped, "\\s+");
 
-            Fragment::Regex(Regex::new(&regex).unwrap())
+            Fragment::Regex(regex::bytes::Regex::new(&regex).unwrap())
         }
     }
 }
@@ -211,14 +211,20 @@ impl<'doc> Subfeature<'doc> {
     /// can't be found. The returned span is relative to the feature's
     /// start.
     fn locate_within(&self, feature: &str) -> Option<Span> {
+        // NOTE: Our inputs are always valid UTF-8 but `after` may not
+        // be a valid UTF-8 codepoint index, so everything below operates
+        // on a byte slice.
+        let feature = feature.as_bytes();
         let bias = self.after;
         let focus = &feature[bias..];
 
         match &self.fragment {
-            Fragment::Raw(fragment) => focus.find(fragment).map(|start| {
-                let end = start + fragment.len();
-                Span::from(start..end).adjust(bias)
-            }),
+            Fragment::Raw(fragment) => {
+                memchr::memmem::find(focus, fragment.as_bytes()).map(|start| {
+                    let end = start + fragment.len();
+                    Span::from(start..end).adjust(bias)
+                })
+            }
             Fragment::Regex(regex) => regex
                 .find(focus)
                 .map(|m| Span::from(m.range()).adjust(bias)),
