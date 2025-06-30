@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.11.0
+
 ### New Features 🌈
 
 * `zizmor` now has **experimental** support for IDE/editor integrations via
