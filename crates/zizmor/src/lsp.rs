@@ -47,6 +47,74 @@ impl LanguageServer for Backend {
     }
 
     async fn initialized(&self, _: lsp_types::InitializedParams) {
+        let selectors = vec![
+            lsp_types::DocumentFilter {
+                language: Some("yaml".into()),
+                scheme: None,
+                pattern: Some("**/.github/workflows/*.{yml,yaml}".into()),
+            },
+            lsp_types::DocumentFilter {
+                language: Some("yaml".into()),
+                scheme: None,
+                pattern: Some("**/action.{yml,yaml}".into()),
+            },
+        ];
+
+        // Register our capabilities with the client.
+        // Clients like the VS Code extension should do this for us, but we
+        // also explicitly request these capabilities in case the client/integration
+        // neglects to.
+        self.client
+            .register_capability(vec![
+                lsp_types::Registration {
+                    id: "zizmor-didopen".into(),
+                    method: "textDocument/didOpen".into(),
+                    register_options: Some(
+                        serde_json::to_value(lsp_types::TextDocumentRegistrationOptions {
+                            document_selector: Some(selectors.clone()),
+                        })
+                        .unwrap(),
+                    ),
+                },
+                lsp_types::Registration {
+                    id: "zizmor-didchange".into(),
+                    method: "textDocument/didChange".into(),
+                    register_options: Some(
+                        serde_json::to_value(lsp_types::TextDocumentChangeRegistrationOptions {
+                            document_selector: Some(selectors.clone()),
+                            sync_kind: 1, // FULL
+                        })
+                        .unwrap(),
+                    ),
+                },
+                lsp_types::Registration {
+                    id: "zizmor-didsave".into(),
+                    method: "textDocument/didSave".into(),
+                    register_options: Some(
+                        serde_json::to_value(lsp_types::TextDocumentSaveRegistrationOptions {
+                            include_text: Some(true),
+                            text_document_registration_options:
+                                lsp_types::TextDocumentRegistrationOptions {
+                                    document_selector: Some(selectors.clone()),
+                                },
+                        })
+                        .unwrap(),
+                    ),
+                },
+                lsp_types::Registration {
+                    id: "zizmor-didclose".into(),
+                    method: "textDocument/didClose".into(),
+                    register_options: Some(
+                        serde_json::to_value(lsp_types::TextDocumentRegistrationOptions {
+                            document_selector: Some(selectors),
+                        })
+                        .unwrap(),
+                    ),
+                },
+            ])
+            .await
+            .expect("failed to register text document capabilities with the LSP client");
+
         self.client
             .log_message(lsp_types::MessageType::INFO, "server initialized!")
             .await;
