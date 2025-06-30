@@ -146,7 +146,7 @@ struct App {
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
     naches: bool,
 
-    /// Fix findings automatically, when available.
+    /// Fix findings automatically, when available (EXPERIMENTAL).
     #[arg(
         long,
         value_enum,
@@ -178,7 +178,7 @@ struct App {
 #[derive(Args)]
 #[group(multiple = true, conflicts_with = "inputs")]
 struct LspArgs {
-    /// Run in language server mode.
+    /// Run in language server mode (EXPERIMENTAL).
     ///
     /// This flag cannot be used with any other flags.
     #[arg(long)]
