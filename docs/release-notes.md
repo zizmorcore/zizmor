@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* `zizmor` now has **experimental** support for IDE/editor integrations via
+  `zizmor --lsp`; see the [IDE integration documentation](./integrations.md#ides)
+  for more information (#984)
+
 ### Enhancements 🌱
 
 * The [bot-conditions] audit now supports auto-fixes for many findings (#921)

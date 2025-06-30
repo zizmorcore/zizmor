@@ -206,7 +206,7 @@ GitHub Actions setup:
 
 [About code scanning alerts - Pull request check failures for code scanning alerts]: https://docs.github.com/en/code-security/code-scanning/managing-code-scanning-alerts/about-code-scanning-alerts#pull-request-check-failures-for-code-scanning-alerts
 
-## IDEs *&#8203;*{.chip .chip-experimental}
+## IDEs *&#8203;*{.chip .chip-experimental} { #ides }
 
 !!! warning
 
