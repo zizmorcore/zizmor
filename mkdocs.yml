@@ -13,6 +13,7 @@ nav:
   - "installation.md"
   - "quickstart.md"
   - "usage.md"
+  - "integrations.md"
   - "release-notes.md"
   - "configuration.md"
   - "audits.md"
@@ -90,7 +91,10 @@ markdown_extensions:
       base_path:
         - "docs/snippets"
       check_paths: true
+      auto_append:
+        - abbreviations.md
   - md_in_html
+  - abbr
   - attr_list
   - toc:
       permalink: 🔗

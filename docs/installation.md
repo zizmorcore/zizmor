@@ -8,16 +8,6 @@ description: Installation instructions for zizmor.
 
 `zizmor` is available within several packaging ecosystems.
 
-=== ":simple-rust: crates.io"
-
-    ![Crates.io Version](https://img.shields.io/crates/v/zizmor)
-
-    You can install `zizmor` from <https://crates.io> with `cargo`:
-
-    ```bash
-    cargo install --locked zizmor
-    ```
-
 === ":simple-homebrew: Homebrew"
 
     ![Homebrew Formula Version](https://img.shields.io/homebrew/v/zizmor)
@@ -53,6 +43,22 @@ description: Installation instructions for zizmor.
 
     # or, shortcut:
     uvx zizmor --help
+    ```
+
+=== ":simple-rust: crates.io"
+
+    ![Crates.io Version](https://img.shields.io/crates/v/zizmor)
+
+    You can install `zizmor` from [crates.io](https://crates.io) with `cargo`:
+
+    !!! note
+
+        Passing `--locked` to `cargo install` is **strongly recommended**,
+        as an unlocked build may pull in different dependency versions
+        than have been tested upstream. See rust-lang/cargo!7169 for context.
+
+    ```bash
+    cargo install --locked zizmor
     ```
 
 === ":simple-docker: Docker"
@@ -145,7 +151,7 @@ description: Installation instructions for zizmor.
 
     !!! info
 
-        Are you interested in packaging `zizmor` for another ecosystem?
+        Have you packaged `zizmor` for another ecosystem?
         Let us know by [filing an issue](https://github.com/zizmorcore/zizmor/issues/new)!
 
     The badge below tracks `zizmor`'s overall packaging status.

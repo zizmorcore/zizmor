@@ -6,6 +6,8 @@ Arguments:
   <INPUTS>...  The inputs to audit
 
 Options:
+      --lsp
+          Run in language server mode (EXPERIMENTAL)
   -p, --pedantic
           Emit 'pedantic' findings
       --persona <PERSONA>
@@ -47,7 +49,7 @@ Options:
       --completions <SHELL>
           Generate tab completion scripts for the specified shell [possible values: bash, elvish, fish, nushell, powershell, zsh]
       --fix[=<MODE>]
-          Fix findings automatically, when available [possible values: safe, unsafe-only, all]
+          Fix findings automatically, when available (EXPERIMENTAL) [possible values: safe, unsafe-only, all]
       --thanks
           Emit thank-you messages for zizmor's sponsors
   -h, --help

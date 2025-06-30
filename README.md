@@ -95,6 +95,13 @@ Tenki Cloud
 </table>
 <!-- @@end-sponsors@@ -->
 
+Is your name missing above? Consider becoming one of our sponsors through
+one of the following:
+
+- [GitHub Sponsors](https://github.com/sponsors/woodruffw) (preferred)
+- [thanks.dev](https://thanks.dev/u/gh/woodruffw)
+- [ko-fi](https://ko-fi.com/woodruffw)
+
 ## Star History
 
 <a href="https://star-history.com/#zizmorcore/zizmor&Date">

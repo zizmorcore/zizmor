@@ -10,7 +10,7 @@ use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
 use camino::{Utf8Path, Utf8PathBuf};
-use clap::{CommandFactory, Parser, ValueEnum};
+use clap::{Args, CommandFactory, Parser, ValueEnum};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
@@ -31,6 +31,8 @@ mod audit;
 mod config;
 mod finding;
 mod github_api;
+#[cfg(feature = "lsp")]
+mod lsp;
 mod models;
 mod output;
 mod registry;
@@ -46,6 +48,10 @@ const THANKS: &[(&str, &str)] = &[("Grafana Labs", "https://grafana.com")];
 #[derive(Parser)]
 #[command(about, version)]
 struct App {
+    #[cfg(feature = "lsp")]
+    #[command(flatten)]
+    lsp: LspArgs,
+
     /// Emit 'pedantic' findings.
     ///
     /// This is an alias for --persona=pedantic.
@@ -140,7 +146,7 @@ struct App {
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
     naches: bool,
 
-    /// Fix findings automatically, when available.
+    /// Fix findings automatically, when available (EXPERIMENTAL).
     #[arg(
         long,
         value_enum,
@@ -166,6 +172,24 @@ struct App {
     /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
+}
+
+#[cfg(feature = "lsp")]
+#[derive(Args)]
+#[group(multiple = true, conflicts_with = "inputs")]
+struct LspArgs {
+    /// Run in language server mode (EXPERIMENTAL).
+    ///
+    /// This flag cannot be used with any other flags.
+    #[arg(long)]
+    lsp: bool,
+
+    // This flag exists solely because VS Code's LSP client implementation
+    // insists on appending `--stdio` to the LSP server's arguments when
+    // using the 'stdio' transport. It has no actual meaning or use.
+    // See: <https://github.com/microsoft/vscode-languageserver-node/issues/1222
+    #[arg(long, hide = true)]
+    stdio: bool,
 }
 
 /// Shell with auto-generated completion script available.
@@ -517,6 +541,12 @@ fn run() -> Result<ExitCode> {
 
     let mut app = App::parse();
 
+    #[cfg(feature = "lsp")]
+    if app.lsp.lsp {
+        lsp::run()?;
+        return Ok(ExitCode::SUCCESS);
+    }
+
     if app.thanks {
         println!("zizmor's development is sustained by our generous sponsors:");
         for (name, url) in THANKS {
@@ -621,7 +651,8 @@ fn run() -> Result<ExitCode> {
 
     let audit_registry = AuditRegistry::default_audits(&audit_state)?;
 
-    let mut results = FindingRegistry::new(&app, &config);
+    let mut results =
+        FindingRegistry::new(app.min_severity, app.min_confidence, app.persona, &config);
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");

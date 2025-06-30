@@ -441,7 +441,7 @@ impl<'a, 'doc, T: Locatable<'doc>> Routable<'a, 'doc> for T {
 }
 
 /// Represents a `(row, column)` point within a file.
-#[derive(Serialize)]
+#[derive(Copy, Clone, Serialize)]
 pub(crate) struct Point {
     pub(crate) row: usize,
     pub(crate) column: usize,
