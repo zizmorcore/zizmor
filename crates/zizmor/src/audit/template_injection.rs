@@ -781,7 +781,7 @@ jobs:
                           - name: Vulnerable step with existing env
                             run: echo "Event name is ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
                             env:
-                              EXISTING_VAR: existing_value
+                              EXISTING_VAR: "existing_value"
                               GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
                     "#);
                 }

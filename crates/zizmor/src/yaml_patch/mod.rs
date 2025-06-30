@@ -371,21 +371,42 @@ fn apply_single_patch(
                                 existing_value
                             };
 
-                        if let serde_yaml::Value::Mapping(existing_mapping) = actual_existing_value
+                        if let serde_yaml::Value::Mapping(_existing_mapping) = actual_existing_value
                         {
-                            // Both are mappings, merge them
-                            let mut merged_mapping = existing_mapping.clone();
+                            // Both are mappings, merge them using Add operations to preserve comments
+                            let mut current_document = document.clone();
                             for (k, v) in new_mapping {
-                                merged_mapping.insert(k.clone(), v.clone());
-                            }
+                                let key_str = match k {
+                                    serde_yaml::Value::String(s) => s.clone(),
+                                    _ => serde_yaml::to_string(k)?.trim().to_string(),
+                                };
 
-                            // Use a custom replacement that preserves the key structure
-                            return apply_mapping_replacement(
-                                document,
-                                &existing_key_route,
-                                key,
-                                &serde_yaml::Value::Mapping(merged_mapping),
-                            );
+                                // Check if this key already exists in the mapping
+                                let nested_key_route = existing_key_route.with_keys(&[key_str.as_str().into()]);
+                                if let Ok(Some(_)) = route_to_feature_exact(&nested_key_route, &current_document) {
+                                    // Key exists, replace it
+                                    current_document = apply_single_patch(
+                                        &current_document,
+                                        &Patch {
+                                            route: nested_key_route,
+                                            operation: Op::Replace(v.clone()),
+                                        },
+                                    )?;
+                                } else {
+                                    // Key doesn't exist, add it using Add operation to preserve comments
+                                    current_document = apply_single_patch(
+                                        &current_document,
+                                        &Patch {
+                                            route: existing_key_route.clone(),
+                                            operation: Op::Add {
+                                                key: key_str,
+                                                value: v.clone(),
+                                            },
+                                        },
+                                    )?;
+                                }
+                            }
+                            return Ok(current_document);
                         }
                     }
                 }
@@ -887,91 +908,7 @@ fn handle_root_level_addition(
     yamlpath::Document::new(result).map_err(Error::from)
 }
 
-/// Apply a mapping replacement that preserves the key structure
-fn apply_mapping_replacement(
-    doc: &yamlpath::Document,
-    route: &Route<'_>,
-    _key: &str,
-    value: &serde_yaml::Value,
-) -> Result<yamlpath::Document, Error> {
-    let feature = route_to_feature_pretty(route, doc)?;
 
-    // Extract the current content to see what we're working with
-    let current_content_with_ws = doc.extract_with_leading_whitespace(&feature);
-
-    // Check if this is a flow mapping that should be handled specially
-    let trimmed_content = current_content_with_ws.trim();
-    let is_flow_mapping = trimmed_content.starts_with('{')
-        && trimmed_content.ends_with('}')
-        && !trimmed_content.contains('\n');
-
-    if is_flow_mapping {
-        // For flow mappings, use the existing flow mapping logic
-        let replacement = apply_value_replacement(&feature, doc, value, false)?;
-        let mut result = doc.source().to_string();
-        result.replace_range(
-            feature.location.byte_span.0..feature.location.byte_span.1,
-            &replacement,
-        );
-        return yamlpath::Document::new(result).map_err(Error::from);
-    }
-
-    // For block mappings, we need to preserve the structure properly
-    if let Some(colon_pos) = current_content_with_ws.find(':') {
-        // This is a key-value pair like "env:\n  EXISTING_VAR: value"
-        let key_part = &current_content_with_ws[..colon_pos + 1]; // "env:"
-
-        // Get the indentation level for the mapping content
-        let leading_whitespace = extract_leading_whitespace(doc, &feature);
-        let content_indent = format!("{}  ", leading_whitespace); // Add 2 spaces for mapping content
-
-        // Serialize the new mapping value and indent it properly
-        let new_value_str = serialize_yaml_value(value)?;
-        let new_value_str = new_value_str.trim_end();
-
-        // Format the mapping content with proper indentation
-        let indented_content = if let serde_yaml::Value::Mapping(mapping) = value {
-            if mapping.is_empty() {
-                " {}".to_string() // Empty mapping as inline
-            } else {
-                // Format as block mapping
-                let mut formatted_lines = Vec::new();
-                for (k, v) in mapping {
-                    let key_str = match k {
-                        serde_yaml::Value::String(s) => s.clone(),
-                        _ => serde_yaml::to_string(k)?.trim().to_string(),
-                    };
-                    let val_str = serialize_yaml_value(v)?;
-                    let val_str = val_str.trim();
-                    formatted_lines.push(format!("{}{}: {}", content_indent, key_str, val_str));
-                }
-                format!("\n{}", formatted_lines.join("\n"))
-            }
-        } else {
-            // Not a mapping, format as regular value
-            format!(" {}", new_value_str)
-        };
-
-        let replacement = format!("{}{}", key_part, indented_content);
-
-        // Calculate spans for replacement
-        let ws_start = feature.location.byte_span.0
-            - (current_content_with_ws.len() - current_content_with_ws.trim_start().len());
-
-        let mut result = doc.source().to_string();
-        result.replace_range(ws_start..feature.location.byte_span.1, &replacement);
-        yamlpath::Document::new(result).map_err(Error::from)
-    } else {
-        // Not a key-value pair, use regular value replacement
-        let replacement = apply_value_replacement(&feature, doc, value, false)?;
-        let mut result = doc.source().to_string();
-        result.replace_range(
-            feature.location.byte_span.0..feature.location.byte_span.1,
-            &replacement,
-        );
-        yamlpath::Document::new(result).map_err(Error::from)
-    }
-}
 
 /// Apply a value replacement at the given feature location, preserving key structure and formatting
 fn apply_value_replacement(
@@ -3323,6 +3260,56 @@ jobs:
             env: { NODE_ENV: test }
             steps:
               - run: echo "test"
+        "#);
+    }
+
+    #[test]
+    fn test_merge_into_preserves_comments_in_env_block() {
+        // Test that comments are preserved when merging into an env block with existing comments
+        let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Needs a redirection
+        run: ${{ inputs.script }}
+        env:
+          # An existing comment about this wacky env-var
+          WACKY: "It's just a wacky world""#;
+
+        let new_env = {
+            let mut map = serde_yaml::Mapping::new();
+            map.insert(
+                serde_yaml::Value::String("INPUTS_SCRIPT".to_string()),
+                serde_yaml::Value::String("${{ inputs.script }}".to_string()),
+            );
+            map
+        };
+
+        let operations = vec![Patch {
+            route: route!("jobs", "test", "steps", 0),
+            operation: Op::MergeInto {
+                key: "env".to_string(),
+                value: serde_yaml::Value::Mapping(new_env),
+            },
+        }];
+
+        let result =
+            apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+        // Check that the comment is preserved
+        assert!(result.source().contains("# An existing comment about this wacky env-var"));
+
+        insta::assert_snapshot!(result.source(), @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Needs a redirection
+                run: ${{ inputs.script }}
+                env:
+                  # An existing comment about this wacky env-var
+                  WACKY: "It's just a wacky world"
+                  INPUTS_SCRIPT: ${{ inputs.script }}
         "#);
     }
 }
