@@ -15,6 +15,11 @@ of `zizmor`.
 * The [bot-conditions] audit now produces findings on triggers other than
   `pull_request_target` (#921)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would crash when attempting to extract
+  subfeatures from features containing non-ASCII codepoints (#989)
+
 ## 1.10.0
 
 This is a **huge** new release, with multiple new features, enhancements,
