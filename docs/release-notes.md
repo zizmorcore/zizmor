@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `--fix` would fail to preserve comments when modifying
+  block-style YAML mappings (#995)
+
 ## 1.11.0
 
 ### New Features 🌈
