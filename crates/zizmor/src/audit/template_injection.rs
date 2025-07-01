@@ -15,7 +15,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{collections::HashMap, env, ops::Deref, sync::LazyLock, vec};
+use std::{env, ops::Deref, sync::LazyLock, vec};
 
 use fst::Map;
 use github_actions_expressions::{Expr, Literal, context::Context};
@@ -303,8 +303,10 @@ impl TemplateInjection {
                 route: step.route(),
                 operation: Op::MergeInto {
                     key: "env".to_string(),
-                    value: serde_yaml::to_value(HashMap::from([(env_var.as_str(), raw.as_raw())]))
-                        .unwrap(),
+                    updates: indexmap::IndexMap::from_iter([(
+                        env_var.clone(),
+                        serde_yaml::Value::String(raw.as_raw().into()),
+                    )]),
                 },
             });
         }
