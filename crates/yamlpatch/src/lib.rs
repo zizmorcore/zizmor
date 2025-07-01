@@ -32,6 +32,12 @@ pub struct Route<'doc> {
     components: Vec<RouteComponent<'doc>>,
 }
 
+impl<'doc> Default for Route<'doc> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'doc> Route<'doc> {
     /// Create a new empty route.
     pub fn new() -> Route<'doc> {
