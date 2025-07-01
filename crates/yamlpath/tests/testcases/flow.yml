@@ -12,7 +12,7 @@ testcase:
 
 queries:
   - query: [flow1, foo]
-    expected: "{ foo: [1, 2, 3: [4, 5, { a: b }]] }"
+    expected: "foo: [1, 2, 3: [4, 5, { a: b }]]"
 
   - query: [flow1, foo, 2]
     # TODO: ideally would be `3: [4, 5, { a: b }]`
@@ -28,7 +28,7 @@ queries:
     expected: "{ a: }"
 
   - query: [flow4, foo]
-    expected: "{\n    foo: [1, 2, 3: [4, 5, { a: b }]],\n  }"
+    expected: "    foo: [1, 2, 3: [4, 5, { a: b }]]"
 
   - query: [flow5, 0]
     expected: "    abc"

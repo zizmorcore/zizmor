@@ -168,7 +168,6 @@ pub enum Op<'doc> {
         updates: indexmap::IndexMap<String, serde_yaml::Value>,
     },
     /// Remove the key at the given path
-    #[allow(dead_code)]
     Remove,
 }
 
@@ -436,20 +435,16 @@ fn apply_single_patch(
 
             let feature = route_to_feature_pretty(&patch.route, document)?;
 
-            // For removal, we need to remove the entire line including leading whitespace
-            // TODO: This isn't sound, e.g. removing `b:` from `{a: a, b: b}` will
-            // remove the entire line.
-            let start_pos = {
-                let range = line_span(document, feature.location.byte_span.0);
-                range.start
-            };
-            let end_pos = {
-                let range = line_span(document, feature.location.byte_span.1);
-                range.end
-            };
-
+            // At the moment, we simply delete the entire "pretty" feature.
+            // This works well enough, but it will leave any leading
+            // or trailing whitespace if not captured in the underlying
+            // tree-sitter-extracted feature.
             let mut result = content.to_string();
-            result.replace_range(start_pos..end_pos, "");
+            result.replace_range(
+                feature.location.byte_span.0..feature.location.byte_span.1,
+                "",
+            );
+
             yamlpath::Document::new(result).map_err(Error::from)
         }
     }
@@ -1500,7 +1495,7 @@ foo: { bar: abc }
     }
 
     #[test]
-    fn test_remove_preserves_structure() {
+    fn test_remove_preserves_block_structure() {
         let original = r#"
 permissions:
   contents: read  # Keep this comment
@@ -1522,6 +1517,47 @@ permissions:
         permissions:
           contents: read  # Keep this comment
           issues: read
+        ");
+    }
+
+    // #[test]
+    // fn test_remove_preserves_flow_structure() {
+    //     let original = "foo: { a: a, b: b }";
+
+    //     let document = yamlpath::Document::new(original).unwrap();
+
+    //     let operations = vec![Patch {
+    //         route: route!("foo", "b"),
+    //         operation: Op::Remove,
+    //     }];
+
+    //     let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    //     // Removes the key while preserving the rest of the structure
+    //     insta::assert_snapshot!(result.source(), @"foo: { a: a }");
+    // }
+
+    #[test]
+    fn test_remove_empty_key() {
+        let original = r#"
+foo:
+  bar: abc
+  baz:
+"#;
+
+        let document = yamlpath::Document::new(original).unwrap();
+
+        let operations = vec![Patch {
+            route: route!("foo", "baz"),
+            operation: Op::Remove,
+        }];
+
+        let result = apply_yaml_patches(&document, &operations).unwrap();
+
+        // Removes the empty key while preserving the rest of the structure
+        insta::assert_snapshot!(result.source(), @r"
+        foo:
+          bar: abc
         ");
     }
 

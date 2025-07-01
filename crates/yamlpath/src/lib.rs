@@ -579,11 +579,14 @@ impl Document {
     fn query_node(&self, query: &Query, mode: QueryMode) -> Result<Node, QueryError> {
         let mut focus_node = self.top_object()?;
         for component in &query.route {
+            dbg!(&focus_node);
             match self.descend(&focus_node, component) {
                 Ok(next) => focus_node = next,
                 Err(e) => return Err(e),
             }
         }
+
+        dbg!(&focus_node);
 
         focus_node = match mode {
             QueryMode::Pretty => {
@@ -594,9 +597,8 @@ impl Document {
                 //
                 // NOTE: We might already be on the block/flow pair if we terminated
                 // with an absent value, in which case we don't need to do this cleanup.
-                if matches!(query.route.last(), Some(Component::Key(_)))
-                    && focus_node.kind_id() != self.block_mapping_pair_id
-                    && focus_node.kind_id() != self.flow_pair_id
+                if focus_node.kind_id() != self.block_mapping_pair_id
+                    || focus_node.kind_id() == self.flow_node_id
                 {
                     focus_node.parent().unwrap()
                 } else {
@@ -650,6 +652,7 @@ impl Document {
         if matches!(mode, QueryMode::Pretty)
             && matches!(query.route.last(), Some(Component::Key(_)))
             && focus_node.kind_id() != self.block_mapping_pair_id
+            && focus_node.kind_id() != self.flow_pair_id
         {
             focus_node = focus_node.parent().unwrap()
         }
@@ -878,6 +881,24 @@ baz:
         assert_eq!(
             doc.extract_with_leading_whitespace(&doc.query_pretty(&query).unwrap()),
             "{d: e}"
+        );
+    }
+
+    #[test]
+    fn test_flow_pair_in_sequence() {
+        let doc = r#"
+foo: [1, 2, 3: {abc: def}]
+"#;
+
+        let doc = Document::new(doc).unwrap();
+        let query = Query {
+            route: vec![Component::Key("foo"), Component::Index(2)],
+        };
+
+        let feature = doc.query_pretty(&query).unwrap();
+        assert_eq!(
+            doc.extract_with_leading_whitespace(&feature),
+            "3: {abc: def}"
         );
     }
 
