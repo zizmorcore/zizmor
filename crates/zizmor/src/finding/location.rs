@@ -96,6 +96,20 @@ impl<'doc> From<Vec<RouteComponent<'doc>>> for Route<'doc> {
     }
 }
 
+impl<'doc> Route<'doc> {
+    /// Convert this location Route to a yamlpatch Route
+    pub(crate) fn to_yamlpatch_route(&self) -> yamlpatch::Route<'doc> {
+        let yamlpatch_components: Vec<yamlpatch::RouteComponent<'doc>> = self.components
+            .iter()
+            .map(|comp| match comp {
+                RouteComponent::Key(key) => yamlpatch::RouteComponent::Key(key),
+                RouteComponent::Index(idx) => yamlpatch::RouteComponent::Index(*idx),
+            })
+            .collect();
+        yamlpatch::Route::from(yamlpatch_components)
+    }
+}
+
 #[macro_export]
 macro_rules! route {
     ($($key:expr),* $(,)?) => {

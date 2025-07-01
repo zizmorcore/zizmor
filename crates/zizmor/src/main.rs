@@ -38,7 +38,6 @@ mod output;
 mod registry;
 mod state;
 mod utils;
-mod yaml_patch;
 
 // TODO: Dedupe this with the top-level `sponsors.json` used by the
 // README + docs site.

@@ -8,8 +8,8 @@ use crate::{
     models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
     utils::split_patterns,
-    yaml_patch::{Op, Patch},
 };
+use yamlpatch::{Op, Patch};
 
 pub(crate) struct Artipacked;
 
@@ -148,7 +148,7 @@ impl Artipacked {
             key: step.location().key,
             disposition: Default::default(),
             patches: vec![Patch {
-                route: step.route(),
+                route: step.route().to_yamlpatch_route(),
                 operation: Op::MergeInto {
                     key: "with".to_string(),
                     updates: indexmap::IndexMap::from_iter([(

@@ -37,8 +37,8 @@ use crate::{
     },
     state::AuditState,
     utils::{DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_expressions},
-    yaml_patch::{Op, Patch},
 };
+use yamlpatch::{Op, Patch};
 
 pub(crate) struct TemplateInjection;
 
@@ -284,7 +284,7 @@ impl TemplateInjection {
 
         let mut patches = vec![];
         patches.push(Patch {
-            route: step.route().with_keys(&["run".into()]),
+            route: step.route().with_keys(&["run".into()]).to_yamlpatch_route(),
             operation: Op::RewriteFragment {
                 from: raw.as_raw().to_string().into(),
                 to: format!("${{{env_var}}}").into(),
@@ -300,7 +300,7 @@ impl TemplateInjection {
             .contains(&env_var.as_str())
         {
             patches.push(Patch {
-                route: step.route(),
+                route: step.route().to_yamlpatch_route(),
                 operation: Op::MergeInto {
                     key: "env".to_string(),
                     updates: indexmap::IndexMap::from_iter([(

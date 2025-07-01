@@ -70,6 +70,7 @@ tree-sitter.workspace = true
 tree-sitter-bash.workspace = true
 tree-sitter-powershell.workspace = true
 yamlpath.workspace = true
+yamlpatch.workspace = true
 
 [build-dependencies]
 csv.workspace = true

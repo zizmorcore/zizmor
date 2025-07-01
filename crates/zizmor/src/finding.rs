@@ -8,8 +8,8 @@ use self::location::{Location, SymbolicLocation};
 use crate::{
     InputKey,
     models::AsDocument,
-    yaml_patch::{self, Patch},
 };
+use yamlpatch::{self, Patch};
 
 pub(crate) mod location;
 
@@ -137,7 +137,7 @@ impl Fix<'_> {
         &self,
         document: &yamlpath::Document,
     ) -> anyhow::Result<yamlpath::Document> {
-        match yaml_patch::apply_yaml_patches(document, &self.patches) {
+        match yamlpatch::apply_yaml_patches(document, &self.patches) {
             Ok(new_document) => Ok(new_document),
             Err(e) => Err(anyhow!("fix failed: {e}")),
         }
