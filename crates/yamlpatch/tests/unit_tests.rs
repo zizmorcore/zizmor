@@ -1191,14 +1191,10 @@ fn test_merge_into_new_key() {
         route: route!("jobs", "test", "steps", 0),
         operation: Op::MergeInto {
             key: "env".to_string(),
-            value: serde_yaml::Value::Mapping({
-                let mut map = serde_yaml::Mapping::new();
-                map.insert(
-                    serde_yaml::Value::String("TEST_VAR".to_string()),
-                    serde_yaml::Value::String("test_value".to_string()),
-                );
-                map
-            }),
+            updates: indexmap::IndexMap::from_iter([(
+                "TEST_VAR".to_string(),
+                serde_yaml::Value::String("test_value".to_string()),
+            )]),
         },
     }];
 
@@ -1232,14 +1228,10 @@ fn test_merge_into_existing_key() {
         route: route!("jobs", "test", "steps", 0),
         operation: Op::MergeInto {
             key: "env".to_string(),
-            value: serde_yaml::Value::Mapping({
-                let mut map = serde_yaml::Mapping::new();
-                map.insert(
-                    serde_yaml::Value::String("NEW_VAR".to_string()),
-                    serde_yaml::Value::String("new_value".to_string()),
-                );
-                map
-            }),
+            updates: indexmap::IndexMap::from_iter([(
+                "NEW_VAR".to_string(),
+                serde_yaml::Value::String("new_value".to_string()),
+            )]),
         },
     }];
 
@@ -1277,14 +1269,10 @@ fn test_merge_into_prevents_duplicate_keys() {
         route: route!("jobs", "test", "steps", 0),
         operation: Op::MergeInto {
             key: "env".to_string(),
-            value: serde_yaml::Value::Mapping({
-                let mut map = serde_yaml::Mapping::new();
-                map.insert(
-                    serde_yaml::Value::String("NEW_VAR".to_string()),
-                    serde_yaml::Value::String("new_value".to_string()),
-                );
-                map
-            }),
+            updates: indexmap::IndexMap::from_iter([(
+                "NEW_VAR".to_string(),
+                serde_yaml::Value::String("new_value".to_string()),
+            )]),
         },
     }];
 
@@ -1304,46 +1292,6 @@ fn test_merge_into_prevents_duplicate_keys() {
                   EXISTING_VAR: existing_value
                   ANOTHER_VAR: another_value
                   NEW_VAR: new_value
-        "#);
-}
-
-#[test]
-fn test_merge_into_with_shell_key() {
-    // Test MergeInto with shell key to simulate template injection fixes
-    let original = r#"jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Test step
-        run: echo "hello""#;
-
-    let operations = vec![Patch {
-        route: route!("jobs", "test", "steps", 0),
-        operation: Op::MergeInto {
-            key: "env".to_string(),
-            value: serde_yaml::Value::Mapping({
-                let mut map = serde_yaml::Mapping::new();
-                map.insert(
-                    serde_yaml::Value::String("GITHUB_REF_NAME".to_string()),
-                    serde_yaml::Value::String("${{ github.ref_name }}".to_string()),
-                );
-                map
-            }),
-        },
-    }];
-
-    let result =
-        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
-
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                run: echo "hello"
-                env:
-                  GITHUB_REF_NAME: ${{ github.ref_name }}
         "#);
 }
 
@@ -1418,10 +1366,10 @@ fn test_debug_indentation_issue() {
         "Leading whitespace should not be empty for indented step"
     );
 
-    // Test the actual MergeInto operation
+    // Test the actual add operation
     let operations = vec![Patch {
         route: route!("jobs", "build", "steps", 0),
-        operation: Op::MergeInto {
+        operation: Op::Add {
             key: "shell".to_string(),
             value: serde_yaml::Value::String("bash".to_string()),
         },
@@ -1522,20 +1470,16 @@ jobs:
     }
 
     // Test the MergeInto operation
-    let new_env = {
-        let mut map = serde_yaml::Mapping::new();
-        map.insert(
-            serde_yaml::Value::String("STEPS_META_OUTPUTS_TAGS".to_string()),
-            serde_yaml::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
-        );
-        map
-    };
+    let new_env = indexmap::IndexMap::from_iter([(
+        "STEPS_META_OUTPUTS_TAGS".to_string(),
+        serde_yaml::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
+    )]);
 
     let operations = vec![Patch {
         route: route!("jobs", "test", "steps", 0),
         operation: Op::MergeInto {
             key: "env".to_string(),
-            value: serde_yaml::Value::Mapping(new_env),
+            updates: new_env,
         },
     }];
 
@@ -1584,11 +1528,16 @@ fn test_merge_into_complex_env_mapping() {
         map
     };
 
+    let new_env = indexmap::IndexMap::from_iter([(
+        "STEPS_META_OUTPUTS_TAGS".to_string(),
+        serde_yaml::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
+    )]);
+
     let operations = vec![Patch {
         route: route!("jobs", "test", "steps", 0),
         operation: Op::MergeInto {
             key: "env".to_string(),
-            value: serde_yaml::Value::Mapping(new_env),
+            updates: new_env,
         },
     }];
 
@@ -1629,14 +1578,10 @@ fn test_merge_into_reuses_existing_key_no_duplicates() {
         route: route!("jobs", "test", "steps", 0),
         operation: Op::MergeInto {
             key: "env".to_string(),
-            value: serde_yaml::Value::Mapping({
-                let mut map = serde_yaml::Mapping::new();
-                map.insert(
-                    serde_yaml::Value::String("NEW_VAR".to_string()),
-                    serde_yaml::Value::String("new_value".to_string()),
-                );
-                map
-            }),
+            updates: indexmap::IndexMap::from_iter([(
+                "NEW_VAR".to_string(),
+                serde_yaml::Value::String("new_value".to_string()),
+            )]),
         },
     }];
 
@@ -1677,28 +1622,20 @@ fn test_merge_into_with_mapping_merge_behavior() {
             route: route!("jobs", "test", "steps", 0),
             operation: Op::MergeInto {
                 key: "env".to_string(),
-                value: serde_yaml::Value::Mapping({
-                    let mut map = serde_yaml::Mapping::new();
-                    map.insert(
-                        serde_yaml::Value::String("NEW_VAR_1".to_string()),
-                        serde_yaml::Value::String("new_value_1".to_string()),
-                    );
-                    map
-                }),
+                updates: indexmap::IndexMap::from_iter([(
+                    "NEW_VAR_1".to_string(),
+                    serde_yaml::Value::String("new_value_1".to_string()),
+                )]),
             },
         },
         Patch {
             route: route!("jobs", "test", "steps", 0),
             operation: Op::MergeInto {
                 key: "env".to_string(),
-                value: serde_yaml::Value::Mapping({
-                    let mut map = serde_yaml::Mapping::new();
-                    map.insert(
-                        serde_yaml::Value::String("NEW_VAR_2".to_string()),
-                        serde_yaml::Value::String("new_value_2".to_string()),
-                    );
-                    map
-                }),
+                updates: indexmap::IndexMap::from_iter([(
+                    "NEW_VAR_2".to_string(),
+                    serde_yaml::Value::String("new_value_2".to_string()),
+                )]),
             },
         },
     ];
@@ -1718,49 +1655,6 @@ fn test_merge_into_with_mapping_merge_behavior() {
                   KEEP_THIS: keep_value
                   NEW_VAR_1: new_value_1
                   NEW_VAR_2: new_value_2
-        "#);
-}
-
-#[test]
-fn test_merge_into_key_reuse_with_different_value_types() {
-    // Test MergeInto behavior when existing key has different value type
-    let original = r#"jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Test step
-        run: echo "hello"
-        shell: bash"#;
-
-    // Try to merge a mapping into a step that has a shell key with string value
-    let operations = vec![Patch {
-        route: route!("jobs", "test", "steps", 0),
-        operation: Op::MergeInto {
-            key: "env".to_string(),
-            value: serde_yaml::Value::Mapping({
-                let mut map = serde_yaml::Mapping::new();
-                map.insert(
-                    serde_yaml::Value::String("GITHUB_REF_NAME".to_string()),
-                    serde_yaml::Value::String("${{ github.ref_name }}".to_string()),
-                );
-                map
-            }),
-        },
-    }];
-
-    let result =
-        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
-
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                run: echo "hello"
-                shell: bash
-                env:
-                  GITHUB_REF_NAME: ${{ github.ref_name }}
         "#);
 }
 
@@ -2231,20 +2125,16 @@ fn test_merge_into_preserves_comments_in_env_block() {
           # An existing comment about this wacky env-var
           WACKY: "It's just a wacky world""#;
 
-    let new_env = {
-        let mut map = serde_yaml::Mapping::new();
-        map.insert(
-            serde_yaml::Value::String("INPUTS_SCRIPT".to_string()),
-            serde_yaml::Value::String("${{ inputs.script }}".to_string()),
-        );
-        map
-    };
+    let new_env = indexmap::IndexMap::from_iter([(
+        "INPUTS_SCRIPT".to_string(),
+        serde_yaml::Value::String("${{ inputs.script }}".to_string()),
+    )]);
 
     let operations = vec![Patch {
         route: route!("jobs", "test", "steps", 0),
         operation: Op::MergeInto {
             key: "env".to_string(),
-            value: serde_yaml::Value::Mapping(new_env),
+            updates: new_env,
         },
     }];
 
@@ -2267,5 +2157,88 @@ fn test_merge_into_preserves_comments_in_env_block() {
                   # An existing comment about this wacky env-var
                   WACKY: "It's just a wacky world"
                   INPUTS_SCRIPT: ${{ inputs.script }}
+        "#);
+}
+
+#[test]
+fn test_merge_into_flow_mapping() {
+    let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step1
+        uses: actions/checkout@v4
+        with: { persist-credentials: true }  # Flow mapping in block context
+"#;
+
+    let operations = vec![Patch {
+        route: route!("jobs", "test", "steps", 0),
+        operation: Op::MergeInto {
+            key: "with".to_string(),
+            updates: indexmap::IndexMap::from_iter([
+                (
+                    "persist-credentials".to_string(),
+                    serde_yaml::Value::Bool(false),
+                ),
+                (
+                    "another-key".to_string(),
+                    serde_yaml::Value::String("some-value".to_string()),
+                ),
+            ]),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Step1
+                uses: actions/checkout@v4
+                with: { persist-credentials: false, another-key: some-value }  # Flow mapping in block context
+        "#);
+}
+
+#[test]
+#[ignore = "known issue with empty body handling"]
+fn test_merge_into_key_missing_body() {
+    let original = r#"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step1
+        uses: actions/checkout@v4
+        # empty with: block
+        with:
+"#;
+
+    let operations = vec![Patch {
+        route: route!("jobs", "test", "steps", 0),
+        operation: Op::MergeInto {
+            key: "with".to_string(),
+            updates: indexmap::IndexMap::from_iter([(
+                "persist-credentials".to_string(),
+                serde_yaml::Value::Bool(false),
+            )]),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Step1
+                uses: actions/checkout@v4
+                with:
+                  persist-credentials: false
         "#);
 }

@@ -17,6 +17,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+indexmap.workspace = true
 line-index.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

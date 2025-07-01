@@ -250,14 +250,15 @@ pub enum Op<'doc> {
         key: String,
         value: serde_yaml::Value,
     },
-    /// Merge a key-value pair into an existing mapping at the given path, or create the key if it doesn't exist.
-    /// If both the existing value and new value are mappings, they are merged together.
-    /// Otherwise, the new value replaces the existing one.
+    /// Update a mapping at the given path.
+    ///
+    /// If the mapping does not already exist, it will be created.
     MergeInto {
         key: String,
-        value: serde_yaml::Value,
+        updates: indexmap::IndexMap<String, serde_yaml::Value>,
     },
     /// Remove the key at the given path
+    #[allow(dead_code)]
     Remove,
 }
 
@@ -427,102 +428,94 @@ fn apply_single_patch(
             );
             yamlpath::Document::new(result).map_err(Error::from)
         }
-        Op::MergeInto { key, value } => {
-            if patch.route.is_root() {
-                // Handle root-level merges specially
-                return handle_root_level_addition(document, key, value);
-            }
-
-            // Check if the key already exists in the target mapping
+        Op::MergeInto { key, updates } => {
             let existing_key_route = patch.route.with_keys(&[key.as_str().into()]);
+            match route_to_feature_exact(&existing_key_route, document) {
+                // The key already exists, and has a nonempty body.
+                Ok(Some(existing_feature)) => {
+                    // Sanity-check that we're on a mapping.
+                    let style = Style::from_feature(&existing_feature, document);
+                    if !matches!(style, Style::BlockMapping | Style::FlowMapping) {
+                        return Err(Error::InvalidOperation(format!(
+                            "can't perform merge against non-mapping at {:?}",
+                            existing_key_route
+                        )));
+                    }
 
-            if let Ok(existing_feature) = route_to_feature_pretty(&existing_key_route, document) {
-                // Key exists, check if we need to merge mappings
-                if let serde_yaml::Value::Mapping(new_mapping) = &value {
-                    // Try to parse the existing value as YAML to see if it's also a mapping
-                    let existing_content = document.extract(&existing_feature);
-                    if let Ok(existing_value) =
-                        serde_yaml::from_str::<serde_yaml::Value>(existing_content)
-                    {
-                        // The extracted content includes the key, so we need to get the value
-                        let actual_existing_value =
-                            if let serde_yaml::Value::Mapping(outer_mapping) = existing_value {
-                                // If the extracted content is like "env: { ... }", get the value part
-                                if let Some(inner_value) =
-                                    outer_mapping.get(serde_yaml::Value::String(key.clone()))
-                                {
-                                    inner_value.clone()
-                                } else {
-                                    // Fallback: use the outer mapping directly
-                                    serde_yaml::Value::Mapping(outer_mapping)
-                                }
-                            } else {
-                                existing_value
-                            };
+                    // NOTE: We need to extract the original mapping with
+                    // leading whitespace so that serde_yaml can parse it;
+                    // otherwise something like:
+                    //
+                    // ```yaml
+                    // env:
+                    //   FOO: bar
+                    //   ABC: def
+                    // ```
+                    //
+                    // would be extracted as:
+                    //
+                    // ```yaml
+                    // FOO: bar
+                    //   ABC: def
+                    // ```
+                    let existing_content =
+                        document.extract_with_leading_whitespace(&existing_feature);
+                    let existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(
+                        existing_content,
+                    )
+                    .map_err(|e| {
+                        Error::InvalidOperation(format!(
+                            "MergeInto: failed to parse existing mapping at {:?}: {e}",
+                            existing_key_route
+                        ))
+                    })?;
 
-                        if let serde_yaml::Value::Mapping(_) = actual_existing_value {
-                            // Both are mappings, merge them using Add operations to preserve comments
-                            let mut current_document = document.clone();
-                            for (k, v) in new_mapping {
-                                let key_str = match k {
-                                    serde_yaml::Value::String(s) => s.clone(),
-                                    _ => serde_yaml::to_string(k)?.trim().to_string(),
-                                };
-
-                                // Check if this key already exists in the mapping
-                                let nested_key_route =
-                                    existing_key_route.with_keys(&[key_str.as_str().into()]);
-                                if let Ok(Some(_)) =
-                                    route_to_feature_exact(&nested_key_route, &current_document)
-                                {
-                                    // Key exists, replace it
-                                    current_document = apply_single_patch(
-                                        &current_document,
-                                        &Patch {
-                                            route: nested_key_route,
-                                            operation: Op::Replace(v.clone()),
-                                        },
-                                    )?;
-                                } else {
-                                    // Key doesn't exist, add it using Add operation to preserve comments
-                                    current_document = apply_single_patch(
-                                        &current_document,
-                                        &Patch {
-                                            route: existing_key_route.clone(),
-                                            operation: Op::Add {
-                                                key: key_str,
-                                                value: v.clone(),
-                                            },
-                                        },
-                                    )?;
-                                }
-                            }
-                            return Ok(current_document);
+                    // Add or replace each key-value pair in the updates.
+                    let mut current_document = document.clone();
+                    for (k, v) in updates {
+                        if existing_mapping.contains_key(k) {
+                            current_document = apply_single_patch(
+                                &current_document,
+                                &Patch {
+                                    route: existing_key_route.with_keys(&[k.as_str().into()]),
+                                    operation: Op::Replace(v.clone()),
+                                },
+                            )?;
+                        } else {
+                            current_document = apply_single_patch(
+                                &current_document,
+                                &Patch {
+                                    route: existing_key_route.clone(),
+                                    operation: Op::Add {
+                                        key: k.into(),
+                                        value: v.clone(),
+                                    },
+                                },
+                            )?;
                         }
                     }
-                }
 
-                // Not both mappings, or parsing failed, just replace
-                return apply_single_patch(
+                    Ok(current_document)
+                }
+                // The key exists, but has an empty body.
+                // TODO: Support this.
+                Ok(None) => Err(Error::InvalidOperation(format!(
+                    "MergeInto: cannot merge into empty key at {:?}",
+                    existing_key_route
+                ))),
+                // The key does not exist.
+                Err(Error::Query(yamlpath::QueryError::ExhaustedMapping(_))) => apply_single_patch(
                     document,
                     &Patch {
-                        route: existing_key_route,
-                        operation: Op::Replace(value.clone()),
+                        route: patch.route.clone(),
+                        operation: Op::Add {
+                            key: key.clone(),
+                            value: serde_yaml::to_value(updates.clone())?,
+                        },
                     },
-                );
+                ),
+                Err(e) => Err(e),
             }
-
-            // Key doesn't exist, add it using Add operation
-            apply_single_patch(
-                document,
-                &Patch {
-                    route: patch.route.clone(),
-                    operation: Op::Add {
-                        key: key.clone(),
-                        value: value.clone(),
-                    },
-                },
-            )
         }
         Op::Remove => {
             if patch.route.is_root() {
@@ -918,85 +911,6 @@ pub fn find_content_end(feature: &yamlpath::Feature, doc: &yamlpath::Document) -
     }
 
     feature.location.byte_span.1 // Fallback to original end if no content found
-}
-
-/// Handle root-level additions and merges by finding the best insertion point at the document root
-fn handle_root_level_addition(
-    document: &yamlpath::Document,
-    key: &str,
-    value: &serde_yaml::Value,
-) -> Result<yamlpath::Document, Error> {
-    let content = document.source();
-
-    // Convert the new value to YAML string
-    let new_value_str = serialize_yaml_value(value)?;
-    let new_value_str = new_value_str.trim_end(); // Remove trailing newline
-
-    // For root-level additions, we want to insert at the end of the document
-    // but before any trailing whitespace or comments
-    let lines: Vec<&str> = content.lines().collect();
-
-    // Find the last line that contains actual YAML content (not empty or comment-only)
-    let mut last_content_line_idx = None;
-    for (i, line) in lines.iter().enumerate().rev() {
-        let trimmed = line.trim();
-        if !trimmed.is_empty() && !trimmed.starts_with('#') {
-            last_content_line_idx = Some(i);
-            break;
-        }
-    }
-
-    // Format the new entry for root level (no indentation)
-    let new_entry = if let serde_yaml::Value::Mapping(mapping) = value {
-        if mapping.is_empty() {
-            // For empty mappings, format inline
-            format!("{}: {}", key, new_value_str)
-        } else {
-            // For non-empty mappings, format as a nested structure
-            let value_lines: Vec<&str> = new_value_str.lines().collect();
-            let mut result = format!("{}:", key);
-            for line in value_lines.iter() {
-                if !line.trim().is_empty() {
-                    result.push('\n');
-                    result.push_str("  "); // 2 spaces for nested content
-                    result.push_str(line.trim_start());
-                }
-            }
-            result
-        }
-    } else {
-        // For scalar values, simple key: value format
-        format!("{}: {}", key, new_value_str)
-    };
-
-    let mut result = content.to_string();
-
-    if let Some(last_idx) = last_content_line_idx {
-        // Calculate the insertion point after the last content line
-        let mut insertion_point = 0;
-        for (i, line) in lines.iter().enumerate() {
-            if i <= last_idx {
-                insertion_point += line.len();
-                if i < lines.len() - 1 {
-                    insertion_point += 1; // +1 for newline
-                }
-            } else {
-                break;
-            }
-        }
-
-        // Insert the new entry with a leading newline
-        let final_entry = format!("\n{}", new_entry);
-        result.insert_str(insertion_point, &final_entry);
-    } else {
-        // If there's no content, just append at the end
-        if !result.is_empty() && !result.ends_with('\n') {
-            result.push('\n');
-        }
-        result.push_str(&new_entry);
-    }
-
-    yamlpath::Document::new(result).map_err(Error::from)
 }
 
 /// Apply a value replacement at the given feature location, preserving key structure and formatting
