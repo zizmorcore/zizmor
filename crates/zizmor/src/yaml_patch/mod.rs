@@ -340,7 +340,7 @@ fn apply_single_patch(
         }
         Op::MergeInto { key, updates } => {
             let existing_key_route = patch.route.with_keys(&[key.as_str().into()]);
-            match route_to_feature_exact(&existing_key_route, &document) {
+            match route_to_feature_exact(&existing_key_route, document) {
                 // The key already exists, and has a nonempty body.
                 Ok(Some(existing_feature)) => {
                     // Sanity-check that we're on a mapping.
