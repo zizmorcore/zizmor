@@ -371,8 +371,7 @@ fn apply_single_patch(
                                 existing_value
                             };
 
-                        if let serde_yaml::Value::Mapping(_existing_mapping) = actual_existing_value
-                        {
+                        if let serde_yaml::Value::Mapping(_) = actual_existing_value {
                             // Both are mappings, merge them using Add operations to preserve comments
                             let mut current_document = document.clone();
                             for (k, v) in new_mapping {
@@ -382,8 +381,11 @@ fn apply_single_patch(
                                 };
 
                                 // Check if this key already exists in the mapping
-                                let nested_key_route = existing_key_route.with_keys(&[key_str.as_str().into()]);
-                                if let Ok(Some(_)) = route_to_feature_exact(&nested_key_route, &current_document) {
+                                let nested_key_route =
+                                    existing_key_route.with_keys(&[key_str.as_str().into()]);
+                                if let Ok(Some(_)) =
+                                    route_to_feature_exact(&nested_key_route, &current_document)
+                                {
                                     // Key exists, replace it
                                     current_document = apply_single_patch(
                                         &current_document,
@@ -907,8 +909,6 @@ fn handle_root_level_addition(
 
     yamlpath::Document::new(result).map_err(Error::from)
 }
-
-
 
 /// Apply a value replacement at the given feature location, preserving key structure and formatting
 fn apply_value_replacement(
@@ -3297,7 +3297,11 @@ jobs:
             apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
         // Check that the comment is preserved
-        assert!(result.source().contains("# An existing comment about this wacky env-var"));
+        assert!(
+            result
+                .source()
+                .contains("# An existing comment about this wacky env-var")
+        );
 
         insta::assert_snapshot!(result.source(), @r#"
         jobs:
