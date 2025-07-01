@@ -32,7 +32,7 @@ pub struct Route<'doc> {
     components: Vec<RouteComponent<'doc>>,
 }
 
-impl<'doc> Default for Route<'doc> {
+impl Default for Route<'_> {
     fn default() -> Self {
         Self::new()
     }
