@@ -16,7 +16,7 @@ queries:
 
   - query: [flow1, foo, 2]
     # TODO: ideally would be `3: [4, 5, { a: b }]`
-    expected: "[4, 5, { a: b }]"
+    expected: "3: [4, 5, { a: b }]"
 
   - query: [flow1, foo, 2, 2]
     expected: "{ a: b }"
