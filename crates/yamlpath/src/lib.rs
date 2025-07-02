@@ -579,11 +579,14 @@ impl Document {
     fn query_node(&self, query: &Query, mode: QueryMode) -> Result<Node, QueryError> {
         let mut focus_node = self.top_object()?;
         for component in &query.route {
+            dbg!(&focus_node);
             match self.descend(&focus_node, component) {
                 Ok(next) => focus_node = next,
                 Err(e) => return Err(e),
             }
         }
+
+        dbg!(&focus_node);
 
         focus_node = match mode {
             QueryMode::Pretty => {
@@ -594,10 +597,13 @@ impl Document {
                 //
                 // NOTE: We might already be on the block/flow pair if we terminated
                 // with an absent value, in which case we don't need to do this cleanup.
-                if matches!(query.route.last(), Some(Component::Key(_)))
+                if (matches!(query.route.last(), Some(Component::Key(_)))
                     && focus_node.kind_id() != self.block_mapping_pair_id
-                    && focus_node.kind_id() != self.flow_pair_id
+                    && focus_node.kind_id() != self.flow_pair_id)
+                    || (matches!(query.route.last(), Some(Component::Index(_)))
+                        && focus_node.kind_id() == self.flow_node_id)
                 {
+                    dbg!("hmmmm");
                     focus_node.parent().unwrap()
                 } else {
                     focus_node
@@ -650,6 +656,7 @@ impl Document {
         if matches!(mode, QueryMode::Pretty)
             && matches!(query.route.last(), Some(Component::Key(_)))
             && focus_node.kind_id() != self.block_mapping_pair_id
+            && focus_node.kind_id() != self.flow_pair_id
         {
             focus_node = focus_node.parent().unwrap()
         }
@@ -850,34 +857,52 @@ baz: quux
         )
     }
 
+    //     #[test]
+    //     fn test_basic() {
+    //         let doc = r#"
+    // foo: bar
+    // baz:
+    //   sub:
+    //     keys:
+    //       abc:
+    //         - 123
+    //         - 456
+    //         - [a, b, c, {d: e}]
+    //         "#;
+
+    //         let doc = Document::new(doc).unwrap();
+    //         let query = Query {
+    //             route: vec![
+    //                 Component::Key("baz"),
+    //                 Component::Key("sub"),
+    //                 Component::Key("keys"),
+    //                 Component::Key("abc"),
+    //                 Component::Index(2),
+    //                 Component::Index(3),
+    //             ],
+    //         };
+
+    //         assert_eq!(
+    //             doc.extract_with_leading_whitespace(&doc.query_pretty(&query).unwrap()),
+    //             "{d: e}"
+    //         );
+    //     }
+
     #[test]
-    fn test_basic() {
+    fn test_flow_pair_in_sequence() {
         let doc = r#"
-foo: bar
-baz:
-  sub:
-    keys:
-      abc:
-        - 123
-        - 456
-        - [a, b, c, {d: e}]
-        "#;
+foo: [1, 2, 3: {abc: def}]
+"#;
 
         let doc = Document::new(doc).unwrap();
         let query = Query {
-            route: vec![
-                Component::Key("baz"),
-                Component::Key("sub"),
-                Component::Key("keys"),
-                Component::Key("abc"),
-                Component::Index(2),
-                Component::Index(3),
-            ],
+            route: vec![Component::Key("foo"), Component::Index(2)],
         };
 
+        let feature = doc.query_pretty(&query).unwrap();
         assert_eq!(
-            doc.extract_with_leading_whitespace(&doc.query_pretty(&query).unwrap()),
-            "{d: e}"
+            doc.extract_with_leading_whitespace(&feature),
+            "3: {abc: def}"
         );
     }
 
