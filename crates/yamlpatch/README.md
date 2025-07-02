@@ -53,4 +53,4 @@ and formatting, making minimal changes while achieving the desired result.
 
 ## License
 
-MIT? License.
+MIT License.
