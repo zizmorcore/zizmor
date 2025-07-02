@@ -11,15 +11,22 @@ jobs:
   crates:
     name: Publish zizmor to crates.io 📦
     runs-on: ubuntu-latest
+
     environment:
       name: crates.io
       url: https://crates.io/crates/zizmor
+
+    permissions:
+      id-token: write # for trusted publishing to crates.io
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
 
+      - uses: rust-lang/crates-io-auth-action@591aa2e893cc3dd3b4b9afa8eefaa0b423d90d68 # v1
+        id: auth
+
       - name: publish to crates.io
         run: cargo publish -p zizmor
         env:
-          CARGO_REGISTRY_TOKEN: "${{ secrets.CARGO_REGISTRY_TOKEN }}"
+          CARGO_REGISTRY_TOKEN: "${{ steps.auth.outputs.token }}"
