@@ -2133,9 +2133,11 @@ fn test_merge_into_preserves_comments_in_env_block() {
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // Check that the comment is preserved
-    assert!(result
-        .source()
-        .contains("# An existing comment about this wacky env-var"));
+    assert!(
+        result
+            .source()
+            .contains("# An existing comment about this wacky env-var")
+    );
 
     insta::assert_snapshot!(result.source(), @r#"
         jobs:

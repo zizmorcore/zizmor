@@ -5,10 +5,7 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 use self::location::{Location, SymbolicLocation};
-use crate::{
-    InputKey,
-    models::AsDocument,
-};
+use crate::{InputKey, models::AsDocument};
 use yamlpatch::{self, Patch};
 
 pub(crate) mod location;
