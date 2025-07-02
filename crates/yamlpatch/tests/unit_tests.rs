@@ -1519,15 +1519,6 @@ fn test_merge_into_complex_env_mapping() {
           OIDC_ISSUER_URL: ${{ secrets.OIDC_ISSUER_URL }}
         shell: bash"#;
 
-    let new_env = {
-        let mut map = serde_yaml::Mapping::new();
-        map.insert(
-            serde_yaml::Value::String("STEPS_META_OUTPUTS_TAGS".to_string()),
-            serde_yaml::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
-        );
-        map
-    };
-
     let new_env = indexmap::IndexMap::from_iter([(
         "STEPS_META_OUTPUTS_TAGS".to_string(),
         serde_yaml::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
