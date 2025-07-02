@@ -21,12 +21,19 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       package-name: ${{ steps.get-package-name.outputs.package-name }}
-    if: ${{ github.event_name == 'push' }}
     steps:
       - name: Get package name from tag
         id: get-package-name
         run: |
-          echo package-name="$(echo ${GITHUB_REF_NAME} | cut -d/ -f1)" >> ${GITHUB_OUTPUT}
+          if [[ -z "${INPUT_PACKAGE_NAME}" ]]; then
+            package_name="$(echo ${GITHUB_REF_NAME} | cut -d/ -f1)"
+          else
+            package_name="${INPUT_PACKAGE_NAME}"
+          fi
+          echo "::notice::Using package name: ${package_name}"
+          echo "package-name=${package_name}" >> ${GITHUB_OUTPUT}
+        env:
+          INPUT_PACKAGE_NAME: ${{ github.event.inputs.package-name }}
 
   crates:
     needs: [get-package-name]
