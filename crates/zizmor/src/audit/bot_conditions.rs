@@ -17,8 +17,8 @@ use crate::{
     },
     models::workflow::{JobExt, Workflow},
     utils::ExtractedExpr,
-    yaml_patch::{Op, Patch},
 };
+use yamlpatch::{Op, Patch};
 
 pub(crate) struct BotConditions;
 
@@ -385,7 +385,7 @@ impl BotConditions {
             key: &workflow.key,
             disposition: FixDisposition::Safe,
             patches: vec![Patch {
-                route: if_route,
+                route: if_route.into(),
                 operation: Op::RewriteFragment {
                     from: spoofable_context_raw.into(),
                     to: safe_context.into(),

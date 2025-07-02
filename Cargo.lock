@@ -3664,6 +3664,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
 
 [[package]]
+name = "yamlpatch"
+version = "0.1.0"
+dependencies = [
+ "indexmap",
+ "insta",
+ "line-index",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror 2.0.12",
+ "yamlpath",
+]
+
+[[package]]
 name = "yamlpath"
 version = "0.23.1"
 dependencies = [
@@ -3843,5 +3858,6 @@ dependencies = [
  "tree-sitter",
  "tree-sitter-bash",
  "tree-sitter-powershell",
+ "yamlpatch",
  "yamlpath",
 ]

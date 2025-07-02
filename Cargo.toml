@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/github-actions-expressions",
     "crates/github-actions-models",
+    "crates/yamlpatch",
     "crates/yamlpath",
     "crates/zizmor",
 ]
@@ -64,6 +65,7 @@ tree-sitter = "0.25.6"
 tree-sitter-bash = "0.23.3"
 tree-sitter-powershell = "0.25.6"
 yamlpath = { path = "crates/yamlpath", version = "0.23.1" }
+yamlpatch = { path = "crates/yamlpatch", version = "0.1.0" }
 tree-sitter-yaml = "0.7.1"
 
 [workspace.lints.clippy]

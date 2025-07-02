@@ -1,0 +1,30 @@
+[package]
+name = "yamlpatch"
+version = "0.1.0"
+description = "Comment and format-preserving YAML patch operations"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/yamlpatch"
+keywords = ["yaml", "patch"]
+
+authors = [
+    "Mostafa Moradian <mstfmoradian@gmail.com>",
+    "William Woodruff <william@yossarian.net>"
+]
+homepage.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+indexmap.workspace = true
+line-index.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+serde_yaml.workspace = true
+thiserror.workspace = true
+yamlpath.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+pretty_assertions.workspace = true
