@@ -40,7 +40,7 @@ jobs:
     name: Publish support crate to crates.io 📦
     runs-on: ubuntu-latest
     env:
-      PACKAGE_NAME: ${{ needs.get-package-name.outputs.package-name || github.event.inputs.package-name }}
+      PACKAGE_NAME: ${{ needs.get-package-name.outputs.package-name }}
     environment:
       name: crates.io
       url: https://crates.io/crates/${{ env.PACKAGE_NAME }}
