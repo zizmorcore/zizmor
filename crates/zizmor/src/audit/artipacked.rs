@@ -148,7 +148,7 @@ impl Artipacked {
             key: step.location().key,
             disposition: Default::default(),
             patches: vec![Patch {
-                route: step.route().to_yamlpatch_route(),
+                route: step.route().into(),
                 operation: Op::MergeInto {
                     key: "with".to_string(),
                     updates: indexmap::IndexMap::from_iter([(
