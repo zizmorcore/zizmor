@@ -5,12 +5,14 @@ use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalB
 
 use crate::audit::{Audit, audit_meta};
 use crate::finding::location::{Locatable as _, Routable};
-use crate::finding::{Confidence, Finding, Fix, Severity};
+use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
 use crate::models::StepCommon;
 use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
 use crate::models::workflow::{JobExt as _, NormalJob, Step, Steps};
 use crate::state::AuditState;
-use crate::yaml_patch::{Op, Patch};
+
+use indexmap::IndexMap;
+use yamlpatch::{Op, Patch};
 
 use super::AuditLoadError;
 
@@ -58,7 +60,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         ActionCoordinate::Configurable {
             uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
             control: ControlExpr::single(
-                Toggle::OptOut,
+                Toggle::OptIn,
                 "enable-cache",
                 ControlFieldType::String,
                 true,
@@ -292,16 +294,12 @@ impl CachePoisoning {
             .find(|coord| coord.usage(step).is_some())?;
 
         match matching_coord {
-            ActionCoordinate::NotConfigurable(pattern) => {
+            ActionCoordinate::NotConfigurable(_pattern) => {
                 // For non-configurable actions, suggest removing or replacing
                 Some(Fix {
                     title: "Remove or replace cache-enabled action".to_string(),
-                    description: format!(
-                        "The action '{:?}' always enables caching and cannot be configured to disable it. \
-                        Consider removing this step or replacing it with a manual alternative in publishing workflows.",
-                        pattern
-                    ),
-                    _key: step.location().key,
+                    key: step.location().key,
+                    disposition: FixDisposition::default(),
                     patches: vec![], // No automatic fix
                 })
             }
@@ -325,7 +323,7 @@ impl CachePoisoning {
                 field_type,
                 ..
             } => {
-                let (field_value, title, description) = match (toggle, field_type) {
+                let (field_value, title, _description) = match (toggle, field_type) {
                     (Toggle::OptOut, ControlFieldType::Boolean) => (
                         serde_yaml::Value::Bool(true),
                         format!("Set {}: true to disable caching", field_name),
@@ -343,10 +341,10 @@ impl CachePoisoning {
                         ),
                     ),
                     (Toggle::OptIn, ControlFieldType::String) => (
-                        serde_yaml::Value::String("".to_string()),
-                        format!("Clear {} to disable caching", field_name),
+                        serde_yaml::Value::String("false".to_string()),
+                        format!("Set {}: false to disable caching", field_name),
                         format!(
-                            "Remove or clear the '{}' field to disable caching in this publishing workflow.",
+                            "Set '{}' to 'false' to disable caching in this publishing workflow.",
                             field_name
                         ),
                     ),
@@ -362,13 +360,13 @@ impl CachePoisoning {
 
                 Some(Fix {
                     title,
-                    description,
-                    _key: step.location().key,
+                    key: step.location().key,
+                    disposition: FixDisposition::default(),
                     patches: vec![Patch {
-                        route: step.route().with_keys(&["with".into()]),
+                        route: step.route().into(),
                         operation: Op::MergeInto {
-                            key: field_name.to_string(),
-                            value: field_value,
+                            key: "with".to_string(),
+                            updates: IndexMap::from([(field_name.to_string(), field_value)]),
                         },
                     }],
                 })
@@ -502,7 +500,15 @@ mod tests {
         assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
 
         let fix = &finding.fixes[0];
-        fix.apply_to_content(workflow_content).unwrap().unwrap()
+
+        // Parse the workflow content as a document
+        let document = yamlpath::Document::new(workflow_content).unwrap();
+
+        // Apply the fix and get the new document
+        let fixed_document = fix.apply(&document).unwrap();
+
+        // Return the source content
+        fixed_document.source().to_string()
     }
 
     #[test]
@@ -585,7 +591,7 @@ jobs:
                       - uses: actions/setup-node@v4
                         with:
                           node-version: '20'
-                          cache: ''
+                          cache: 'false'
                       - uses: softprops/action-gh-release@v1
                 ");
             }
@@ -628,7 +634,7 @@ jobs:
                         with:
                           distribution: 'temurin'
                           java-version: '17'
-                          cache: ''
+                          cache: 'false'
                       - uses: softprops/action-gh-release@v1
                 ");
             }
