@@ -327,8 +327,7 @@ fn apply_single_patch(
                 Some(idx) => (idx + bias, idx + bias + from.len()),
                 None => {
                     return Err(Error::InvalidOperation(format!(
-                        "no match for '{}' in feature",
-                        from
+                        "no match for '{from}' in feature"
                     )));
                 }
             };
@@ -437,8 +436,7 @@ fn apply_single_patch(
                     let style = Style::from_feature(&existing_feature, document);
                     if !matches!(style, Style::BlockMapping | Style::FlowMapping) {
                         return Err(Error::InvalidOperation(format!(
-                            "can't perform merge against non-mapping at {:?}",
-                            existing_key_route
+                            "can't perform merge against non-mapping at {existing_key_route:?}"
                         )));
                     }
 
@@ -465,8 +463,7 @@ fn apply_single_patch(
                     )
                     .map_err(|e| {
                         Error::InvalidOperation(format!(
-                            "MergeInto: failed to parse existing mapping at {:?}: {e}",
-                            existing_key_route
+                            "MergeInto: failed to parse existing mapping at {existing_key_route:?}: {e}"
                         ))
                     })?;
 
@@ -500,8 +497,7 @@ fn apply_single_patch(
                 // The key exists, but has an empty body.
                 // TODO: Support this.
                 Ok(None) => Err(Error::InvalidOperation(format!(
-                    "MergeInto: cannot merge into empty key at {:?}",
-                    existing_key_route
+                    "MergeInto: cannot merge into empty key at {existing_key_route:?}"
                 ))),
                 // The key does not exist.
                 Err(Error::Query(yamlpath::QueryError::ExhaustedMapping(_))) => apply_single_patch(
@@ -632,8 +628,7 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
                     }
                     if !matches!(key, serde_yaml::Value::String(_)) {
                         return Err(Error::InvalidOperation(format!(
-                            "mapping keys must be strings, found: {:?}",
-                            key
+                            "mapping keys must be strings, found: {key:?}"
                         )));
                     }
                     serialize_inner(key, buf)?;
@@ -649,8 +644,7 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
                 Ok(())
             }
             serde_yaml::Value::Tagged(tagged_value) => Err(Error::InvalidOperation(format!(
-                "cannot serialize tagged value: {:?}",
-                tagged_value
+                "cannot serialize tagged value: {tagged_value:?}"
             ))),
         }
     }
@@ -961,7 +955,7 @@ fn apply_value_replacement(
                     if string_content.contains('\n') {
                         // For multiline literal blocks, use the raw string content
                         let leading_whitespace = extract_leading_whitespace(doc, feature);
-                        let content_indent = format!("{}  ", leading_whitespace); // Key indent + 2 spaces for content
+                        let content_indent = format!("{leading_whitespace}  "); // Key indent + 2 spaces for content
 
                         // Format as: key: |\n  content\n  more content
                         let indented_content = string_content
@@ -1027,15 +1021,15 @@ fn handle_flow_mapping_value_replacement(
         if value_part.is_empty() {
             // Case: { key: } -> { key: value }
             let key_part = before_colon.trim_start_matches('{').trim();
-            Ok(format!("{{ {}: {} }}", key_part, val_str))
+            Ok(format!("{{ {key_part}: {val_str} }}"))
         } else {
             // Case: { key: oldvalue } -> { key: newvalue }
             let key_part = before_colon.trim_start_matches('{').trim();
-            Ok(format!("{{ {}: {} }}", key_part, val_str))
+            Ok(format!("{{ {key_part}: {val_str} }}"))
         }
     } else {
         // Case 2: { key } - no colon, bare key -> { key: value }
         let key_part = trimmed.trim_start_matches('{').trim_end_matches('}').trim();
-        Ok(format!("{{ {}: {} }}", key_part, val_str))
+        Ok(format!("{{ {key_part}: {val_str} }}"))
     }
 }

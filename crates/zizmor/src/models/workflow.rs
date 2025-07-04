@@ -517,7 +517,7 @@ impl<'doc> Matrix<'doc> {
     fn expand(values: HashMap<String, serde_json::Value>) -> Vec<(String, String)> {
         values
             .iter()
-            .flat_map(|(key, value)| Matrix::walk_path(value, format!("matrix.{}", key)))
+            .flat_map(|(key, value)| Matrix::walk_path(value, format!("matrix.{key}")))
             .collect()
     }
 
