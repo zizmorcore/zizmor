@@ -326,34 +326,30 @@ impl CachePoisoning {
                 let (field_value, title, _description) = match (toggle, field_type) {
                     (Toggle::OptOut, ControlFieldType::Boolean) => (
                         serde_yaml::Value::Bool(true),
-                        format!("Set {}: true to disable caching", field_name),
+                        format!("Set {field_name}: true to disable caching"),
                         format!(
-                            "Set '{}' to 'true' to disable cache writes in this publishing workflow.",
-                            field_name
+                            "Set '{field_name}' to 'true' to disable cache writes in this publishing workflow."
                         ),
                     ),
                     (Toggle::OptIn, ControlFieldType::Boolean) => (
                         serde_yaml::Value::Bool(false),
-                        format!("Set {}: false to disable caching", field_name),
+                        format!("Set {field_name}: false to disable caching"),
                         format!(
-                            "Set '{}' to 'false' to disable caching in this publishing workflow.",
-                            field_name
+                            "Set '{field_name}' to 'false' to disable caching in this publishing workflow."
                         ),
                     ),
                     (Toggle::OptIn, ControlFieldType::String) => (
                         serde_yaml::Value::String("false".to_string()),
-                        format!("Set {}: false to disable caching", field_name),
+                        format!("Set {field_name}: false to disable caching"),
                         format!(
-                            "Set '{}' to 'false' to disable caching in this publishing workflow.",
-                            field_name
+                            "Set '{field_name}' to 'false' to disable caching in this publishing workflow."
                         ),
                     ),
                     (Toggle::OptOut, ControlFieldType::String) => (
                         serde_yaml::Value::String("false".to_string()),
-                        format!("Set {}: false to disable caching", field_name),
+                        format!("Set {field_name}: false to disable caching"),
                         format!(
-                            "Set '{}' to 'false' to disable caching in this publishing workflow.",
-                            field_name
+                            "Set '{field_name}' to 'false' to disable caching in this publishing workflow."
                         ),
                     ),
                 };
