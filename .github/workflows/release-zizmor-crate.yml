@@ -23,7 +23,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: rust-lang/crates-io-auth-action@591aa2e893cc3dd3b4b9afa8eefaa0b423d90d68 # v1
+      - uses: rust-lang/crates-io-auth-action@63a7064947ceca9989005e118db3a5fecdc9259f # v1
         id: auth
 
       - name: publish to crates.io
