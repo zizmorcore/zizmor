@@ -9,8 +9,8 @@ use std::{
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
-use camino::{Utf8Path, Utf8PathBuf};
-use clap::{Args, CommandFactory, Parser, ValueEnum};
+use camino::Utf8Path;
+use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
@@ -69,7 +69,7 @@ struct App {
     offline: bool,
 
     /// The GitHub API token to use.
-    #[arg(long, env)]
+    #[arg(long, env, value_parser = NonEmptyStringValueParser::new())]
     gh_token: Option<String>,
 
     /// The GitHub Server Hostname. Defaults to github.com
@@ -101,8 +101,14 @@ struct App {
 
     /// The configuration file to load. By default, any config will be
     /// discovered relative to $CWD.
-    #[arg(short, long, env = "ZIZMOR_CONFIG", group = "conf")]
-    config: Option<Utf8PathBuf>,
+    #[arg(
+        short,
+        long,
+        env = "ZIZMOR_CONFIG",
+        group = "conf",
+        value_parser = NonEmptyStringValueParser::new()
+    )]
+    config: Option<String>,
 
     /// Disable all configuration loading.
     #[arg(long, group = "conf")]
@@ -123,7 +129,7 @@ struct App {
     /// The directory to use for HTTP caching. By default, a
     /// host-appropriate user-caching directory will be used.
     #[arg(long)]
-    cache_dir: Option<Utf8PathBuf>,
+    cache_dir: Option<String>,
 
     /// Control which kinds of inputs are collected for auditing.
     ///
