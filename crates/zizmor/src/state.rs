@@ -22,7 +22,7 @@ pub(crate) struct AuditState<'a> {
 impl<'a> AuditState<'a> {
     pub(crate) fn new(app: &App, config: &'a Config) -> Self {
         let cache_dir = match &app.cache_dir {
-            Some(cache_dir) => cache_dir.as_std_path().to_path_buf(),
+            Some(cache_dir) => PathBuf::from(cache_dir),
             None => choose_app_strategy(AppStrategyArgs {
                 top_level_domain: "io.github".into(),
                 author: "woodruffw".into(),
