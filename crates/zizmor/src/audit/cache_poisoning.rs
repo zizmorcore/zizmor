@@ -333,20 +333,11 @@ impl CachePoisoning {
                             "Set '{field_name}' to 'false' to disable caching in this publishing workflow."
                         ),
                     ),
-                    (Toggle::OptIn, ControlFieldType::String) => (
-                        serde_yaml::Value::String("false".to_string()),
-                        format!("Set {field_name}: false to disable caching"),
-                        format!(
-                            "Set '{field_name}' to 'false' to disable caching in this publishing workflow."
-                        ),
-                    ),
-                    (Toggle::OptOut, ControlFieldType::String) => (
-                        serde_yaml::Value::String("false".to_string()),
-                        format!("Set {field_name}: false to disable caching"),
-                        format!(
-                            "Set '{field_name}' to 'false' to disable caching in this publishing workflow."
-                        ),
-                    ),
+                    // String control fields are action-specific and we can't reliably know
+                    // what value disables caching (e.g., setup-node expects '' not 'false')
+                    (Toggle::OptIn, ControlFieldType::String) | (Toggle::OptOut, ControlFieldType::String) => {
+                        return None;
+                    }
                 };
 
                 Some(Fix {
@@ -558,10 +549,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-go@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          go-version: '1.21'
+          cache: true
       - uses: softprops/action-gh-release@v1
 "#;
 
@@ -579,10 +570,10 @@ jobs:
                   test:
                     runs-on: ubuntu-latest
                     steps:
-                      - uses: actions/setup-node@v4
+                      - uses: actions/setup-go@v4
                         with:
-                          node-version: '20'
-                          cache: 'false'
+                          go-version: '1.21'
+                          cache: false
                       - uses: softprops/action-gh-release@v1
                 ");
             }
@@ -612,22 +603,10 @@ jobs:
             "test_cache_disable_fix_opt_in_string.yml",
             workflow_content,
             |findings: Vec<Finding>| {
-                let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
-                insta::assert_snapshot!(fixed_content, @r"
-                name: Test Workflow
-                on: release
-
-                jobs:
-                  test:
-                    runs-on: ubuntu-latest
-                    steps:
-                      - uses: actions/setup-java@v4
-                        with:
-                          distribution: 'temurin'
-                          java-version: '17'
-                          cache: 'false'
-                      - uses: softprops/action-gh-release@v1
-                ");
+                let finding = &findings[0];
+                // String control fields should not have fixes since we can't reliably
+                // know what value disables caching for different actions
+                assert!(finding.fixes.is_empty());
             }
         );
     }
@@ -653,20 +632,10 @@ jobs:
             "test_cache_disable_fix_opt_out_string.yml",
             workflow_content,
             |findings: Vec<Finding>| {
-                let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
-                insta::assert_snapshot!(fixed_content, @r"
-                name: Test Workflow
-                on: release
-
-                jobs:
-                  test:
-                    runs-on: ubuntu-latest
-                    steps:
-                      - uses: astral-sh/setup-uv@v1
-                        with:
-                          enable-cache: 'false'
-                      - uses: softprops/action-gh-release@v1
-                ");
+                let finding = &findings[0];
+                // String control fields should not have fixes since we can't reliably
+                // know what value disables caching for different actions
+                assert!(finding.fixes.is_empty());
             }
         );
     }
