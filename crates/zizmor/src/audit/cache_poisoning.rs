@@ -295,13 +295,8 @@ impl CachePoisoning {
 
         match matching_coord {
             ActionCoordinate::NotConfigurable(_pattern) => {
-                // For non-configurable actions, suggest removing or replacing
-                Some(Fix {
-                    title: "Remove or replace cache-enabled action".to_string(),
-                    key: step.location().key,
-                    disposition: FixDisposition::default(),
-                    patches: vec![], // No automatic fix
-                })
+                // For non-configurable actions, we can't provide automatic fixes
+                None
             }
             ActionCoordinate::Configurable {
                 uses_pattern,
@@ -696,11 +691,8 @@ jobs:
             workflow_content,
             |findings: Vec<Finding>| {
                 let finding = &findings[0];
-                assert_eq!(
-                    finding.fixes[0].title,
-                    "Remove or replace cache-enabled action"
-                );
-                assert!(finding.fixes[0].patches.is_empty());
+                // Non-configurable actions should not have fixes
+                assert!(finding.fixes.is_empty());
             }
         );
     }
