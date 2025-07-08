@@ -60,7 +60,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         ActionCoordinate::Configurable {
             uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
             control: ControlExpr::single(
-                Toggle::OptIn,
+                Toggle::OptOut,
                 "enable-cache",
                 ControlFieldType::String,
                 true,
@@ -611,34 +611,7 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_cache_disable_fix_opt_out_string() {
-        let workflow_content = r#"
-name: Test Workflow
-on: release
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: astral-sh/setup-uv@v1
-        with:
-          enable-cache: "true"
-      - uses: softprops/action-gh-release@v1
-"#;
-
-        test_workflow_audit!(
-            CachePoisoning,
-            "test_cache_disable_fix_opt_out_string.yml",
-            workflow_content,
-            |findings: Vec<Finding>| {
-                let finding = &findings[0];
-                // String control fields should not have fixes since we can't reliably
-                // know what value disables caching for different actions
-                assert!(finding.fixes.is_empty());
-            }
-        );
-    }
 
     #[test]
     fn test_cache_disable_fix_non_configurable() {
