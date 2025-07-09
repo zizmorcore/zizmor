@@ -15,10 +15,10 @@
 
 use std::ops::{BitAnd, BitOr};
 
-use github_actions_models::common::{expr::ExplicitExpr, EnvValue, Uses};
+use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
 use indexmap::IndexMap;
 
-use super::{uses::RepositoryUsesPattern, StepBodyCommon, StepCommon};
+use super::{StepBodyCommon, StepCommon, uses::RepositoryUsesPattern};
 
 pub(crate) enum ActionCoordinate {
     Configurable {
