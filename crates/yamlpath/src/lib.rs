@@ -343,14 +343,6 @@ impl Document {
         &self.source
     }
 
-    /// Returns a `Feature` for this document's root node.
-    ///
-    /// This is typically useful as a "fallback" feature, e.g. for capturing
-    /// a span of the entire document.
-    pub fn root(&self) -> Feature {
-        self.tree.root_node().into()
-    }
-
     /// Returns a [`Feature`] for the topmost semantic object in this document.
     ///
     /// This is typically useful as a "fallback" feature, e.g. for positioning
@@ -875,6 +867,21 @@ baz:
             doc.extract_with_leading_whitespace(&doc.query_pretty(&route).unwrap()),
             "{d: e}"
         );
+    }
+
+    #[test]
+    fn test_top_feature() {
+        let doc = r#"
+foo: bar
+baz:
+  abc: def
+"#;
+
+        let doc = Document::new(doc).unwrap();
+        let feature = doc.top_feature().unwrap();
+
+        assert_eq!(doc.extract(&feature).trim(), doc.source().trim());
+        assert_eq!(feature.kind(), FeatureKind::BlockMapping);
     }
 
     #[test]

@@ -266,19 +266,16 @@ impl<'doc> SymbolicLocation<'doc> {
             SymbolicFeature::Subfeature(subfeature) => {
                 // If we have a subfeature, we have to extract its exact
                 // parent feature.
-                let feature = match self.route.is_empty() {
-                    false => document.query_exact(&self.route)?.ok_or_else(|| {
-                        // This should never fail in practice, unless our
-                        // route is malformed or ends in a key-only feature
-                        // (e.g. `foo:`). The latter shouldn't really happen,
-                        // since there's no meaningful subfeature in that case.
-                        anyhow::anyhow!(
-                            "failed to extract exact feature for symbolic location: {}",
-                            self.annotation
-                        )
-                    })?,
-                    true => document.root(),
-                };
+                let feature = document.query_exact(&self.route)?.ok_or_else(|| {
+                    // This should never fail in practice, unless our
+                    // route is malformed or ends in a key-only feature
+                    // (e.g. `foo:`). The latter shouldn't really happen,
+                    // since there's no meaningful subfeature in that case.
+                    anyhow::anyhow!(
+                        "failed to extract exact feature for symbolic location: {}",
+                        self.annotation
+                    )
+                })?;
 
                 let extracted = document.extract(&feature);
 
@@ -298,10 +295,7 @@ impl<'doc> SymbolicLocation<'doc> {
                 )
             }
             SymbolicFeature::Normal => {
-                let feature = match self.route.is_empty() {
-                    false => document.query_pretty(&self.route)?,
-                    true => document.root(),
-                };
+                let feature = document.query_pretty(&self.route)?;
 
                 (
                     document.extract_with_leading_whitespace(&feature),

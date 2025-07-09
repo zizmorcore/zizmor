@@ -84,10 +84,10 @@ error[artipacked]: credential persistence through GitHub Actions artifacts
    = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
-  --> .github/workflows/artipacked.yml:1:1
+  --> .github/workflows/artipacked.yml:21:1
    |
- 1 | / # artipacked.yml
- 2 | | #
+21 | / on:
+22 | |   push:
 ...  |
 84 | |           name: workspace
 85 | |           path: ${{ github.workspace }}
@@ -201,10 +201,10 @@ error[bot-conditions]: spoofable bot actor check
    = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
-  --> .github/workflows/cache-poisoning.yml:1:1
+  --> .github/workflows/cache-poisoning.yml:22:1
    |
- 1 | / # cache-poisoning.yml
- 2 | | #
+22 | / on: release
+23 | |
 ...  |
 57 | |       - name: Publish on crates.io
 58 | |         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}
@@ -702,10 +702,10 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
 
 warning[excessive-permissions]: overly broad permissions
-  --> .github/workflows/secrets-inherit.yml:1:1
+  --> .github/workflows/secrets-inherit.yml:12:1
    |
- 1 | / # secrets-inherit.yml
- 2 | | #
+12 | / on: push
+13 | |
 ...  |
 32 | |     # OK: no secrets forwarded
 33 | |     secrets: {}
@@ -796,10 +796,10 @@ warning[excessive-permissions]: overly broad permissions
    = note: audit confidence → Medium
 
 warning[excessive-permissions]: overly broad permissions
-   --> .github/workflows/template-injection.yml:1:1
+   --> .github/workflows/template-injection.yml:20:1
     |
-  1 | / # template-injection.yml
-  2 | | #
+ 20 | / name: example
+ 21 | | on:
 ...   |
 127 | |         run: |
 128 | |           ${{ some.context == 'success' }}

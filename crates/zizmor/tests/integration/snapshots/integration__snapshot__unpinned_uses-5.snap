@@ -1,12 +1,13 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"unpinned-uses/issue-659-repro.yml\")).args([\"--pedantic\"]).run()?"
+snapshot_kind: text
 ---
 warning[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:1:1
+  --> @@INPUT@@:2:1
    |
- 1 | / # minimized from https://raw.githubusercontent.com/docker/actions-toolkit/59501e62b/.github/workflows/test.yml
- 2 | | name: issue-659-repro
+ 2 | / name: issue-659-repro
+ 3 | |
 ...  |
 19 | |         with:
 20 | |           node-version: ${{ env.NODE_VERSION }}
