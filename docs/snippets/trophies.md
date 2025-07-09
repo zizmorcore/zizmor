@@ -722,6 +722,7 @@
 
     ??? example "Examples"
         - openpubkey/opkssh#198
+        - openpubkey/opkssh#247
 
 
 -   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource

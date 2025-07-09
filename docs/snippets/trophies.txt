@@ -162,6 +162,7 @@ openbao/openbao#924
 open-edge-platform/geti#162
 open-edge-platform/geti-sdk#603
 openpubkey/opkssh#198
+openpubkey/opkssh#247
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
 orion-rs/orion#441
