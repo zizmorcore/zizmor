@@ -385,7 +385,7 @@ impl BotConditions {
             key: &workflow.key,
             disposition: FixDisposition::Safe,
             patches: vec![Patch {
-                route: if_route.into(),
+                route: if_route,
                 operation: Op::RewriteFragment {
                     from: spoofable_context_raw.into(),
                     to: safe_context.into(),

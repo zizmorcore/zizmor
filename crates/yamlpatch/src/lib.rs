@@ -449,14 +449,14 @@ pub fn route_to_feature_pretty<'a>(
     route: &yamlpath::Route<'_>,
     doc: &'a yamlpath::Document,
 ) -> Result<yamlpath::Feature<'a>, Error> {
-    doc.query_pretty(&route).map_err(Error::from)
+    doc.query_pretty(route).map_err(Error::from)
 }
 
 pub fn route_to_feature_exact<'a>(
     route: &yamlpath::Route<'_>,
     doc: &'a yamlpath::Document,
 ) -> Result<Option<yamlpath::Feature<'a>>, Error> {
-    doc.query_exact(&route).map_err(Error::from)
+    doc.query_exact(route).map_err(Error::from)
 }
 
 /// Serialize a serde_yaml::Value to a YAML string, handling different types appropriately

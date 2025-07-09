@@ -284,7 +284,7 @@ impl TemplateInjection {
 
         let mut patches = vec![];
         patches.push(Patch {
-            route: step.route().with_keys(["run".into()]).into(),
+            route: step.route().with_keys(["run".into()]),
             operation: Op::RewriteFragment {
                 from: raw.as_raw().to_string().into(),
                 to: format!("${{{env_var}}}").into(),
@@ -300,7 +300,7 @@ impl TemplateInjection {
             .contains(&env_var.as_str())
         {
             patches.push(Patch {
-                route: step.route().into(),
+                route: step.route(),
                 operation: Op::MergeInto {
                     key: "env".to_string(),
                     updates: indexmap::IndexMap::from_iter([(

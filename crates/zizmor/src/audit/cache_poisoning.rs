@@ -348,7 +348,7 @@ impl CachePoisoning {
                     key: step.location().key,
                     disposition: FixDisposition::default(),
                     patches: vec![Patch {
-                        route: step.route().into(),
+                        route: step.route(),
                         operation: Op::MergeInto {
                             key: "with".to_string(),
                             updates: IndexMap::from([(field_name.to_string(), field_value)]),
