@@ -16,10 +16,10 @@ workspace = true
 
 [dependencies]
 line-index.workspace = true
+serde.workspace = true
 thiserror.workspace = true
 tree-sitter.workspace = true
 tree-sitter-yaml = { workspace = true }
 
 [dev-dependencies]
-serde.workspace = true
 serde_yaml.workspace = true

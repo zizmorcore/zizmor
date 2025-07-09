@@ -55,7 +55,7 @@ impl ForbiddenUses {
                     .add_location(
                         step.location()
                             .primary()
-                            .with_keys(&["uses".into()])
+                            .with_keys(["uses".into()])
                             .annotated("use of this action is forbidden"),
                     )
                     .build(step)?,

@@ -20,7 +20,7 @@ use terminal_link::Link;
 
 use crate::{
     InputKey,
-    finding::location::{Locatable, Route, SymbolicFeature, SymbolicLocation},
+    finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
     models::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
@@ -195,7 +195,7 @@ impl Workflow {
             key: &self.key,
             annotation: "this workflow".to_string(),
             link: None,
-            route: Route::new(),
+            route: Default::default(),
             feature_kind: SymbolicFeature::Normal,
             kind: Default::default(),
         }
@@ -337,12 +337,12 @@ impl<'doc, T: JobExt<'doc>> Locatable<'doc> for T {
         self.parent()
             .location()
             .annotated("this job")
-            .with_keys(&["jobs".into(), self.id().into()])
+            .with_keys(["jobs".into(), self.id().into()])
     }
 
     fn location_with_name(&self) -> SymbolicLocation<'doc> {
         match self.name() {
-            Some(_) => self.location().with_keys(&["name".into()]),
+            Some(_) => self.location().with_keys(["name".into()]),
             None => self.location(),
         }
     }
@@ -581,13 +581,13 @@ impl<'doc> Locatable<'doc> for Step<'doc> {
     fn location(&self) -> SymbolicLocation<'doc> {
         self.parent
             .location()
-            .with_keys(&["steps".into(), self.index.into()])
+            .with_keys(["steps".into(), self.index.into()])
             .annotated("this step")
     }
 
     fn location_with_name(&self) -> SymbolicLocation<'doc> {
         match self.inner.name {
-            Some(_) => self.location().with_keys(&["name".into()]),
+            Some(_) => self.location().with_keys(["name".into()]),
             None => self.location(),
         }
     }

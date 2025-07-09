@@ -13,7 +13,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     finding::{
         Confidence, Fix, FixDisposition, Severity,
-        location::{Locatable as _, Route, Subfeature},
+        location::{Locatable as _, Subfeature},
     },
     models::workflow::{JobExt, Workflow},
     utils::ExtractedExpr,
@@ -77,7 +77,7 @@ impl Audit for BotConditions {
             conds.push((
                 expr,
                 job.location_with_name(),
-                job.location().with_keys(&["if".into()]),
+                job.location().with_keys(["if".into()]),
             ));
         }
 
@@ -87,7 +87,7 @@ impl Audit for BotConditions {
                 conds.push((
                     expr,
                     step.location_with_name(),
-                    step.location().with_keys(&["if".into()]),
+                    step.location().with_keys(["if".into()]),
                 ));
             }
         }
@@ -352,7 +352,7 @@ impl BotConditions {
     fn attempt_fix<'doc>(
         workflow: &'doc Workflow,
         spoofable_context: &SpannedExpr<'doc>,
-        if_route: Route<'doc>,
+        if_route: yamlpath::Route<'doc>,
     ) -> Option<Fix<'doc>> {
         // Get appropriate contexts based on workflow triggers
         let (safe_name_context, safe_id_context) = Self::get_user_contexts_for_triggers(workflow)?;

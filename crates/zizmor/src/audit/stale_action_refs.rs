@@ -47,7 +47,7 @@ impl StaleActionRefs {
                     .confidence(Confidence::High)
                     .severity(Severity::Low)
                     .persona(Persona::Pedantic)
-                    .add_location(step.location().primary().with_keys(&["uses".into()]))
+                    .add_location(step.location().primary().with_keys(["uses".into()]))
                     .build(step)?,
             );
         }

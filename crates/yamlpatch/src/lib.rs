@@ -3,98 +3,6 @@
 use std::borrow::Cow;
 
 use line_index::{LineCol, TextRange, TextSize};
-use serde::Serialize;
-
-/// Represents a route component in a YAML path.
-#[derive(Serialize, Clone, Debug)]
-pub enum RouteComponent<'doc> {
-    /// A key in a mapping.
-    Key(&'doc str),
-    /// An index in a sequence.
-    Index(usize),
-}
-
-impl From<usize> for RouteComponent<'_> {
-    fn from(value: usize) -> Self {
-        Self::Index(value)
-    }
-}
-
-impl<'doc> From<&'doc str> for RouteComponent<'doc> {
-    fn from(value: &'doc str) -> Self {
-        Self::Key(value)
-    }
-}
-
-/// Represents a route (path) to a YAML feature.
-#[derive(Serialize, Clone, Debug)]
-pub struct Route<'doc> {
-    components: Vec<RouteComponent<'doc>>,
-}
-
-impl Default for Route<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'doc> Route<'doc> {
-    /// Create a new empty route.
-    pub fn new() -> Route<'doc> {
-        Self {
-            components: Default::default(),
-        }
-    }
-
-    /// Create a new route with the given keys appended.
-    pub fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> Route<'doc> {
-        let mut components = self.components.clone();
-        components.extend(keys.iter().cloned());
-        Route { components }
-    }
-
-    /// Check if this route is the root route (empty).
-    pub fn is_root(&self) -> bool {
-        self.components.is_empty()
-    }
-
-    /// Convert this route to a yamlpath query.
-    pub fn to_query(&self) -> Option<yamlpath::Query<'doc>> {
-        if self.is_root() {
-            return None;
-        }
-
-        let mut builder = yamlpath::QueryBuilder::new();
-
-        for component in &self.components {
-            builder = match component {
-                RouteComponent::Key(key) => builder.key(key),
-                RouteComponent::Index(idx) => builder.index(*idx),
-            }
-        }
-
-        Some(builder.build())
-    }
-}
-
-impl<'doc> From<Vec<RouteComponent<'doc>>> for Route<'doc> {
-    fn from(components: Vec<RouteComponent<'doc>>) -> Self {
-        Self { components }
-    }
-}
-
-/// Macro to create a route from a series of keys and indices.
-#[macro_export]
-macro_rules! route {
-    ($($key:expr),* $(,)?) => {
-        $crate::Route::from(
-            vec![$($crate::RouteComponent::from($key)),*]
-        )
-    };
-    () => {
-        $crate::Route::new()
-    };
-}
 
 /// Error types for YAML patch operations
 #[derive(thiserror::Error, Debug)]
@@ -189,7 +97,7 @@ impl Style {
 #[derive(Debug, Clone)]
 pub struct Patch<'doc> {
     /// The route to the feature to patch.
-    pub route: Route<'doc>,
+    pub route: yamlpath::Route<'doc>,
     /// The operation to perform on the feature.
     pub operation: Op<'doc>,
 }
@@ -375,11 +283,7 @@ fn apply_single_patch(
             // Check to see whether `key` is already present within the route.
             // NOTE: Safe unwrap, since `with_keys` ensures we always have at
             // least one component.
-            let key_query = patch
-                .route
-                .with_keys(&[key.as_str().into()])
-                .to_query()
-                .unwrap();
+            let key_query = patch.route.with_key(key.as_str());
 
             if document.query_exists(&key_query) {
                 return Err(Error::InvalidOperation(format!(
@@ -389,7 +293,7 @@ fn apply_single_patch(
                 )));
             }
 
-            let feature = if patch.route.is_root() {
+            let feature = if patch.route.is_empty() {
                 document.top_feature()?
             } else {
                 route_to_feature_exact(&patch.route, document)?.ok_or_else(|| {
@@ -428,7 +332,7 @@ fn apply_single_patch(
             yamlpath::Document::new(result).map_err(Error::from)
         }
         Op::MergeInto { key, updates } => {
-            let existing_key_route = patch.route.with_keys(&[key.as_str().into()]);
+            let existing_key_route = patch.route.with_key(key.as_str());
             match route_to_feature_exact(&existing_key_route, document) {
                 // The key already exists, and has a nonempty body.
                 Ok(Some(existing_feature)) => {
@@ -474,7 +378,7 @@ fn apply_single_patch(
                             current_document = apply_single_patch(
                                 &current_document,
                                 &Patch {
-                                    route: existing_key_route.with_keys(&[k.as_str().into()]),
+                                    route: existing_key_route.with_key(k.as_str()),
                                     operation: Op::Replace(v.clone()),
                                 },
                             )?;
@@ -514,7 +418,7 @@ fn apply_single_patch(
             }
         }
         Op::Remove => {
-            if patch.route.is_root() {
+            if patch.route.is_empty() {
                 return Err(Error::InvalidOperation(
                     "Cannot remove root document".to_string(),
                 ));
@@ -542,23 +446,17 @@ fn apply_single_patch(
 }
 
 pub fn route_to_feature_pretty<'a>(
-    route: &Route<'_>,
+    route: &yamlpath::Route<'_>,
     doc: &'a yamlpath::Document,
 ) -> Result<yamlpath::Feature<'a>, Error> {
-    match route.to_query() {
-        Some(query) => doc.query_pretty(&query).map_err(Error::from),
-        None => Ok(doc.root()),
-    }
+    doc.query_pretty(&route).map_err(Error::from)
 }
 
 pub fn route_to_feature_exact<'a>(
-    route: &Route<'_>,
+    route: &yamlpath::Route<'_>,
     doc: &'a yamlpath::Document,
 ) -> Result<Option<yamlpath::Feature<'a>>, Error> {
-    match route.to_query() {
-        Some(query) => doc.query_exact(&query).map_err(Error::from),
-        None => Ok(Some(doc.root())),
-    }
+    doc.query_exact(&route).map_err(Error::from)
 }
 
 /// Serialize a serde_yaml::Value to a YAML string, handling different types appropriately

@@ -32,96 +32,6 @@ pub(crate) enum LocationKind {
     Hidden,
 }
 
-#[derive(Serialize, Clone, Debug)]
-pub(crate) enum RouteComponent<'doc> {
-    Key(&'doc str),
-    Index(usize),
-}
-
-impl From<usize> for RouteComponent<'_> {
-    fn from(value: usize) -> Self {
-        Self::Index(value)
-    }
-}
-
-impl<'doc> From<&'doc str> for RouteComponent<'doc> {
-    fn from(value: &'doc str) -> Self {
-        Self::Key(value)
-    }
-}
-
-#[derive(Serialize, Clone, Debug)]
-pub(crate) struct Route<'doc> {
-    components: Vec<RouteComponent<'doc>>,
-}
-
-impl<'doc> Route<'doc> {
-    pub(crate) fn new() -> Route<'doc> {
-        Self {
-            components: Default::default(),
-        }
-    }
-
-    pub(crate) fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> Route<'doc> {
-        let mut components = self.components.clone();
-        components.extend(keys.iter().cloned());
-        Route { components }
-    }
-
-    pub(crate) fn is_root(&self) -> bool {
-        self.components.is_empty()
-    }
-
-    pub(crate) fn to_query(&self) -> Option<yamlpath::Query<'doc>> {
-        if self.is_root() {
-            return None;
-        }
-
-        let mut builder = yamlpath::QueryBuilder::new();
-
-        for component in &self.components {
-            builder = match component {
-                RouteComponent::Key(key) => builder.key(key),
-                RouteComponent::Index(idx) => builder.index(*idx),
-            }
-        }
-
-        Some(builder.build())
-    }
-}
-
-impl<'doc> From<Vec<RouteComponent<'doc>>> for Route<'doc> {
-    fn from(components: Vec<RouteComponent<'doc>>) -> Self {
-        Self { components }
-    }
-}
-
-impl<'doc> From<Route<'doc>> for yamlpatch::Route<'doc> {
-    fn from(route: Route<'doc>) -> Self {
-        let yamlpatch_components: Vec<yamlpatch::RouteComponent<'doc>> = route
-            .components
-            .iter()
-            .map(|comp| match comp {
-                RouteComponent::Key(key) => yamlpatch::RouteComponent::Key(key),
-                RouteComponent::Index(idx) => yamlpatch::RouteComponent::Index(*idx),
-            })
-            .collect();
-        yamlpatch::Route::from(yamlpatch_components)
-    }
-}
-
-#[macro_export]
-macro_rules! route {
-    ($($key:expr),* $(,)?) => {
-        $crate::finding::location::Route::from(
-            vec![$($crate::finding::location::RouteComponent::from($key)),*]
-        )
-    };
-    () => {
-        $crate::finding::location::Route::new()
-    };
-}
-
 /// Represent's a subfeature's fragment.
 ///
 /// This is used to locate a subfeature's exact location within a surrounding
@@ -280,7 +190,7 @@ pub(crate) struct SymbolicLocation<'doc> {
     pub(crate) link: Option<String>,
 
     /// A symbolic route (of keys and indices) to the final location.
-    pub(crate) route: Route<'doc>,
+    pub(crate) route: yamlpath::Route<'doc>,
 
     pub(crate) feature_kind: SymbolicFeature<'doc>,
 
@@ -289,7 +199,10 @@ pub(crate) struct SymbolicLocation<'doc> {
 }
 
 impl<'doc> SymbolicLocation<'doc> {
-    pub(crate) fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> SymbolicLocation<'doc> {
+    pub(crate) fn with_keys(
+        &self,
+        keys: impl IntoIterator<Item = yamlpath::Component<'doc>>,
+    ) -> SymbolicLocation<'doc> {
         SymbolicLocation {
             key: self.key,
             annotation: self.annotation.clone(),
@@ -353,8 +266,8 @@ impl<'doc> SymbolicLocation<'doc> {
             SymbolicFeature::Subfeature(subfeature) => {
                 // If we have a subfeature, we have to extract its exact
                 // parent feature.
-                let feature = match self.route.to_query() {
-                    Some(query) => document.query_exact(&query)?.ok_or_else(|| {
+                let feature = match self.route.is_empty() {
+                    false => document.query_exact(&self.route)?.ok_or_else(|| {
                         // This should never fail in practice, unless our
                         // route is malformed or ends in a key-only feature
                         // (e.g. `foo:`). The latter shouldn't really happen,
@@ -364,7 +277,7 @@ impl<'doc> SymbolicLocation<'doc> {
                             self.annotation
                         )
                     })?,
-                    None => document.root(),
+                    true => document.root(),
                 };
 
                 let extracted = document.extract(&feature);
@@ -385,9 +298,9 @@ impl<'doc> SymbolicLocation<'doc> {
                 )
             }
             SymbolicFeature::Normal => {
-                let feature = match self.route.to_query() {
-                    Some(query) => document.query_pretty(&query)?,
-                    None => document.root(),
+                let feature = match self.route.is_empty() {
+                    false => document.query_pretty(&self.route)?,
+                    true => document.root(),
                 };
 
                 (
@@ -397,9 +310,9 @@ impl<'doc> SymbolicLocation<'doc> {
                 )
             }
             SymbolicFeature::KeyOnly => {
-                let feature = match self.route.to_query() {
-                    Some(query) => document.query_key_only(&query)?,
-                    None => {
+                let feature = match self.route.is_empty() {
+                    false => document.query_key_only(&self.route)?,
+                    true => {
                         // NOTE: Technically API misuse; maybe we should panic instead?
                         anyhow::bail!("can't concretize a key-only route without a query");
                     }
@@ -445,11 +358,11 @@ pub(crate) trait Locatable<'doc> {
 }
 
 pub(crate) trait Routable<'a, 'doc> {
-    fn route(&'a self) -> Route<'doc>;
+    fn route(&'a self) -> yamlpath::Route<'doc>;
 }
 
 impl<'a, 'doc, T: Locatable<'doc>> Routable<'a, 'doc> for T {
-    fn route(&'a self) -> Route<'doc> {
+    fn route(&'a self) -> yamlpath::Route<'doc> {
         self.location().route
     }
 }

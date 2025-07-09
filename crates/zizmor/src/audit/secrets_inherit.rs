@@ -34,12 +34,12 @@ impl Audit for SecretsInherit {
                     .add_location(
                         job.location()
                             .primary()
-                            .with_keys(&["uses".into()])
+                            .with_keys(["uses".into()])
                             .annotated("this reusable workflow"),
                     )
                     .add_location(
                         job.location()
-                            .with_keys(&["secrets".into()])
+                            .with_keys(["secrets".into()])
                             .annotated("inherits all parent secrets"),
                     )
                     .confidence(Confidence::High)

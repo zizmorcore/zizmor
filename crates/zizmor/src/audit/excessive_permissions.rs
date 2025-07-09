@@ -159,14 +159,14 @@ impl ExcessivePermissions {
                     Severity::Medium,
                     Confidence::High,
                     location
-                        .with_keys(&["permissions".into()])
+                        .with_keys(["permissions".into()])
                         .annotated("uses read-all permissions"),
                 )),
                 BasePermission::WriteAll => results.push((
                     Severity::High,
                     Confidence::High,
                     location
-                        .with_keys(&["permissions".into()])
+                        .with_keys(["permissions".into()])
                         .annotated("uses write-all permissions"),
                 )),
             },
@@ -186,7 +186,7 @@ impl ExcessivePermissions {
                         *severity,
                         Confidence::High,
                         location
-                            .with_keys(&["permissions".into(), name.as_str().into()])
+                            .with_keys(["permissions".into(), name.as_str().into()])
                             .annotated(format!(
                                 "{name}: write is overly broad at the workflow level"
                             )),
@@ -219,14 +219,14 @@ impl ExcessivePermissions {
                     Severity::Medium,
                     Confidence::High,
                     location
-                        .with_keys(&["permissions".into()])
+                        .with_keys(["permissions".into()])
                         .annotated("uses read-all permissions"),
                 )),
                 BasePermission::WriteAll => Some((
                     Severity::High,
                     Confidence::High,
                     location
-                        .with_keys(&["permissions".into()])
+                        .with_keys(["permissions".into()])
                         .annotated("uses write-all permissions"),
                 )),
             },

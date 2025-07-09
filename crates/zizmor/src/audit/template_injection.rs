@@ -130,16 +130,16 @@ impl TemplateInjection {
                         .map(|script| {
                             (
                                 script,
-                                step.location().with_keys(&["with".into(), input.into()]),
+                                step.location().with_keys(["with".into(), input.into()]),
                                 vec![
                                     // TODO: Plumb the step name/id as a related
                                     // location here and below; this will require us
                                     // to add it to StepCommon.
                                     step.location()
-                                        .with_keys(&["uses".into()])
+                                        .with_keys(["uses".into()])
                                         .annotated("action accepts arbitrary code"),
                                     step.location()
-                                        .with_keys(&["with".into(), input.into()])
+                                        .with_keys(["with".into(), input.into()])
                                         .annotated("via this input")
                                         .key_only(),
                                 ],
@@ -150,10 +150,10 @@ impl TemplateInjection {
             models::StepBodyCommon::Run { run, .. } => {
                 vec![(
                     run,
-                    step.location().with_keys(&["run".into()]),
+                    step.location().with_keys(["run".into()]),
                     vec![
                         step.location()
-                            .with_keys(&["run".into()])
+                            .with_keys(["run".into()])
                             .annotated("this run block")
                             .key_only(),
                     ],
@@ -284,7 +284,7 @@ impl TemplateInjection {
 
         let mut patches = vec![];
         patches.push(Patch {
-            route: step.route().with_keys(&["run".into()]).into(),
+            route: step.route().with_keys(["run".into()]).into(),
             operation: Op::RewriteFragment {
                 from: raw.as_raw().to_string().into(),
                 to: format!("${{{env_var}}}").into(),

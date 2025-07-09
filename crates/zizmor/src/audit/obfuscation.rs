@@ -110,7 +110,7 @@ impl Obfuscation {
                         .add_location(
                             step.location()
                                 .primary()
-                                .with_keys(&["uses".into()])
+                                .with_keys(["uses".into()])
                                 .annotated(annotation),
                         )
                         .build(step)?,

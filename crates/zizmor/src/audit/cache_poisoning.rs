@@ -382,13 +382,13 @@ impl CachePoisoning {
                 .add_location(
                     step.workflow()
                         .location()
-                        .with_keys(&["on".into()])
+                        .with_keys(["on".into()])
                         .annotated("generally used when publishing artifacts generated at runtime"),
                 )
                 .add_location(
                     step.location()
                         .primary()
-                        .with_keys(&[yaml_key.into()])
+                        .with_keys([yaml_key.into()])
                         .annotated(annotation),
                 ),
             PublishingArtifactsScenario::UsingWellKnowPublisherAction(publisher) => Self::finding()
@@ -397,13 +397,13 @@ impl CachePoisoning {
                 .add_location(
                     publisher
                         .location()
-                        .with_keys(&["uses".into()])
+                        .with_keys(["uses".into()])
                         .annotated("runtime artifacts usually published here"),
                 )
                 .add_location(
                     step.location()
                         .primary()
-                        .with_keys(&[yaml_key.into()])
+                        .with_keys([yaml_key.into()])
                         .annotated(annotation),
                 ),
         };

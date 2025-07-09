@@ -1,7 +1,7 @@
-//! Comment and format-preserving YAML path queries.
+//! Comment and format-preserving YAML path routes.
 //!
 //! This is **not** "XPath but for YAML". If you need a generic object
-//! query language that **doesn't** capture exact parse spans or comments,
+//! route language that **doesn't** capture exact parse spans or comments,
 //! then you probably want an implementation of [JSONPath] or something
 //! like [jq].
 //!
@@ -14,10 +14,11 @@
 #![forbid(unsafe_code)]
 
 use line_index::LineIndex;
+use serde::Serialize;
 use thiserror::Error;
 use tree_sitter::{Language, Node, Parser, Tree};
 
-/// Possible errors when performing YAML path queries.
+/// Possible errors when performing YAML path routes.
 #[derive(Error, Debug)]
 pub enum QueryError {
     /// The tree-sitter backend couldn't accept the YAML grammar.
@@ -26,16 +27,16 @@ pub enum QueryError {
     /// The user's input YAML is malformed.
     #[error("input is not valid YAML")]
     InvalidInput,
-    /// The query expects a key at a given point, but the input isn't a mapping.
+    /// The route expects a key at a given point, but the input isn't a mapping.
     #[error("expected mapping containing key `{0}`")]
     ExpectedMapping(String),
-    /// The query expects a list index at a given point, but the input isn't a list.
+    /// The route expects a list index at a given point, but the input isn't a list.
     #[error("expected list for index `[{0}]`")]
     ExpectedList(usize),
-    /// The query expects the given key in a mapping, but the mapping doesn't have that key.
+    /// The route expects the given key in a mapping, but the mapping doesn't have that key.
     #[error("mapping has no key `{0}`")]
     ExhaustedMapping(String),
-    /// The query expects the given list index, but the list isn't the right size.
+    /// The route expects the given list index, but the list isn't the right size.
     #[error("index `[{0}]` exceeds list size ({1})")]
     ExhaustedList(usize, usize),
     /// The YAML syntax tree wasn't structured the way we expect.
@@ -48,15 +49,16 @@ pub enum QueryError {
     /// the given field name.
     #[error("syntax node `{0}` is missing child field `{1}`")]
     MissingChildField(String, &'static str),
-    /// Any other query error that doesn't fit cleanly above.
-    #[error("query error: {0}")]
+    /// Any other route error that doesn't fit cleanly above.
+    #[error("route error: {0}")]
     Other(String),
 }
 
-/// A query into some YAML document.
+/// A route into some YAML document.
 ///
-/// Internally, a query is one or more "component" selectors, each of which
-/// is either a mapping key or list index to descend through.
+/// Internally, a route is zero or more "component" selectors, each of which
+/// is either a mapping key or list index to descend through. An empty
+/// route corresponds to the top-most document feature.
 ///
 /// For example, with the following YAML document:
 ///
@@ -70,83 +72,70 @@ pub enum QueryError {
 ///
 /// The sub-list member `e` would be identified via the path
 /// `foo`, `bar`, `baz`, `1`, `1`.
-#[derive(Debug)]
-pub struct Query<'a> {
-    /// The individual top-down components of this query.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct Route<'a> {
+    /// The individual top-down components of this route.
     route: Vec<Component<'a>>,
 }
 
-impl<'a> Query<'a> {
-    /// Constructs a new query from the given path components.
-    ///
-    /// Returns `None` if the component list is empty.
-    pub fn new(route: Vec<Component<'a>>) -> Option<Self> {
-        if route.is_empty() {
+impl<'a> Route<'a> {
+    /// Returns whether this route is empty.
+    pub fn is_empty(&self) -> bool {
+        self.route.is_empty()
+    }
+
+    /// Create a new route from this route, with the given component
+    /// added to the end.
+    pub fn with_key(&self, component: impl Into<Component<'a>>) -> Self {
+        let mut components = self.route.clone();
+        components.push(component.into());
+
+        Self::from(components)
+    }
+
+    /// Create a new route from this route, with the given components
+    /// added to the end.
+    pub fn with_keys(&self, components: impl IntoIterator<Item = Component<'a>>) -> Self {
+        let mut new_route = self.route.clone();
+        new_route.extend(components);
+
+        Self::from(new_route)
+    }
+
+    /// Returns a route for the "parent" path of the route's current path,
+    /// or `None` the current route has no parent.
+    pub fn parent(&self) -> Option<Self> {
+        if self.is_empty() {
             None
         } else {
-            Some(Self { route })
+            let mut route = self.route.clone();
+            route.truncate(self.route.len() - 1);
+            Some(Self::from(route))
         }
     }
+}
 
-    /// Returns a query for the "parent" path of the query's current path,
-    /// or `None` the current query has no parent.
-    pub fn parent(&self) -> Option<Self> {
-        let mut route = self.route.clone();
-        route.truncate(self.route.len() - 1);
-        Self::new(route)
+/// Convenience builder for constructing a `Route`.
+#[macro_export]
+macro_rules! route {
+    ($($key:expr),* $(,)?) => {
+        $crate::Route::from(
+            vec![$($crate::Component::from($key)),*]
+        )
+    };
+    () => {
+        $crate::Route::default()
+    };
+}
+
+impl<'a> From<Vec<Component<'a>>> for Route<'a> {
+    fn from(route: Vec<Component<'a>>) -> Self {
+        Self { route }
     }
 }
 
-/// A builder for [`Query`] objects.
-#[derive(Clone, Debug)]
-pub struct QueryBuilder<'a> {
-    route: Vec<Component<'a>>,
-}
-
-impl Default for QueryBuilder<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a> QueryBuilder<'a> {
-    /// Starts a new `QueryBuilder`.
-    pub fn new() -> Self {
-        Self { route: vec![] }
-    }
-
-    /// Adds a new key to the query being built.
-    pub fn key(mut self, key: &'a str) -> Self {
-        self.route.push(Component::Key(key));
-        self
-    }
-
-    /// Adds multiple new keys to the query being built.
-    pub fn keys(mut self, keys: impl Iterator<Item = &'a str>) -> Self {
-        for key in keys {
-            self = self.key(key)
-        }
-
-        self
-    }
-
-    /// Adds a new index to the query being built.
-    pub fn index(mut self, index: usize) -> Self {
-        self.route.push(Component::Index(index));
-        self
-    }
-
-    /// Construct this `QueryBuilder` into a [`Query`], consuming
-    /// it in the process.
-    ///
-    /// Panics unless at least one component has been added.
-    pub fn build(self) -> Query<'a> {
-        Query::new(self.route).expect("API misuse: must add at least one component")
-    }
-}
-
-/// A single `Query` component.
-#[derive(Clone, Debug, PartialEq)]
+/// A single `Route` component.
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum Component<'a> {
     /// A YAML key.
     Key(&'a str),
@@ -155,12 +144,24 @@ pub enum Component<'a> {
     Index(usize),
 }
 
+impl From<usize> for Component<'_> {
+    fn from(index: usize) -> Self {
+        Component::Index(index)
+    }
+}
+
+impl<'a> From<&'a str> for Component<'a> {
+    fn from(key: &'a str) -> Self {
+        Component::Key(key)
+    }
+}
+
 /// Represents the concrete location of some YAML syntax.
 #[derive(Debug)]
 pub struct Location {
-    /// The byte span at which the query's result appears.
+    /// The byte span at which the route's result appears.
     pub byte_span: (usize, usize),
-    /// The "point" (i.e., line/column) span at which the query's result appears.
+    /// The "point" (i.e., line/column) span at which the route's result appears.
     pub point_span: ((usize, usize), (usize, usize)),
 }
 
@@ -195,16 +196,16 @@ pub enum FeatureKind {
     Scalar,
 }
 
-/// Represents the result of a successful query.
+/// Represents the result of a successful route.
 #[derive(Debug)]
 pub struct Feature<'tree> {
     /// The tree-sitter node that this feature was extracted from.
     _node: Node<'tree>,
 
-    /// The exact location of the query result.
+    /// The exact location of the route result.
     pub location: Location,
 
-    /// The "context" location for the query result.
+    /// The "context" location for the route result.
     /// This is typically the surrounding mapping or list structure.
     pub context: Option<Location>,
 }
@@ -260,14 +261,14 @@ enum QueryMode {
     /// For example, querying `foo: bar` for `foo` will return
     /// `foo: bar` instead of just `bar`.
     Pretty,
-    /// For queries that terminate in a key, make the extracted
+    /// For routes that terminate in a key, make the extracted
     /// feature only that key, rather than both the key and value ("pretty"),
     /// or just the value ("exact").
     ///
     /// For example, querying `foo: bar` for `foo` will return `foo`.
     KeyOnly,
     /// Make extracted features as "exact" as possible, e.g. by
-    /// including only the exact span of the query result.
+    /// including only the exact span of the route result.
     Exact,
 }
 
@@ -378,41 +379,41 @@ impl Document {
         self.range_spanned_by_comment(offset, offset)
     }
 
-    /// Perform a query on the current document, returning `true`
-    /// if the query succeeds (i.e. references an existing feature).
+    /// Perform a route on the current document, returning `true`
+    /// if the route succeeds (i.e. references an existing feature).
     ///
     /// All errors become `false`.
-    pub fn query_exists(&self, query: &Query) -> bool {
-        self.query_node(query, QueryMode::Exact).is_ok()
+    pub fn query_exists(&self, route: &Route) -> bool {
+        self.query_node(route, QueryMode::Exact).is_ok()
     }
 
-    /// Perform a query on the current document, returning a `Feature`
-    /// if the query succeeds.
+    /// Perform a route on the current document, returning a `Feature`
+    /// if the route succeeds.
     ///
     /// The feature is extracted in "pretty" mode, meaning that it'll
     /// contain a subjectively relevant "pretty" span rather than the
-    /// exact span of the query result.
+    /// exact span of the route result.
     ///
     /// For example, querying `foo: bar` for `foo` will return
     /// `foo: bar` instead of just `bar`.
-    pub fn query_pretty(&self, query: &Query) -> Result<Feature, QueryError> {
-        self.query_node(query, QueryMode::Pretty).map(|n| n.into())
+    pub fn query_pretty(&self, route: &Route) -> Result<Feature, QueryError> {
+        self.query_node(route, QueryMode::Pretty).map(|n| n.into())
     }
 
-    /// Perform a query on the current document, returning a `Feature`
-    /// if the query succeeds. Returns `None` if the query
+    /// Perform a route on the current document, returning a `Feature`
+    /// if the route succeeds. Returns `None` if the route
     /// succeeds, but matches an absent value (e.g. `foo:`).
     ///
     /// The feature is extracted in "exact" mode, meaning that it'll
-    /// contain the exact span of the query result.
+    /// contain the exact span of the route result.
     ///
     /// For example, querying `foo: bar` for `foo` will return
     /// just `bar` instead of `foo: bar`.
-    pub fn query_exact(&self, query: &Query) -> Result<Option<Feature>, QueryError> {
-        let node = self.query_node(query, QueryMode::Exact)?;
+    pub fn query_exact(&self, route: &Route) -> Result<Option<Feature>, QueryError> {
+        let node = self.query_node(route, QueryMode::Exact)?;
 
         if node.kind_id() == self.block_mapping_pair_id || node.kind_id() == self.flow_pair_id {
-            // If the query matches a mapping pair, we return None,
+            // If the route matches a mapping pair, we return None,
             // since this indicates an absent value.
             Ok(None)
         } else {
@@ -421,8 +422,8 @@ impl Document {
         }
     }
 
-    /// Perform a query on the current document, returning a `Feature`
-    /// if the query succeeds.
+    /// Perform a route on the current document, returning a `Feature`
+    /// if the route succeeds.
     ///
     /// The feature is extracted in "key only" mode, meaning that it'll
     /// contain only the key of a mapping, rather than the
@@ -430,14 +431,14 @@ impl Document {
     ///
     /// For example, querying `foo: bar` for `foo` will return
     /// just `foo` instead of `foo: bar` or `bar`.
-    pub fn query_key_only(&self, query: &Query) -> Result<Feature, QueryError> {
-        if !matches!(query.route.last(), Some(Component::Key(_))) {
+    pub fn query_key_only(&self, route: &Route) -> Result<Feature, QueryError> {
+        if !matches!(route.route.last(), Some(Component::Key(_))) {
             return Err(QueryError::Other(
-                "query must end with a key component for key-only queries".into(),
+                "route must end with a key component for key-only routes".into(),
             ));
         }
 
-        self.query_node(query, QueryMode::KeyOnly).map(|n| n.into())
+        self.query_node(route, QueryMode::KeyOnly).map(|n| n.into())
     }
 
     /// Returns a string slice of the original document corresponding to
@@ -576,9 +577,9 @@ impl Document {
         Ok(top_node)
     }
 
-    fn query_node(&self, query: &Query, mode: QueryMode) -> Result<Node, QueryError> {
+    fn query_node(&self, route: &Route, mode: QueryMode) -> Result<Node, QueryError> {
         let mut focus_node = self.top_object()?;
-        for component in &query.route {
+        for component in &route.route {
             match self.descend(&focus_node, component) {
                 Ok(next) => focus_node = next,
                 Err(e) => return Err(e),
@@ -594,7 +595,7 @@ impl Document {
                 //
                 // NOTE: We might already be on the block/flow pair if we terminated
                 // with an absent value, in which case we don't need to do this cleanup.
-                if matches!(query.route.last(), Some(Component::Key(_)))
+                if matches!(route.route.last(), Some(Component::Key(_)))
                     && focus_node.kind_id() != self.block_mapping_pair_id
                     && focus_node.kind_id() != self.flow_pair_id
                 {
@@ -648,7 +649,7 @@ impl Document {
         // NOTE: We might already be on the block_mapping_pair if we terminated
         // with an absent value, in which case we don't need to do this cleanup.
         if matches!(mode, QueryMode::Pretty)
-            && matches!(query.route.last(), Some(Component::Key(_)))
+            && matches!(route.route.last(), Some(Component::Key(_)))
             && focus_node.kind_id() != self.block_mapping_pair_id
         {
             focus_node = focus_node.parent().unwrap()
@@ -777,20 +778,21 @@ impl Document {
 mod tests {
     use std::vec;
 
-    use crate::{Component, Document, FeatureKind, Query, QueryBuilder};
+    use crate::{Component, Document, FeatureKind, Route};
 
     #[test]
     fn test_query_parent() {
-        let query = QueryBuilder::new()
-            .keys(["foo", "bar", "baz"].into_iter())
-            .build();
+        let route = route!("foo", "bar", "baz");
         assert_eq!(
-            query.parent().unwrap().route,
+            route.parent().unwrap().route,
             [Component::Key("foo"), Component::Key("bar")]
         );
 
-        let query = QueryBuilder::new().keys(["foo"].into_iter()).build();
-        assert!(query.parent().is_none());
+        let route = route!("foo");
+        assert!(route.parent().is_some());
+
+        let route = Route::from(vec![]);
+        assert!(route.parent().is_none());
     }
 
     #[test]
@@ -830,16 +832,10 @@ baz: quux
 
     #[test]
     fn test_query_builder() {
-        let query = QueryBuilder::new()
-            .key("foo")
-            .key("bar")
-            .index(1)
-            .index(123)
-            .key("lol")
-            .build();
+        let route = route!("foo", "bar", 1, 123, "lol");
 
         assert_eq!(
-            query.route,
+            route.route,
             [
                 Component::Key("foo"),
                 Component::Key("bar"),
@@ -864,7 +860,7 @@ baz:
         "#;
 
         let doc = Document::new(doc).unwrap();
-        let query = Query {
+        let route = Route {
             route: vec![
                 Component::Key("baz"),
                 Component::Key("sub"),
@@ -876,7 +872,7 @@ baz:
         };
 
         assert_eq!(
-            doc.extract_with_leading_whitespace(&doc.query_pretty(&query).unwrap()),
+            doc.extract_with_leading_whitespace(&doc.query_pretty(&route).unwrap()),
             "{d: e}"
         );
     }
@@ -898,10 +894,10 @@ bar: # outside
         let doc = Document::new(doc).unwrap();
 
         // Querying the root gives us all comments underneath it.
-        let query = Query {
+        let route = Route {
             route: vec![Component::Key("root")],
         };
-        let feature = doc.query_pretty(&query).unwrap();
+        let feature = doc.query_pretty(&route).unwrap();
         assert_eq!(
             doc.feature_comments(&feature),
             &["# rootlevel", "# foo", "# bar", "# baz", "# quux"]
@@ -909,14 +905,14 @@ bar: # outside
 
         // Querying a nested key gives us its adjacent comment,
         // even though it's above it on the AST.
-        let query = Query {
+        let route = Route {
             route: vec![
                 Component::Key("root"),
                 Component::Key("e"),
                 Component::Index(1),
             ],
         };
-        let feature = doc.query_pretty(&query).unwrap();
+        let feature = doc.query_pretty(&route).unwrap();
         assert_eq!(doc.feature_comments(&feature), &["# quux"]);
     }
 
@@ -967,7 +963,7 @@ nested:
 "#;
         let doc = Document::new(doc).unwrap();
 
-        for (query, expected_kind) in &[
+        for (route, expected_kind) in &[
             (
                 vec![Component::Key("block-mapping")],
                 FeatureKind::BlockMapping,
@@ -1053,8 +1049,8 @@ nested:
                 FeatureKind::FlowMapping,
             ),
         ] {
-            let query = Query::new(query.clone()).unwrap();
-            let feature = doc.query_exact(&query).unwrap().unwrap();
+            let route = Route::from(route.clone());
+            let feature = doc.query_exact(&route).unwrap().unwrap();
             assert_eq!(feature.kind(), *expected_kind);
         }
     }

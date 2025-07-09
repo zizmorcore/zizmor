@@ -410,7 +410,7 @@ impl Audit for GitHubEnv {
                         .add_location(
                             step.location()
                                 .primary()
-                                .with_keys(&["run".into()])
+                                .with_keys(["run".into()])
                                 .annotated(format!("write to {dest} may allow code execution")),
                         )
                         .build(step.workflow())?,
@@ -440,7 +440,7 @@ impl Audit for GitHubEnv {
                     .add_location(
                         step.location()
                             .primary()
-                            .with_keys(&["run".into()])
+                            .with_keys(["run".into()])
                             .annotated(format!("write to {dest} may allow code execution")),
                     )
                     .build(step.action())?,
