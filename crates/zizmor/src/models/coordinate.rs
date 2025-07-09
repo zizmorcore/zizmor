@@ -274,18 +274,16 @@ impl ControlExpr {
             ControlExpr::Single {
                 toggle,
                 field_name,
-                field_type,
+                field_type: _,
                 satisfied_by_default: enabled_by_default,
             } => {
                 // If the controlling field is not present, the default dictates the semantics.
                 if let Some(field_value) = with.get(*field_name) {
                     match field_value.to_string().as_str() {
-                        "false" if matches!(field_type, ControlFieldType::Boolean) => {
-                            match toggle {
-                                Toggle::OptIn => ControlEvaluation::NotSatisfied,
-                                Toggle::OptOut => ControlEvaluation::Satisfied,
-                            }
-                        }
+                        "false" => match toggle {
+                            Toggle::OptIn => ControlEvaluation::NotSatisfied,
+                            Toggle::OptOut => ControlEvaluation::Satisfied,
+                        },
                         other => match ExplicitExpr::from_curly(other) {
                             None => match toggle {
                                 Toggle::OptIn => ControlEvaluation::Satisfied,

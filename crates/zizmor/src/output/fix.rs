@@ -91,7 +91,7 @@ pub fn apply_fixes(
                     failed_fixes.push((
                         finding.ident,
                         file_path,
-                        format!("conflict after applying previous fixes: {}", e),
+                        format!("conflict after applying previous fixes: {e}"),
                     ));
                 }
             }

@@ -9,6 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* The [cache-poisoning] audit now supports auto-fixes for many findings (#923)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `--fix` would fail to preserve comments when modifying
