@@ -1,14 +1,14 @@
 use std::sync::LazyLock;
 
-use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 use github_actions_models::workflow::Trigger;
+use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 
-use crate::audit::{audit_meta, Audit};
+use crate::audit::{Audit, audit_meta};
 use crate::finding::location::{Locatable as _, Routable};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
+use crate::models::StepCommon;
 use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
 use crate::models::workflow::{JobExt as _, NormalJob, Step, Steps};
-use crate::models::StepCommon;
 use crate::state::AuditState;
 
 use indexmap::IndexMap;
@@ -281,19 +281,21 @@ impl CachePoisoning {
         ))
     }
 
-    fn evaluate_cache_usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
+    fn evaluate_cache_usage<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> Option<(&'static ActionCoordinate, Usage)> {
         KNOWN_CACHE_AWARE_ACTIONS
             .iter()
-            .find_map(|coord| coord.usage(step))
+            .find_map(|coord| coord.usage(step).map(|usage| (coord, usage)))
     }
 
-    fn create_cache_disable_fix<'doc>(&self, step: &Step<'doc>) -> Option<Fix<'doc>> {
-        // Find the matching action coordinate
-        let matching_coord = KNOWN_CACHE_AWARE_ACTIONS
-            .iter()
-            .find(|coord| coord.usage(step).is_some())?;
-
-        match matching_coord {
+    fn create_cache_disable_fix<'doc>(
+        &self,
+        coord: &ActionCoordinate,
+        step: &Step<'doc>,
+    ) -> Option<Fix<'doc>> {
+        match coord {
             ActionCoordinate::NotConfigurable(_pattern) => {
                 // For non-configurable actions, we can't provide automatic fixes
                 None
@@ -335,7 +337,8 @@ impl CachePoisoning {
                     ),
                     // String control fields are action-specific and we can't reliably know
                     // what value disables caching (e.g., setup-node expects '' not 'false')
-                    (Toggle::OptIn, ControlFieldType::String) | (Toggle::OptOut, ControlFieldType::String) => {
+                    (Toggle::OptIn, ControlFieldType::String)
+                    | (Toggle::OptOut, ControlFieldType::String) => {
                         return None;
                     }
                 };
@@ -363,7 +366,7 @@ impl CachePoisoning {
         step: &Step<'doc>,
         scenario: &PublishingArtifactsScenario<'doc>,
     ) -> Option<Finding<'doc>> {
-        let cache_usage = self.evaluate_cache_usage(step)?;
+        let (coord, cache_usage) = self.evaluate_cache_usage(step)?;
 
         let (yaml_key, annotation) = match cache_usage {
             Usage::Always => ("uses", "caching always restored here"),
@@ -406,7 +409,7 @@ impl CachePoisoning {
         };
 
         // Add fix if available
-        if let Some(fix) = self.create_cache_disable_fix(step) {
+        if let Some(fix) = self.create_cache_disable_fix(coord, step) {
             finding_builder = finding_builder.fix(fix);
         }
 
@@ -610,8 +613,6 @@ jobs:
             }
         );
     }
-
-
 
     #[test]
     fn test_cache_disable_fix_non_configurable() {
