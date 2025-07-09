@@ -304,13 +304,7 @@ impl<'doc> SymbolicLocation<'doc> {
                 )
             }
             SymbolicFeature::KeyOnly => {
-                let feature = match self.route.is_empty() {
-                    false => document.query_key_only(&self.route)?,
-                    true => {
-                        // NOTE: Technically API misuse; maybe we should panic instead?
-                        anyhow::bail!("can't concretize a key-only route without a query");
-                    }
-                };
+                let feature = document.query_key_only(&self.route)?;
 
                 (
                     document.extract(&feature),
