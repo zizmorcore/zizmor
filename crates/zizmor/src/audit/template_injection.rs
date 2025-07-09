@@ -284,7 +284,7 @@ impl TemplateInjection {
 
         let mut patches = vec![];
         patches.push(Patch {
-            route: step.route().with_keys(["run".into()]),
+            route: step.route().with_key("run"),
             operation: Op::RewriteFragment {
                 from: raw.as_raw().to_string().into(),
                 to: format!("${{{env_var}}}").into(),
