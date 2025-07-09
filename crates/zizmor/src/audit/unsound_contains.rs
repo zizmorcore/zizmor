@@ -67,7 +67,7 @@ impl Audit for UnsoundContains {
                         .severity(severity)
                         .confidence(Confidence::High)
                         .add_location(
-                            loc.with_keys(&["if".into()])
+                            loc.with_keys(["if".into()])
                                 .primary()
                                 .annotated(format!("contains(..) condition can be bypassed if attacker can control '{context}'")),
                         )

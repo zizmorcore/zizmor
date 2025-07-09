@@ -63,7 +63,7 @@ impl Audit for SelfHostedRunner {
                                     .add_location(
                                         job.location()
                                             .primary()
-                                            .with_keys(&["runs-on".into()])
+                                            .with_keys(["runs-on".into()])
                                             .annotated("self-hosted runner used here"),
                                     )
                                     .build(workflow)?,
@@ -81,7 +81,7 @@ impl Audit for SelfHostedRunner {
                                     .add_location(
                                         job.location()
                                             .primary()
-                                            .with_keys(&["runs-on".into()])
+                                            .with_keys(["runs-on".into()])
                                             .annotated(
                                                 "expression may expand into a self-hosted runner",
                                             ),
@@ -104,7 +104,7 @@ impl Audit for SelfHostedRunner {
                         .add_location(
                             job.location()
                                 .primary()
-                                .with_keys(&["runs-on".into()])
+                                .with_keys(["runs-on".into()])
                                 .annotated("runner group implies self-hosted runner"),
                         )
                         .build(workflow)?,
@@ -130,13 +130,13 @@ impl Audit for SelfHostedRunner {
                                 .persona(Persona::Auditor)
                                 .add_location(
                                     job.location()
-                                        .with_keys(&["strategy".into()])
+                                        .with_keys(["strategy".into()])
                                         .annotated("matrix declares self-hosted runner"),
                                 )
                                 .add_location(
                                     job.location()
                                         .primary()
-                                        .with_keys(&["runs-on".into()])
+                                        .with_keys(["runs-on".into()])
                                         .annotated(
                                             "expression may expand into a self-hosted runner",
                                         ),

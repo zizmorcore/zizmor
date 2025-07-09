@@ -29,7 +29,7 @@ impl Audit for DangerousTriggers {
                         workflow
                             .location()
                             .primary()
-                            .with_keys(&["on".into()])
+                            .with_keys(["on".into()])
                             .annotated("pull_request_target is almost always used insecurely"),
                     )
                     .build(workflow)?,
@@ -44,7 +44,7 @@ impl Audit for DangerousTriggers {
                         workflow
                             .location()
                             .primary()
-                            .with_keys(&["on".into()])
+                            .with_keys(["on".into()])
                             .annotated("workflow_run is almost always used insecurely"),
                     )
                     .build(workflow)?,

@@ -131,7 +131,7 @@ impl KnownVulnerableActions {
                     .add_location(
                         step.location()
                             .primary()
-                            .with_keys(&["uses".into()])
+                            .with_keys(["uses".into()])
                             .annotated(&id)
                             .with_url(format!("https://github.com/advisories/{id}")),
                     )

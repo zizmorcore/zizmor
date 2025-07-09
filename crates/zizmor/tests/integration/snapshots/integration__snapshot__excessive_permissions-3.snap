@@ -1,12 +1,13 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"excessive-permissions/workflow-default-perms.yml\")).args([\"--pedantic\"]).run()?"
+snapshot_kind: text
 ---
 warning[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:1:1
+  --> @@INPUT@@:5:1
    |
- 1 | / # two findings in pedantic mode: one for the entire workflow for having
- 2 | | # implicit permissions (pedantic), and one for the 'single' job for having
+ 5 | / on: push
+ 6 | |
 ...  |
 15 | |         with:
 16 | |           persist-credentials: false

@@ -58,7 +58,7 @@ impl Audit for UnpinnedImages {
                 image.parse().unwrap(),
                 job.location()
                     .primary()
-                    .with_keys(&["container".into(), "image".into()]),
+                    .with_keys(["container".into(), "image".into()]),
             ));
         }
 
@@ -66,7 +66,7 @@ impl Audit for UnpinnedImages {
             if let Container::Container { image, .. } = &config {
                 image_refs_with_locations.push((
                     image.parse().unwrap(),
-                    job.location().primary().with_keys(&[
+                    job.location().primary().with_keys([
                         "services".into(),
                         service.as_str().into(),
                         "image".into(),

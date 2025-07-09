@@ -32,7 +32,7 @@ impl InsecureCommands {
             .severity(Severity::High)
             .persona(Persona::Auditor)
             .add_location(
-                location.primary().with_keys(&["env".into()]).annotated(
+                location.primary().with_keys(["env".into()]).annotated(
                     "non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS",
                 ),
             )
@@ -50,7 +50,7 @@ impl InsecureCommands {
             .add_location(
                 location
                     .primary()
-                    .with_keys(&["env".into()])
+                    .with_keys(["env".into()])
                     .annotated("insecure commands enabled here"),
             )
             .build(doc)

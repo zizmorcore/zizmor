@@ -90,7 +90,7 @@ impl Audit for RefConfusion {
                                     .add_location(
                                         step.location()
                                             .primary()
-                                            .with_keys(&["uses".into()])
+                                            .with_keys(["uses".into()])
                                             .annotated(REF_CONFUSION_ANNOTATION),
                                     )
                                     .build(workflow)?,
@@ -139,7 +139,7 @@ impl Audit for RefConfusion {
                     .add_location(
                         step.location()
                             .primary()
-                            .with_keys(&["uses".into()])
+                            .with_keys(["uses".into()])
                             .annotated(REF_CONFUSION_ANNOTATION),
                     )
                     .build(step.action())?,

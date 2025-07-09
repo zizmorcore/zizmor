@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use serde::Deserialize;
-use yamlpath::{Document, Query, QueryBuilder};
+use yamlpath::{Component, Document, Route};
 
 #[test]
 fn test_integration() {
@@ -36,18 +36,18 @@ struct Testcase {
     queries: Vec<TestcaseQuery>,
 }
 
-impl<'a> From<&'a TestcaseQuery> for Query<'a> {
+impl<'a> From<&'a TestcaseQuery> for Route<'a> {
     fn from(query: &'a TestcaseQuery) -> Self {
-        let mut builder = QueryBuilder::new().key("testcase");
+        let mut components = vec![Component::Key("testcase")];
 
         for component in &query.query {
-            builder = match component {
-                QueryComponent::Index(idx) => builder.index(*idx),
-                QueryComponent::Key(key) => builder.key(key),
+            match component {
+                QueryComponent::Index(idx) => components.push(Component::Index(*idx)),
+                QueryComponent::Key(key) => components.push(Component::Key(key)),
             }
         }
 
-        builder.build()
+        Self::from(components)
     }
 }
 
@@ -57,7 +57,7 @@ fn run_testcase(path: &Path) {
 
     for q in &testcase.queries {
         let document = Document::new(raw_testcase.clone()).unwrap();
-        let query: Query = q.into();
+        let query: Route = q.into();
 
         let feature = match q.mode.as_deref() {
             Some("pretty") | None => Some(document.query_pretty(&query).unwrap()),

@@ -45,7 +45,7 @@ impl UseTrustedPublishing {
             .add_location(
                 step.location()
                     .primary()
-                    .with_keys(&["uses".into()])
+                    .with_keys(["uses".into()])
                     .annotated("this step"),
             );
 
@@ -57,7 +57,7 @@ impl UseTrustedPublishing {
                     .add_location(
                         step.location()
                             .primary()
-                            .with_keys(&["with".into(), "password".into()])
+                            .with_keys(["with".into(), "password".into()])
                             .annotated(USES_MANUAL_CREDENTIAL),
                     )
                     .build(step)?,

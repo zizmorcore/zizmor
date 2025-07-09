@@ -10,7 +10,7 @@ use terminal_link::Link;
 
 use crate::{
     InputKey,
-    finding::location::{Locatable, Route, SymbolicFeature, SymbolicLocation},
+    finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
     models::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
@@ -97,7 +97,7 @@ impl Action {
             key: &self.key,
             annotation: "this action".to_string(),
             link: None,
-            route: Route::new(),
+            route: Default::default(),
             feature_kind: SymbolicFeature::Normal,
             kind: Default::default(),
         }
@@ -155,7 +155,7 @@ impl<'a> std::ops::Deref for CompositeStep<'a> {
 
 impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
     fn location(&self) -> SymbolicLocation<'doc> {
-        self.parent.location().annotated("this step").with_keys(&[
+        self.parent.location().annotated("this step").with_keys([
             "runs".into(),
             "steps".into(),
             self.index.into(),
@@ -164,7 +164,7 @@ impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
 
     fn location_with_name(&self) -> SymbolicLocation<'doc> {
         match self.inner.name {
-            Some(_) => self.location().with_keys(&["name".into()]),
+            Some(_) => self.location().with_keys(["name".into()]),
             None => self.location(),
         }
     }

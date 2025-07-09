@@ -1,4 +1,5 @@
 use yamlpatch::*;
+use yamlpath::route;
 
 #[test]
 fn test_serialize_flow() {
@@ -916,11 +917,11 @@ jobs:
 
     // Test what yamlpath extracts for the checkout step
     let doc = yamlpath::Document::new(original).unwrap();
-    let checkout_query = route!("jobs", "test", "steps", 0).to_query().unwrap();
+    let checkout_query = route!("jobs", "test", "steps", 0);
     let checkout_feature = doc.query_pretty(&checkout_query).unwrap();
 
     // Test what yamlpath extracts for the test job
-    let job_query = route!("jobs", "test").to_query().unwrap();
+    let job_query = route!("jobs", "test");
     let job_feature = doc.query_pretty(&job_query).unwrap();
 
     // Assert that the checkout step extraction includes the expected content
@@ -1002,11 +1003,11 @@ fn test_comment_boundary_issue() {
 
     // See what yamlpath extracts for step 0
     let doc = yamlpath::Document::new(original).unwrap();
-    let step0_query = route!("steps", 0).to_query().unwrap();
+    let step0_query = route!("steps", 0);
     let step0_feature = doc.query_pretty(&step0_query).unwrap();
 
     // See what yamlpath extracts for step 1
-    let step1_query = route!("steps", 1).to_query().unwrap();
+    let step1_query = route!("steps", 1);
     let step1_feature = doc.query_pretty(&step1_query).unwrap();
 
     // Check for overlaps
@@ -1308,7 +1309,7 @@ fn test_debug_indentation_issue() {
 
     // Test yamlpath extraction
     let doc = yamlpath::Document::new(original).unwrap();
-    let step_query = route!("jobs", "build", "steps", 0).to_query().unwrap();
+    let step_query = route!("jobs", "build", "steps", 0);
     let step_feature = doc.query_pretty(&step_query).unwrap();
 
     // Test indentation calculation and content extraction
@@ -1410,9 +1411,7 @@ jobs:
 
     // Test yamlpath extraction of the env section
     let doc = yamlpath::Document::new(original).unwrap();
-    let env_query = route!("jobs", "test", "steps", 0, "env")
-        .to_query()
-        .unwrap();
+    let env_query = route!("jobs", "test", "steps", 0, "env");
 
     if let Ok(env_feature) = doc.query_pretty(&env_query) {
         let env_content = doc.extract(&env_feature);
