@@ -1041,15 +1041,27 @@ fn handle_flow_mapping_removal(
         // Extract the content of the feature to remove
         let feature_content = document.extract(&feature);
 
-        // Try to find and remove the matching key-value pair
-        // We'll try to match based on the content
+        // Try to find and remove the matching key-value pair using improved matching
         let mut key_to_remove = None;
+
+        // First, try to match values
         for (key, value) in &existing_mapping {
-            // Check if the serialized value matches the feature content
             if let Ok(serialized_value) = serialize_yaml_value(value) {
-                if serialized_value.trim() == feature_content.trim() {
+                if values_match(&serialized_value, feature_content) {
                     key_to_remove = Some(key.clone());
                     break;
+                }
+            }
+        }
+
+        // If not found, try to match keys
+        if key_to_remove.is_none() {
+            for (key, _) in &existing_mapping {
+                if let Ok(serialized_key) = serialize_yaml_value(key) {
+                    if values_match(&serialized_key, feature_content) {
+                        key_to_remove = Some(key.clone());
+                        break;
+                    }
                 }
             }
         }
@@ -1057,23 +1069,9 @@ fn handle_flow_mapping_removal(
         if let Some(key) = key_to_remove {
             existing_mapping.remove(&key);
         } else {
-            // Fallback: try to find key by matching feature content with key
-            for (key, _) in &existing_mapping {
-                if let Ok(serialized_key) = serialize_yaml_value(key) {
-                    if serialized_key.trim() == feature_content.trim() {
-                        key_to_remove = Some(key.clone());
-                        break;
-                    }
-                }
-            }
-
-            if let Some(key) = key_to_remove {
-                existing_mapping.remove(&key);
-            } else {
-                return Err(Error::InvalidOperation(
-                    "Could not find key to remove in flow mapping".to_string(),
-                ));
-            }
+            return Err(Error::InvalidOperation(
+                "Could not find key to remove in flow mapping".to_string(),
+            ));
         }
     } else {
         return Err(Error::InvalidOperation(
@@ -1129,19 +1127,18 @@ fn handle_flow_sequence_removal(
     let mut existing_sequence = serde_yaml::from_str::<serde_yaml::Sequence>(parent_content)
         .map_err(Error::Serialization)?;
 
-    // Get the feature that needs to be removed to determine what index to remove
+    // Get the feature that needs to be removed to determine what item to remove
     let feature_to_remove = route_to_feature_exact(route, document)?;
 
     if let Some(feature) = feature_to_remove {
         // Extract the content of the feature to remove
         let feature_content = document.extract(&feature);
 
-        // Try to find and remove the matching sequence item
+        // Try to find and remove the matching sequence item using improved matching
         let mut index_to_remove = None;
         for (index, value) in existing_sequence.iter().enumerate() {
-            // Check if the serialized value matches the feature content
             if let Ok(serialized_value) = serialize_yaml_value(value) {
-                if serialized_value.trim() == feature_content.trim() {
+                if values_match(&serialized_value, feature_content) {
                     index_to_remove = Some(index);
                     break;
                 }
@@ -1176,30 +1173,132 @@ fn handle_flow_sequence_removal(
 
 /// Handle removal from a multiline flow mapping
 fn handle_multiline_flow_mapping_removal(
-    _document: &yamlpath::Document,
-    _parent_feature: &yamlpath::Feature,
-    _route: &yamlpath::Route,
-    _content: &str,
+    document: &yamlpath::Document,
+    parent_feature: &yamlpath::Feature,
+    route: &yamlpath::Route,
+    content: &str,
 ) -> Result<yamlpath::Document, Error> {
-    // TODO: Implement multiline flow mapping removal
-    // This is more complex as we need to handle the multiline structure properly
-    Err(Error::InvalidOperation(
-        "Remove operation is not yet supported for multiline flow mappings".to_string(),
-    ))
+    // For multiline flow mappings, we need to carefully parse and reconstruct
+    let parent_content = document.extract(parent_feature);
+
+    // Parse the multiline flow mapping
+    let mut existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(parent_content)
+        .map_err(Error::Serialization)?;
+
+    // Get the feature that needs to be removed to determine what key/value to remove
+    let feature_to_remove = route_to_feature_exact(route, document)?;
+
+    if let Some(feature) = feature_to_remove {
+        // Extract the content of the feature to remove
+        let feature_content = document.extract(&feature);
+
+        // Try to find and remove the matching key-value pair using improved matching
+        let mut key_to_remove = None;
+
+        // First, try to match values
+        for (key, value) in &existing_mapping {
+            if let Ok(serialized_value) = serialize_yaml_value(value) {
+                if values_match(&serialized_value, feature_content) {
+                    key_to_remove = Some(key.clone());
+                    break;
+                }
+            }
+        }
+
+        // If not found, try to match keys
+        if key_to_remove.is_none() {
+            for (key, _) in &existing_mapping {
+                if let Ok(serialized_key) = serialize_yaml_value(key) {
+                    if values_match(&serialized_key, feature_content) {
+                        key_to_remove = Some(key.clone());
+                        break;
+                    }
+                }
+            }
+        }
+
+        if let Some(key) = key_to_remove {
+            existing_mapping.remove(&key);
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find key to remove in multiline flow mapping".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Feature to remove not found in multiline flow mapping".to_string(),
+        ));
+    }
+
+    // Serialize back preserving multiline structure
+    let updated_content = serialize_multiline_flow_mapping(&existing_mapping, parent_content)?;
+
+    // Replace the parent feature content
+    let mut result = content.to_string();
+    result.replace_range(
+        parent_feature.location.byte_span.0..parent_feature.location.byte_span.1,
+        &updated_content,
+    );
+
+    yamlpath::Document::new(result).map_err(Error::from)
 }
 
 /// Handle removal from a multiline flow sequence
 fn handle_multiline_flow_sequence_removal(
-    _document: &yamlpath::Document,
-    _parent_feature: &yamlpath::Feature,
-    _route: &yamlpath::Route,
-    _content: &str,
+    document: &yamlpath::Document,
+    parent_feature: &yamlpath::Feature,
+    route: &yamlpath::Route,
+    content: &str,
 ) -> Result<yamlpath::Document, Error> {
-    // TODO: Implement multiline flow sequence removal
-    // This is more complex as we need to handle the multiline structure properly
-    Err(Error::InvalidOperation(
-        "Remove operation is not yet supported for multiline flow sequences".to_string(),
-    ))
+    // For multiline flow sequences, we need to carefully parse and reconstruct
+    let parent_content = document.extract(parent_feature);
+
+    // Parse the multiline flow sequence
+    let mut existing_sequence = serde_yaml::from_str::<serde_yaml::Sequence>(parent_content)
+        .map_err(Error::Serialization)?;
+
+    // Get the feature that needs to be removed to determine what item to remove
+    let feature_to_remove = route_to_feature_exact(route, document)?;
+
+    if let Some(feature) = feature_to_remove {
+        // Extract the content of the feature to remove
+        let feature_content = document.extract(&feature);
+
+        // Try to find and remove the matching sequence item using improved matching
+        let mut index_to_remove = None;
+        for (index, value) in existing_sequence.iter().enumerate() {
+            if let Ok(serialized_value) = serialize_yaml_value(value) {
+                if values_match(&serialized_value, feature_content) {
+                    index_to_remove = Some(index);
+                    break;
+                }
+            }
+        }
+
+        if let Some(index) = index_to_remove {
+            existing_sequence.remove(index);
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find item to remove in multiline flow sequence".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Feature to remove not found in multiline flow sequence".to_string(),
+        ));
+    }
+
+    // Serialize back preserving multiline structure
+    let updated_content = serialize_multiline_flow_sequence(&existing_sequence, parent_content)?;
+
+    // Replace the parent feature content
+    let mut result = content.to_string();
+    result.replace_range(
+        parent_feature.location.byte_span.0..parent_feature.location.byte_span.1,
+        &updated_content,
+    );
+
+    yamlpath::Document::new(result).map_err(Error::from)
 }
 
 /// Handle removal from a flow mapping that is a value within a block mapping
@@ -1238,14 +1337,27 @@ fn handle_flow_mapping_removal_in_context(
         // Extract the content of the feature to remove
         let feature_content = document.extract(&feature);
 
-        // Try to find and remove the matching key-value pair
+        // Try to find and remove the matching key-value pair using improved matching
         let mut key_to_remove = None;
+
+        // First, try to match values
         for (key, value) in &existing_mapping {
-            // Check if the serialized value matches the feature content
             if let Ok(serialized_value) = serialize_yaml_value(value) {
-                if serialized_value.trim() == feature_content.trim() {
+                if values_match(&serialized_value, feature_content) {
                     key_to_remove = Some(key.clone());
                     break;
+                }
+            }
+        }
+
+        // If not found, try to match keys
+        if key_to_remove.is_none() {
+            for (key, _) in &existing_mapping {
+                if let Ok(serialized_key) = serialize_yaml_value(key) {
+                    if values_match(&serialized_key, feature_content) {
+                        key_to_remove = Some(key.clone());
+                        break;
+                    }
                 }
             }
         }
@@ -1253,23 +1365,9 @@ fn handle_flow_mapping_removal_in_context(
         if let Some(key) = key_to_remove {
             existing_mapping.remove(&key);
         } else {
-            // Fallback: try to find key by matching feature content with key
-            for (key, _) in &existing_mapping {
-                if let Ok(serialized_key) = serialize_yaml_value(key) {
-                    if serialized_key.trim() == feature_content.trim() {
-                        key_to_remove = Some(key.clone());
-                        break;
-                    }
-                }
-            }
-
-            if let Some(key) = key_to_remove {
-                existing_mapping.remove(&key);
-            } else {
-                return Err(Error::InvalidOperation(
-                    "Could not find key to remove in flow mapping within block mapping".to_string(),
-                ));
-            }
+            return Err(Error::InvalidOperation(
+                "Could not find key to remove in flow mapping within block mapping".to_string(),
+            ));
         }
     } else {
         return Err(Error::InvalidOperation(
@@ -1335,12 +1433,11 @@ fn handle_flow_sequence_removal_in_context(
         // Extract the content of the feature to remove
         let feature_content = document.extract(&feature);
 
-        // Try to find and remove the matching sequence item
+        // Try to find and remove the matching sequence item using improved matching
         let mut index_to_remove = None;
         for (index, value) in existing_sequence.iter().enumerate() {
-            // Check if the serialized value matches the feature content
             if let Ok(serialized_value) = serialize_yaml_value(value) {
-                if serialized_value.trim() == feature_content.trim() {
+                if values_match(&serialized_value, feature_content) {
                     index_to_remove = Some(index);
                     break;
                 }
@@ -1380,4 +1477,140 @@ fn handle_flow_sequence_removal_in_context(
     );
 
     yamlpath::Document::new(result).map_err(Error::from)
+}
+
+/// Check if two values match, handling Unicode normalization and quote differences
+fn values_match(serialized_value: &str, feature_content: &str) -> bool {
+    let trimmed_serialized = serialized_value.trim();
+    let trimmed_feature = feature_content.trim();
+
+    // Direct match
+    if trimmed_serialized == trimmed_feature {
+        return true;
+    }
+
+    // Try normalized comparison
+    let normalized_serialized = normalize_unicode_key(trimmed_serialized);
+    let normalized_feature = normalize_unicode_key(trimmed_feature);
+
+    if normalized_serialized == normalized_feature {
+        return true;
+    }
+
+    // Try removing quotes from both sides
+    let unquoted_serialized = remove_quotes(trimmed_serialized);
+    let unquoted_feature = remove_quotes(trimmed_feature);
+
+    if unquoted_serialized == unquoted_feature {
+        return true;
+    }
+
+    // Try normalized unquoted comparison
+    let normalized_unquoted_serialized = normalize_unicode_key(&unquoted_serialized);
+    let normalized_unquoted_feature = normalize_unicode_key(&unquoted_feature);
+
+    normalized_unquoted_serialized == normalized_unquoted_feature
+}
+
+/// Remove surrounding quotes from a string
+fn remove_quotes(s: &str) -> String {
+    let mut result = s.to_string();
+
+    if (result.starts_with('"') && result.ends_with('"'))
+        || (result.starts_with('\'') && result.ends_with('\''))
+    {
+        result = result[1..result.len() - 1].to_string();
+    }
+
+    result
+}
+
+/// Normalize a Unicode key by handling escape sequences and different encodings
+fn normalize_unicode_key(key: &str) -> String {
+    // Handle basic Unicode normalization
+    let mut result = key.to_string();
+
+    // Handle common escape sequences
+    result = result.replace("\\n", "\n");
+    result = result.replace("\\t", "\t");
+    result = result.replace("\\r", "\r");
+    result = result.replace("\\\\", "\\");
+    result = result.replace("\\\"", "\"");
+    result = result.replace("\\'", "'");
+
+    // Remove surrounding quotes if present
+    if (result.starts_with('"') && result.ends_with('"'))
+        || (result.starts_with('\'') && result.ends_with('\''))
+    {
+        result = result[1..result.len() - 1].to_string();
+    }
+
+    result
+}
+
+/// Serialize a multiline flow mapping while preserving structure
+fn serialize_multiline_flow_mapping(
+    mapping: &serde_yaml::Mapping,
+    original_content: &str,
+) -> Result<String, Error> {
+    if mapping.is_empty() {
+        return Ok("{}".to_string());
+    }
+
+    // Check if the original was multiline
+    if original_content.contains('\n') {
+        // Preserve multiline structure
+        let mut result = String::from("{\n");
+        let entries: Vec<_> = mapping.iter().collect();
+
+        for (i, (key, value)) in entries.iter().enumerate() {
+            let key_str = serialize_yaml_value(key)?;
+            let value_str = serialize_yaml_value(value)?;
+
+            result.push_str(&format!("  {}: {}", key_str.trim(), value_str.trim()));
+
+            if i < entries.len() - 1 {
+                result.push(',');
+            }
+            result.push('\n');
+        }
+
+        result.push('}');
+        Ok(result)
+    } else {
+        // Fall back to single-line flow
+        serialize_flow(&serde_yaml::Value::Mapping(mapping.clone()))
+    }
+}
+
+/// Serialize a multiline flow sequence while preserving structure
+fn serialize_multiline_flow_sequence(
+    sequence: &serde_yaml::Sequence,
+    original_content: &str,
+) -> Result<String, Error> {
+    if sequence.is_empty() {
+        return Ok("[]".to_string());
+    }
+
+    // Check if the original was multiline
+    if original_content.contains('\n') {
+        // Preserve multiline structure
+        let mut result = String::from("[\n");
+
+        for (i, value) in sequence.iter().enumerate() {
+            let value_str = serialize_yaml_value(value)?;
+            result.push_str(&format!("  {}", value_str.trim()));
+
+            if i < sequence.len() - 1 {
+                result.push(',');
+            }
+            result.push('\n');
+        }
+
+        result.push(']');
+        Ok(result)
+    } else {
+        // Fall back to single-line flow
+        serialize_flow(&serde_yaml::Value::Sequence(sequence.clone()))
+    }
 }

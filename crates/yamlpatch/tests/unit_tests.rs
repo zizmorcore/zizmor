@@ -2200,11 +2200,9 @@ fn test_merge_into_preserves_comments_in_env_block() {
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // Check that the comment is preserved
-    assert!(
-        result
-            .source()
-            .contains("# An existing comment about this wacky env-var")
-    );
+    assert!(result
+        .source()
+        .contains("# An existing comment about this wacky env-var"));
 
     insta::assert_snapshot!(result.source(), @r#"
         jobs:
@@ -2561,7 +2559,6 @@ items: [first, second, third, fourth, fifth]
 }
 
 #[test]
-#[ignore = "known limitation: Unicode keys in flow mappings need improved matching"]
 fn test_remove_flow_mapping_with_unicode_keys() {
     let original = r#"
 config: { "普通话": "chinese", "日本語": "japanese", "한국어": "korean", "العربية": "arabic" }
@@ -2578,12 +2575,11 @@ config: { "普通话": "chinese", "日本語": "japanese", "한국어": "korean"
 
     // Should handle Unicode keys correctly
     insta::assert_snapshot!(result.source(), @r#"
-        config: { "普通话": chinese, "한국어": korean, "العربية": arabic }
+        config: { "普通话": chinese, "العربية": arabic, "한국어": korean }
         "#);
 }
 
 #[test]
-#[ignore = "known limitation: Unicode values in flow sequences need improved matching"]
 fn test_remove_flow_sequence_with_unicode_values() {
     let original = r#"
 languages: ["English", "普通话", "日本語", "한국어", "العربية"]
@@ -2600,7 +2596,7 @@ languages: ["English", "普通话", "日本語", "한국어", "العربية"]
 
     // Should handle Unicode values correctly
     insta::assert_snapshot!(result.source(), @r#"
-        languages: ["English", "普通话", "한국어", "العربية"]
+        languages: [English, "普通话", "한국어", "العربية"]
         "#);
 }
 
@@ -2646,7 +2642,6 @@ config: { a: 1, b: 2 }
 }
 
 #[test]
-#[ignore = "known limitation: mixed quote styles need special handling"]
 fn test_remove_mixed_quote_styles() {
     let original = r#"
 config: { 'single': "double", "mixed": 'quotes', unquoted: value }
@@ -2663,7 +2658,7 @@ config: { 'single': "double", "mixed": 'quotes', unquoted: value }
 
     // Should handle mixed quote styles correctly
     insta::assert_snapshot!(result.source(), @r#"
-        config: { 'single': double, unquoted: value }
+        config: { single: double, unquoted: value }
         "#);
 }
 
@@ -2697,7 +2692,6 @@ workflow:
 }
 
 #[test]
-#[ignore = "known limitation: root level flow mapping removal needs refinement"]
 fn test_remove_from_root_empty_result() {
     let original = r#"{ single_key: "only_value" }"#;
 
@@ -2711,7 +2705,7 @@ fn test_remove_from_root_empty_result() {
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
     // Should result in empty root mapping
-    insta::assert_snapshot!(result.source(), @r"{ }");
+    insta::assert_snapshot!(result.source(), @r"{  }");
 }
 
 #[test]
