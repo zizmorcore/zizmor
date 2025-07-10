@@ -212,6 +212,26 @@ fn invalid_config_file() -> Result<()> {
 }
 
 #[test]
+fn empty_config_env_var() -> Result<()> {
+    zizmor()
+        .setenv("ZIZMOR_CONFIG", "")
+        .input(input_under_test("e2e-menagerie"))
+        .run()?;
+
+    Ok(())
+}
+
+#[test]
+fn empty_config_arg() -> Result<()> {
+    zizmor()
+        .config("")
+        .input(input_under_test("e2e-menagerie"))
+        .run()?;
+
+    Ok(())
+}
+
+#[test]
 fn invalid_inputs() -> Result<()> {
     for workflow_tc in [
         "invalid-workflow",
