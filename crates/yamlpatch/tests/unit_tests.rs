@@ -571,6 +571,74 @@ permissions:
 }
 
 #[test]
+fn test_remove_flow_mapping() {
+    let original = r#"
+config: { a: valueA, b: valueB, c: valueC }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("config", "b"),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should remove 'b: valueB' from the flow mapping
+    insta::assert_snapshot!(result.source(), @r"
+        config: { a: valueA, c: valueC }
+        ");
+}
+
+#[test]
+fn test_remove_flow_sequence() {
+    let original = r#"
+items: [first, second, third]
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("items", 1),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should remove 'second' from the flow sequence
+    insta::assert_snapshot!(result.source(), @r"
+        items: [first, third]
+        ");
+}
+
+#[test]
+fn test_remove_block_sequence() {
+    let original = r#"
+steps:
+  - name: First step
+  - name: Second step  # Remove this
+  - name: Third step
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("steps", 1),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should remove the second step from the block sequence
+    insta::assert_snapshot!(result.source(), @r"
+        steps:
+          - name: First step
+          - name: Third step
+        ");
+}
+
+#[test]
 fn test_multiple_operations_preserve_comments() {
     let original = r#"
 # Main configuration
@@ -2132,11 +2200,9 @@ fn test_merge_into_preserves_comments_in_env_block() {
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // Check that the comment is preserved
-    assert!(
-        result
-            .source()
-            .contains("# An existing comment about this wacky env-var")
-    );
+    assert!(result
+        .source()
+        .contains("# An existing comment about this wacky env-var"));
 
     insta::assert_snapshot!(result.source(), @r#"
         jobs:
