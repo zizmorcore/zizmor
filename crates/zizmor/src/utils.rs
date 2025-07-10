@@ -457,10 +457,10 @@ impl<'a> ExtractedExpr<'a> {
 ///
 /// Adapted roughly from GitHub's `parseScalar`:
 /// See: <https://github.com/actions/languageservices/blob/3a8c29c2d/workflow-parser/src/templates/template-reader.ts#L448>
-fn extract_expression<'a>(
-    text: &'a str,
+fn extract_expression(
+    text: &str,
     offset: usize,
-) -> Option<(ExtractedExpr<'a>, Range<usize>)> {
+) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
     let view = &text[offset..];
     let start = view.find("${{")?;
 
@@ -485,7 +485,7 @@ fn extract_expression<'a>(
 }
 
 /// Extract zero or more expressions from the given free-form text.
-pub(crate) fn extract_expressions<'a>(text: &'a str) -> Vec<(ExtractedExpr<'a>, Range<usize>)> {
+pub(crate) fn extract_expressions(text: &str) -> Vec<(ExtractedExpr<'_>, Range<usize>)> {
     let mut exprs = vec![];
     let mut offset = 0;
 
@@ -508,9 +508,9 @@ pub(crate) fn extract_expressions<'a>(text: &'a str) -> Vec<(ExtractedExpr<'a>, 
 /// Unlike `extract_expressions`, this function performs some semantic
 /// filtering over the raw input. For example, it skip ignore expressions
 /// that are inside comments.
-pub(crate) fn parse_expressions_from_input<'doc>(
-    input: &'doc AuditInput,
-) -> Vec<(ExtractedExpr<'doc>, Range<usize>)> {
+pub(crate) fn parse_expressions_from_input(
+    input: &AuditInput,
+) -> Vec<(ExtractedExpr<'_>, Range<usize>)> {
     let text = input.as_document().source();
     let doc = input.as_document();
 
