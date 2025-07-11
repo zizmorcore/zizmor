@@ -514,6 +514,13 @@ pub(crate) struct Comparison {
 pub(crate) struct Advisory {
     pub(crate) ghsa_id: String,
     pub(crate) severity: String,
+    pub(crate) vulnerabilities: Vec<Vulnerability>,
+}
+
+/// Represents a vulnerability within a GHSA advisory.
+#[derive(Deserialize)]
+pub(crate) struct Vulnerability {
+    pub(crate) first_patched_version: Option<String>,
 }
 
 /// Represents a file listing from GitHub's contents API.

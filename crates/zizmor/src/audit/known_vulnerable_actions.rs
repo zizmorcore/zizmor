@@ -31,7 +31,7 @@ impl KnownVulnerableActions {
     fn action_known_vulnerabilities(
         &self,
         uses: &RepositoryUses,
-    ) -> Result<Vec<(Severity, String)>> {
+    ) -> Result<Vec<(Severity, String, Option<String>)>> {
         let version = match &uses.git_ref {
             // If `uses` is pinned to a symbolic ref, we need to perform
             // feats of heroism to figure out what's going on.
@@ -111,7 +111,13 @@ impl KnownVulnerableActions {
                 _ => Severity::Unknown,
             };
 
-            results.push((severity, vuln.ghsa_id));
+            // Get the first patched version from the first vulnerability in the advisory
+            let first_patched_version = vuln
+                .vulnerabilities
+                .first()
+                .and_then(|v| v.first_patched_version.clone());
+
+            results.push((severity, vuln.ghsa_id, first_patched_version));
         }
 
         Ok(results)
@@ -151,22 +157,28 @@ impl KnownVulnerableActions {
         &self,
         uses: &RepositoryUses,
         _ghsa_id: &str,
+        first_patched_version: Option<&str>,
         step: &impl StepCommon<'doc>,
     ) -> Option<Fix<'doc>> {
-        // Try to get the latest tag to suggest as an upgrade target
-        match self.client.list_tags(&uses.owner, &uses.repo) {
-            Ok(tags) if !tags.is_empty() => {
-                // Use the first tag as the latest (GitHub API returns tags in descending order)
-                let latest_tag = &tags[0];
-                Some(Self::create_upgrade_to_latest_fix(
-                    uses,
-                    &latest_tag.name,
-                    step,
-                ))
-            }
-            _ => {
-                // If we can't get tags, we can't provide a specific fix
-                None
+        // Use the first patched version from the advisory if available
+        if let Some(version) = first_patched_version {
+            Some(Self::create_upgrade_fix(uses, version, step))
+        } else {
+            // Fallback to the latest tag if no first_patched_version is available
+            match self.client.list_tags(&uses.owner, &uses.repo) {
+                Ok(tags) if !tags.is_empty() => {
+                    // Use the first tag as the latest (GitHub API returns tags in descending order)
+                    let latest_tag = &tags[0];
+                    Some(Self::create_upgrade_to_latest_fix(
+                        uses,
+                        &latest_tag.name,
+                        step,
+                    ))
+                }
+                _ => {
+                    // If we can't get tags, we can't provide a specific fix
+                    None
+                }
             }
         }
     }
@@ -178,7 +190,7 @@ impl KnownVulnerableActions {
             return Ok(findings);
         };
 
-        for (severity, id) in self.action_known_vulnerabilities(uses)? {
+        for (severity, id, first_patched_version) in self.action_known_vulnerabilities(uses)? {
             let mut finding_builder = Self::finding()
                 .confidence(Confidence::High)
                 .severity(severity)
@@ -191,7 +203,9 @@ impl KnownVulnerableActions {
                 );
 
             // Add fix if available
-            if let Some(fix) = self.get_vulnerability_fix(uses, &id, step) {
+            if let Some(fix) =
+                self.get_vulnerability_fix(uses, &id, first_patched_version.as_deref(), step)
+            {
                 finding_builder = finding_builder.fix(fix);
             }
 
@@ -617,6 +631,55 @@ jobs:
             steps:
               - name: Action without version
                 uses: actions/checkout@v4
+        "#);
+    }
+
+    #[test]
+    fn test_first_patched_version_priority() {
+        // This test verifies that first_patched_version is used when available
+        let workflow_content = r#"
+name: Test First Patched Version Priority
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable action
+        uses: actions/checkout@v2
+"#;
+
+        let key = InputKey::local("test_first_patched.yml", None::<&str>).unwrap();
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+        let job = workflow.jobs().next().unwrap();
+        let steps: Vec<_> = match job {
+            crate::models::workflow::Job::NormalJob(normal_job) => normal_job.steps().collect(),
+            _ => panic!("Expected normal job"),
+        };
+        let step = &steps[0];
+
+        let uses = RepositoryUses {
+            owner: "actions".to_string(),
+            repo: "checkout".to_string(),
+            git_ref: Some("v2".to_string()),
+            subpath: None,
+        };
+
+        // Test that when first_patched_version is provided, it's used
+        let fix_with_patched_version =
+            KnownVulnerableActions::create_upgrade_fix(&uses, "v3.1.0", step);
+        let fixed_document = fix_with_patched_version
+            .apply(workflow.as_document())
+            .unwrap();
+
+        insta::assert_snapshot!(fixed_document.source(), @r#"
+        name: Test First Patched Version Priority
+        on: push
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Vulnerable action
+                uses: actions/checkout@v3.1.0
         "#);
     }
 }
