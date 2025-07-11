@@ -11,7 +11,10 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use git2::{ObjectType, Oid, Repository, TreeWalkMode, TreeWalkResult, build::RepoBuilder};
+use git2::{
+    FetchOptions, ObjectType, Oid, Repository, TreeWalkMode, TreeWalkResult,
+    build::{CheckoutBuilder, RepoBuilder},
+};
 use github_actions_models::common::RepositoryUses;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
@@ -162,9 +165,17 @@ impl Client {
             .collect())
     }
 
+    pub(crate) fn get_repo_path(&self, owner: &str, repo: &str) -> PathBuf {
+        self.cache_dir.join(format!("repositories/{owner}/{repo}"))
+    }
+
     #[instrument(skip(self))]
     pub(crate) async fn get_repo(&self, owner: &str, repo: &str) -> Result<Repository> {
-        let path = self.cache_dir.join(format!("repositories/{owner}/{repo}"));
+        let path = self.get_repo_path(owner, repo);
+
+        let mut fetch_opts = FetchOptions::new();
+        fetch_opts.depth(1);
+        fetch_opts.download_tags(git2::AutotagOption::None);
 
         let repository = match self
             .fetched_repos
@@ -172,25 +183,24 @@ impl Client {
             .unwrap()
             .get(&format!("{owner}/{repo}"))
         {
-            Some(path) => {
-                
-                Repository::open(path)?
-            }
+            Some(path) => Repository::open(path)?,
             None => match path.exists() {
-                true => {
-                    self.run_fetch(&path).await?;
-                    
-                    Repository::open(&path)?
-                }
+                true => Repository::open(&path)?,
                 false => {
-                    
-                    RepoBuilder::new()
+                    let mut checkout: CheckoutBuilder = CheckoutBuilder::default();
+                    checkout.dry_run();
+
+                    let repository: Repository = RepoBuilder::new()
                         .bare(true)
+                        .fetch_options(fetch_opts)
+                        .with_checkout(checkout)
                         .clone(
                             &self.host.to_repo_url(owner, repo, self.token.clone()),
                             &path,
                         )
-                        .with_context(|| format!("couldn't clone repo {owner}/{repo}"))?
+                        .with_context(|| format!("couldn't clone repo {owner}/{repo}"))?;
+
+                    repository
                 }
             },
         };
@@ -204,19 +214,30 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    pub(crate) async fn run_fetch(&self, path: &PathBuf) -> Result<()> {
+    pub(crate) async fn run_fetch(
+        &self,
+        path: &PathBuf,
+        refspecs: Option<Vec<String>>,
+    ) -> Result<()> {
         let repository = Repository::open(path)?;
         let mut remote = match repository.find_remote("origin") {
             Ok(r) => r,
             Err(_) => return Err(anyhow::anyhow!("couldn't find remote for {path:?}")),
         };
 
-        let refspecs = remote.fetch_refspecs()?;
-        let mut normalized_refspecs = vec![];
-        for spec in refspecs.iter().flatten().map(|s| s.to_string()) {
-            normalized_refspecs.push(spec);
-        }
-        remote.fetch(&normalized_refspecs, None, None)?;
+        let mut fo = FetchOptions::new();
+        fo.depth(1);
+
+        let refs = match refspecs {
+            Some(refs) => refs,
+            None => {
+                let rs = remote.fetch_refspecs()?;
+                let refs = rs.iter().flatten().map(|s| s.to_string()).collect();
+                refs
+            }
+        };
+
+        remote.fetch(&refs, Some(&mut fo), None)?;
         Ok(())
     }
 
@@ -243,7 +264,9 @@ impl Client {
         let mut branches = vec![];
 
         for reference in refs.iter() {
-            if let Ref::Branch(branch) = reference { branches.push(branch.clone()) }
+            if let Ref::Branch(branch) = reference {
+                branches.push(branch.clone())
+            }
         }
 
         Ok(branches)
@@ -257,7 +280,9 @@ impl Client {
         let refs = self.list_refs(owner, repo).await?;
 
         for reference in refs.iter() {
-            if let Ref::Tag(tag) = reference { tags.push(tag.clone()) }
+            if let Ref::Tag(tag) = reference {
+                tags.push(tag.clone())
+            }
         }
 
         Ok(tags)
@@ -297,6 +322,13 @@ impl Client {
         repo: &str,
         git_ref: &str,
     ) -> Result<Option<String>> {
+        let repository = self.get_repo(owner, repo).await?;
+        if repository.revparse(git_ref).is_err() {
+            let refspecs = vec![git_ref.to_string()];
+            self.run_fetch(&self.get_repo_path(owner, repo), Some(refspecs))
+                .await?;
+        }
+
         let refs = self.list_refs(owner, repo).await?;
         let reference = refs.iter().find(|reference| match reference {
             Ref::Branch(branch) => branch.name == git_ref,
@@ -345,6 +377,12 @@ impl Client {
         head: &str,
     ) -> Result<Option<ComparisonStatus>> {
         let repository = self.get_repo(owner, repo).await?;
+        if repository.revparse(base).is_err() || repository.revparse(head).is_err() {
+            let refspecs = vec![base.to_string(), head.to_string()];
+            self.run_fetch(&self.get_repo_path(owner, repo), Some(refspecs))
+                .await?;
+        }
+
         // Use git2's revwalk to determine the relationship between base and head
         let base_commit = match repository.revparse_single(base) {
             Ok(commit) => commit,
