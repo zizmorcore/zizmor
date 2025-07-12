@@ -5,14 +5,14 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{audit_meta, Audit, AuditLoadError};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{location::Routable as _, Confidence, Finding, Fix, Severity},
+    finding::{Confidence, Finding, Fix, Severity, location::Routable as _},
     github_api,
-    models::{action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step, StepCommon},
+    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
     state::AuditState,
 };
 use yamlpatch::{Op, Patch};
@@ -143,15 +143,6 @@ impl KnownVulnerableActions {
         }
     }
 
-    /// Create a fix to upgrade to the latest available version
-    fn create_upgrade_to_latest_fix<'doc>(
-        uses: &RepositoryUses,
-        latest_version: &str,
-        step: &impl StepCommon<'doc>,
-    ) -> Fix<'doc> {
-        Self::create_upgrade_fix(uses, latest_version, step)
-    }
-
     /// Get the best available fix for a vulnerable action
     fn get_vulnerability_fix<'doc>(
         &self,
@@ -164,22 +155,7 @@ impl KnownVulnerableActions {
         if let Some(version) = first_patched_version {
             Some(Self::create_upgrade_fix(uses, version, step))
         } else {
-            // Fallback to the latest tag if no first_patched_version is available
-            match self.client.list_tags(&uses.owner, &uses.repo) {
-                Ok(tags) if !tags.is_empty() => {
-                    // Use the first tag as the latest (GitHub API returns tags in descending order)
-                    let latest_tag = &tags[0];
-                    Some(Self::create_upgrade_to_latest_fix(
-                        uses,
-                        &latest_tag.name,
-                        step,
-                    ))
-                }
-                _ => {
-                    // If we can't get tags, we can't provide a specific fix
-                    None
-                }
-            }
+            None
         }
     }
 
@@ -249,7 +225,7 @@ impl Audit for KnownVulnerableActions {
 mod tests {
     use super::*;
     use crate::{
-        models::{workflow::Workflow, AsDocument},
+        models::{AsDocument, workflow::Workflow},
         registry::InputKey,
     };
 
