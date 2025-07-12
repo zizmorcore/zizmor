@@ -130,10 +130,10 @@ impl KnownVulnerableActions {
         step: &impl StepCommon<'doc>,
     ) -> Fix<'doc> {
         let action_name = format!("{}/{}", uses.owner, uses.repo);
-        let new_uses_value = format!("{}@{}", action_name, target_version);
+        let new_uses_value = format!("{action_name}@{target_version}");
 
         Fix {
-            title: format!("upgrade {} to {}", action_name, target_version),
+            title: format!("upgrade {action_name} to {target_version}"),
             key: step.location().key,
             disposition: Default::default(),
             patches: vec![Patch {
@@ -152,11 +152,7 @@ impl KnownVulnerableActions {
         step: &impl StepCommon<'doc>,
     ) -> Option<Fix<'doc>> {
         // Use the first patched version from the advisory if available
-        if let Some(version) = first_patched_version {
-            Some(Self::create_upgrade_fix(uses, version, step))
-        } else {
-            None
-        }
+        first_patched_version.map(|version| Self::create_upgrade_fix(uses, version, step))
     }
 
     fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
