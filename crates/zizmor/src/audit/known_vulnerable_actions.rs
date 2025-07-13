@@ -5,14 +5,14 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{audit_meta, Audit, AuditLoadError};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
-    finding::{location::Routable as _, Confidence, Finding, Fix, Severity},
+    finding::{Confidence, Finding, Fix, Severity, location::Routable as _},
     github_api,
-    models::{action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step, StepCommon},
+    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
     state::AuditState,
 };
 use yamlpatch::{Op, Patch};
@@ -221,7 +221,7 @@ impl Audit for KnownVulnerableActions {
 mod tests {
     use super::*;
     use crate::{
-        models::{workflow::Workflow, AsDocument},
+        models::{AsDocument, workflow::Workflow},
         registry::InputKey,
     };
 

@@ -457,10 +457,7 @@ impl<'a> ExtractedExpr<'a> {
 ///
 /// Adapted roughly from GitHub's `parseScalar`:
 /// See: <https://github.com/actions/languageservices/blob/3a8c29c2d/workflow-parser/src/templates/template-reader.ts#L448>
-fn extract_expression(
-    text: &str,
-    offset: usize,
-) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
+fn extract_expression(text: &str, offset: usize) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
     let view = &text[offset..];
     let start = view.find("${{")?;
 
