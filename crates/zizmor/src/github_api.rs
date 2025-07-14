@@ -67,7 +67,11 @@ pub(crate) struct GitHubToken(String);
 
 impl GitHubToken {
     pub(crate) fn from_clap(token: &str) -> Result<Self, String> {
-        Ok(Self(token.trim().to_owned()))
+        let token = token.trim();
+        if token.is_empty() {
+            return Err("GitHub token cannot be empty".into());
+        }
+        Ok(Self(token.to_owned()))
     }
 
     fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
@@ -568,6 +572,13 @@ mod tests {
             ("gho_test\ntest", "gho_test\ntest"),
         ] {
             assert_eq!(GitHubToken::from_clap(token).unwrap().0, expected);
+        }
+    }
+
+    #[test]
+    fn test_github_token_err() {
+        for token in ["", " ", "\r", "\n", "\t", "     "] {
+            assert!(GitHubToken::from_clap(token).is_err());
         }
     }
 }
