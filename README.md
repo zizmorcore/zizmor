@@ -57,13 +57,6 @@ See [our contributing guide!](./CONTRIBUTING.md)
 <tbody>
 <tr>
 <td align="center" valign="top" width="15%">
-<a href="https://astral.sh/">
-<img src="https://avatars.githubusercontent.com/u/115962839?s=100&v=4" width="100px">
-<br>
-Astral
-</a>
-</td>
-<td align="center" valign="top" width="15%">
 <a href="https://grafana.com/">
 <img src="https://avatars.githubusercontent.com/u/7195757?s=100&v=4" width="100px">
 <br>
