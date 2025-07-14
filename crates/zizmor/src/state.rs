@@ -7,7 +7,7 @@ use etcetera::{AppStrategy, AppStrategyArgs, choose_app_strategy};
 use crate::{
     App,
     config::Config,
-    github_api::{Client, GitHubHost},
+    github_api::{Client, GitHubHost, GitHubToken},
 };
 
 #[derive(Clone)]
@@ -15,7 +15,7 @@ pub(crate) struct AuditState<'a> {
     pub(crate) config: &'a Config,
     pub(crate) no_online_audits: bool,
     pub(crate) cache_dir: PathBuf,
-    pub(crate) gh_token: Option<String>,
+    pub(crate) gh_token: Option<GitHubToken>,
     pub(crate) gh_hostname: GitHubHost,
 }
 
@@ -47,7 +47,7 @@ impl<'a> AuditState<'a> {
     /// Return a cache-configured GitHub API client, if
     /// a GitHub API token is present.
     /// If gh_hostname is also present, set it as api_base for client.
-    pub(crate) fn github_client(&self) -> Option<Client> {
+    pub(crate) fn github_client(&self) -> Option<anyhow::Result<Client>> {
         self.gh_token
             .as_ref()
             .map(|token| Client::new(&self.gh_hostname, token, &self.cache_dir))

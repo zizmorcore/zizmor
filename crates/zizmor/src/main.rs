@@ -16,7 +16,7 @@ use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
 use github_actions_models::common::Uses;
-use github_api::GitHubHost;
+use github_api::{GitHubHost, GitHubToken};
 use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
@@ -69,8 +69,8 @@ struct App {
     offline: bool,
 
     /// The GitHub API token to use.
-    #[arg(long, env, value_parser = NonEmptyStringValueParser::new())]
-    gh_token: Option<String>,
+    #[arg(long, env, value_parser = GitHubToken::from_clap)]
+    gh_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
     #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::from_clap)]
@@ -450,7 +450,7 @@ fn collect_from_repo_slug(
                 gh_token = "--gh-token <TOKEN>".yellow(),
             )]
         ))
-    })?;
+    })??;
 
     if matches!(mode, CollectionMode::WorkflowsOnly) {
         // Performance: if we're *only* collecting workflows, then we

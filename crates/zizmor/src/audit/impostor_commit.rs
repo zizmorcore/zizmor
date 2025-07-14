@@ -120,13 +120,11 @@ impl Audit for ImpostorCommit {
             )));
         }
 
-        let Some(client) = state.github_client() else {
-            return Err(AuditLoadError::Skip(anyhow!(
-                "can't run without a GitHub API token"
-            )));
-        };
-
-        Ok(ImpostorCommit { client })
+        state
+            .github_client()
+            .ok_or_else(|| AuditLoadError::Skip(anyhow!("can't run without a GitHub API token")))?
+            .map(|client| ImpostorCommit { client })
+            .map_err(AuditLoadError::Fail)
     }
 
     fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> Result<Vec<Finding<'doc>>> {

@@ -15,7 +15,7 @@ use http_cache_reqwest::{
 use owo_colors::OwoColorize;
 use reqwest::{
     Response, StatusCode,
-    header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT},
+    header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, InvalidHeaderValue, USER_AGENT},
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, de::DeserializeOwned};
@@ -61,20 +61,38 @@ impl GitHubHost {
     }
 }
 
+/// A sanitized GitHub access token.
+#[derive(Clone)]
+pub(crate) struct GitHubToken(String);
+
+impl GitHubToken {
+    pub(crate) fn from_clap(token: &str) -> Result<Self, String> {
+        Ok(Self(token.trim().to_owned()))
+    }
+
+    fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
+        HeaderValue::from_str(&format!("Bearer {}", self.0))
+    }
+}
+
 pub(crate) struct Client {
     api_base: String,
     http: ClientWithMiddleware,
 }
 
 impl Client {
-    pub(crate) fn new(hostname: &GitHubHost, token: &str, cache_dir: &Path) -> Self {
+    pub(crate) fn new(
+        hostname: &GitHubHost,
+        token: &GitHubToken,
+        cache_dir: &Path,
+    ) -> anyhow::Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
             AUTHORIZATION,
-            format!("Bearer {token}")
-                .parse()
-                .expect("couldn't build authorization header for GitHub client?"),
+            token
+                .to_header_value()
+                .context("couldn't build authorization header for GitHub client")?,
         );
         headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
         headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
@@ -105,10 +123,10 @@ impl Client {
         }))
         .build();
 
-        Self {
+        Ok(Self {
             api_base: hostname.to_api_url(),
             http,
-        }
+        })
     }
 
     async fn paginate<T: DeserializeOwned>(
@@ -525,7 +543,7 @@ pub(crate) struct File {
 
 #[cfg(test)]
 mod tests {
-    use crate::github_api::GitHubHost;
+    use crate::github_api::{GitHubHost, GitHubToken};
 
     #[test]
     fn test_github_host() {
@@ -538,6 +556,18 @@ mod tests {
             ),
         ] {
             assert_eq!(GitHubHost::from_clap(host).unwrap().to_api_url(), expected);
+        }
+    }
+
+    #[test]
+    fn test_github_token() {
+        for (token, expected) in [
+            ("gha_testtest\n", "gha_testtest"),
+            ("  gha_testtest  ", "gha_testtest"),
+            ("gho_testtest", "gho_testtest"),
+            ("gho_test\ntest", "gho_test\ntest"),
+        ] {
+            assert_eq!(GitHubToken::from_clap(token).unwrap().0, expected);
         }
     }
 }
