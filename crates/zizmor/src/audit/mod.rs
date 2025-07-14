@@ -196,7 +196,7 @@ pub(crate) enum AuditLoadError {
 /// **only** [`Audit::audit`] and not [`Audit::audit_normal_job`] or
 /// [`Audit::audit_step`].
 pub(crate) trait Audit: AuditCore {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new<'a>(state: &'a AuditState<'_>) -> Result<Self, AuditLoadError>
     where
         Self: Sized;
 

@@ -79,6 +79,7 @@ impl GitHubToken {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
     http: ClientWithMiddleware,

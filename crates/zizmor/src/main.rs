@@ -441,7 +441,7 @@ fn collect_from_repo_slug(
         )));
     }
 
-    let client = state.github_client().ok_or_else(|| {
+    let client = state.gh_client.as_ref().ok_or_else(|| {
         anyhow!(tips(
             format!("can't retrieve repository: {input}", input = input.green()),
             &[format!(
@@ -450,7 +450,7 @@ fn collect_from_repo_slug(
                 gh_token = "--gh-token <TOKEN>".yellow(),
             )]
         ))
-    })??;
+    })?;
 
     if matches!(mode, CollectionMode::WorkflowsOnly) {
         // Performance: if we're *only* collecting workflows, then we
@@ -646,7 +646,7 @@ fn run() -> Result<ExitCode> {
         ))
     })?;
 
-    let audit_state = AuditState::new(&app, &config);
+    let audit_state = AuditState::new(&app, &config)?;
     let registry = collect_inputs(
         &app.inputs,
         &app.collect,
