@@ -39,7 +39,7 @@ http-cache-reqwest = "0.16"
 human-panic = "2.0.3"
 ignore = "0.4.23"
 indexmap = { version = "2.10.0", features = ["serde"] }
-indicatif = "0.17.12"
+indicatif = "0.18"
 insta = "1.43.0"
 jsonschema = "0.30.0"
 line-index = "0.1.2"
@@ -59,7 +59,7 @@ thiserror = "2.0.12"
 tokio = { version = "1.46.1", features = ["rt-multi-thread", "io-std"] }
 tower-lsp = { version = "0.20.0" }
 tracing = "0.1.41"
-tracing-indicatif = "0.3.10"
+tracing-indicatif = "0.3.11"
 tracing-subscriber = "0.3.19"
 tree-sitter = "0.25.8"
 tree-sitter-bash = "0.23.3"
