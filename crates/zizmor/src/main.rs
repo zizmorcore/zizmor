@@ -16,7 +16,7 @@ use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
 use github_actions_models::common::Uses;
-use github_api::GitHubHost;
+use github_api::{GitHubHost, GitHubToken};
 use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
@@ -69,8 +69,8 @@ struct App {
     offline: bool,
 
     /// The GitHub API token to use.
-    #[arg(long, env, value_parser = NonEmptyStringValueParser::new())]
-    gh_token: Option<String>,
+    #[arg(long, env, value_parser = GitHubToken::from_clap)]
+    gh_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
     #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::from_clap)]
@@ -441,7 +441,7 @@ fn collect_from_repo_slug(
         )));
     }
 
-    let client = state.github_client().ok_or_else(|| {
+    let client = state.gh_client.as_ref().ok_or_else(|| {
         anyhow!(tips(
             format!("can't retrieve repository: {input}", input = input.green()),
             &[format!(
@@ -646,7 +646,7 @@ fn run() -> Result<ExitCode> {
         ))
     })?;
 
-    let audit_state = AuditState::new(&app, &config);
+    let audit_state = AuditState::new(&app, &config)?;
     let registry = collect_inputs(
         &app.inputs,
         &app.collect,
