@@ -135,22 +135,17 @@ impl KnownVulnerableActions {
         // If the current uses is pinned by commit hash, resolve target_version to commit
         // and add a version comment for Dependabot
         if uses.ref_is_commit() {
-            let Some(target_commit) =
-                self.client
-                    .commit_for_ref(&uses.owner, &uses.repo, target_version)?
-            else {
-                // If we can't resolve the target version to a commit, fall back to version string
-                let new_uses_value = format!("{action_name}@{target_version}");
-                return Ok(Fix {
-                    title: format!("upgrade {action_name} to {target_version}"),
-                    key: step.location().key,
-                    disposition: Default::default(),
-                    patches: vec![Patch {
-                        route: step.route().with_key("uses"),
-                        operation: Op::Replace(serde_yaml::Value::String(new_uses_value)),
-                    }],
-                });
-            };
+            let target_commit = self
+                .client
+                .commit_for_ref(&uses.owner, &uses.repo, target_version)?
+                .ok_or_else(|| {
+                    anyhow!(
+                        "Cannot resolve version {} to commit hash for {}/{}",
+                        target_version,
+                        uses.owner,
+                        uses.repo
+                    )
+                })?;
 
             // Use RewriteFragment to replace the commit with the new commit and add version comment
             let current_uses_value = format!("{action_name}@{}", uses.git_ref.as_ref().unwrap());
