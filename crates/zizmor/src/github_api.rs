@@ -36,7 +36,7 @@ pub(crate) enum GitHubHost {
 }
 
 impl GitHubHost {
-    pub(crate) fn from_clap(hostname: &str) -> Result<Self, String> {
+    pub(crate) fn new(hostname: &str) -> Result<Self, String> {
         let normalized = hostname.to_lowercase();
 
         // NOTE: ideally we'd do a full domain validity check here.
@@ -66,7 +66,7 @@ impl GitHubHost {
 pub(crate) struct GitHubToken(String);
 
 impl GitHubToken {
-    pub(crate) fn from_clap(token: &str) -> Result<Self, String> {
+    pub(crate) fn new(token: &str) -> Result<Self, String> {
         let token = token.trim();
         if token.is_empty() {
             return Err("GitHub token cannot be empty".into());
@@ -567,7 +567,7 @@ mod tests {
                 "https://selfhosted.example.com/api/v3",
             ),
         ] {
-            assert_eq!(GitHubHost::from_clap(host).unwrap().to_api_url(), expected);
+            assert_eq!(GitHubHost::new(host).unwrap().to_api_url(), expected);
         }
     }
 
@@ -579,14 +579,14 @@ mod tests {
             ("gho_testtest", "gho_testtest"),
             ("gho_test\ntest", "gho_test\ntest"),
         ] {
-            assert_eq!(GitHubToken::from_clap(token).unwrap().0, expected);
+            assert_eq!(GitHubToken::new(token).unwrap().0, expected);
         }
     }
 
     #[test]
     fn test_github_token_err() {
         for token in ["", " ", "\r", "\n", "\t", "     "] {
-            assert!(GitHubToken::from_clap(token).is_err());
+            assert!(GitHubToken::new(token).is_err());
         }
     }
 }

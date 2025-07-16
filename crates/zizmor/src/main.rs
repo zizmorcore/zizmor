@@ -69,11 +69,11 @@ struct App {
     offline: bool,
 
     /// The GitHub API token to use.
-    #[arg(long, env, value_parser = GitHubToken::from_clap)]
+    #[arg(long, env, value_parser = GitHubToken::new)]
     gh_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
-    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::from_clap)]
+    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::new)]
     gh_hostname: GitHubHost,
 
     /// Perform only offline audits.

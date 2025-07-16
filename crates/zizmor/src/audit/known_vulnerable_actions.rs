@@ -256,6 +256,8 @@ impl Audit for KnownVulnerableActions {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
     use crate::{
         models::{AsDocument, workflow::Workflow},
@@ -268,8 +270,14 @@ mod tests {
         let state = crate::state::AuditState {
             config: &config,
             no_online_audits: false,
-            cache_dir: std::path::PathBuf::from("/tmp"),
-            gh_token: Some("test_token".to_string()),
+            gh_client: Some(
+                github_api::Client::new(
+                    &github_api::GitHubHost::Standard("github.com".to_string()),
+                    &github_api::GitHubToken::new("fake").unwrap(),
+                    Path::new("/tmp"),
+                )
+                .unwrap(),
+            ),
             gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
         };
         KnownVulnerableActions::new(&state).unwrap()
@@ -897,8 +905,7 @@ jobs:
         let state = crate::state::AuditState {
             config: &config,
             no_online_audits: true,
-            cache_dir: std::path::PathBuf::from("/tmp"),
-            gh_token: None,
+            gh_client: None,
             gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
         };
 
@@ -942,8 +949,14 @@ jobs:
         let state = crate::state::AuditState {
             config: &config,
             no_online_audits: false,
-            cache_dir: std::path::PathBuf::from("/tmp"),
-            gh_token: std::env::var("GH_TOKEN").ok(),
+            gh_client: Some(
+                github_api::Client::new(
+                    &github_api::GitHubHost::Standard("github.com".to_string()),
+                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    Path::new("/tmp"),
+                )
+                .unwrap(),
+            ),
             gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
         };
 
@@ -1014,8 +1027,14 @@ jobs:
         let state = crate::state::AuditState {
             config: &config,
             no_online_audits: false,
-            cache_dir: std::path::PathBuf::from("/tmp"),
-            gh_token: std::env::var("GH_TOKEN").ok(),
+            gh_client: Some(
+                github_api::Client::new(
+                    &github_api::GitHubHost::Standard("github.com".to_string()),
+                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    Path::new("/tmp"),
+                )
+                .unwrap(),
+            ),
             gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
         };
 
