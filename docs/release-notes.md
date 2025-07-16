@@ -17,6 +17,8 @@ of `zizmor`.
 
 * Fixed a bug where `--fix` would fail to preserve comments when modifying
   block-style YAML mappings (#995)
+* Fixed a bug where `zizmor` would crash when given a GitHub API token
+  with leading or trailing whitespace (#1027)
 
 ## 1.11.0
 

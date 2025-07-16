@@ -523,8 +523,7 @@ mod tests {
             let audit_state = AuditState {
                 config: &Default::default(),
                 no_online_audits: false,
-                cache_dir: "/tmp/zizmor".into(),
-                gh_token: None,
+                gh_client: None,
                 gh_hostname: GitHubHost::Standard("github.com".into()),
             };
 
@@ -640,8 +639,7 @@ mod tests {
             let audit_state = AuditState {
                 config: &Default::default(),
                 no_online_audits: false,
-                cache_dir: "/tmp/zizmor".into(),
-                gh_token: None,
+                gh_client: None,
                 gh_hostname: GitHubHost::Standard("github.com".into()),
             };
 

@@ -2,7 +2,8 @@
     {
         "name": "Astral",
         "url": "https://astral.sh/",
-        "img": "https://avatars.githubusercontent.com/u/115962839?s=100&v=4"
+        "img": "https://avatars.githubusercontent.com/u/115962839?s=100&v=4",
+        "former": true
     },
     {
         "name": "Grafana Labs",

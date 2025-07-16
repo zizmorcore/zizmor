@@ -1312,7 +1312,7 @@ regardless of definition order.
     - :simple-go: @stacklok/frizbee: supports hash-pinning (but not updating)
       workflow definitions.
 
-        See also @stacklok/frizbee#184 for current usage caveats.
+        See also stacklok/frizbee#184 for current usage caveats.
 
 For repository actions (like @actions/checkout): add a branch, tag, or SHA
 reference.
