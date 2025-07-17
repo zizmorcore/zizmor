@@ -49,7 +49,6 @@ indicatif.workspace = true
 itertools.workspace = true
 jsonschema.workspace = true
 line-index.workspace = true
-memchr.workspace = true
 owo-colors.workspace = true
 regex.workspace = true
 reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls"] }
@@ -58,6 +57,7 @@ serde = { workspace = true, features = ["derive"] }
 serde-sarif.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
+subfeature.workspace = true
 tar.workspace = true
 terminal-link.workspace = true
 thiserror.workspace = true

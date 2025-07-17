@@ -6,6 +6,7 @@ on:
       # NOTE: additional non-zizmor crate tag patterns get added here
       - "github-actions-expressions/v*"
       - "github-actions-models/v*"
+      - "subfeature/v*"
       - "yamlpath/v*"
       - "yamlpatch/v*"
   workflow_dispatch:
