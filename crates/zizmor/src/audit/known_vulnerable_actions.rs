@@ -183,15 +183,10 @@ impl KnownVulnerableActions {
     fn get_vulnerability_fix<'doc>(
         &self,
         uses: &RepositoryUses,
-        _ghsa_id: &str,
-        first_patched_version: Option<&str>,
+        first_patched_version: &str,
         step: &impl StepCommon<'doc>,
-    ) -> Result<Option<Fix<'doc>>> {
-        // Use the first patched version from the advisory if available
-        match first_patched_version {
-            Some(version) => Ok(Some(self.create_upgrade_fix(uses, version, step)?)),
-            None => Ok(None),
-        }
+    ) -> Result<Fix<'doc>> {
+        self.create_upgrade_fix(uses, first_patched_version, step)
     }
 
     fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
@@ -214,8 +209,9 @@ impl KnownVulnerableActions {
                 );
 
             // Add fix if available
-            if let Some(fix) =
-                self.get_vulnerability_fix(uses, &id, first_patched_version.as_deref(), step)?
+            if let Some(fix) = first_patched_version
+                .map(|patched_version| self.get_vulnerability_fix(uses, &patched_version, step))
+                .transpose()?
             {
                 finding_builder = finding_builder.fix(fix);
             }
@@ -960,34 +956,33 @@ jobs:
             gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
         };
 
-        if let Ok(audit) = KnownVulnerableActions::new(&state) {
-            let fix_result = audit.create_upgrade_fix(&uses, "v4.2.0", step);
+        let audit = KnownVulnerableActions::new(&state).unwrap();
+        let fix_result = audit.create_upgrade_fix(&uses, "v4.2.0", step);
 
-            match fix_result {
-                Ok(fix) => {
-                    assert_eq!(fix.title, "upgrade actions/checkout to v4.2.0");
-                    assert_eq!(fix.patches.len(), 1);
+        match fix_result {
+            Ok(fix) => {
+                assert_eq!(fix.title, "upgrade actions/checkout to v4.2.0");
+                assert_eq!(fix.patches.len(), 1);
 
-                    // Should use RewriteFragment for commit hash pinning
-                    match &fix.patches[0].operation {
-                        yamlpatch::Op::RewriteFragment { from, to, .. } => {
-                            assert!(from.contains("b4ffde65f46336ab88eb53be808477a3936bae11"));
-                            assert!(to.contains("# v4.2.0")); // Should have version comment
+                // Should use RewriteFragment for commit hash pinning
+                match &fix.patches[0].operation {
+                    yamlpatch::Op::RewriteFragment { from, to, .. } => {
+                        assert!(from.contains("b4ffde65f46336ab88eb53be808477a3936bae11"));
+                        assert!(to.contains("# v4.2.0")); // Should have version comment
 
-                            // Apply the fix to verify it works
-                            let fixed_document = fix.apply(workflow.as_document()).unwrap();
-                            let fixed_source = fixed_document.source();
+                        // Apply the fix to verify it works
+                        let fixed_document = fix.apply(workflow.as_document()).unwrap();
+                        let fixed_source = fixed_document.source();
 
-                            // Should contain a commit hash (not the original one)
-                            assert!(fixed_source.contains("actions/checkout@"));
-                            assert!(fixed_source.contains("# v4.2.0"));
-                        }
-                        _ => panic!("Expected RewriteFragment operation for commit hash pinning"),
+                        // Should contain a commit hash (not the original one)
+                        assert!(fixed_source.contains("actions/checkout@"));
+                        assert!(fixed_source.contains("# v4.2.0"));
                     }
+                    _ => panic!("Expected RewriteFragment operation for commit hash pinning"),
                 }
-                Err(e) => {
-                    panic!("Commit hash pinning should work with real API: {}", e);
-                }
+            }
+            Err(e) => {
+                panic!("Commit hash pinning should work with real API: {}", e);
             }
         }
     }
@@ -1038,28 +1033,27 @@ jobs:
             gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
         };
 
-        if let Ok(audit) = KnownVulnerableActions::new(&state) {
-            let fix_result = audit.create_upgrade_fix(&uses, "v4.2.0", step);
+        let audit = KnownVulnerableActions::new(&state).unwrap();
+        let fix_result = audit.create_upgrade_fix(&uses, "v4.2.0", step);
 
-            match fix_result {
-                Ok(fix) => {
-                    assert_eq!(fix.title, "upgrade actions/checkout to v4.2.0");
-                    assert_eq!(fix.patches.len(), 1);
+        match fix_result {
+            Ok(fix) => {
+                assert_eq!(fix.title, "upgrade actions/checkout to v4.2.0");
+                assert_eq!(fix.patches.len(), 1);
 
-                    // Should fall back to Replace operation when commit resolution fails
-                    match &fix.patches[0].operation {
-                        yamlpatch::Op::Replace(value) => {
-                            assert_eq!(value.as_str().unwrap(), "actions/checkout@v4.2.0");
-                        }
-                        _ => panic!("Expected Replace operation for fallback behavior"),
+                // Should fall back to Replace operation when commit resolution fails
+                match &fix.patches[0].operation {
+                    yamlpatch::Op::Replace(value) => {
+                        assert_eq!(value.as_str().unwrap(), "actions/checkout@v4.2.0");
                     }
+                    _ => panic!("Expected Replace operation for fallback behavior"),
                 }
-                Err(e) => {
-                    panic!(
-                        "Fallback should work even when commit resolution fails: {}",
-                        e
-                    );
-                }
+            }
+            Err(e) => {
+                panic!(
+                    "Fallback should work even when commit resolution fails: {}",
+                    e
+                );
             }
         }
     }
