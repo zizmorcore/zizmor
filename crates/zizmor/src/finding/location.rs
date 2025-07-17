@@ -402,10 +402,6 @@ impl<'doc> Location<'doc> {
 
 #[cfg(test)]
 mod tests {
-    use github_actions_expressions::Expr;
-
-    use subfeature::Fragment;
-
     use super::Comment;
 
     #[test]
