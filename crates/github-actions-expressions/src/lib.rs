@@ -131,58 +131,12 @@ impl<'src> Literal<'src> {
     }
 }
 
-// TODO: Move this type to some kind of common crate? It's useful to have
-// a single span type everywhere, instead of the current mash of span helpers
-// and ranges we have throughout zizmor.
-/// Represents a `[start, end)` byte span for a source expression.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Span {
-    /// The start of the span, inclusive.
-    pub start: usize,
-    /// The end of the span, exclusive.
-    pub end: usize,
-}
-
-impl Span {
-    /// Adjust this span by the given bias.
-    pub fn adjust(self, bias: usize) -> Self {
-        Self {
-            start: self.start + bias,
-            end: self.end + bias,
-        }
-    }
-}
-
-impl From<pest::Span<'_>> for Span {
-    fn from(span: pest::Span<'_>) -> Self {
-        Self {
-            start: span.start(),
-            end: span.end(),
-        }
-    }
-}
-
-impl From<std::ops::Range<usize>> for Span {
-    fn from(range: std::ops::Range<usize>) -> Self {
-        Self {
-            start: range.start,
-            end: range.end,
-        }
-    }
-}
-
-impl From<Span> for std::ops::Range<usize> {
-    fn from(span: Span) -> Self {
-        span.start..span.end
-    }
-}
-
 /// Represents the origin of an expression, including its source span
 /// and unparsed form.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Origin<'src> {
     /// The expression's source span.
-    pub span: Span,
+    pub span: subfeature::Span,
     /// The expression's unparsed form, as it appears in the source.
     ///
     /// This is recorded exactly as it appears in the source, *except*
@@ -194,7 +148,7 @@ pub struct Origin<'src> {
 
 impl<'a> Origin<'a> {
     /// Create a new origin from the given span and raw form.
-    pub fn new(span: impl Into<Span>, raw: &'a str) -> Self {
+    pub fn new(span: impl Into<subfeature::Span>, raw: &'a str) -> Self {
         Self {
             span: span.into(),
             raw: raw.trim(),
@@ -357,6 +311,12 @@ impl<'a> Deref for SpannedExpr<'a> {
     }
 }
 
+impl<'doc> From<&SpannedExpr<'doc>> for subfeature::Fragment<'doc> {
+    fn from(expr: &SpannedExpr<'doc>) -> Self {
+        Self::new(expr.origin.raw)
+    }
+}
+
 /// Represents a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
 pub enum Expr<'src> {
@@ -484,7 +444,7 @@ impl<'src> Expr<'src> {
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: BinOp::Or,
@@ -500,7 +460,7 @@ impl<'src> Expr<'src> {
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: BinOp::And,
@@ -530,7 +490,7 @@ impl<'src> Expr<'src> {
                         };
 
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: eq_op,
@@ -560,7 +520,7 @@ impl<'src> Expr<'src> {
                         };
 
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: eq_op,
@@ -577,7 +537,7 @@ impl<'src> Expr<'src> {
 
                     match inner_pair.as_rule() {
                         Rule::unary_op => Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::UnOp {
                                 op: UnOp::Not,
                                 expr: parse_pair(pairs.next().unwrap())?,
@@ -593,7 +553,7 @@ impl<'src> Expr<'src> {
                     parse_pair(pair.into_inner().next().unwrap())
                 }
                 Rule::number => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     pair.as_str().parse::<f64>().unwrap().into(),
                 )
                 .into()),
@@ -605,27 +565,31 @@ impl<'src> Expr<'src> {
                     // Optimization: if our string literal doesn't have any
                     // escaped quotes in it, we can save ourselves a clone.
                     if !string_inner.contains('\'') {
-                        Ok(SpannedExpr::new(Origin::new(span, raw), string_inner.into()).into())
+                        Ok(SpannedExpr::new(
+                            Origin::new(span.start()..span.end(), raw),
+                            string_inner.into(),
+                        )
+                        .into())
                     } else {
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             string_inner.replace("''", "'").into(),
                         )
                         .into())
                     }
                 }
                 Rule::boolean => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     pair.as_str().parse::<bool>().unwrap().into(),
                 )
                 .into()),
                 Rule::null => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     Expr::Literal(Literal::Null),
                 )
                 .into()),
                 Rule::star => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     Expr::Star,
                 )
                 .into()),
@@ -639,7 +603,7 @@ impl<'src> Expr<'src> {
                         .collect::<Result<_, _>>()?;
 
                     Ok(SpannedExpr::new(
-                        Origin::new(span, raw),
+                        Origin::new(span.start()..span.end(), raw),
                         Expr::Call {
                             func: Function(identifier.as_str()),
                             args,
@@ -648,12 +612,12 @@ impl<'src> Expr<'src> {
                     .into())
                 }
                 Rule::identifier => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     Expr::ident(pair.as_str()),
                 )
                 .into()),
                 Rule::index => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     Expr::Index(parse_pair(pair.into_inner().next().unwrap())?),
                 )
                 .into()),
@@ -671,7 +635,11 @@ impl<'src> Expr<'src> {
                     if inner.len() == 1 && matches!(inner[0].inner, Expr::Call { .. }) {
                         Ok(inner.remove(0).into())
                     } else {
-                        Ok(SpannedExpr::new(Origin::new(span, raw), Expr::context(inner)).into())
+                        Ok(SpannedExpr::new(
+                            Origin::new(span.start()..span.end(), raw),
+                            Expr::context(inner),
+                        )
+                        .into())
                     }
                 }
                 r => panic!("unrecognized rule: {r:?}"),

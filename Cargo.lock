@@ -835,6 +835,7 @@ dependencies = [
  "pest",
  "pest_derive",
  "pretty_assertions",
+ "subfeature",
 ]
 
 [[package]]
@@ -2501,6 +2502,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "subfeature"
+version = "0.1.0"
+dependencies = [
+ "memchr",
+ "regex",
+ "serde",
+]
+
+[[package]]
 name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3837,7 +3847,6 @@ dependencies = [
  "itertools",
  "jsonschema",
  "line-index",
- "memchr",
  "owo-colors",
  "regex",
  "reqwest",
@@ -3847,6 +3856,7 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "serde_yaml",
+ "subfeature",
  "tar",
  "terminal-link",
  "thiserror 2.0.12",

@@ -29,7 +29,7 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
-        location::{Routable as _, Subfeature, SymbolicLocation},
+        location::{Routable as _, SymbolicLocation},
     },
     models::{
         self, StepCommon, action::CompositeStep, inputs::Capability, uses::RepositoryUsesPattern,
@@ -38,6 +38,7 @@ use crate::{
     state::AuditState,
     utils::{DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_expressions},
 };
+use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
 pub(crate) struct TemplateInjection;
