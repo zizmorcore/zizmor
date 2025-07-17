@@ -104,6 +104,10 @@ impl Zizmor {
         self
     }
 
+    pub fn has_config_set_from_env(&self) -> bool {
+        self.cmd.get_envs().any(|(key, _)| key == "ZIZMOR_CONFIG")
+    }
+
     pub fn run(mut self) -> Result<String> {
         if self.offline {
             self.cmd.arg("--offline");
@@ -115,7 +119,7 @@ impl Zizmor {
 
         if let Some(config) = self.config {
             self.cmd.arg("--config").arg(config);
-        } else {
+        } else if !self.has_config_set_from_env() {
             self.cmd.arg("--no-config");
         }
 
