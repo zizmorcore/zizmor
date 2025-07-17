@@ -11,13 +11,11 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    finding::{
-        Confidence, Fix, FixDisposition, Severity,
-        location::{Locatable as _, Subfeature},
-    },
+    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
     models::workflow::{JobExt, Workflow},
     utils::ExtractedExpr,
 };
+use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
 pub(crate) struct BotConditions;

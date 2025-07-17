@@ -1,6 +1,7 @@
 github-actions-models
 =====================
 
+[![zizmor](https://img.shields.io/badge/%F0%9F%8C%88-zizmor-white?labelColor=white)](https://zizmor.sh/)
 [![CI](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml/badge.svg)](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/github-actions-models)](https://crates.io/crates/github-actions-models)
 [![docs.rs](https://img.shields.io/docsrs/github-actions-models)](https://docs.rs/github-actions-models)
