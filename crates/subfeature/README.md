@@ -1,5 +1,6 @@
 # subfeature
 
+[![zizmor](https://img.shields.io/badge/%F0%9F%8C%88-zizmor-white?labelColor=white)](https://zizmor.sh/)
 [![CI](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml/badge.svg)](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/subfeature)](https://crates.io/crates/subfeature)
 [![docs.rs](https://img.shields.io/docsrs/subfeature)](https://docs.rs/subfeature)
