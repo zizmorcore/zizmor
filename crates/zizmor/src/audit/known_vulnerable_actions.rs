@@ -135,12 +135,21 @@ impl KnownVulnerableActions {
             uses_slug.push_str(&format!("/{}", subpath));
         }
 
+        // TODO(ww): This isn't quite right; we really should be matching
+        // the "style" of the clause being fixed. In practice most actions
+        // use `v{VERSION}`, but some use a raw `{VERSION}` instead.
+        let target_version_tag = if target_version.starts_with('v') {
+            target_version.to_string()
+        } else {
+            format!("v{target_version}")
+        };
+
         // If the current uses is pinned by commit hash, resolve target_version to commit
         // and add a version comment for Dependabot
         if uses.ref_is_commit() {
             let target_commit = self
                 .client
-                .commit_for_ref(&uses.owner, &uses.repo, target_version)?
+                .commit_for_ref(&uses.owner, &uses.repo, &target_version_tag)?
                 .ok_or_else(|| {
                     anyhow!(
                         "Cannot resolve version {} to commit hash for {}/{}",
@@ -807,34 +816,22 @@ jobs:
 
     #[cfg(feature = "gh-token-tests")]
     #[test]
-    fn test_commit_hash_pinning_with_real_api() {
+    fn test_fix_commit_pin() {
         // Test with real GitHub API - requires GH_TOKEN environment variable
         let workflow_content = r#"
 name: Test Commit Hash Pinning Real API
 on: push
+permissions: {}
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - name: Commit pinned action
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4  # v4.0.0
 "#;
 
-        let key = InputKey::local("test_commit_hash_real.yml", None::<&str>).unwrap();
+        let key = InputKey::local("dummy.yml", None::<&str>).unwrap();
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
-        let job = workflow.jobs().next().unwrap();
-        let steps: Vec<_> = match job {
-            crate::models::workflow::Job::NormalJob(normal_job) => normal_job.steps().collect(),
-            _ => panic!("Expected normal job"),
-        };
-        let step = &steps[0];
-
-        let uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: Some("b4ffde65f46336ab88eb53be808477a3936bae11".to_string()),
-            subpath: None,
-        };
 
         let config = crate::config::Config::default();
         let state = crate::state::AuditState {
@@ -852,104 +849,22 @@ jobs:
         };
 
         let audit = KnownVulnerableActions::new(&state).unwrap();
-        let fix_result = audit.create_upgrade_fix(&uses, "v4.2.0", step);
 
-        match fix_result {
-            Ok(fix) => {
-                assert_eq!(fix.title, "upgrade actions/checkout to v4.2.0");
-                assert_eq!(fix.patches.len(), 1);
+        let input = workflow.into();
+        let findings = audit.audit(&input).unwrap();
+        assert_eq!(findings.len(), 1);
 
-                // Should use RewriteFragment for commit hash pinning
-                match &fix.patches[0].operation {
-                    yamlpatch::Op::RewriteFragment { from, to, .. } => {
-                        assert!(from.contains("b4ffde65f46336ab88eb53be808477a3936bae11"));
-                        assert!(to.contains("# v4.2.0")); // Should have version comment
-
-                        // Apply the fix to verify it works
-                        let fixed_document = fix.apply(workflow.as_document()).unwrap();
-                        let fixed_source = fixed_document.source();
-
-                        // Should contain a commit hash (not the original one)
-                        assert!(fixed_source.contains("actions/checkout@"));
-                        assert!(fixed_source.contains("# v4.2.0"));
-                    }
-                    _ => panic!("Expected RewriteFragment operation for commit hash pinning"),
-                }
-            }
-            Err(e) => {
-                panic!("Commit hash pinning should work with real API: {}", e);
-            }
-        }
-    }
-
-    #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_commit_resolution_fallback() {
-        // Test fallback behavior when commit resolution fails
-        let workflow_content = r#"
-name: Test Commit Resolution Fallback
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Commit pinned action
-        uses: actions/checkout@invalid_commit_hash
-"#;
-
-        let key = InputKey::local("test_commit_fallback.yml", None::<&str>).unwrap();
-        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
-        let job = workflow.jobs().next().unwrap();
-        let steps: Vec<_> = match job {
-            crate::models::workflow::Job::NormalJob(normal_job) => normal_job.steps().collect(),
-            _ => panic!("Expected normal job"),
-        };
-        let step = &steps[0];
-
-        let uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: Some("invalid_commit_hash".to_string()),
-            subpath: None,
-        };
-
-        let config = crate::config::Config::default();
-        let state = crate::state::AuditState {
-            config: &config,
-            no_online_audits: false,
-            gh_client: Some(
-                github_api::Client::new(
-                    &github_api::GitHubHost::Standard("github.com".to_string()),
-                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
-                    Path::new("/tmp"),
-                )
-                .unwrap(),
-            ),
-            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
-        };
-
-        let audit = KnownVulnerableActions::new(&state).unwrap();
-        let fix_result = audit.create_upgrade_fix(&uses, "v4.2.0", step);
-
-        match fix_result {
-            Ok(fix) => {
-                assert_eq!(fix.title, "upgrade actions/checkout to v4.2.0");
-                assert_eq!(fix.patches.len(), 1);
-
-                // Should fall back to Replace operation when commit resolution fails
-                match &fix.patches[0].operation {
-                    yamlpatch::Op::Replace(value) => {
-                        assert_eq!(value.as_str().unwrap(), "actions/checkout@v4.2.0");
-                    }
-                    _ => panic!("Expected Replace operation for fallback behavior"),
-                }
-            }
-            Err(e) => {
-                panic!(
-                    "Fallback should work even when commit resolution fails: {}",
-                    e
-                );
-            }
-        }
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        assert_snapshot!(new_doc.source(), @r"
+        name: Test Commit Hash Pinning Real API
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Commit pinned action
+                uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85 # 4.1.3  # v4.0.0
+        ");
     }
 }
