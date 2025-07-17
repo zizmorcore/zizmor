@@ -627,9 +627,7 @@ mod tests {
             .fixes
             .iter()
             .find(|f| f.title == expected_title)
-            .unwrap_or_else(|| {
-                panic!("Expected fix with title '{expected_title}' but not found")
-            });
+            .unwrap_or_else(|| panic!("Expected fix with title '{expected_title}' but not found"));
 
         fix.apply(document).unwrap()
     }
