@@ -161,7 +161,7 @@ impl KnownVulnerableActions {
 
             // Use RewriteFragment to replace the commit with the new commit and add version comment
             let current_uses_value = format!("{uses_slug}@{}", uses.git_ref.as_ref().unwrap());
-            let new_uses_value = format!("{uses_slug}@{target_commit} # {target_version}");
+            let new_uses_value = format!("{uses_slug}@{target_commit}  # {target_version_tag}");
 
             Ok(Fix {
                 title: format!("upgrade {uses_slug} to {target_version}"),
@@ -864,7 +864,7 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - name: Commit pinned action
-                uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85 # 4.1.3  # v4.0.0
+                uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.1.3  # v4.0.0
         ");
     }
 }
