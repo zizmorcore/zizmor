@@ -146,7 +146,7 @@ impl KnownVulnerableActions {
 
         // If the current uses is pinned by commit hash, resolve target_version to commit
         // and add a version comment for Dependabot
-        if uses.ref_is_commit() {
+        if let Some(commit_ref) = uses.commit_ref() {
             let target_commit = self
                 .client
                 .commit_for_ref(&uses.owner, &uses.repo, &target_version_tag)?
@@ -160,7 +160,7 @@ impl KnownVulnerableActions {
                 })?;
 
             // Use RewriteFragment to replace the commit with the new commit and add version comment
-            let current_uses_value = format!("{uses_slug}@{}", uses.git_ref.as_ref().unwrap());
+            let uses_slug_re = regex::escape(&format!("{uses_slug}@{commit_ref}"));
             let new_uses_value = format!("{uses_slug}@{target_commit}  # {target_version_tag}");
 
             Ok(Fix {
@@ -170,9 +170,11 @@ impl KnownVulnerableActions {
                 patches: vec![Patch {
                     route: step.route().with_key("uses"),
                     operation: Op::RewriteFragment {
-                        from: current_uses_value.into(),
+                        from: subfeature::Subfeature::new(
+                            0,
+                            subfeature::Fragment::Regex(regex::bytes::Regex::new(&uses_slug_re)?),
+                        ),
                         to: new_uses_value.into(),
-                        after: None,
                     },
                 }],
             })

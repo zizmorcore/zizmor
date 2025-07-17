@@ -444,7 +444,7 @@ impl<'a> ExtractedExpr<'a> {
 
     // Returns the extracted expression exactly as it was extracted,
     // including any fencing.
-    pub(crate) fn as_raw(&self) -> &str {
+    pub(crate) fn as_raw(&self) -> &'a str {
         self.inner
     }
 }

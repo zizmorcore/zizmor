@@ -224,9 +224,8 @@ foo:
     let operations = vec![Patch {
         route: route!("foo", "bar"),
         operation: Op::RewriteFragment {
-            from: "${{ foo }}".into(),
+            from: subfeature::Subfeature::new(0, "${{ foo }}"),
             to: "${FOO}".into(),
-            after: None,
         },
     }];
 
@@ -254,9 +253,8 @@ foo:
     let operations = vec![Patch {
         route: route!("foo", "bar"),
         operation: Op::RewriteFragment {
-            from: "${{ foo }}".into(),
+            from: subfeature::Subfeature::new(0, "${{ foo }}"),
             to: "${FOO}".into(),
-            after: None,
         },
     }];
 
@@ -274,9 +272,11 @@ foo:
     let operations = vec![Patch {
         route: route!("foo", "bar"),
         operation: Op::RewriteFragment {
-            from: "${{ foo }}".into(),
+            from: subfeature::Subfeature::new(
+                original.find("${{ foo }}").unwrap() + 1,
+                "${{ foo }}",
+            ),
             to: "${FOO}".into(),
-            after: original.find("${{ foo }}").map(|idx| idx + 1),
         },
     }];
 
@@ -309,17 +309,15 @@ jobs:
         Patch {
             route: route!("jobs", "test", "steps", 0, "run"),
             operation: Op::RewriteFragment {
-                from: "${{ foo }}".into(),
+                from: subfeature::Subfeature::new(0, "${{ foo }}"),
                 to: "${FOO}".into(),
-                after: None,
             },
         },
         Patch {
             route: route!("jobs", "test", "steps", 0, "run"),
             operation: Op::RewriteFragment {
-                from: "${{ bar }}".into(),
+                from: subfeature::Subfeature::new(0, "${{ bar }}"),
                 to: "${BAR}".into(),
-                after: None,
             },
         },
     ];

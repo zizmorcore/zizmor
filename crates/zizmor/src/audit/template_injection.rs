@@ -287,9 +287,8 @@ impl TemplateInjection {
         patches.push(Patch {
             route: step.route().with_key("run"),
             operation: Op::RewriteFragment {
-                from: raw.as_raw().to_string().into(),
+                from: subfeature::Subfeature::new(0, raw.as_raw()),
                 to: format!("${{{env_var}}}").into(),
-                after: None,
             },
         });
 

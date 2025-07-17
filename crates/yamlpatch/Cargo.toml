@@ -22,6 +22,7 @@ line-index.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 serde_yaml.workspace = true
+subfeature.workspace = true
 thiserror.workspace = true
 yamlpath.workspace = true
 
