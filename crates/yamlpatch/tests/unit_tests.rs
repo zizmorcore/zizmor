@@ -867,7 +867,7 @@ jobs:
       - run: echo "test""#;
 
     // Test with trailing newline (common in real files)
-    let original_with_newline = format!("{}\n", original);
+    let original_with_newline = format!("{original}\n");
 
     let operations = vec![Patch {
         route: route!("jobs", "test"),
@@ -1020,16 +1020,14 @@ fn test_comment_boundary_issue() {
     // Assert that there's content between the steps (whitespace and list marker)
     assert!(
         !content_between.is_empty(),
-        "There should be content between steps. Content between: {:?}",
-        content_between
+        "There should be content between steps. Content between: {content_between:?}"
     );
 
     // The content between is just whitespace and the list marker for step2
     // yamlpath includes comments as part of the respective steps
     assert!(
         content_between.contains("- "),
-        "Should contain list marker for step2. Content between: {:?}",
-        content_between
+        "Should contain list marker for step2. Content between: {content_between:?}"
     );
 
     // Assert that step boundaries don't overlap
@@ -1323,8 +1321,7 @@ fn test_debug_indentation_issue() {
     // Assert that leading whitespace extraction includes the step content
     assert!(
         feature_with_ws.contains("name: Test step"),
-        "Step should contain the step name. Actual content: {:?}",
-        feature_with_ws
+        "Step should contain the step name. Actual content: {feature_with_ws:?}"
     );
 
     // Assert that the content includes the multiline run block
@@ -1347,7 +1344,7 @@ fn test_debug_indentation_issue() {
     if let Some(first_line) = feature_with_ws.lines().next() {
         if let Some(_colon_pos) = first_line.find(':') {
             let key_indent = &first_line[..first_line.len() - first_line.trim_start().len()];
-            let final_indent = format!("{}  ", key_indent);
+            let final_indent = format!("{key_indent}  ");
 
             // Assert that indentation calculation works correctly
             assert!(!final_indent.is_empty(), "Final indent should not be empty");
@@ -1450,15 +1447,13 @@ jobs:
                     }
                 } else {
                     panic!(
-                        "Env content should parse as a mapping. Actual content: {:?}",
-                        env_content
+                        "Env content should parse as a mapping. Actual content: {env_content:?}"
                     );
                 }
             }
             Err(e) => {
                 panic!(
-                    "Env content should parse as valid YAML: {}. Actual content: {:?}",
-                    e, env_content
+                    "Env content should parse as valid YAML: {e}. Actual content: {env_content:?}"
                 );
             }
         }

@@ -132,7 +132,7 @@ impl KnownVulnerableActions {
     ) -> Result<Fix<'doc>> {
         let mut uses_slug = format!("{}/{}", uses.owner, uses.repo);
         if let Some(subpath) = &uses.subpath {
-            uses_slug.push_str(&format!("/{}", subpath));
+            uses_slug.push_str(&format!("/{subpath}"));
         }
 
         // TODO(ww): This isn't quite right; we really should be matching

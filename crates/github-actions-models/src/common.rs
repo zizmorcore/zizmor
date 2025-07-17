@@ -456,7 +456,7 @@ mod tests {
         ];
 
         for (val, expected) in vectors {
-            assert_eq!(val.csharp_trueish(), expected, "failed for {:?}", val);
+            assert_eq!(val.csharp_trueish(), expected, "failed for {val:?}");
         }
     }
 
