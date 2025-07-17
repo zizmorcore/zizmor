@@ -130,7 +130,10 @@ impl KnownVulnerableActions {
         target_version: &str,
         step: &impl StepCommon<'doc>,
     ) -> Result<Fix<'doc>> {
-        let action_name = format!("{}/{}", uses.owner, uses.repo);
+        let mut uses_slug = format!("{}/{}", uses.owner, uses.repo);
+        if let Some(subpath) = &uses.subpath {
+            uses_slug.push_str(&format!("/{}", subpath));
+        }
 
         // If the current uses is pinned by commit hash, resolve target_version to commit
         // and add a version comment for Dependabot
@@ -148,11 +151,11 @@ impl KnownVulnerableActions {
                 })?;
 
             // Use RewriteFragment to replace the commit with the new commit and add version comment
-            let current_uses_value = format!("{action_name}@{}", uses.git_ref.as_ref().unwrap());
-            let new_uses_value = format!("{action_name}@{target_commit} # {target_version}");
+            let current_uses_value = format!("{uses_slug}@{}", uses.git_ref.as_ref().unwrap());
+            let new_uses_value = format!("{uses_slug}@{target_commit} # {target_version}");
 
             Ok(Fix {
-                title: format!("upgrade {action_name} to {target_version}"),
+                title: format!("upgrade {uses_slug} to {target_version}"),
                 key: step.location().key,
                 disposition: Default::default(),
                 patches: vec![Patch {
@@ -166,9 +169,9 @@ impl KnownVulnerableActions {
             })
         } else {
             // For non-commit refs, just replace with the target version
-            let new_uses_value = format!("{action_name}@{target_version}");
+            let new_uses_value = format!("{uses_slug}@{target_version}");
             Ok(Fix {
-                title: format!("upgrade {action_name} to {target_version}"),
+                title: format!("upgrade {uses_slug} to {target_version}"),
                 key: step.location().key,
                 disposition: Default::default(),
                 patches: vec![Patch {
@@ -254,6 +257,8 @@ impl Audit for KnownVulnerableActions {
 mod tests {
     use std::path::Path;
 
+    use insta::assert_snapshot;
+
     use super::*;
     use crate::{
         models::{AsDocument, workflow::Workflow},
@@ -277,51 +282,6 @@ mod tests {
             gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
         };
         KnownVulnerableActions::new(&state).unwrap()
-    }
-
-    #[test]
-    fn test_fix_creation_basic() {
-        // Test fix creation function directly
-        let uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: Some("v2".to_string()),
-            subpath: None,
-        };
-
-        let key = InputKey::local("test.yml", None::<&str>).unwrap();
-        let workflow_content = r#"
-name: Test Workflow
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-"#;
-        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
-        let job = workflow.jobs().next().unwrap();
-        let steps: Vec<_> = match job {
-            crate::models::workflow::Job::NormalJob(normal_job) => normal_job.steps().collect(),
-            _ => panic!("Expected normal job"),
-        };
-        let step = &steps[0];
-
-        let audit = create_test_audit();
-
-        let fix = audit.create_upgrade_fix(&uses, "v4", step).unwrap();
-
-        assert_eq!(fix.title, "upgrade actions/checkout to v4");
-        assert_eq!(fix.patches.len(), 1);
-
-        // Test that the patch operation is correct
-        match &fix.patches[0].operation {
-            Op::Replace(value) => {
-                assert_eq!(value.as_str().unwrap(), "actions/checkout@v4");
-            }
-            _ => panic!("Expected Replace operation"),
-        }
     }
 
     #[test]
@@ -613,7 +573,7 @@ jobs:
         let fix = audit.create_upgrade_fix(&uses, "v2", step).unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
-        insta::assert_snapshot!(fixed_document.source(), @r#"
+        insta::assert_snapshot!(fixed_document.source(), @r"
         name: Test Action with Subpath
         on: push
         jobs:
@@ -621,10 +581,10 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - name: Custom action
-                uses: owner/repo@v2
+                uses: owner/repo/subpath@v2
                 with:
                   param: value
-        "#);
+        ");
     }
 
     #[test]
@@ -723,67 +683,7 @@ jobs:
     }
 
     #[test]
-    fn test_commit_hash_pinning_basic() {
-        // This test verifies that commit-pinned actions are handled correctly
-        let workflow_content = r#"
-name: Test Commit Hash Pinning
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Commit pinned action
-        uses: actions/checkout@abc123def456
-"#;
-
-        let key = InputKey::local("test_commit_hash.yml", None::<&str>).unwrap();
-        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
-        let job = workflow.jobs().next().unwrap();
-        let steps: Vec<_> = match job {
-            crate::models::workflow::Job::NormalJob(normal_job) => normal_job.steps().collect(),
-            _ => panic!("Expected normal job"),
-        };
-        let step = &steps[0];
-
-        let uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: Some("abc123def456".to_string()),
-            subpath: None,
-        };
-
-        let audit = create_test_audit();
-        let fix_result = audit.create_upgrade_fix(&uses, "v4", step);
-
-        // This test may fail due to API call, but we're testing the logic structure
-        // The important thing is that it attempts to handle commit hash pinning
-        match fix_result {
-            Ok(fix) => {
-                assert_eq!(fix.title, "upgrade actions/checkout to v4");
-                assert_eq!(fix.patches.len(), 1);
-
-                // Check if it's using RewriteFragment for commit hash pinning
-                match &fix.patches[0].operation {
-                    yamlpatch::Op::RewriteFragment { from, to, .. } => {
-                        assert!(from.contains("abc123def456"));
-                        assert!(to.contains("# v4")); // Should have version comment
-                    }
-                    yamlpatch::Op::Replace(_) => {
-                        // Fallback case when commit resolution fails
-                        // This is also acceptable behavior
-                    }
-                    _ => panic!("Unexpected operation type"),
-                }
-            }
-            Err(_) => {
-                // API call failed in test environment - this is expected
-                // The test validates that the method exists and has correct signature
-            }
-        }
-    }
-
-    #[test]
-    fn test_non_commit_ref_uses_replace() {
+    fn test_fix_symbolic_ref() {
         // Test that non-commit refs use simple Replace operation
         let workflow_content = r#"
 name: Test Non-Commit Ref
@@ -793,7 +693,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Tag pinned action
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2 # this comment stays
 "#;
 
         let key = InputKey::local("test_non_commit.yml", None::<&str>).unwrap();
@@ -813,25 +713,20 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix_result = audit.create_upgrade_fix(&uses, "v4", step);
+        let fix = audit.create_upgrade_fix(&uses, "v4", step).unwrap();
 
-        match fix_result {
-            Ok(fix) => {
-                assert_eq!(fix.title, "upgrade actions/checkout to v4");
-                assert_eq!(fix.patches.len(), 1);
+        let new_doc = fix.apply(workflow.as_document()).unwrap();
 
-                // Non-commit refs should use Replace operation
-                match &fix.patches[0].operation {
-                    yamlpatch::Op::Replace(value) => {
-                        assert_eq!(value.as_str().unwrap(), "actions/checkout@v4");
-                    }
-                    _ => panic!("Expected Replace operation for non-commit ref"),
-                }
-            }
-            Err(e) => {
-                panic!("Non-commit ref handling should not fail: {}", e);
-            }
-        }
+        assert_snapshot!(new_doc.source(), @r"
+        name: Test Non-Commit Ref
+        on: push
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Tag pinned action
+                uses: actions/checkout@v4 # this comment stays
+        ");
     }
 
     #[test]
