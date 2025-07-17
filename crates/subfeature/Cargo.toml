@@ -1,16 +1,19 @@
 [package]
 name = "subfeature"
-version = "0.1.0"
+description = "Subfeature handling and manipulation APIs"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/subfeature"
+version = "0.0.1"
+readme = "README.md"
+
 authors.workspace = true
-readme.workspace = true
 homepage.workspace = true
 edition.workspace = true
 license.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 memchr.workspace = true
 regex.workspace = true
 serde.workspace = true
-
-[lints]
-workspace = true
