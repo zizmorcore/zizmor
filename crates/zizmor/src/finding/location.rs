@@ -454,39 +454,4 @@ mod tests {
             )
         }
     }
-
-    #[test]
-    fn test_fragment_from_expr() {
-        for (expr, expected) in &[
-            ("foo==bar", "foo==bar"),
-            ("foo    ==   bar", "foo    ==   bar"),
-            ("foo == bar", r"foo == bar"),
-            ("foo(bar)", "foo(bar)"),
-            ("foo(bar, baz)", "foo(bar, baz)"),
-            ("foo (bar, baz)", "foo (bar, baz)"),
-            ("a . b . c . d", "a . b . c . d"),
-            ("true \n && \n false", r"true\s+\&\&\s+false"),
-        ] {
-            let expr = Expr::parse(expr).unwrap();
-            match Fragment::from(&expr) {
-                Fragment::Raw(actual) => assert_eq!(actual, *expected),
-                Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
-            };
-        }
-    }
-
-    #[test]
-    fn test_fragment_from_context() {
-        for (ctx, expected) in &[
-            ("foo.bar", "foo.bar"),
-            ("foo . bar", "foo . bar"),
-            ("foo['bar']", "foo['bar']"),
-            ("foo [\n'bar'\n]", r"foo\s+\[\s+'bar'\s+\]"),
-        ] {
-            match Fragment::from(*ctx) {
-                Fragment::Raw(actual) => assert_eq!(actual, *expected),
-                Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
-            }
-        }
-    }
 }

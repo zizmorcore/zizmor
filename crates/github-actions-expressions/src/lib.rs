@@ -1355,4 +1355,24 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_fragment_from_expr() {
+        for (expr, expected) in &[
+            ("foo==bar", "foo==bar"),
+            ("foo    ==   bar", "foo    ==   bar"),
+            ("foo == bar", r"foo == bar"),
+            ("foo(bar)", "foo(bar)"),
+            ("foo(bar, baz)", "foo(bar, baz)"),
+            ("foo (bar, baz)", "foo (bar, baz)"),
+            ("a . b . c . d", "a . b . c . d"),
+            ("true \n && \n false", r"true\s+\&\&\s+false"),
+        ] {
+            let expr = Expr::parse(expr).unwrap();
+            match subfeature::Fragment::from(&expr) {
+                subfeature::Fragment::Raw(actual) => assert_eq!(actual, *expected),
+                subfeature::Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
+            };
+        }
+    }
 }

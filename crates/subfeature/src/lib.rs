@@ -166,3 +166,23 @@ impl<'a> Subfeature<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::Fragment;
+
+    #[test]
+    fn test_fragment_from_context() {
+        for (ctx, expected) in &[
+            ("foo.bar", "foo.bar"),
+            ("foo . bar", "foo . bar"),
+            ("foo['bar']", "foo['bar']"),
+            ("foo [\n'bar'\n]", r"foo\s+\[\s+'bar'\s+\]"),
+        ] {
+            match Fragment::from(*ctx) {
+                Fragment::Raw(actual) => assert_eq!(actual, *expected),
+                Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
+            }
+        }
+    }
+}
