@@ -8,7 +8,6 @@ use std::{io::Read, ops::Deref, path::Path};
 use anyhow::{Context, Result, anyhow};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
-use github_actions_models::common::RepositoryUses;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
 };
@@ -24,7 +23,7 @@ use tracing::instrument;
 
 use crate::{
     InputRegistry,
-    registry::{InputKey, InputKind},
+    registry::{InputKey, InputKind, RepoSlug},
     utils::PipeSelf,
 };
 
@@ -350,7 +349,7 @@ impl Client {
     #[tokio::main]
     pub(crate) async fn fetch_workflows(
         &self,
-        slug: &RepositoryUses,
+        slug: &RepoSlug,
         registry: &mut InputRegistry,
     ) -> Result<()> {
         let owner = &slug.owner;
@@ -417,7 +416,7 @@ impl Client {
     #[tokio::main]
     pub(crate) async fn fetch_audit_inputs(
         &self,
-        slug: &RepositoryUses,
+        slug: &RepoSlug,
         registry: &mut InputRegistry,
     ) -> Result<()> {
         let url = format!(

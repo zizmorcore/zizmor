@@ -238,8 +238,8 @@ pub struct RepositoryUses {
     pub repo: String,
     /// The subpath to the action or reusable workflow, if present.
     pub subpath: Option<String>,
-    /// The `@<ref>` that the `uses:` is pinned to, if present.
-    pub git_ref: Option<String>,
+    /// The `@<ref>` that the `uses:` is pinned to.
+    pub git_ref: String,
 }
 
 impl FromStr for RepositoryUses {
@@ -255,8 +255,8 @@ impl FromStr for RepositoryUses {
         // NOTE: Both git refs and paths can contain `@`, but in practice
         // GHA refuses to run a `uses:` clause with more than one `@` in it.
         let (path, git_ref) = match uses.rsplit_once('@') {
-            Some((path, git_ref)) => (path, Some(git_ref)),
-            None => (uses, None),
+            Some((path, git_ref)) => (path, git_ref),
+            None => return Err(UsesError(format!("missing `@<ref>` in {uses}"))),
         };
 
         let components = path.splitn(3, '/').collect::<Vec<_>>();
@@ -268,7 +268,7 @@ impl FromStr for RepositoryUses {
             owner: components[0].into(),
             repo: components[1].into(),
             subpath: components.get(2).map(ToString::to_string),
-            git_ref: git_ref.map(Into::into),
+            git_ref: git_ref.into(),
         })
     }
 }
@@ -368,16 +368,7 @@ where
     let uses = step_uses(de)?;
 
     match uses {
-        Uses::Repository(ref repo) => {
-            // Remote reusable workflows must be pinned.
-            if repo.git_ref.is_none() {
-                Err(custom_error::<D>(
-                    "repo action must have `@<ref>` in reusable workflow",
-                ))
-            } else {
-                Ok(uses)
-            }
-        }
+        Uses::Repository(_) => Ok(uses),
         Uses::Local(ref local) => {
             // Local reusable workflows cannot be pinned.
             // We do this with a string scan because `@` *can* occur as
@@ -470,7 +461,7 @@ mod tests {
                     owner: "actions".to_owned(),
                     repo: "checkout".to_owned(),
                     subpath: None,
-                    git_ref: Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned()),
+                    git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned(),
                 })),
             ),
             (
@@ -480,7 +471,7 @@ mod tests {
                     owner: "actions".to_owned(),
                     repo: "aws".to_owned(),
                     subpath: Some("ec2".to_owned()),
-                    git_ref: Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned()),
+                    git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned(),
                 })),
             ),
             (
@@ -490,7 +481,7 @@ mod tests {
                     owner: "example".to_owned(),
                     repo: "foo".to_owned(),
                     subpath: Some("bar/baz/quux".to_owned()),
-                    git_ref: Some("8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned()),
+                    git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned(),
                 })),
             ),
             (
@@ -500,7 +491,7 @@ mod tests {
                     owner: "actions".to_owned(),
                     repo: "checkout".to_owned(),
                     subpath: None,
-                    git_ref: Some("v4".to_owned()),
+                    git_ref: "v4".to_owned(),
                 })),
             ),
             (
@@ -509,18 +500,15 @@ mod tests {
                     owner: "actions".to_owned(),
                     repo: "checkout".to_owned(),
                     subpath: None,
-                    git_ref: Some("abcd".to_owned()),
+                    git_ref: "abcd".to_owned(),
                 })),
             ),
             (
-                // Valid: unpinned
+                // Invalid: unpinned
                 "actions/checkout",
-                Ok(Uses::Repository(RepositoryUses {
-                    owner: "actions".to_owned(),
-                    repo: "checkout".to_owned(),
-                    subpath: None,
-                    git_ref: None,
-                })),
+                Err(UsesError(
+                    "missing `@<ref>` in actions/checkout".to_owned(),
+                )),
             ),
             (
                 // Valid: Docker ref, implicit registry
@@ -641,7 +629,7 @@ mod tests {
                     owner: "octo-org".to_owned(),
                     repo: "this-repo".to_owned(),
                     subpath: Some(".github/workflows/workflow-1.yml".to_owned()),
-                    git_ref: Some("172239021f7ba04fe7327647b213799853a9eb89".to_owned()),
+                    git_ref: "172239021f7ba04fe7327647b213799853a9eb89".to_owned(),
                 })),
             ),
             (
@@ -650,7 +638,7 @@ mod tests {
                     owner: "octo-org".to_owned(),
                     repo: "this-repo".to_owned(),
                     subpath: Some(".github/workflows/workflow-1.yml".to_owned()),
-                    git_ref: Some("notahash".to_owned()),
+                    git_ref: "notahash".to_owned(),
                 })),
             ),
             (
@@ -659,7 +647,7 @@ mod tests {
                     owner: "octo-org".to_owned(),
                     repo: "this-repo".to_owned(),
                     subpath: Some(".github/workflows/workflow-1.yml".to_owned()),
-                    git_ref: Some("abcd".to_owned()),
+                    git_ref: "abcd".to_owned(),
                 })),
             ),
             // Invalid: remote reusable workflow without ref

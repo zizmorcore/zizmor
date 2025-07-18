@@ -194,7 +194,7 @@ impl<'doc> SymbolicLocation<'doc> {
                 comments: document
                     .feature_comments(&feature)
                     .into_iter()
-                    .map(Comment)
+                    .map(|f| Comment(document.extract(&f)))
                     .collect(),
             },
         })

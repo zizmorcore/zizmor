@@ -475,7 +475,7 @@ impl Document {
 
     /// Given a [`Feature`], return all comments that span the same range
     /// as the feature does.
-    pub fn feature_comments<'tree>(&'tree self, feature: &Feature<'tree>) -> Vec<&'tree str> {
+    pub fn feature_comments<'tree>(&'tree self, feature: &Feature<'tree>) -> Vec<Feature<'tree>> {
         // To extract all comments for a feature, we trawl the entire tree's
         // nodes and extract all comment nodes in the line range for the
         // feature.
@@ -506,7 +506,7 @@ impl Document {
             comment_id: u16,
             start_line: usize,
             end_line: usize,
-        ) -> Vec<&'tree str> {
+        ) -> Vec<Feature<'tree>> {
             let mut comments = vec![];
             let mut cur = node.walk();
 
@@ -524,7 +524,7 @@ impl Document {
                             && c.start_position().row >= start_line
                             && c.end_position().row <= end_line
                     })
-                    .map(|c| c.utf8_text(source.as_bytes()).unwrap()),
+                    .map(|c| c.into()),
             );
 
             for child in node.children(&mut cur) {
@@ -906,7 +906,10 @@ bar: # outside
         };
         let feature = doc.query_pretty(&route).unwrap();
         assert_eq!(
-            doc.feature_comments(&feature),
+            doc.feature_comments(&feature)
+                .iter()
+                .map(|f| doc.extract(f))
+                .collect::<Vec<_>>(),
             &["# rootlevel", "# foo", "# bar", "# baz", "# quux"]
         );
 
@@ -920,7 +923,13 @@ bar: # outside
             ],
         };
         let feature = doc.query_pretty(&route).unwrap();
-        assert_eq!(doc.feature_comments(&feature), &["# quux"]);
+        assert_eq!(
+            doc.feature_comments(&feature)
+                .iter()
+                .map(|f| doc.extract(f))
+                .collect::<Vec<_>>(),
+            &["# quux"]
+        );
     }
 
     #[test]

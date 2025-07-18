@@ -335,6 +335,87 @@ jobs:
         "#);
 }
 
+/// `Operation::ReplaceComment` should replace the comment
+/// at the given route with the new comment, without affecting
+/// any YAML values or any other comments.
+#[test]
+fn test_replace_comment() {
+    let original = r#"
+foo:
+  bar: baz # This is a comment
+  abc: def # Another comment
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo", "bar"),
+        operation: Op::ReplaceComment {
+            new: "# Updated comment".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r"
+        foo:
+          bar: baz # Updated comment
+          abc: def # Another comment
+        ");
+}
+
+/// `Operation::ReplaceComment` should fdo nothing if there is no comment
+/// at the given route, and should not affect the YAML value.
+#[test]
+fn test_replace_comment_noop() {
+    let original = r#"
+foo:
+    bar: baz
+    abc: def
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo", "bar"),
+        operation: Op::ReplaceComment {
+            new: "# This comment does not exist".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r"
+        foo:
+            bar: baz
+            abc: def
+        ");
+}
+
+/// `Operation::ReplaceComment` should fail if there are multiple comments
+/// at the given route, as it's unclear which one to replace.
+#[test]
+fn test_replace_comment_fails_on_too_many_comments() {
+    let original = r#"
+foo:
+    bar: baz # First comment
+    abc: def # Second comment
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::ReplaceComment {
+            new: "# This won't work".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations);
+
+    assert!(result.is_err());
+}
+
 #[test]
 fn test_replace_empty_block_value() {
     let original = r#"

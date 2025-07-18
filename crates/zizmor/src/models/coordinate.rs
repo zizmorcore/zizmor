@@ -335,38 +335,38 @@ mod tests {
     #[test]
     fn test_usage() {
         let workflow = r#"
-name: test_usage
-on: push
-jobs:
-  test_usage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: foo/bar      # 0
+    name: test_usage
+    on: push
+    jobs:
+      test_usage:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: foo/bar@v1      # 0
 
-      - uses: foo/bar@v1   # 1
+          - uses: foo/bar@v1      # 1
 
-      - uses: not/thesame  # 2
-        with:
-          set-me: true
+          - uses: not/thesame@v1  # 2
+            with:
+              set-me: true
 
-      - uses: not/thesame  # 3
+          - uses: not/thesame@v1  # 3
 
-      - uses: foo/bar      # 4
-        with:
-          set-me: true
+          - uses: foo/bar@v1      # 4
+            with:
+              set-me: true
 
-      - uses: foo/bar      # 5
-        with:
-          set-me: false
+          - uses: foo/bar@v1      # 5
+            with:
+              set-me: false
 
-      - uses: foo/bar      # 6
-        with:
-          disable-cache: true
+          - uses: foo/bar@v1      # 6
+            with:
+              disable-cache: true
 
-      - uses: foo/bar      # 7
-        with:
-          disable-cache: false
-"#;
+          - uses: foo/bar@v1      # 7
+            with:
+              disable-cache: false
+    "#;
 
         let workflow =
             Workflow::from_string(workflow.into(), InputKey::local("dummy", None).unwrap())

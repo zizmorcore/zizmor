@@ -142,6 +142,15 @@ pub enum Op<'doc> {
         from: subfeature::Subfeature<'doc>,
         to: Cow<'doc, str>,
     },
+    /// Replace a comment at the given path.
+    ///
+    /// This operation replaces the entire comment associated with the feature
+    /// at the given path with the new comment.
+    ///
+    /// The entire comment is replaced at once, and only one matching
+    /// comment is permitted. Features that don't have an associated comment
+    /// are ignored, while features with multiple comments will be rejected.
+    ReplaceComment { new: Cow<'doc, str> },
     /// Replace the value at the given path
     Replace(serde_yaml::Value),
     /// Add a new key-value pair at the given path.
@@ -241,6 +250,32 @@ fn apply_single_patch(
             );
 
             yamlpath::Document::new(patched_content).map_err(Error::from)
+        }
+        Op::ReplaceComment { new } => {
+            let feature = route_to_feature_exact(&patch.route, document)?.ok_or_else(|| {
+                Error::InvalidOperation(format!(
+                    "no existing feature at {route:?}",
+                    route = patch.route
+                ))
+            })?;
+
+            let comment_features = document.feature_comments(&feature);
+            let comment_feature = match comment_features.len() {
+                0 => return Ok(document.clone()),
+                1 => &comment_features[0],
+                _ => {
+                    return Err(Error::InvalidOperation(format!(
+                        "multiple comments found at {route:?}",
+                        route = patch.route
+                    )));
+                }
+            };
+
+            let mut result = content.to_string();
+            let span = comment_feature.location.byte_span;
+            result.replace_range(span.0..span.1, &new);
+
+            yamlpath::Document::new(result).map_err(Error::from)
         }
         Op::Replace(value) => {
             let feature = route_to_feature_pretty(&patch.route, document)?;

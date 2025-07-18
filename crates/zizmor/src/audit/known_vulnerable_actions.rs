@@ -49,7 +49,7 @@ impl KnownVulnerableActions {
             //
             // To handle all of the above, we convert the ref into a commit
             // and then find the longest tag for that commit.
-            Some(version) if !uses.ref_is_commit() => {
+            version if !uses.ref_is_commit() => {
                 let Some(commit_ref) =
                     self.client
                         .commit_for_ref(&uses.owner, &uses.repo, version)?
@@ -75,7 +75,7 @@ impl KnownVulnerableActions {
             // tag matching that ref. In theory the action's repo could do
             // something annoying like use branches for versions instead,
             // which we should also probably support.
-            Some(commit_ref) => {
+            commit_ref => {
                 match self
                     .client
                     .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)?
@@ -88,12 +88,6 @@ impl KnownVulnerableActions {
                     None => return Ok(vec![]),
                 }
             }
-            // No version means the action runs the latest default branch
-            // version. We could in theory query GHSA for this but it's
-            // unlikely to be meaningful.
-            // TODO: Maybe we need a separate (low-sev) audit for actions usage
-            // on @master/@main/etc?
-            None => return Ok(vec![]),
         };
 
         let vulns = self
@@ -159,7 +153,6 @@ impl KnownVulnerableActions {
                     )
                 })?;
 
-            // Use RewriteFragment to replace the commit with the new commit and add version comment
             let uses_slug_re = regex::escape(&format!("{uses_slug}@{commit_ref}"));
             let new_uses_value = format!("{uses_slug}@{target_commit}  # {target_version_tag}");
 
@@ -178,11 +171,23 @@ impl KnownVulnerableActions {
                     },
                 }],
             })
-        } else {
-            // For non-commit refs, just replace with the target version
-            let new_uses_value = format!("{uses_slug}@{target_version}");
+        } else if let Some(sym_ref) = uses.symbolic_ref() {
+            // Like above, we don't know a priori whether the new tag should be
+            // prefixed with `v` or not. Instead of trying to figure it out
+            // via the GitHub API, we match the style of the current `uses`
+            // clause.
+            let target_version_tag =
+                match (sym_ref.starts_with('v'), target_version.starts_with('v')) {
+                    (true, false) => format!("v{target_version}"),
+                    // It seems unlikely that GHSA would give us `vX.Y.Z`,
+                    // but who knows?
+                    (false, true) => target_version[1..].to_string(),
+                    _ => target_version.to_string(),
+                };
+
+            let new_uses_value = format!("{uses_slug}@{target_version_tag}");
             Ok(Fix {
-                title: format!("upgrade {uses_slug} to {target_version}"),
+                title: format!("upgrade {uses_slug} to {target_version_tag}"),
                 key: step.location().key,
                 disposition: Default::default(),
                 patches: vec![Patch {
@@ -190,6 +195,8 @@ impl KnownVulnerableActions {
                     operation: Op::Replace(serde_yaml::Value::String(new_uses_value)),
                 }],
             })
+        } else {
+            unreachable!()
         }
     }
 
@@ -323,7 +330,7 @@ jobs:
         let uses = RepositoryUses {
             owner: "actions".to_string(),
             repo: "checkout".to_string(),
-            git_ref: Some("v2".to_string()),
+            git_ref: "v2".to_string(),
             subpath: None,
         };
 
@@ -375,7 +382,7 @@ jobs:
         let uses = RepositoryUses {
             owner: "actions".to_string(),
             repo: "setup-node".to_string(),
-            git_ref: Some("v1".to_string()),
+            git_ref: "v1".to_string(),
             subpath: None,
         };
 
@@ -429,7 +436,7 @@ jobs:
         let uses = RepositoryUses {
             owner: "codecov".to_string(),
             repo: "codecov-action".to_string(),
-            git_ref: Some("v1".to_string()),
+            git_ref: "v1".to_string(),
             subpath: None,
         };
 
@@ -493,7 +500,7 @@ jobs:
         let uses_checkout = RepositoryUses {
             owner: "actions".to_string(),
             repo: "checkout".to_string(),
-            git_ref: Some("v2".to_string()),
+            git_ref: "v2".to_string(),
             subpath: None,
         };
         let fix_checkout = audit
@@ -505,7 +512,7 @@ jobs:
         let uses_node = RepositoryUses {
             owner: "actions".to_string(),
             repo: "setup-node".to_string(),
-            git_ref: Some("v1".to_string()),
+            git_ref: "v1".to_string(),
             subpath: None,
         };
         let fix_node = audit
@@ -517,7 +524,7 @@ jobs:
         let uses_cache = RepositoryUses {
             owner: "actions".to_string(),
             repo: "cache".to_string(),
-            git_ref: Some("v2".to_string()),
+            git_ref: "v2".to_string(),
             subpath: None,
         };
         let fix_cache = audit
@@ -576,7 +583,7 @@ jobs:
         let uses = RepositoryUses {
             owner: "owner".to_string(),
             repo: "repo".to_string(),
-            git_ref: Some("v1".to_string()),
+            git_ref: "v1".to_string(),
             subpath: Some("subpath".to_string()),
         };
 
@@ -596,52 +603,6 @@ jobs:
                 with:
                   param: value
         ");
-    }
-
-    #[test]
-    fn test_fix_upgrade_action_without_version() {
-        let workflow_content = r#"
-name: Test Action Without Version
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Action without version
-        uses: actions/checkout
-"#;
-
-        let key = InputKey::local("test_no_version.yml", None::<&str>).unwrap();
-        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
-        let job = workflow.jobs().next().unwrap();
-        let steps: Vec<_> = match job {
-            crate::models::workflow::Job::NormalJob(normal_job) => normal_job.steps().collect(),
-            _ => panic!("Expected normal job"),
-        };
-        let step = &steps[0];
-
-        // Test the fix for action without version
-        let uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: None,
-            subpath: None,
-        };
-
-        let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v4", step).unwrap();
-        let fixed_document = fix.apply(workflow.as_document()).unwrap();
-
-        insta::assert_snapshot!(fixed_document.source(), @r#"
-        name: Test Action Without Version
-        on: push
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Action without version
-                uses: actions/checkout@v4
-        "#);
     }
 
     #[test]
@@ -670,7 +631,7 @@ jobs:
         let uses = RepositoryUses {
             owner: "actions".to_string(),
             repo: "checkout".to_string(),
-            git_ref: Some("v2".to_string()),
+            git_ref: "v2".to_string(),
             subpath: None,
         };
 
@@ -695,7 +656,6 @@ jobs:
 
     #[test]
     fn test_fix_symbolic_ref() {
-        // Test that non-commit refs use simple Replace operation
         let workflow_content = r#"
 name: Test Non-Commit Ref
 on: push
@@ -719,7 +679,7 @@ jobs:
         let uses = RepositoryUses {
             owner: "actions".to_string(),
             repo: "checkout".to_string(),
-            git_ref: Some("v2".to_string()),
+            git_ref: "v2".to_string(),
             subpath: None,
         };
 
@@ -738,66 +698,6 @@ jobs:
               - name: Tag pinned action
                 uses: actions/checkout@v4 # this comment stays
         ");
-    }
-
-    #[test]
-    fn test_commit_hash_detection() {
-        // Test that ref_is_commit correctly identifies commit hashes
-        use crate::models::uses::RepositoryUsesExt;
-
-        // Valid commit hash - 40 hex characters
-        let commit_uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: Some("b4ffde65f46336ab88eb53be808477a3936bae11".to_string()),
-            subpath: None,
-        };
-        assert!(commit_uses.ref_is_commit());
-
-        // Invalid commit hash - too short
-        let short_ref = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: Some("abc123".to_string()),
-            subpath: None,
-        };
-        assert!(!short_ref.ref_is_commit());
-
-        // Invalid commit hash - contains non-hex characters
-        let non_hex_ref = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: Some("b4ffde65f46336ab88eb53be808477a3936bae1g".to_string()),
-            subpath: None,
-        };
-        assert!(!non_hex_ref.ref_is_commit());
-
-        // Version tag - not a commit hash
-        let version_ref = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: Some("v4.1.1".to_string()),
-            subpath: None,
-        };
-        assert!(!version_ref.ref_is_commit());
-
-        // Branch name - not a commit hash
-        let branch_ref = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: Some("main".to_string()),
-            subpath: None,
-        };
-        assert!(!branch_ref.ref_is_commit());
-
-        // No ref - not a commit hash
-        let no_ref = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: None,
-            subpath: None,
-        };
-        assert!(!no_ref.ref_is_commit());
     }
 
     #[test]
