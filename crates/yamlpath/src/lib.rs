@@ -502,7 +502,6 @@ impl Document {
 
         fn trawl<'tree>(
             node: &Node<'tree>,
-            source: &'tree str,
             comment_id: u16,
             start_line: usize,
             end_line: usize,
@@ -528,7 +527,7 @@ impl Document {
             );
 
             for child in node.children(&mut cur) {
-                comments.extend(trawl(&child, source, comment_id, start_line, end_line));
+                comments.extend(trawl(&child, comment_id, start_line, end_line));
             }
 
             comments
@@ -536,7 +535,6 @@ impl Document {
 
         trawl(
             &self.tree.root_node(),
-            &self.source,
             self.comment_id,
             start_line,
             end_line,

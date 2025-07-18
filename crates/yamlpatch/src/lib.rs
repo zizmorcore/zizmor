@@ -273,7 +273,7 @@ fn apply_single_patch(
 
             let mut result = content.to_string();
             let span = comment_feature.location.byte_span;
-            result.replace_range(span.0..span.1, &new);
+            result.replace_range(span.0..span.1, new);
 
             yamlpath::Document::new(result).map_err(Error::from)
         }
