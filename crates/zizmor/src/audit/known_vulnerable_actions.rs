@@ -161,10 +161,18 @@ impl KnownVulnerableActions {
                     title: format!("upgrade {uses_slug} to {target_version}"),
                     key: step.location().key,
                     disposition: Default::default(),
-                    patches: vec![Patch {
-                        route: step.route().with_key("uses"),
-                        operation: Op::Replace(new_uses_value.into()),
-                    }],
+                    patches: vec![
+                        Patch {
+                            route: step.route().with_key("uses"),
+                            operation: Op::Replace(new_uses_value.into()),
+                        },
+                        Patch {
+                            route: step.route().with_key("uses"),
+                            operation: Op::ReplaceComment {
+                                new: format!("# {target_version_tag}").into(),
+                            },
+                        },
+                    ],
                 })
             }
             // If `uses` is pinned to a symbolic ref, we only need to perform
@@ -765,7 +773,7 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - name: Commit pinned action
-                uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.0.0
+                uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.1.3
         ");
     }
 }
