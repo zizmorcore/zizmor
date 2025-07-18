@@ -100,6 +100,11 @@ impl Span {
             end: self.end + bias,
         }
     }
+
+    /// Returns the span as a range.
+    pub fn as_range(&self) -> std::ops::Range<usize> {
+        self.start..self.end
+    }
 }
 
 impl From<std::ops::Range<usize>> for Span {
@@ -111,18 +116,18 @@ impl From<std::ops::Range<usize>> for Span {
     }
 }
 
-impl From<Span> for std::ops::Range<usize> {
-    fn from(span: Span) -> Self {
-        span.start..span.end
-    }
-}
-
 /// Represents a "subfeature" of a symbolic location, such as a substring
 /// within a YAML string.
 #[derive(Serialize, Clone, Debug)]
-pub struct Subfeature<'doc> {
-    pub(crate) after: usize,
-    pub(crate) fragment: Fragment<'doc>,
+pub struct Subfeature<'a> {
+    /// A byte index after which the subfeature starts.
+    ///
+    /// This is a fuzzy anchor: we know our subfeature starts
+    /// *somewhere* after this index, but we don't know exactly where it is
+    /// in the original feature due to parsed whitespace.
+    pub after: usize,
+    /// The fragment of the subfeature.
+    pub fragment: Fragment<'a>,
 }
 
 impl<'a> Subfeature<'a> {

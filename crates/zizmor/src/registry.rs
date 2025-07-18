@@ -5,11 +5,11 @@ use std::{
     collections::{BTreeMap, btree_map},
     fmt::Display,
     process::ExitCode,
+    str::FromStr,
 };
 
 use anyhow::{Context, anyhow};
 use camino::{Utf8Path, Utf8PathBuf};
-use github_actions_models::common::RepositoryUses;
 use indexmap::IndexMap;
 use serde::Serialize;
 use thiserror::Error;
@@ -64,6 +64,49 @@ impl std::fmt::Display for InputKind {
     }
 }
 
+/// A GitHub repository slug, i.e. `owner/repo[@ref]`.
+#[derive(Debug)]
+pub(crate) struct RepoSlug {
+    /// The owner of the repository.
+    pub(crate) owner: String,
+    /// The name of the repository.
+    pub(crate) repo: String,
+    /// An optional Git reference, e.g. a branch or tag name.
+    pub(crate) git_ref: Option<String>,
+}
+
+impl FromStr for RepoSlug {
+    type Err = anyhow::Error;
+
+    /// NOTE: This is almost exactly the same as
+    /// [`github_actions_models::common::RepositoryUses`],
+    /// except that we don't require a git ref and we forbid subpaths.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (path, git_ref) = match s.rsplit_once('@') {
+            Some((path, git_ref)) => (path, Some(git_ref)),
+            None => (s, None),
+        };
+
+        let components = path.splitn(2, '/').collect::<Vec<_>>();
+
+        match components.len() {
+            2 => Ok(Self {
+                owner: components[0].into(),
+                repo: components[1].into(),
+                git_ref: git_ref.map(|s| s.into()),
+            }),
+            x if x < 2 => Err(anyhow!(tips(
+                "invalid repo slug (too short)",
+                &["pass owner/repo or owner/repo@ref"]
+            ))),
+            _ => Err(anyhow!(tips(
+                "invalid repo slug (too many parts)",
+                &["pass owner/repo or owner/repo@ref"]
+            ))),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct LocalKey {
     /// The path's nondeterministic prefix, if any.
@@ -74,6 +117,7 @@ pub(crate) struct LocalKey {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct RemoteKey {
+    // TODO: Dedupe with RepoSlug above.
     owner: String,
     repo: String,
     git_ref: Option<String>,
@@ -126,7 +170,7 @@ impl InputKey {
         }))
     }
 
-    pub(crate) fn remote(slug: &RepositoryUses, path: String) -> Result<Self, InputError> {
+    pub(crate) fn remote(slug: &RepoSlug, path: String) -> Result<Self, InputError> {
         if Utf8Path::new(&path).file_name().is_none() {
             return Err(InputError::MissingName);
         }
@@ -464,7 +508,7 @@ impl<'a> FindingRegistry<'a> {
 mod tests {
     use std::str::FromStr;
 
-    use github_actions_models::common::Uses;
+    use crate::registry::RepoSlug;
 
     use super::InputKey;
 
@@ -474,9 +518,7 @@ mod tests {
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
-        let Uses::Repository(slug) = Uses::from_str("foo/bar").unwrap() else {
-            panic!()
-        };
+        let slug = RepoSlug::from_str("foo/bar").unwrap();
         let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
         assert_eq!(
             remote.to_string(),
@@ -484,9 +526,7 @@ mod tests {
         );
 
         // With a git ref
-        let Uses::Repository(slug) = Uses::from_str("foo/bar@v1").unwrap() else {
-            panic!()
-        };
+        let slug = RepoSlug::from_str("foo/bar@v1").unwrap();
         let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
         assert_eq!(
             remote.to_string(),

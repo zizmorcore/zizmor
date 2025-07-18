@@ -162,7 +162,7 @@ impl<'doc> SymbolicLocation<'doc> {
 
                 (
                     extracted,
-                    ConcreteLocation::from_span(subfeature_span.into(), document),
+                    ConcreteLocation::from_span(subfeature_span.as_range(), document),
                     feature,
                 )
             }
@@ -194,7 +194,7 @@ impl<'doc> SymbolicLocation<'doc> {
                 comments: document
                     .feature_comments(&feature)
                     .into_iter()
-                    .map(Comment)
+                    .map(|f| Comment(document.extract(&f)))
                     .collect(),
             },
         })
@@ -338,7 +338,7 @@ impl<'doc> Feature<'doc> {
     ) -> Self {
         let contents = input.as_document().source();
 
-        let span = subfeature.locate_within(contents).unwrap().into();
+        let span = subfeature.locate_within(contents).unwrap().as_range();
 
         Self::from_span(&span, input)
     }

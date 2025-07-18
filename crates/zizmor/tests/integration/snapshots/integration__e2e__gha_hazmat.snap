@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
-expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@33cd22cdd7823a5795768388aff977fe992b5aad\").run()?"
+expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61\").run()?"
 snapshot_kind: text
 ---
  INFO collect_inputs: zizmor: collected 22 inputs from woodruffw/gha-hazmat
@@ -302,21 +302,6 @@ error[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → High
 
-warning[excessive-permissions]: overly broad permissions
-  --> .github/workflows/github-env.yml:24:3
-   |
-24 | /   vulnerable:
-25 | |     runs-on: ubuntu-latest
-...  |
-33 | |         env:
-34 | |           TITLE: ${{ github.event.pull_request.title }}
-   | |                                                        -
-   | |________________________________________________________|
-   |                                                          this job
-   |                                                          default permissions used due to no permissions: block
-   |
-   = note: audit confidence → Medium
-
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   --> .github/workflows/github-env.yml:19:1
    |
@@ -328,12 +313,12 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    = note: audit confidence → Medium
 
 error[github-env]: dangerous use of environment file
-  --> .github/workflows/github-env.yml:30:9
+  --> .github/workflows/github-env.yml:32:9
    |
-30 |         - run: |
+32 |         - run: |
    |  _________^
-31 | |           message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
-32 | |           echo "message=$message" >> $GITHUB_ENV
+33 | |           message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
+34 | |           echo "message=$message" >> $GITHUB_ENV
    | |________________________________________________^ write to GITHUB_ENV may allow code execution
    |
    = note: audit confidence → Low
@@ -678,25 +663,10 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
 
-warning[excessive-permissions]: overly broad permissions
-  --> .github/workflows/ref-confusion.yml:20:3
-   |
-20 | /   commit:
-21 | |     runs-on: ubuntu-latest
-22 | |     steps:
-23 | |       # NOT OK: `confusable` is both a tag and a branch
-24 | |       - uses: woodruffw/gha-hazmat/ref-confusion@confusable
-   | |                                                            -
-   | |____________________________________________________________|
-   |                                                              this job
-   |                                                              default permissions used due to no permissions: block
-   |
-   = note: audit confidence → Medium
-
 error[unpinned-uses]: unpinned action reference
-  --> .github/workflows/ref-confusion.yml:24:9
+  --> .github/workflows/ref-confusion.yml:26:9
    |
-24 |       - uses: woodruffw/gha-hazmat/ref-confusion@confusable
+26 |       - uses: woodruffw/gha-hazmat/ref-confusion@confusable
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
@@ -780,158 +750,71 @@ warning[secrets-inherit]: secrets unconditionally inherited by called workflow
    |
    = note: audit confidence → High
 
-warning[excessive-permissions]: overly broad permissions
-  --> .github/workflows/self-hosted.yml:22:3
-   |
-22 | /   vulnerable:
-23 | |     # NOT OK: self-hosted runners are difficult to secure in public repos
-...  |
-27 | |       - run: |
-28 | |           echo "hello from a self-hosted runner"
-   | |                                                 -
-   | |_________________________________________________|
-   |                                                   this job
-   |                                                   default permissions used due to no permissions: block
-   |
-   = note: audit confidence → Medium
-
-warning[excessive-permissions]: overly broad permissions
-   --> .github/workflows/template-injection.yml:20:1
-    |
- 20 | / name: example
- 21 | | on:
-...   |
-127 | |         run: |
-128 | |           ${{ some.context == 'success' }}
-    | |___________________________________________- default permissions used due to no permissions: block
-    |
-    = note: audit confidence → Medium
-
-warning[excessive-permissions]: overly broad permissions
-  --> .github/workflows/template-injection.yml:36:3
-   |
-36 | /   vulnerable-1:
-37 | |     runs-on: ubuntu-latest
-...  |
-94 | |         run: |
-95 | |           echo "doing a thing: ${{ github.workspace }}"
-   | |                                                       -
-   | |_______________________________________________________|
-   |                                                         this job
-   |                                                         default permissions used due to no permissions: block
-   |
-   = note: audit confidence → Medium
-
-warning[excessive-permissions]: overly broad permissions
-   --> .github/workflows/template-injection.yml:97:3
-    |
- 97 | /   vulnerable-2:
- 98 | |     runs-on: ubuntu-latest
-...   |
-106 | |         run: |
-107 | |           echo "doing a thing: ${{ matrix.unknown-key }}"
-    | |                                                         -
-    | |_________________________________________________________|
-    |                                                           this job
-    |                                                           default permissions used due to no permissions: block
-    |
-    = note: audit confidence → Medium
-
-warning[excessive-permissions]: overly broad permissions
-   --> .github/workflows/template-injection.yml:110:3
-    |
-110 | /   vulnerable-3:
-111 | |     runs-on: ubuntu-latest
-...   |
-118 | |           script: |
-119 | |             return "doing a thing: ${{ github.event.issue.title }}"
-    | |                                                                   -
-    | |___________________________________________________________________|
-    |                                                                     this job
-    |                                                                     default permissions used due to no permissions: block
-    |
-    = note: audit confidence → Medium
-
-warning[excessive-permissions]: overly broad permissions
-   --> .github/workflows/template-injection.yml:121:3
-    |
-121 | /   not-vulnerable-4:
-122 | |     runs-on: ubuntu-latest
-...   |
-127 | |         run: |
-128 | |           ${{ some.context == 'success' }}
-    | |                                           -
-    | |___________________________________________|
-    |                                             this job
-    |                                             default permissions used due to no permissions: block
-    |
-    = note: audit confidence → Medium
-
 error[template-injection]: code injection via template expansion
-  --> .github/workflows/template-injection.yml:48:36
+  --> .github/workflows/template-injection.yml:50:36
    |
-47 |         run: |
+49 |         run: |
    |         ^^^ this run block
-48 |           echo "issue created: ${{ github.event.issue.title }}"
+50 |           echo "issue created: ${{ github.event.issue.title }}"
    |                                    ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
 error[template-injection]: code injection via template expansion
-  --> .github/workflows/template-injection.yml:53:36
+  --> .github/workflows/template-injection.yml:55:36
    |
-52 |         run: |
+54 |         run: |
    |         ^^^ this run block
-53 |           echo "doing a thing: ${{ inputs.hackme }}"
+55 |           echo "doing a thing: ${{ inputs.hackme }}"
    |                                    ^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
 error[template-injection]: code injection via template expansion
-  --> .github/workflows/template-injection.yml:63:36
+  --> .github/workflows/template-injection.yml:65:36
    |
-62 |         run: |
+64 |         run: |
    |         ^^^ this run block
-63 |           echo "doing a thing: ${{ inputs.hackme-call }}"
+65 |           echo "doing a thing: ${{ inputs.hackme-call }}"
    |                                    ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
 warning[template-injection]: code injection via template expansion
-  --> .github/workflows/template-injection.yml:85:36
+  --> .github/workflows/template-injection.yml:87:36
    |
-84 |         run: |
+86 |         run: |
    |         --- this run block
-85 |           echo "doing a thing: ${{ matrix.dynamic }}"
+87 |           echo "doing a thing: ${{ matrix.dynamic }}"
    |                                    -------------- may expand into attacker-controllable code
    |
    = note: audit confidence → Medium
    = note: this finding has an auto-fix
 
 warning[template-injection]: code injection via template expansion
-   --> .github/workflows/template-injection.yml:107:36
+   --> .github/workflows/template-injection.yml:109:36
     |
-106 |         run: |
+108 |         run: |
     |         --- this run block
-107 |           echo "doing a thing: ${{ matrix.unknown-key }}"
+109 |           echo "doing a thing: ${{ matrix.unknown-key }}"
     |                                    ------------------ may expand into attacker-controllable code
     |
     = note: audit confidence → Medium
     = note: this finding has an auto-fix
 
 error[template-injection]: code injection via template expansion
-   --> .github/workflows/template-injection.yml:119:40
+   --> .github/workflows/template-injection.yml:120:40
     |
-115 |         uses: actions/github-script@v7
+116 |         uses: actions/github-script@v7
     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action accepts arbitrary code
-116 |         with:
-117 |           # NOT OK: attacker-controlled issue title
-118 |           script: |
+117 |         with:
+118 |           # NOT OK: attacker-controlled issue title
+119 |           script: |
     |           ^^^^^^ via this input
-119 |             return "doing a thing: ${{ github.event.issue.title }}"
+120 |             return "doing a thing: ${{ github.event.issue.title }}"
     |                                        ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
     |
     = note: audit confidence → High
@@ -974,42 +857,27 @@ warning[excessive-permissions]: overly broad permissions
 16 | /   unpinned-0:
 17 | |     runs-on: ubuntu-latest
 ...  |
-37 | |           args: hello!
-38 | |
-   | |_-- this job
-   |   |
-   |   default permissions used due to no permissions: block
+28 | |           entrypoint: /bin/echo
+29 | |           args: hello!
+   | |                       -
+   | |_______________________|
+   |                         this job
+   |                         default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
-error[unpinned-uses]: unpinned action reference
+warning[unpinned-uses]: unpinned action reference
   --> .github/workflows/unpinned.yml:20:9
    |
-20 |       - uses: actions/checkout
-   |         ^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a ref or hash (required by actions/* policy)
-   |
-   = note: audit confidence → High
-
-error[unpinned-uses]: unpinned action reference
-  --> .github/workflows/unpinned.yml:25:9
-   |
-25 |       - uses: github/codeql-action/upload-sarif
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a ref or hash (required by github/* policy)
-   |
-   = note: audit confidence → High
-
-warning[unpinned-uses]: unpinned action reference
-  --> .github/workflows/unpinned.yml:28:9
-   |
-28 |       - uses: docker://ubuntu
+20 |       - uses: docker://ubuntu
    |         --------------------- action is not pinned to a tag, branch, or hash ref
    |
    = note: audit confidence → High
 
 warning[unpinned-uses]: unpinned action reference
-  --> .github/workflows/unpinned.yml:34:9
+  --> .github/workflows/unpinned.yml:26:9
    |
-34 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
+26 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
    |         -------------------------------------------------- action is not pinned to a tag, branch, or hash ref
    |
    = note: audit confidence → High
@@ -1096,4 +964,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-172 findings (77 suppressed): 0 unknown, 6 informational, 0 low, 37 medium, 52 high
+159 findings (74 suppressed): 0 unknown, 6 informational, 0 low, 29 medium, 50 high

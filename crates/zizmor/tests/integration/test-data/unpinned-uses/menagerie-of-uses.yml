@@ -11,10 +11,6 @@ jobs:
     steps:
       - uses: actions/setup-python@v4
 
-      - uses: actions/checkout
-        with:
-          persist-credentials: false
-
       - uses: actions/checkout@v3
         with:
           persist-credentials: false

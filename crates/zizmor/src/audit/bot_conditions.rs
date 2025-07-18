@@ -385,9 +385,8 @@ impl BotConditions {
             patches: vec![Patch {
                 route: if_route,
                 operation: Op::RewriteFragment {
-                    from: spoofable_context_raw.into(),
+                    from: subfeature::Subfeature::new(0, spoofable_context_raw),
                     to: safe_context.into(),
-                    after: None,
                 },
             }],
         })
