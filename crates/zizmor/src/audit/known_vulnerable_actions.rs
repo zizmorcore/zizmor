@@ -153,8 +153,7 @@ impl KnownVulnerableActions {
                     )
                 })?;
 
-            let uses_slug_re = regex::escape(&format!("{uses_slug}@{commit_ref}"));
-            let new_uses_value = format!("{uses_slug}@{target_commit}  # {target_version_tag}");
+            let new_uses_value = format!("{uses_slug}@{target_commit}");
 
             Ok(Fix {
                 title: format!("upgrade {uses_slug} to {target_version}"),
@@ -162,13 +161,7 @@ impl KnownVulnerableActions {
                 disposition: Default::default(),
                 patches: vec![Patch {
                     route: step.route().with_key("uses"),
-                    operation: Op::RewriteFragment {
-                        from: subfeature::Subfeature::new(
-                            0,
-                            subfeature::Fragment::Regex(regex::bytes::Regex::new(&uses_slug_re)?),
-                        ),
-                        to: new_uses_value.into(),
-                    },
+                    operation: Op::Replace(new_uses_value.into()),
                 }],
             })
         } else if let Some(sym_ref) = uses.symbolic_ref() {
@@ -192,7 +185,7 @@ impl KnownVulnerableActions {
                 disposition: Default::default(),
                 patches: vec![Patch {
                     route: step.route().with_key("uses"),
-                    operation: Op::Replace(serde_yaml::Value::String(new_uses_value)),
+                    operation: Op::Replace(new_uses_value.into()),
                 }],
             })
         } else {
@@ -766,7 +759,7 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - name: Commit pinned action
-                uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.1.3  # v4.0.0
+                uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.0.0
         ");
     }
 }
