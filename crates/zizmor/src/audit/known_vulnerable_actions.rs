@@ -138,39 +138,46 @@ impl KnownVulnerableActions {
             format!("v{target_version}")
         };
 
-        // If the current uses is pinned by commit hash, resolve target_version to commit
-        // and add a version comment for Dependabot
-        if let Some(commit_ref) = uses.commit_ref() {
-            let target_commit = self
-                .client
-                .commit_for_ref(&uses.owner, &uses.repo, &target_version_tag)?
-                .ok_or_else(|| {
-                    anyhow!(
-                        "Cannot resolve version {} to commit hash for {}/{}",
-                        target_version,
-                        uses.owner,
-                        uses.repo
-                    )
-                })?;
+        match uses.ref_is_commit() {
+            // If `uses` is pinned to a commit, then we need two patches:
+            // one to change the `uses` clause to the new version,
+            // and another to replace any existing version comment.
+            true => {
+                let target_commit = self
+                    .client
+                    .commit_for_ref(&uses.owner, &uses.repo, &target_version_tag)?
+                    .ok_or_else(|| {
+                        anyhow!(
+                            "Cannot resolve version {} to commit hash for {}/{}",
+                            target_version,
+                            uses.owner,
+                            uses.repo
+                        )
+                    })?;
 
-            let new_uses_value = format!("{uses_slug}@{target_commit}");
+                let new_uses_value = format!("{uses_slug}@{target_commit}");
 
-            Ok(Fix {
-                title: format!("upgrade {uses_slug} to {target_version}"),
-                key: step.location().key,
-                disposition: Default::default(),
-                patches: vec![Patch {
-                    route: step.route().with_key("uses"),
-                    operation: Op::Replace(new_uses_value.into()),
-                }],
-            })
-        } else if let Some(sym_ref) = uses.symbolic_ref() {
-            // Like above, we don't know a priori whether the new tag should be
-            // prefixed with `v` or not. Instead of trying to figure it out
-            // via the GitHub API, we match the style of the current `uses`
-            // clause.
-            let target_version_tag =
-                match (sym_ref.starts_with('v'), target_version.starts_with('v')) {
+                Ok(Fix {
+                    title: format!("upgrade {uses_slug} to {target_version}"),
+                    key: step.location().key,
+                    disposition: Default::default(),
+                    patches: vec![Patch {
+                        route: step.route().with_key("uses"),
+                        operation: Op::Replace(new_uses_value.into()),
+                    }],
+                })
+            }
+            // If `uses` is pinned to a symbolic ref, we only need to perform
+            // a single patch.
+            false => {
+                // Like above, we don't know a priori whether the new tag should be
+                // prefixed with `v` or not. Instead of trying to figure it out
+                // via the GitHub API, we match the style of the current `uses`
+                // clause.
+                let target_version_tag = match (
+                    uses.git_ref.starts_with('v'),
+                    target_version.starts_with('v'),
+                ) {
                     (true, false) => format!("v{target_version}"),
                     // It seems unlikely that GHSA would give us `vX.Y.Z`,
                     // but who knows?
@@ -178,18 +185,17 @@ impl KnownVulnerableActions {
                     _ => target_version.to_string(),
                 };
 
-            let new_uses_value = format!("{uses_slug}@{target_version_tag}");
-            Ok(Fix {
-                title: format!("upgrade {uses_slug} to {target_version_tag}"),
-                key: step.location().key,
-                disposition: Default::default(),
-                patches: vec![Patch {
-                    route: step.route().with_key("uses"),
-                    operation: Op::Replace(new_uses_value.into()),
-                }],
-            })
-        } else {
-            unreachable!()
+                let new_uses_value = format!("{uses_slug}@{target_version_tag}");
+                Ok(Fix {
+                    title: format!("upgrade {uses_slug} to {target_version_tag}"),
+                    key: step.location().key,
+                    disposition: Default::default(),
+                    patches: vec![Patch {
+                        route: step.route().with_key("uses"),
+                        operation: Op::Replace(new_uses_value.into()),
+                    }],
+                })
+            }
         }
     }
 
