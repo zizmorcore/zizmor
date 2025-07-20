@@ -56,6 +56,15 @@
         - astral-sh/ruff#14844
 
 
+-   ![](https://github.com/astronomer.png?size=40){ width="40" loading=lazy align=left } astronomer
+
+    ---
+
+    ??? example "Examples"
+        - astronomer/astronomer-cosmos#1870
+        - astronomer/dag-factory#482
+
+
 -   ![](https://github.com/astropy.png?size=40){ width="40" loading=lazy align=left } astropy
 
     ---
@@ -223,6 +232,14 @@
 
     ??? example "Examples"
         - earthobservations/wetterdienst#1440
+
+
+-   ![](https://github.com/edgelesssys.png?size=40){ width="40" loading=lazy align=left } edgelesssys
+
+    ---
+
+    ??? example "Examples"
+        - edgelesssys/contrast#1604
 
 
 -   ![](https://github.com/Electric-Coin-Company.png?size=40){ width="40" loading=lazy align=left } Electric-Coin-Company
