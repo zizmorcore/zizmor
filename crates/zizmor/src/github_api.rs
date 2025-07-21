@@ -8,7 +8,6 @@ use std::{io::Read, ops::Deref, path::Path};
 use anyhow::{Context, Result, anyhow};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
-use github_actions_models::common::RepositoryUses;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
 };
@@ -24,7 +23,7 @@ use tracing::instrument;
 
 use crate::{
     InputRegistry,
-    registry::{InputKey, InputKind},
+    registry::{InputKey, InputKind, RepoSlug},
     utils::PipeSelf,
 };
 
@@ -36,7 +35,7 @@ pub(crate) enum GitHubHost {
 }
 
 impl GitHubHost {
-    pub(crate) fn from_clap(hostname: &str) -> Result<Self, String> {
+    pub(crate) fn new(hostname: &str) -> Result<Self, String> {
         let normalized = hostname.to_lowercase();
 
         // NOTE: ideally we'd do a full domain validity check here.
@@ -66,7 +65,7 @@ impl GitHubHost {
 pub(crate) struct GitHubToken(String);
 
 impl GitHubToken {
-    pub(crate) fn from_clap(token: &str) -> Result<Self, String> {
+    pub(crate) fn new(token: &str) -> Result<Self, String> {
         let token = token.trim();
         if token.is_empty() {
             return Err("GitHub token cannot be empty".into());
@@ -350,7 +349,7 @@ impl Client {
     #[tokio::main]
     pub(crate) async fn fetch_workflows(
         &self,
-        slug: &RepositoryUses,
+        slug: &RepoSlug,
         registry: &mut InputRegistry,
     ) -> Result<()> {
         let owner = &slug.owner;
@@ -417,7 +416,7 @@ impl Client {
     #[tokio::main]
     pub(crate) async fn fetch_audit_inputs(
         &self,
-        slug: &RepositoryUses,
+        slug: &RepoSlug,
         registry: &mut InputRegistry,
     ) -> Result<()> {
         let url = format!(
@@ -537,6 +536,13 @@ pub(crate) struct Comparison {
 pub(crate) struct Advisory {
     pub(crate) ghsa_id: String,
     pub(crate) severity: String,
+    pub(crate) vulnerabilities: Vec<Vulnerability>,
+}
+
+/// Represents a vulnerability within a GHSA advisory.
+#[derive(Deserialize)]
+pub(crate) struct Vulnerability {
+    pub(crate) first_patched_version: Option<String>,
 }
 
 /// Represents a file listing from GitHub's contents API.
@@ -560,7 +566,7 @@ mod tests {
                 "https://selfhosted.example.com/api/v3",
             ),
         ] {
-            assert_eq!(GitHubHost::from_clap(host).unwrap().to_api_url(), expected);
+            assert_eq!(GitHubHost::new(host).unwrap().to_api_url(), expected);
         }
     }
 
@@ -572,14 +578,14 @@ mod tests {
             ("gho_testtest", "gho_testtest"),
             ("gho_test\ntest", "gho_test\ntest"),
         ] {
-            assert_eq!(GitHubToken::from_clap(token).unwrap().0, expected);
+            assert_eq!(GitHubToken::new(token).unwrap().0, expected);
         }
     }
 
     #[test]
     fn test_github_token_err() {
         for token in ["", " ", "\r", "\n", "\t", "     "] {
-            assert!(GitHubToken::from_clap(token).is_err());
+            assert!(GitHubToken::new(token).is_err());
         }
     }
 }

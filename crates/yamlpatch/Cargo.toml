@@ -1,6 +1,6 @@
 [package]
 name = "yamlpatch"
-version = "0.2.0"
+version = "0.3.0"
 description = "Comment and format-preserving YAML patch operations"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/yamlpatch"
 keywords = ["yaml", "patch"]
@@ -22,6 +22,7 @@ line-index.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 serde_yaml.workspace = true
+subfeature.workspace = true
 thiserror.workspace = true
 yamlpath.workspace = true
 

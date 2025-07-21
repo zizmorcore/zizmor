@@ -139,10 +139,18 @@ pub enum Op<'doc> {
     /// which specifies that the rewrite should only occur on
     /// the first match of `from` that occurs after the given byte index.
     RewriteFragment {
-        from: Cow<'doc, str>,
+        from: subfeature::Subfeature<'doc>,
         to: Cow<'doc, str>,
-        after: Option<usize>,
     },
+    /// Replace a comment at the given path.
+    ///
+    /// This operation replaces the entire comment associated with the feature
+    /// at the given path with the new comment.
+    ///
+    /// The entire comment is replaced at once, and only one matching
+    /// comment is permitted. Features that don't have an associated comment
+    /// are ignored, while features with multiple comments will be rejected.
+    ReplaceComment { new: Cow<'doc, str> },
     /// Replace the value at the given path
     Replace(serde_yaml::Value),
     /// Add a new key-value pair at the given path.
@@ -208,7 +216,7 @@ fn apply_single_patch(
 ) -> Result<yamlpath::Document, Error> {
     let content = document.source();
     match &patch.operation {
-        Op::RewriteFragment { from, to, after } => {
+        Op::RewriteFragment { from, to } => {
             let Some(feature) = route_to_feature_exact(&patch.route, document)? else {
                 return Err(Error::InvalidOperation(format!(
                     "no pre-existing value to patch at {route:?}",
@@ -217,11 +225,7 @@ fn apply_single_patch(
             };
 
             let extracted_feature = document.extract(&feature);
-
-            let bias = match after {
-                Some(after) => *after,
-                None => 0,
-            };
+            let bias = from.after;
 
             if bias > extracted_feature.len() {
                 return Err(Error::InvalidOperation(format!(
@@ -229,19 +233,14 @@ fn apply_single_patch(
                 )));
             }
 
-            let slice = &extracted_feature[bias..];
-
-            let (from_start, from_end) = match slice.find(from.as_ref()) {
-                Some(idx) => (idx + bias, idx + bias + from.len()),
-                None => {
-                    return Err(Error::InvalidOperation(format!(
-                        "no match for '{from}' in feature"
-                    )));
-                }
+            let Some(span) = from.locate_within(extracted_feature) else {
+                return Err(Error::InvalidOperation(format!(
+                    "no match for '{from:?}' in feature",
+                )));
             };
 
             let mut patched_feature = extracted_feature.to_string();
-            patched_feature.replace_range(from_start..from_end, to);
+            patched_feature.replace_range(span.as_range(), to);
 
             // Finally, put our patch back into the overall content.
             let mut patched_content = content.to_string();
@@ -251,6 +250,32 @@ fn apply_single_patch(
             );
 
             yamlpath::Document::new(patched_content).map_err(Error::from)
+        }
+        Op::ReplaceComment { new } => {
+            let feature = route_to_feature_exact(&patch.route, document)?.ok_or_else(|| {
+                Error::InvalidOperation(format!(
+                    "no existing feature at {route:?}",
+                    route = patch.route
+                ))
+            })?;
+
+            let comment_features = document.feature_comments(&feature);
+            let comment_feature = match comment_features.len() {
+                0 => return Ok(document.clone()),
+                1 => &comment_features[0],
+                _ => {
+                    return Err(Error::InvalidOperation(format!(
+                        "multiple comments found at {route:?}",
+                        route = patch.route
+                    )));
+                }
+            };
+
+            let mut result = content.to_string();
+            let span = comment_feature.location.byte_span;
+            result.replace_range(span.0..span.1, new);
+
+            yamlpath::Document::new(result).map_err(Error::from)
         }
         Op::Replace(value) => {
             let feature = route_to_feature_pretty(&patch.route, document)?;
