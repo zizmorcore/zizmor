@@ -5,8 +5,6 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
-use std::borrow::Cow;
-
 use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
@@ -131,8 +129,9 @@ impl KnownVulnerableActions {
             uses_slug.push_str(&format!("/{subpath}"));
         }
 
-        let (bare_version, prefixed_version) = if target_version.starts_with('v') {
-            (target_version[1..].into(), target_version)
+        let (bare_version, prefixed_version) = if let Some(bare) = target_version.strip_prefix('v')
+        {
+            (bare.into(), target_version)
         } else {
             let prefixed = format!("v{target_version}");
             (target_version, prefixed)
