@@ -5,6 +5,8 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
+use std::borrow::Cow;
+
 use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
 
@@ -121,7 +123,7 @@ impl KnownVulnerableActions {
     fn create_upgrade_fix<'doc>(
         &self,
         uses: &RepositoryUses,
-        target_version: &str,
+        target_version: String,
         step: &impl StepCommon<'doc>,
     ) -> Result<Fix<'doc>> {
         let mut uses_slug = format!("{}/{}", uses.owner, uses.repo);
@@ -129,13 +131,11 @@ impl KnownVulnerableActions {
             uses_slug.push_str(&format!("/{subpath}"));
         }
 
-        // TODO(ww): This isn't quite right; we really should be matching
-        // the "style" of the clause being fixed. In practice most actions
-        // use `v{VERSION}`, but some use a raw `{VERSION}` instead.
-        let target_version_tag = if target_version.starts_with('v') {
-            target_version.to_string()
+        let (bare_version, prefixed_version) = if target_version.starts_with('v') {
+            (target_version[1..].into(), target_version)
         } else {
-            format!("v{target_version}")
+            let prefixed = format!("v{target_version}");
+            (target_version, prefixed)
         };
 
         match uses.ref_is_commit() {
@@ -143,13 +143,24 @@ impl KnownVulnerableActions {
             // one to change the `uses` clause to the new version,
             // and another to replace any existing version comment.
             true => {
-                let target_commit = self
+                // Annoying: GHSA will usually give us a fix version as `X.Y.Z`,
+                // but GitHub Actions are conventionally tagged as `vX.Y.Z`.
+                // We don't know whether a given action follows this
+                // convention or not, so we have to try both.
+                // We try the prefixed version first, since we expect it
+                // to be more common.
+                let (target_ref, target_commit) = self
                     .client
-                    .commit_for_ref(&uses.owner, &uses.repo, &target_version_tag)?
+                    .commit_for_ref(&uses.owner, &uses.repo, &prefixed_version)
+                    .map(|commit| commit.map(|commit| (&prefixed_version, commit)))
+                    .or_else(|_| {
+                        self.client
+                            .commit_for_ref(&uses.owner, &uses.repo, &bare_version)
+                            .map(|commit| commit.map(|commit| (&bare_version, commit)))
+                    })?
                     .ok_or_else(|| {
                         anyhow!(
-                            "Cannot resolve version {} to commit hash for {}/{}",
-                            target_version,
+                            "Cannot resolve version {bare_version} to commit hash for {}/{}",
                             uses.owner,
                             uses.repo
                         )
@@ -158,7 +169,7 @@ impl KnownVulnerableActions {
                 let new_uses_value = format!("{uses_slug}@{target_commit}");
 
                 Ok(Fix {
-                    title: format!("upgrade {uses_slug} to {target_version}"),
+                    title: format!("upgrade {uses_slug} to {target_ref}"),
                     key: step.location().key,
                     disposition: Default::default(),
                     patches: vec![
@@ -169,7 +180,7 @@ impl KnownVulnerableActions {
                         Patch {
                             route: step.route().with_key("uses"),
                             operation: Op::ReplaceComment {
-                                new: format!("# {target_version_tag}").into(),
+                                new: format!("# {target_ref}").into(),
                             },
                         },
                     ],
@@ -182,15 +193,10 @@ impl KnownVulnerableActions {
                 // prefixed with `v` or not. Instead of trying to figure it out
                 // via the GitHub API, we match the style of the current `uses`
                 // clause.
-                let target_version_tag = match (
-                    uses.git_ref.starts_with('v'),
-                    target_version.starts_with('v'),
-                ) {
-                    (true, false) => format!("v{target_version}"),
-                    // It seems unlikely that GHSA would give us `vX.Y.Z`,
-                    // but who knows?
-                    (false, true) => target_version[1..].to_string(),
-                    _ => target_version.to_string(),
+                let target_version_tag = if uses.git_ref.starts_with('v') {
+                    prefixed_version
+                } else {
+                    bare_version
                 };
 
                 let new_uses_value = format!("{uses_slug}@{target_version_tag}");
@@ -205,16 +211,6 @@ impl KnownVulnerableActions {
                 })
             }
         }
-    }
-
-    /// Get the best available fix for a vulnerable action
-    fn get_vulnerability_fix<'doc>(
-        &self,
-        uses: &RepositoryUses,
-        first_patched_version: &str,
-        step: &impl StepCommon<'doc>,
-    ) -> Result<Fix<'doc>> {
-        self.create_upgrade_fix(uses, first_patched_version, step)
     }
 
     fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
@@ -236,9 +232,18 @@ impl KnownVulnerableActions {
                         .with_url(format!("https://github.com/advisories/{id}")),
                 );
 
-            // Add fix if available
+            // Add fix if available.
+            // TODO(ww): In principle we could have multiple findings on a single
+            // `uses:` clause, in which case our suggested fixes would potentially
+            // overlap and partially cancel each other out. The end result of this
+            // would be a lack of a single fixpoint, i.e. the user has to invoke
+            // `zizmor` multiple times to fix all vulnerabilities.
+            // To avoid that, we could probably collect each `first_patched_version`
+            // and only apply the highest one. This would be moderately annoying
+            // to do, since we'd have to decide which finding to attach that
+            // fix to.
             if let Some(fix) = first_patched_version
-                .map(|patched_version| self.get_vulnerability_fix(uses, &patched_version, step))
+                .map(|patched_version| self.create_upgrade_fix(uses, patched_version, step))
                 .transpose()?
             {
                 finding_builder = finding_builder.fix(fix);
@@ -342,7 +347,7 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v4", step).unwrap();
+        let fix = audit.create_upgrade_fix(&uses, "v4".into(), step).unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r#"
@@ -394,7 +399,7 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v4", step).unwrap();
+        let fix = audit.create_upgrade_fix(&uses, "v4".into(), step).unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r#"
@@ -448,7 +453,7 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v4", step).unwrap();
+        let fix = audit.create_upgrade_fix(&uses, "v4".into(), step).unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r#"
@@ -511,7 +516,7 @@ jobs:
             subpath: None,
         };
         let fix_checkout = audit
-            .create_upgrade_fix(&uses_checkout, "v4", &steps[0])
+            .create_upgrade_fix(&uses_checkout, "v4".into(), &steps[0])
             .unwrap();
         current_document = fix_checkout.apply(&current_document).unwrap();
 
@@ -523,7 +528,7 @@ jobs:
             subpath: None,
         };
         let fix_node = audit
-            .create_upgrade_fix(&uses_node, "v4", &steps[1])
+            .create_upgrade_fix(&uses_node, "v4".into(), &steps[1])
             .unwrap();
         current_document = fix_node.apply(&current_document).unwrap();
 
@@ -535,7 +540,7 @@ jobs:
             subpath: None,
         };
         let fix_cache = audit
-            .create_upgrade_fix(&uses_cache, "v4", &steps[2])
+            .create_upgrade_fix(&uses_cache, "v4".into(), &steps[2])
             .unwrap();
         current_document = fix_cache.apply(&current_document).unwrap();
 
@@ -595,7 +600,7 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v2", step).unwrap();
+        let fix = audit.create_upgrade_fix(&uses, "v2".into(), step).unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r"
@@ -644,7 +649,9 @@ jobs:
 
         // Test that when first_patched_version is provided, it's used
         let audit = create_test_audit();
-        let fix_with_patched_version = audit.create_upgrade_fix(&uses, "v3.1.0", step).unwrap();
+        let fix_with_patched_version = audit
+            .create_upgrade_fix(&uses, "v3.1.0".into(), step)
+            .unwrap();
         let fixed_document = fix_with_patched_version
             .apply(workflow.as_document())
             .unwrap();
@@ -691,7 +698,7 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v4", step).unwrap();
+        let fix = audit.create_upgrade_fix(&uses, "v4".into(), step).unwrap();
 
         let new_doc = fix.apply(workflow.as_document()).unwrap();
 
