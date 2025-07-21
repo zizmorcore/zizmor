@@ -784,5 +784,58 @@ jobs:
     }
 
     // TODO: test_fix_commit_pin_subpath
-    // TODO: test_fix_commit_pin_no_comment
+
+    #[cfg(feature = "gh-token-tests")]
+    #[test]
+    fn test_fix_commit_pin_no_comment() {
+        // Ensure that we don't rewrite a version comment
+        // if the `uses:` clause doesn't already have one.
+        let workflow_content = r#"
+name: Test Commit Hash Pinning Real API
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Commit pinned action
+        uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4
+"#;
+        let key = InputKey::local("dummy.yml", None::<&str>).unwrap();
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let config = crate::config::Config::default();
+        let state = crate::state::AuditState {
+            config: &config,
+            no_online_audits: false,
+            gh_client: Some(
+                github_api::Client::new(
+                    &github_api::GitHubHost::Standard("github.com".to_string()),
+                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    Path::new("/tmp"),
+                )
+                .unwrap(),
+            ),
+            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
+        };
+
+        let audit = KnownVulnerableActions::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit.audit(&input).unwrap();
+        assert_eq!(findings.len(), 1);
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        assert_snapshot!(new_doc.source(), @r"
+        name: Test Commit Hash Pinning Real API
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Commit pinned action
+                uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85
+        ");
+    }
 }
