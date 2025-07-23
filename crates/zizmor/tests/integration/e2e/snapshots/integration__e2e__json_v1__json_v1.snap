@@ -1,0 +1,675 @@
+---
+source: crates/zizmor/tests/integration/e2e/json_v1.rs
+expression: output
+snapshot_kind: text
+---
+[
+  {
+    "ident": "template-injection",
+    "desc": "code injection via template expansion",
+    "url": "https://docs.zizmor.sh/audits/#template-injection",
+    "determinations": {
+      "confidence": "High",
+      "severity": "High",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "this step",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "inject-me"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 0
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Hidden"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 15,
+              "column": 8
+            },
+            "end_point": {
+              "row": 19,
+              "column": 0
+            },
+            "offset_span": {
+              "start": 241,
+              "end": 425
+            }
+          },
+          "feature": "uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # tag=v7.0.1\n        with:\n          script: |\n            return \"doing a thing: ${{ github.event.issue.title }}\"\n",
+          "comments": [
+            "# tag=v7.0.1"
+          ]
+        }
+      },
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "may expand into attacker-controllable code",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "inject-me"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 0
+              },
+              {
+                "Key": "with"
+              },
+              {
+                "Key": "script"
+              }
+            ]
+          },
+          "feature_kind": {
+            "Subfeature": {
+              "after": 24,
+              "fragment": {
+                "Raw": "github.event.issue.title"
+              }
+            }
+          },
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 18,
+              "column": 39
+            },
+            "end_point": {
+              "row": 18,
+              "column": 63
+            },
+            "offset_span": {
+              "start": 396,
+              "end": 420
+            }
+          },
+          "feature": "|\n            return \"doing a thing: ${{ github.event.issue.title }}\"\n",
+          "comments": []
+        }
+      },
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "action accepts arbitrary code",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "inject-me"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 0
+              },
+              {
+                "Key": "uses"
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Related"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 15,
+              "column": 8
+            },
+            "end_point": {
+              "row": 15,
+              "column": 76
+            },
+            "offset_span": {
+              "start": 241,
+              "end": 309
+            }
+          },
+          "feature": "uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea",
+          "comments": [
+            "# tag=v7.0.1"
+          ]
+        }
+      },
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "via this input",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "inject-me"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 0
+              },
+              {
+                "Key": "with"
+              },
+              {
+                "Key": "script"
+              }
+            ]
+          },
+          "feature_kind": "KeyOnly",
+          "kind": "Related"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 17,
+              "column": 10
+            },
+            "end_point": {
+              "row": 17,
+              "column": 16
+            },
+            "offset_span": {
+              "start": 347,
+              "end": 353
+            }
+          },
+          "feature": "script",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  },
+  {
+    "ident": "unpinned-uses",
+    "desc": "unpinned action reference",
+    "url": "https://docs.zizmor.sh/audits/#unpinned-uses",
+    "determinations": {
+      "confidence": "High",
+      "severity": "Medium",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "action is not pinned to a tag, branch, or hash ref",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "unpinned-0"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 1
+              },
+              {
+                "Key": "uses"
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 16,
+              "column": 8
+            },
+            "end_point": {
+              "row": 16,
+              "column": 29
+            },
+            "offset_span": {
+              "start": 279,
+              "end": 300
+            }
+          },
+          "feature": "uses: docker://ubuntu",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  },
+  {
+    "ident": "unpinned-uses",
+    "desc": "unpinned action reference",
+    "url": "https://docs.zizmor.sh/audits/#unpinned-uses",
+    "determinations": {
+      "confidence": "High",
+      "severity": "Medium",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "action is not pinned to a tag, branch, or hash ref",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "unpinned-0"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 2
+              },
+              {
+                "Key": "uses"
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 22,
+              "column": 8
+            },
+            "end_point": {
+              "row": 22,
+              "column": 58
+            },
+            "offset_span": {
+              "start": 404,
+              "end": 454
+            }
+          },
+          "feature": "uses: docker://ghcr.io/pypa/gh-action-pypi-publish",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  },
+  {
+    "ident": "unsound-contains",
+    "desc": "unsound contains condition",
+    "url": "https://docs.zizmor.sh/audits/#unsound-contains",
+    "determinations": {
+      "confidence": "High",
+      "severity": "High",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "contains(..) condition can be bypassed if attacker can control 'github.ref'",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "hackme"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 0
+              },
+              {
+                "Key": "if"
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 19,
+              "column": 8
+            },
+            "end_point": {
+              "row": 19,
+              "column": 77
+            },
+            "offset_span": {
+              "start": 274,
+              "end": 343
+            }
+          },
+          "feature": "        if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  },
+  {
+    "ident": "unsound-contains",
+    "desc": "unsound contains condition",
+    "url": "https://docs.zizmor.sh/audits/#unsound-contains",
+    "determinations": {
+      "confidence": "High",
+      "severity": "High",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "contains(..) condition can be bypassed if attacker can control 'env.GITHUB_REF_NAME'",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "hackme"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 1
+              },
+              {
+                "Key": "if"
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 23,
+              "column": 8
+            },
+            "end_point": {
+              "row": 23,
+              "column": 64
+            },
+            "offset_span": {
+              "start": 404,
+              "end": 460
+            }
+          },
+          "feature": "        if: ${{ contains('main,develop', env.GITHUB_REF_NAME) }}",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  },
+  {
+    "ident": "unsound-contains",
+    "desc": "unsound contains condition",
+    "url": "https://docs.zizmor.sh/audits/#unsound-contains",
+    "determinations": {
+      "confidence": "High",
+      "severity": "High",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "contains(..) condition can be bypassed if attacker can control 'github.ref_name'",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "hackme"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 2
+              },
+              {
+                "Key": "if"
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 27,
+              "column": 8
+            },
+            "end_point": {
+              "row": 27,
+              "column": 120
+            },
+            "offset_span": {
+              "start": 521,
+              "end": 633
+            }
+          },
+          "feature": "        if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  },
+  {
+    "ident": "unsound-contains",
+    "desc": "unsound contains condition",
+    "url": "https://docs.zizmor.sh/audits/#unsound-contains",
+    "determinations": {
+      "confidence": "High",
+      "severity": "High",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "contains(..) condition can be bypassed if attacker can control 'github.actor'",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "hackme"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 2
+              },
+              {
+                "Key": "if"
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 27,
+              "column": 8
+            },
+            "end_point": {
+              "row": 27,
+              "column": 120
+            },
+            "offset_span": {
+              "start": 521,
+              "end": 633
+            }
+          },
+          "feature": "        if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  },
+  {
+    "ident": "unsound-contains",
+    "desc": "unsound contains condition",
+    "url": "https://docs.zizmor.sh/audits/#unsound-contains",
+    "determinations": {
+      "confidence": "High",
+      "severity": "Informational",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "contains(..) condition can be bypassed if attacker can control 'runner.name'",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "hackme"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 3
+              },
+              {
+                "Key": "if"
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 31,
+              "column": 8
+            },
+            "end_point": {
+              "row": 31,
+              "column": 52
+            },
+            "offset_span": {
+              "start": 719,
+              "end": 763
+            }
+          },
+          "feature": "        if: contains('runner1,runner2', runner.name)",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  }
+]
