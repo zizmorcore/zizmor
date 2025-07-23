@@ -41,6 +41,11 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
                             ControlFieldType::FreeString,
                             false,
                         ),
+                        // TIP: On first glance you might think this should be
+                        // `any` instead, but observe that each of these control
+                        // expressions is marked with `enabled_by_default: true`.
+                        // If we used `any` we'd end up accidentally satisfying
+                        // when the user only sets one of the control fields.
                         ControlExpr::all([
                             ControlExpr::single(
                                 Toggle::OptIn,
