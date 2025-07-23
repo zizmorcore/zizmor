@@ -1,15 +1,19 @@
-use github_actions_models::common::{EnvValue, Uses};
-use indexmap::IndexMap;
+use std::{sync::LazyLock, vec};
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Severity},
-    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _},
+    models::{
+        StepCommon,
+        coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle},
+    },
     state::AuditState,
 };
 
 const USES_MANUAL_CREDENTIAL: &str =
     "uses a manually-configured credential instead of Trusted Publishing";
+
+const KNOWN_RUBY_TP_INDICES: &[&str] = &["https://rubygems.org"];
 
 const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
     "https://upload.pypi.org/legacy/",
@@ -24,6 +28,72 @@ audit_meta!(
     "prefer trusted publishing for authentication"
 );
 
+static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str])>> =
+    LazyLock::new(|| {
+        vec![
+            (
+                ActionCoordinate::Configurable {
+                    uses_pattern: "pypa/gh-action-pypi-publish".parse().unwrap(),
+                    control: ControlExpr::all([
+                        ControlExpr::single(
+                            Toggle::OptIn,
+                            "password",
+                            ControlFieldType::FreeString,
+                            false,
+                        ),
+                        ControlExpr::all([
+                            ControlExpr::single(
+                                Toggle::OptIn,
+                                "repository-url",
+                                ControlFieldType::Exact(KNOWN_PYTHON_TP_INDICES),
+                                true,
+                            ),
+                            ControlExpr::single(
+                                Toggle::OptIn,
+                                "repository_url",
+                                ControlFieldType::Exact(KNOWN_PYTHON_TP_INDICES),
+                                true,
+                            ),
+                        ]),
+                    ]),
+                },
+                &["with", "password"],
+            ),
+            (
+                ActionCoordinate::Configurable {
+                    uses_pattern: "rubygems/release-gem".parse().unwrap(),
+                    control: ControlExpr::not(ControlExpr::single(
+                        Toggle::OptIn,
+                        "setup-trusted-publisher",
+                        ControlFieldType::Boolean,
+                        true,
+                    )),
+                },
+                &["with", "setup-trusted-publisher"],
+            ),
+            (
+                ActionCoordinate::Configurable {
+                    uses_pattern: "rubygems/configure-rubygems-credentials".parse().unwrap(),
+                    control: ControlExpr::all([
+                        ControlExpr::single(
+                            Toggle::OptIn,
+                            "api-token",
+                            ControlFieldType::FreeString,
+                            false,
+                        ),
+                        ControlExpr::single(
+                            Toggle::OptIn,
+                            "gem-server",
+                            ControlFieldType::Exact(KNOWN_RUBY_TP_INDICES),
+                            true,
+                        ),
+                    ]),
+                },
+                &["with", "api-token"],
+            ),
+        ]
+    });
+
 impl UseTrustedPublishing {
     fn process_step<'doc>(
         &self,
@@ -31,85 +101,32 @@ impl UseTrustedPublishing {
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
-        let StepBodyCommon::Uses {
-            uses: Uses::Repository(uses),
-            with,
-        } = &step.body()
-        else {
-            return Ok(findings);
-        };
-
-        let candidate = Self::finding()
-            .severity(Severity::Informational)
-            .confidence(Confidence::High)
-            .add_location(
-                step.location()
-                    .primary()
-                    .with_keys(["uses".into()])
-                    .annotated("this step"),
-            );
-
-        if uses.matches("pypa/gh-action-pypi-publish")
-            && self.pypi_publish_uses_manual_credentials(with)
-        {
-            findings.push(
-                candidate
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(["with".into(), "password".into()])
-                            .annotated(USES_MANUAL_CREDENTIAL),
-                    )
-                    .build(step)?,
-            );
-        } else if ((uses.matches("rubygems/release-gem"))
-            && self.release_gem_uses_manual_credentials(with))
-            || (uses.matches("rubygems/configure-rubygems-credential")
-                && self.rubygems_credential_uses_manual_credentials(with))
-        {
-            findings.push(
-                candidate
-                    .add_location(step.location().primary().annotated(USES_MANUAL_CREDENTIAL))
-                    .build(step)?,
-            );
+        for (coordinate, keys) in KNOWN_TRUSTED_PUBLISHING_ACTIONS.iter() {
+            // TODO: Capture the Some(Usage) here and specialize the
+            // finding with it.
+            if coordinate.usage(step).is_some() {
+                findings.push(
+                    Self::finding()
+                        .severity(Severity::Informational)
+                        .confidence(Confidence::High)
+                        .add_location(
+                            step.location()
+                                .primary()
+                                .with_keys(["uses".into()])
+                                .annotated("this step"),
+                        )
+                        .add_location(
+                            step.location()
+                                .primary()
+                                .with_keys(keys.iter().map(|k| (*k).into()))
+                                .annotated(USES_MANUAL_CREDENTIAL),
+                        )
+                        .build(step)?,
+                );
+            }
         }
 
         Ok(findings)
-    }
-
-    fn pypi_publish_uses_manual_credentials(&self, with: &IndexMap<String, EnvValue>) -> bool {
-        // `password` implies the step isn't using Trusted Publishing,
-        // but we also need to check `repository-url` to prevent false-positives
-        // on third-party indices.
-        let has_manual_credential = with.contains_key("password");
-
-        match with
-            .get("repository-url")
-            .or_else(|| with.get("repository_url"))
-        {
-            Some(repo_url) => {
-                has_manual_credential
-                    && KNOWN_PYTHON_TP_INDICES.contains(&repo_url.to_string().as_str())
-            }
-            None => has_manual_credential,
-        }
-    }
-
-    fn release_gem_uses_manual_credentials(&self, with: &IndexMap<String, EnvValue>) -> bool {
-        match with.get("setup-trusted-publisher") {
-            Some(v) if v.to_string() == "true" => false,
-            // Anything besides `true` means to *not* use trusted publishing.
-            Some(_) => true,
-            // Not set means the default, which is trusted publishing.
-            None => false,
-        }
-    }
-
-    fn rubygems_credential_uses_manual_credentials(
-        &self,
-        with: &IndexMap<String, EnvValue>,
-    ) -> bool {
-        with.contains_key("api-token")
     }
 }
 

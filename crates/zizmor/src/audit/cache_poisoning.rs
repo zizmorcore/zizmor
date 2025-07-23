@@ -34,7 +34,12 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions/setup-java/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-java".parse().unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::String, false),
+            control: ControlExpr::single(
+                Toggle::OptIn,
+                "cache",
+                ControlFieldType::FreeString,
+                false,
+            ),
         },
         // https://github.com/actions/setup-go/blob/main/action.yml
         ActionCoordinate::Configurable {
@@ -44,12 +49,22 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions/setup-node/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-node".parse().unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::String, false),
+            control: ControlExpr::single(
+                Toggle::OptIn,
+                "cache",
+                ControlFieldType::FreeString,
+                false,
+            ),
         },
         // https://github.com/actions/setup-python/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-python".parse().unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::String, false),
+            control: ControlExpr::single(
+                Toggle::OptIn,
+                "cache",
+                ControlFieldType::FreeString,
+                false,
+            ),
         },
         // https://github.com/actions/setup-dotnet/blob/main/action.yml
         ActionCoordinate::Configurable {
@@ -62,7 +77,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
             control: ControlExpr::single(
                 Toggle::OptOut,
                 "enable-cache",
-                ControlFieldType::String,
+                ControlFieldType::Boolean,
                 true,
             ),
         },
@@ -129,7 +144,12 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/graalvm/setup-graalvm/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "graalvm/setup-graalvm".parse().unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::String, false),
+            control: ControlExpr::single(
+                Toggle::OptIn,
+                "cache",
+                ControlFieldType::FreeString,
+                false,
+            ),
         },
         // https://github.com/gradle/actions/blob/main/setup-gradle/action.yml
         ActionCoordinate::Configurable {
@@ -151,7 +171,12 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                     ControlFieldType::Boolean,
                     true,
                 ),
-                ControlExpr::single(Toggle::OptIn, "version", ControlFieldType::String, false),
+                ControlExpr::single(
+                    Toggle::OptIn,
+                    "version",
+                    ControlFieldType::FreeString,
+                    false,
+                ),
             ]),
         },
         // https://github.com/actions-rust-lang/setup-rust-toolchain/blob/main/action.yml
@@ -337,8 +362,7 @@ impl CachePoisoning {
                     ),
                     // String control fields are action-specific and we can't reliably know
                     // what value disables caching (e.g., setup-node expects '' not 'false')
-                    (Toggle::OptIn, ControlFieldType::String)
-                    | (Toggle::OptOut, ControlFieldType::String) => {
+                    (Toggle::OptIn, _) | (Toggle::OptOut, _) => {
                         return None;
                     }
                 };
@@ -356,8 +380,8 @@ impl CachePoisoning {
                     }],
                 })
             }
-            // For complex control expressions (All/Any), don't provide automatic fixes for now
-            ControlExpr::All(_) | ControlExpr::Any(_) => None,
+            // For complex control expressions (All/Any/Not), don't provide automatic fixes for now
+            ControlExpr::All(_) | ControlExpr::Any(_) | ControlExpr::Not(_) => None,
         }
     }
 

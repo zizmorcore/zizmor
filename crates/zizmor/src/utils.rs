@@ -412,7 +412,7 @@ impl<'a> ExtractedExpr<'a> {
     }
 
     /// Creates a new [`ExtractedExpr`] from a fenced expression.
-    fn from_fenced(expr: &'a str) -> Option<Self> {
+    pub(crate) fn from_fenced(expr: &'a str) -> Option<Self> {
         expr.strip_prefix("${{")
             .and_then(|e| e.strip_suffix("}}"))
             .map(|_| ExtractedExpr {
