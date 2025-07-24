@@ -3,6 +3,8 @@
 # This workflow covers "first party" pull requests specifically,
 # i.e. those created from branches within the same repository.
 
+name: Benchmark PRs (first-party)
+
 on:
   pull_request:
     types: [opened, reopened, edited, synchronize]
