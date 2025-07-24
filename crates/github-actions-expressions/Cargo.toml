@@ -15,9 +15,10 @@ workspace = true
 
 [dependencies]
 anyhow.workspace = true
+itertools.workspace = true
 pest.workspace = true
 pest_derive.workspace = true
-itertools.workspace = true
+subfeature.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true

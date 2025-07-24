@@ -59,13 +59,11 @@ impl Audit for RefConfusion {
             )));
         }
 
-        let Some(client) = state.github_client() else {
-            return Err(AuditLoadError::Skip(anyhow!(
-                "can't run without a GitHub API token"
-            )));
-        };
-
-        Ok(Self { client })
+        state
+            .gh_client
+            .clone()
+            .ok_or_else(|| AuditLoadError::Skip(anyhow!("can't run without a GitHub API token")))
+            .map(|client| RefConfusion { client })
     }
 
     fn audit_workflow<'doc>(

@@ -4,6 +4,8 @@ use anyhow::Result;
 
 use crate::common::{OutputMode, input_under_test, zizmor};
 
+mod json_v1;
+
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn gha_hazmat() -> Result<()> {
@@ -15,7 +17,7 @@ fn gha_hazmat() -> Result<()> {
             .offline(false)
             .output(OutputMode::Both)
             .args(["--no-online-audits"])
-            .input("woodruffw/gha-hazmat@33cd22cdd7823a5795768388aff977fe992b5aad")
+            .input("woodruffw/gha-hazmat@83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61")
             .run()?
     );
     Ok(())

@@ -57,6 +57,8 @@ assert _README.is_file()
 logo_sponsors = []
 name_sponsors = []
 for sponsor in _SPONSORS:
+    if sponsor.get("former", False):
+        continue  # skip former sponsors
     if "img" in sponsor:
         logo_sponsors.append(_SPONSOR_LOGO_HTML.format(**sponsor).strip())
     else:

@@ -13,10 +13,12 @@
 // able to express things like
 // "match foo/bar if foo: A and not bar: B and baz: /abcd/"
 
-use std::ops::{BitAnd, BitOr};
+use std::ops::{BitAnd, BitOr, Not};
 
-use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
+use github_actions_models::common::{EnvValue, Uses};
 use indexmap::IndexMap;
+
+use crate::utils::ExtractedExpr;
 
 use super::{StepBodyCommon, StepCommon, uses::RepositoryUsesPattern};
 
@@ -89,8 +91,14 @@ pub(crate) enum Toggle {
 pub(crate) enum ControlFieldType {
     /// The behavior is controlled by a boolean field, e.g. `cache: true`.
     Boolean,
-    /// The behavior is controlled by a string field, e.g. `cache: "pip"`.
-    String,
+    /// The behavior is controlled by a "free" string field.
+    ///
+    /// This is effectively a "presence" check, i.e. is satisfied if
+    /// the field is present, regardless of its value.
+    FreeString,
+    /// The behavior is controlled by a "fixed" string field, i.e. only applies
+    /// when the field matches one of the given values.
+    Exact(&'static [&'static str]),
 }
 
 /// The result of evaluating a control expression.
@@ -105,6 +113,19 @@ pub(crate) enum ControlEvaluation {
     /// The control expression is conditionally satisfied,
     /// i.e. depends on an actions expression or similar.
     Conditional,
+}
+
+impl Not for ControlEvaluation {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            ControlEvaluation::DefaultSatisfied => ControlEvaluation::NotSatisfied,
+            ControlEvaluation::Satisfied => ControlEvaluation::NotSatisfied,
+            ControlEvaluation::NotSatisfied => ControlEvaluation::Satisfied,
+            ControlEvaluation::Conditional => ControlEvaluation::Conditional,
+        }
+    }
 }
 
 impl BitAnd for ControlEvaluation {
@@ -248,6 +269,8 @@ pub(crate) enum ControlExpr {
     /// Existential quantification: any of the fields must be satisfied.
     #[allow(dead_code)]
     Any(Vec<ControlExpr>),
+    /// Negation: the "opposite" of the expression's satisfaction.
+    Not(Box<ControlExpr>),
 }
 
 impl ControlExpr {
@@ -269,28 +292,64 @@ impl ControlExpr {
         Self::All(exprs.into_iter().collect())
     }
 
+    pub(crate) fn not(expr: ControlExpr) -> Self {
+        Self::Not(Box::new(expr))
+    }
+
     pub(crate) fn eval(&self, with: &IndexMap<String, EnvValue>) -> ControlEvaluation {
         match self {
             ControlExpr::Single {
                 toggle,
                 field_name,
-                field_type: _,
+                field_type,
                 satisfied_by_default: enabled_by_default,
             } => {
                 // If the controlling field is not present, the default dictates the semantics.
                 if let Some(field_value) = with.get(*field_name) {
-                    match field_value.to_string().as_str() {
-                        "false" => match toggle {
-                            Toggle::OptIn => ControlEvaluation::NotSatisfied,
-                            Toggle::OptOut => ControlEvaluation::Satisfied,
-                        },
-                        other => match ExplicitExpr::from_curly(other) {
-                            None => match toggle {
+                    match field_type {
+                        // We expect a boolean control.
+                        ControlFieldType::Boolean => match field_value.to_string().as_str() {
+                            "true" => match toggle {
                                 Toggle::OptIn => ControlEvaluation::Satisfied,
                                 Toggle::OptOut => ControlEvaluation::NotSatisfied,
                             },
-                            Some(_) => ControlEvaluation::Conditional,
+                            "false" => match toggle {
+                                Toggle::OptIn => ControlEvaluation::NotSatisfied,
+                                Toggle::OptOut => ControlEvaluation::Satisfied,
+                            },
+                            other => match ExtractedExpr::from_fenced(other) {
+                                // We have something like `foo: ${{ expr }}`,
+                                // which could evaluate either way.
+                                Some(_) => ControlEvaluation::Conditional,
+                                // We have something like `foo: bar`, but we
+                                // were expecting a boolean. Assume pessimistically
+                                // that the action coerces any non-`false` value to `true`.
+                                None => match toggle {
+                                    Toggle::OptIn => ControlEvaluation::Satisfied,
+                                    Toggle::OptOut => ControlEvaluation::NotSatisfied,
+                                },
+                            },
                         },
+                        // We expect a "free" string control, i.e. any value.
+                        // Evaluate just the toggle.
+                        ControlFieldType::FreeString => match toggle {
+                            Toggle::OptIn => ControlEvaluation::Satisfied,
+                            Toggle::OptOut => ControlEvaluation::NotSatisfied,
+                        },
+                        // We expect a "fixed" string control, i.e. one of a set of values.
+                        ControlFieldType::Exact(items) => {
+                            if items.contains(&field_value.to_string().as_str()) {
+                                match toggle {
+                                    Toggle::OptIn => ControlEvaluation::Satisfied,
+                                    Toggle::OptOut => ControlEvaluation::NotSatisfied,
+                                }
+                            } else {
+                                match toggle {
+                                    Toggle::OptIn => ControlEvaluation::NotSatisfied,
+                                    Toggle::OptOut => ControlEvaluation::Satisfied,
+                                }
+                            }
+                        }
                     }
                 } else if *enabled_by_default {
                     ControlEvaluation::DefaultSatisfied
@@ -306,6 +365,7 @@ impl ControlExpr {
                 .iter()
                 .map(|expr| expr.eval(with))
                 .fold(ControlEvaluation::NotSatisfied, |acc, expr| acc | expr),
+            ControlExpr::Not(expr) => !expr.eval(with),
         }
     }
 }
@@ -335,38 +395,38 @@ mod tests {
     #[test]
     fn test_usage() {
         let workflow = r#"
-name: test_usage
-on: push
-jobs:
-  test_usage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: foo/bar      # 0
+    name: test_usage
+    on: push
+    jobs:
+      test_usage:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: foo/bar@v1      # 0
 
-      - uses: foo/bar@v1   # 1
+          - uses: foo/bar@v1      # 1
 
-      - uses: not/thesame  # 2
-        with:
-          set-me: true
+          - uses: not/thesame@v1  # 2
+            with:
+              set-me: true
 
-      - uses: not/thesame  # 3
+          - uses: not/thesame@v1  # 3
 
-      - uses: foo/bar      # 4
-        with:
-          set-me: true
+          - uses: foo/bar@v1      # 4
+            with:
+              set-me: true
 
-      - uses: foo/bar      # 5
-        with:
-          set-me: false
+          - uses: foo/bar@v1      # 5
+            with:
+              set-me: false
 
-      - uses: foo/bar      # 6
-        with:
-          disable-cache: true
+          - uses: foo/bar@v1      # 6
+            with:
+              disable-cache: true
 
-      - uses: foo/bar      # 7
-        with:
-          disable-cache: false
-"#;
+          - uses: foo/bar@v1      # 7
+            with:
+              disable-cache: false
+    "#;
 
         let workflow =
             Workflow::from_string(workflow.into(), InputKey::local("dummy", None).unwrap())

@@ -5,11 +5,12 @@ use crate::{
     Confidence, Severity,
     finding::{
         Finding, Persona,
-        location::{Feature, Location, Subfeature},
+        location::{Feature, Location},
     },
     models::{StepCommon, action::CompositeStep, workflow::Step},
     utils::parse_expressions_from_input,
 };
+use subfeature::Subfeature;
 
 use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
 

@@ -12,11 +12,18 @@ of `zizmor`.
 ### Enhancements 🌱
 
 * The [cache-poisoning] audit now supports auto-fixes for many findings (#923)
+* The [known-vulnerable-actions] audit now supports auto-fixes for many findings
+  (#1019)
+* `zizmor` is now stricter about parsing `uses:` clauses. In particular,
+  `zizmor` will no longer accept `uses: org/repo` without a trailing
+  `@ref`, as GitHub Actions itself does not accept this syntax (#1019)
 
 ### Bug Fixes 🐛
 
 * Fixed a bug where `--fix` would fail to preserve comments when modifying
   block-style YAML mappings (#995)
+* Fixed a bug where `zizmor` would crash when given a GitHub API token
+  with leading or trailing whitespace (#1027)
 
 ## 1.11.0
 

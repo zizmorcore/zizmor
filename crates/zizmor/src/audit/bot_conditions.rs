@@ -11,13 +11,11 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    finding::{
-        Confidence, Fix, FixDisposition, Severity,
-        location::{Locatable as _, Subfeature},
-    },
+    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
     models::workflow::{JobExt, Workflow},
     utils::ExtractedExpr,
 };
+use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
 pub(crate) struct BotConditions;
@@ -387,9 +385,8 @@ impl BotConditions {
             patches: vec![Patch {
                 route: if_route,
                 operation: Op::RewriteFragment {
-                    from: spoofable_context_raw.into(),
+                    from: subfeature::Subfeature::new(0, spoofable_context_raw),
                     to: safe_context.into(),
-                    after: None,
                 },
             }],
         })
@@ -415,8 +412,7 @@ mod tests {
             let audit_state = AuditState {
                 config: &Default::default(),
                 no_online_audits: false,
-                cache_dir: "/tmp/zizmor".into(),
-                gh_token: None,
+                gh_client: None,
                 gh_hostname: GitHubHost::Standard("github.com".into()),
             };
             let audit = <$audit_type>::new(&audit_state).unwrap();

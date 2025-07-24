@@ -8,14 +8,13 @@ use std::{io::Read, ops::Deref, path::Path};
 use anyhow::{Context, Result, anyhow};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
-use github_actions_models::common::RepositoryUses;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
 };
 use owo_colors::OwoColorize;
 use reqwest::{
     Response, StatusCode,
-    header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT},
+    header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, InvalidHeaderValue, USER_AGENT},
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, de::DeserializeOwned};
@@ -24,7 +23,7 @@ use tracing::instrument;
 
 use crate::{
     InputRegistry,
-    registry::{InputKey, InputKind},
+    registry::{InputKey, InputKind, RepoSlug},
     utils::PipeSelf,
 };
 
@@ -36,7 +35,7 @@ pub(crate) enum GitHubHost {
 }
 
 impl GitHubHost {
-    pub(crate) fn from_clap(hostname: &str) -> Result<Self, String> {
+    pub(crate) fn new(hostname: &str) -> Result<Self, String> {
         let normalized = hostname.to_lowercase();
 
         // NOTE: ideally we'd do a full domain validity check here.
@@ -61,20 +60,43 @@ impl GitHubHost {
     }
 }
 
+/// A sanitized GitHub access token.
+#[derive(Clone)]
+pub(crate) struct GitHubToken(String);
+
+impl GitHubToken {
+    pub(crate) fn new(token: &str) -> Result<Self, String> {
+        let token = token.trim();
+        if token.is_empty() {
+            return Err("GitHub token cannot be empty".into());
+        }
+        Ok(Self(token.to_owned()))
+    }
+
+    fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
+        HeaderValue::from_str(&format!("Bearer {}", self.0))
+    }
+}
+
+#[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
     http: ClientWithMiddleware,
 }
 
 impl Client {
-    pub(crate) fn new(hostname: &GitHubHost, token: &str, cache_dir: &Path) -> Self {
+    pub(crate) fn new(
+        hostname: &GitHubHost,
+        token: &GitHubToken,
+        cache_dir: &Path,
+    ) -> anyhow::Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
         headers.insert(
             AUTHORIZATION,
-            format!("Bearer {token}")
-                .parse()
-                .expect("couldn't build authorization header for GitHub client?"),
+            token
+                .to_header_value()
+                .context("couldn't build authorization header for GitHub client")?,
         );
         headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
         headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
@@ -105,10 +127,10 @@ impl Client {
         }))
         .build();
 
-        Self {
+        Ok(Self {
             api_base: hostname.to_api_url(),
             http,
-        }
+        })
     }
 
     async fn paginate<T: DeserializeOwned>(
@@ -327,7 +349,7 @@ impl Client {
     #[tokio::main]
     pub(crate) async fn fetch_workflows(
         &self,
-        slug: &RepositoryUses,
+        slug: &RepoSlug,
         registry: &mut InputRegistry,
     ) -> Result<()> {
         let owner = &slug.owner;
@@ -394,7 +416,7 @@ impl Client {
     #[tokio::main]
     pub(crate) async fn fetch_audit_inputs(
         &self,
-        slug: &RepositoryUses,
+        slug: &RepoSlug,
         registry: &mut InputRegistry,
     ) -> Result<()> {
         let url = format!(
@@ -514,6 +536,13 @@ pub(crate) struct Comparison {
 pub(crate) struct Advisory {
     pub(crate) ghsa_id: String,
     pub(crate) severity: String,
+    pub(crate) vulnerabilities: Vec<Vulnerability>,
+}
+
+/// Represents a vulnerability within a GHSA advisory.
+#[derive(Deserialize)]
+pub(crate) struct Vulnerability {
+    pub(crate) first_patched_version: Option<String>,
 }
 
 /// Represents a file listing from GitHub's contents API.
@@ -525,7 +554,7 @@ pub(crate) struct File {
 
 #[cfg(test)]
 mod tests {
-    use crate::github_api::GitHubHost;
+    use crate::github_api::{GitHubHost, GitHubToken};
 
     #[test]
     fn test_github_host() {
@@ -537,7 +566,26 @@ mod tests {
                 "https://selfhosted.example.com/api/v3",
             ),
         ] {
-            assert_eq!(GitHubHost::from_clap(host).unwrap().to_api_url(), expected);
+            assert_eq!(GitHubHost::new(host).unwrap().to_api_url(), expected);
+        }
+    }
+
+    #[test]
+    fn test_github_token() {
+        for (token, expected) in [
+            ("gha_testtest\n", "gha_testtest"),
+            ("  gha_testtest  ", "gha_testtest"),
+            ("gho_testtest", "gho_testtest"),
+            ("gho_test\ntest", "gho_test\ntest"),
+        ] {
+            assert_eq!(GitHubToken::new(token).unwrap().0, expected);
+        }
+    }
+
+    #[test]
+    fn test_github_token_err() {
+        for token in ["", " ", "\r", "\n", "\t", "     "] {
+            assert!(GitHubToken::new(token).is_err());
         }
     }
 }

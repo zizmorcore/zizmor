@@ -224,9 +224,8 @@ foo:
     let operations = vec![Patch {
         route: route!("foo", "bar"),
         operation: Op::RewriteFragment {
-            from: "${{ foo }}".into(),
+            from: subfeature::Subfeature::new(0, "${{ foo }}"),
             to: "${FOO}".into(),
-            after: None,
         },
     }];
 
@@ -254,9 +253,8 @@ foo:
     let operations = vec![Patch {
         route: route!("foo", "bar"),
         operation: Op::RewriteFragment {
-            from: "${{ foo }}".into(),
+            from: subfeature::Subfeature::new(0, "${{ foo }}"),
             to: "${FOO}".into(),
-            after: None,
         },
     }];
 
@@ -274,9 +272,11 @@ foo:
     let operations = vec![Patch {
         route: route!("foo", "bar"),
         operation: Op::RewriteFragment {
-            from: "${{ foo }}".into(),
+            from: subfeature::Subfeature::new(
+                original.find("${{ foo }}").unwrap() + 1,
+                "${{ foo }}",
+            ),
             to: "${FOO}".into(),
-            after: original.find("${{ foo }}").map(|idx| idx + 1),
         },
     }];
 
@@ -309,17 +309,15 @@ jobs:
         Patch {
             route: route!("jobs", "test", "steps", 0, "run"),
             operation: Op::RewriteFragment {
-                from: "${{ foo }}".into(),
+                from: subfeature::Subfeature::new(0, "${{ foo }}"),
                 to: "${FOO}".into(),
-                after: None,
             },
         },
         Patch {
             route: route!("jobs", "test", "steps", 0, "run"),
             operation: Op::RewriteFragment {
-                from: "${{ bar }}".into(),
+                from: subfeature::Subfeature::new(0, "${{ bar }}"),
                 to: "${BAR}".into(),
-                after: None,
             },
         },
     ];
@@ -335,6 +333,87 @@ jobs:
                   echo "foo: ${FOO}"
                   echo "bar: ${BAR}"
         "#);
+}
+
+/// `Operation::ReplaceComment` should replace the comment
+/// at the given route with the new comment, without affecting
+/// any YAML values or any other comments.
+#[test]
+fn test_replace_comment() {
+    let original = r#"
+foo:
+  bar: baz # This is a comment
+  abc: def # Another comment
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo", "bar"),
+        operation: Op::ReplaceComment {
+            new: "# Updated comment".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r"
+        foo:
+          bar: baz # Updated comment
+          abc: def # Another comment
+        ");
+}
+
+/// `Operation::ReplaceComment` should fdo nothing if there is no comment
+/// at the given route, and should not affect the YAML value.
+#[test]
+fn test_replace_comment_noop() {
+    let original = r#"
+foo:
+    bar: baz
+    abc: def
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo", "bar"),
+        operation: Op::ReplaceComment {
+            new: "# This comment does not exist".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r"
+        foo:
+            bar: baz
+            abc: def
+        ");
+}
+
+/// `Operation::ReplaceComment` should fail if there are multiple comments
+/// at the given route, as it's unclear which one to replace.
+#[test]
+fn test_replace_comment_fails_on_too_many_comments() {
+    let original = r#"
+foo:
+    bar: baz # First comment
+    abc: def # Second comment
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::ReplaceComment {
+            new: "# This won't work".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations);
+
+    assert!(result.is_err());
 }
 
 #[test]
@@ -937,7 +1016,7 @@ jobs:
       - run: echo "test""#;
 
     // Test with trailing newline (common in real files)
-    let original_with_newline = format!("{}\n", original);
+    let original_with_newline = format!("{original}\n");
 
     let operations = vec![Patch {
         route: route!("jobs", "test"),
@@ -1090,16 +1169,14 @@ fn test_comment_boundary_issue() {
     // Assert that there's content between the steps (whitespace and list marker)
     assert!(
         !content_between.is_empty(),
-        "There should be content between steps. Content between: {:?}",
-        content_between
+        "There should be content between steps. Content between: {content_between:?}"
     );
 
     // The content between is just whitespace and the list marker for step2
     // yamlpath includes comments as part of the respective steps
     assert!(
         content_between.contains("- "),
-        "Should contain list marker for step2. Content between: {:?}",
-        content_between
+        "Should contain list marker for step2. Content between: {content_between:?}"
     );
 
     // Assert that step boundaries don't overlap
@@ -1393,8 +1470,7 @@ fn test_debug_indentation_issue() {
     // Assert that leading whitespace extraction includes the step content
     assert!(
         feature_with_ws.contains("name: Test step"),
-        "Step should contain the step name. Actual content: {:?}",
-        feature_with_ws
+        "Step should contain the step name. Actual content: {feature_with_ws:?}"
     );
 
     // Assert that the content includes the multiline run block
@@ -1417,7 +1493,7 @@ fn test_debug_indentation_issue() {
     if let Some(first_line) = feature_with_ws.lines().next() {
         if let Some(_colon_pos) = first_line.find(':') {
             let key_indent = &first_line[..first_line.len() - first_line.trim_start().len()];
-            let final_indent = format!("{}  ", key_indent);
+            let final_indent = format!("{key_indent}  ");
 
             // Assert that indentation calculation works correctly
             assert!(!final_indent.is_empty(), "Final indent should not be empty");
@@ -1520,15 +1596,13 @@ jobs:
                     }
                 } else {
                     panic!(
-                        "Env content should parse as a mapping. Actual content: {:?}",
-                        env_content
+                        "Env content should parse as a mapping. Actual content: {env_content:?}"
                     );
                 }
             }
             Err(e) => {
                 panic!(
-                    "Env content should parse as valid YAML: {}. Actual content: {:?}",
-                    e, env_content
+                    "Env content should parse as valid YAML: {e}. Actual content: {env_content:?}"
                 );
             }
         }

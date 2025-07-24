@@ -1209,8 +1209,7 @@ actions should be pinned by SHA reference.
 By default, this audit applies the following policy:
 
 * Official GitHub actions namespaces can be pinned by branch or tag.
-  In other words, `actions/checkout@v4` is acceptable, but `actions/checkout`
-  is not.
+  In other words, `actions/checkout@v4` is acceptable.
 * All other actions must be pinned by SHA reference.
 
 This audit can be configured with a custom set of rules, e.g. to
@@ -1255,6 +1254,12 @@ The valid policies are:
   pinned either symbolic or SHA reference.
 * `any`: no pinning is required for any `#!yaml uses:` clauses that match the associated
   pattern.
+
+    !!! tip
+
+        For repository `#!yaml uses` clauses like `#!yaml uses: actions/checkout@v4`
+        this is equivalent to `ref-pin`, as GitHub Actions does not permit
+        completely unpinned repository actions.
 
 If a `#!yaml uses:` clauses matches multiple rules, the most specific one is used
 regardless of definition order.
@@ -1312,7 +1317,7 @@ regardless of definition order.
     - :simple-go: @stacklok/frizbee: supports hash-pinning (but not updating)
       workflow definitions.
 
-        See also @stacklok/frizbee#184 for current usage caveats.
+        See also stacklok/frizbee#184 for current usage caveats.
 
 For repository actions (like @actions/checkout): add a branch, tag, or SHA
 reference.
@@ -1332,7 +1337,7 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
           unpinned-uses:
               runs-on: ubuntu-latest
               steps:
-              - uses: actions/checkout
+              - uses: pypa/gh-action-pypi-publish@v1.12.4
                 with:
                 persist-credentials: false
 
@@ -1352,7 +1357,7 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
           unpinned-uses:
               runs-on: ubuntu-latest
               steps:
-              - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+              - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc  # v1.12.4
                 with:
                 persist-credentials: false
 

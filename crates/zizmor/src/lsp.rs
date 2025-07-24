@@ -261,8 +261,7 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     let audit_state = AuditState {
         config: &config,
         no_online_audits: false,
-        cache_dir: std::env::temp_dir(),
-        gh_token: None,
+        gh_client: None,
         gh_hostname: crate::GitHubHost::Standard("github.com".into()),
     };
 

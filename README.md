@@ -1,5 +1,6 @@
 # 🌈 zizmor
 
+[![zizmor](https://img.shields.io/badge/%F0%9F%8C%88-zizmor-white?labelColor=white)](https://zizmor.sh/)
 [![CI](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml/badge.svg)](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/zizmor)](https://crates.io/crates/zizmor)
 [![Packaging status](https://repology.org/badge/tiny-repos/zizmor.svg)](https://repology.org/project/zizmor/versions)
@@ -56,13 +57,6 @@ See [our contributing guide!](./CONTRIBUTING.md)
 <caption>Logo-level sponsors</caption>
 <tbody>
 <tr>
-<td align="center" valign="top" width="15%">
-<a href="https://astral.sh/">
-<img src="https://avatars.githubusercontent.com/u/115962839?s=100&v=4" width="100px">
-<br>
-Astral
-</a>
-</td>
 <td align="center" valign="top" width="15%">
 <a href="https://grafana.com/">
 <img src="https://avatars.githubusercontent.com/u/7195757?s=100&v=4" width="100px">

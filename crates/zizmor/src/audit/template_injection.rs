@@ -29,7 +29,7 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
-        location::{Routable as _, Subfeature, SymbolicLocation},
+        location::{Routable as _, SymbolicLocation},
     },
     models::{
         self, StepCommon, action::CompositeStep, inputs::Capability, uses::RepositoryUsesPattern,
@@ -38,6 +38,7 @@ use crate::{
     state::AuditState,
     utils::{DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_expressions},
 };
+use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
 pub(crate) struct TemplateInjection;
@@ -286,9 +287,8 @@ impl TemplateInjection {
         patches.push(Patch {
             route: step.route().with_key("run"),
             operation: Op::RewriteFragment {
-                from: raw.as_raw().to_string().into(),
+                from: subfeature::Subfeature::new(0, raw.as_raw()),
                 to: format!("${{{env_var}}}").into(),
-                after: None,
             },
         });
 
@@ -605,8 +605,7 @@ mod tests {
             let audit_state = AuditState {
                 config: &Default::default(),
                 no_online_audits: false,
-                cache_dir: "/tmp/zizmor".into(),
-                gh_token: None,
+                gh_client: None,
                 gh_hostname: GitHubHost::Standard("github.com".into()),
             };
             let audit = <$audit_type>::new(&audit_state).unwrap();
@@ -628,9 +627,7 @@ mod tests {
             .fixes
             .iter()
             .find(|f| f.title == expected_title)
-            .unwrap_or_else(|| {
-                panic!("Expected fix with title '{}' but not found", expected_title)
-            });
+            .unwrap_or_else(|| panic!("Expected fix with title '{expected_title}' but not found"));
 
         fix.apply(document).unwrap()
     }

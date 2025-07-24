@@ -412,7 +412,7 @@ impl<'a> ExtractedExpr<'a> {
     }
 
     /// Creates a new [`ExtractedExpr`] from a fenced expression.
-    fn from_fenced(expr: &'a str) -> Option<Self> {
+    pub(crate) fn from_fenced(expr: &'a str) -> Option<Self> {
         expr.strip_prefix("${{")
             .and_then(|e| e.strip_suffix("}}"))
             .map(|_| ExtractedExpr {
@@ -444,7 +444,7 @@ impl<'a> ExtractedExpr<'a> {
 
     // Returns the extracted expression exactly as it was extracted,
     // including any fencing.
-    pub(crate) fn as_raw(&self) -> &str {
+    pub(crate) fn as_raw(&self) -> &'a str {
         self.inner
     }
 }
@@ -457,10 +457,7 @@ impl<'a> ExtractedExpr<'a> {
 ///
 /// Adapted roughly from GitHub's `parseScalar`:
 /// See: <https://github.com/actions/languageservices/blob/3a8c29c2d/workflow-parser/src/templates/template-reader.ts#L448>
-fn extract_expression(
-    text: &str,
-    offset: usize,
-) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
+fn extract_expression(text: &str, offset: usize) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
     let view = &text[offset..];
     let start = view.find("${{")?;
 

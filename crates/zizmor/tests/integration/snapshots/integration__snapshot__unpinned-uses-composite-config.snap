@@ -1,6 +1,7 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().config(input_under_test(\"unpinned-uses/configs/composite.yml\")).input(input_under_test(\"unpinned-uses/menagerie-of-uses.yml\")).run()?"
+snapshot_kind: text
 ---
 error[unpinned-uses]: unpinned action reference
   --> @@INPUT@@:12:9
@@ -11,17 +12,17 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
 
 error[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:28:9
+  --> @@INPUT@@:24:9
    |
-28 |       - uses: github/codeql-action/init@v3
+24 |       - uses: github/codeql-action/init@v3
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
 error[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:30:9
+  --> @@INPUT@@:26:9
    |
-30 |       - uses: github/codeql-action/upload-sarif@v3
+26 |       - uses: github/codeql-action/upload-sarif@v3
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High

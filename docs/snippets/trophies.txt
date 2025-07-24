@@ -19,6 +19,8 @@ artichoke/project-infrastructure#683
 artichoke/setup-rust#121
 ashishb/wp2hugo#91
 astral-sh/ruff#14844
+astronomer/astronomer-cosmos#1870
+astronomer/dag-factory#482
 astropy/astropy#17315
 autotag-dev/autotag#142
 BerkeleyLearnVerify/Scenic#320
@@ -48,6 +50,7 @@ django-commons/django-tasks-scheduler#272
 Diaoul/subliminal#1190
 docker/compose#12737
 earthobservations/wetterdienst#1440
+edgelesssys/contrast#1604
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615

@@ -26,6 +26,6 @@ runs:
           echo "hello ${{ inputs.expandme }}"
 
     - name: case4
-      uses: azure/powershell
+      uses: azure/powershell@whatever
       with:
         inlineScript: Get-AzVM -ResourceGroupName "${{ inputs.expandme }}"

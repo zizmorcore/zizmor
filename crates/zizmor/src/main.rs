@@ -15,8 +15,7 @@ use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
-use github_actions_models::common::Uses;
-use github_api::GitHubHost;
+use github_api::{GitHubHost, GitHubToken};
 use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
@@ -26,6 +25,8 @@ use terminal_link::Link;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
+
+use crate::registry::RepoSlug;
 
 mod audit;
 mod config;
@@ -69,11 +70,11 @@ struct App {
     offline: bool,
 
     /// The GitHub API token to use.
-    #[arg(long, env, value_parser = NonEmptyStringValueParser::new())]
-    gh_token: Option<String>,
+    #[arg(long, env, value_parser = GitHubToken::new)]
+    gh_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
-    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::from_clap)]
+    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::new)]
     gh_hostname: GitHubHost,
 
     /// Perform only offline audits.
@@ -420,8 +421,7 @@ fn collect_from_repo_slug(
     state: &AuditState,
     registry: &mut InputRegistry,
 ) -> Result<()> {
-    // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
-    let Ok(Uses::Repository(slug)) = Uses::from_str(input) else {
+    let Ok(slug) = RepoSlug::from_str(input) else {
         return Err(anyhow!(tips(
             format!("invalid input: {input}"),
             &[format!(
@@ -433,15 +433,7 @@ fn collect_from_repo_slug(
         )));
     };
 
-    // We don't expect subpaths here.
-    if slug.subpath.is_some() {
-        return Err(anyhow!(tips(
-            "invalid GitHub repository reference",
-            &["pass owner/repo or owner/repo@ref"]
-        )));
-    }
-
-    let client = state.github_client().ok_or_else(|| {
+    let client = state.gh_client.as_ref().ok_or_else(|| {
         anyhow!(tips(
             format!("can't retrieve repository: {input}", input = input.green()),
             &[format!(
@@ -646,7 +638,7 @@ fn run() -> Result<ExitCode> {
         ))
     })?;
 
-    let audit_state = AuditState::new(&app, &config);
+    let audit_state = AuditState::new(&app, &config)?;
     let registry = collect_inputs(
         &app.inputs,
         &app.collect,
@@ -692,7 +684,7 @@ fn run() -> Result<ExitCode> {
     match app.format {
         OutputFormat::Plain => output::plain::render_findings(&app, &registry, &results),
         OutputFormat::Json | OutputFormat::JsonV1 => {
-            serde_json::to_writer_pretty(stdout(), &results.findings())?
+            output::json::v1::output(stdout(), results.findings())?
         }
         OutputFormat::Sarif => {
             serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))?
