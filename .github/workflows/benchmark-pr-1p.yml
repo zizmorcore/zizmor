@@ -44,6 +44,30 @@ jobs:
       - name: Run benchmarks
         run: make bench
 
+      - name: Upload benchmark results
+        # Take each result file in bench/results/*.json and use
+        # `bencher run` to upload it.
+        run: |
+          for file in bench/results/*.json; do
+            bencher run \
+              --project zizmor \
+              --token "${BENCHER_API_TOKEN}" \
+              --branch "${GITHUB_HEAD_REF}" \
+              --start-point "${GITHUB_BASE_REF}" \
+              --start-point-hash "${PULL_REQUEST_BASE_SHA}" \
+              --start-point-clone-thresholds \
+              --start-point-reset \
+              --testbed ubuntu-latest \
+              --err \
+              --adapter shell_hyperfine \
+              --github-actions "${GITHUB_TOKEN}" \
+              --file "${file}"
+          done
+        env:
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
       # - name: Track PR Benchmarks with Bencher
       #   run: |
       #     bencher run \
