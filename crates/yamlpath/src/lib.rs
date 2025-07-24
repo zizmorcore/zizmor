@@ -510,8 +510,8 @@ impl Document {
         // With this AST the spanning parent is 'parent', but the 'comment'
         // node is actually *adjacent* to 'parent' rather than enclosed in it.
 
-        let start_line = feature.location.point_span.0 .0;
-        let end_line = feature.location.point_span.1 .0;
+        let start_line = feature.location.point_span.0.0;
+        let end_line = feature.location.point_span.1.0;
 
         fn trawl<'tree>(
             node: &Node<'tree>,

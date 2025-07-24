@@ -2274,9 +2274,11 @@ fn test_merge_into_preserves_comments_in_env_block() {
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // Check that the comment is preserved
-    assert!(result
-        .source()
-        .contains("# An existing comment about this wacky env-var"));
+    assert!(
+        result
+            .source()
+            .contains("# An existing comment about this wacky env-var")
+    );
 
     insta::assert_snapshot!(result.source(), @r#"
         jobs:
@@ -2827,5 +2829,51 @@ items: [zero, one, two, three, four]
     // Should handle boundary indices correctly
     insta::assert_snapshot!(result.source(), @r"
         items: [one, two, three]
+        ");
+}
+
+#[test]
+#[ignore = "known limitation: string-based detection fails with nested flow structures like {[...]}"]
+fn test_remove_flow_sequence_inside_flow_mapping_malformed() {
+    // Test case for issue: {[foo: bar, baz: abc]} syntax
+    // This creates a flow mapping with a sequence as a key (malformed YAML)
+    // but the string-based detection incorrectly thinks it's both a flow mapping and sequence
+    let original = r#"
+test: {[foo: bar, baz: abc]}
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("test", 0), // This should fail - no sequence at this level
+        operation: Op::Remove,
+    }];
+
+    // This currently gives wrong error due to brittle string detection
+    let result = apply_yaml_patches(&document, &operations);
+    assert!(result.is_err());
+}
+
+#[test]
+#[ignore = "known limitation: string-based detection fails with mixed flow structures"]
+fn test_remove_flow_mapping_inside_flow_sequence() {
+    // Test case for issue: [{foo: bar}] syntax where flow mappings are inside flow sequences
+    // The string-based detection might choose wrong handler due to presence of both { } and [ ]
+    let original = r#"
+items: [{foo: bar}, {baz: qux}]
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("items", 0, "foo"), // Remove 'foo' key from first mapping in sequence
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should remove the foo key from the first flow mapping
+    insta::assert_snapshot!(result.source(), @r"
+        items: [{baz: qux}]
         ");
 }
