@@ -144,6 +144,8 @@ class Bench:
 
         hyperfine_command = [
             "hyperfine",
+            "--warmup",
+            "3",
             # NOTE: not needed because we use --no-exit-codes in the stencil
             # "--ignore-failure",
             "--export-json",
