@@ -44,3 +44,8 @@ crates/zizmor/data/codeql-injection-sinks.json: support/codeql-injection-sinks.p
 .PHONY: pinact
 pinact:
 	pinact run --update --verify
+
+
+.PHONY: bench
+bench:
+	uv run bench/benchmark.py

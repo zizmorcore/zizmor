@@ -1,0 +1,9 @@
+[
+    {
+        "name": "grafana-9f212d11d0ac",
+        "source_type": "archive-url",
+        "source": "https://github.com/grafana/grafana/archive/9f212d11d0ac9c38ada62a7db830844bb9b02905.zip",
+        "source_sha256": "c6d42b52c8d912db2698d8b06f227de46f0c2d04cc757841792ed6567f0c56c7",
+        "stencil": "$ZIZMOR --offline --format=plain --no-exit-codes --no-config $INPUTS"
+    }
+]
