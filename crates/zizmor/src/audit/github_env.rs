@@ -1,5 +1,5 @@
 use std::ops::{Deref, Range};
-use std::sync::{LazyLock, RwLock};
+use std::sync::LazyLock;
 
 use anyhow::{Context, Result};
 use github_actions_models::action;
@@ -21,12 +21,8 @@ static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 pub(crate) struct GitHubEnv {
-    // Ideally we'd use a RefCell here, but the LSP mode requires that
-    // each Audit be Sync.
-    // TODO: Evaluate whether this is worth it. Maybe just loading a new parser
-    // each time would be just as fast?
-    bash_parser: RwLock<Parser>,
-    pwsh_parser: RwLock<Parser>,
+    bash: Language,
+    pwsh: Language,
 
     // cached queries
     bash_redirect_query: SpannedQuery,
@@ -180,12 +176,14 @@ impl GitHubEnv {
         &self,
         script_body: &'hay str,
     ) -> Result<Vec<(&'hay str, Range<usize>)>> {
+        let mut parser = Parser::new();
+        parser
+            .set_language(&self.bash)
+            .context("failed to set bash language for parser")?;
+
         let mut cursor = QueryCursor::new();
 
-        let tree = self
-            .bash_parser
-            .write()
-            .unwrap()
+        let tree = parser
             .parse(script_body, None)
             .context("failed to parse `run:` body as bash")?;
 
@@ -283,10 +281,12 @@ impl GitHubEnv {
         &self,
         script_body: &'hay str,
     ) -> Result<Vec<(&'hay str, Range<usize>)>> {
-        let tree = &self
-            .pwsh_parser
-            .write()
-            .unwrap()
+        let mut parser = Parser::new();
+        parser
+            .set_language(&self.pwsh)
+            .context("failed to set pwsh language for parser")?;
+
+        let tree = parser
             .parse(script_body, None)
             .context("failed to parse `run:` body as pwsh")?;
 
@@ -295,7 +295,7 @@ impl GitHubEnv {
         let mut matching_spans = vec![];
 
         for query in queries {
-            let matches = self.query(query, &mut cursor, tree, script_body);
+            let matches = self.query(query, &mut cursor, &tree, script_body);
             matches.for_each(|mat| {
                 let span = mat
                     .captures
@@ -364,12 +364,12 @@ impl Audit for GitHubEnv {
             .map_err(AuditLoadError::Skip)?;
 
         Ok(Self {
-            bash_parser: RwLock::new(bash_parser),
-            pwsh_parser: RwLock::new(pwsh_parser),
             bash_redirect_query: SpannedQuery::new(BASH_REDIRECT_QUERY, &bash),
             bash_pipeline_query: SpannedQuery::new(BASH_PIPELINE_QUERY, &bash),
             pwsh_redirect_query: SpannedQuery::new(PWSH_REDIRECT_QUERY, &pwsh),
             pwsh_pipeline_query: SpannedQuery::new(PWSH_PIPELINE_QUERY, &pwsh),
+            bash,
+            pwsh,
         })
     }
 
