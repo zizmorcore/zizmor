@@ -164,8 +164,15 @@ class Bench:
             )
         except subprocess.CalledProcessError:
             LOG.error("run failed, see above for details")
-        else:
-            LOG.info(f"run written to {result_file}")
+
+        # Stupid hack: fixup each result file's results[0].command
+        # to be a more useful benchmark identifier, since bencher
+        # apparently keys on these.
+        result_json = json.loads(result_file.read_bytes())
+        result_json["results"][0]["command"] = f"zizmor::{self.benchmark['name']}"
+        result_file.write_text(json.dumps(result_json))
+
+        LOG.info(f"run written to {result_file}")
 
 
 def main() -> None:
