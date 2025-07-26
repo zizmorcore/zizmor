@@ -6,7 +6,7 @@ use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
 use regex::Regex;
 use tree_sitter::{
-    Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
+    Language, Parser, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
 };
 
 use super::{Audit, AuditLoadError, audit_meta};
@@ -25,43 +25,13 @@ pub(crate) struct GitHubEnv {
     pwsh: Language,
 
     // cached queries
-    bash_redirect_query: SpannedQuery,
-    bash_pipeline_query: SpannedQuery,
-    pwsh_redirect_query: SpannedQuery,
-    pwsh_pipeline_query: SpannedQuery,
+    bash_redirect_query: utils::SpannedQuery,
+    bash_pipeline_query: utils::SpannedQuery,
+    pwsh_redirect_query: utils::SpannedQuery,
+    pwsh_pipeline_query: utils::SpannedQuery,
 }
 
 audit_meta!(GitHubEnv, "github-env", "dangerous use of environment file");
-
-/// Holds a tree-sitter query that contains a `@span` capture that
-/// covers the entire range of the query.
-struct SpannedQuery {
-    inner: Query,
-    span_idx: u32,
-    destination_idx: u32,
-}
-
-impl Deref for SpannedQuery {
-    type Target = Query;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl SpannedQuery {
-    fn new(query: &'static str, language: &Language) -> Self {
-        let query = Query::new(language, query).expect("malformed query");
-        let span_idx = query.capture_index_for_name("span").unwrap();
-        let destination_idx = query.capture_index_for_name("destination").unwrap();
-
-        Self {
-            inner: query,
-            span_idx,
-            destination_idx,
-        }
-    }
-}
 
 const BASH_REDIRECT_QUERY: &str = r#"
 (redirected_statement
@@ -164,7 +134,7 @@ impl GitHubEnv {
 
     fn query<'a>(
         &self,
-        query: &'a SpannedQuery,
+        query: &'a utils::SpannedQuery,
         cursor: &'a mut QueryCursor,
         tree: &'a Tree,
         source: &'a str,
@@ -364,10 +334,10 @@ impl Audit for GitHubEnv {
             .map_err(AuditLoadError::Skip)?;
 
         Ok(Self {
-            bash_redirect_query: SpannedQuery::new(BASH_REDIRECT_QUERY, &bash),
-            bash_pipeline_query: SpannedQuery::new(BASH_PIPELINE_QUERY, &bash),
-            pwsh_redirect_query: SpannedQuery::new(PWSH_REDIRECT_QUERY, &pwsh),
-            pwsh_pipeline_query: SpannedQuery::new(PWSH_PIPELINE_QUERY, &pwsh),
+            bash_redirect_query: utils::SpannedQuery::new(BASH_REDIRECT_QUERY, &bash),
+            bash_pipeline_query: utils::SpannedQuery::new(BASH_PIPELINE_QUERY, &bash),
+            pwsh_redirect_query: utils::SpannedQuery::new(PWSH_REDIRECT_QUERY, &pwsh),
+            pwsh_pipeline_query: utils::SpannedQuery::new(PWSH_PIPELINE_QUERY, &pwsh),
             bash,
             pwsh,
         })
