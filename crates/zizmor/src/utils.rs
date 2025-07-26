@@ -10,7 +10,10 @@ use jsonschema::{
     output::{ErrorDescription, OutputUnit},
     validator_for,
 };
-use std::{collections::VecDeque, ops::Range};
+use std::{
+    collections::VecDeque,
+    ops::{Deref, Range},
+};
 use std::{fmt::Write, sync::LazyLock};
 
 use crate::{audit::AuditInput, models::AsDocument, registry::InputError};
@@ -593,6 +596,36 @@ pub(crate) fn normalize_shell(shell: &str) -> &str {
     };
 
     Utf8Path::new(path).file_name().unwrap_or(path)
+}
+
+/// Holds a tree-sitter query that contains a `@span` capture that
+/// covers the entire range of the query.
+pub(crate) struct SpannedQuery {
+    inner: tree_sitter::Query,
+    pub(crate) span_idx: u32,
+    pub(crate) destination_idx: u32,
+}
+
+impl Deref for SpannedQuery {
+    type Target = tree_sitter::Query;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl SpannedQuery {
+    pub(crate) fn new(query: &'static str, language: &tree_sitter::Language) -> Self {
+        let query = tree_sitter::Query::new(language, query).expect("malformed query");
+        let span_idx = query.capture_index_for_name("span").unwrap();
+        let destination_idx = query.capture_index_for_name("destination").unwrap();
+
+        Self {
+            inner: query,
+            span_idx,
+            destination_idx,
+        }
+    }
 }
 
 #[cfg(test)]

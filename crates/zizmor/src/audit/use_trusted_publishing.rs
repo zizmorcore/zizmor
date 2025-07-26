@@ -1,5 +1,7 @@
 use std::{sync::LazyLock, vec};
 
+use tree_sitter::Language;
+
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Severity},
@@ -8,6 +10,7 @@ use crate::{
         coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle},
     },
     state::AuditState,
+    utils,
 };
 
 const USES_MANUAL_CREDENTIAL: &str =
@@ -19,14 +22,6 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
     "https://upload.pypi.org/legacy/",
     "https://test.pypi.org/legacy/",
 ];
-
-pub(crate) struct UseTrustedPublishing;
-
-audit_meta!(
-    UseTrustedPublishing,
-    "use-trusted-publishing",
-    "prefer trusted publishing for authentication"
-);
 
 static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str])>> =
     LazyLock::new(|| {
@@ -99,6 +94,22 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
         ]
     });
 
+const BASH_COMMAND_QUERY: &str =
+    "(command name: (command_name) @cmd argument: (_)* @args) @span @destination";
+
+pub(crate) struct UseTrustedPublishing {
+    bash: Language,
+    pwsh: Language,
+
+    bash_command_query: utils::SpannedQuery,
+}
+
+audit_meta!(
+    UseTrustedPublishing,
+    "use-trusted-publishing",
+    "prefer trusted publishing for authentication"
+);
+
 impl UseTrustedPublishing {
     fn process_step<'doc>(
         &self,
@@ -137,7 +148,14 @@ impl UseTrustedPublishing {
 
 impl Audit for UseTrustedPublishing {
     fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
-        Ok(Self)
+        let bash: Language = tree_sitter_bash::LANGUAGE.into();
+        let pwsh: Language = tree_sitter_powershell::LANGUAGE.into();
+
+        Ok(Self {
+            bash_command_query: utils::SpannedQuery::new(BASH_COMMAND_QUERY, &bash),
+            bash,
+            pwsh,
+        })
     }
 
     fn audit_step<'doc>(
