@@ -1,14 +1,21 @@
 use std::{sync::LazyLock, vec};
 
+use anyhow::anyhow;
 use github_actions_models::workflow::job::StepBody;
+use regex::RegexSet;
+use subfeature::Span;
+use subfeature::Subfeature;
 use tree_sitter::Language;
+use tree_sitter::StreamingIterator as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::finding::location::Locatable;
 use crate::{
     finding::{Confidence, Finding, Severity},
     models::{
         StepBodyCommon, StepCommon,
         coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle},
+        workflow::JobExt as _,
     },
     state::AuditState,
     utils,
@@ -95,14 +102,17 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
         ]
     });
 
-const BASH_COMMAND_QUERY: &str =
-    "(command name: (command_name) @cmd argument: (_)* @args) @span @destination";
+/// A query that matches a bash command with at least one argument.
+const BASH_COMMAND_QUERY: &str = "(command name: (_) argument: (_)+) @cmd";
+
+static NON_TP_COMMAND_PATTERNS: LazyLock<RegexSet> =
+    LazyLock::new(|| RegexSet::new(&[r"cargo\s+publish"]).unwrap());
 
 pub(crate) struct UseTrustedPublishing {
     bash: Language,
     pwsh: Language,
 
-    bash_command_query: utils::SpannedQuery,
+    bash_command_query: tree_sitter::Query,
 }
 
 audit_meta!(
@@ -145,6 +155,51 @@ impl UseTrustedPublishing {
 
         Ok(findings)
     }
+
+    fn bash_trusted_publishing_command_candidates<'doc>(
+        &self,
+        run: &'doc str,
+    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+        let mut parser = tree_sitter::Parser::new();
+        parser.set_language(&self.bash)?;
+
+        let mut cursor = tree_sitter::QueryCursor::new();
+        let tree = parser
+            .parse(run, None)
+            .ok_or_else(|| anyhow::anyhow!("oops"))?;
+
+        Ok(cursor
+            .captures(&self.bash_command_query, tree.root_node(), run.as_bytes())
+            .filter_map(|(mat, cap_idx)| {
+                let cap_node = mat.captures[*cap_idx].node;
+                let cap_cmd = cap_node.utf8_text(run.as_bytes()).unwrap();
+
+                NON_TP_COMMAND_PATTERNS
+                    .is_match(cap_cmd)
+                    .then(|| Subfeature::new(cap_node.start_byte(), cap_cmd))
+            })
+            .cloned()
+            .collect())
+    }
+
+    fn trusted_publishing_command_candidates<'doc>(
+        &self,
+        run: &'doc str,
+        shell: &str,
+    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+        let normalized = utils::normalize_shell(shell);
+
+        match normalized {
+            "bash" | "sh" => self.bash_trusted_publishing_command_candidates(run),
+            // TODO: Others worth handling here?
+            &_ => {
+                tracing::warn!(
+                    "'{shell}' ({normalized}) shell not supported when searching for publishing commands"
+                );
+                Ok(vec![])
+            }
+        }
+    }
 }
 
 impl Audit for UseTrustedPublishing {
@@ -153,7 +208,8 @@ impl Audit for UseTrustedPublishing {
         let pwsh: Language = tree_sitter_powershell::LANGUAGE.into();
 
         Ok(Self {
-            bash_command_query: utils::SpannedQuery::new(BASH_COMMAND_QUERY, &bash),
+            bash_command_query: tree_sitter::Query::new(&bash, BASH_COMMAND_QUERY)
+                .map_err(|e| AuditLoadError::Fail(e.into()))?,
             bash,
             pwsh,
         })
@@ -174,7 +230,31 @@ impl Audit for UseTrustedPublishing {
         if let StepBodyCommon::Run { run, .. } = step.body()
             && !step.parent.has_id_token()
         {
-            todo!()
+            let shell = step.shell().unwrap_or_else(|| {
+                tracing::warn!(
+                    "use-trusted-publishing: couldn't determine shell type for {workflow}:{job} step {stepno}",
+                    workflow = step.workflow().key.filename(),
+                    job = step.parent.id(),
+                    stepno = step.index
+                );
+
+                "bash"
+            });
+
+            for _subfeature in self.trusted_publishing_command_candidates(run, shell)? {
+                findings.push(
+                    Self::finding()
+                        .severity(Severity::Informational)
+                        .confidence(Confidence::High)
+                        .add_location(
+                            step.location()
+                                .primary()
+                                .with_keys(["run".into()])
+                                .annotated("this step"),
+                        )
+                        .build(step)?,
+                );
+            }
         }
 
         Ok(findings)
