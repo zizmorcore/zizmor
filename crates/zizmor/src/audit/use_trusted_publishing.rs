@@ -1,12 +1,13 @@
 use std::{sync::LazyLock, vec};
 
+use github_actions_models::workflow::job::StepBody;
 use tree_sitter::Language;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Severity},
     models::{
-        StepCommon,
+        StepBodyCommon, StepCommon,
         coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle},
     },
     state::AuditState,
@@ -162,7 +163,21 @@ impl Audit for UseTrustedPublishing {
         &self,
         step: &crate::models::workflow::Step<'doc>,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
-        self.process_step(step)
+        let mut findings = self.process_step(step)?;
+
+        // In addition to the shared action matching above, we can
+        // also check for some `run:` patterns that indicate publishing
+        // without Trusted Publishing.
+        // We can only check these reliably on workflows and not actions,
+        // since we need to be able to see the `id-token` permission's
+        // state to filter out any false positives.
+        if let StepBodyCommon::Run { run, .. } = step.body()
+            && !step.parent.has_id_token()
+        {
+            todo!()
+        }
+
+        Ok(findings)
     }
 
     fn audit_composite_step<'doc>(
