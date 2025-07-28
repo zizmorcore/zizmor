@@ -241,16 +241,23 @@ impl Audit for UseTrustedPublishing {
                 "bash"
             });
 
-            for _subfeature in self.trusted_publishing_command_candidates(run, shell)? {
+            for subfeature in self.trusted_publishing_command_candidates(run, shell)? {
                 findings.push(
                     Self::finding()
                         .severity(Severity::Informational)
                         .confidence(Confidence::High)
                         .add_location(
                             step.location()
+                                .with_keys(["run".into()])
+                                .key_only()
+                                .annotated("this step"),
+                        )
+                        .add_location(
+                            step.location()
                                 .primary()
                                 .with_keys(["run".into()])
-                                .annotated("this step"),
+                                .subfeature(subfeature)
+                                .annotated("this command"),
                         )
                         .build(step)?,
                 );

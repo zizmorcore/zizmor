@@ -1,0 +1,14 @@
+on: [push]
+
+name: use-trusted-publishing
+
+jobs:
+  publish-1:
+    name: publish to crates.io
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: vulnerable-1
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
