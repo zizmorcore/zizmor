@@ -250,7 +250,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         info: this step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
   --> .github/workflows/cache-poisoning.yml:22:1

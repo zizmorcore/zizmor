@@ -112,6 +112,16 @@ const PWSH_COMMAND_QUERY: &str = "(command command_name: (_) command_elements: (
 const NON_TP_COMMAND_PATTERNS: &[&str] = &[
     // cargo ... publish ...
     r"(?s)cargo\s+(.+\s+)?publish",
+    // uv ... publish ...
+    r"(?s)uv\s+(.+\s+)?publish",
+    // hatch ... publish ...
+    r"(?s)hatch\s+(.+\s+)?publish",
+    // pdm ... publish ...
+    r"(?s)pdm\s+(.+\s+)?publish",
+    // twine ... upload ...
+    r"(?s)twine\s+(.+\s+)?upload",
+    // gem ... push ...
+    r"(?s)gem\s+(.+\s+)?push",
 ];
 
 static NON_TP_COMMAND_PATTERN_SET: LazyLock<RegexSet> =
@@ -298,7 +308,12 @@ impl Audit for UseTrustedPublishing {
                 findings.push(
                     Self::finding()
                         .severity(Severity::Informational)
-                        .confidence(Confidence::High)
+                        // Our confidence is lower here, since we have less
+                        // insight into the publishing command's context
+                        // (e.g. whether it's influenced by something in
+                        // the environment to publish to a different index
+                        // that doesn't support Trusted Publishing).
+                        .confidence(Confidence::Medium)
                         .add_location(step.location().hidden())
                         .add_location(
                             step.location()

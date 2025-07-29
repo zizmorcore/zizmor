@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Publish on Pypi
+      - name: Publish on Pypi # zizmor: ignore[use-trusted-publishing]
         run: uv build publish
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_PUBLISH_TOKEN }}

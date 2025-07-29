@@ -11,7 +11,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         info: this step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:17:9
@@ -21,7 +21,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         info: this step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:23:9
@@ -34,7 +34,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
 27 | |             --no-verify
    | |_______________________- info: this command
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:37:9
@@ -44,7 +44,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         info: this step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:42:9
@@ -54,7 +54,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         info: this step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:48:9
@@ -67,7 +67,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
 52 | |             --no-verify
    | |_______________________- info: this command
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:56:9
@@ -77,7 +77,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         info: this step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:62:9
@@ -90,6 +90,6 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
 66 | |             publish
    | |___________________- info: this command
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 9 findings (1 suppressed): 0 unknown, 8 informational, 0 low, 0 medium, 0 high
