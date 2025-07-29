@@ -238,7 +238,7 @@ impl<'doc> NormalJob<'doc> {
             common::Permissions::Base(common::BasePermission::WriteAll) => true,
             common::Permissions::Explicit(explicit) => explicit
                 .get("id-token")
-                .map_or(false, |perm| matches!(perm, common::Permission::Write)),
+                .is_some_and(|perm| matches!(perm, common::Permission::Write)),
             _ => false,
         }
     }
