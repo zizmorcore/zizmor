@@ -1,0 +1,95 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"use-trusted-publishing/cargo-publish.yml\")).run()?"
+snapshot_kind: text
+---
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:12:9
+   |
+12 |         run: cargo publish
+   |         ---  ------------- info: this command
+   |         |
+   |         info: this step
+   |
+   = note: audit confidence → Medium
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:17:9
+   |
+17 |         run: cargo +nightly publish
+   |         ---  ---------------------- info: this command
+   |         |
+   |         info: this step
+   |
+   = note: audit confidence → Medium
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:23:9
+   |
+23 |           run: |
+   |           --- info: this step
+24 | /           cargo \
+25 | |             publish \
+26 | |             --allow-dirty \
+27 | |             --no-verify
+   | |_______________________- info: this command
+   |
+   = note: audit confidence → Medium
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:37:9
+   |
+37 |         run: cargo publish
+   |         ---  ------------- info: this command
+   |         |
+   |         info: this step
+   |
+   = note: audit confidence → Medium
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:42:9
+   |
+42 |         run: cargo +nightly publish
+   |         ---  ---------------------- info: this command
+   |         |
+   |         info: this step
+   |
+   = note: audit confidence → Medium
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:48:9
+   |
+48 |           run: |
+   |           --- info: this step
+49 | /           cargo `
+50 | |             publish `
+51 | |             --allow-dirty `
+52 | |             --no-verify
+   | |_______________________- info: this command
+   |
+   = note: audit confidence → Medium
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:56:9
+   |
+56 |         run: cargo publish --allow-dirty --no-verify
+   |         ---  ------------- info: this command
+   |         |
+   |         info: this step
+   |
+   = note: audit confidence → Medium
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:62:9
+   |
+62 |           run: |
+   |           --- info: this step
+63 | /           cargo ^
+64 | |             --allow-dirty ^
+65 | |             --no-verify ^
+66 | |             publish
+   | |___________________- info: this command
+   |
+   = note: audit confidence → Medium
+
+9 findings (1 suppressed): 0 unknown, 8 informational, 0 low, 0 medium, 0 high

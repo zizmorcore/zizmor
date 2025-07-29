@@ -1542,8 +1542,6 @@ and possible.
 Other resources:
 
 * [Trusted Publishers for All Package Repositories]
-* [Publishing to PyPI with a Trusted Publisher]
-* [Trusted Publishing - RubyGems Guides]
 * [Trusted publishing: a new benchmark for packaging security]
 
 ### Remediation
@@ -1551,8 +1549,46 @@ Other resources:
 In general, enabling Trusted Publishing requires a one-time change to your
 package's configuration on its associated index (e.g. PyPI or RubyGems).
 
-Once your Trusted Publisher is registered, see @pypa/gh-action-pypi-publish
-or @rubygems/release-gem for canonical examples of using it.
+Each ecosystem has its own resources for using a Trusted Publisher
+once it's configured:
+
+<div class="grid cards" markdown>
+-   :simple-pypi:{.lg .middle} Python (PyPI)
+
+    ---
+
+    Usage: @pypa/gh-action-pypi-publish
+
+    See: [Publishing to PyPI with a Trusted Publisher]
+
+-   :simple-rubygems:{.lg .middle} Ruby (RubyGems)
+
+    ---
+
+    Usage: @rubygems/release-gem
+
+    See: [Trusted Publishing - RubyGems Guides]
+
+-   :material-language-rust:{.lg .middle} Rust (crates.io)
+
+    ---
+
+    Usage: @rust-lang/crates-io-auth-action.
+
+    See: [Trusted Publishing - crates.io]
+
+-   :simple-dart:{.lg .middle} Dart (pub.dev)
+
+    ---
+
+    See: [Automated publishing of packages to pub.dev]
+
+-   :material-npm:{.lg .middle} JavaScript (npm)
+
+    ---
+
+    See npm/cli!8336 and orgs/community?161015
+</div>
 
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
@@ -1562,6 +1598,8 @@ or @rubygems/release-gem for canonical examples of using it.
 [Keeping your GitHub Actions and workflows secure Part 2: Untrusted input]: https://securitylab.github.com/resources/github-actions-untrusted-input/
 [Publishing to PyPI with a Trusted Publisher]: https://docs.pypi.org/trusted-publishers/
 [Trusted Publishing - RubyGems Guides]: https://guides.rubygems.org/trusted-publishing/
+[Trusted Publishing - crates.io]: https://crates.io/docs/trusted-publishing
+[Automated publishing of packages to pub.dev]: https://dart.dev/tools/pub/automated-publishing
 [Trusted publishing: a new benchmark for packaging security]: https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/
 [Trusted Publishers for All Package Repositories]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
 [were deprecated by GitHub]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/

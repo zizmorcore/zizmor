@@ -223,6 +223,26 @@ impl<'doc> NormalJob<'doc> {
         Steps::new(self)
     }
 
+    /// Returns whether this job has the `id-token: write permission.
+    pub(crate) fn has_id_token(&self) -> bool {
+        // Figure out which permissions we need to be looking at.
+        // We look at the job's own permissions unless they indicate
+        // that they're the default, in which case we know the effective
+        // permissions are the parent workflow's.
+        let effective_permissions = match self.permissions {
+            common::Permissions::Base(common::BasePermission::Default) => &self.parent.permissions,
+            _ => &self.permissions,
+        };
+
+        match effective_permissions {
+            common::Permissions::Base(common::BasePermission::WriteAll) => true,
+            common::Permissions::Explicit(explicit) => explicit
+                .get("id-token")
+                .is_some_and(|perm| matches!(perm, common::Permission::Write)),
+            _ => false,
+        }
+    }
+
     /// Perform feats of heroism to figure of what this job's runner's
     /// default shell is.
     ///
