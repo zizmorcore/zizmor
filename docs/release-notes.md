@@ -17,6 +17,9 @@ of `zizmor`.
 * `zizmor` is now stricter about parsing `uses:` clauses. In particular,
   `zizmor` will no longer accept `uses: org/repo` without a trailing
   `@ref`, as GitHub Actions itself does not accept this syntax (#1019)
+* The [use-trusted-publishing] audit now detects many more patterns, including
+  `cargo publish` and other `#!yaml run:` blocks that make use of publishing
+  commands directly (#1042)
 
 ### Bug Fixes 🐛
 
