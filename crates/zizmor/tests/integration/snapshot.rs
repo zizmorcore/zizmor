@@ -277,6 +277,12 @@ fn use_trusted_publishing() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/cargo-publish.yml"))
+            .run()?
+    );
+
     Ok(())
 }
 

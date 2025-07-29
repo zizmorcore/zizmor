@@ -1,9 +1,7 @@
 use std::{sync::LazyLock, vec};
 
-use anyhow::anyhow;
-use github_actions_models::workflow::job::StepBody;
+use anyhow::Context as _;
 use regex::RegexSet;
-use subfeature::Span;
 use subfeature::Subfeature;
 use tree_sitter::Language;
 use tree_sitter::StreamingIterator as _;
@@ -102,17 +100,36 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
         ]
     });
 
-/// A query that matches a bash command with at least one argument.
+// Queries that match a command with at least one argument.
+//
+// NOTE: These queries are intentionally very simple. The operating theory here
+// is that it's faster to match a simple query and then filter the results
+// with a compiled regular expression than it is to write a complex
+// query that uses tree-sitter's baked-in regex support.
 const BASH_COMMAND_QUERY: &str = "(command name: (_) argument: (_)+) @cmd";
+const PWSH_COMMAND_QUERY: &str = "(command command_name: (_) command_elements: (_)+) @cmd";
 
-static NON_TP_COMMAND_PATTERNS: LazyLock<RegexSet> =
-    LazyLock::new(|| RegexSet::new(&[r"cargo\s+publish"]).unwrap());
+const NON_TP_COMMAND_PATTERNS: &[&str] = &[
+    // cargo ... publish ...
+    r"(?s)cargo\s+(.+\s+)?publish",
+];
+
+static NON_TP_COMMAND_PATTERN_SET: LazyLock<RegexSet> =
+    LazyLock::new(|| RegexSet::new(NON_TP_COMMAND_PATTERNS).unwrap());
+
+static NON_TP_COMMAND_PATTERN_REGEXES: LazyLock<Vec<regex::Regex>> = LazyLock::new(|| {
+    NON_TP_COMMAND_PATTERNS
+        .iter()
+        .map(|p| regex::Regex::new(p).unwrap())
+        .collect()
+});
 
 pub(crate) struct UseTrustedPublishing {
     bash: Language,
     pwsh: Language,
 
     bash_command_query: tree_sitter::Query,
+    pwsh_command_query: tree_sitter::Query,
 }
 
 audit_meta!(
@@ -136,6 +153,7 @@ impl UseTrustedPublishing {
                     Self::finding()
                         .severity(Severity::Informational)
                         .confidence(Confidence::High)
+                        .add_location(step.location().hidden())
                         .add_location(
                             step.location()
                                 .primary()
@@ -166,7 +184,7 @@ impl UseTrustedPublishing {
         let mut cursor = tree_sitter::QueryCursor::new();
         let tree = parser
             .parse(run, None)
-            .ok_or_else(|| anyhow::anyhow!("oops"))?;
+            .context("failed to parse `run:` body as bash")?;
 
         Ok(cursor
             .captures(&self.bash_command_query, tree.root_node(), run.as_bytes())
@@ -174,11 +192,49 @@ impl UseTrustedPublishing {
                 let cap_node = mat.captures[*cap_idx].node;
                 let cap_cmd = cap_node.utf8_text(run.as_bytes()).unwrap();
 
-                NON_TP_COMMAND_PATTERNS
+                NON_TP_COMMAND_PATTERN_SET
                     .is_match(cap_cmd)
                     .then(|| Subfeature::new(cap_node.start_byte(), cap_cmd))
             })
             .cloned()
+            .collect())
+    }
+
+    fn pwsh_trusted_publishing_command_candidates<'doc>(
+        &self,
+        run: &'doc str,
+    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+        let mut parser = tree_sitter::Parser::new();
+        parser.set_language(&self.pwsh)?;
+
+        let mut cursor = tree_sitter::QueryCursor::new();
+        let tree = parser
+            .parse(run, None)
+            .context("failed to parse `run:` body as pwsh")?;
+
+        Ok(cursor
+            .captures(&self.pwsh_command_query, tree.root_node(), run.as_bytes())
+            .filter_map(|(mat, cap_idx)| {
+                let cap_node = mat.captures[*cap_idx].node;
+                let cap_cmd = cap_node.utf8_text(run.as_bytes()).unwrap();
+
+                NON_TP_COMMAND_PATTERN_SET
+                    .is_match(cap_cmd)
+                    .then(|| Subfeature::new(cap_node.start_byte(), cap_cmd))
+            })
+            .cloned()
+            .collect())
+    }
+
+    fn raw_trusted_publishing_command_candidates<'doc>(
+        &self,
+        run: &'doc str,
+    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+        Ok(NON_TP_COMMAND_PATTERN_SET
+            .matches(run)
+            .into_iter()
+            .map(|idx| NON_TP_COMMAND_PATTERN_REGEXES[idx].find(run).unwrap())
+            .map(|mat| Subfeature::new(mat.start(), mat.as_str()))
             .collect())
     }
 
@@ -191,13 +247,8 @@ impl UseTrustedPublishing {
 
         match normalized {
             "bash" | "sh" => self.bash_trusted_publishing_command_candidates(run),
-            // TODO: Others worth handling here?
-            &_ => {
-                tracing::warn!(
-                    "'{shell}' ({normalized}) shell not supported when searching for publishing commands"
-                );
-                Ok(vec![])
-            }
+            "pwsh" | "powershell" => self.pwsh_trusted_publishing_command_candidates(run),
+            _ => self.raw_trusted_publishing_command_candidates(run),
         }
     }
 }
@@ -209,6 +260,8 @@ impl Audit for UseTrustedPublishing {
 
         Ok(Self {
             bash_command_query: tree_sitter::Query::new(&bash, BASH_COMMAND_QUERY)
+                .map_err(|e| AuditLoadError::Fail(e.into()))?,
+            pwsh_command_query: tree_sitter::Query::new(&pwsh, PWSH_COMMAND_QUERY)
                 .map_err(|e| AuditLoadError::Fail(e.into()))?,
             bash,
             pwsh,
@@ -231,7 +284,7 @@ impl Audit for UseTrustedPublishing {
             && !step.parent.has_id_token()
         {
             let shell = step.shell().unwrap_or_else(|| {
-                tracing::warn!(
+                tracing::debug!(
                     "use-trusted-publishing: couldn't determine shell type for {workflow}:{job} step {stepno}",
                     workflow = step.workflow().key.filename(),
                     job = step.parent.id(),
@@ -246,6 +299,7 @@ impl Audit for UseTrustedPublishing {
                     Self::finding()
                         .severity(Severity::Informational)
                         .confidence(Confidence::High)
+                        .add_location(step.location().hidden())
                         .add_location(
                             step.location()
                                 .with_keys(["run".into()])

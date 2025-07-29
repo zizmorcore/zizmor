@@ -20,6 +20,6 @@ jobs:
         with:
           lookup-only: true
 
-      - name: Publish on crates.io
+      - name: Publish on crates.io # zizmor: ignore[use-trusted-publishing]
         if: false
         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}

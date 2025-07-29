@@ -242,6 +242,16 @@ warning[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → Medium
 
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> .github/workflows/cache-poisoning.yml:58:9
+   |
+58 |         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}
+   |         ---  --------------------- info: this command
+   |         |
+   |         info: this step
+   |
+   = note: audit confidence → High
+
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
   --> .github/workflows/cache-poisoning.yml:22:1
    |
@@ -964,4 +974,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-159 findings (74 suppressed): 0 unknown, 6 informational, 0 low, 29 medium, 50 high
+160 findings (74 suppressed): 0 unknown, 7 informational, 0 low, 29 medium, 50 high
