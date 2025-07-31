@@ -433,6 +433,7 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
   | |_______________________________________^ insecure commands enabled here
   |
   = note: audit confidence → High
+  = note: this finding has an auto-fix
 
 error[insecure-commands]: execution of insecure workflow commands is enabled
   --> .github/workflows/insecure-commands.yml:12:5
@@ -443,6 +444,7 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
    | |___________________________________________^ insecure commands enabled here
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[insecure-commands]: execution of insecure workflow commands is enabled
   --> .github/workflows/insecure-commands.yml:17:9
@@ -453,6 +455,7 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
    | |________________________________________________^ insecure commands enabled here
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/known-vulnerable-actions.yml:14:3
