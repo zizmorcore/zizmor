@@ -11,6 +11,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: "benchmark-pr-1p-${{ github.event.pull_request.number }}"
+  cancel-in-progress: true
+
 jobs:
   benchmark-pr-1p:
     name: Continuous Benchmarking PRs with Bencher
