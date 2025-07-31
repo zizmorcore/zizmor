@@ -16,6 +16,14 @@
         - aio-libs/aiobotocore#1355
 
 
+-   ![](https://github.com/anchore.png?size=40){ width="40" loading=lazy align=left } anchore
+
+    ---
+
+    ??? example "Examples"
+        - anchore/vunnel#832
+
+
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
 
     ---
@@ -651,6 +659,7 @@
     ---
 
     ??? example "Examples"
+        - mozilla/addons#15751
         - mozilla/fxa#18628
         - mozilla/neqo#2413
         - mozilla/neqo#2721

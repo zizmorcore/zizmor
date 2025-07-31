@@ -7,6 +7,7 @@
 adafruit/circuitpython#9785
 aio-libs/aiobotocore#1344
 aio-libs/aiobotocore#1355
+anchore/vunnel#832
 apache/airflow#45408
 apache/airflow#47258
 apache/airflow#50749
@@ -147,6 +148,7 @@ mongodb/django-mongodb-backend#315
 mongodb/motor#312
 mongodb/mongo-python-driver#2001
 mongodb-labs/flask-pymongo#170
+mozilla/addons#15751
 mozilla/fxa#18628
 mozilla/neqo#2413
 mozilla/neqo#2721
