@@ -439,15 +439,17 @@ jobs:
                 let fix = &finding.fixes[0];
                 let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
-                // Check that ACTIONS_ALLOW_UNSECURE_COMMANDS is removed
-                assert!(
-                    !fixed_document
-                        .source()
-                        .contains("ACTIONS_ALLOW_UNSECURE_COMMANDS")
-                );
+                insta::assert_snapshot!(fixed_document.source(), @r#"
+                on: push
 
-                // Check that other environment variables are preserved
-                assert!(fixed_document.source().contains("OTHER_VAR: keep-me"));
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    env:
+                      OTHER_VAR: keep-me
+                    steps:
+                      - run: echo "test"
+                "#);
             }
         );
     }
