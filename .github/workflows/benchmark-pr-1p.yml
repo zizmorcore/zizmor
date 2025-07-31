@@ -11,11 +11,20 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: "benchmark-pr-1p-${{ github.event.pull_request.number }}"
+  cancel-in-progress: true
+
 jobs:
   benchmark-pr-1p:
     name: Continuous Benchmarking PRs with Bencher
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      ${{
+        github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+          && !contains(github.event.pull_request.labels.*.name, 'no-benchmark')
+      }}
 
     permissions:
       pull-requests: write
