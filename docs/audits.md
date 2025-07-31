@@ -1587,7 +1587,7 @@ once it's configured:
 
     ---
 
-    See npm/cli!8336 and orgs/community?161015
+    See: [Trusted publishing for npm packages]
 </div>
 
 
@@ -1600,6 +1600,7 @@ once it's configured:
 [Trusted Publishing - RubyGems Guides]: https://guides.rubygems.org/trusted-publishing/
 [Trusted Publishing - crates.io]: https://crates.io/docs/trusted-publishing
 [Automated publishing of packages to pub.dev]: https://dart.dev/tools/pub/automated-publishing
+[Trusted publishing for npm packages]: https://docs.npmjs.com/trusted-publishers
 [Trusted publishing: a new benchmark for packaging security]: https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/
 [Trusted Publishers for All Package Repositories]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
 [were deprecated by GitHub]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
