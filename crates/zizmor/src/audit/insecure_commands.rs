@@ -26,7 +26,7 @@ audit_meta!(
 
 impl InsecureCommands {
     /// Creates a fix that removes the ACTIONS_ALLOW_UNSECURE_COMMANDS environment variable.
-    fn create_remove_fix<'doc>(&self, location: SymbolicLocation<'doc>) -> Fix<'doc> {
+    fn create_fix<'doc>(&self, location: SymbolicLocation<'doc>) -> Fix<'doc> {
         Fix {
             title: "remove ACTIONS_ALLOW_UNSECURE_COMMANDS environment variable".into(),
             key: location.key,
@@ -62,7 +62,7 @@ impl InsecureCommands {
         doc: &'s impl AsDocument<'s, 'doc>,
         location: SymbolicLocation<'doc>,
     ) -> Result<Finding<'doc>> {
-        let fix = self.create_remove_fix(location.clone());
+        let fix = self.create_fix(location.clone());
 
         Self::finding()
             .confidence(Confidence::High)
