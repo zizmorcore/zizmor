@@ -20,6 +20,8 @@ of `zizmor`.
 * The [use-trusted-publishing] audit now detects many more patterns, including
   `cargo publish` and other `#!yaml run:` blocks that make use of publishing
   commands directly (#1042)
+* The [insecure-commands] audit now supports auto-fixes for many findings
+  (#1045)
 
 ### Bug Fixes 🐛
 
