@@ -293,8 +293,9 @@ The general procedure for adding a new audit can be described as:
     - You may want to use both the `AuditState` and `github_api::Client` to get the job done
 - Assign the proper `location` when creating a `Finding`, grabbing it from the
   proper `Workflow`, `Job` or `Step` instance
-- Register `MyNewAudit` in the known audits at `crates/zizmor/src/main.rs`
-- Add proper integration tests covering some scenarios at `tests/acceptance.rs`
+- Add `MyNewAudit` to `AuditRegistry::default_audits` in `crates/zizmor/src/registry.rs`
+- Add proper integration tests covering some scenarios to the snapshot tests
+  in `crates/zizmor/tests/integration/snapshot.rs`
 - Add proper docs for this new audit at `docs/audits`. Take care to add your new
   heading in alpha order relative to the other audit headings. Please include
   relevant public information about the underlying vulnerability
