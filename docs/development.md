@@ -170,6 +170,34 @@ GH_TOKEN=$(gh auth token) cargo insta test --force-update-snapshots --features o
 
 See [insta's documentation] for more details.
 
+## Benchmarking
+
+`zizmor` currently uses [hyperfine](https://github.org/sharkdp/hyperfine)
+for command-line benchmarking.
+
+Benchmarks are stored in the top-level `bench/` directory, and can be
+run locally with:
+
+```bash
+# run all benchmarks
+make bench
+```
+
+We currently run benchmarks in the CI and report their results
+to [Bencher](https://bencher.dev/). See
+[our project page](https://bencher.dev/console/projects/zizmor/plots)
+on Bencher for results and trends.
+
+### Adding new benchmarks
+
+`zizmor` currently orchestrates benchmarks with `bench/benchmark.py`,
+which wraps `hyperfine` to add a planning phase.
+
+Take a look at `bench/benchmarks.json` for the current benchmarks.
+Observe that each benchmark tells `benchmark.py` how to retrieve its
+input as well as provides a `stencil` that the benchmark runner will
+expand to run the benchmark.
+
 ## Building the website
 
 `zizmor`'s website is built with [MkDocs](https://www.mkdocs.org/), which
