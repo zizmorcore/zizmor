@@ -19,7 +19,7 @@ jobs:
   benchmark-pr-1p:
     name: Continuous Benchmarking PRs with Bencher
     runs-on: ubuntu-latest
-    if: |
+    if: >-
       ${{
         github.event_name == 'pull_request'
           && github.event.pull_request.head.repo.full_name == github.repository
