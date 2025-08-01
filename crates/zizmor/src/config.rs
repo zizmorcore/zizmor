@@ -87,7 +87,12 @@ impl Config {
             return Ok(Self::default());
         }
 
-        let config = match &app.config {
+        let app_config = app
+            .config
+            .as_ref()
+            .filter(|config| !config.as_str().is_empty());
+
+        let config = match app_config {
             Some(path) => serde_yaml::from_str(&fs::read_to_string(path)?)?,
             None => {
                 // If the user didn't pass a config path explicitly with
