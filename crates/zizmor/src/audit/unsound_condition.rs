@@ -51,11 +51,11 @@ impl UnsoundCondition {
         // greater than the length of the fenced expression. This indicates
         // leading or trailing content (like whitespace) that makes the
         // evaluation always true.
-        let Some((expr, _)) = utils::extract_fenced_expression(&raw_expr, 0) else {
+        let Some((expr, _)) = utils::extract_fenced_expression(raw_expr, 0) else {
             return false;
         };
 
-        return raw_expr.len() > expr.as_raw().len();
+        raw_expr.len() > expr.as_raw().len()
     }
 
     fn process_conditions<'a, 'doc>(
