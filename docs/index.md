@@ -60,8 +60,8 @@ many common security issues in typical GitHub Actions CI/CD setups.
 --8<-- "sponsors.html"
 </figure>
 
-Is your name missing above? Consider becoming one of our sponsors through
-one of the following:
+Want to see your name or logo above? Consider becoming a sponsor
+through one of the following:
 
 - [GitHub Sponsors](https://github.com/sponsors/woodruffw) (preferred)
 - [thanks.dev](https://thanks.dev/u/gh/woodruffw)

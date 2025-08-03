@@ -19,7 +19,10 @@ artichoke/boba#265
 artichoke/project-infrastructure#683
 artichoke/setup-rust#121
 ashishb/wp2hugo#91
+astral-sh/python-build-standalone#716
 astral-sh/ruff#14844
+astral-sh/uv#15016
+astral-sh/uv#15018
 astronomer/astronomer-cosmos#1870
 astronomer/dag-factory#482
 astropy/astropy#17315
