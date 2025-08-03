@@ -5,7 +5,7 @@ use github_actions_expressions::{Expr, SpannedExpr, context::Context};
 use crate::{
     Confidence, Severity,
     finding::location::{Feature, Location},
-    utils::parse_expressions_from_input,
+    utils::parse_fenced_expressions_from_input,
 };
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
@@ -32,7 +32,7 @@ impl Audit for UnredactedSecrets {
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
-        for (expr, span) in parse_expressions_from_input(input) {
+        for (expr, span) in parse_fenced_expressions_from_input(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;

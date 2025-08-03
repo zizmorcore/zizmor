@@ -5,9 +5,9 @@ use github_actions_models::common::If;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    finding::{Confidence, Severity, location::Locatable as _},
+    finding::{Confidence, Severity},
     models::workflow::JobExt as _,
-    utils::ExtractedExpr,
+    utils::{self, ExtractedExpr},
 };
 
 // TODO: Merge this with the list in `template_injection.rs`?
@@ -44,21 +44,13 @@ impl Audit for UnsoundContains {
         &self,
         job: &super::NormalJob<'w>,
     ) -> anyhow::Result<Vec<super::Finding<'w>>> {
-        let conditions = job
-            .r#if
-            .iter()
-            .map(|cond| (cond, job.location()))
-            .chain(
-                job.steps()
-                    .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location()))),
-            )
-            .filter_map(|(cond, loc)| {
-                if let If::Expr(expr) = cond {
-                    Some((expr.as_str(), loc))
-                } else {
-                    None
-                }
-            });
+        let conditions = job.conditions().filter_map(|(cond, loc)| {
+            if let If::Expr(expr) = cond {
+                Some((expr.as_str(), loc))
+            } else {
+                None
+            }
+        });
 
         conditions
             .flat_map(|(expr, loc)| {
@@ -116,7 +108,14 @@ impl UnsoundContains {
     }
 
     fn unsound_contains(expr: &str) -> Vec<(Severity, String)> {
-        let bare = ExtractedExpr::new(expr).as_bare();
+        // Handle a fenced `if:` by extracting it explicitly.
+        // We need this indirection because of multiline YAML strings,
+        // e.g. where the literal string value might be something like
+        // `${{ ... }}\n`.
+        let bare = match utils::extract_fenced_expression(expr, 0) {
+            Some((expr, _)) => expr.as_bare(),
+            None => ExtractedExpr::new(expr).as_bare(),
+        };
 
         Expr::parse(bare)
             .inspect_err(|_err| tracing::warn!("couldn't parse expression: {expr}"))

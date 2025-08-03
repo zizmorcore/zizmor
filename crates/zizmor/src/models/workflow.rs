@@ -26,7 +26,7 @@ use crate::{
         inputs::{Capability, HasInputs},
     },
     registry::InputError,
-    utils::{self, WORKFLOW_VALIDATOR, extract_expressions, from_str_with_validation},
+    utils::{self, WORKFLOW_VALIDATOR, extract_fenced_expressions, from_str_with_validation},
 };
 
 /// Represents an entire GitHub Actions workflow.
@@ -223,7 +223,7 @@ impl<'doc> NormalJob<'doc> {
         Steps::new(self)
     }
 
-    /// Returns whether this job has the `id-token: write permission.
+    /// Returns whether this job has the `id-token: write` permission.
     pub(crate) fn has_id_token(&self) -> bool {
         // Figure out which permissions we need to be looking at.
         // We look at the job's own permissions unless they indicate
@@ -271,6 +271,20 @@ impl<'doc> NormalJob<'doc> {
                 None
             }
         }
+    }
+
+    /// Returns an iterator over this job's conditions, including all
+    /// step-level conditions.
+    ///
+    /// Each [`common::If`] is paired with a [`SymbolicLocation`]
+    /// for its *parent*, i.e. a job or step.
+    pub(crate) fn conditions(
+        &self,
+    ) -> impl Iterator<Item = (&'doc common::If, SymbolicLocation<'doc>)> {
+        self.r#if.iter().map(|cond| (cond, self.location())).chain(
+            self.steps()
+                .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location()))),
+        )
     }
 }
 
@@ -463,7 +477,7 @@ impl<'doc> Matrix<'doc> {
             // one or more expressions (e.g. `foo-${{ bar }}-${{ baz }}`). So we
             // need to check for *any* expression in the expanded value,
             // not just that it starts and ends with the expression delimiters.
-            let expansion_contains_expression = !extract_expressions(expansion).is_empty();
+            let expansion_contains_expression = !extract_fenced_expressions(expansion).is_empty();
             context.matches(path.as_str()) && expansion_contains_expression
         });
 

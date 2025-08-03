@@ -828,6 +828,7 @@ mod tests {
         ]";
 
         let cases = &[
+            "true",
             "fromJSON(inputs.free-threading) && '--disable-gil' || ''",
             "foo || bar || baz",
             "foo || bar && baz || foo && 1 && 2 && 3 || 4",

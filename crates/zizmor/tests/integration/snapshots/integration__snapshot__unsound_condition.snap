@@ -1,0 +1,35 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"unsound-condition.yml\")).run()?"
+snapshot_kind: text
+---
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:27:9
+   |
+27 | /         if: |
+28 | |           ${{ some.context }}
+   | |_____________________________^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:33:9
+   |
+33 | /         if: >
+34 | |           ${{ some.context }}
+   | |_____________________________^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:60:9
+   |
+60 | /         if: |
+61 | |           ${{ some.context
+62 | |             && other.context
+63 | |           }}
+   | |____________^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+3 findings: 0 unknown, 0 informational, 0 low, 0 medium, 3 high
