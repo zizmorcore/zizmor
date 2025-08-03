@@ -36,7 +36,7 @@ use crate::{
         workflow::Step,
     },
     state::AuditState,
-    utils::{DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_expressions},
+    utils::{DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_fenced_expressions},
 };
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
@@ -331,7 +331,7 @@ impl TemplateInjection {
         Persona,
     )> {
         let mut bad_expressions = vec![];
-        for (expr, expr_span) in extract_expressions(script) {
+        for (expr, expr_span) in extract_fenced_expressions(script) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_raw());
                 continue;

@@ -1437,6 +1437,98 @@ individual fields as separate secrets.
         ```
 
 
+## `unsound-condition`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [unsound-condition.yml]   | v1.12.0      | ✅             | ✅                 | ❌  |
+
+[unsound-condition.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unsound-contains.yml
+
+Detects conditions that are inadvertently always true despite containing
+an expression that should control the evaluation.
+
+A common source of these is an unintentional interaction
+between multi-line YAML strings and fenced GitHub Actions expressions.
+For example, the following condition always evaluates to `true`, despite
+appearing to evaluate to `false`:
+
+```yaml
+if: |
+  ${{ false }}
+```
+
+This happens because YAML's "block" scalars include a trailing newline
+by default, which is left *outside* of the GitHub Actions expression.
+This results in an expansion like `'false\n'` instead of `'false'`,
+which GitHub Actions interprets as a truthy value.
+
+### Remediation
+
+There are two ways to remediate this:
+
+* Avoid fenced expressions in `#!yaml if:` conditions. Instead, write
+  the expression as a "bare" expression.
+
+    This will still include the trailing newline, but it will be *inside*
+    of the expression as seen from the GitHub Actions expression parser.
+
+    !!! example
+
+        === "Before :warning:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will incorrectly always run"
+                    if: |
+                      ${{ false }}
+            ```
+
+        === "After :white_check_mark:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will correctly not run"
+                    if: |
+                      false
+            ```
+
+* Use fenced expressions, but use a YAML block scalar that does not
+  include a trailing newline. Either `|-` or `>-` is appropriate for
+  this purpose.
+
+    !!! example
+
+        === "Before :warning:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will incorrectly always run"
+                    if: |
+                      ${{ false }}
+            ```
+
+        === "After :white_check_mark:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will correctly not run"
+                    if: |-
+                      ${{ false }}
+            ```
+
 ## `unsound-contains`
 
 | Type     | Examples                            | Introduced in | Works offline | Enabled by default | Configurable |

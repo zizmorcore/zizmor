@@ -102,6 +102,17 @@ impl Action {
             kind: Default::default(),
         }
     }
+
+    /// Returns an iterator over this action's step-level conditions.
+    ///
+    /// Each [`common::If`] is paired with a [`SymbolicLocation`].
+    /// for its *parent*, i.e. a composite step.
+    pub(crate) fn conditions(&self) -> impl Iterator<Item = (&common::If, SymbolicLocation<'_>)> {
+        self.steps()
+            .into_iter()
+            .flatten()
+            .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location())))
+    }
 }
 
 /// An iterable container for steps within a [`Job`].

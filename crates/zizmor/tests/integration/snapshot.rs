@@ -805,3 +805,14 @@ fn unpinned_images() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn unsound_condition() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unsound-condition.yml"))
+            .run()?
+    );
+
+    Ok(())
+}

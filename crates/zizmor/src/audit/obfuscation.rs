@@ -8,7 +8,7 @@ use crate::{
         location::{Feature, Location},
     },
     models::{StepCommon, action::CompositeStep, workflow::Step},
-    utils::parse_expressions_from_input,
+    utils::parse_fenced_expressions_from_input,
 };
 use subfeature::Subfeature;
 
@@ -134,7 +134,7 @@ impl Audit for Obfuscation {
     fn audit_raw<'doc>(&self, input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
-        for (expr, expr_span) in parse_expressions_from_input(input) {
+        for (expr, expr_span) in parse_fenced_expressions_from_input(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
