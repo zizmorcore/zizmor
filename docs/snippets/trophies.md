@@ -61,7 +61,10 @@
     ---
 
     ??? example "Examples"
+        - astral-sh/python-build-standalone#716
         - astral-sh/ruff#14844
+        - astral-sh/uv#15016
+        - astral-sh/uv#15018
 
 
 -   ![](https://github.com/astronomer.png?size=40){ width="40" loading=lazy align=left } astronomer
