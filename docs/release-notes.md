@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [unsound-condition] detects `if:` conditions that
+  inadvertently always evaluate to `true` (#1053)
+
 ### Enhancements 🌱
 
 * The [cache-poisoning] audit now supports auto-fixes for many findings (#923)
@@ -938,3 +943,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [insecure-commands]: ./audits.md#insecure-commands
 [use-trusted-publishing]: ./audits.md#use-trusted-publishing
 [anonymous-definition]: ./audits.md#anonymous-definition
+[unsound-condition]: ./audits.md#unsound-condition
