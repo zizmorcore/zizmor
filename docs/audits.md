@@ -1443,7 +1443,7 @@ individual fields as separate secrets.
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow, Action  | [unsound-condition.yml]   | v1.12.0      | ✅             | ✅                 | ❌  |
 
-[unsound-condition.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unsound-contains.yml
+[unsound-condition.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unsound-condition.yml
 
 Detects conditions that are inadvertently always true despite containing
 an expression that should control the evaluation.
