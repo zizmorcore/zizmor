@@ -65,6 +65,20 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
                 },
                 &["with", "password"],
             ),
+            // TODO: Not sufficiently sensitive; we need to detect whether
+            // a TP-compatible registry is being published to.
+            // (
+            //     ActionCoordinate::Configurable {
+            //         uses_pattern: "PyO3/maturin-action".parse().unwrap(),
+            //         control: ControlExpr::single(
+            //             Toggle::OptIn,
+            //             "command",
+            //             ControlFieldType::Exact(&["upload", "publish"]),
+            //             true,
+            //         ),
+            //     },
+            //     &["with", "command"],
+            // ),
             (
                 ActionCoordinate::Configurable {
                     uses_pattern: "rubygems/release-gem".parse().unwrap(),
