@@ -27,6 +27,7 @@ of `zizmor`.
   commands directly (#1042)
 * The [insecure-commands] audit now supports auto-fixes for many findings
   (#1045)
+* The [template-injection] audit now detects more action injection sinks (#1059)
 
 ### Bug Fixes 🐛
 
@@ -944,3 +945,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [use-trusted-publishing]: ./audits.md#use-trusted-publishing
 [anonymous-definition]: ./audits.md#anonymous-definition
 [unsound-condition]: ./audits.md#unsound-condition
+[known-vulnerable-actions]: ./audits.md#known-vulnerable-actions
