@@ -56,16 +56,22 @@ static ACTION_INJECTION_SINKS: LazyLock<Vec<(RepositoryUsesPattern, Vec<&str>)>>
         )
         .unwrap();
 
-        // These sinks are not tracked by CodeQL (yet)
-        sinks.push(("amadevus/pwsh-script".parse().unwrap(), vec!["script"]));
-        sinks.push((
-            "jannekem/run-python-script-action".parse().unwrap(),
-            vec!["script"],
-        ));
-        sinks.push((
-            "cardinalby/js-eval-action".parse().unwrap(),
-            vec!["expression"],
-        ));
+        sinks.extend([
+            // These sinks are not tracked by CodeQL (yet)
+            ("amadevus/pwsh-script".parse().unwrap(), vec!["script"]),
+            (
+                "jannekem/run-python-script-action".parse().unwrap(),
+                vec!["script"],
+            ),
+            (
+                "cardinalby/js-eval-action".parse().unwrap(),
+                vec!["expression"],
+            ),
+            (
+                "addnab/docker-run-action".parse().unwrap(),
+                vec!["options", "run"],
+            ),
+        ]);
         sinks
     });
 
