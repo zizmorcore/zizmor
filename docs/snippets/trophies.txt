@@ -5,6 +5,7 @@
 # owner/repo@commit for individual commits
 
 adafruit/circuitpython#9785
+ag2ai/faststream#2398
 aio-libs/aiobotocore#1344
 aio-libs/aiobotocore#1355
 anchore/vunnel#832
@@ -60,6 +61,7 @@ Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
 fatiando/harmonica#550
+Flexget/Flexget#4299
 foyer-rs/foyer#859
 fpgmaas/deptry#972
 fpgmaas/deptry#1161
