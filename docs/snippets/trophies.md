@@ -7,6 +7,14 @@
         - adafruit/circuitpython#9785
 
 
+-   ![](https://github.com/ag2ai.png?size=40){ width="40" loading=lazy align=left } ag2ai
+
+    ---
+
+    ??? example "Examples"
+        - ag2ai/faststream#2398
+
+
 -   ![](https://github.com/aio-libs.png?size=40){ width="40" loading=lazy align=left } aio-libs
 
     ---
@@ -291,6 +299,14 @@
 
     ??? example "Examples"
         - fatiando/harmonica#550
+
+
+-   ![](https://github.com/Flexget.png?size=40){ width="40" loading=lazy align=left } Flexget
+
+    ---
+
+    ??? example "Examples"
+        - Flexget/Flexget#4299
 
 
 -   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
