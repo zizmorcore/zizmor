@@ -298,13 +298,16 @@ impl TemplateInjection {
             },
         });
 
-        // We only need to add the environment variable if it doesn't
-        // match one of the runner's default environment variables.
-        if !DEFAULT_ENVIRONMENT_VARIABLES
+        // We need to insert a new key into the `env:` block, unless the
+        // variable is already a default *or* the context is `env.FOO`,
+        // since the latter implies that `FOO` is already present.
+        let needs_new_env = !DEFAULT_ENVIRONMENT_VARIABLES
             .iter()
             .map(|t| t.0)
             .contains(&env_var.as_str())
-        {
+            && !ctx.child_of("env");
+
+        if needs_new_env {
             patches.push(Patch {
                 route: step.route(),
                 operation: Op::MergeInto {
@@ -1024,6 +1027,66 @@ jobs:
                           echo "User: ${GITHUB_ACTOR}"
                           echo "User: ${GITHUB_ACTOR}"
                           echo "User: ${GITHUB_ACTOR}"
+                "#);
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_no_env_overcorrection() {
+        // Testcase for #1052.
+        let workflow_content = r#"
+name: Test Duplicate Template Injections
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Equivalent vulnerable expressions
+        run: |
+          echo "User: ${{ env.THIS_IS_NOT_A_DEFAULT }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_no_env_overcorrection.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                // Should find template injection
+                assert!(!findings.is_empty());
+
+                // Should have at least one finding with a fix
+                let findings_with_fixes: Vec<_> =
+                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
+                assert!(
+                    !findings_with_fixes.is_empty(),
+                    "Expected at least one finding with a fix"
+                );
+
+                // Apply each fix in sequence
+                let mut current_document = workflow.as_document().clone();
+                for finding in findings_with_fixes {
+                    if let Some(fix) = finding
+                        .fixes
+                        .iter()
+                        .find(|f| f.title == "replace expression with environment variable")
+                    {
+                        if let Ok(new_document) = fix.apply(&current_document) {
+                            current_document = new_document;
+                        }
+                    }
+                }
+
+                insta::assert_snapshot!(current_document.source(), @r#"
+                name: Test Duplicate Template Injections
+                on: push
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    steps:
+                      - name: Equivalent vulnerable expressions
+                        run: |
+                          echo "User: ${THIS_IS_NOT_A_DEFAULT}"
                 "#);
             }
         );
