@@ -54,6 +54,11 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
 
     /// Returns the document which contains this step.
     fn document(&self) -> &'doc yamlpath::Document;
+
+    /// Returns the effective shell for this step, if it can be determined.
+    /// This includes the step's explicit shell, job defaults, workflow defaults,
+    /// and runner defaults. Returns `None` if the shell cannot be statically determined.
+    fn effective_shell(&self) -> Option<&str>;
 }
 
 impl<'a, 'doc, T: StepCommon<'doc>> AsDocument<'a, 'doc> for T {
