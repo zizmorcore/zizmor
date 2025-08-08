@@ -180,7 +180,7 @@ impl TemplateInjection {
         }
 
         // Get the effective shell, which includes defaults and fallbacks
-        let shell = step.effective_shell()?;
+        let shell = step.shell()?;
 
         match shell {
             // sh-style shells (bash, sh, zsh, etc.)

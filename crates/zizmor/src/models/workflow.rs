@@ -673,7 +673,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         self.workflow().as_document()
     }
 
-    fn effective_shell(&self) -> Option<&str> {
+    fn shell(&self) -> Option<&str> {
         // For workflow steps, we can use the existing shell() method
         self.shell()
     }

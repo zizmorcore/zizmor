@@ -227,7 +227,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         self.action().as_document()
     }
 
-    fn effective_shell(&self) -> Option<&str> {
+    fn shell(&self) -> Option<&str> {
         // For composite action steps, shell is always explicitly specified in the YAML
         if let action::StepBody::Run { shell, .. } = &self.inner.body {
             Some(shell)
