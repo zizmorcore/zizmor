@@ -189,8 +189,7 @@ impl TemplateInjection {
             "cmd" => Some(format!("%{env_var}%")),
             // PowerShell (both Windows PowerShell and PowerShell Core)
             "pwsh" | "powershell" => Some(format!("$env:{env_var}")),
-            // Python shell (uses os.environ)
-            "python" => Some(format!("{{os.environ.get('{env_var}')}}")),
+
             // For unknown shells, don't provide a fix to avoid incorrect syntax
             _ => None,
         }
@@ -1460,109 +1459,6 @@ jobs:
                             run: echo PR title is %GITHUB_EVENT_PULL_REQUEST_TITLE%
                             env:
                               GITHUB_EVENT_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
-                    "#);
-                }
-            }
-        );
-    }
-
-    #[test]
-    fn test_template_injection_fix_python_shell() {
-        let workflow_content = r#"
-name: Test Template Injection - Python
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Python script with template injection
-        shell: python
-        run: |
-          import os
-          print(f"User is ${{ github.event.pull_request.title }}")
-"#;
-
-        test_workflow_audit!(
-            TemplateInjection,
-            "test_template_injection_fix_python_shell.yml",
-            workflow_content,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                assert!(!findings.is_empty());
-
-                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
-                assert!(finding_with_fix.is_some());
-
-                if let Some(finding) = finding_with_fix {
-                    let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow.as_document(),
-                        finding,
-                        "replace expression with environment variable",
-                    );
-                    insta::assert_snapshot!(fixed_content.source(), @r#"
-                    name: Test Template Injection - Python
-                    on: push
-                    jobs:
-                      test:
-                        runs-on: ubuntu-latest
-                        steps:
-                          - name: Python script with template injection
-                            shell: python
-                            run: |
-                              import os
-                              print(f"User is {os.environ.get('GITHUB_EVENT_PULL_REQUEST_TITLE')}")
-                            env:
-                              GITHUB_EVENT_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
-                    "#);
-                }
-            }
-        );
-    }
-
-    #[test]
-    fn test_template_injection_fix_python_shell_with_default_env() {
-        let workflow_content = r#"
-name: Test Template Injection - Python with Default Env
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Python script with default env variable
-        shell: python
-        run: |
-          import os
-          print(f"User is ${{ github.actor }}")
-"#;
-
-        test_workflow_audit!(
-            TemplateInjection,
-            "test_template_injection_fix_python_shell_with_default_env.yml",
-            workflow_content,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                assert!(!findings.is_empty());
-
-                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
-                assert!(finding_with_fix.is_some());
-
-                if let Some(finding) = finding_with_fix {
-                    let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow.as_document(),
-                        finding,
-                        "replace expression with environment variable",
-                    );
-                    // GITHUB_ACTOR is a default env var, so no env block should be added
-                    insta::assert_snapshot!(fixed_content.source(), @r#"
-                    name: Test Template Injection - Python with Default Env
-                    on: push
-                    jobs:
-                      test:
-                        runs-on: ubuntu-latest
-                        steps:
-                          - name: Python script with default env variable
-                            shell: python
-                            run: |
-                              import os
-                              print(f"User is {os.environ.get('GITHUB_ACTOR')}")
                     "#);
                 }
             }
