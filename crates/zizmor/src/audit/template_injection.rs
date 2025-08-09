@@ -36,7 +36,7 @@ use crate::{
         workflow::Step,
     },
     state::AuditState,
-    utils::{DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_fenced_expressions},
+    utils::{self, DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_fenced_expressions},
 };
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
@@ -170,27 +170,24 @@ impl TemplateInjection {
         }
     }
 
-    /// Returns the appropriate shell variable syntax for the given environment variable
+    /// Returns the appropriate variable expansion syntax for the given variable
     /// based on the step's shell type. Returns `None` if the shell type is unsupported
     /// for auto-fixing.
-    fn shell_variable_syntax<'doc>(env_var: &str, step: &impl StepCommon<'doc>) -> Option<String> {
+    fn variable_expansion_for_shell<'doc>(
+        env_var: &str,
+        step: &impl StepCommon<'doc>,
+    ) -> Option<String> {
         // Only provide fixes for run steps
         if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
             return None;
         }
 
-        // Get the effective shell, which includes defaults and fallbacks
-        let shell = step.shell()?;
+        let shell = utils::normalize_shell(step.shell()?);
 
         match shell {
-            // sh-style shells (bash, sh, zsh, etc.)
             "bash" | "sh" | "zsh" => Some(format!("${{{env_var}}}")),
-            // Windows Command Prompt
             "cmd" => Some(format!("%{env_var}%")),
-            // PowerShell (both Windows PowerShell and PowerShell Core)
             "pwsh" | "powershell" => Some(format!("$env:{env_var}")),
-
-            // For unknown shells, don't provide a fix to avoid incorrect syntax
             _ => None,
         }
     }
@@ -313,7 +310,7 @@ impl TemplateInjection {
         let env_var = Self::context_to_env_var(ctx)?;
 
         // Determine the shell type and generate appropriate variable syntax
-        let var_syntax = Self::shell_variable_syntax(&env_var, step)?;
+        let var_syntax = Self::variable_expansion_for_shell(&env_var, step)?;
 
         let mut patches = vec![];
         patches.push(Patch {
@@ -1228,6 +1225,52 @@ jobs:
                         steps:
                           - name: Vulnerable step with bash shell
                             shell: bash
+                            run: echo "User is ${GITHUB_ACTOR}"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_bash_shell_full_path() {
+        let workflow_content = r#"
+name: Test Template Injection - Bash
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with bash shell
+        shell: /bin/bash
+        run: echo "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_bash_shell.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - Bash
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step with bash shell
+                            shell: /bin/bash
                             run: echo "User is ${GITHUB_ACTOR}"
                     "#);
                 }

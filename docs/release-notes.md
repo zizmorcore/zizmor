@@ -37,6 +37,8 @@ of `zizmor`.
   with leading or trailing whitespace (#1027)
 * Fixed a bug where [template-injection] findings in `--fix` mode would be
   incorrectly patched when referencing an `env.*` context (#1052)
+* Fixed a bug where [template-injection] findings in `--fix` mode would be
+  patched with shell syntax that didn't match the step's actual shell (#1064)
 
 ## 1.11.0
 
