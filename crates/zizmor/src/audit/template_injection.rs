@@ -36,7 +36,7 @@ use crate::{
         workflow::Step,
     },
     state::AuditState,
-    utils::{DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_fenced_expressions},
+    utils::{self, DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_fenced_expressions},
 };
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
@@ -170,6 +170,28 @@ impl TemplateInjection {
         }
     }
 
+    /// Returns the appropriate variable expansion syntax for the given variable
+    /// based on the step's shell type. Returns `None` if the shell type is unsupported
+    /// for auto-fixing.
+    fn variable_expansion_for_shell<'doc>(
+        env_var: &str,
+        step: &impl StepCommon<'doc>,
+    ) -> Option<String> {
+        // Only provide fixes for run steps
+        if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
+            return None;
+        }
+
+        let shell = utils::normalize_shell(step.shell()?);
+
+        match shell {
+            "bash" | "sh" | "zsh" => Some(format!("${{{env_var}}}")),
+            "cmd" => Some(format!("%{env_var}%")),
+            "pwsh" | "powershell" => Some(format!("$env:{env_var}")),
+            _ => None,
+        }
+    }
+
     /// Converts a [`Context`] into an appropriate environment variable name,
     /// or `None` if conversion is not possible.
     fn context_to_env_var(ctx: &Context) -> Option<String> {
@@ -264,9 +286,6 @@ impl TemplateInjection {
             return None;
         }
 
-        // FIXME: We should only produce a fix if we're confident that
-        // the `run:` block has bash syntax.
-
         // If our expression isn't a single context, then we can't fix it yet.
         let Expr::Context(ctx) = parsed else {
             return None;
@@ -274,8 +293,9 @@ impl TemplateInjection {
 
         // From here, our fix consists of two patch operations:
         // 1. Replacing the expression in the script with an environment
-        //    variable of our generation. For example, `${{ foo.bar }}`
-        //    becomes `${FOO_BAR}`.
+        //    variable of our generation. The variable syntax depends on
+        //    the shell type: `${VAR}` for bash/sh, `%VAR%` for cmd,
+        //    `$env:VAR` for PowerShell.
         // 2. Inserting the new environment variable into the step's
         //    `env:` block, e.g. `FOO_BAR: ${{ foo.bar }}`.
         //
@@ -289,12 +309,16 @@ impl TemplateInjection {
         // index. In those kinds of cases, we don't produce a fix.
         let env_var = Self::context_to_env_var(ctx)?;
 
+        // Express the variable's expansion according to the step's shell.
+        // For example, `VAR` becomes `${VAR}` in bash/sh/zsh,
+        let var_expansion = Self::variable_expansion_for_shell(&env_var, step)?;
+
         let mut patches = vec![];
         patches.push(Patch {
             route: step.route().with_key("run"),
             operation: Op::RewriteFragment {
                 from: subfeature::Subfeature::new(0, raw.as_raw()),
-                to: format!("${{{env_var}}}").into(),
+                to: var_expansion.into(),
             },
         });
 
@@ -1161,5 +1185,359 @@ jobs:
                 expected
             );
         }
+    }
+
+    #[test]
+    fn test_template_injection_fix_bash_shell() {
+        let workflow_content = r#"
+name: Test Template Injection - Bash
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with bash shell
+        shell: bash
+        run: echo "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_bash_shell.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - Bash
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step with bash shell
+                            shell: bash
+                            run: echo "User is ${GITHUB_ACTOR}"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_bash_shell_full_path() {
+        let workflow_content = r#"
+name: Test Template Injection - Bash
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with bash shell
+        shell: /bin/bash
+        run: echo "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_bash_shell.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - Bash
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step with bash shell
+                            shell: /bin/bash
+                            run: echo "User is ${GITHUB_ACTOR}"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_cmd_shell() {
+        let workflow_content = r#"
+name: Test Template Injection - CMD
+on: push
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Vulnerable step with cmd shell
+        shell: cmd
+        run: echo User is ${{ github.actor }}
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_cmd_shell.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - CMD
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: windows-latest
+                        steps:
+                          - name: Vulnerable step with cmd shell
+                            shell: cmd
+                            run: echo User is %GITHUB_ACTOR%
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_pwsh_shell() {
+        let workflow_content = r#"
+name: Test Template Injection - PowerShell
+on: push
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Vulnerable step with pwsh shell
+        shell: pwsh
+        run: Write-Host "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_pwsh_shell.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - PowerShell
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: windows-latest
+                        steps:
+                          - name: Vulnerable step with pwsh shell
+                            shell: pwsh
+                            run: Write-Host "User is $env:GITHUB_ACTOR"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_default_shell_ubuntu() {
+        let workflow_content = r#"
+name: Test Template Injection - Default Shell Ubuntu
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with default shell
+        run: echo "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_default_shell_ubuntu.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    // Ubuntu default shell is bash, so should use ${VAR} syntax
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - Default Shell Ubuntu
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step with default shell
+                            run: echo "User is ${GITHUB_ACTOR}"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_default_shell_windows() {
+        let workflow_content = r#"
+name: Test Template Injection - Default Shell Windows
+on: push
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Vulnerable step with default shell
+        run: Write-Host "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_default_shell_windows.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    // Windows default shell is pwsh, so should use $env:VAR syntax
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - Default Shell Windows
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: windows-latest
+                        steps:
+                          - name: Vulnerable step with default shell
+                            run: Write-Host "User is $env:GITHUB_ACTOR"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_cmd_shell_with_custom_env() {
+        let workflow_content = r#"
+name: Test Template Injection - CMD with Custom Env
+on: push
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Vulnerable step with custom context
+        shell: cmd
+        run: echo PR title is ${{ github.event.pull_request.title }}
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_cmd_shell_with_custom_env.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - CMD with Custom Env
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: windows-latest
+                        steps:
+                          - name: Vulnerable step with custom context
+                            shell: cmd
+                            run: echo PR title is %GITHUB_EVENT_PULL_REQUEST_TITLE%
+                            env:
+                              GITHUB_EVENT_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_no_fix_unknown_shell() {
+        let workflow_content = r#"
+name: Test Template Injection - Unknown Shell
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with unknown shell
+        shell: fish
+        run: echo "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_no_fix_unknown_shell.yml",
+            workflow_content,
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                // Should find the vulnerability but not provide a fix for unknown shell
+                assert!(!findings.is_empty());
+
+                let findings_with_fixes: Vec<_> =
+                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
+                assert!(
+                    findings_with_fixes.is_empty(),
+                    "Expected no fixes for unknown shell type"
+                );
+            }
+        );
     }
 }

@@ -672,6 +672,11 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
     fn document(&self) -> &'doc yamlpath::Document {
         self.workflow().as_document()
     }
+
+    fn shell(&self) -> Option<&str> {
+        // For workflow steps, we can use the existing shell() method
+        self.shell()
+    }
 }
 
 impl<'doc> Step<'doc> {

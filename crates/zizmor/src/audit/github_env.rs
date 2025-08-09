@@ -300,7 +300,8 @@ impl GitHubEnv {
         let normalized = utils::normalize_shell(shell);
 
         match normalized {
-            "bash" | "sh" => self.bash_uses_github_env(run_step_body),
+            // NOTE(ww): zsh is probably close enough in syntax to slide here. Hopefully.
+            "bash" | "sh" | "zsh" => self.bash_uses_github_env(run_step_body),
             "cmd" => Ok(self.cmd_uses_github_env(run_step_body)),
             "pwsh" | "powershell" => self.pwsh_uses_github_env(run_step_body),
             // TODO: handle python.
