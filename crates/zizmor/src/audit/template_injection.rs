@@ -309,15 +309,16 @@ impl TemplateInjection {
         // index. In those kinds of cases, we don't produce a fix.
         let env_var = Self::context_to_env_var(ctx)?;
 
-        // Determine the shell type and generate appropriate variable syntax
-        let var_syntax = Self::variable_expansion_for_shell(&env_var, step)?;
+        // Express the variable's expansion according to the step's shell.
+        // For example, `VAR` becomes `${VAR}` in bash/sh/zsh,
+        let var_expansion = Self::variable_expansion_for_shell(&env_var, step)?;
 
         let mut patches = vec![];
         patches.push(Patch {
             route: step.route().with_key("run"),
             operation: Op::RewriteFragment {
                 from: subfeature::Subfeature::new(0, raw.as_raw()),
-                to: var_syntax.into(),
+                to: var_expansion.into(),
             },
         });
 
