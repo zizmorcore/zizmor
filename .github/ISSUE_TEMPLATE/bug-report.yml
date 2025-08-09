@@ -10,7 +10,7 @@ body:
       value: |
         Thank you for taking the time to fill out this bug report!
 
-        Please read the following parts of this template carefully.
+        Please read the following parts of this template **very carefully**.
         Invalid or incomplete submissions take longer to triage,
         and may be given a lower priority or closed outright
         if not actionable.
@@ -27,9 +27,10 @@ body:
             the feature request form instead.
           required: true
         - label: >-
-            I have looked through the
-            [open issues](https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue+is%3Aopen+)
-            for a duplicate report.
+            I have looked through both the
+            [open](https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue+is%3Aopen+)
+            and [closed](https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue%20state%3Aclosed)
+            issues for a duplicate report.
           required: true
 
   - type: input
