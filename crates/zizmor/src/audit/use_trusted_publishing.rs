@@ -270,7 +270,7 @@ impl UseTrustedPublishing {
         let normalized = utils::normalize_shell(shell);
 
         match normalized {
-            "bash" | "sh" => self.bash_trusted_publishing_command_candidates(run),
+            "bash" | "sh" | "zsh" => self.bash_trusted_publishing_command_candidates(run),
             "pwsh" | "powershell" => self.pwsh_trusted_publishing_command_candidates(run),
             _ => self.raw_trusted_publishing_command_candidates(run),
         }
