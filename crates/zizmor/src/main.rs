@@ -684,7 +684,7 @@ fn run() -> Result<ExitCode> {
     match app.format {
         OutputFormat::Plain => output::plain::render_findings(&app, &registry, &results),
         OutputFormat::Json | OutputFormat::JsonV1 => {
-            serde_json::to_writer_pretty(stdout(), &results.findings())?
+            output::json::v1::output(stdout(), results.findings())?
         }
         OutputFormat::Sarif => {
             serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))?

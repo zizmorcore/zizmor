@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'The version of zizmor to build against'
+        description: "The version of zizmor to build against"
         required: true
 
       latest:
-        description: 'Whether to tag the image as latest'
+        description: "Whether to tag the image as latest"
         required: false
         default: true
         type: boolean
@@ -83,6 +83,7 @@ jobs:
           touch "${RUNNER_TEMP}/digests/${digest#sha256:}"
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
+        shell: bash
 
       - name: Upload digest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

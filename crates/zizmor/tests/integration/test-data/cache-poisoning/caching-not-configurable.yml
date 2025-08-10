@@ -20,5 +20,5 @@ jobs:
       - name: Setup CI caching
         uses: Mozilla-Actions/sccache-action@054db53350805f83040bf3e6e9b8cf5a139aa7c9
 
-      - name: Publish on crates.io
+      - name: Publish on crates.io # zizmor: ignore[use-trusted-publishing]
         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}

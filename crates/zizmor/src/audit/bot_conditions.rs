@@ -13,7 +13,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
     models::workflow::{JobExt, Workflow},
-    utils::ExtractedExpr,
+    utils::{self, ExtractedExpr},
 };
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
@@ -91,9 +91,16 @@ impl Audit for BotConditions {
         }
 
         for (expr, parent, if_loc) in conds {
-            let unparsed = ExtractedExpr::new(expr);
+            // Handle a fenced `if:` by extracting it explicitly.
+            // We need this indirection because of multiline YAML strings,
+            // e.g. where the literal string value might be something like
+            // `${{ ... }}\n`.
+            let bare = match utils::extract_fenced_expression(expr, 0) {
+                Some((expr, _)) => expr.as_bare(),
+                None => ExtractedExpr::new(expr).as_bare(),
+            };
 
-            let Ok(expr) = Expr::parse(unparsed.as_bare()) else {
+            let Ok(expr) = Expr::parse(bare) else {
                 tracing::warn!("couldn't parse expression: {expr}");
                 continue;
             };

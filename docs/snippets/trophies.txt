@@ -5,8 +5,10 @@
 # owner/repo@commit for individual commits
 
 adafruit/circuitpython#9785
+ag2ai/faststream#2398
 aio-libs/aiobotocore#1344
 aio-libs/aiobotocore#1355
+anchore/vunnel#832
 apache/airflow#45408
 apache/airflow#47258
 apache/airflow#50749
@@ -18,7 +20,10 @@ artichoke/boba#265
 artichoke/project-infrastructure#683
 artichoke/setup-rust#121
 ashishb/wp2hugo#91
+astral-sh/python-build-standalone#716
 astral-sh/ruff#14844
+astral-sh/uv#15016
+astral-sh/uv#15018
 astronomer/astronomer-cosmos#1870
 astronomer/dag-factory#482
 astropy/astropy#17315
@@ -28,6 +33,7 @@ bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
 blakeblackshear/frigate#15490
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
+bw2/ConfigArgParse#336
 cakephp/cakephp#18081
 canonical/operator#1656
 canonical/operator#1721
@@ -55,6 +61,7 @@ Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
 fatiando/harmonica#550
+Flexget/Flexget#4299
 foyer-rs/foyer#859
 fpgmaas/deptry#972
 fpgmaas/deptry#1161
@@ -147,6 +154,7 @@ mongodb/django-mongodb-backend#315
 mongodb/motor#312
 mongodb/mongo-python-driver#2001
 mongodb-labs/flask-pymongo#170
+mozilla/addons#15751
 mozilla/fxa#18628
 mozilla/neqo#2413
 mozilla/neqo#2721

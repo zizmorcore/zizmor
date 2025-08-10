@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [unsound-condition] detects `if:` conditions that
+  inadvertently always evaluate to `true` (#1053)
+
 ### Enhancements 🌱
 
 * The [cache-poisoning] audit now supports auto-fixes for many findings (#923)
@@ -17,6 +22,12 @@ of `zizmor`.
 * `zizmor` is now stricter about parsing `uses:` clauses. In particular,
   `zizmor` will no longer accept `uses: org/repo` without a trailing
   `@ref`, as GitHub Actions itself does not accept this syntax (#1019)
+* The [use-trusted-publishing] audit now detects many more patterns, including
+  `cargo publish` and other `#!yaml run:` blocks that make use of publishing
+  commands directly (#1042)
+* The [insecure-commands] audit now supports auto-fixes for many findings
+  (#1045)
+* The [template-injection] audit now detects more action injection sinks (#1059)
 
 ### Bug Fixes 🐛
 
@@ -24,6 +35,10 @@ of `zizmor`.
   block-style YAML mappings (#995)
 * Fixed a bug where `zizmor` would crash when given a GitHub API token
   with leading or trailing whitespace (#1027)
+* Fixed a bug where [template-injection] findings in `--fix` mode would be
+  incorrectly patched when referencing an `env.*` context (#1052)
+* Fixed a bug where [template-injection] findings in `--fix` mode would be
+  patched with shell syntax that didn't match the step's actual shell (#1064)
 
 ## 1.11.0
 
@@ -933,3 +948,5 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [insecure-commands]: ./audits.md#insecure-commands
 [use-trusted-publishing]: ./audits.md#use-trusted-publishing
 [anonymous-definition]: ./audits.md#anonymous-definition
+[unsound-condition]: ./audits.md#unsound-condition
+[known-vulnerable-actions]: ./audits.md#known-vulnerable-actions

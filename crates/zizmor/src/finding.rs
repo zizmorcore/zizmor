@@ -94,7 +94,7 @@ pub(crate) enum Severity {
 }
 
 /// A finding's "determination," i.e. its various classifications.
-#[derive(Serialize)]
+#[derive(Copy, Clone, Serialize)]
 pub(crate) struct Determinations {
     pub(crate) confidence: Confidence,
     pub(crate) severity: Severity,
@@ -141,7 +141,6 @@ impl Fix<'_> {
     }
 }
 
-#[derive(Serialize)]
 pub(crate) struct Finding<'doc> {
     /// The audit ID for this finding, e.g. `template-injection`.
     pub(crate) ident: &'static str,
@@ -163,7 +162,6 @@ pub(crate) struct Finding<'doc> {
     /// One or more suggested fixes for this finding. Because a finding
     /// can span multiple inputs, each fix is associated with a specific
     /// input via [`Fix::key`].
-    #[serde(skip_serializing)]
     pub(crate) fixes: Vec<Fix<'doc>>,
 }
 

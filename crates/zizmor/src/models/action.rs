@@ -102,6 +102,17 @@ impl Action {
             kind: Default::default(),
         }
     }
+
+    /// Returns an iterator over this action's step-level conditions.
+    ///
+    /// Each [`common::If`] is paired with a [`SymbolicLocation`].
+    /// for its *parent*, i.e. a composite step.
+    pub(crate) fn conditions(&self) -> impl Iterator<Item = (&common::If, SymbolicLocation<'_>)> {
+        self.steps()
+            .into_iter()
+            .flatten()
+            .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location())))
+    }
 }
 
 /// An iterable container for steps within a [`Job`].
@@ -214,6 +225,15 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
 
     fn document(&self) -> &'doc yamlpath::Document {
         self.action().as_document()
+    }
+
+    fn shell(&self) -> Option<&str> {
+        // For composite action steps, shell is always explicitly specified in the YAML
+        if let action::StepBody::Run { shell, .. } = &self.inner.body {
+            Some(shell)
+        } else {
+            None
+        }
     }
 }
 

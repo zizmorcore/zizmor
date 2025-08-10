@@ -1437,6 +1437,98 @@ individual fields as separate secrets.
         ```
 
 
+## `unsound-condition`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [unsound-condition.yml]   | v1.12.0      | ✅             | ✅                 | ❌  |
+
+[unsound-condition.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unsound-condition.yml
+
+Detects conditions that are inadvertently always true despite containing
+an expression that should control the evaluation.
+
+A common source of these is an unintentional interaction
+between multi-line YAML strings and fenced GitHub Actions expressions.
+For example, the following condition always evaluates to `true`, despite
+appearing to evaluate to `false`:
+
+```yaml
+if: |
+  ${{ false }}
+```
+
+This happens because YAML's "block" scalars include a trailing newline
+by default, which is left *outside* of the GitHub Actions expression.
+This results in an expansion like `'false\n'` instead of `'false'`,
+which GitHub Actions interprets as a truthy value.
+
+### Remediation
+
+There are two ways to remediate this:
+
+* Avoid fenced expressions in `#!yaml if:` conditions. Instead, write
+  the expression as a "bare" expression.
+
+    This will still include the trailing newline, but it will be *inside*
+    of the expression as seen from the GitHub Actions expression parser.
+
+    !!! example
+
+        === "Before :warning:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will incorrectly always run"
+                    if: |
+                      ${{ false }}
+            ```
+
+        === "After :white_check_mark:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will correctly not run"
+                    if: |
+                      false
+            ```
+
+* Use fenced expressions, but use a YAML block scalar that does not
+  include a trailing newline. Either `|-` or `>-` is appropriate for
+  this purpose.
+
+    !!! example
+
+        === "Before :warning:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will incorrectly always run"
+                    if: |
+                      ${{ false }}
+            ```
+
+        === "After :white_check_mark:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will correctly not run"
+                    if: |-
+                      ${{ false }}
+            ```
+
 ## `unsound-contains`
 
 | Type     | Examples                            | Introduced in | Works offline | Enabled by default | Configurable |
@@ -1542,8 +1634,6 @@ and possible.
 Other resources:
 
 * [Trusted Publishers for All Package Repositories]
-* [Publishing to PyPI with a Trusted Publisher]
-* [Trusted Publishing - RubyGems Guides]
 * [Trusted publishing: a new benchmark for packaging security]
 
 ### Remediation
@@ -1551,8 +1641,46 @@ Other resources:
 In general, enabling Trusted Publishing requires a one-time change to your
 package's configuration on its associated index (e.g. PyPI or RubyGems).
 
-Once your Trusted Publisher is registered, see @pypa/gh-action-pypi-publish
-or @rubygems/release-gem for canonical examples of using it.
+Each ecosystem has its own resources for using a Trusted Publisher
+once it's configured:
+
+<div class="grid cards" markdown>
+-   :simple-pypi:{.lg .middle} Python (PyPI)
+
+    ---
+
+    Usage: @pypa/gh-action-pypi-publish
+
+    See: [Publishing to PyPI with a Trusted Publisher]
+
+-   :simple-rubygems:{.lg .middle} Ruby (RubyGems)
+
+    ---
+
+    Usage: @rubygems/release-gem
+
+    See: [Trusted Publishing - RubyGems Guides]
+
+-   :material-language-rust:{.lg .middle} Rust (crates.io)
+
+    ---
+
+    Usage: @rust-lang/crates-io-auth-action.
+
+    See: [Trusted Publishing - crates.io]
+
+-   :simple-dart:{.lg .middle} Dart (pub.dev)
+
+    ---
+
+    See: [Automated publishing of packages to pub.dev]
+
+-   :material-npm:{.lg .middle} JavaScript (npm)
+
+    ---
+
+    See: [Trusted publishing for npm packages]
+</div>
 
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
@@ -1562,6 +1690,9 @@ or @rubygems/release-gem for canonical examples of using it.
 [Keeping your GitHub Actions and workflows secure Part 2: Untrusted input]: https://securitylab.github.com/resources/github-actions-untrusted-input/
 [Publishing to PyPI with a Trusted Publisher]: https://docs.pypi.org/trusted-publishers/
 [Trusted Publishing - RubyGems Guides]: https://guides.rubygems.org/trusted-publishing/
+[Trusted Publishing - crates.io]: https://crates.io/docs/trusted-publishing
+[Automated publishing of packages to pub.dev]: https://dart.dev/tools/pub/automated-publishing
+[Trusted publishing for npm packages]: https://docs.npmjs.com/trusted-publishers
 [Trusted publishing: a new benchmark for packaging security]: https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/
 [Trusted Publishers for All Package Repositories]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
 [were deprecated by GitHub]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/

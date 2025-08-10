@@ -277,6 +277,12 @@ fn use_trusted_publishing() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/cargo-publish.yml"))
+            .run()?
+    );
+
     Ok(())
 }
 
@@ -794,6 +800,17 @@ fn unpinned_images() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-images.yml"))
             .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
+fn unsound_condition() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unsound-condition.yml"))
             .run()?
     );
 

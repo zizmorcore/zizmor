@@ -84,13 +84,18 @@ Trail of Bits
 Tenki Cloud
 </a>
 </td>
+<td align="center" valign="top">
+<a href="https://github.com/ariccio">
+Alexander Riccio
+</a>
+</td>
 </tr>
 </tbody>
 </table>
 <!-- @@end-sponsors@@ -->
 
-Is your name missing above? Consider becoming one of our sponsors through
-one of the following:
+Want to see your name or logo above? Consider becoming a sponsor
+through one of the following:
 
 - [GitHub Sponsors](https://github.com/sponsors/woodruffw) (preferred)
 - [thanks.dev](https://thanks.dev/u/gh/woodruffw)

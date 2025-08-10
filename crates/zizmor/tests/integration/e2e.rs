@@ -4,6 +4,8 @@ use anyhow::Result;
 
 use crate::common::{OutputMode, input_under_test, zizmor};
 
+mod json_v1;
+
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn gha_hazmat() -> Result<()> {

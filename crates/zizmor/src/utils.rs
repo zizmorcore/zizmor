@@ -10,7 +10,10 @@ use jsonschema::{
     output::{ErrorDescription, OutputUnit},
     validator_for,
 };
-use std::{collections::VecDeque, ops::Range};
+use std::{
+    collections::VecDeque,
+    ops::{Deref, Range},
+};
 use std::{fmt::Write, sync::LazyLock};
 
 use crate::{audit::AuditInput, models::AsDocument, registry::InputError};
@@ -412,7 +415,10 @@ impl<'a> ExtractedExpr<'a> {
     }
 
     /// Creates a new [`ExtractedExpr`] from a fenced expression.
-    fn from_fenced(expr: &'a str) -> Option<Self> {
+    ///
+    /// This expects the fencing to be exact, i.e. there should be
+    /// no leading or trailing whitespace around the fences.
+    pub(crate) fn from_fenced(expr: &'a str) -> Option<Self> {
         expr.strip_prefix("${{")
             .and_then(|e| e.strip_suffix("}}"))
             .map(|_| ExtractedExpr {
@@ -449,7 +455,7 @@ impl<'a> ExtractedExpr<'a> {
     }
 }
 
-/// Parse an expression from the given free-form text, starting
+/// Extract a fenced expression from the given free-form text, starting
 /// at the given offset. The returned span is absolute.
 ///
 /// Returns `None` if no expression is found, or an span past
@@ -457,7 +463,10 @@ impl<'a> ExtractedExpr<'a> {
 ///
 /// Adapted roughly from GitHub's `parseScalar`:
 /// See: <https://github.com/actions/languageservices/blob/3a8c29c2d/workflow-parser/src/templates/template-reader.ts#L448>
-fn extract_expression(text: &str, offset: usize) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
+pub(crate) fn extract_fenced_expression(
+    text: &str,
+    offset: usize,
+) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
     let view = &text[offset..];
     let start = view.find("${{")?;
 
@@ -481,12 +490,12 @@ fn extract_expression(text: &str, offset: usize) -> Option<(ExtractedExpr<'_>, R
     })
 }
 
-/// Extract zero or more expressions from the given free-form text.
-pub(crate) fn extract_expressions(text: &str) -> Vec<(ExtractedExpr<'_>, Range<usize>)> {
+/// Extract zero or more fenced expressions from the given free-form text.
+pub(crate) fn extract_fenced_expressions(text: &str) -> Vec<(ExtractedExpr<'_>, Range<usize>)> {
     let mut exprs = vec![];
     let mut offset = 0;
 
-    while let Some((expr, span)) = extract_expression(text, offset) {
+    while let Some((expr, span)) = extract_fenced_expression(text, offset) {
         exprs.push((expr, (span.start..span.end)));
 
         if span.end >= text.len() {
@@ -499,13 +508,13 @@ pub(crate) fn extract_expressions(text: &str) -> Vec<(ExtractedExpr<'_>, Range<u
     exprs
 }
 
-/// Like `extract_expressions`, but over an entire audit input (e.g. workflow
+/// Like [`extract_fenced_expressions`], but over an entire audit input (e.g. workflow
 /// or action definition).
 ///
-/// Unlike `extract_expressions`, this function performs some semantic
+/// Unlike [`extract_fenced_expressions`], this function performs some semantic
 /// filtering over the raw input. For example, it skip ignore expressions
 /// that are inside comments.
-pub(crate) fn parse_expressions_from_input(
+pub(crate) fn parse_fenced_expressions_from_input(
     input: &AuditInput,
 ) -> Vec<(ExtractedExpr<'_>, Range<usize>)> {
     let text = input.as_document().source();
@@ -514,7 +523,7 @@ pub(crate) fn parse_expressions_from_input(
     let mut exprs = vec![];
     let mut offset = 0;
 
-    while let Some((expr, span)) = extract_expression(text, offset) {
+    while let Some((expr, span)) = extract_fenced_expression(text, offset) {
         // Ignore expressions that are inside comments.
         if doc.offset_inside_comment(span.start) {
             // Don't jump the entire span, since we might have an
@@ -572,7 +581,7 @@ pub(crate) fn env_is_static(env_ctx: &Context, envs: &[&LoE<Env>]) -> bool {
                 // TODO: We could instead return the interior expressions here
                 // for further analysis, to further eliminate false positives
                 // e.g. `env.foo: ${{ something-safe }}`.
-                return extract_expressions(&value.to_string()).is_empty();
+                return extract_fenced_expressions(&value.to_string()).is_empty();
             }
         }
     }
@@ -595,6 +604,36 @@ pub(crate) fn normalize_shell(shell: &str) -> &str {
     Utf8Path::new(path).file_name().unwrap_or(path)
 }
 
+/// Holds a tree-sitter query that contains a `@span` capture that
+/// covers the entire range of the query.
+pub(crate) struct SpannedQuery {
+    inner: tree_sitter::Query,
+    pub(crate) span_idx: u32,
+    pub(crate) destination_idx: u32,
+}
+
+impl Deref for SpannedQuery {
+    type Target = tree_sitter::Query;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl SpannedQuery {
+    pub(crate) fn new(query: &'static str, language: &tree_sitter::Language) -> Self {
+        let query = tree_sitter::Query::new(language, query).expect("malformed query");
+        let span_idx = query.capture_index_for_name("span").unwrap();
+        let destination_idx = query.capture_index_for_name("destination").unwrap();
+
+        Self {
+            inner: query,
+            span_idx,
+            destination_idx,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
@@ -604,8 +643,8 @@ mod tests {
         models::{action::Action, workflow::Workflow},
         registry::InputKey,
         utils::{
-            env_is_static, extract_expression, extract_expressions, normalize_shell,
-            parse_expressions_from_input,
+            env_is_static, extract_fenced_expression, extract_fenced_expressions, normalize_shell,
+            parse_fenced_expressions_from_input,
         },
     };
 
@@ -642,7 +681,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_expression() {
+    fn test_extract_fenced_expression() {
         let exprs = &[
             ("${{ foo }}", " foo ", 0..10),
             ("${{ foo }}${{ bar }}", " foo ", 0..10),
@@ -656,14 +695,14 @@ mod tests {
         ];
 
         for (text, expected_expr, expected_span) in exprs {
-            let (actual_expr, actual_span) = extract_expression(text, 0).unwrap();
+            let (actual_expr, actual_span) = extract_fenced_expression(text, 0).unwrap();
             assert_eq!(*expected_expr, actual_expr.as_bare());
             assert_eq!(*expected_span, actual_span);
         }
     }
 
     #[test]
-    fn test_extract_expressions() {
+    fn test_extract_fenced_expressions() {
         let multiple = r#"echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${OPENSSL_HASH}" >> $GITHUB_ENV"#;
 
         {
@@ -676,7 +715,7 @@ mod tests {
                 ]
                 .as_slice(),
             );
-            let exprs = extract_expressions(raw)
+            let exprs = extract_fenced_expressions(raw)
                 .into_iter()
                 .map(|(e, _)| e.as_raw().to_string())
                 .collect::<Vec<_>>();
@@ -686,7 +725,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_expressions_from_input() -> Result<()> {
+    fn test_extract_fenced_expressions_from_input() -> Result<()> {
         // Repro cases for #569; ensures we handle broken expressions that
         // are commented out. Observe that the commented expression isn't
         // terminated correctly, so the naive parse continues to the next
@@ -708,7 +747,7 @@ runs:
         let action = Action::from_string(action.into(), InputKey::local("fake", None)?)?;
         let action = action.into();
 
-        let exprs = parse_expressions_from_input(&action);
+        let exprs = parse_fenced_expressions_from_input(&action);
         assert_eq!(exprs.len(), 1);
         assert_eq!(exprs[0].0.as_raw().to_string(), "${{ '' }}");
 
@@ -736,7 +775,7 @@ jobs:
 
         let workflow = Workflow::from_string(workflow.into(), InputKey::local("fake", None)?)?;
 
-        let exprs = parse_expressions_from_input(&workflow.into())
+        let exprs = parse_fenced_expressions_from_input(&workflow.into())
             .into_iter()
             .map(|(e, _)| e.as_raw().to_string())
             .collect::<Vec<_>>();

@@ -18,6 +18,6 @@ jobs:
       - name: Setup CI caching
         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
 
-      - name: Publish on crates.io
+      - name: Publish on crates.io # zizmor: ignore[use-trusted-publishing]
         if: false
         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}

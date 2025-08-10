@@ -7,6 +7,14 @@
         - adafruit/circuitpython#9785
 
 
+-   ![](https://github.com/ag2ai.png?size=40){ width="40" loading=lazy align=left } ag2ai
+
+    ---
+
+    ??? example "Examples"
+        - ag2ai/faststream#2398
+
+
 -   ![](https://github.com/aio-libs.png?size=40){ width="40" loading=lazy align=left } aio-libs
 
     ---
@@ -14,6 +22,14 @@
     ??? example "Examples"
         - aio-libs/aiobotocore#1344
         - aio-libs/aiobotocore#1355
+
+
+-   ![](https://github.com/anchore.png?size=40){ width="40" loading=lazy align=left } anchore
+
+    ---
+
+    ??? example "Examples"
+        - anchore/vunnel#832
 
 
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
@@ -53,7 +69,10 @@
     ---
 
     ??? example "Examples"
+        - astral-sh/python-build-standalone#716
         - astral-sh/ruff#14844
+        - astral-sh/uv#15016
+        - astral-sh/uv#15018
 
 
 -   ![](https://github.com/astronomer.png?size=40){ width="40" loading=lazy align=left } astronomer
@@ -112,6 +131,14 @@
 
     ??? example "Examples"
         - brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
+
+
+-   ![](https://github.com/bw2.png?size=40){ width="40" loading=lazy align=left } bw2
+
+    ---
+
+    ??? example "Examples"
+        - bw2/ConfigArgParse#336
 
 
 -   ![](https://github.com/cakephp.png?size=40){ width="40" loading=lazy align=left } cakephp
@@ -272,6 +299,14 @@
 
     ??? example "Examples"
         - fatiando/harmonica#550
+
+
+-   ![](https://github.com/Flexget.png?size=40){ width="40" loading=lazy align=left } Flexget
+
+    ---
+
+    ??? example "Examples"
+        - Flexget/Flexget#4299
 
 
 -   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
@@ -651,6 +686,7 @@
     ---
 
     ??? example "Examples"
+        - mozilla/addons#15751
         - mozilla/fxa#18628
         - mozilla/neqo#2413
         - mozilla/neqo#2721
