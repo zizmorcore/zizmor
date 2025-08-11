@@ -1337,14 +1337,14 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
           unpinned-uses:
               runs-on: ubuntu-latest
               steps:
-              - uses: pypa/gh-action-pypi-publish@v1.12.4
-                with:
-                persist-credentials: false
+                - uses: pypa/gh-action-pypi-publish@v1.12.4
+                  with:
+                    persist-credentials: false
 
-              - uses: docker://ubuntu
-                with:
-                entrypoint: /bin/echo
-                args: hello!
+                - uses: docker://ubuntu
+                  with:
+                    entrypoint: /bin/echo
+                    args: hello!
         ```
 
     === "After :white_check_mark:"
@@ -1357,14 +1357,14 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
           unpinned-uses:
               runs-on: ubuntu-latest
               steps:
-              - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc  # v1.12.4
-                with:
-                persist-credentials: false
+                - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc  # v1.12.4
+                  with:
+                    persist-credentials: false
 
-              - uses: docker://ubuntu:24.04
-                with:
-                entrypoint: /bin/echo
-                args: hello!
+                - uses: docker://ubuntu:24.04
+                  with:
+                    entrypoint: /bin/echo
+                    args: hello!
         ```
 
 ## `unredacted-secrets`
