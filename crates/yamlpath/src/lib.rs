@@ -347,7 +347,7 @@ impl Document {
     ///
     /// This is typically useful as a "fallback" feature, e.g. for positioning
     /// relative to the "top" of the document.
-    pub fn top_feature(&self) -> Result<Feature, QueryError> {
+    pub fn top_feature(&self) -> Result<Feature<'_>, QueryError> {
         let top_node = self.top_object()?;
         Ok(top_node.into())
     }
@@ -388,7 +388,7 @@ impl Document {
     ///
     /// For example, querying `foo: bar` for `foo` will return
     /// `foo: bar` instead of just `bar`.
-    pub fn query_pretty(&self, route: &Route) -> Result<Feature, QueryError> {
+    pub fn query_pretty(&self, route: &Route) -> Result<Feature<'_>, QueryError> {
         self.query_node(route, QueryMode::Pretty).map(|n| n.into())
     }
 
@@ -401,7 +401,7 @@ impl Document {
     ///
     /// For example, querying `foo: bar` for `foo` will return
     /// just `bar` instead of `foo: bar`.
-    pub fn query_exact(&self, route: &Route) -> Result<Option<Feature>, QueryError> {
+    pub fn query_exact(&self, route: &Route) -> Result<Option<Feature<'_>>, QueryError> {
         let node = self.query_node(route, QueryMode::Exact)?;
 
         if node.kind_id() == self.block_mapping_pair_id || node.kind_id() == self.flow_pair_id {
@@ -423,7 +423,7 @@ impl Document {
     ///
     /// For example, querying `foo: bar` for `foo` will return
     /// just `foo` instead of `foo: bar` or `bar`.
-    pub fn query_key_only(&self, route: &Route) -> Result<Feature, QueryError> {
+    pub fn query_key_only(&self, route: &Route) -> Result<Feature<'_>, QueryError> {
         if !matches!(route.route.last(), Some(Component::Key(_))) {
             return Err(QueryError::Other(
                 "route must end with a key component for key-only routes".into(),
@@ -543,7 +543,7 @@ impl Document {
 
     /// Returns the topmost semantic object in the YAML document,
     /// i.e. the node corresponding to the first block or flow feature.
-    fn top_object(&self) -> Result<Node, QueryError> {
+    fn top_object(&self) -> Result<Node<'_>, QueryError> {
         // All tree-sitter-yaml trees start with a `stream` node.
         let stream = self.tree.root_node();
 
@@ -567,7 +567,7 @@ impl Document {
         Ok(top_node)
     }
 
-    fn query_node(&self, route: &Route, mode: QueryMode) -> Result<Node, QueryError> {
+    fn query_node(&self, route: &Route, mode: QueryMode) -> Result<Node<'_>, QueryError> {
         let mut focus_node = self.top_object()?;
         for component in &route.route {
             match self.descend(&focus_node, component) {

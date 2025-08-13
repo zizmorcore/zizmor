@@ -381,7 +381,9 @@ impl AuditRegistry {
         self.audits.insert(ident, audit);
     }
 
-    pub(crate) fn iter_audits(&self) -> indexmap::map::Iter<&str, Box<dyn Audit + Send + Sync>> {
+    pub(crate) fn iter_audits(
+        &self,
+    ) -> indexmap::map::Iter<'_, &str, Box<dyn Audit + Send + Sync>> {
         self.audits.iter()
     }
 }
