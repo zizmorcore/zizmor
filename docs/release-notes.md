@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.12.0
+
 ### New Features 🌈
 
 * **New audit**: [unsound-condition] detects `if:` conditions that
