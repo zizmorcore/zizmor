@@ -3,6 +3,7 @@ name: zizmor binary releases for GitHub 🐙
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions: {}
 
@@ -86,11 +87,13 @@ jobs:
         run: ls -l distrib/
 
       - name: Attest to artifacts
+        if: github.event_name == 'release'
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: "distrib/*"
 
       - name: Upload to release
+        if: github.event_name == 'release'
         run: |
           gh release upload --repo zizmorcore/zizmor "${GITHUB_REF_NAME}" distrib/*
         env:
