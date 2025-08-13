@@ -26,8 +26,6 @@ jobs:
             target: aarch64-apple-darwin
           - runner: windows-latest
             target: x86_64-pc-windows-msvc
-          - runner: windows-latest
-            target: i686-pc-windows-msvc
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
