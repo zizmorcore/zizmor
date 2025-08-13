@@ -6,7 +6,6 @@ repository = "https://github.com/zizmorcore/zizmor"
 documentation = "https://docs.zizmor.sh"
 keywords = ["cli", "github-actions", "static-analysis", "security"]
 categories = ["command-line-utilities", "security"]
-rust-version = "1.85.0"
 
 homepage.workspace = true
 license.workspace = true
