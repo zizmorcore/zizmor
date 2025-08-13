@@ -3,6 +3,7 @@ name: zizmor binary releases for GitHub 🐙
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions: {}
 
@@ -24,23 +25,24 @@ jobs:
             target: aarch64-apple-darwin
           - runner: windows-latest
             target: x86_64-pc-windows-msvc
-          - runner: windows-latest
-            target: i686-pc-windows-msvc
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
 
-      - name: Rust toolchain and target information
-        run: |
-          rustup show
-        shell: bash
-
       - name: Install Rust target for ${{ matrix.target }}
-        run: rustup target add "${TARGET}"
+        run: |
+          rustup update
+          rustup target add "${TARGET}"
         env:
           TARGET: ${{ matrix.target }}
+        shell: bash
+
+      - name: Rust toolchain and target information
+        run: |
+          rustc --version
+          rustup show
         shell: bash
 
       - name: Build release
@@ -86,11 +88,13 @@ jobs:
         run: ls -l distrib/
 
       - name: Attest to artifacts
+        if: github.event_name == 'release'
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: "distrib/*"
 
       - name: Upload to release
+        if: github.event_name == 'release'
         run: |
           gh release upload --repo zizmorcore/zizmor "${GITHUB_REF_NAME}" distrib/*
         env:
