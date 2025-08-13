@@ -34,15 +34,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Rust toolchain and target information
-        run: |
-          rustup show
-        shell: bash
-
       - name: Install Rust target for ${{ matrix.target }}
-        run: rustup target add "${TARGET}"
+        run: |
+          rustup update
+          rustup target add "${TARGET}"
         env:
           TARGET: ${{ matrix.target }}
+        shell: bash
+
+      - name: Rust toolchain and target information
+        run: |
+          rustc --version
+          rustup show
         shell: bash
 
       - name: Build release
