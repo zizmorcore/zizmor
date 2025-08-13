@@ -425,7 +425,7 @@ impl<'src> Expr<'src> {
             .next()
             .unwrap();
 
-        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr>> {
+        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr<'_>>> {
             // We're parsing a pest grammar, which isn't left-recursive.
             // As a result, we have constructions like
             // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
