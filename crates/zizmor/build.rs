@@ -21,7 +21,7 @@ fn do_context_capabilities() {
 
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(false)
-        .from_path(source)
+        .from_path(&source)
         .unwrap();
 
     for record in rdr.records() {
@@ -38,6 +38,10 @@ fn do_context_capabilities() {
     }
 
     build.finish().unwrap();
+
+    // Also copy the CSV into the output directory for reference.
+    let target = Path::new(&out_dir).join("context-capabilities.csv");
+    fs::copy(&source, target).unwrap();
 }
 
 fn do_codeql_injection_sinks() {

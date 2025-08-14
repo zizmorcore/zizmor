@@ -15,9 +15,9 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{env, ops::Deref, sync::LazyLock, vec};
+use std::{collections::HashMap, env, ops::Deref, sync::LazyLock, vec};
 
-use fst::Map;
+// use fst::Map;
 use github_actions_expressions::{Expr, Literal, context::Context};
 use github_actions_models::{
     common::{EnvValue, RepositoryUses, Uses, expr::LoE},
@@ -75,20 +75,47 @@ static ACTION_INJECTION_SINKS: LazyLock<Vec<(RepositoryUsesPattern, Vec<&str>)>>
         sinks
     });
 
-static CONTEXT_CAPABILITIES_FST: LazyLock<Map<&[u8]>> = LazyLock::new(|| {
-    fst::Map::new(include_bytes!(concat!(env!("OUT_DIR"), "/context-capabilities.fst")).as_slice())
-        .expect("couldn't initialize context capabilities FST")
+// static CONTEXT_CAPABILITIES_FST: LazyLock<Map<&[u8]>> = LazyLock::new(|| {
+//     fst::Map::new(include_bytes!(concat!(env!("OUT_DIR"), "/context-capabilities.fst")).as_slice())
+//         .expect("couldn't initialize context capabilities FST")
+// });
+
+static CONTEXT_CAPABILITIES_MAP: LazyLock<HashMap<String, Capability>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(&include_bytes!(concat!(env!("OUT_DIR"), "/context-capabilities.csv"))[..]);
+
+    for record in rdr.records() {
+        let record = record.unwrap();
+        let context = record.get(0).unwrap();
+        let capability = match record.get(1).unwrap() {
+            "arbitrary" => Capability::Arbitrary,
+            "structured" => Capability::Structured,
+            "fixed" => Capability::Fixed,
+            _ => panic!("Unknown capability"),
+        };
+
+        map.insert(context.into(), capability);
+    }
+
+    map
 });
 
 impl Capability {
-    fn from_context(context: &str) -> Option<Self> {
-        match CONTEXT_CAPABILITIES_FST.get(context) {
-            Some(0) => Some(Capability::Arbitrary),
-            Some(1) => Some(Capability::Structured),
-            Some(2) => Some(Capability::Fixed),
-            Some(_) => unreachable!("unexpected context capability"),
-            _ => None,
-        }
+    // fn from_context(context: &str) -> Option<Self> {
+    //     match CONTEXT_CAPABILITIES_FST.get(context) {
+    //         Some(0) => Some(Capability::Arbitrary),
+    //         Some(1) => Some(Capability::Structured),
+    //         Some(2) => Some(Capability::Fixed),
+    //         Some(_) => unreachable!("unexpected context capability"),
+    //         _ => None,
+    //     }
+    // }
+
+    pub(crate) fn from_context(context: &str) -> Option<Self> {
+        CONTEXT_CAPABILITIES_MAP.get(context).copied()
     }
 }
 

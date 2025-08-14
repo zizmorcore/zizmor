@@ -35,6 +35,7 @@ clap = { workspace = true, features = ["derive", "env"] }
 clap-verbosity-flag = { workspace = true, features = ["tracing"] }
 clap_complete.workspace = true
 clap_complete_nushell.workspace = true
+csv.workspace = true
 etcetera.workspace = true
 flate2.workspace = true
 fst.workspace = true
