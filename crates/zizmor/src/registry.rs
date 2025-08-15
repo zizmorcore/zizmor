@@ -2,13 +2,13 @@
 //! audits.
 
 use std::{
-    collections::{BTreeMap, btree_map},
+    collections::{btree_map, BTreeMap},
     fmt::Display,
     process::ExitCode,
     str::FromStr,
 };
 
-use anyhow::{Context, anyhow};
+use anyhow::{anyhow, Context};
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use serde::Serialize;
@@ -352,6 +352,7 @@ impl AuditRegistry {
         register_audit!(audit::self_hosted_runner::SelfHostedRunner);
         register_audit!(audit::known_vulnerable_actions::KnownVulnerableActions);
         register_audit!(audit::unpinned_uses::UnpinnedUses);
+        register_audit!(audit::timeout_minutes::TimeoutMinutes);
         register_audit!(audit::insecure_commands::InsecureCommands);
         register_audit!(audit::github_env::GitHubEnv);
         register_audit!(audit::cache_poisoning::CachePoisoning);
