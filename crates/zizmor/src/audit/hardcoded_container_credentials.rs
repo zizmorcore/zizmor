@@ -73,28 +73,27 @@ impl Audit for HardcodedContainerCredentials {
                         }),
                     ..
                 } = &config
+                    && ExplicitExpr::from_curly(password).is_none()
                 {
-                    if ExplicitExpr::from_curly(password).is_none() {
-                        findings.push(
-                            Self::finding()
-                                .severity(Severity::High)
-                                .confidence(Confidence::High)
-                                .add_location(
-                                    job.location()
-                                        .primary()
-                                        .with_keys([
-                                            "services".into(),
-                                            service.as_str().into(),
-                                            "credentials".into(),
-                                        ])
-                                        .annotated(format!(
-                                            "service {service}: container registry password is \
+                    findings.push(
+                        Self::finding()
+                            .severity(Severity::High)
+                            .confidence(Confidence::High)
+                            .add_location(
+                                job.location()
+                                    .primary()
+                                    .with_keys([
+                                        "services".into(),
+                                        service.as_str().into(),
+                                        "credentials".into(),
+                                    ])
+                                    .annotated(format!(
+                                        "service {service}: container registry password is \
                                          hard-coded"
-                                        )),
-                                )
-                                .build(workflow)?,
-                        )
-                    }
+                                    )),
+                            )
+                            .build(workflow)?,
+                    )
                 }
             }
         }

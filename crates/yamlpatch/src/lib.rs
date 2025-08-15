@@ -874,35 +874,35 @@ fn apply_value_replacement(
 
             if is_multiline_literal {
                 // Check if this is a multiline string value
-                if let serde_yaml::Value::String(string_content) = value {
-                    if string_content.contains('\n') {
-                        // For multiline literal blocks, use the raw string content
-                        let leading_whitespace = extract_leading_whitespace(doc, feature);
-                        let content_indent = format!("{leading_whitespace}  "); // Key indent + 2 spaces for content
+                if let serde_yaml::Value::String(string_content) = value
+                    && string_content.contains('\n')
+                {
+                    // For multiline literal blocks, use the raw string content
+                    let leading_whitespace = extract_leading_whitespace(doc, feature);
+                    let content_indent = format!("{leading_whitespace}  "); // Key indent + 2 spaces for content
 
-                        // Format as: key: |\n  content\n  more content
-                        let indented_content = string_content
-                            .lines()
-                            .map(|line| {
-                                if line.trim().is_empty() {
-                                    String::new()
-                                } else {
-                                    format!("{}{}", content_indent, line.trim_start())
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                            .join("\n");
+                    // Format as: key: |\n  content\n  more content
+                    let indented_content = string_content
+                        .lines()
+                        .map(|line| {
+                            if line.trim().is_empty() {
+                                String::new()
+                            } else {
+                                format!("{}{}", content_indent, line.trim_start())
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
 
-                        // Find the position of | in the original content and include it
-                        let pipe_pos = value_part.find('|').unwrap();
-                        let key_with_pipe = &current_content_with_ws
-                            [..colon_pos + 1 + value_part[..pipe_pos].len() + 1];
-                        return Ok(format!(
-                            "{}\n{}",
-                            key_with_pipe.trim_end(),
-                            indented_content
-                        ));
-                    }
+                    // Find the position of | in the original content and include it
+                    let pipe_pos = value_part.find('|').unwrap();
+                    let key_with_pipe = &current_content_with_ws
+                        [..colon_pos + 1 + value_part[..pipe_pos].len() + 1];
+                    return Ok(format!(
+                        "{}\n{}",
+                        key_with_pipe.trim_end(),
+                        indented_content
+                    ));
                 }
             }
         }
