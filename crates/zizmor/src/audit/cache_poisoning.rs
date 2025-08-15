@@ -75,7 +75,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         ActionCoordinate::Configurable {
             uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
             control: ControlExpr::single(
-                Toggle::OptOut,
+                Toggle::OptIn,
                 "enable-cache",
                 ControlFieldType::Boolean,
                 true,

@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [cache-poisoning] would incorrectly detect the
+  opposite cases for cache enablement (#1081)
+
 ## 1.12.0
 
 ### New Features 🌈
