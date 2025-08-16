@@ -472,7 +472,8 @@ impl Audit for CachePoisoning {
 mod tests {
     use super::*;
     use crate::{
-        github_api::GitHubHost, models::workflow::Workflow, registry::InputKey, state::AuditState,
+        github_api::GitHubHost, models::workflow::Workflow, registry::input::InputKey,
+        state::AuditState,
     };
 
     /// Macro for testing workflow audits with common boilerplate

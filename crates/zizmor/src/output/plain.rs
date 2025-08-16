@@ -11,7 +11,7 @@ use crate::{
     App,
     finding::{Finding, Severity, location::Location},
     models::AsDocument,
-    registry::{FindingRegistry, InputKey, InputRegistry},
+    registry::{FindingRegistry, input::InputKey, input::InputRegistry},
 };
 
 impl From<&Severity> for Level {

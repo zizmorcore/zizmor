@@ -19,14 +19,13 @@ use github_api::{GitHubHost, GitHubToken};
 use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
-use registry::{AuditRegistry, FindingRegistry, InputKey, InputKind, InputRegistry};
+use registry::input::{InputKey, InputKind, InputRegistry, RepoSlug};
+use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
-
-use crate::registry::RepoSlug;
 
 mod audit;
 mod config;

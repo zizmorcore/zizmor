@@ -16,7 +16,7 @@ use std::{
 };
 use std::{fmt::Write, sync::LazyLock};
 
-use crate::{audit::AuditInput, models::AsDocument, registry::InputError};
+use crate::{audit::AuditInput, models::AsDocument, registry::input::InputError};
 
 pub(crate) static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
     validator_for(&serde_json::from_str(include_str!("./data/github-action.json")).unwrap())

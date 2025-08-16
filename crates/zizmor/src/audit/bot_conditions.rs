@@ -407,7 +407,7 @@ mod tests {
         finding::Finding,
         github_api::GitHubHost,
         models::{AsDocument, workflow::Workflow},
-        registry::InputKey,
+        registry::input::InputKey,
         state::AuditState,
     };
 

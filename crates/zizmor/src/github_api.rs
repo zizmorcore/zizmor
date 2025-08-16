@@ -23,7 +23,7 @@ use tracing::instrument;
 
 use crate::{
     InputRegistry,
-    registry::{InputKey, InputKind, RepoSlug},
+    registry::input::{InputKey, InputKind, RepoSlug},
     utils::PipeSelf,
 };
 

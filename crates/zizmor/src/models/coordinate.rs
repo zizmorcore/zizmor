@@ -389,7 +389,7 @@ mod tests {
             uses::RepositoryUsesPattern,
             workflow::{Job, Workflow},
         },
-        registry::InputKey,
+        registry::input::InputKey,
     };
 
     #[test]

@@ -2,7 +2,7 @@
 
 use std::{ops::Range, sync::LazyLock};
 
-use crate::{audit::AuditInput, models::AsDocument, registry::InputKey};
+use crate::{audit::AuditInput, models::AsDocument, registry::input::InputKey};
 use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
