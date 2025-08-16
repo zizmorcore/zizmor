@@ -134,7 +134,7 @@ impl ImpostorCommit {
                         .name
                         .chars()
                         .nth(1)
-                        .map_or(false, |c| c.is_ascii_digit())
+                        .is_some_and(|c| c.is_ascii_digit())
             })
             .collect();
 
@@ -146,7 +146,7 @@ impl ImpostorCommit {
             tags.first().map(|tag| &tag.name)
         };
 
-        Ok(latest_tag.map(|s| s.clone()))
+        Ok(latest_tag.cloned())
     }
 
     /// Create a fix for an impostor commit by replacing it with the latest tag
@@ -204,10 +204,10 @@ impl ImpostorCommit {
         if let Some(subpath) = &uses.subpath {
             uses_slug.push_str(&format!("/{subpath}"));
         }
-        let fixed_uses = format!("{}@{}", uses_slug, latest_tag);
+        let fixed_uses = format!("{uses_slug}@{latest_tag}");
 
         Some(Fix {
-            title: format!("pin to latest tag {}", latest_tag),
+            title: format!("pin to latest tag {latest_tag}"),
             key,
             disposition: FixDisposition::Safe,
             patches: vec![Patch {
