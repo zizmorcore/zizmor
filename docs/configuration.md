@@ -65,7 +65,8 @@ entire file or entire line.
 
 !!! important
 
-    Composite action findings cannot be ignored via `zizmor.yml` currently.
+    Composite action findings cannot be ignored via `zizmor.yml` currently,
+    They can be ignored inline [with comments](./usage.md/#ignoring-results).
 
 For example, here is a configuration file with two different audit ignore
 rule groups:
