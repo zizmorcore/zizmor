@@ -627,7 +627,7 @@ mod tests {
     use crate::github_api::GitHubHost;
     use crate::models::AsDocument;
     use crate::models::workflow::Workflow;
-    use crate::registry::InputKey;
+    use crate::registry::input::InputKey;
     use crate::state::AuditState;
 
     /// Macro for testing workflow audits with common boilerplate

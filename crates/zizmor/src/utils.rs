@@ -641,7 +641,7 @@ mod tests {
 
     use crate::{
         models::{action::Action, workflow::Workflow},
-        registry::InputKey,
+        registry::input::InputKey,
         utils::{
             env_is_static, extract_fenced_expression, extract_fenced_expressions, normalize_shell,
             parse_fenced_expressions_from_input,
