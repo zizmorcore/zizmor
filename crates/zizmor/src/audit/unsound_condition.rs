@@ -96,7 +96,7 @@ impl UnsoundCondition {
             } else {
                 &cleaned
             };
-            format!("${{{{ {} }}}}", unwrapped)
+            format!("${{{{ {unwrapped} }}}}")
         } else {
             inner_expr.to_string()
         };
