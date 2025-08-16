@@ -11,7 +11,7 @@ use crate::finding::location::Point;
 use crate::finding::{Persona, Severity};
 use crate::models::action::Action;
 use crate::models::workflow::Workflow;
-use crate::registry::{FindingRegistry, InputKey};
+use crate::registry::{FindingRegistry, input::InputKey};
 use crate::{AuditRegistry, AuditState};
 
 struct LspDocumentCommon {

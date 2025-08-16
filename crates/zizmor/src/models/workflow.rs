@@ -25,7 +25,7 @@ use crate::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
     },
-    registry::InputError,
+    registry::input::InputError,
     utils::{self, WORKFLOW_VALIDATOR, extract_fenced_expressions, from_str_with_validation},
 };
 

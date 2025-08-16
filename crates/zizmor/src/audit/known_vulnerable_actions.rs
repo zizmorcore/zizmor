@@ -291,7 +291,7 @@ mod tests {
     use super::*;
     use crate::{
         models::{AsDocument, workflow::Workflow},
-        registry::InputKey,
+        registry::input::InputKey,
     };
 
     // Helper function to create a test KnownVulnerableActions instance

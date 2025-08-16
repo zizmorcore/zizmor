@@ -11,7 +11,7 @@ use crate::{
         AsDocument, action::Action, action::CompositeStep, workflow::Job, workflow::NormalJob,
         workflow::ReusableWorkflowCallJob, workflow::Step, workflow::Workflow,
     },
-    registry::InputKey,
+    registry::input::InputKey,
     state::AuditState,
 };
 
