@@ -24,6 +24,7 @@ astral-sh/python-build-standalone#716
 astral-sh/ruff#14844
 astral-sh/uv#15016
 astral-sh/uv#15018
+aspnet-contrib/AspNet.Security.OAuth.Providers#1095
 astronomer/astronomer-cosmos#1870
 astronomer/dag-factory#482
 astropy/astropy#17315
@@ -124,6 +125,7 @@ icsharpcode/ILSpy#3365
 immich-app/immich#17651
 Instagram/LibCST#1262
 jj-vcs/jj#5076
+junit-team/junit-framework#4838
 jupyterhub/jupyterhub#5049
 kanidm/kanidm#3430
 libssh2/libssh2#1609
