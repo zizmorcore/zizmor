@@ -691,29 +691,6 @@ pub enum Evaluation {
 }
 
 impl Evaluation {
-    /// Convert the evaluation result to GitHub Actions string representation.
-    ///
-    /// This follows GitHub Actions' string conversion rules:
-    /// - Strings are returned as-is (without quotes)
-    /// - Numbers are converted to string representation
-    /// - Booleans become "true" or "false"
-    /// - Null becomes an empty string
-    pub fn to_github_string(&self) -> String {
-        match self {
-            Evaluation::String(s) => s.clone(),
-            Evaluation::Number(n) => {
-                // Format numbers like GitHub Actions does
-                if n.fract() == 0.0 {
-                    format!("{}", *n as i64)
-                } else {
-                    n.to_string()
-                }
-            }
-            Evaluation::Boolean(b) => b.to_string(),
-            Evaluation::Null => String::new(),
-        }
-    }
-
     /// Convert to a boolean following GitHub Actions truthiness rules.
     ///
     /// GitHub Actions truthiness:
@@ -732,7 +709,19 @@ impl Evaluation {
 
 impl std::fmt::Display for Evaluation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_github_string())
+        match self {
+            Evaluation::String(s) => write!(f, "{}", s),
+            Evaluation::Number(n) => {
+                // Format numbers like GitHub Actions does
+                if n.fract() == 0.0 {
+                    write!(f, "{}", *n as i64)
+                } else {
+                    write!(f, "{}", n)
+                }
+            }
+            Evaluation::Boolean(b) => write!(f, "{}", b),
+            Evaluation::Null => write!(f, ""),
+        }
     }
 }
 
@@ -753,7 +742,7 @@ impl<'src> SpannedExpr<'src> {
     ///
     /// let expr = Expr::parse("'hello'").unwrap();
     /// let result = expr.evaluate_constant().unwrap();
-    /// assert_eq!(result.to_github_string(), "hello");
+    /// assert_eq!(result.to_string(), "hello");
     ///
     /// let expr = Expr::parse("true && false").unwrap();
     /// let result = expr.evaluate_constant().unwrap();
@@ -852,7 +841,7 @@ impl<'src> Expr<'src> {
             (Evaluation::String(a), Evaluation::String(b)) => a == b,
 
             // Type coercion rules - convert to string and compare
-            (a, b) => a.to_github_string() == b.to_github_string(),
+            (a, b) => a.to_string() == b.to_string(),
         }
     }
 
@@ -867,13 +856,12 @@ impl<'src> Expr<'src> {
 
             // Try to convert both to numbers first, then fall back to string comparison
             (a, b) => {
-                if let (Ok(a_num), Ok(b_num)) = (
-                    a.to_github_string().parse::<f64>(),
-                    b.to_github_string().parse::<f64>(),
-                ) {
+                if let (Ok(a_num), Ok(b_num)) =
+                    (a.to_string().parse::<f64>(), b.to_string().parse::<f64>())
+                {
                     a_num.partial_cmp(&b_num)
                 } else {
-                    Some(a.to_github_string().cmp(&b.to_github_string()))
+                    Some(a.to_string().cmp(&b.to_string()))
                 }
             }
         }
@@ -900,7 +888,7 @@ impl<'src> Expr<'src> {
         }
 
         let format_str = args[0].evaluate_constant()?;
-        let format_template = format_str.to_github_string();
+        let format_template = format_str.to_string();
 
         let mut result = format_template;
 
@@ -908,7 +896,7 @@ impl<'src> Expr<'src> {
         for (i, arg) in args.iter().skip(1).enumerate() {
             let arg_val = arg.evaluate_constant()?;
             let placeholder = format!("{{{}}}", i);
-            result = result.replace(&placeholder, &arg_val.to_github_string());
+            result = result.replace(&placeholder, &arg_val.to_string());
         }
 
         Some(Evaluation::String(result))
@@ -921,8 +909,8 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let haystack = args[0].evaluate_constant()?.to_github_string();
-        let needle = args[1].evaluate_constant()?.to_github_string();
+        let haystack = args[0].evaluate_constant()?.to_string();
+        let needle = args[1].evaluate_constant()?.to_string();
 
         Some(Evaluation::Boolean(haystack.contains(&needle)))
     }
@@ -934,8 +922,8 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let string = args[0].evaluate_constant()?.to_github_string();
-        let prefix = args[1].evaluate_constant()?.to_github_string();
+        let string = args[0].evaluate_constant()?.to_string();
+        let prefix = args[1].evaluate_constant()?.to_string();
 
         Some(Evaluation::Boolean(string.starts_with(&prefix)))
     }
@@ -947,8 +935,8 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let string = args[0].evaluate_constant()?.to_github_string();
-        let suffix = args[1].evaluate_constant()?.to_github_string();
+        let string = args[0].evaluate_constant()?.to_string();
+        let suffix = args[1].evaluate_constant()?.to_string();
 
         Some(Evaluation::Boolean(string.ends_with(&suffix)))
     }
@@ -981,7 +969,7 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let json_str = args[0].evaluate_constant()?.to_github_string();
+        let json_str = args[0].evaluate_constant()?.to_string();
 
         // Simple JSON parsing for basic literals
         match json_str.trim() {
@@ -1731,7 +1719,7 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluation_result_to_github_string() {
+    fn test_evaluation_result_display() {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -1744,7 +1732,7 @@ mod tests {
         ];
 
         for (result, expected) in test_cases {
-            assert_eq!(result.to_github_string(), *expected);
+            assert_eq!(result.to_string(), *expected);
         }
     }
 
