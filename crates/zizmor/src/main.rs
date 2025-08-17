@@ -477,7 +477,7 @@ fn run() -> Result<ExitCode> {
         reg.with(indicatif_layer).init();
     }
 
-    let config = Config::new(&app).map_err(|e| {
+    let config = Config::global(&app).map_err(|e| {
         anyhow!(tips(
             format!("failed to load config: {e:#}"),
             &[

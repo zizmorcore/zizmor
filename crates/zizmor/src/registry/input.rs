@@ -14,6 +14,7 @@ use thiserror::Error;
 use crate::{
     CollectionMode,
     audit::AuditInput,
+    config::Config,
     github_api::GitHubHost,
     models::{action::Action, workflow::Workflow},
     state::AuditState,
@@ -270,14 +271,16 @@ impl From<&RepoSlug> for Group {
 /// A group of inputs collected from the same source.
 pub(crate) struct InputGroup {
     /// The collected inputs.
-    pub(crate) inputs: BTreeMap<InputKey, AuditInput>,
-    // TODO: Config will go here.
+    inputs: BTreeMap<InputKey, AuditInput>,
+    /// The configuration for this group.
+    config: Config,
 }
 
 impl InputGroup {
     fn new() -> Self {
         Self {
             inputs: Default::default(),
+            config: Default::default(),
         }
     }
 

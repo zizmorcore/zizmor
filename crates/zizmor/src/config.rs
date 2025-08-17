@@ -82,7 +82,8 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub(crate) fn new(app: &App) -> Result<Self> {
+    /// Loads a global [`Config`] for the given [`App`].
+    pub(crate) fn global(app: &App) -> Result<Self> {
         if app.no_config {
             return Ok(Self::default());
         }
