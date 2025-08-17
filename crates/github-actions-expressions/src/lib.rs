@@ -697,7 +697,7 @@ impl Evaluation {
     /// - false and null are falsy
     /// - Numbers: 0 is falsy, everything else is truthy
     /// - Strings: empty string is falsy, everything else is truthy
-    pub fn to_boolean(&self) -> bool {
+    pub fn as_boolean(&self) -> bool {
         match self {
             Evaluation::Boolean(b) => *b,
             Evaluation::Null => false,
@@ -781,7 +781,7 @@ impl<'src> Expr<'src> {
                 match op {
                     BinOp::And => {
                         // GitHub Actions && semantics: if LHS is falsy, return LHS, else return RHS
-                        if lhs_val.to_boolean() {
+                        if lhs_val.as_boolean() {
                             Some(rhs_val)
                         } else {
                             Some(lhs_val)
@@ -789,7 +789,7 @@ impl<'src> Expr<'src> {
                     }
                     BinOp::Or => {
                         // GitHub Actions || semantics: if LHS is truthy, return LHS, else return RHS
-                        if lhs_val.to_boolean() {
+                        if lhs_val.as_boolean() {
                             Some(lhs_val)
                         } else {
                             Some(rhs_val)
@@ -821,7 +821,7 @@ impl<'src> Expr<'src> {
             Expr::UnOp { op, expr } => {
                 let val = expr.evaluate_constant()?;
                 match op {
-                    UnOp::Not => Some(Evaluation::Boolean(!val.to_boolean())),
+                    UnOp::Not => Some(Evaluation::Boolean(!val.as_boolean())),
                 }
             }
 
@@ -1752,7 +1752,7 @@ mod tests {
         ];
 
         for (result, expected) in test_cases {
-            assert_eq!(result.to_boolean(), *expected);
+            assert_eq!(result.as_boolean(), *expected);
         }
     }
 
