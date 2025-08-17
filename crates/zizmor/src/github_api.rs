@@ -355,7 +355,7 @@ impl Client {
         let repo = &slug.repo;
         let git_ref = &slug.git_ref;
 
-        tracing::debug!("fetching workflows for {owner}/{repo}");
+        tracing::debug!("fetching workflows for {slug}");
 
         // It'd be nice if the GitHub contents API allowed us to retrieve
         // all file contents with a directory listing, but it doesn't.
