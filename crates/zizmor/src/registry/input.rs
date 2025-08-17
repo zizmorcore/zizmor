@@ -117,6 +117,7 @@ impl std::fmt::Display for RepoSlug {
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct LocalKey {
     /// The group this input belongs to.
+    #[serde(skip)]
     group: Group,
     /// The path's nondeterministic prefix, if any.
     prefix: Option<Utf8PathBuf>,
@@ -127,6 +128,7 @@ pub(crate) struct LocalKey {
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct RemoteKey {
     /// The group this input belongs to.
+    #[serde(skip)]
     group: Group,
     // TODO: Dedupe with RepoSlug above.
     owner: String,
@@ -254,8 +256,7 @@ impl InputKey {
 }
 
 /// An opaque identifier for a group of inputs.
-#[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Serialize)]
-#[serde(transparent)]
+#[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub(crate) struct Group(String);
 
 impl From<&str> for Group {
