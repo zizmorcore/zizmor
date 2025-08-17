@@ -489,49 +489,6 @@ impl InputRegistry {
         Ok(())
     }
 
-    // pub(crate) fn register(
-    //     &mut self,
-    //     kind: InputKind,
-    //     contents: String,
-    //     key: InputKey,
-    // ) -> anyhow::Result<()> {
-    //     tracing::debug!("registering {kind} input as with key {key}");
-
-    //     let input: Result<AuditInput, InputError> = match kind {
-    //         InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(|wf| wf.into()),
-    //         InputKind::Action => Action::from_string(contents, key.clone()).map(|a| a.into()),
-    //     };
-
-    //     match input {
-    //         Ok(input) => self.register_input(input),
-    //         Err(InputError::Syntax(e)) if !self.strict => {
-    //             tracing::warn!("failed to parse input: {e}");
-    //             Ok(())
-    //         }
-    //         Err(e @ InputError::Schema { .. }) if !self.strict => {
-    //             tracing::warn!("failed to validate input as {kind}: {e}");
-    //             Ok(())
-    //         }
-    //         Err(e) => {
-    //             Err(anyhow::anyhow!(e)).with_context(|| format!("failed to load {key} as {kind}"))
-    //         }
-    //     }
-    // }
-
-    // /// Registers an already-loaded workflow or action definition.
-    // fn register_input(&mut self, input: AuditInput) -> anyhow::Result<()> {
-    //     if self.inputs.contains_key(input.key()) {
-    //         return Err(anyhow::anyhow!(
-    //             "can't register {key} more than once",
-    //             key = input.key()
-    //         ));
-    //     }
-
-    //     self.inputs.insert(input.key().clone(), input);
-
-    //     Ok(())
-    // }
-
     /// Return an iterator over all inputs in all groups in this registry.
     pub(crate) fn iter_inputs(&self) -> impl Iterator<Item = (&InputKey, &AuditInput)> {
         self.groups.values().flat_map(|group| group.inputs.iter())
