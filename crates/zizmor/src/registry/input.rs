@@ -543,7 +543,7 @@ impl InputRegistry {
     /// Get a reference to a registered input by its key.
     pub(crate) fn get_input(&self, key: &InputKey) -> &AuditInput {
         self.groups
-            .get(&key.group())
+            .get(key.group())
             .and_then(|group| group.inputs.get(key))
             .expect("API misuse: requested an un-registered input")
     }
