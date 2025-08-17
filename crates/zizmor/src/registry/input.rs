@@ -62,7 +62,7 @@ impl std::fmt::Display for InputKind {
 }
 
 /// A GitHub repository slug, i.e. `owner/repo[@ref]`.
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub(crate) struct RepoSlug {
     /// The owner of the repository.
     pub(crate) owner: String,
@@ -130,10 +130,8 @@ pub(crate) struct RemoteKey {
     /// The group this input belongs to.
     #[serde(skip)]
     group: Group,
-    // TODO: Dedupe with RepoSlug above.
-    owner: String,
-    repo: String,
-    git_ref: Option<String>,
+    slug: RepoSlug,
+    /// The path to the input file within the repository.
     path: Utf8PathBuf,
 }
 
@@ -154,12 +152,12 @@ impl std::fmt::Display for InputKey {
             InputKey::Local(local) => write!(f, "file://{path}", path = local.given_path),
             InputKey::Remote(remote) => {
                 // No ref means assume HEAD, i.e. whatever's on the default branch.
-                let git_ref = remote.git_ref.as_deref().unwrap_or("HEAD");
+                let git_ref = remote.slug.git_ref.as_deref().unwrap_or("HEAD");
                 write!(
                     f,
                     "https://github.com/{owner}/{repo}/blob/{git_ref}/{path}",
-                    owner = remote.owner,
-                    repo = remote.repo,
+                    owner = remote.slug.owner,
+                    repo = remote.slug.repo,
                     path = remote.path
                 )
             }
@@ -192,9 +190,7 @@ impl InputKey {
 
         Ok(Self::Remote(RemoteKey {
             group,
-            owner: slug.owner.clone(),
-            repo: slug.repo.clone(),
-            git_ref: slug.git_ref.clone(),
+            slug: slug.clone(),
             path: path.into(),
         }))
     }
