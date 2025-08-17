@@ -3,23 +3,20 @@
 use std::{
     io::{Write, stdout},
     process::ExitCode,
-    str::FromStr,
 };
 
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
-use camino::Utf8Path;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
 use finding::{Confidence, Persona, Severity};
 use github_api::{GitHubHost, GitHubToken};
-use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
-use registry::input::{InputKey, InputKind, InputRegistry, RepoSlug};
+use registry::input::{InputKey, InputRegistry};
 use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
@@ -356,164 +353,17 @@ pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
     format!("{}", renderer.render(message))
 }
 
-#[instrument(skip(mode, registry))]
-fn collect_from_dir(
-    input_path: &Utf8Path,
-    mode: &CollectionMode,
-    registry: &mut InputRegistry,
-) -> Result<()> {
-    // Start with all filters disabled, i.e. walk everything.
-    let mut walker = WalkBuilder::new(input_path);
-    let walker = walker.standard_filters(false);
-
-    // If the user wants to respect `.gitignore` files, then we need to
-    // explicitly enable it. This also enables filtering by a global
-    // `.gitignore` file and the `.git/info/exclude` file, since these
-    // typically align with the user's expectations.
-    //
-    // We honor `.gitignore` and similar files even if `.git/` is not
-    // present, since users may retrieve or reconstruct a source archive
-    // without a `.git/` directory. In particular, this snares some
-    // zizmor integrators.
-    //
-    // See: https://github.com/zizmorcore/zizmor/issues/596
-    if mode.respects_gitignore() {
-        walker
-            .require_git(false)
-            .git_ignore(true)
-            .git_global(true)
-            .git_exclude(true);
-    }
-
-    for entry in walker.build() {
-        let entry = entry?;
-        let entry = <&Utf8Path>::try_from(entry.path())?;
-
-        if mode.workflows()
-            && entry.is_file()
-            && matches!(entry.extension(), Some("yml" | "yaml"))
-            && entry
-                .parent()
-                .is_some_and(|dir| dir.ends_with(".github/workflows"))
-        {
-            let key = InputKey::local(entry, Some(input_path))?;
-            let contents = std::fs::read_to_string(entry)?;
-            registry.register(InputKind::Workflow, contents, key)?;
-        }
-
-        if mode.actions()
-            && entry.is_file()
-            && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
-        {
-            let key = InputKey::local(entry, Some(input_path))?;
-            let contents = std::fs::read_to_string(entry)?;
-            registry.register(InputKind::Action, contents, key)?;
-        }
-    }
-
-    Ok(())
-}
-
-fn collect_from_repo_slug(
-    input: &str,
-    mode: &CollectionMode,
-    state: &AuditState,
-    registry: &mut InputRegistry,
-) -> Result<()> {
-    let Ok(slug) = RepoSlug::from_str(input) else {
-        return Err(anyhow!(tips(
-            format!("invalid input: {input}"),
-            &[format!(
-                "pass a single {file}, {directory}, or entire repo by {slug} slug",
-                file = "file".green(),
-                directory = "directory".green(),
-                slug = "owner/repo".green()
-            )]
-        )));
-    };
-
-    let client = state.gh_client.as_ref().ok_or_else(|| {
-        anyhow!(tips(
-            format!("can't retrieve repository: {input}", input = input.green()),
-            &[format!(
-                "try removing {offline} or passing {gh_token}",
-                offline = "--offline".yellow(),
-                gh_token = "--gh-token <TOKEN>".yellow(),
-            )]
-        ))
-    })?;
-
-    if matches!(mode, CollectionMode::WorkflowsOnly) {
-        // Performance: if we're *only* collecting workflows, then we
-        // can save ourselves a full repo download and only fetch the
-        // repo's workflow files.
-        client.fetch_workflows(&slug, registry)?;
-    } else {
-        let before = registry.len();
-        let host = match &state.gh_hostname {
-            GitHubHost::Enterprise(address) => address.as_str(),
-            GitHubHost::Standard(_) => "github.com",
-        };
-
-        client
-            .fetch_audit_inputs(&slug, registry)
-            .with_context(|| {
-                tips(
-                    format!(
-                        "couldn't collect inputs from https://{host}/{owner}/{repo}",
-                        host = host,
-                        owner = slug.owner,
-                        repo = slug.repo
-                    ),
-                    &["confirm the repository exists and that you have access to it"],
-                )
-            })?;
-        let after = registry.len();
-        let len = after - before;
-
-        tracing::info!(
-            "collected {len} inputs from {owner}/{repo}",
-            owner = slug.owner,
-            repo = slug.repo
-        );
-    }
-
-    Ok(())
-}
-
 #[instrument(skip_all)]
 fn collect_inputs(
-    inputs: &[String],
-    mode: &CollectionMode,
+    inputs: Vec<String>,
+    mode: CollectionMode,
     strict: bool,
     state: &AuditState,
 ) -> Result<InputRegistry> {
-    let mut registry = InputRegistry::new(strict);
+    let mut registry = InputRegistry::new();
 
-    for input in inputs {
-        let input_path = Utf8Path::new(input);
-        if input_path.is_file() {
-            // When collecting individual files, we don't know which part
-            // of the input path is the prefix.
-            let (key, kind) = match (input_path.file_stem(), input_path.extension()) {
-                (Some("action"), Some("yml" | "yaml")) => {
-                    (InputKey::local(input_path, None)?, InputKind::Action)
-                }
-                (Some(_), Some("yml" | "yaml")) => {
-                    (InputKey::local(input_path, None)?, InputKind::Workflow)
-                }
-                _ => return Err(anyhow!("invalid input: {input}")),
-            };
-
-            let contents = std::fs::read_to_string(input_path)?;
-            registry.register(kind, contents, key)?;
-        } else if input_path.is_dir() {
-            collect_from_dir(input_path, mode, &mut registry)?;
-        } else {
-            // If this input isn't a file or directory, it's probably an
-            // `owner/repo(@ref)?` slug.
-            collect_from_repo_slug(input, mode, state, &mut registry)?;
-        }
+    for input in inputs.into_iter() {
+        registry.register_group(input, mode, strict, state)?;
     }
 
     if registry.len() == 0 {
@@ -638,12 +488,7 @@ fn run() -> Result<ExitCode> {
     })?;
 
     let audit_state = AuditState::new(&app, &config)?;
-    let registry = collect_inputs(
-        &app.inputs,
-        &app.collect,
-        app.strict_collection,
-        &audit_state,
-    )?;
+    let registry = collect_inputs(app.inputs, app.collect, app.strict_collection, &audit_state)?;
 
     let audit_registry = AuditRegistry::default_audits(&audit_state)?;
 
@@ -681,7 +526,7 @@ fn run() -> Result<ExitCode> {
     }
 
     match app.format {
-        OutputFormat::Plain => output::plain::render_findings(&app, &registry, &results),
+        OutputFormat::Plain => output::plain::render_findings(&registry, &results, app.naches),
         OutputFormat::Json | OutputFormat::JsonV1 => {
             output::json::v1::output(stdout(), results.findings())?
         }

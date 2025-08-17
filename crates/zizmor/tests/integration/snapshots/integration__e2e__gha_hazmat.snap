@@ -3,7 +3,7 @@ source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61\").run()?"
 snapshot_kind: text
 ---
- INFO collect_inputs: zizmor: collected 22 inputs from woodruffw/gha-hazmat
+ INFO collect_inputs: zizmor::registry::input: collected 22 inputs from woodruffw/gha-hazmat
  INFO zizmor::registry: skipping impostor-commit: offline audits only requested
  INFO zizmor::registry: skipping ref-confusion: offline audits only requested
  INFO zizmor::registry: skipping known-vulnerable-actions: offline audits only requested

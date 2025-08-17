@@ -1,15 +1,22 @@
 //! Input registry and associated types.
 
-use std::collections::{BTreeMap, btree_map};
+use std::{
+    collections::{BTreeMap, btree_map},
+    str::FromStr as _,
+};
 
 use anyhow::Context as _;
 use camino::{Utf8Path, Utf8PathBuf};
+use owo_colors::OwoColorize as _;
 use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
+    CollectionMode,
     audit::AuditInput,
+    github_api::GitHubHost,
     models::{action::Action, workflow::Workflow},
+    state::AuditState,
     tips,
 };
 
@@ -55,7 +62,7 @@ impl std::fmt::Display for InputKind {
 }
 
 /// A GitHub repository slug, i.e. `owner/repo[@ref]`.
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub(crate) struct RepoSlug {
     /// The owner of the repository.
     pub(crate) owner: String,
@@ -97,8 +104,21 @@ impl std::str::FromStr for RepoSlug {
     }
 }
 
+impl std::fmt::Display for RepoSlug {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(ref git_ref) = self.git_ref {
+            write!(f, "{}/{}@{}", self.owner, self.repo, git_ref)
+        } else {
+            write!(f, "{}/{}", self.owner, self.repo)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct LocalKey {
+    /// The group this input belongs to.
+    #[serde(skip)]
+    group: Group,
     /// The path's nondeterministic prefix, if any.
     prefix: Option<Utf8PathBuf>,
     /// The given path to the input. This can be absolute or relative.
@@ -107,14 +127,15 @@ pub(crate) struct LocalKey {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct RemoteKey {
-    // TODO: Dedupe with RepoSlug above.
-    owner: String,
-    repo: String,
-    git_ref: Option<String>,
+    /// The group this input belongs to.
+    #[serde(skip)]
+    group: Group,
+    slug: RepoSlug,
+    /// The path to the input file within the repository.
     path: Utf8PathBuf,
 }
 
-/// A unique identifying "key" for a workflow file in a given run of zizmor.
+/// A unique identifying "key" for an input in a given run of zizmor.
 ///
 /// zizmor currently knows two different kinds of keys: local keys
 /// are just canonical paths to files on disk, while remote keys are
@@ -131,12 +152,12 @@ impl std::fmt::Display for InputKey {
             InputKey::Local(local) => write!(f, "file://{path}", path = local.given_path),
             InputKey::Remote(remote) => {
                 // No ref means assume HEAD, i.e. whatever's on the default branch.
-                let git_ref = remote.git_ref.as_deref().unwrap_or("HEAD");
+                let git_ref = remote.slug.git_ref.as_deref().unwrap_or("HEAD");
                 write!(
                     f,
                     "https://github.com/{owner}/{repo}/blob/{git_ref}/{path}",
-                    owner = remote.owner,
-                    repo = remote.repo,
+                    owner = remote.slug.owner,
+                    repo = remote.slug.repo,
                     path = remote.path
                 )
             }
@@ -146,6 +167,7 @@ impl std::fmt::Display for InputKey {
 
 impl InputKey {
     pub(crate) fn local<P: AsRef<Utf8Path>>(
+        group: Group,
         path: P,
         prefix: Option<P>,
     ) -> Result<Self, InputError> {
@@ -155,6 +177,7 @@ impl InputKey {
         }
 
         Ok(Self::Local(LocalKey {
+            group,
             prefix: prefix.map(|p| p.as_ref().to_path_buf()),
             given_path: path.as_ref().to_path_buf(),
         }))
@@ -166,9 +189,8 @@ impl InputKey {
         }
 
         Ok(Self::Remote(RemoteKey {
-            owner: slug.owner.clone(),
-            repo: slug.repo.clone(),
-            git_ref: slug.git_ref.clone(),
+            group: slug.into(),
+            slug: slug.clone(),
             path: path.into(),
         }))
     }
@@ -219,59 +241,46 @@ impl InputKey {
             InputKey::Remote(remote) => remote.path.file_name().unwrap(),
         }
     }
+
+    /// Returns the group this input belongs to.
+    fn group(&self) -> &Group {
+        match self {
+            InputKey::Local(local) => &local.group,
+            InputKey::Remote(remote) => &remote.group,
+        }
+    }
 }
 
-pub(crate) struct InputRegistry {
-    strict: bool,
-    // NOTE: We use a BTreeMap here to ensure that registered inputs
-    // iterate in a deterministic order. This saves us a lot of pain
-    // while snapshot testing across multiple input files, and makes
-    // the user experience more predictable.
+/// An opaque identifier for a group of inputs.
+#[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
+pub(crate) struct Group(String);
+
+impl From<&str> for Group {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl From<&RepoSlug> for Group {
+    fn from(value: &RepoSlug) -> Self {
+        Self(value.to_string())
+    }
+}
+
+/// A group of inputs collected from the same source.
+pub(crate) struct InputGroup {
+    /// The collected inputs.
     pub(crate) inputs: BTreeMap<InputKey, AuditInput>,
+    // TODO: Config will go here.
 }
 
-impl InputRegistry {
-    pub(crate) fn new(strict: bool) -> Self {
+impl InputGroup {
+    fn new() -> Self {
         Self {
-            strict,
             inputs: Default::default(),
         }
     }
 
-    pub(crate) fn len(&self) -> usize {
-        self.inputs.len()
-    }
-
-    pub(crate) fn register(
-        &mut self,
-        kind: InputKind,
-        contents: String,
-        key: InputKey,
-    ) -> anyhow::Result<()> {
-        tracing::debug!("registering {kind} input as with key {key}");
-
-        let input: Result<AuditInput, InputError> = match kind {
-            InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(|wf| wf.into()),
-            InputKind::Action => Action::from_string(contents, key.clone()).map(|a| a.into()),
-        };
-
-        match input {
-            Ok(input) => self.register_input(input),
-            Err(InputError::Syntax(e)) if !self.strict => {
-                tracing::warn!("failed to parse input: {e}");
-                Ok(())
-            }
-            Err(e @ InputError::Schema { .. }) if !self.strict => {
-                tracing::warn!("failed to validate input as {kind}: {e}");
-                Ok(())
-            }
-            Err(e) => {
-                Err(anyhow::anyhow!(e)).with_context(|| format!("failed to load {key} as {kind}"))
-            }
-        }
-    }
-
-    /// Registers an already-loaded workflow or action definition.
     fn register_input(&mut self, input: AuditInput) -> anyhow::Result<()> {
         if self.inputs.contains_key(input.key()) {
             return Err(anyhow::anyhow!(
@@ -285,13 +294,254 @@ impl InputRegistry {
         Ok(())
     }
 
-    pub(crate) fn iter_inputs(&self) -> btree_map::Iter<'_, InputKey, AuditInput> {
-        self.inputs.iter()
+    pub(crate) fn register(
+        &mut self,
+        kind: InputKind,
+        contents: String,
+        key: InputKey,
+        strict: bool,
+    ) -> anyhow::Result<()> {
+        tracing::debug!("registering {kind} input as with key {key}");
+
+        let input: Result<AuditInput, InputError> = match kind {
+            InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(|wf| wf.into()),
+            InputKind::Action => Action::from_string(contents, key.clone()).map(|a| a.into()),
+        };
+
+        match input {
+            Ok(input) => self.register_input(input),
+            Err(InputError::Syntax(e)) if !strict => {
+                tracing::warn!("failed to parse input: {e}");
+                Ok(())
+            }
+            Err(e @ InputError::Schema { .. }) if !strict => {
+                tracing::warn!("failed to validate input as {kind}: {e}");
+                Ok(())
+            }
+            Err(e) => {
+                Err(anyhow::anyhow!(e)).with_context(|| format!("failed to load {key} as {kind}"))
+            }
+        }
     }
 
+    fn collect_from_file(&mut self, path: &Utf8Path, strict: bool) -> anyhow::Result<()> {
+        // When collecting individual files, we don't know which part
+        // of the input path is the prefix.
+        let (key, kind) = match (path.file_stem(), path.extension()) {
+            (Some("action"), Some("yml" | "yaml")) => (
+                InputKey::local(Group(path.as_str().into()), path, None)?,
+                InputKind::Action,
+            ),
+            (Some(_), Some("yml" | "yaml")) => (
+                InputKey::local(Group(path.as_str().into()), path, None)?,
+                InputKind::Workflow,
+            ),
+            _ => return Err(anyhow::anyhow!("invalid input: {path}")),
+        };
+
+        let contents = std::fs::read_to_string(path)?;
+        self.register(kind, contents, key, strict)
+    }
+
+    fn collect_from_dir(
+        &mut self,
+        path: &Utf8Path,
+        mode: CollectionMode,
+        strict: bool,
+    ) -> anyhow::Result<()> {
+        // Start with all filters disabled, i.e. walk everything.
+        let mut walker = ignore::WalkBuilder::new(path);
+        let walker = walker.standard_filters(false);
+
+        // If the user wants to respect `.gitignore` files, then we need to
+        // explicitly enable it. This also enables filtering by a global
+        // `.gitignore` file and the `.git/info/exclude` file, since these
+        // typically align with the user's expectations.
+        //
+        // We honor `.gitignore` and similar files even if `.git/` is not
+        // present, since users may retrieve or reconstruct a source archive
+        // without a `.git/` directory. In particular, this snares some
+        // zizmor integrators.
+        //
+        // See: https://github.com/zizmorcore/zizmor/issues/596
+        if mode.respects_gitignore() {
+            walker
+                .require_git(false)
+                .git_ignore(true)
+                .git_global(true)
+                .git_exclude(true);
+        }
+
+        for entry in walker.build() {
+            let entry = entry?;
+            let entry = <&Utf8Path>::try_from(entry.path())?;
+
+            if mode.workflows()
+                && entry.is_file()
+                && matches!(entry.extension(), Some("yml" | "yaml"))
+                && entry
+                    .parent()
+                    .is_some_and(|dir| dir.ends_with(".github/workflows"))
+            {
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
+                let contents = std::fs::read_to_string(entry)?;
+                self.register(InputKind::Workflow, contents, key, strict)?;
+            }
+
+            if mode.actions()
+                && entry.is_file()
+                && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
+            {
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
+                let contents = std::fs::read_to_string(entry)?;
+                self.register(InputKind::Action, contents, key, strict)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn collect_from_repo_slug(
+        &mut self,
+        raw_slug: &str,
+        state: &AuditState,
+        mode: CollectionMode,
+        _strict: bool,
+    ) -> anyhow::Result<()> {
+        let Ok(slug) = RepoSlug::from_str(raw_slug) else {
+            return Err(anyhow::anyhow!(tips(
+                format!("invalid input: {raw_slug}"),
+                &[format!(
+                    "pass a single {file}, {directory}, or entire repo by {slug} slug",
+                    file = "file".green(),
+                    directory = "directory".green(),
+                    slug = "owner/repo".green()
+                )]
+            )));
+        };
+
+        let client = state.gh_client.as_ref().ok_or_else(|| {
+            anyhow::anyhow!(tips(
+                format!(
+                    "can't retrieve repository: {raw_slug}",
+                    raw_slug = raw_slug.green()
+                ),
+                &[format!(
+                    "try removing {offline} or passing {gh_token}",
+                    offline = "--offline".yellow(),
+                    gh_token = "--gh-token <TOKEN>".yellow(),
+                )]
+            ))
+        })?;
+
+        if matches!(mode, CollectionMode::WorkflowsOnly) {
+            // Performance: if we're *only* collecting workflows, then we
+            // can save ourselves a full repo download and only fetch the
+            // repo's workflow files.
+            client.fetch_workflows(&slug, self)?;
+        } else {
+            let before = self.len();
+            let host = match &state.gh_hostname {
+                GitHubHost::Enterprise(address) => address.as_str(),
+                GitHubHost::Standard(_) => "github.com",
+            };
+
+            client.fetch_audit_inputs(&slug, self).with_context(|| {
+                tips(
+                    format!(
+                        "couldn't collect inputs from https://{host}/{owner}/{repo}",
+                        host = host,
+                        owner = slug.owner,
+                        repo = slug.repo
+                    ),
+                    &["confirm the repository exists and that you have access to it"],
+                )
+            })?;
+            let after = self.len();
+            let len = after - before;
+
+            tracing::info!(
+                "collected {len} inputs from {owner}/{repo}",
+                owner = slug.owner,
+                repo = slug.repo
+            );
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn collect(
+        request: &str,
+        mode: CollectionMode,
+        strict: bool,
+        state: &AuditState,
+    ) -> anyhow::Result<Self> {
+        let path = Utf8Path::new(request);
+        let mut group = Self::new();
+        if path.is_file() {
+            group.collect_from_file(path, strict)?;
+        } else if path.is_dir() {
+            group.collect_from_dir(path, mode, strict)?;
+        } else {
+            group.collect_from_repo_slug(request, state, mode, strict)?;
+        }
+
+        Ok(group)
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.inputs.len()
+    }
+}
+
+pub(crate) struct InputRegistry {
+    // NOTE: We use a BTreeMap here to ensure that registered inputs
+    // iterate in a deterministic order. This saves us a lot of pain
+    // while snapshot testing across multiple input files, and makes
+    // the user experience more predictable.
+    pub(crate) groups: BTreeMap<Group, InputGroup>,
+}
+
+impl InputRegistry {
+    pub(crate) fn new() -> Self {
+        Self {
+            groups: Default::default(),
+        }
+    }
+
+    /// Return the total number of inputs registered across all groups
+    /// in this registry.
+    pub(crate) fn len(&self) -> usize {
+        self.groups.values().map(|g| g.len()).sum()
+    }
+
+    pub(crate) fn register_group(
+        &mut self,
+        name: String,
+        mode: CollectionMode,
+        strict: bool,
+        state: &AuditState,
+    ) -> anyhow::Result<()> {
+        // If the group has already been registered, then the user probably
+        // duplicated the input multiple times on the command line by accident.
+        // We just ignore any duplicate registrations.
+        if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.clone())) {
+            e.insert(InputGroup::collect(&name, mode, strict, state)?);
+        }
+
+        Ok(())
+    }
+
+    /// Return an iterator over all inputs in all groups in this registry.
+    pub(crate) fn iter_inputs(&self) -> impl Iterator<Item = (&InputKey, &AuditInput)> {
+        self.groups.values().flat_map(|group| group.inputs.iter())
+    }
+
+    /// Get a reference to a registered input by its key.
     pub(crate) fn get_input(&self, key: &InputKey) -> &AuditInput {
-        self.inputs
-            .get(key)
+        self.groups
+            .get(key.group())
+            .and_then(|group| group.inputs.get(key))
             .expect("API misuse: requested an un-registered input")
     }
 }
@@ -304,7 +554,7 @@ mod tests {
 
     #[test]
     fn test_input_key_display() {
-        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
@@ -326,16 +576,18 @@ mod tests {
 
     #[test]
     fn test_input_key_local_presentation_path() {
-        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo")).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
+        let local =
+            InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
         let local = InputKey::local(
+            "fakegroup".into(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
         )
@@ -348,23 +600,26 @@ mod tests {
 
     #[test]
     fn test_input_key_local_sarif_path() {
-        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.sarif_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo")).unwrap();
         assert_eq!(local.sarif_path(), "bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
+        let local =
+            InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
         assert_eq!(local.sarif_path(), "baz.yml");
 
         let local = InputKey::local(
+            "fakegroup".into(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
         )
         .unwrap();
         assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
 
-        let local = InputKey::local("./.github/workflows/baz.yml", Some(".")).unwrap();
+        let local =
+            InputKey::local("fakegroup".into(), "./.github/workflows/baz.yml", Some(".")).unwrap();
         assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
     }
 }

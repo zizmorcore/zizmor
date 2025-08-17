@@ -744,7 +744,10 @@ runs:
       shell: bash
 "#;
 
-        let action = Action::from_string(action.into(), InputKey::local("fake", None)?)?;
+        let action = Action::from_string(
+            action.into(),
+            InputKey::local("fakegroup".into(), "fake", None)?,
+        )?;
         let action = action.into();
 
         let exprs = parse_fenced_expressions_from_input(&action);
@@ -773,7 +776,10 @@ jobs:
       - run: echo hello from ${{ github.actor }}
 "#;
 
-        let workflow = Workflow::from_string(workflow.into(), InputKey::local("fake", None)?)?;
+        let workflow = Workflow::from_string(
+            workflow.into(),
+            InputKey::local("fakegroup".into(), "fake", None)?,
+        )?;
 
         let exprs = parse_fenced_expressions_from_input(&workflow.into())
             .into_iter()
