@@ -679,7 +679,7 @@ impl From<bool> for Expr<'_> {
 /// This type represents the possible values that can result from evaluating
 /// constant-reducible GitHub Actions expressions.
 #[derive(Debug, Clone, PartialEq)]
-pub enum EvaluationResult {
+pub enum Evaluation {
     /// A string value (includes both string literals and stringified other types)
     String(String),
     /// A numeric value
@@ -690,7 +690,7 @@ pub enum EvaluationResult {
     Null,
 }
 
-impl EvaluationResult {
+impl Evaluation {
     /// Convert the evaluation result to GitHub Actions string representation.
     ///
     /// This follows GitHub Actions' string conversion rules:
@@ -700,8 +700,8 @@ impl EvaluationResult {
     /// - Null becomes an empty string
     pub fn to_github_string(&self) -> String {
         match self {
-            EvaluationResult::String(s) => s.clone(),
-            EvaluationResult::Number(n) => {
+            Evaluation::String(s) => s.clone(),
+            Evaluation::Number(n) => {
                 // Format numbers like GitHub Actions does
                 if n.fract() == 0.0 {
                     format!("{}", *n as i64)
@@ -709,8 +709,8 @@ impl EvaluationResult {
                     n.to_string()
                 }
             }
-            EvaluationResult::Boolean(b) => b.to_string(),
-            EvaluationResult::Null => String::new(),
+            Evaluation::Boolean(b) => b.to_string(),
+            Evaluation::Null => String::new(),
         }
     }
 
@@ -722,15 +722,15 @@ impl EvaluationResult {
     /// - Strings: empty string is falsy, everything else is truthy
     pub fn to_boolean(&self) -> bool {
         match self {
-            EvaluationResult::Boolean(b) => *b,
-            EvaluationResult::Null => false,
-            EvaluationResult::Number(n) => *n != 0.0,
-            EvaluationResult::String(s) => !s.is_empty(),
+            Evaluation::Boolean(b) => *b,
+            Evaluation::Null => false,
+            Evaluation::Number(n) => *n != 0.0,
+            Evaluation::String(s) => !s.is_empty(),
         }
     }
 }
 
-impl std::fmt::Display for EvaluationResult {
+impl std::fmt::Display for Evaluation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_github_string())
     }
@@ -739,7 +739,7 @@ impl std::fmt::Display for EvaluationResult {
 impl<'src> SpannedExpr<'src> {
     /// Evaluates a constant-reducible expression to its literal value.
     ///
-    /// Returns `Some(EvaluationResult)` if the expression can be constant-evaluated,
+    /// Returns `Some(Evaluation)` if the expression can be constant-evaluated,
     /// or `None` if the expression contains non-constant elements (like contexts or
     /// non-reducible function calls).
     ///
@@ -749,7 +749,7 @@ impl<'src> SpannedExpr<'src> {
     /// # Examples
     ///
     /// ```
-    /// use github_actions_expressions::{Expr, EvaluationResult};
+    /// use github_actions_expressions::{Expr, Evaluation};
     ///
     /// let expr = Expr::parse("'hello'").unwrap();
     /// let result = expr.evaluate_constant().unwrap();
@@ -757,9 +757,9 @@ impl<'src> SpannedExpr<'src> {
     ///
     /// let expr = Expr::parse("true && false").unwrap();
     /// let result = expr.evaluate_constant().unwrap();
-    /// assert_eq!(result, EvaluationResult::Boolean(false));
+    /// assert_eq!(result, Evaluation::Boolean(false));
     /// ```
-    pub fn evaluate_constant(&self) -> Option<EvaluationResult> {
+    pub fn evaluate_constant(&self) -> Option<Evaluation> {
         self.inner.evaluate_constant()
     }
 }
@@ -776,13 +776,13 @@ impl<'src> Expr<'src> {
     /// - Function calls (format, contains, startsWith, endsWith, toJSON, fromJSON)
     ///
     /// The implementation follows GitHub's official evaluation semantics.
-    pub fn evaluate_constant(&self) -> Option<EvaluationResult> {
+    pub fn evaluate_constant(&self) -> Option<Evaluation> {
         match self {
             Expr::Literal(literal) => Some(match literal {
-                Literal::String(s) => EvaluationResult::String(s.to_string()),
-                Literal::Number(n) => EvaluationResult::Number(*n),
-                Literal::Boolean(b) => EvaluationResult::Boolean(*b),
-                Literal::Null => EvaluationResult::Null,
+                Literal::String(s) => Evaluation::String(s.to_string()),
+                Literal::Number(n) => Evaluation::Number(*n),
+                Literal::Boolean(b) => Evaluation::Boolean(*b),
+                Literal::Null => Evaluation::Null,
             }),
 
             Expr::BinOp { lhs, op, rhs } => {
@@ -806,26 +806,22 @@ impl<'src> Expr<'src> {
                             Some(rhs_val)
                         }
                     }
-                    BinOp::Eq => Some(EvaluationResult::Boolean(Self::values_equal(
-                        &lhs_val, &rhs_val,
-                    ))),
-                    BinOp::Neq => Some(EvaluationResult::Boolean(!Self::values_equal(
-                        &lhs_val, &rhs_val,
-                    ))),
-                    BinOp::Lt => Self::compare_values(&lhs_val, &rhs_val).map(|ord| {
-                        EvaluationResult::Boolean(matches!(ord, std::cmp::Ordering::Less))
-                    }),
+                    BinOp::Eq => Some(Evaluation::Boolean(Self::values_equal(&lhs_val, &rhs_val))),
+                    BinOp::Neq => {
+                        Some(Evaluation::Boolean(!Self::values_equal(&lhs_val, &rhs_val)))
+                    }
+                    BinOp::Lt => Self::compare_values(&lhs_val, &rhs_val)
+                        .map(|ord| Evaluation::Boolean(matches!(ord, std::cmp::Ordering::Less))),
                     BinOp::Le => Self::compare_values(&lhs_val, &rhs_val).map(|ord| {
-                        EvaluationResult::Boolean(matches!(
+                        Evaluation::Boolean(matches!(
                             ord,
                             std::cmp::Ordering::Less | std::cmp::Ordering::Equal
                         ))
                     }),
-                    BinOp::Gt => Self::compare_values(&lhs_val, &rhs_val).map(|ord| {
-                        EvaluationResult::Boolean(matches!(ord, std::cmp::Ordering::Greater))
-                    }),
+                    BinOp::Gt => Self::compare_values(&lhs_val, &rhs_val)
+                        .map(|ord| Evaluation::Boolean(matches!(ord, std::cmp::Ordering::Greater))),
                     BinOp::Ge => Self::compare_values(&lhs_val, &rhs_val).map(|ord| {
-                        EvaluationResult::Boolean(matches!(
+                        Evaluation::Boolean(matches!(
                             ord,
                             std::cmp::Ordering::Greater | std::cmp::Ordering::Equal
                         ))
@@ -836,7 +832,7 @@ impl<'src> Expr<'src> {
             Expr::UnOp { op, expr } => {
                 let val = expr.evaluate_constant()?;
                 match op {
-                    UnOp::Not => Some(EvaluationResult::Boolean(!val.to_boolean())),
+                    UnOp::Not => Some(Evaluation::Boolean(!val.to_boolean())),
                 }
             }
 
@@ -848,12 +844,12 @@ impl<'src> Expr<'src> {
     }
 
     /// Compares two evaluation results following GitHub Actions comparison semantics.
-    fn values_equal(lhs: &EvaluationResult, rhs: &EvaluationResult) -> bool {
+    fn values_equal(lhs: &Evaluation, rhs: &Evaluation) -> bool {
         match (lhs, rhs) {
-            (EvaluationResult::Null, EvaluationResult::Null) => true,
-            (EvaluationResult::Boolean(a), EvaluationResult::Boolean(b)) => a == b,
-            (EvaluationResult::Number(a), EvaluationResult::Number(b)) => a == b,
-            (EvaluationResult::String(a), EvaluationResult::String(b)) => a == b,
+            (Evaluation::Null, Evaluation::Null) => true,
+            (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a == b,
+            (Evaluation::Number(a), Evaluation::Number(b)) => a == b,
+            (Evaluation::String(a), Evaluation::String(b)) => a == b,
 
             // Type coercion rules - convert to string and compare
             (a, b) => a.to_github_string() == b.to_github_string(),
@@ -861,16 +857,13 @@ impl<'src> Expr<'src> {
     }
 
     /// Compares two evaluation results for ordering operations.
-    fn compare_values(
-        lhs: &EvaluationResult,
-        rhs: &EvaluationResult,
-    ) -> Option<std::cmp::Ordering> {
+    fn compare_values(lhs: &Evaluation, rhs: &Evaluation) -> Option<std::cmp::Ordering> {
         match (lhs, rhs) {
             // Numbers can be compared directly
-            (EvaluationResult::Number(a), EvaluationResult::Number(b)) => a.partial_cmp(b),
+            (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
 
             // String comparison
-            (EvaluationResult::String(a), EvaluationResult::String(b)) => Some(a.cmp(b)),
+            (Evaluation::String(a), Evaluation::String(b)) => Some(a.cmp(b)),
 
             // Try to convert both to numbers first, then fall back to string comparison
             (a, b) => {
@@ -887,7 +880,7 @@ impl<'src> Expr<'src> {
     }
 
     /// Evaluates a function call if it's one of the supported constant-reducible functions.
-    fn evaluate_function_call(func: &Function, args: &[SpannedExpr]) -> Option<EvaluationResult> {
+    fn evaluate_function_call(func: &Function, args: &[SpannedExpr]) -> Option<Evaluation> {
         match func {
             f if f == "format" => Self::eval_format_function(args),
             f if f == "contains" => Self::eval_contains_function(args),
@@ -901,7 +894,7 @@ impl<'src> Expr<'src> {
 
     /// Evaluates the `format()` function following GitHub Actions semantics.
     /// format(format_string, arg1, arg2, ...)
-    fn eval_format_function(args: &[SpannedExpr]) -> Option<EvaluationResult> {
+    fn eval_format_function(args: &[SpannedExpr]) -> Option<Evaluation> {
         if args.is_empty() {
             return None;
         }
@@ -918,12 +911,12 @@ impl<'src> Expr<'src> {
             result = result.replace(&placeholder, &arg_val.to_github_string());
         }
 
-        Some(EvaluationResult::String(result))
+        Some(Evaluation::String(result))
     }
 
     /// Evaluates the `contains()` function.
     /// contains(search_string, search_value)
-    fn eval_contains_function(args: &[SpannedExpr]) -> Option<EvaluationResult> {
+    fn eval_contains_function(args: &[SpannedExpr]) -> Option<Evaluation> {
         if args.len() != 2 {
             return None;
         }
@@ -931,12 +924,12 @@ impl<'src> Expr<'src> {
         let haystack = args[0].evaluate_constant()?.to_github_string();
         let needle = args[1].evaluate_constant()?.to_github_string();
 
-        Some(EvaluationResult::Boolean(haystack.contains(&needle)))
+        Some(Evaluation::Boolean(haystack.contains(&needle)))
     }
 
     /// Evaluates the `startsWith()` function.
     /// startsWith(search_string, search_value)
-    fn eval_starts_with_function(args: &[SpannedExpr]) -> Option<EvaluationResult> {
+    fn eval_starts_with_function(args: &[SpannedExpr]) -> Option<Evaluation> {
         if args.len() != 2 {
             return None;
         }
@@ -944,12 +937,12 @@ impl<'src> Expr<'src> {
         let string = args[0].evaluate_constant()?.to_github_string();
         let prefix = args[1].evaluate_constant()?.to_github_string();
 
-        Some(EvaluationResult::Boolean(string.starts_with(&prefix)))
+        Some(Evaluation::Boolean(string.starts_with(&prefix)))
     }
 
     /// Evaluates the `endsWith()` function.
     /// endsWith(search_string, search_value)
-    fn eval_ends_with_function(args: &[SpannedExpr]) -> Option<EvaluationResult> {
+    fn eval_ends_with_function(args: &[SpannedExpr]) -> Option<Evaluation> {
         if args.len() != 2 {
             return None;
         }
@@ -957,12 +950,12 @@ impl<'src> Expr<'src> {
         let string = args[0].evaluate_constant()?.to_github_string();
         let suffix = args[1].evaluate_constant()?.to_github_string();
 
-        Some(EvaluationResult::Boolean(string.ends_with(&suffix)))
+        Some(Evaluation::Boolean(string.ends_with(&suffix)))
     }
 
     /// Evaluates the `toJSON()` function.
     /// toJSON(value) - converts value to JSON string
-    fn eval_to_json_function(args: &[SpannedExpr]) -> Option<EvaluationResult> {
+    fn eval_to_json_function(args: &[SpannedExpr]) -> Option<Evaluation> {
         if args.len() != 1 {
             return None;
         }
@@ -970,20 +963,20 @@ impl<'src> Expr<'src> {
         let value = args[0].evaluate_constant()?;
 
         let json_str = match value {
-            EvaluationResult::String(s) => {
+            Evaluation::String(s) => {
                 format!("\"{}\"", s.replace('\\', "\\\\").replace('\"', "\\\""))
             }
-            EvaluationResult::Number(n) => n.to_string(),
-            EvaluationResult::Boolean(b) => b.to_string(),
-            EvaluationResult::Null => "null".to_string(),
+            Evaluation::Number(n) => n.to_string(),
+            Evaluation::Boolean(b) => b.to_string(),
+            Evaluation::Null => "null".to_string(),
         };
 
-        Some(EvaluationResult::String(json_str))
+        Some(Evaluation::String(json_str))
     }
 
     /// Evaluates the `fromJSON()` function.
     /// fromJSON(json_string) - parses JSON string (limited support for constants)
-    fn eval_from_json_function(args: &[SpannedExpr]) -> Option<EvaluationResult> {
+    fn eval_from_json_function(args: &[SpannedExpr]) -> Option<Evaluation> {
         if args.len() != 1 {
             return None;
         }
@@ -992,20 +985,20 @@ impl<'src> Expr<'src> {
 
         // Simple JSON parsing for basic literals
         match json_str.trim() {
-            "null" => Some(EvaluationResult::Null),
-            "true" => Some(EvaluationResult::Boolean(true)),
-            "false" => Some(EvaluationResult::Boolean(false)),
+            "null" => Some(Evaluation::Null),
+            "true" => Some(Evaluation::Boolean(true)),
+            "false" => Some(Evaluation::Boolean(false)),
             s if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 => {
                 // Simple string unescaping
                 let unescaped = &s[1..s.len() - 1]
                     .replace("\\\"", "\"")
                     .replace("\\\\", "\\");
-                Some(EvaluationResult::String(unescaped.to_string()))
+                Some(Evaluation::String(unescaped.to_string()))
             }
             s => {
                 // Try to parse as number
                 if let Ok(n) = s.parse::<f64>() {
-                    Some(EvaluationResult::Number(n))
+                    Some(Evaluation::Number(n))
                 } else {
                     None
                 }
@@ -1567,16 +1560,16 @@ mod tests {
 
     #[test]
     fn test_evaluate_constant_literals() -> Result<()> {
-        use crate::EvaluationResult;
+        use crate::Evaluation;
 
         let test_cases = &[
-            ("'hello'", EvaluationResult::String("hello".to_string())),
-            ("'world'", EvaluationResult::String("world".to_string())),
-            ("42", EvaluationResult::Number(42.0)),
-            ("3.14", EvaluationResult::Number(3.14)),
-            ("true", EvaluationResult::Boolean(true)),
-            ("false", EvaluationResult::Boolean(false)),
-            ("null", EvaluationResult::Null),
+            ("'hello'", Evaluation::String("hello".to_string())),
+            ("'world'", Evaluation::String("world".to_string())),
+            ("42", Evaluation::Number(42.0)),
+            ("3.14", Evaluation::Number(3.14)),
+            ("true", Evaluation::Boolean(true)),
+            ("false", Evaluation::Boolean(false)),
+            ("null", Evaluation::Null),
         ];
 
         for (expr_str, expected) in test_cases {
@@ -1590,38 +1583,38 @@ mod tests {
 
     #[test]
     fn test_evaluate_constant_binary_operations() -> Result<()> {
-        use crate::EvaluationResult;
+        use crate::Evaluation;
 
         let test_cases = &[
             // Boolean operations
-            ("true && true", EvaluationResult::Boolean(true)),
-            ("true && false", EvaluationResult::Boolean(false)),
-            ("false && true", EvaluationResult::Boolean(false)),
-            ("false && false", EvaluationResult::Boolean(false)),
-            ("true || true", EvaluationResult::Boolean(true)),
-            ("true || false", EvaluationResult::Boolean(true)),
-            ("false || true", EvaluationResult::Boolean(true)),
-            ("false || false", EvaluationResult::Boolean(false)),
+            ("true && true", Evaluation::Boolean(true)),
+            ("true && false", Evaluation::Boolean(false)),
+            ("false && true", Evaluation::Boolean(false)),
+            ("false && false", Evaluation::Boolean(false)),
+            ("true || true", Evaluation::Boolean(true)),
+            ("true || false", Evaluation::Boolean(true)),
+            ("false || true", Evaluation::Boolean(true)),
+            ("false || false", Evaluation::Boolean(false)),
             // Equality operations
-            ("1 == 1", EvaluationResult::Boolean(true)),
-            ("1 == 2", EvaluationResult::Boolean(false)),
-            ("'hello' == 'hello'", EvaluationResult::Boolean(true)),
-            ("'hello' == 'world'", EvaluationResult::Boolean(false)),
-            ("true == true", EvaluationResult::Boolean(true)),
-            ("true == false", EvaluationResult::Boolean(false)),
-            ("1 != 2", EvaluationResult::Boolean(true)),
-            ("1 != 1", EvaluationResult::Boolean(false)),
+            ("1 == 1", Evaluation::Boolean(true)),
+            ("1 == 2", Evaluation::Boolean(false)),
+            ("'hello' == 'hello'", Evaluation::Boolean(true)),
+            ("'hello' == 'world'", Evaluation::Boolean(false)),
+            ("true == true", Evaluation::Boolean(true)),
+            ("true == false", Evaluation::Boolean(false)),
+            ("1 != 2", Evaluation::Boolean(true)),
+            ("1 != 1", Evaluation::Boolean(false)),
             // Comparison operations
-            ("1 < 2", EvaluationResult::Boolean(true)),
-            ("2 < 1", EvaluationResult::Boolean(false)),
-            ("1 <= 1", EvaluationResult::Boolean(true)),
-            ("1 <= 2", EvaluationResult::Boolean(true)),
-            ("2 <= 1", EvaluationResult::Boolean(false)),
-            ("2 > 1", EvaluationResult::Boolean(true)),
-            ("1 > 2", EvaluationResult::Boolean(false)),
-            ("1 >= 1", EvaluationResult::Boolean(true)),
-            ("2 >= 1", EvaluationResult::Boolean(true)),
-            ("1 >= 2", EvaluationResult::Boolean(false)),
+            ("1 < 2", Evaluation::Boolean(true)),
+            ("2 < 1", Evaluation::Boolean(false)),
+            ("1 <= 1", Evaluation::Boolean(true)),
+            ("1 <= 2", Evaluation::Boolean(true)),
+            ("2 <= 1", Evaluation::Boolean(false)),
+            ("2 > 1", Evaluation::Boolean(true)),
+            ("1 > 2", Evaluation::Boolean(false)),
+            ("1 >= 1", Evaluation::Boolean(true)),
+            ("2 >= 1", Evaluation::Boolean(true)),
+            ("1 >= 2", Evaluation::Boolean(false)),
         ];
 
         for (expr_str, expected) in test_cases {
@@ -1635,68 +1628,65 @@ mod tests {
 
     #[test]
     fn test_evaluate_constant_functions() -> Result<()> {
-        use crate::EvaluationResult;
+        use crate::Evaluation;
 
         let test_cases = &[
             // format function
             (
                 "format('{0}', 'hello')",
-                EvaluationResult::String("hello".to_string()),
+                Evaluation::String("hello".to_string()),
             ),
             (
                 "format('{0} {1}', 'hello', 'world')",
-                EvaluationResult::String("hello world".to_string()),
+                Evaluation::String("hello world".to_string()),
             ),
             (
                 "format('Value: {0}', 42)",
-                EvaluationResult::String("Value: 42".to_string()),
+                Evaluation::String("Value: 42".to_string()),
             ),
             // contains function
             (
                 "contains('hello world', 'world')",
-                EvaluationResult::Boolean(true),
+                Evaluation::Boolean(true),
             ),
-            (
-                "contains('hello world', 'foo')",
-                EvaluationResult::Boolean(false),
-            ),
-            ("contains('test', '')", EvaluationResult::Boolean(true)),
+            ("contains('hello world', 'foo')", Evaluation::Boolean(false)),
+            ("contains('test', '')", Evaluation::Boolean(true)),
             // startsWith function
             (
                 "startsWith('hello world', 'hello')",
-                EvaluationResult::Boolean(true),
+                Evaluation::Boolean(true),
             ),
             (
                 "startsWith('hello world', 'world')",
-                EvaluationResult::Boolean(false),
+                Evaluation::Boolean(false),
             ),
-            ("startsWith('test', '')", EvaluationResult::Boolean(true)),
+            ("startsWith('test', '')", Evaluation::Boolean(true)),
             // endsWith function
             (
                 "endsWith('hello world', 'world')",
-                EvaluationResult::Boolean(true),
+                Evaluation::Boolean(true),
             ),
             (
                 "endsWith('hello world', 'hello')",
-                EvaluationResult::Boolean(false),
+                Evaluation::Boolean(false),
             ),
-            ("endsWith('test', '')", EvaluationResult::Boolean(true)),
+            ("endsWith('test', '')", Evaluation::Boolean(true)),
             // toJSON function
             (
                 "toJSON('hello')",
-                EvaluationResult::String("\"hello\"".to_string()),
+                Evaluation::String("\"hello\"".to_string()),
             ),
-            ("toJSON(42)", EvaluationResult::String("42".to_string())),
-            ("toJSON(true)", EvaluationResult::String("true".to_string())),
-            ("toJSON(null)", EvaluationResult::String("null".to_string())),
+            ("toJSON(42)", Evaluation::String("42".to_string())),
+            ("toJSON(true)", Evaluation::String("true".to_string())),
+            ("toJSON(null)", Evaluation::String("null".to_string())),
             // fromJSON function
             (
                 "fromJSON('\"hello\"')",
-                EvaluationResult::String("hello".to_string()),
+                Evaluation::String("hello".to_string()),
             ),
-            ("fromJSON('42')", EvaluationResult::Number(42.0)),
-            ("fromJSON('true')", EvaluationResult::Boolean(true)),
-            ("fromJSON('null')", EvaluationResult::Null),
+            ("fromJSON('42')", Evaluation::Number(42.0)),
+            ("fromJSON('true')", Evaluation::Boolean(true)),
+            ("fromJSON('null')", Evaluation::Null),
         ];
 
         for (expr_str, expected) in test_cases {
@@ -1710,24 +1700,24 @@ mod tests {
 
     #[test]
     fn test_evaluate_constant_complex_expressions() -> Result<()> {
-        use crate::EvaluationResult;
+        use crate::Evaluation;
 
         let test_cases = &[
             // Nested operations
-            ("!false", EvaluationResult::Boolean(true)),
-            ("!true", EvaluationResult::Boolean(false)),
-            ("!(true && false)", EvaluationResult::Boolean(true)),
+            ("!false", Evaluation::Boolean(true)),
+            ("!true", Evaluation::Boolean(false)),
+            ("!(true && false)", Evaluation::Boolean(true)),
             // Complex boolean logic
-            ("true && (false || true)", EvaluationResult::Boolean(true)),
-            ("false || (true && false)", EvaluationResult::Boolean(false)),
+            ("true && (false || true)", Evaluation::Boolean(true)),
+            ("false || (true && false)", Evaluation::Boolean(false)),
             // Mixed function calls
             (
                 "contains(format('{0} {1}', 'hello', 'world'), 'world')",
-                EvaluationResult::Boolean(true),
+                Evaluation::Boolean(true),
             ),
             (
                 "startsWith(format('prefix_{0}', 'test'), 'prefix')",
-                EvaluationResult::Boolean(true),
+                Evaluation::Boolean(true),
             ),
         ];
 
@@ -1742,15 +1732,15 @@ mod tests {
 
     #[test]
     fn test_evaluation_result_to_github_string() {
-        use crate::EvaluationResult;
+        use crate::Evaluation;
 
         let test_cases = &[
-            (EvaluationResult::String("hello".to_string()), "hello"),
-            (EvaluationResult::Number(42.0), "42"),
-            (EvaluationResult::Number(3.14), "3.14"),
-            (EvaluationResult::Boolean(true), "true"),
-            (EvaluationResult::Boolean(false), "false"),
-            (EvaluationResult::Null, ""),
+            (Evaluation::String("hello".to_string()), "hello"),
+            (Evaluation::Number(42.0), "42"),
+            (Evaluation::Number(3.14), "3.14"),
+            (Evaluation::Boolean(true), "true"),
+            (Evaluation::Boolean(false), "false"),
+            (Evaluation::Null, ""),
         ];
 
         for (result, expected) in test_cases {
@@ -1760,17 +1750,17 @@ mod tests {
 
     #[test]
     fn test_evaluation_result_to_boolean() {
-        use crate::EvaluationResult;
+        use crate::Evaluation;
 
         let test_cases = &[
-            (EvaluationResult::Boolean(true), true),
-            (EvaluationResult::Boolean(false), false),
-            (EvaluationResult::Null, false),
-            (EvaluationResult::Number(0.0), false),
-            (EvaluationResult::Number(1.0), true),
-            (EvaluationResult::Number(-1.0), true),
-            (EvaluationResult::String("".to_string()), false),
-            (EvaluationResult::String("hello".to_string()), true),
+            (Evaluation::Boolean(true), true),
+            (Evaluation::Boolean(false), false),
+            (Evaluation::Null, false),
+            (Evaluation::Number(0.0), false),
+            (Evaluation::Number(1.0), true),
+            (Evaluation::Number(-1.0), true),
+            (Evaluation::String("".to_string()), false),
+            (Evaluation::String("hello".to_string()), true),
         ];
 
         for (result, expected) in test_cases {
@@ -1780,31 +1770,28 @@ mod tests {
 
     #[test]
     fn test_github_actions_logical_semantics() -> Result<()> {
-        use crate::EvaluationResult;
+        use crate::Evaluation;
 
         // Test GitHub Actions-specific && and || semantics
         let test_cases = &[
             // && returns the first falsy value, or the last value if all are truthy
-            ("false && 'hello'", EvaluationResult::Boolean(false)),
-            ("null && 'hello'", EvaluationResult::Null),
-            ("'' && 'hello'", EvaluationResult::String("".to_string())),
+            ("false && 'hello'", Evaluation::Boolean(false)),
+            ("null && 'hello'", Evaluation::Null),
+            ("'' && 'hello'", Evaluation::String("".to_string())),
             (
                 "'hello' && 'world'",
-                EvaluationResult::String("world".to_string()),
+                Evaluation::String("world".to_string()),
             ),
-            ("true && 42", EvaluationResult::Number(42.0)),
+            ("true && 42", Evaluation::Number(42.0)),
             // || returns the first truthy value, or the last value if all are falsy
-            ("true || 'hello'", EvaluationResult::Boolean(true)),
+            ("true || 'hello'", Evaluation::Boolean(true)),
             (
                 "'hello' || 'world'",
-                EvaluationResult::String("hello".to_string()),
+                Evaluation::String("hello".to_string()),
             ),
-            (
-                "false || 'hello'",
-                EvaluationResult::String("hello".to_string()),
-            ),
-            ("null || false", EvaluationResult::Boolean(false)),
-            ("'' || null", EvaluationResult::Null),
+            ("false || 'hello'", Evaluation::String("hello".to_string())),
+            ("null || false", Evaluation::Boolean(false)),
+            ("'' || null", Evaluation::Null),
         ];
 
         for (expr_str, expected) in test_cases {

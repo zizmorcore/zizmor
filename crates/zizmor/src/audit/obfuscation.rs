@@ -1,4 +1,4 @@
-use github_actions_expressions::{EvaluationResult, Expr, Origin, SpannedExpr};
+use github_actions_expressions::{Evaluation, Expr, Origin, SpannedExpr};
 use github_actions_models::common::{RepositoryUses, Uses};
 use yamlpatch::{Op, Patch};
 
@@ -123,16 +123,16 @@ impl Obfuscation {
         expr.evaluate_constant().map(|result| {
             // For GitHub Actions replacements, we need to format the result appropriately
             match result {
-                EvaluationResult::String(s) => s,
-                EvaluationResult::Number(n) => {
+                Evaluation::String(s) => s,
+                Evaluation::Number(n) => {
                     if n.fract() == 0.0 {
                         format!("{}", n as i64)
                     } else {
                         n.to_string()
                     }
                 }
-                EvaluationResult::Boolean(b) => b.to_string(),
-                EvaluationResult::Null => "null".to_string(),
+                Evaluation::Boolean(b) => b.to_string(),
+                Evaluation::Null => "null".to_string(),
             }
         })
     }
