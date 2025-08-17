@@ -64,6 +64,14 @@
         - ashishb/wp2hugo#91
 
 
+-   ![](https://github.com/aspnet-contrib.png?size=40){ width="40" loading=lazy align=left } aspnet-contrib
+
+    ---
+
+    ??? example "Examples"
+        - aspnet-contrib/AspNet.Security.OAuth.Providers#1095
+
+
 -   ![](https://github.com/astral-sh.png?size=40){ width="40" loading=lazy align=left } astral-sh
 
     ---
@@ -544,6 +552,14 @@
 
     ??? example "Examples"
         - jj-vcs/jj#5076
+
+
+-   ![](https://github.com/junit-team.png?size=40){ width="40" loading=lazy align=left } junit-team
+
+    ---
+
+    ??? example "Examples"
+        - junit-team/junit-framework#4838
 
 
 -   ![](https://github.com/jupyterhub.png?size=40){ width="40" loading=lazy align=left } jupyterhub
