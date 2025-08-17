@@ -798,8 +798,10 @@ jobs:
       - run: true
 "#;
 
-        let workflow =
-            Workflow::from_string(workflow.into(), crate::InputKey::local("dummy", None)?)?;
+        let workflow = Workflow::from_string(
+            workflow.into(),
+            crate::InputKey::local("fakegroup".into(), "dummy", None)?,
+        )?;
 
         // `foo` unifies in favor of the more permissive capability,
         // which is `Capability::Arbitrary` from the `string` input type

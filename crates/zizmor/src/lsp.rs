@@ -170,12 +170,12 @@ impl Backend {
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
             AuditInput::from(Action::from_string(
                 params.text,
-                InputKey::local(path, None)?,
+                InputKey::local("lsp".into(), path, None)?,
             )?)
         } else if matches!(path.extension(), Some("yml" | "yaml")) {
             AuditInput::from(Workflow::from_string(
                 params.text,
-                InputKey::local(path, None)?,
+                InputKey::local("lsp".into(), path, None)?,
             )?)
         } else {
             anyhow::bail!("asked to audit unexpected file: {path}");

@@ -428,9 +428,11 @@ mod tests {
               disable-cache: false
     "#;
 
-        let workflow =
-            Workflow::from_string(workflow.into(), InputKey::local("dummy", None).unwrap())
-                .unwrap();
+        let workflow = Workflow::from_string(
+            workflow.into(),
+            InputKey::local("fakegroup".into(), "dummy", None).unwrap(),
+        )
+        .unwrap();
 
         let Job::NormalJob(job) = workflow.jobs().next().unwrap() else {
             panic!("Expected a normal job");

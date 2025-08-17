@@ -399,7 +399,7 @@ impl Client {
                 .text()
                 .await?;
 
-            let key = InputKey::remote(slug, file.path)?;
+            let key = InputKey::remote(slug.into(), slug, file.path)?;
             // TODO: Make strictness configurable here?
             group.register(InputKind::Workflow, contents, key, true)?;
         }
@@ -467,13 +467,13 @@ impl Client {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug.into(), slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 // TODO: Make strictness configurable here?
                 group.register(InputKind::Workflow, contents, key, true)?;
             } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug.into(), slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 // TODO: Make strictness configurable here?

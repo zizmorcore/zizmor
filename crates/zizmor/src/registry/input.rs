@@ -104,8 +104,20 @@ impl std::str::FromStr for RepoSlug {
     }
 }
 
+impl std::fmt::Display for RepoSlug {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(ref git_ref) = self.git_ref {
+            write!(f, "{}/{}@{}", self.owner, self.repo, git_ref)
+        } else {
+            write!(f, "{}/{}", self.owner, self.repo)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct LocalKey {
+    /// The group this input belongs to.
+    group: Group,
     /// The path's nondeterministic prefix, if any.
     prefix: Option<Utf8PathBuf>,
     /// The given path to the input. This can be absolute or relative.
@@ -114,6 +126,8 @@ pub(crate) struct LocalKey {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct RemoteKey {
+    /// The group this input belongs to.
+    group: Group,
     // TODO: Dedupe with RepoSlug above.
     owner: String,
     repo: String,
@@ -121,7 +135,7 @@ pub(crate) struct RemoteKey {
     path: Utf8PathBuf,
 }
 
-/// A unique identifying "key" for a workflow file in a given run of zizmor.
+/// A unique identifying "key" for an input in a given run of zizmor.
 ///
 /// zizmor currently knows two different kinds of keys: local keys
 /// are just canonical paths to files on disk, while remote keys are
@@ -153,6 +167,7 @@ impl std::fmt::Display for InputKey {
 
 impl InputKey {
     pub(crate) fn local<P: AsRef<Utf8Path>>(
+        group: Group,
         path: P,
         prefix: Option<P>,
     ) -> Result<Self, InputError> {
@@ -162,17 +177,19 @@ impl InputKey {
         }
 
         Ok(Self::Local(LocalKey {
+            group,
             prefix: prefix.map(|p| p.as_ref().to_path_buf()),
             given_path: path.as_ref().to_path_buf(),
         }))
     }
 
-    pub(crate) fn remote(slug: &RepoSlug, path: String) -> Result<Self, InputError> {
+    pub(crate) fn remote(group: Group, slug: &RepoSlug, path: String) -> Result<Self, InputError> {
         if Utf8Path::new(&path).file_name().is_none() {
             return Err(InputError::MissingName);
         }
 
         Ok(Self::Remote(RemoteKey {
+            group,
             owner: slug.owner.clone(),
             repo: slug.repo.clone(),
             git_ref: slug.git_ref.clone(),
@@ -225,6 +242,31 @@ impl InputKey {
             InputKey::Local(local) => local.given_path.file_name().unwrap(),
             InputKey::Remote(remote) => remote.path.file_name().unwrap(),
         }
+    }
+
+    /// Returns the group this input belongs to.
+    fn group(&self) -> &Group {
+        match self {
+            InputKey::Local(local) => &local.group,
+            InputKey::Remote(remote) => &remote.group,
+        }
+    }
+}
+
+/// An opaque identifier for a group of inputs.
+#[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Serialize)]
+#[serde(transparent)]
+pub(crate) struct Group(String);
+
+impl From<&str> for Group {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl From<&RepoSlug> for Group {
+    fn from(value: &RepoSlug) -> Self {
+        Self(value.to_string())
     }
 }
 
@@ -289,10 +331,14 @@ impl InputGroup {
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
-            (Some("action"), Some("yml" | "yaml")) => {
-                (InputKey::local(path, None)?, InputKind::Action)
-            }
-            (Some(_), Some("yml" | "yaml")) => (InputKey::local(path, None)?, InputKind::Workflow),
+            (Some("action"), Some("yml" | "yaml")) => (
+                InputKey::local(Group(path.as_str().into()), path, None)?,
+                InputKind::Action,
+            ),
+            (Some(_), Some("yml" | "yaml")) => (
+                InputKey::local(Group(path.as_str().into()), path, None)?,
+                InputKind::Workflow,
+            ),
             _ => return Err(anyhow::anyhow!("invalid input: {path}")),
         };
 
@@ -340,7 +386,7 @@ impl InputGroup {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = InputKey::local(entry, Some(path))?;
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
                 let contents = std::fs::read_to_string(entry)?;
                 self.register(InputKind::Workflow, contents, key, strict)?;
             }
@@ -349,7 +395,7 @@ impl InputGroup {
                 && entry.is_file()
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
-                let key = InputKey::local(entry, Some(path))?;
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
                 let contents = std::fs::read_to_string(entry)?;
                 self.register(InputKind::Action, contents, key, strict)?;
             }
@@ -456,7 +502,7 @@ pub(crate) struct InputRegistry {
     // iterate in a deterministic order. This saves us a lot of pain
     // while snapshot testing across multiple input files, and makes
     // the user experience more predictable.
-    pub(crate) groups: BTreeMap<String, InputGroup>,
+    pub(crate) groups: BTreeMap<Group, InputGroup>,
 }
 
 impl InputRegistry {
@@ -482,7 +528,7 @@ impl InputRegistry {
         // If the group has already been registered, then the user probably
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
-        if let btree_map::Entry::Vacant(e) = self.groups.entry(name.clone()) {
+        if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.clone())) {
             e.insert(InputGroup::collect(&name, mode, strict, state)?);
         }
 
@@ -494,11 +540,13 @@ impl InputRegistry {
         self.groups.values().flat_map(|group| group.inputs.iter())
     }
 
-    // pub(crate) fn get_input(&self, key: &InputKey) -> &AuditInput {
-    //     self.inputs
-    //         .get(key)
-    //         .expect("API misuse: requested an un-registered input")
-    // }
+    /// Get a reference to a registered input by its key.
+    pub(crate) fn get_input(&self, key: &InputKey) -> &AuditInput {
+        self.groups
+            .get(&key.group())
+            .and_then(|group| group.inputs.get(key))
+            .expect("API misuse: requested an un-registered input")
+    }
 }
 
 #[cfg(test)]
@@ -509,12 +557,17 @@ mod tests {
 
     #[test]
     fn test_input_key_display() {
-        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
         let slug = RepoSlug::from_str("foo/bar").unwrap();
-        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
+        let remote = InputKey::remote(
+            "fakegroup".into(),
+            &slug,
+            ".github/workflows/baz.yml".into(),
+        )
+        .unwrap();
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/HEAD/.github/workflows/baz.yml"
@@ -522,7 +575,12 @@ mod tests {
 
         // With a git ref
         let slug = RepoSlug::from_str("foo/bar@v1").unwrap();
-        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
+        let remote = InputKey::remote(
+            "fakegroup".into(),
+            &slug,
+            ".github/workflows/baz.yml".into(),
+        )
+        .unwrap();
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/v1/.github/workflows/baz.yml"
@@ -531,16 +589,18 @@ mod tests {
 
     #[test]
     fn test_input_key_local_presentation_path() {
-        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo")).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
+        let local =
+            InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
         let local = InputKey::local(
+            "fakegroup".into(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
         )
@@ -553,23 +613,26 @@ mod tests {
 
     #[test]
     fn test_input_key_local_sarif_path() {
-        let local = InputKey::local("/foo/bar/baz.yml", None).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None).unwrap();
         assert_eq!(local.sarif_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo")).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo")).unwrap();
         assert_eq!(local.sarif_path(), "bar/baz.yml");
 
-        let local = InputKey::local("/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
+        let local =
+            InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
         assert_eq!(local.sarif_path(), "baz.yml");
 
         let local = InputKey::local(
+            "fakegroup".into(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
         )
         .unwrap();
         assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
 
-        let local = InputKey::local("./.github/workflows/baz.yml", Some(".")).unwrap();
+        let local =
+            InputKey::local("fakegroup".into(), "./.github/workflows/baz.yml", Some(".")).unwrap();
         assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
     }
 }
