@@ -183,13 +183,13 @@ impl InputKey {
         }))
     }
 
-    pub(crate) fn remote(group: Group, slug: &RepoSlug, path: String) -> Result<Self, InputError> {
+    pub(crate) fn remote(slug: &RepoSlug, path: String) -> Result<Self, InputError> {
         if Utf8Path::new(&path).file_name().is_none() {
             return Err(InputError::MissingName);
         }
 
         Ok(Self::Remote(RemoteKey {
-            group,
+            group: slug.into(),
             slug: slug.clone(),
             path: path.into(),
         }))
@@ -559,12 +559,7 @@ mod tests {
 
         // No ref
         let slug = RepoSlug::from_str("foo/bar").unwrap();
-        let remote = InputKey::remote(
-            "fakegroup".into(),
-            &slug,
-            ".github/workflows/baz.yml".into(),
-        )
-        .unwrap();
+        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/HEAD/.github/workflows/baz.yml"
@@ -572,12 +567,7 @@ mod tests {
 
         // With a git ref
         let slug = RepoSlug::from_str("foo/bar@v1").unwrap();
-        let remote = InputKey::remote(
-            "fakegroup".into(),
-            &slug,
-            ".github/workflows/baz.yml".into(),
-        )
-        .unwrap();
+        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/v1/.github/workflows/baz.yml"
