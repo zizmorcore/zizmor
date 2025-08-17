@@ -690,6 +690,29 @@ pub enum Evaluation {
     Null,
 }
 
+impl PartialOrd for Evaluation {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            // Numbers can be compared directly
+            (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
+
+            // String comparison
+            (Evaluation::String(a), Evaluation::String(b)) => Some(a.cmp(b)),
+
+            // Try to convert both to numbers first, then fall back to string comparison
+            (a, b) => {
+                if let (Ok(a_num), Ok(b_num)) =
+                    (a.to_string().parse::<f64>(), b.to_string().parse::<f64>())
+                {
+                    a_num.partial_cmp(&b_num)
+                } else {
+                    Some(a.to_string().cmp(&b.to_string()))
+                }
+            }
+        }
+    }
+}
+
 impl Evaluation {
     /// Convert to a boolean following GitHub Actions truthiness rules.
     ///
@@ -799,17 +822,19 @@ impl<'src> Expr<'src> {
                     BinOp::Neq => {
                         Some(Evaluation::Boolean(!Self::values_equal(&lhs_val, &rhs_val)))
                     }
-                    BinOp::Lt => Self::compare_values(&lhs_val, &rhs_val)
+                    BinOp::Lt => lhs_val
+                        .partial_cmp(&rhs_val)
                         .map(|ord| Evaluation::Boolean(matches!(ord, std::cmp::Ordering::Less))),
-                    BinOp::Le => Self::compare_values(&lhs_val, &rhs_val).map(|ord| {
+                    BinOp::Le => lhs_val.partial_cmp(&rhs_val).map(|ord| {
                         Evaluation::Boolean(matches!(
                             ord,
                             std::cmp::Ordering::Less | std::cmp::Ordering::Equal
                         ))
                     }),
-                    BinOp::Gt => Self::compare_values(&lhs_val, &rhs_val)
+                    BinOp::Gt => lhs_val
+                        .partial_cmp(&rhs_val)
                         .map(|ord| Evaluation::Boolean(matches!(ord, std::cmp::Ordering::Greater))),
-                    BinOp::Ge => Self::compare_values(&lhs_val, &rhs_val).map(|ord| {
+                    BinOp::Ge => lhs_val.partial_cmp(&rhs_val).map(|ord| {
                         Evaluation::Boolean(matches!(
                             ord,
                             std::cmp::Ordering::Greater | std::cmp::Ordering::Equal
@@ -842,28 +867,6 @@ impl<'src> Expr<'src> {
 
             // Type coercion rules - convert to string and compare
             (a, b) => a.to_string() == b.to_string(),
-        }
-    }
-
-    /// Compares two evaluation results for ordering operations.
-    fn compare_values(lhs: &Evaluation, rhs: &Evaluation) -> Option<std::cmp::Ordering> {
-        match (lhs, rhs) {
-            // Numbers can be compared directly
-            (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
-
-            // String comparison
-            (Evaluation::String(a), Evaluation::String(b)) => Some(a.cmp(b)),
-
-            // Try to convert both to numbers first, then fall back to string comparison
-            (a, b) => {
-                if let (Ok(a_num), Ok(b_num)) =
-                    (a.to_string().parse::<f64>(), b.to_string().parse::<f64>())
-                {
-                    a_num.partial_cmp(&b_num)
-                } else {
-                    Some(a.to_string().cmp(&b.to_string()))
-                }
-            }
         }
     }
 
