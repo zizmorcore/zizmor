@@ -79,6 +79,7 @@
     ??? example "Examples"
         - astral-sh/python-build-standalone#716
         - astral-sh/ruff#14844
+        - astral-sh/ruff-action#206
         - astral-sh/uv#15016
         - astral-sh/uv#15018
 
@@ -560,6 +561,7 @@
 
     ??? example "Examples"
         - junit-team/junit-framework#4838
+        - junit-team/junit-framework#4840
 
 
 -   ![](https://github.com/jupyterhub.png?size=40){ width="40" loading=lazy align=left } jupyterhub
