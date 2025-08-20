@@ -176,6 +176,14 @@
         - certbot/josepy#193
 
 
+-   ![](https://github.com/conda.png?size=40){ width="40" loading=lazy align=left } conda
+
+    ---
+
+    ??? example "Examples"
+        - conda/conda-lock#814
+
+
 -   ![](https://github.com/cunla.png?size=40){ width="40" loading=lazy align=left } cunla
 
     ---
@@ -194,6 +202,14 @@
         - curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
         - curl/curl@17a669426f36b467dfd945b4b35f6211598b7977
         - curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
+
+
+-   ![](https://github.com/dani-garcia.png?size=40){ width="40" loading=lazy align=left } dani-garcia
+
+    ---
+
+    ??? example "Examples"
+        - dani-garcia/vaultwarden#5537
 
 
 -   ![](https://github.com/danmar.png?size=40){ width="40" loading=lazy align=left } danmar
@@ -539,6 +555,16 @@
         - immich-app/immich#17651
 
 
+-   ![](https://github.com/indygreg.png?size=40){ width="40" loading=lazy align=left } indygreg
+
+    ---
+
+    ??? example "Examples"
+        - indygreg/apple-platform-rs@5bded60cbfc2b81e1bedd745ab41417e5c3a76ea
+        - indygreg/cryptography-rs@d0ae52a8040c7be8fd2024a5e2dc1cc1705c3469
+        - indygreg/python-zstandard@d0bf56011d85faf1c76da38f63d174b275c2cdeb
+
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---
@@ -578,6 +604,15 @@
 
     ??? example "Examples"
         - kanidm/kanidm#3430
+
+
+-   ![](https://github.com/kata-containers.png?size=40){ width="40" loading=lazy align=left } kata-containers
+
+    ---
+
+    ??? example "Examples"
+        - kata-containers/kata-containers#11392
+        - kata-containers/kata-containers#11475
 
 
 -   ![](https://github.com/libssh2.png?size=40){ width="40" loading=lazy align=left } libssh2
@@ -1055,6 +1090,14 @@
         - quarkslab/quokka#46
 
 
+-   ![](https://github.com/ratatui.png?size=40){ width="40" loading=lazy align=left } ratatui
+
+    ---
+
+    ??? example "Examples"
+        - ratatui/ratatui#1961
+
+
 -   ![](https://github.com/reubeno.png?size=40){ width="40" loading=lazy align=left } reubeno
 
     ---
@@ -1184,6 +1227,16 @@
         - slackapi/manifest-schema#14
         - slackapi/slack-cli#100
         - slackapi/python-slack-events-api#110
+
+
+-   ![](https://github.com/stravalib.png?size=40){ width="40" loading=lazy align=left } stravalib
+
+    ---
+
+    ??? example "Examples"
+        - stravalib/stravalib#645
+        - stravalib/stravalib#648
+        - stravalib/stravalib#649
 
 
 -   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
