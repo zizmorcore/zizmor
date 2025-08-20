@@ -125,7 +125,7 @@ GitHub Actions setup:
     !!! important
 
         When using `--format=sarif`, `zizmor` does not use its
-        [exit codes](#exit-codes) to signal the presence of findings. As a result,
+        [exit codes](usage.md/#exit-codes) to signal the presence of findings. As a result,
         `zizmor` will always exit with code `0` even if findings are present,
         **unless** an internal error occurs during the audit.
 
