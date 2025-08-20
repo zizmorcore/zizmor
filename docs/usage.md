@@ -268,7 +268,7 @@ zizmor --color=never ...
 !!! important
 
     `--format=json-v1` uses 0-based line numbering, where line numbers are
-    denoted by the key `row`. This is as opposed to Plain and SARIF formatting,
+    denoted by the key `row`. This is as opposed to `--format=plain` and `--format=SARIF`,
     where line numbers are 1-based.
 
 With `--format=json`, `zizmor` will produce a flat array of findings in
