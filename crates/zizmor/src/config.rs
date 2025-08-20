@@ -85,25 +85,17 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    fn discover_in_dir(path: &Utf8Path) -> Option<Result<Self>> {
+    fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>> {
         for candidate in CONFIG_CANDIDATES {
             let candidate_path = path.join(candidate);
             if candidate_path.is_file() {
-                match fs::read_to_string(&candidate_path) {
-                    Ok(contents) => match serde_yaml::from_str::<Self>(&contents) {
-                        Ok(config) => return Some(Ok(config)),
-                        Err(err) => {
-                            return Some(Err(err.into()));
-                        }
-                    },
-                    Err(err) => {
-                        return Some(Err(err.into()));
-                    }
-                }
+                return Ok(Some(serde_yaml::from_str(&fs::read_to_string(
+                    &candidate_path,
+                )?)?));
             }
         }
 
-        None
+        Ok(None)
     }
 
     /// Discover a [`Config`] using rules applicable to the given path.
@@ -114,34 +106,31 @@ impl Config {
     ///
     /// For directories, this attempts to find a `.github/zizmor.yml` or
     /// `zizmor.yml` in the directory itself.
-    fn discover(path: &Utf8Path) -> Option<Result<Self>> {
+    pub(crate) fn discover(path: &Utf8Path) -> Result<Option<Self>> {
         if path.is_dir() {
             Self::discover_in_dir(path)
         } else if path.is_file() {
-            let Some(parent) = path.parent() else {
-                tracing::debug!("no grandparent for {path:?}, cannot discover config");
-                return None;
+            let Some(mut parent) = path.parent() else {
+                tracing::debug!("no parent for {path:?}, cannot discover config");
+                return Ok(None);
             };
 
             // TODO: Terminate this walk at $HOME or similar?
-            while let Some(parent) = parent.parent() {
-                let candidate_path = parent.join("zizmor.yml");
+            while let Some(next) = parent.parent() {
+                let candidate_path = next.join("zizmor.yml");
                 if candidate_path.is_file() {
-                    return match fs::read_to_string(&candidate_path) {
-                        Ok(contents) => match serde_yaml::from_str::<Self>(&contents) {
-                            Ok(config) => Some(Ok(config)),
-                            Err(err) => Some(Err(err.into())),
-                        },
-                        Err(err) => Some(Err(err.into())),
-                    };
+                    return Ok(Some(serde_yaml::from_str(&fs::read_to_string(
+                        &candidate_path,
+                    )?)?));
                 }
+                parent = next;
             }
 
-            None
+            Ok(None)
         } else {
-            Some(Err(anyhow!(
+            Err(anyhow!(
                 "cannot discover config for `{path}`: not a file or directory"
-            )))
+            ))
         }
     }
 
@@ -163,10 +152,10 @@ impl Config {
                     .try_into()
                     .with_context(|| "current directory is not valid UTF-8")?;
 
-                Self::discover_in_dir(&cwd).unwrap_or_else(|| {
+                Self::discover_in_dir(&cwd)?.unwrap_or_else(|| {
                     tracing::debug!("no config discovered; loading default");
-                    Ok(Self::default())
-                })?
+                    Self::default()
+                })
             }
         };
 

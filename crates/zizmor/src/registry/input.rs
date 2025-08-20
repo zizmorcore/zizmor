@@ -276,10 +276,10 @@ pub(crate) struct InputGroup {
 }
 
 impl InputGroup {
-    fn new() -> Self {
+    fn new(config: Config) -> Self {
         Self {
             inputs: Default::default(),
-            config: Default::default(),
+            config,
         }
     }
 
@@ -326,7 +326,10 @@ impl InputGroup {
         }
     }
 
-    fn collect_from_file(&mut self, path: &Utf8Path, strict: bool) -> anyhow::Result<()> {
+    fn collect_from_file(path: &Utf8Path, strict: bool) -> anyhow::Result<Self> {
+        let config = Config::discover(path)?.unwrap_or_default();
+        let mut group = Self::new(config);
+
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
@@ -342,15 +345,19 @@ impl InputGroup {
         };
 
         let contents = std::fs::read_to_string(path)?;
-        self.register(kind, contents, key, strict)
+        group.register(kind, contents, key, strict)?;
+
+        Ok(group)
     }
 
     fn collect_from_dir(
-        &mut self,
         path: &Utf8Path,
         mode: CollectionMode,
         strict: bool,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Self> {
+        let config = Config::discover(path)?.unwrap_or_default();
+        let mut group = Self::new(config);
+
         // Start with all filters disabled, i.e. walk everything.
         let mut walker = ignore::WalkBuilder::new(path);
         let walker = walker.standard_filters(false);
@@ -387,7 +394,7 @@ impl InputGroup {
             {
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
                 let contents = std::fs::read_to_string(entry)?;
-                self.register(InputKind::Workflow, contents, key, strict)?;
+                group.register(InputKind::Workflow, contents, key, strict)?;
             }
 
             if mode.actions()
@@ -396,20 +403,23 @@ impl InputGroup {
             {
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
                 let contents = std::fs::read_to_string(entry)?;
-                self.register(InputKind::Action, contents, key, strict)?;
+                group.register(InputKind::Action, contents, key, strict)?;
             }
         }
 
-        Ok(())
+        Ok(group)
     }
 
     fn collect_from_repo_slug(
-        &mut self,
         raw_slug: &str,
         gh_client: Option<&Client>,
         mode: CollectionMode,
         _strict: bool,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Self> {
+        // TODO: Load remote config here.
+        let config = Config::default();
+        let mut group = Self::new(config);
+
         let Ok(slug) = RepoSlug::from_str(raw_slug) else {
             return Err(anyhow::anyhow!(tips(
                 format!("invalid input: {raw_slug}"),
@@ -440,26 +450,28 @@ impl InputGroup {
             // Performance: if we're *only* collecting workflows, then we
             // can save ourselves a full repo download and only fetch the
             // repo's workflow files.
-            client.fetch_workflows(&slug, self)?;
+            client.fetch_workflows(&slug, &mut group)?;
         } else {
-            let before = self.len();
+            let before = group.len();
             let host = match client.host() {
                 GitHubHost::Enterprise(address) => address.as_str(),
                 GitHubHost::Standard(_) => "github.com",
             };
 
-            client.fetch_audit_inputs(&slug, self).with_context(|| {
-                tips(
-                    format!(
-                        "couldn't collect inputs from https://{host}/{owner}/{repo}",
-                        host = host,
-                        owner = slug.owner,
-                        repo = slug.repo
-                    ),
-                    &["confirm the repository exists and that you have access to it"],
-                )
-            })?;
-            let after = self.len();
+            client
+                .fetch_audit_inputs(&slug, &mut group)
+                .with_context(|| {
+                    tips(
+                        format!(
+                            "couldn't collect inputs from https://{host}/{owner}/{repo}",
+                            host = host,
+                            owner = slug.owner,
+                            repo = slug.repo
+                        ),
+                        &["confirm the repository exists and that you have access to it"],
+                    )
+                })?;
+            let after = group.len();
             let len = after - before;
 
             tracing::info!(
@@ -469,7 +481,7 @@ impl InputGroup {
             );
         }
 
-        Ok(())
+        Ok(group)
     }
 
     pub(crate) fn collect(
@@ -479,16 +491,13 @@ impl InputGroup {
         gh_client: Option<&Client>,
     ) -> anyhow::Result<Self> {
         let path = Utf8Path::new(request);
-        let mut group = Self::new();
         if path.is_file() {
-            group.collect_from_file(path, strict)?;
+            Self::collect_from_file(path, strict)
         } else if path.is_dir() {
-            group.collect_from_dir(path, mode, strict)?;
+            Self::collect_from_dir(path, mode, strict)
         } else {
-            group.collect_from_repo_slug(request, gh_client, mode, strict)?;
+            Self::collect_from_repo_slug(request, gh_client, mode, strict)
         }
-
-        Ok(group)
     }
 
     pub(crate) fn len(&self) -> usize {
