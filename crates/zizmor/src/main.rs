@@ -129,7 +129,7 @@ struct App {
 
     /// The directory to use for HTTP caching. By default, a
     /// host-appropriate user-caching directory will be used.
-    #[arg(long, default_value_t = App::default_cache_dir())]
+    #[arg(long, default_value_t = App::default_cache_dir(), hide_default_value = true)]
     cache_dir: Utf8PathBuf,
 
     /// Control which kinds of inputs are collected for auditing.
