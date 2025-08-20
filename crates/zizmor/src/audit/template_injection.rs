@@ -599,7 +599,7 @@ impl TemplateInjection {
 }
 
 impl Audit for TemplateInjection {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -624,7 +624,6 @@ mod tests {
 
     use crate::audit::Audit;
     use crate::audit::template_injection::{Capability, TemplateInjection};
-    use crate::github_api::GitHubHost;
     use crate::models::AsDocument;
     use crate::models::workflow::Workflow;
     use crate::registry::input::InputKey;
@@ -635,12 +634,7 @@ mod tests {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
             let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
             let findings = audit.audit_workflow(&workflow).unwrap();
 

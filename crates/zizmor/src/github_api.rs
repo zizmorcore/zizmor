@@ -3,10 +3,10 @@
 //! Build on synchronous reqwest to avoid octocrab's need to taint
 //! the whole codebase with async.
 
-use std::{io::Read, ops::Deref, path::Path};
+use std::{fmt::Display, io::Read, ops::Deref, str::FromStr};
 
 use anyhow::{Context, Result, anyhow};
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use flate2::read::GzDecoder;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
@@ -59,6 +59,29 @@ impl GitHubHost {
     }
 }
 
+impl Default for GitHubHost {
+    fn default() -> Self {
+        Self::Standard("github.com".into())
+    }
+}
+
+impl Display for GitHubHost {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Enterprise(host) => write!(f, "{host}"),
+            Self::Standard(host) => write!(f, "{host}"),
+        }
+    }
+}
+
+impl FromStr for GitHubHost {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
+    }
+}
+
 /// A sanitized GitHub access token.
 #[derive(Clone)]
 pub(crate) struct GitHubToken(String);
@@ -80,14 +103,15 @@ impl GitHubToken {
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
+    host: GitHubHost,
     http: ClientWithMiddleware,
 }
 
 impl Client {
     pub(crate) fn new(
-        hostname: &GitHubHost,
-        token: &GitHubToken,
-        cache_dir: &Path,
+        host: GitHubHost,
+        token: GitHubToken,
+        cache_dir: Utf8PathBuf,
     ) -> anyhow::Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
@@ -127,9 +151,14 @@ impl Client {
         .build();
 
         Ok(Self {
-            api_base: hostname.to_api_url(),
+            api_base: host.to_api_url(),
+            host,
             http,
         })
+    }
+
+    pub(crate) fn host(&self) -> &GitHubHost {
+        &self.host
     }
 
     async fn paginate<T: DeserializeOwned>(

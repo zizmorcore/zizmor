@@ -15,9 +15,8 @@ use crate::{
     CollectionMode,
     audit::AuditInput,
     config::Config,
-    github_api::GitHubHost,
+    github_api::{Client, GitHubHost},
     models::{action::Action, workflow::Workflow},
-    state::AuditState,
     tips,
 };
 
@@ -407,7 +406,7 @@ impl InputGroup {
     fn collect_from_repo_slug(
         &mut self,
         raw_slug: &str,
-        state: &AuditState,
+        gh_client: Option<&Client>,
         mode: CollectionMode,
         _strict: bool,
     ) -> anyhow::Result<()> {
@@ -423,7 +422,7 @@ impl InputGroup {
             )));
         };
 
-        let client = state.gh_client.as_ref().ok_or_else(|| {
+        let client = gh_client.ok_or_else(|| {
             anyhow::anyhow!(tips(
                 format!(
                     "can't retrieve repository: {raw_slug}",
@@ -444,7 +443,7 @@ impl InputGroup {
             client.fetch_workflows(&slug, self)?;
         } else {
             let before = self.len();
-            let host = match &state.gh_hostname {
+            let host = match client.host() {
                 GitHubHost::Enterprise(address) => address.as_str(),
                 GitHubHost::Standard(_) => "github.com",
             };
@@ -477,7 +476,7 @@ impl InputGroup {
         request: &str,
         mode: CollectionMode,
         strict: bool,
-        state: &AuditState,
+        gh_client: Option<&Client>,
     ) -> anyhow::Result<Self> {
         let path = Utf8Path::new(request);
         let mut group = Self::new();
@@ -486,7 +485,7 @@ impl InputGroup {
         } else if path.is_dir() {
             group.collect_from_dir(path, mode, strict)?;
         } else {
-            group.collect_from_repo_slug(request, state, mode, strict)?;
+            group.collect_from_repo_slug(request, gh_client, mode, strict)?;
         }
 
         Ok(group)
@@ -523,13 +522,13 @@ impl InputRegistry {
         name: String,
         mode: CollectionMode,
         strict: bool,
-        state: &AuditState,
+        gh_client: Option<&Client>,
     ) -> anyhow::Result<()> {
         // If the group has already been registered, then the user probably
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
         if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.clone())) {
-            e.insert(InputGroup::collect(&name, mode, strict, state)?);
+            e.insert(InputGroup::collect(&name, mode, strict, gh_client)?);
         }
 
         Ok(())

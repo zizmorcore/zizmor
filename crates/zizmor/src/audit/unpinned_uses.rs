@@ -118,12 +118,12 @@ impl UnpinnedUses {
 }
 
 impl Audit for UnpinnedUses {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         let config = state
-            .config
+            .global_config
             .rule_config::<UnpinnedUsesConfig>(Self::ident())
             .context("invalid configuration")
             .map_err(AuditLoadError::Fail)?

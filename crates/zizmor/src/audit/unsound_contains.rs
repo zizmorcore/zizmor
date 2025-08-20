@@ -33,7 +33,7 @@ audit_meta!(
 );
 
 impl Audit for UnsoundContains {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

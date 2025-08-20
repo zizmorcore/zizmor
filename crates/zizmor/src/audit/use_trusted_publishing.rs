@@ -278,7 +278,7 @@ impl UseTrustedPublishing {
 }
 
 impl Audit for UseTrustedPublishing {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         let bash: Language = tree_sitter_bash::LANGUAGE.into();
         let pwsh: Language = tree_sitter_powershell::LANGUAGE.into();
 

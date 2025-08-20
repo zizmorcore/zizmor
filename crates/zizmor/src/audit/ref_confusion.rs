@@ -49,7 +49,7 @@ impl RefConfusion {
 }
 
 impl Audit for RefConfusion {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

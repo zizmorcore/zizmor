@@ -256,16 +256,9 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
-    let config = Config::default();
+    let state = AuditState::default();
 
-    let audit_state = AuditState {
-        config: &config,
-        no_online_audits: false,
-        gh_client: None,
-        gh_hostname: crate::GitHubHost::Standard("github.com".into()),
-    };
-
-    let audits = AuditRegistry::default_audits(&audit_state)?;
+    let audits = AuditRegistry::default_audits(&state)?;
     let (service, socket) = LspService::new(|client| Backend {
         audit_registry: audits,
         client,

@@ -1,12 +1,15 @@
 use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
 use anyhow::{Context as _, Result, anyhow};
+use camino::{Utf8Path, Utf8PathBuf};
 use serde::{
     Deserialize,
     de::{self, DeserializeOwned},
 };
 
 use crate::{App, finding::Finding};
+
+const CONFIG_CANDIDATES: &[&str] = &[".github/zizmor.yml", "zizmor.yml"];
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct WorkflowRule {
@@ -82,6 +85,66 @@ pub(crate) struct Config {
 }
 
 impl Config {
+    fn discover_in_dir(path: &Utf8Path) -> Option<Result<Self>> {
+        for candidate in CONFIG_CANDIDATES {
+            let candidate_path = path.join(candidate);
+            if candidate_path.is_file() {
+                match fs::read_to_string(&candidate_path) {
+                    Ok(contents) => match serde_yaml::from_str::<Self>(&contents) {
+                        Ok(config) => return Some(Ok(config)),
+                        Err(err) => {
+                            return Some(Err(err.into()));
+                        }
+                    },
+                    Err(err) => {
+                        return Some(Err(err.into()));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Discover a [`Config`] using rules applicable to the given path.
+    ///
+    /// For files, this attempts to walk up the directory tree,
+    /// looking for either a `zizmor.yml`.
+    /// The walk starts at the file's grandparent directory.
+    ///
+    /// For directories, this attempts to find a `.github/zizmor.yml` or
+    /// `zizmor.yml` in the directory itself.
+    fn discover(path: &Utf8Path) -> Option<Result<Self>> {
+        if path.is_dir() {
+            Self::discover_in_dir(path)
+        } else if path.is_file() {
+            let Some(parent) = path.parent() else {
+                tracing::debug!("no grandparent for {path:?}, cannot discover config");
+                return None;
+            };
+
+            // TODO: Terminate this walk at $HOME or similar?
+            while let Some(parent) = parent.parent() {
+                let candidate_path = parent.join("zizmor.yml");
+                if candidate_path.is_file() {
+                    return match fs::read_to_string(&candidate_path) {
+                        Ok(contents) => match serde_yaml::from_str::<Self>(&contents) {
+                            Ok(config) => Some(Ok(config)),
+                            Err(err) => Some(Err(err.into())),
+                        },
+                        Err(err) => Some(Err(err.into())),
+                    };
+                }
+            }
+
+            None
+        } else {
+            Some(Err(anyhow!(
+                "cannot discover config for `{path}`: not a file or directory"
+            )))
+        }
+    }
+
     /// Loads a global [`Config`] for the given [`App`].
     pub(crate) fn global(app: &App) -> Result<Self> {
         if app.no_config {
@@ -89,27 +152,21 @@ impl Config {
         }
 
         let config = match &app.config {
-            Some(path) => serde_yaml::from_str(&fs::read_to_string(path)?)?,
+            Some(path) => serde_yaml::from_str::<Self>(&fs::read_to_string(path)?)?,
             None => {
                 // If the user didn't pass a config path explicitly with
                 // `--config`, then we attempt to discover one relative to $CWD
                 // Our procedure is to first look for `$CWD/.github/zizmor.yml`,
                 // then `$CWD/zizmor.yml`, and then bail.
-                let cwd = std::env::current_dir()
-                    .with_context(|| "config discovery couldn't access CWD")?;
+                let cwd: Utf8PathBuf = std::env::current_dir()
+                    .with_context(|| "config discovery couldn't access CWD")?
+                    .try_into()
+                    .with_context(|| "current directory is not valid UTF-8")?;
 
-                let path = cwd.join(".github").join("zizmor.yml");
-                if path.is_file() {
-                    serde_yaml::from_str(&fs::read_to_string(path)?)?
-                } else {
-                    let path = cwd.join("zizmor.yml");
-                    if path.is_file() {
-                        serde_yaml::from_str(&fs::read_to_string(path)?)?
-                    } else {
-                        tracing::debug!("no config discovered; loading default");
-                        Config::default()
-                    }
-                }
+                Self::discover_in_dir(&cwd).unwrap_or_else(|| {
+                    tracing::debug!("no config discovered; loading default");
+                    Ok(Self::default())
+                })?
             }
         };
 

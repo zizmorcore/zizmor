@@ -57,7 +57,7 @@ impl StaleActionRefs {
 }
 
 impl Audit for StaleActionRefs {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

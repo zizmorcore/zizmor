@@ -14,7 +14,7 @@ audit_meta!(
 );
 
 impl Audit for DangerousTriggers {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 

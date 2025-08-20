@@ -91,7 +91,7 @@ impl UnsoundCondition {
 }
 
 impl Audit for UnsoundCondition {
-    fn new(_state: &crate::state::AuditState<'_>) -> Result<Self, super::AuditLoadError>
+    fn new(_state: &crate::state::AuditState) -> Result<Self, super::AuditLoadError>
     where
         Self: Sized,
     {

@@ -442,7 +442,7 @@ impl CachePoisoning {
 }
 
 impl Audit for CachePoisoning {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -471,10 +471,7 @@ impl Audit for CachePoisoning {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        github_api::GitHubHost, models::workflow::Workflow, registry::input::InputKey,
-        state::AuditState,
-    };
+    use crate::{models::workflow::Workflow, registry::input::InputKey, state::AuditState};
 
     /// Macro for testing workflow audits with common boilerplate
     ///
@@ -489,12 +486,7 @@ mod tests {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
             let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
             let findings = audit.audit_workflow(&workflow).unwrap();
 

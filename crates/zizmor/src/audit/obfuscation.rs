@@ -124,7 +124,7 @@ impl Obfuscation {
 }
 
 impl Audit for Obfuscation {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {

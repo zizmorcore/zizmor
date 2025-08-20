@@ -8,10 +8,12 @@ use std::{
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
+use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use config::Config;
+use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
 use github_api::{GitHubHost, GitHubToken};
 use indicatif::ProgressStyle;
@@ -23,6 +25,8 @@ use terminal_link::Link;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
+
+use crate::github_api::Client;
 
 mod audit;
 mod config;
@@ -70,7 +74,7 @@ struct App {
     gh_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
-    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::new)]
+    #[arg(long, env = "GH_HOST", default_value_t)]
     gh_hostname: GitHubHost,
 
     /// Perform only offline audits.
@@ -125,8 +129,8 @@ struct App {
 
     /// The directory to use for HTTP caching. By default, a
     /// host-appropriate user-caching directory will be used.
-    #[arg(long)]
-    cache_dir: Option<String>,
+    #[arg(long, default_value_t = App::default_cache_dir())]
+    cache_dir: Utf8PathBuf,
 
     /// Control which kinds of inputs are collected for auditing.
     ///
@@ -174,6 +178,20 @@ struct App {
     /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
+}
+
+impl App {
+    fn default_cache_dir() -> Utf8PathBuf {
+        etcetera::choose_app_strategy(etcetera::AppStrategyArgs {
+            top_level_domain: "io.github".into(),
+            author: "woodruffw".into(),
+            app_name: "zizmor".into(),
+        })
+        .expect("failed to determine default cache directory")
+        .cache_dir()
+        .try_into()
+        .expect("failed to turn cache directory into a sane path")
+    }
 }
 
 #[cfg(feature = "lsp")]
@@ -358,12 +376,12 @@ fn collect_inputs(
     inputs: Vec<String>,
     mode: CollectionMode,
     strict: bool,
-    state: &AuditState,
+    gh_client: Option<&Client>,
 ) -> Result<InputRegistry> {
     let mut registry = InputRegistry::new();
 
     for input in inputs.into_iter() {
-        registry.register_group(input, mode, strict, state)?;
+        registry.register_group(input, mode, strict, gh_client)?;
     }
 
     if registry.len() == 0 {
@@ -477,7 +495,7 @@ fn run() -> Result<ExitCode> {
         reg.with(indicatif_layer).init();
     }
 
-    let config = Config::global(&app).map_err(|e| {
+    let global_config = Config::global(&app).map_err(|e| {
         anyhow!(tips(
             format!("failed to load config: {e:#}"),
             &[
@@ -487,13 +505,28 @@ fn run() -> Result<ExitCode> {
         ))
     })?;
 
-    let audit_state = AuditState::new(&app, &config)?;
-    let registry = collect_inputs(app.inputs, app.collect, app.strict_collection, &audit_state)?;
+    let gh_client = app
+        .gh_token
+        .map(|token| Client::new(app.gh_hostname, token, app.cache_dir))
+        .transpose()?;
 
-    let audit_registry = AuditRegistry::default_audits(&audit_state)?;
+    let registry = collect_inputs(
+        app.inputs,
+        app.collect,
+        app.strict_collection,
+        gh_client.as_ref(),
+    )?;
 
-    let mut results =
-        FindingRegistry::new(app.min_severity, app.min_confidence, app.persona, &config);
+    let state = AuditState::new(global_config, app.no_online_audits, gh_client);
+
+    let audit_registry = AuditRegistry::default_audits(&state)?;
+
+    let mut results = FindingRegistry::new(
+        app.min_severity,
+        app.min_confidence,
+        app.persona,
+        &state.global_config,
+    );
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");
