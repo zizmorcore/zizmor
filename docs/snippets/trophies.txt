@@ -36,6 +36,7 @@ bitcoindevkit/bdk#1813
 blakeblackshear/frigate#15490
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 bw2/ConfigArgParse#336
+cachix/git-hooks.nix#606
 cakephp/cakephp#18081
 canonical/operator#1656
 canonical/operator#1721

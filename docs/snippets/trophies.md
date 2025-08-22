@@ -150,6 +150,14 @@
         - bw2/ConfigArgParse#336
 
 
+-   ![](https://github.com/cachix.png?size=40){ width="40" loading=lazy align=left } cachix
+
+    ---
+
+    ??? example "Examples"
+        - cachix/git-hooks.nix#606
+
+
 -   ![](https://github.com/cakephp.png?size=40){ width="40" loading=lazy align=left } cakephp
 
     ---
