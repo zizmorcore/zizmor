@@ -7,7 +7,9 @@ use serde::{
     de::{self, DeserializeOwned},
 };
 
-use crate::{App, finding::Finding, github_api::Client, registry::input::RepoSlug, tips};
+use crate::{
+    App, CollectionOptions, finding::Finding, github_api::Client, registry::input::RepoSlug, tips,
+};
 
 const CONFIG_CANDIDATES: &[&str] = &[".github/zizmor.yml", "zizmor.yml"];
 
@@ -106,6 +108,34 @@ impl Config {
         }
 
         Ok(None)
+    }
+
+    /// Discover a [`Config`] according to the collection options.
+    ///
+    /// This function models zizmor's current precedence rules for
+    /// configuration discovery:
+    /// 1. `--no-config` disables all config loading.
+    /// 2. `--config <file>` uses the given config file globally,
+    ///    which we've already loaded into `options.global_config`.
+    /// 3. Otherwise, we use the provided `discover_fn` to attempt
+    ///    to discover a config file. This function is typically one
+    ///    of [`Config::discover_local`] or [`Config::discover_remote`]
+    ///    depending on the input type.
+    pub(crate) fn discover<F>(options: &CollectionOptions, discover_fn: F) -> Result<Self>
+    where
+        F: FnOnce() -> Result<Option<Self>>,
+    {
+        if options.no_config {
+            // User has explicitly disabled config loading.
+            Ok(Config::default())
+        } else if let Some(config) = &options.global_config {
+            // The user gave us a (legacy) global config file,
+            // which takes precedence over any discovered config.
+            Ok(config.clone())
+        } else {
+            // Attempt to discover a config file using the provided function.
+            discover_fn().map(|conf| conf.unwrap_or_default())
+        }
     }
 
     /// Discover a [`Config`] using rules applicable to the given path.

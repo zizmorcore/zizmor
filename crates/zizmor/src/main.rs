@@ -101,7 +101,6 @@ struct App {
     color: Option<ColorMode>,
 
     /// The configuration file to load.
-    ///
     /// This loads a single configuration file across all input groups,
     /// which may not be what you intend.
     #[arg(
@@ -378,6 +377,8 @@ pub(crate) struct CollectionOptions {
     pub(crate) mode: CollectionMode,
     pub(crate) strict: bool,
     pub(crate) no_config: bool,
+    /// Global configuration, if any.
+    pub(crate) global_config: Option<Config>,
 }
 
 #[instrument(skip_all)]
@@ -514,11 +515,16 @@ fn run() -> Result<ExitCode> {
         mode: app.collect,
         strict: app.strict_collection,
         no_config: app.no_config,
+        global_config: global_config,
     };
 
     let registry = collect_inputs(app.inputs, &collection_options, gh_client.as_ref())?;
 
-    let state = AuditState::new(global_config, app.no_online_audits, gh_client);
+    let state = AuditState::new(
+        collection_options.global_config,
+        app.no_online_audits,
+        gh_client,
+    );
 
     let audit_registry = AuditRegistry::default_audits(&state)?;
 
