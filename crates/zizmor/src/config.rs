@@ -142,11 +142,11 @@ impl Config {
         let conf = CONFIG_CANDIDATES
             .iter()
             .find_map(|candidate| client.fetch_single_file(slug, candidate).transpose())
-            .and_then(|contents| {
-                Some(contents.and_then(|contents| {
+            .map(|contents| {
+                contents.and_then(|contents| {
                     tracing::debug!("retrieved config for {slug}");
                     serde_yaml::from_str::<Self>(&contents).map_err(Into::into)
-                }))
+                })
             })
             .transpose()?;
 

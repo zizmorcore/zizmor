@@ -327,14 +327,11 @@ impl InputGroup {
     }
 
     fn collect_from_file(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
-        let config = options
-            .no_config
-            .then(|| Config::default())
-            .unwrap_or_else(|| {
-                Config::discover_local(path)
-                    .unwrap_or_default()
-                    .unwrap_or_default()
-            });
+        let config = options.no_config.then(Config::default).unwrap_or_else(|| {
+            Config::discover_local(path)
+                .unwrap_or_default()
+                .unwrap_or_default()
+        });
         let mut group = Self::new(config);
 
         // When collecting individual files, we don't know which part
@@ -358,14 +355,11 @@ impl InputGroup {
     }
 
     fn collect_from_dir(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
-        let config = options
-            .no_config
-            .then(|| Config::default())
-            .unwrap_or_else(|| {
-                Config::discover_local(path)
-                    .unwrap_or_default()
-                    .unwrap_or_default()
-            });
+        let config = options.no_config.then(Config::default).unwrap_or_else(|| {
+            Config::discover_local(path)
+                .unwrap_or_default()
+                .unwrap_or_default()
+        });
         let mut group = Self::new(config);
 
         // Start with all filters disabled, i.e. walk everything.
@@ -451,14 +445,11 @@ impl InputGroup {
             ))
         })?;
 
-        let config = options
-            .no_config
-            .then(|| Config::default())
-            .unwrap_or_else(|| {
-                Config::discover_remote(client, &slug)
-                    .unwrap_or_default()
-                    .unwrap_or_default()
-            });
+        let config = options.no_config.then(Config::default).unwrap_or_else(|| {
+            Config::discover_remote(client, &slug)
+                .unwrap_or_default()
+                .unwrap_or_default()
+        });
         let mut group = Self::new(config);
 
         if matches!(options.mode, CollectionMode::WorkflowsOnly) {
@@ -550,7 +541,7 @@ impl InputRegistry {
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
         if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.clone())) {
-            e.insert(InputGroup::collect(&name, &options, gh_client)?);
+            e.insert(InputGroup::collect(&name, options, gh_client)?);
         }
 
         Ok(())
