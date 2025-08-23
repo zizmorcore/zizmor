@@ -42,6 +42,7 @@ canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
 certbot/josepy#193
+coder/coder#19459
 conda/conda-lock#814
 cunla/fakeredis-py#391
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
