@@ -184,6 +184,14 @@
         - certbot/josepy#193
 
 
+-   ![](https://github.com/coder.png?size=40){ width="40" loading=lazy align=left } coder
+
+    ---
+
+    ??? example "Examples"
+        - coder/coder#19459
+
+
 -   ![](https://github.com/conda.png?size=40){ width="40" loading=lazy align=left } conda
 
     ---
