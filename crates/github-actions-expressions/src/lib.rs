@@ -674,6 +674,330 @@ impl From<bool> for Expr<'_> {
     }
 }
 
+/// The result of evaluating a GitHub Actions expression.
+///
+/// This type represents the possible values that can result from evaluating
+/// constant-reducible GitHub Actions expressions.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Evaluation {
+    /// A string value (includes both string literals and stringified other types)
+    String(String),
+    /// A numeric value
+    Number(f64),
+    /// A boolean value
+    Boolean(bool),
+    /// The null value
+    Null,
+}
+
+impl PartialOrd for Evaluation {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            // Numbers can be compared directly
+            (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
+
+            // String comparison
+            (Evaluation::String(a), Evaluation::String(b)) => Some(a.cmp(b)),
+
+            // Try to convert both to numbers first, then fall back to string comparison
+            (a, b) => {
+                if let (Ok(a_num), Ok(b_num)) =
+                    (a.to_string().parse::<f64>(), b.to_string().parse::<f64>())
+                {
+                    a_num.partial_cmp(&b_num)
+                } else {
+                    Some(a.to_string().cmp(&b.to_string()))
+                }
+            }
+        }
+    }
+}
+
+impl Evaluation {
+    /// Convert to a boolean following GitHub Actions truthiness rules.
+    ///
+    /// GitHub Actions truthiness:
+    /// - false and null are falsy
+    /// - Numbers: 0 is falsy, everything else is truthy
+    /// - Strings: empty string is falsy, everything else is truthy
+    pub fn as_boolean(&self) -> bool {
+        match self {
+            Evaluation::Boolean(b) => *b,
+            Evaluation::Null => false,
+            Evaluation::Number(n) => *n != 0.0,
+            Evaluation::String(s) => !s.is_empty(),
+        }
+    }
+}
+
+impl std::fmt::Display for Evaluation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Evaluation::String(s) => write!(f, "{}", s),
+            Evaluation::Number(n) => {
+                // Format numbers like GitHub Actions does
+                if n.fract() == 0.0 {
+                    write!(f, "{}", *n as i64)
+                } else {
+                    write!(f, "{}", n)
+                }
+            }
+            Evaluation::Boolean(b) => write!(f, "{}", b),
+            Evaluation::Null => write!(f, ""),
+        }
+    }
+}
+
+impl<'src> SpannedExpr<'src> {
+    /// Evaluates a constant-reducible expression to its literal value.
+    ///
+    /// Returns `Some(Evaluation)` if the expression can be constant-evaluated,
+    /// or `None` if the expression contains non-constant elements (like contexts or
+    /// non-reducible function calls).
+    ///
+    /// This implementation follows GitHub Actions' evaluation semantics as documented at:
+    /// https://docs.github.com/en/actions/reference/workflows-and-actions/expressions
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use github_actions_expressions::{Expr, Evaluation};
+    ///
+    /// let expr = Expr::parse("'hello'").unwrap();
+    /// let result = expr.evaluate_constant().unwrap();
+    /// assert_eq!(result.to_string(), "hello");
+    ///
+    /// let expr = Expr::parse("true && false").unwrap();
+    /// let result = expr.evaluate_constant().unwrap();
+    /// assert_eq!(result, Evaluation::Boolean(false));
+    /// ```
+    pub fn evaluate_constant(&self) -> Option<Evaluation> {
+        self.inner.evaluate_constant()
+    }
+}
+
+impl<'src> Expr<'src> {
+    /// Evaluates a constant-reducible expression to its literal value.
+    ///
+    /// This is the core implementation of GitHub Actions expression evaluation
+    /// for constant-reducible expressions. It handles:
+    ///
+    /// - Literals (strings, numbers, booleans, null)
+    /// - Binary operations (&&, ||, ==, !=, <, <=, >, >=)
+    /// - Unary operations (!)
+    /// - Function calls (format, contains, startsWith, endsWith, toJSON, fromJSON)
+    ///
+    /// The implementation follows GitHub's official evaluation semantics.
+    pub fn evaluate_constant(&self) -> Option<Evaluation> {
+        match self {
+            Expr::Literal(literal) => Some(match literal {
+                Literal::String(s) => Evaluation::String(s.to_string()),
+                Literal::Number(n) => Evaluation::Number(*n),
+                Literal::Boolean(b) => Evaluation::Boolean(*b),
+                Literal::Null => Evaluation::Null,
+            }),
+
+            Expr::BinOp { lhs, op, rhs } => {
+                let lhs_val = lhs.evaluate_constant()?;
+                let rhs_val = rhs.evaluate_constant()?;
+
+                match op {
+                    BinOp::And => {
+                        // GitHub Actions && semantics: if LHS is falsy, return LHS, else return RHS
+                        if lhs_val.as_boolean() {
+                            Some(rhs_val)
+                        } else {
+                            Some(lhs_val)
+                        }
+                    }
+                    BinOp::Or => {
+                        // GitHub Actions || semantics: if LHS is truthy, return LHS, else return RHS
+                        if lhs_val.as_boolean() {
+                            Some(lhs_val)
+                        } else {
+                            Some(rhs_val)
+                        }
+                    }
+                    BinOp::Eq => Some(Evaluation::Boolean(Self::values_equal(&lhs_val, &rhs_val))),
+                    BinOp::Neq => {
+                        Some(Evaluation::Boolean(!Self::values_equal(&lhs_val, &rhs_val)))
+                    }
+                    BinOp::Lt => lhs_val
+                        .partial_cmp(&rhs_val)
+                        .map(|ord| Evaluation::Boolean(matches!(ord, std::cmp::Ordering::Less))),
+                    BinOp::Le => lhs_val.partial_cmp(&rhs_val).map(|ord| {
+                        Evaluation::Boolean(matches!(
+                            ord,
+                            std::cmp::Ordering::Less | std::cmp::Ordering::Equal
+                        ))
+                    }),
+                    BinOp::Gt => lhs_val
+                        .partial_cmp(&rhs_val)
+                        .map(|ord| Evaluation::Boolean(matches!(ord, std::cmp::Ordering::Greater))),
+                    BinOp::Ge => lhs_val.partial_cmp(&rhs_val).map(|ord| {
+                        Evaluation::Boolean(matches!(
+                            ord,
+                            std::cmp::Ordering::Greater | std::cmp::Ordering::Equal
+                        ))
+                    }),
+                }
+            }
+
+            Expr::UnOp { op, expr } => {
+                let val = expr.evaluate_constant()?;
+                match op {
+                    UnOp::Not => Some(Evaluation::Boolean(!val.as_boolean())),
+                }
+            }
+
+            Expr::Call { func, args } => Self::evaluate_function_call(func, args),
+
+            // Non-constant expressions
+            _ => None,
+        }
+    }
+
+    /// Compares two evaluation results following GitHub Actions comparison semantics.
+    fn values_equal(lhs: &Evaluation, rhs: &Evaluation) -> bool {
+        match (lhs, rhs) {
+            (Evaluation::Null, Evaluation::Null) => true,
+            (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a == b,
+            (Evaluation::Number(a), Evaluation::Number(b)) => a == b,
+            (Evaluation::String(a), Evaluation::String(b)) => a == b,
+
+            // Type coercion rules - convert to string and compare
+            (a, b) => a.to_string() == b.to_string(),
+        }
+    }
+
+    /// Evaluates a function call if it's one of the supported constant-reducible functions.
+    fn evaluate_function_call(func: &Function, args: &[SpannedExpr]) -> Option<Evaluation> {
+        match func {
+            f if f == "format" => Self::eval_format_function(args),
+            f if f == "contains" => Self::eval_contains_function(args),
+            f if f == "startsWith" => Self::eval_starts_with_function(args),
+            f if f == "endsWith" => Self::eval_ends_with_function(args),
+            f if f == "toJSON" => Self::eval_to_json_function(args),
+            f if f == "fromJSON" => Self::eval_from_json_function(args),
+            _ => None,
+        }
+    }
+
+    /// Evaluates the `format()` function following GitHub Actions semantics.
+    /// format(format_string, arg1, arg2, ...)
+    fn eval_format_function(args: &[SpannedExpr]) -> Option<Evaluation> {
+        if args.is_empty() {
+            return None;
+        }
+
+        let format_str = args[0].evaluate_constant()?;
+        let format_template = format_str.to_string();
+
+        let mut result = format_template;
+
+        // Replace {0}, {1}, {2}, etc. with the corresponding arguments
+        for (i, arg) in args.iter().skip(1).enumerate() {
+            let arg_val = arg.evaluate_constant()?;
+            let placeholder = format!("{{{}}}", i);
+            result = result.replace(&placeholder, &arg_val.to_string());
+        }
+
+        Some(Evaluation::String(result))
+    }
+
+    /// Evaluates the `contains()` function.
+    /// contains(search_string, search_value)
+    fn eval_contains_function(args: &[SpannedExpr]) -> Option<Evaluation> {
+        if args.len() != 2 {
+            return None;
+        }
+
+        let haystack = args[0].evaluate_constant()?.to_string();
+        let needle = args[1].evaluate_constant()?.to_string();
+
+        Some(Evaluation::Boolean(haystack.contains(&needle)))
+    }
+
+    /// Evaluates the `startsWith()` function.
+    /// startsWith(search_string, search_value)
+    fn eval_starts_with_function(args: &[SpannedExpr]) -> Option<Evaluation> {
+        if args.len() != 2 {
+            return None;
+        }
+
+        let string = args[0].evaluate_constant()?.to_string();
+        let prefix = args[1].evaluate_constant()?.to_string();
+
+        Some(Evaluation::Boolean(string.starts_with(&prefix)))
+    }
+
+    /// Evaluates the `endsWith()` function.
+    /// endsWith(search_string, search_value)
+    fn eval_ends_with_function(args: &[SpannedExpr]) -> Option<Evaluation> {
+        if args.len() != 2 {
+            return None;
+        }
+
+        let string = args[0].evaluate_constant()?.to_string();
+        let suffix = args[1].evaluate_constant()?.to_string();
+
+        Some(Evaluation::Boolean(string.ends_with(&suffix)))
+    }
+
+    /// Evaluates the `toJSON()` function.
+    /// toJSON(value) - converts value to JSON string
+    fn eval_to_json_function(args: &[SpannedExpr]) -> Option<Evaluation> {
+        if args.len() != 1 {
+            return None;
+        }
+
+        let value = args[0].evaluate_constant()?;
+
+        let json_str = match value {
+            Evaluation::String(s) => {
+                format!("\"{}\"", s.replace('\\', "\\\\").replace('\"', "\\\""))
+            }
+            Evaluation::Number(n) => n.to_string(),
+            Evaluation::Boolean(b) => b.to_string(),
+            Evaluation::Null => "null".to_string(),
+        };
+
+        Some(Evaluation::String(json_str))
+    }
+
+    /// Evaluates the `fromJSON()` function.
+    /// fromJSON(json_string) - parses JSON string (limited support for constants)
+    fn eval_from_json_function(args: &[SpannedExpr]) -> Option<Evaluation> {
+        if args.len() != 1 {
+            return None;
+        }
+
+        let json_str = args[0].evaluate_constant()?.to_string();
+
+        // Simple JSON parsing for basic literals
+        match json_str.trim() {
+            "null" => Some(Evaluation::Null),
+            "true" => Some(Evaluation::Boolean(true)),
+            "false" => Some(Evaluation::Boolean(false)),
+            s if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 => {
+                // Simple string unescaping
+                let unescaped = &s[1..s.len() - 1]
+                    .replace("\\\"", "\"")
+                    .replace("\\\\", "\\");
+                Some(Evaluation::String(unescaped.to_string()))
+            }
+            s => {
+                // Try to parse as number
+                if let Ok(n) = s.parse::<f64>() {
+                    Some(Evaluation::Number(n))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
@@ -1220,6 +1544,251 @@ mod tests {
         ] {
             let expr = Expr::parse(expr)?;
             assert_eq!(expr.constant_reducible(), *reducible);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluate_constant_literals() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            ("'hello'", Evaluation::String("hello".to_string())),
+            ("'world'", Evaluation::String("world".to_string())),
+            ("42", Evaluation::Number(42.0)),
+            ("3.14", Evaluation::Number(3.14)),
+            ("true", Evaluation::Boolean(true)),
+            ("false", Evaluation::Boolean(false)),
+            ("null", Evaluation::Null),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.evaluate_constant().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluate_constant_binary_operations() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Boolean operations
+            ("true && true", Evaluation::Boolean(true)),
+            ("true && false", Evaluation::Boolean(false)),
+            ("false && true", Evaluation::Boolean(false)),
+            ("false && false", Evaluation::Boolean(false)),
+            ("true || true", Evaluation::Boolean(true)),
+            ("true || false", Evaluation::Boolean(true)),
+            ("false || true", Evaluation::Boolean(true)),
+            ("false || false", Evaluation::Boolean(false)),
+            // Equality operations
+            ("1 == 1", Evaluation::Boolean(true)),
+            ("1 == 2", Evaluation::Boolean(false)),
+            ("'hello' == 'hello'", Evaluation::Boolean(true)),
+            ("'hello' == 'world'", Evaluation::Boolean(false)),
+            ("true == true", Evaluation::Boolean(true)),
+            ("true == false", Evaluation::Boolean(false)),
+            ("1 != 2", Evaluation::Boolean(true)),
+            ("1 != 1", Evaluation::Boolean(false)),
+            // Comparison operations
+            ("1 < 2", Evaluation::Boolean(true)),
+            ("2 < 1", Evaluation::Boolean(false)),
+            ("1 <= 1", Evaluation::Boolean(true)),
+            ("1 <= 2", Evaluation::Boolean(true)),
+            ("2 <= 1", Evaluation::Boolean(false)),
+            ("2 > 1", Evaluation::Boolean(true)),
+            ("1 > 2", Evaluation::Boolean(false)),
+            ("1 >= 1", Evaluation::Boolean(true)),
+            ("2 >= 1", Evaluation::Boolean(true)),
+            ("1 >= 2", Evaluation::Boolean(false)),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.evaluate_constant().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluate_constant_functions() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // format function
+            (
+                "format('{0}', 'hello')",
+                Evaluation::String("hello".to_string()),
+            ),
+            (
+                "format('{0} {1}', 'hello', 'world')",
+                Evaluation::String("hello world".to_string()),
+            ),
+            (
+                "format('Value: {0}', 42)",
+                Evaluation::String("Value: 42".to_string()),
+            ),
+            // contains function
+            (
+                "contains('hello world', 'world')",
+                Evaluation::Boolean(true),
+            ),
+            ("contains('hello world', 'foo')", Evaluation::Boolean(false)),
+            ("contains('test', '')", Evaluation::Boolean(true)),
+            // startsWith function
+            (
+                "startsWith('hello world', 'hello')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "startsWith('hello world', 'world')",
+                Evaluation::Boolean(false),
+            ),
+            ("startsWith('test', '')", Evaluation::Boolean(true)),
+            // endsWith function
+            (
+                "endsWith('hello world', 'world')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "endsWith('hello world', 'hello')",
+                Evaluation::Boolean(false),
+            ),
+            ("endsWith('test', '')", Evaluation::Boolean(true)),
+            // toJSON function
+            (
+                "toJSON('hello')",
+                Evaluation::String("\"hello\"".to_string()),
+            ),
+            ("toJSON(42)", Evaluation::String("42".to_string())),
+            ("toJSON(true)", Evaluation::String("true".to_string())),
+            ("toJSON(null)", Evaluation::String("null".to_string())),
+            // fromJSON function
+            (
+                "fromJSON('\"hello\"')",
+                Evaluation::String("hello".to_string()),
+            ),
+            ("fromJSON('42')", Evaluation::Number(42.0)),
+            ("fromJSON('true')", Evaluation::Boolean(true)),
+            ("fromJSON('null')", Evaluation::Null),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.evaluate_constant().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluate_constant_complex_expressions() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Nested operations
+            ("!false", Evaluation::Boolean(true)),
+            ("!true", Evaluation::Boolean(false)),
+            ("!(true && false)", Evaluation::Boolean(true)),
+            // Complex boolean logic
+            ("true && (false || true)", Evaluation::Boolean(true)),
+            ("false || (true && false)", Evaluation::Boolean(false)),
+            // Mixed function calls
+            (
+                "contains(format('{0} {1}', 'hello', 'world'), 'world')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "startsWith(format('prefix_{0}', 'test'), 'prefix')",
+                Evaluation::Boolean(true),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.evaluate_constant().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluation_result_display() {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            (Evaluation::String("hello".to_string()), "hello"),
+            (Evaluation::Number(42.0), "42"),
+            (Evaluation::Number(3.14), "3.14"),
+            (Evaluation::Boolean(true), "true"),
+            (Evaluation::Boolean(false), "false"),
+            (Evaluation::Null, ""),
+        ];
+
+        for (result, expected) in test_cases {
+            assert_eq!(result.to_string(), *expected);
+        }
+    }
+
+    #[test]
+    fn test_evaluation_result_to_boolean() {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            (Evaluation::Boolean(true), true),
+            (Evaluation::Boolean(false), false),
+            (Evaluation::Null, false),
+            (Evaluation::Number(0.0), false),
+            (Evaluation::Number(1.0), true),
+            (Evaluation::Number(-1.0), true),
+            (Evaluation::String("".to_string()), false),
+            (Evaluation::String("hello".to_string()), true),
+        ];
+
+        for (result, expected) in test_cases {
+            assert_eq!(result.as_boolean(), *expected);
+        }
+    }
+
+    #[test]
+    fn test_github_actions_logical_semantics() -> Result<()> {
+        use crate::Evaluation;
+
+        // Test GitHub Actions-specific && and || semantics
+        let test_cases = &[
+            // && returns the first falsy value, or the last value if all are truthy
+            ("false && 'hello'", Evaluation::Boolean(false)),
+            ("null && 'hello'", Evaluation::Null),
+            ("'' && 'hello'", Evaluation::String("".to_string())),
+            (
+                "'hello' && 'world'",
+                Evaluation::String("world".to_string()),
+            ),
+            ("true && 42", Evaluation::Number(42.0)),
+            // || returns the first truthy value, or the last value if all are falsy
+            ("true || 'hello'", Evaluation::Boolean(true)),
+            (
+                "'hello' || 'world'",
+                Evaluation::String("hello".to_string()),
+            ),
+            ("false || 'hello'", Evaluation::String("hello".to_string())),
+            ("null || false", Evaluation::Boolean(false)),
+            ("'' || null", Evaluation::Null),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.evaluate_constant().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
         }
 
         Ok(())

@@ -9,38 +9,21 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |         -------------------------- help: actions reference contains empty component
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:16:9
    |
 16 |       - uses: actions/checkout////@v4
-   |         ----------------------------- help: actions reference contains empty component
+   |         -----------------------------
+   |         |
+   |         help: actions reference contains empty component
+   |         help: actions reference contains empty component
+   |         help: actions reference contains empty component
+   |         help: actions reference contains empty component
    |
    = note: audit confidence → High
-
-help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:16:9
-   |
-16 |       - uses: actions/checkout////@v4
-   |         ----------------------------- help: actions reference contains empty component
-   |
-   = note: audit confidence → High
-
-help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:16:9
-   |
-16 |       - uses: actions/checkout////@v4
-   |         ----------------------------- help: actions reference contains empty component
-   |
-   = note: audit confidence → High
-
-help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:16:9
-   |
-16 |       - uses: actions/checkout////@v4
-   |         ----------------------------- help: actions reference contains empty component
-   |
-   = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:19:9
@@ -49,6 +32,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |         ------------------------------------ help: actions reference contains '.'
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:20:9
@@ -57,6 +41,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |         --------------------------- help: actions reference contains '.'
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:23:9
@@ -65,6 +50,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |         ----------------------------------- help: actions reference contains '..'
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:31:20
@@ -73,6 +59,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    -- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:32:20
@@ -81,6 +68,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    --- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:33:20
@@ -89,6 +77,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    ---- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:34:20
@@ -97,6 +86,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    ------------- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:35:20
@@ -105,6 +95,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    ------------- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:36:20
@@ -113,6 +104,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    ------------- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:37:20
@@ -121,6 +113,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    ------ help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:41:20
@@ -129,6 +122,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    -------------------- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:42:20
@@ -137,6 +131,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    ------------------------------- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:43:20
@@ -145,6 +140,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    ---------------------------------------------- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:44:20
@@ -153,6 +149,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    ---------------------- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:45:20
@@ -161,6 +158,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                    -------------------- help: can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:50:60
@@ -169,6 +167,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                                                            -------------------- help: can be reduced to a constant
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:52:99
@@ -177,13 +176,6 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                                                                                                   ------------- help: can be reduced to a constant
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
-help[obfuscation]: obfuscated usage of GitHub Actions features
-  --> @@INPUT@@:54:27
-   |
-54 |           echo ${{ foobar[format('{0}', 'event')]}}
-   |                           ---------------------- help: can be reduced to a constant
-   |
-   = note: audit confidence → High
-
-40 findings (1 ignored, 16 suppressed): 0 unknown, 0 informational, 23 low, 0 medium, 0 high
+36 findings (1 ignored, 16 suppressed, 19 fixable): 0 unknown, 0 informational, 19 low, 0 medium, 0 high
