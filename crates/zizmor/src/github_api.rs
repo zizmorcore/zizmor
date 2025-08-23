@@ -368,6 +368,47 @@ impl Client {
             .map_err(Into::into)
     }
 
+    /// Fetch a single file from the given remote repository slug.
+    ///
+    /// Returns the file contents as a `String` if the file exists,
+    /// or `None` if the request produces a 404.
+    pub(crate) async fn fetch_single_file(
+        &self,
+        slug: &RepoSlug,
+        file: &str,
+    ) -> Result<Option<String>> {
+        tracing::debug!("fetching {file} from {slug}");
+
+        let url = format!(
+            "{api_base}/repos/{owner}/{repo}/contents/{file}",
+            api_base = self.api_base,
+            owner = slug.owner,
+            repo = slug.repo,
+            file = file
+        );
+
+        let resp = self
+            .http
+            .get(&url)
+            .header(ACCEPT, "application/vnd.github.raw+json")
+            .pipe(|req| match slug.git_ref.as_ref() {
+                Some(g) => req.query(&[("ref", g)]),
+                None => req,
+            })
+            .send()
+            .await?;
+
+        match resp.status() {
+            StatusCode::OK => {
+                let contents = resp.text().await?;
+
+                Ok(Some(contents))
+            }
+            StatusCode::NOT_FOUND => Ok(None),
+            _ => Err(resp.error_for_status().unwrap_err().into()),
+        }
+    }
+
     /// Collect all workflows (and only workflows) defined in the given remote
     /// repository slug into the given input group.
     ///
@@ -411,22 +452,15 @@ impl Client {
             .into_iter()
             .filter(|file| file.name.ends_with(".yml") || file.name.ends_with(".yaml"))
         {
-            let file_url = format!("{url}/{file}", file = file.name);
-            tracing::debug!("fetching {file_url}");
-
-            let contents = self
-                .http
-                .get(file_url)
-                .header(ACCEPT, "application/vnd.github.raw+json")
-                .pipe(|req| match git_ref.as_ref() {
-                    Some(g) => req.query(&[("ref", g)]),
-                    None => req,
-                })
-                .send()
-                .await?
-                .error_for_status()?
-                .text()
-                .await?;
+            let Some(contents) = self.fetch_single_file(slug, &file.path).await? else {
+                // This can only happen if we have some kind of TOCTOU
+                // discrepancy with the listing call above, e.g. a file
+                // was deleted on a branch immediately after we listed it.
+                anyhow::bail!(
+                    "couldn't fetch workflow file {file} from {slug}",
+                    file = file.name
+                );
+            };
 
             let key = InputKey::remote(slug, file.path)?;
             // TODO: Make strictness configurable here?
