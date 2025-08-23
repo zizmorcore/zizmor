@@ -71,12 +71,13 @@ impl Audit for ForbiddenUses {
     where
         Self: Sized,
     {
-        let Some(config) = state
-            .global_config
-            .rule_config(Self::ident())
-            .context("invalid configuration")
-            .map_err(AuditLoadError::Fail)?
-        else {
+        // Very gross. Only here until I remove global config.
+        let Some(Ok(Some(config))) = state.global_config.as_ref().map(|config| {
+            config
+                .rule_config(Self::ident())
+                .context("invalid configuration")
+                .map_err(AuditLoadError::Fail)
+        }) else {
             return Err(AuditLoadError::Skip(anyhow!("audit not configured")));
         };
 

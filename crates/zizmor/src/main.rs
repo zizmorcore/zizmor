@@ -100,8 +100,10 @@ struct App {
     #[arg(long, value_enum, value_name = "MODE")]
     color: Option<ColorMode>,
 
-    /// The configuration file to load. By default, any config will be
-    /// discovered relative to $CWD.
+    /// The configuration file to load.
+    ///
+    /// This loads a single configuration file across all input groups,
+    /// which may not be what you intend.
     #[arg(
         short,
         long,
@@ -501,15 +503,7 @@ fn run() -> Result<ExitCode> {
         reg.with(indicatif_layer).init();
     }
 
-    let global_config = Config::global(&app).map_err(|e| {
-        anyhow!(tips(
-            format!("failed to load config: {e:#}"),
-            &[
-                "check your configuration file for errors",
-                "see: https://docs.zizmor.sh/configuration/"
-            ]
-        ))
-    })?;
+    let global_config = Config::global(&app)?;
 
     let gh_client = app
         .gh_token
@@ -529,10 +523,10 @@ fn run() -> Result<ExitCode> {
     let audit_registry = AuditRegistry::default_audits(&state)?;
 
     let mut results = FindingRegistry::new(
+        &&registry,
         app.min_severity,
         app.min_confidence,
         app.persona,
-        &state.global_config,
     );
     {
         // Note: block here so that we drop the span here at the right time.

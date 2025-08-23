@@ -122,11 +122,18 @@ impl Audit for UnpinnedUses {
     where
         Self: Sized,
     {
+        // Very gross. Only here until I remove global config.
         let config = state
             .global_config
-            .rule_config::<UnpinnedUsesConfig>(Self::ident())
-            .context("invalid configuration")
+            .as_ref()
+            .map(|config| {
+                config
+                    .rule_config::<UnpinnedUsesConfig>(Self::ident())
+                    .context("invalid configuration")
+            })
+            .transpose()
             .map_err(AuditLoadError::Fail)?
+            .unwrap_or_default()
             .unwrap_or_default();
 
         let policies = UnpinnedUsesPolicies::try_from(config)

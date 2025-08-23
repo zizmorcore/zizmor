@@ -741,7 +741,7 @@ jobs:
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(
-            crate::Config::default(),
+            Some(crate::Config::default()),
             false,
             Some(
                 github_api::Client::new(
@@ -795,7 +795,7 @@ jobs:
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(
-            crate::Config::default(),
+            Some(crate::Config::default()),
             false,
             Some(
                 github_api::Client::new(

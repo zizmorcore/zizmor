@@ -243,7 +243,7 @@ impl InputKey {
     }
 
     /// Returns the group this input belongs to.
-    fn group(&self) -> &Group {
+    pub(crate) fn group(&self) -> &Group {
         match self {
             InputKey::Local(local) => &local.group,
             InputKey::Remote(remote) => &remote.group,
@@ -276,14 +276,14 @@ pub(crate) struct InputGroup {
 }
 
 impl InputGroup {
-    fn new(config: Config) -> Self {
+    pub(crate) fn new(config: Config) -> Self {
         Self {
             inputs: Default::default(),
             config,
         }
     }
 
-    fn register_input(&mut self, input: AuditInput) -> anyhow::Result<()> {
+    pub(crate) fn register_input(&mut self, input: AuditInput) -> anyhow::Result<()> {
         if self.inputs.contains_key(input.key()) {
             return Err(anyhow::anyhow!(
                 "can't register {key} more than once",
@@ -558,6 +558,15 @@ impl InputRegistry {
             .get(key.group())
             .and_then(|group| group.inputs.get(key))
             .expect("API misuse: requested an un-registered input")
+    }
+
+    /// Get a reference to the configuration for a given input group.
+    pub(crate) fn get_config(&self, group: &Group) -> &Config {
+        &self
+            .groups
+            .get(group)
+            .expect("API misuse: requested config for an un-registered input")
+            .config
     }
 }
 

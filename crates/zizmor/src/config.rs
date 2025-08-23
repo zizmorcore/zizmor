@@ -1,13 +1,13 @@
 use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
 use anyhow::{Context as _, Result, anyhow};
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use serde::{
     Deserialize,
     de::{self, DeserializeOwned},
 };
 
-use crate::{App, finding::Finding, github_api::Client, registry::input::RepoSlug};
+use crate::{App, finding::Finding, github_api::Client, registry::input::RepoSlug, tips};
 
 const CONFIG_CANDIDATES: &[&str] = &[".github/zizmor.yml", "zizmor.yml"];
 
@@ -85,13 +85,23 @@ pub(crate) struct Config {
 }
 
 impl Config {
+    fn load(contents: &str) -> Result<Self> {
+        serde_yaml::from_str(contents).map_err(|e| {
+            anyhow!(tips(
+                format!("failed to load config: {e:#}"),
+                &[
+                    "check your configuration file for errors",
+                    "see: https://docs.zizmor.sh/configuration/"
+                ]
+            ))
+        })
+    }
+
     fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>> {
         for candidate in CONFIG_CANDIDATES {
             let candidate_path = path.join(candidate);
             if candidate_path.is_file() {
-                return Ok(Some(serde_yaml::from_str(&fs::read_to_string(
-                    &candidate_path,
-                )?)?));
+                return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
             }
         }
 
@@ -119,9 +129,7 @@ impl Config {
             while let Some(next) = parent.parent() {
                 let candidate_path = next.join("zizmor.yml");
                 if candidate_path.is_file() {
-                    return Ok(Some(serde_yaml::from_str(&fs::read_to_string(
-                        &candidate_path,
-                    )?)?));
+                    return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
                 }
                 parent = next;
             }
@@ -145,7 +153,7 @@ impl Config {
             .map(|contents| {
                 contents.and_then(|contents| {
                     tracing::debug!("retrieved config for {slug}");
-                    serde_yaml::from_str::<Self>(&contents).map_err(Into::into)
+                    Self::load(&contents).map_err(Into::into)
                 })
             })
             .transpose()?;
@@ -154,33 +162,22 @@ impl Config {
     }
 
     /// Loads a global [`Config`] for the given [`App`].
-    pub(crate) fn global(app: &App) -> Result<Self> {
+    ///
+    /// Returns `Ok(None)` unless the user explicitly specifies
+    /// a config file with `--config`.
+    pub(crate) fn global(app: &App) -> Result<Option<Self>> {
         if app.no_config {
-            return Ok(Self::default());
+            Ok(None)
+        } else if let Some(path) = &app.config {
+            tracing::debug!("loading config from `{path}`");
+
+            let contents = fs::read_to_string(path)
+                .with_context(|| format!("failed to read config file at `{path}`"))?;
+
+            Ok(Some(Self::load(&contents)?))
+        } else {
+            Ok(None)
         }
-
-        let config = match &app.config {
-            Some(path) => serde_yaml::from_str::<Self>(&fs::read_to_string(path)?)?,
-            None => {
-                // If the user didn't pass a config path explicitly with
-                // `--config`, then we attempt to discover one relative to $CWD
-                // Our procedure is to first look for `$CWD/.github/zizmor.yml`,
-                // then `$CWD/zizmor.yml`, and then bail.
-                let cwd: Utf8PathBuf = std::env::current_dir()
-                    .with_context(|| "config discovery couldn't access CWD")?
-                    .try_into()
-                    .with_context(|| "current directory is not valid UTF-8")?;
-
-                Self::discover_in_dir(&cwd)?.unwrap_or_else(|| {
-                    tracing::debug!("no config discovered; loading default");
-                    Self::default()
-                })
-            }
-        };
-
-        tracing::debug!("loaded config: {config:?}");
-
-        Ok(config)
     }
 
     /// Returns `true` if this [`Config`] has an ignore rule for the
