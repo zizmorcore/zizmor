@@ -191,7 +191,7 @@ impl Backend {
 
         for (_, input) in input_registry.iter_inputs() {
             for (_, audit) in self.audit_registry.iter_audits() {
-                registry.extend(audit.audit(&input)?);
+                registry.extend(audit.audit(input)?);
             }
         }
 

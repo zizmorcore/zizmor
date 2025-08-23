@@ -523,7 +523,7 @@ fn run() -> Result<ExitCode> {
     let audit_registry = AuditRegistry::default_audits(&state)?;
 
     let mut results = FindingRegistry::new(
-        &&registry,
+        &registry,
         app.min_severity,
         app.min_confidence,
         app.persona,

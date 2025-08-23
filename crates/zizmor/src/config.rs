@@ -153,8 +153,7 @@ impl Config {
             .map(|contents| {
                 contents.and_then(|contents| {
                     tracing::debug!("retrieved config for {slug}");
-                    Self::load(&contents).map_err(Into::into)
-                })
+                    Self::load(&contents)})
             })
             .transpose()?;
 
