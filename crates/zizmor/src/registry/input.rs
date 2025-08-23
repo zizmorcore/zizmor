@@ -12,7 +12,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
-    CollectionMode,
+    CollectionMode, CollectionOptions,
     audit::AuditInput,
     config::Config,
     github_api::{Client, GitHubHost},
@@ -326,8 +326,15 @@ impl InputGroup {
         }
     }
 
-    fn collect_from_file(path: &Utf8Path, strict: bool) -> anyhow::Result<Self> {
-        let config = Config::discover_local(path)?.unwrap_or_default();
+    fn collect_from_file(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
+        let config = options
+            .no_config
+            .then(|| Config::default())
+            .unwrap_or_else(|| {
+                Config::discover_local(path)
+                    .unwrap_or_default()
+                    .unwrap_or_default()
+            });
         let mut group = Self::new(config);
 
         // When collecting individual files, we don't know which part
@@ -345,17 +352,20 @@ impl InputGroup {
         };
 
         let contents = std::fs::read_to_string(path)?;
-        group.register(kind, contents, key, strict)?;
+        group.register(kind, contents, key, options.strict)?;
 
         Ok(group)
     }
 
-    fn collect_from_dir(
-        path: &Utf8Path,
-        mode: CollectionMode,
-        strict: bool,
-    ) -> anyhow::Result<Self> {
-        let config = Config::discover_local(path)?.unwrap_or_default();
+    fn collect_from_dir(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
+        let config = options
+            .no_config
+            .then(|| Config::default())
+            .unwrap_or_else(|| {
+                Config::discover_local(path)
+                    .unwrap_or_default()
+                    .unwrap_or_default()
+            });
         let mut group = Self::new(config);
 
         // Start with all filters disabled, i.e. walk everything.
@@ -373,7 +383,7 @@ impl InputGroup {
         // zizmor integrators.
         //
         // See: https://github.com/zizmorcore/zizmor/issues/596
-        if mode.respects_gitignore() {
+        if options.mode.respects_gitignore() {
             walker
                 .require_git(false)
                 .git_ignore(true)
@@ -385,7 +395,7 @@ impl InputGroup {
             let entry = entry?;
             let entry = <&Utf8Path>::try_from(entry.path())?;
 
-            if mode.workflows()
+            if options.mode.workflows()
                 && entry.is_file()
                 && matches!(entry.extension(), Some("yml" | "yaml"))
                 && entry
@@ -394,16 +404,16 @@ impl InputGroup {
             {
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
                 let contents = std::fs::read_to_string(entry)?;
-                group.register(InputKind::Workflow, contents, key, strict)?;
+                group.register(InputKind::Workflow, contents, key, options.strict)?;
             }
 
-            if mode.actions()
+            if options.mode.actions()
                 && entry.is_file()
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
                 let contents = std::fs::read_to_string(entry)?;
-                group.register(InputKind::Action, contents, key, strict)?;
+                group.register(InputKind::Action, contents, key, options.strict)?;
             }
         }
 
@@ -412,9 +422,8 @@ impl InputGroup {
 
     fn collect_from_repo_slug(
         raw_slug: &str,
+        options: &CollectionOptions,
         gh_client: Option<&Client>,
-        mode: CollectionMode,
-        _strict: bool,
     ) -> anyhow::Result<Self> {
         let Ok(slug) = RepoSlug::from_str(raw_slug) else {
             return Err(anyhow::anyhow!(tips(
@@ -442,10 +451,17 @@ impl InputGroup {
             ))
         })?;
 
-        let config = Config::discover_remote(&client, &slug)?.unwrap_or_else(|| Config::default());
+        let config = options
+            .no_config
+            .then(|| Config::default())
+            .unwrap_or_else(|| {
+                Config::discover_remote(client, &slug)
+                    .unwrap_or_default()
+                    .unwrap_or_default()
+            });
         let mut group = Self::new(config);
 
-        if matches!(mode, CollectionMode::WorkflowsOnly) {
+        if matches!(options.mode, CollectionMode::WorkflowsOnly) {
             // Performance: if we're *only* collecting workflows, then we
             // can save ourselves a full repo download and only fetch the
             // repo's workflow files.
@@ -485,17 +501,16 @@ impl InputGroup {
 
     pub(crate) fn collect(
         request: &str,
-        mode: CollectionMode,
-        strict: bool,
+        options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> anyhow::Result<Self> {
         let path = Utf8Path::new(request);
         if path.is_file() {
-            Self::collect_from_file(path, strict)
+            Self::collect_from_file(path, options)
         } else if path.is_dir() {
-            Self::collect_from_dir(path, mode, strict)
+            Self::collect_from_dir(path, options)
         } else {
-            Self::collect_from_repo_slug(request, gh_client, mode, strict)
+            Self::collect_from_repo_slug(request, options, gh_client)
         }
     }
 
@@ -528,15 +543,14 @@ impl InputRegistry {
     pub(crate) fn register_group(
         &mut self,
         name: String,
-        mode: CollectionMode,
-        strict: bool,
+        options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> anyhow::Result<()> {
         // If the group has already been registered, then the user probably
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
         if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.clone())) {
-            e.insert(InputGroup::collect(&name, mode, strict, gh_client)?);
+            e.insert(InputGroup::collect(&name, &options, gh_client)?);
         }
 
         Ok(())

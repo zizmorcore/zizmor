@@ -371,17 +371,23 @@ pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
     format!("{}", renderer.render(message))
 }
 
+/// State used when collecting input groups.
+pub(crate) struct CollectionOptions {
+    pub(crate) mode: CollectionMode,
+    pub(crate) strict: bool,
+    pub(crate) no_config: bool,
+}
+
 #[instrument(skip_all)]
 fn collect_inputs(
     inputs: Vec<String>,
-    mode: CollectionMode,
-    strict: bool,
+    options: &CollectionOptions,
     gh_client: Option<&Client>,
 ) -> Result<InputRegistry> {
     let mut registry = InputRegistry::new();
 
     for input in inputs.into_iter() {
-        registry.register_group(input, mode, strict, gh_client)?;
+        registry.register_group(input, options, gh_client)?;
     }
 
     if registry.len() == 0 {
@@ -510,12 +516,13 @@ fn run() -> Result<ExitCode> {
         .map(|token| Client::new(app.gh_hostname, token, app.cache_dir))
         .transpose()?;
 
-    let registry = collect_inputs(
-        app.inputs,
-        app.collect,
-        app.strict_collection,
-        gh_client.as_ref(),
-    )?;
+    let collection_options = CollectionOptions {
+        mode: app.collect,
+        strict: app.strict_collection,
+        no_config: app.no_config,
+    };
+
+    let registry = collect_inputs(app.inputs, &collection_options, gh_client.as_ref())?;
 
     let state = AuditState::new(global_config, app.no_online_audits, gh_client);
 
