@@ -7,7 +7,7 @@ use serde::{
     de::{self, DeserializeOwned},
 };
 
-use crate::{App, finding::Finding};
+use crate::{App, finding::Finding, github_api::Client, registry::input::RepoSlug};
 
 const CONFIG_CANDIDATES: &[&str] = &[".github/zizmor.yml", "zizmor.yml"];
 
@@ -106,7 +106,7 @@ impl Config {
     ///
     /// For directories, this attempts to find a `.github/zizmor.yml` or
     /// `zizmor.yml` in the directory itself.
-    pub(crate) fn discover(path: &Utf8Path) -> Result<Option<Self>> {
+    pub(crate) fn discover_local(path: &Utf8Path) -> Result<Option<Self>> {
         if path.is_dir() {
             Self::discover_in_dir(path)
         } else if path.is_file() {
@@ -132,6 +132,25 @@ impl Config {
                 "cannot discover config for `{path}`: not a file or directory"
             ))
         }
+    }
+
+    /// Discover a [`Config`] for a repository slug.
+    ///
+    /// This will look for a `.github/zizmor.yml` or `zizmor.yml`
+    /// in the repository's root directory.
+    pub(crate) fn discover_remote(client: &Client, slug: &RepoSlug) -> Result<Option<Self>> {
+        let conf = CONFIG_CANDIDATES
+            .iter()
+            .find_map(|candidate| client.fetch_single_file(slug, candidate).transpose())
+            .and_then(|contents| {
+                Some(contents.and_then(|contents| {
+                    tracing::debug!("retrieved config for {slug}");
+                    serde_yaml::from_str::<Self>(&contents).map_err(Into::into)
+                }))
+            })
+            .transpose()?;
+
+        Ok(conf)
     }
 
     /// Loads a global [`Config`] for the given [`App`].

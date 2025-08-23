@@ -327,7 +327,7 @@ impl InputGroup {
     }
 
     fn collect_from_file(path: &Utf8Path, strict: bool) -> anyhow::Result<Self> {
-        let config = Config::discover(path)?.unwrap_or_default();
+        let config = Config::discover_local(path)?.unwrap_or_default();
         let mut group = Self::new(config);
 
         // When collecting individual files, we don't know which part
@@ -355,7 +355,7 @@ impl InputGroup {
         mode: CollectionMode,
         strict: bool,
     ) -> anyhow::Result<Self> {
-        let config = Config::discover(path)?.unwrap_or_default();
+        let config = Config::discover_local(path)?.unwrap_or_default();
         let mut group = Self::new(config);
 
         // Start with all filters disabled, i.e. walk everything.
@@ -416,10 +416,6 @@ impl InputGroup {
         mode: CollectionMode,
         _strict: bool,
     ) -> anyhow::Result<Self> {
-        // TODO: Load remote config here.
-        let config = Config::default();
-        let mut group = Self::new(config);
-
         let Ok(slug) = RepoSlug::from_str(raw_slug) else {
             return Err(anyhow::anyhow!(tips(
                 format!("invalid input: {raw_slug}"),
@@ -445,6 +441,9 @@ impl InputGroup {
                 )]
             ))
         })?;
+
+        let config = Config::discover_remote(&client, &slug)?.unwrap_or_else(|| Config::default());
+        let mut group = Self::new(config);
 
         if matches!(mode, CollectionMode::WorkflowsOnly) {
             // Performance: if we're *only* collecting workflows, then we
