@@ -113,7 +113,7 @@ impl Zizmor {
             std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
         }
 
-        if let Some(config) = self.config {
+        if let Some(config) = &self.config {
             self.cmd.arg("--config").arg(config);
         } else {
             self.cmd.arg("--no-config");
@@ -173,6 +173,11 @@ impl Zizmor {
         let input_placeholder = "@@INPUT@@";
         for input in &self.inputs {
             raw = raw.replace(input, input_placeholder);
+        }
+
+        let config_placeholder = "@@CONFIG@@";
+        if let Some(config) = &self.config {
+            raw = raw.replace(config, config_placeholder);
         }
 
         // Normalize Windows '\' file paths to using '/', to get consistent snapshot test outputs

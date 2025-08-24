@@ -19,7 +19,7 @@ audit_meta!(
 );
 
 impl Audit for UnredactedSecrets {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -29,6 +29,7 @@ impl Audit for UnredactedSecrets {
     fn audit_raw<'doc>(
         &self,
         input: &'doc super::AuditInput,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 

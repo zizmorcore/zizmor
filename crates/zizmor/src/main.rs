@@ -8,10 +8,11 @@ use std::{
 use annotate_snippets::{Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
+use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
-use config::Config;
+use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
 use github_api::{GitHubHost, GitHubToken};
 use indicatif::ProgressStyle;
@@ -23,6 +24,8 @@ use terminal_link::Link;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
+
+use crate::{config::Config, github_api::Client};
 
 mod audit;
 mod config;
@@ -70,7 +73,7 @@ struct App {
     gh_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
-    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::new)]
+    #[arg(long, env = "GH_HOST", default_value_t)]
     gh_hostname: GitHubHost,
 
     /// Perform only offline audits.
@@ -96,8 +99,9 @@ struct App {
     #[arg(long, value_enum, value_name = "MODE")]
     color: Option<ColorMode>,
 
-    /// The configuration file to load. By default, any config will be
-    /// discovered relative to $CWD.
+    /// The configuration file to load.
+    /// This loads a single configuration file across all input groups,
+    /// which may not be what you intend.
     #[arg(
         short,
         long,
@@ -125,8 +129,8 @@ struct App {
 
     /// The directory to use for HTTP caching. By default, a
     /// host-appropriate user-caching directory will be used.
-    #[arg(long)]
-    cache_dir: Option<String>,
+    #[arg(long, default_value_t = App::default_cache_dir(), hide_default_value = true)]
+    cache_dir: Utf8PathBuf,
 
     /// Control which kinds of inputs are collected for auditing.
     ///
@@ -174,6 +178,20 @@ struct App {
     /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
+}
+
+impl App {
+    fn default_cache_dir() -> Utf8PathBuf {
+        etcetera::choose_app_strategy(etcetera::AppStrategyArgs {
+            top_level_domain: "io.github".into(),
+            author: "woodruffw".into(),
+            app_name: "zizmor".into(),
+        })
+        .expect("failed to determine default cache directory")
+        .cache_dir()
+        .try_into()
+        .expect("failed to turn cache directory into a sane path")
+    }
 }
 
 #[cfg(feature = "lsp")]
@@ -353,17 +371,25 @@ pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
     format!("{}", renderer.render(message))
 }
 
+/// State used when collecting input groups.
+pub(crate) struct CollectionOptions {
+    pub(crate) mode: CollectionMode,
+    pub(crate) strict: bool,
+    pub(crate) no_config: bool,
+    /// Global configuration, if any.
+    pub(crate) global_config: Option<Config>,
+}
+
 #[instrument(skip_all)]
 fn collect_inputs(
     inputs: Vec<String>,
-    mode: CollectionMode,
-    strict: bool,
-    state: &AuditState,
+    options: &CollectionOptions,
+    gh_client: Option<&Client>,
 ) -> Result<InputRegistry> {
     let mut registry = InputRegistry::new();
 
     for input in inputs.into_iter() {
-        registry.register_group(input, mode, strict, state)?;
+        registry.register_group(input, options, gh_client)?;
     }
 
     if registry.len() == 0 {
@@ -477,23 +503,28 @@ fn run() -> Result<ExitCode> {
         reg.with(indicatif_layer).init();
     }
 
-    let config = Config::new(&app).map_err(|e| {
-        anyhow!(tips(
-            format!("failed to load config: {e:#}"),
-            &[
-                "check your configuration file for errors",
-                "see: https://docs.zizmor.sh/configuration/"
-            ]
-        ))
-    })?;
+    let global_config = Config::global(&app)?;
 
-    let audit_state = AuditState::new(&app, &config)?;
-    let registry = collect_inputs(app.inputs, app.collect, app.strict_collection, &audit_state)?;
+    let gh_client = app
+        .gh_token
+        .map(|token| Client::new(app.gh_hostname, token, app.cache_dir))
+        .transpose()?;
 
-    let audit_registry = AuditRegistry::default_audits(&audit_state)?;
+    let collection_options = CollectionOptions {
+        mode: app.collect,
+        strict: app.strict_collection,
+        no_config: app.no_config,
+        global_config,
+    };
+
+    let registry = collect_inputs(app.inputs, &collection_options, gh_client.as_ref())?;
+
+    let state = AuditState::new(app.no_online_audits, gh_client);
+
+    let audit_registry = AuditRegistry::default_audits(&state)?;
 
     let mut results =
-        FindingRegistry::new(app.min_severity, app.min_confidence, app.persona, &config);
+        FindingRegistry::new(&registry, app.min_severity, app.min_confidence, app.persona);
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");
@@ -504,15 +535,16 @@ fn run() -> Result<ExitCode> {
 
         let _guard = span.enter();
 
-        for (_, input) in registry.iter_inputs() {
+        for (input_key, input) in registry.iter_inputs() {
             Span::current().pb_set_message(input.key().filename());
+            let config = registry.get_config(input_key.group());
             for (name, audit) in audit_registry.iter_audits() {
                 tracing::debug!(
                     "running {name} on {input}",
                     name = name,
                     input = input.key()
                 );
-                results.extend(audit.audit(input).with_context(|| {
+                results.extend(audit.audit(input, config).with_context(|| {
                     format!("{name} failed on {input}", input = input.key().filename())
                 })?);
                 Span::current().pb_inc(1);

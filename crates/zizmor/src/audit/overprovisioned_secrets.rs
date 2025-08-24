@@ -31,6 +31,7 @@ impl Audit for OverprovisionedSecrets {
     fn audit_raw<'doc>(
         &self,
         input: &'doc AuditInput,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 

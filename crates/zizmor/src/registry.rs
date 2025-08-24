@@ -7,9 +7,8 @@ use indexmap::IndexMap;
 
 use crate::{
     audit::{self, Audit, AuditLoadError},
-    config::Config,
     finding::{Confidence, Finding, Persona, Severity},
-    registry::input::InputKey,
+    registry::input::{InputKey, InputRegistry},
     state::AuditState,
     tips,
 };
@@ -110,7 +109,7 @@ impl std::fmt::Debug for AuditRegistry {
 
 /// A registry of all findings discovered during a `zizmor` run.
 pub(crate) struct FindingRegistry<'a> {
-    config: &'a Config,
+    input_registry: &'a InputRegistry,
     minimum_severity: Option<Severity>,
     minimum_confidence: Option<Confidence>,
     persona: Persona,
@@ -122,13 +121,13 @@ pub(crate) struct FindingRegistry<'a> {
 
 impl<'a> FindingRegistry<'a> {
     pub(crate) fn new(
+        input_registry: &'a InputRegistry,
         minimum_severity: Option<Severity>,
         minimum_confidence: Option<Confidence>,
         persona: Persona,
-        config: &'a Config,
     ) -> Self {
         Self {
-            config,
+            input_registry,
             minimum_severity,
             minimum_confidence,
             persona,
@@ -154,7 +153,10 @@ impl<'a> FindingRegistry<'a> {
                 || self
                     .minimum_confidence
                     .is_some_and(|min| min > finding.determinations.confidence)
-                || self.config.ignores(&finding)
+                || self
+                    .input_registry
+                    .get_config(finding.input_group())
+                    .ignores(&finding)
             {
                 self.ignored.push(finding);
             } else {

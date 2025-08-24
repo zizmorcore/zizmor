@@ -10,6 +10,7 @@ use tree_sitter::{
 };
 
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{workflow::JobExt as _, workflow::Step};
@@ -316,7 +317,7 @@ impl GitHubEnv {
 }
 
 impl Audit for GitHubEnv {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -344,7 +345,11 @@ impl Audit for GitHubEnv {
         })
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let workflow = step.workflow();
@@ -395,6 +400,7 @@ impl Audit for GitHubEnv {
     fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
+        _config: &Config,
     ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -426,7 +432,6 @@ impl Audit for GitHubEnv {
 mod tests {
     use crate::audit::Audit;
     use crate::audit::github_env::{GITHUB_ENV_WRITE_CMD, GitHubEnv};
-    use crate::github_api::GitHubHost;
     use crate::state::AuditState;
 
     #[test]
@@ -491,12 +496,7 @@ mod tests {
             ("echo 'completely-static' \"foo\" >> $GITHUB_ENV", false), // LHS is completely static
             ("echo \"completely-static\" >> $GITHUB_ENV", false), // LHS is completely static
         ] {
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
 
             let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 
@@ -607,12 +607,7 @@ mod tests {
                 false,
             ), // GITHUB_ENV is not a variable
         ] {
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
 
             let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 

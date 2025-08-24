@@ -49,7 +49,7 @@ impl RefConfusion {
 }
 
 impl Audit for RefConfusion {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -69,6 +69,7 @@ impl Audit for RefConfusion {
     fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -122,7 +123,11 @@ impl Audit for RefConfusion {
         Ok(findings)
     }
 
-    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+    fn audit_composite_step<'a>(
+        &self,
+        step: &CompositeStep<'a>,
+        _config: &crate::config::Config,
+    ) -> Result<Vec<Finding<'a>>> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {

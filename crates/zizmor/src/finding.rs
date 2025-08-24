@@ -5,7 +5,7 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 use self::location::{Location, SymbolicLocation};
-use crate::{InputKey, models::AsDocument};
+use crate::{InputKey, models::AsDocument, registry::input::Group};
 use yamlpatch::{self, Patch};
 
 pub(crate) mod location;
@@ -186,6 +186,14 @@ impl Finding<'_> {
             .iter()
             .find(|l| l.symbolic.is_primary())
             .unwrap()
+    }
+
+    /// Return the input group for this finding's primary location.
+    ///
+    /// We assume that all locations in a finding belong to the same group,
+    /// if not the same file within that group.
+    pub(crate) fn input_group(&self) -> &Group {
+        self.primary_location().symbolic.key.group()
     }
 }
 
