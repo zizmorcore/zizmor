@@ -5,7 +5,7 @@ use std::{
     str::FromStr as _,
 };
 
-use anyhow::Context as _;
+use anyhow::Context;
 use camino::{Utf8Path, Utf8PathBuf};
 use owo_colors::OwoColorize as _;
 use serde::Serialize;
@@ -327,7 +327,8 @@ impl InputGroup {
     }
 
     fn collect_from_file(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
-        let config = Config::discover(options, || Config::discover_local(path))?;
+        let config = Config::discover(options, || Config::discover_local(path))
+            .with_context(|| format!("failed to discover configuration for {path}"))?;
 
         let mut group = Self::new(config);
 
@@ -352,7 +353,8 @@ impl InputGroup {
     }
 
     fn collect_from_dir(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
-        let config = Config::discover(options, || Config::discover_local(path))?;
+        let config = Config::discover(options, || Config::discover_local(path))
+            .with_context(|| format!("failed to discover configuration for directory {path}"))?;
 
         let mut group = Self::new(config);
 
@@ -439,7 +441,8 @@ impl InputGroup {
             ))
         })?;
 
-        let config = Config::discover(options, || Config::discover_remote(client, &slug))?;
+        let config = Config::discover(options, || Config::discover_remote(client, &slug))
+            .with_context(|| format!("failed to discover configuration for {slug}"))?;
         let mut group = Self::new(config);
 
         if matches!(options.mode, CollectionMode::WorkflowsOnly) {

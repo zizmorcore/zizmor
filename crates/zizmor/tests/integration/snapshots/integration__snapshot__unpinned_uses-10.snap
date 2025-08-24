@@ -4,7 +4,8 @@ expression: "zizmor().expects_failure(true).config(input_under_test(&format!(\"u
 snapshot_kind: text
 ---
 fatal: no audit was performed
-invalid unpinned-uses configuration
+failed to load config file at `@@CONFIG@@`
 
 Caused by:
-    invalid pattern: foo/b*r
+    0: invalid unpinned-uses configuration
+    1: invalid pattern: foo/b*r

@@ -440,7 +440,9 @@ impl Config {
             let contents = fs::read_to_string(path)
                 .with_context(|| format!("failed to read config file at `{path}`"))?;
 
-            Ok(Some(Self::load(&contents)?))
+            Ok(Some(Self::load(&contents).with_context(|| {
+                format!("failed to load config file at `{path}`")
+            })?))
         } else {
             Ok(None)
         }
