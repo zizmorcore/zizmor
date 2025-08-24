@@ -64,6 +64,7 @@ impl Audit for BotConditions {
     fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -404,6 +405,7 @@ impl BotConditions {
 mod tests {
     use super::*;
     use crate::{
+        config::Config,
         finding::Finding,
         models::{AsDocument, workflow::Workflow},
         registry::input::InputKey,
@@ -417,7 +419,7 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
 
             $test_fn(&workflow, findings)
         }};

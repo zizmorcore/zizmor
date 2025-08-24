@@ -12,7 +12,6 @@ use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
-use config::Config;
 use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
 use github_api::{GitHubHost, GitHubToken};
@@ -26,7 +25,7 @@ use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use crate::github_api::Client;
+use crate::{config::Config, github_api::Client};
 
 mod audit;
 mod config;
@@ -520,11 +519,7 @@ fn run() -> Result<ExitCode> {
 
     let registry = collect_inputs(app.inputs, &collection_options, gh_client.as_ref())?;
 
-    let state = AuditState::new(
-        collection_options.global_config,
-        app.no_online_audits,
-        gh_client,
-    );
+    let state = AuditState::new(app.no_online_audits, gh_client);
 
     let audit_registry = AuditRegistry::default_audits(&state)?;
 
@@ -540,15 +535,16 @@ fn run() -> Result<ExitCode> {
 
         let _guard = span.enter();
 
-        for (_, input) in registry.iter_inputs() {
+        for (input_key, input) in registry.iter_inputs() {
             Span::current().pb_set_message(input.key().filename());
+            let config = registry.get_config(input_key.group());
             for (name, audit) in audit_registry.iter_audits() {
                 tracing::debug!(
                     "running {name} on {input}",
                     name = name,
                     input = input.key()
                 );
-                results.extend(audit.audit(input).with_context(|| {
+                results.extend(audit.audit(input, config).with_context(|| {
                     format!("{name} failed on {input}", input = input.key().filename())
                 })?);
                 Span::current().pb_inc(1);

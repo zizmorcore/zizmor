@@ -189,9 +189,9 @@ impl Backend {
 
         let mut registry = FindingRegistry::new(&input_registry, None, None, Persona::Regular);
 
-        for (_, input) in input_registry.iter_inputs() {
+        for (input_key, input) in input_registry.iter_inputs() {
             for (_, audit) in self.audit_registry.iter_audits() {
-                registry.extend(audit.audit(input)?);
+                registry.extend(audit.audit(input, input_registry.get_config(input_key.group()))?);
             }
         }
 

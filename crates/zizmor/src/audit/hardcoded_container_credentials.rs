@@ -28,6 +28,7 @@ impl Audit for HardcodedContainerCredentials {
     fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 

@@ -4,6 +4,7 @@ use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 
 use crate::audit::{Audit, audit_meta};
+use crate::config::Config;
 use crate::finding::location::{Locatable as _, Routable};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
 use crate::models::StepCommon;
@@ -449,7 +450,11 @@ impl Audit for CachePoisoning {
         Ok(Self)
     }
 
-    fn audit_normal_job<'doc>(&self, job: &NormalJob<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_normal_job<'doc>(
+        &self,
+        job: &NormalJob<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
         let steps = job.steps();
         let trigger = &job.parent().on;
@@ -471,7 +476,9 @@ impl Audit for CachePoisoning {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{models::workflow::Workflow, registry::input::InputKey, state::AuditState};
+    use crate::{
+        config::Config, models::workflow::Workflow, registry::input::InputKey, state::AuditState,
+    };
 
     /// Macro for testing workflow audits with common boilerplate
     ///
@@ -488,7 +495,7 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
 
             $test_fn(findings)
         }};

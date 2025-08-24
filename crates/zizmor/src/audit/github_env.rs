@@ -10,6 +10,7 @@ use tree_sitter::{
 };
 
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{workflow::JobExt as _, workflow::Step};
@@ -344,7 +345,11 @@ impl Audit for GitHubEnv {
         })
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let workflow = step.workflow();
@@ -395,6 +400,7 @@ impl Audit for GitHubEnv {
     fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
+        _config: &Config,
     ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 

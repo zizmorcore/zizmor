@@ -101,6 +101,7 @@ impl Audit for UnsoundCondition {
     fn audit_normal_job<'doc>(
         &self,
         job: &crate::models::workflow::NormalJob<'doc>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         self.process_conditions(job.parent(), job.conditions())
     }
@@ -108,6 +109,7 @@ impl Audit for UnsoundCondition {
     fn audit_reusable_job<'doc>(
         &self,
         job: &crate::models::workflow::ReusableWorkflowCallJob<'doc>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let conds = job.r#if.iter().map(|cond| (cond, job.location()));
         self.process_conditions(job.parent(), conds)
@@ -116,6 +118,7 @@ impl Audit for UnsoundCondition {
     fn audit_action<'doc>(
         &self,
         action: &'doc crate::models::action::Action,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         self.process_conditions(action, action.conditions())
     }

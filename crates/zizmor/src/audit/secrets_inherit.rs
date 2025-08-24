@@ -25,6 +25,7 @@ impl Audit for SecretsInherit {
     fn audit_reusable_job<'doc>(
         &self,
         job: &super::ReusableWorkflowCallJob<'doc>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 

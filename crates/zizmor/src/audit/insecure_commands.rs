@@ -9,6 +9,7 @@ use yamlpatch::{Op, Patch};
 
 use super::{AuditLoadError, Job, audit_meta};
 use crate::audit::Audit;
+use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{
     Confidence, Finding, Fix, FixDisposition, Persona, Severity, location::SymbolicLocation,
@@ -124,7 +125,11 @@ impl Audit for InsecureCommands {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_workflow<'doc>(
+        &self,
+        workflow: &'doc Workflow,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut results = vec![];
 
         match &workflow.env {
@@ -161,6 +166,7 @@ impl Audit for InsecureCommands {
     fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
+        _config: &Config,
     ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -187,6 +193,7 @@ impl Audit for InsecureCommands {
 mod tests {
     use super::*;
     use crate::{
+        config::Config,
         models::{AsDocument, workflow::Workflow},
         registry::input::InputKey,
         state::AuditState,
@@ -199,7 +206,7 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
 
             $test_fn(&workflow, findings)
         }};

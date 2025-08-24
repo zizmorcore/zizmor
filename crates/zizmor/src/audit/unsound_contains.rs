@@ -43,6 +43,7 @@ impl Audit for UnsoundContains {
     fn audit_normal_job<'w>(
         &self,
         job: &super::NormalJob<'w>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<super::Finding<'w>>> {
         let conditions = job.conditions().filter_map(|(cond, loc)| {
             if let If::Expr(expr) = cond {

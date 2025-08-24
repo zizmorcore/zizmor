@@ -27,6 +27,7 @@ use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
+    config::Config,
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
         location::{Routable as _, SymbolicLocation},
@@ -606,13 +607,18 @@ impl Audit for TemplateInjection {
         Ok(Self)
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 
     fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
+        _config: &Config,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
         self.process_step(step)
     }
@@ -624,6 +630,7 @@ mod tests {
 
     use crate::audit::Audit;
     use crate::audit::template_injection::{Capability, TemplateInjection};
+    use crate::config::Config;
     use crate::models::AsDocument;
     use crate::models::workflow::Workflow;
     use crate::registry::input::InputKey;
@@ -636,7 +643,7 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
 
             $test_fn(&workflow, findings)
         }};

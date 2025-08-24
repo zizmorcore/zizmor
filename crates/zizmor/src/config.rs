@@ -1,14 +1,21 @@
 use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
-use anyhow::{Context as _, Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use camino::Utf8Path;
+use github_actions_models::common::RepositoryUses;
 use serde::{
     Deserialize,
     de::{self, DeserializeOwned},
 };
 
 use crate::{
-    App, CollectionOptions, finding::Finding, github_api::Client, registry::input::RepoSlug, tips,
+    App, CollectionOptions,
+    audit::{AuditCore, forbidden_uses::ForbiddenUses, unpinned_uses::UnpinnedUses},
+    finding::Finding,
+    github_api::Client,
+    models::uses::RepositoryUsesPattern,
+    registry::input::RepoSlug,
+    tips,
 };
 
 const CONFIG_CANDIDATES: &[&str] = &[".github/zizmor.yml", "zizmor.yml"];
@@ -79,14 +86,17 @@ pub(crate) struct AuditRuleConfig {
     config: Option<serde_yaml::Mapping>,
 }
 
-/// Runtime configuration, corresponding to a `zizmor.yml` file.
+/// Data model for zizmor's configuration file.
+///
+/// This is a "raw" representation that matches exactly what
+/// we parse from a `zizmor.yml` file.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct Config {
+struct RawConfig {
     rules: HashMap<String, AuditRuleConfig>,
 }
 
-impl Config {
+impl RawConfig {
     fn load(contents: &str) -> Result<Self> {
         serde_yaml::from_str(contents).map_err(|e| {
             anyhow!(tips(
@@ -96,6 +106,232 @@ impl Config {
                     "see: https://docs.zizmor.sh/configuration/"
                 ]
             ))
+        })
+    }
+
+    fn rule_config<T>(&self, ident: &str) -> Result<Option<T>>
+    where
+        T: DeserializeOwned,
+    {
+        Ok(self
+            .rules
+            .get(ident)
+            .and_then(|rule_config| rule_config.config.as_ref())
+            .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
+            .transpose()?)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case", untagged)]
+pub(crate) enum ForbiddenUsesConfig {
+    Allow { allow: Vec<RepositoryUsesPattern> },
+    Deny { deny: Vec<RepositoryUsesPattern> },
+}
+
+/// Config for the `unpinned-uses` rule.
+///
+/// This configuration is reified into an `UnpinnedUsesPolicies`.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub(crate) struct UnpinnedUsesConfig {
+    /// A mapping of `uses:` patterns to policies.
+    policies: HashMap<RepositoryUsesPattern, UsesPolicy>,
+}
+
+/// A singular policy for a `uses:` reference.
+#[derive(Copy, Clone, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum UsesPolicy {
+    /// No policy; all `uses:` references are allowed, even unpinned ones.
+    Any,
+    /// `uses:` references must be pinned to a tag, branch, or hash ref.
+    RefPin,
+    /// `uses:` references must be pinned to a hash ref.
+    HashPin,
+}
+
+/// Represents the set of policies used to evaluate `uses:` references.
+#[derive(Clone, Debug)]
+pub(crate) struct UnpinnedUsesPolicies {
+    /// The policy tree is a mapping of `owner` slugs to a list of
+    /// `(pattern, policy)` pairs under that owner, ordered by specificity.
+    ///
+    /// For example, a config containing both `foo/*: hash-pin` and
+    /// `foo/bar: ref-pin` would produce a policy tree like this:
+    ///
+    /// ```text
+    /// foo:
+    ///   - foo/bar: ref-pin
+    ///   - foo/*: hash-pin
+    /// ```
+    ///
+    /// This is done for performance reasons: a two-level structure here
+    /// means that checking a `uses:` is a linear scan of the policies
+    /// for that owner, rather than a full scan of all policies.
+    policy_tree: HashMap<String, Vec<(RepositoryUsesPattern, UsesPolicy)>>,
+
+    /// This is the policy that's applied if nothing in the policy tree matches.
+    ///
+    /// Normally is this configured by an `*` entry in the config or by
+    /// `UnpinnedUsesConfig::default()`. However, if the user explicitly
+    /// omits a `*` rule, this will be `UsesPolicy::HashPin`.
+    default_policy: UsesPolicy,
+}
+
+impl UnpinnedUsesPolicies {
+    /// Returns the most specific policy for the given repository `uses` reference,
+    /// or the default policy if none match.
+    pub(crate) fn get_policy(
+        &self,
+        uses: &RepositoryUses,
+    ) -> (Option<&RepositoryUsesPattern>, UsesPolicy) {
+        match self.policy_tree.get(&uses.owner) {
+            Some(policies) => {
+                // Policies are ordered by specificity, so we can
+                // iterate and return eagerly.
+                for (uses_pattern, policy) in policies {
+                    if uses_pattern.matches(uses) {
+                        return (Some(uses_pattern), *policy);
+                    }
+                }
+                // The policies under `owner/` might be fully divergent
+                // if there isn't an `owner/*` rule, so we fall back
+                // to the default policy.
+                (None, self.default_policy)
+            }
+            None => (None, self.default_policy),
+        }
+    }
+}
+
+impl Default for UnpinnedUsesPolicies {
+    fn default() -> Self {
+        Self {
+            policy_tree: [
+                (
+                    "actions".into(),
+                    vec![(
+                        RepositoryUsesPattern::InOwner("actions".into()),
+                        UsesPolicy::RefPin,
+                    )],
+                ),
+                (
+                    "github".into(),
+                    vec![(
+                        RepositoryUsesPattern::InOwner("github".into()),
+                        UsesPolicy::RefPin,
+                    )],
+                ),
+                (
+                    "dependabot".into(),
+                    vec![(
+                        RepositoryUsesPattern::InOwner("dependabot".into()),
+                        UsesPolicy::RefPin,
+                    )],
+                ),
+            ]
+            .into(),
+            default_policy: UsesPolicy::HashPin,
+        }
+    }
+}
+
+impl TryFrom<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
+    type Error = anyhow::Error;
+
+    fn try_from(config: UnpinnedUsesConfig) -> Result<Self, Self::Error> {
+        let mut policy_tree: HashMap<String, Vec<(RepositoryUsesPattern, UsesPolicy)>> =
+            HashMap::new();
+        let mut default_policy = UsesPolicy::HashPin;
+
+        for (pattern, policy) in config.policies {
+            match pattern {
+                // Patterns with refs don't make sense in this context, since
+                // we're establishing policies for the refs themselves.
+                RepositoryUsesPattern::ExactWithRef { .. } => {
+                    return Err(anyhow::anyhow!("can't use exact ref patterns here"));
+                }
+                RepositoryUsesPattern::ExactPath { ref owner, .. } => {
+                    policy_tree
+                        .entry(owner.clone())
+                        .or_default()
+                        .push((pattern, policy));
+                }
+                RepositoryUsesPattern::ExactRepo { ref owner, .. } => {
+                    policy_tree
+                        .entry(owner.clone())
+                        .or_default()
+                        .push((pattern, policy));
+                }
+                RepositoryUsesPattern::InRepo { ref owner, .. } => {
+                    policy_tree
+                        .entry(owner.clone())
+                        .or_default()
+                        .push((pattern, policy));
+                }
+                RepositoryUsesPattern::InOwner(ref owner) => {
+                    policy_tree
+                        .entry(owner.clone())
+                        .or_default()
+                        .push((pattern, policy));
+                }
+                RepositoryUsesPattern::Any => {
+                    default_policy = policy;
+                }
+            }
+        }
+
+        // Sort the policies for each owner by specificity.
+        for policies in policy_tree.values_mut() {
+            policies.sort_by(|a, b| a.0.cmp(&b.0));
+        }
+
+        Ok(Self {
+            policy_tree,
+            default_policy,
+        })
+    }
+}
+
+/// zizmor's configuration.
+///
+/// This is a wrapper around [`RawConfig`] that pre-computes various
+/// audit-specific fields so that failures are caught up-front
+/// rather than at audit time. This also saves us some runtime
+/// cost by avoiding potentially (very) repetitive deserialization
+/// of per-audit configs (K audits * N inputs).
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Config {
+    raw: RawConfig,
+    pub(crate) forbidden_uses_config: Option<ForbiddenUsesConfig>,
+    pub(crate) unpinned_uses_policies: UnpinnedUsesPolicies,
+}
+
+impl Config {
+    fn load(contents: &str) -> Result<Self> {
+        let raw = RawConfig::load(contents)?;
+
+        let forbidden_uses_config = raw
+            .rule_config(ForbiddenUses::ident())
+            .context("invalid forbidden-uses configuration")?;
+
+        let unpinned_uses_policies = {
+            if let Some(unpinned_uses_config) = raw
+                .rule_config::<UnpinnedUsesConfig>(UnpinnedUses::ident())
+                .context("invalid unpinned-uses configuration")?
+            {
+                UnpinnedUsesPolicies::try_from(unpinned_uses_config)
+                    .context("invalid unpinned-uses configuration")?
+            } else {
+                UnpinnedUsesPolicies::default()
+            }
+        };
+
+        Ok(Self {
+            raw,
+            forbidden_uses_config,
+            unpinned_uses_policies,
         })
     }
 
@@ -127,7 +363,7 @@ impl Config {
     {
         if options.no_config {
             // User has explicitly disabled config loading.
-            Ok(Config::default())
+            Ok(Self::default())
         } else if let Some(config) = &options.global_config {
             // The user gave us a (legacy) global config file,
             // which takes precedence over any discovered config.
@@ -213,7 +449,7 @@ impl Config {
     /// Returns `true` if this [`Config`] has an ignore rule for the
     /// given finding.
     pub(crate) fn ignores(&self, finding: &Finding<'_>) -> bool {
-        let Some(rule_config) = self.rules.get(finding.ident) else {
+        let Some(rule_config) = self.raw.rules.get(finding.ident) else {
             return false;
         };
 
@@ -258,18 +494,6 @@ impl Config {
         }
 
         false
-    }
-
-    pub(crate) fn rule_config<T>(&self, ident: &str) -> Result<Option<T>>
-    where
-        T: DeserializeOwned,
-    {
-        Ok(self
-            .rules
-            .get(ident)
-            .and_then(|rule_config| rule_config.config.as_ref())
-            .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
-            .transpose()?)
     }
 }
 
