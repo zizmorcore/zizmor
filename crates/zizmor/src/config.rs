@@ -309,6 +309,7 @@ pub(crate) struct Config {
 }
 
 impl Config {
+    /// Loads a [`Config`] from the given contents.
     fn load(contents: &str) -> Result<Self> {
         let raw = RawConfig::load(contents)?;
 
@@ -335,6 +336,7 @@ impl Config {
         })
     }
 
+    /// Discover a [`Config`] in the given directory.
     fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>> {
         for candidate in CONFIG_CANDIDATES {
             let candidate_path = path.join(candidate);
