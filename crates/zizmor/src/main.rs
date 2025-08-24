@@ -514,7 +514,7 @@ fn run() -> Result<ExitCode> {
         mode: app.collect,
         strict: app.strict_collection,
         no_config: app.no_config,
-        global_config: global_config,
+        global_config,
     };
 
     let registry = collect_inputs(app.inputs, &collection_options, gh_client.as_ref())?;
