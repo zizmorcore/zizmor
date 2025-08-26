@@ -29,3 +29,31 @@ fn test_ignores_config_in_root() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Ensures we correctly discover a configuration file in a `.github`
+/// subdirectory of a given input directory, i.e.
+/// `config-in-dotgithub/.github/zizmor.yml` in this case.
+#[test]
+fn test_discovers_config_in_dotgithub() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("config-scenarios/config-in-dotgithub"))
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Ensures we ignore a configuration file in a `.github` subdirectory
+/// of a given input directory when `--no-config` is specified.
+#[test]
+fn test_ignores_config_in_dotgithub() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .no_config(true)
+            .input(input_under_test("config-scenarios/config-in-dotgithub"))
+            .run()?
+    );
+
+    Ok(())
+}
