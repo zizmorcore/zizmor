@@ -6,7 +6,7 @@ build-backend = "maturin"
 # `uv run --only-group docs` from failing.
 [project]
 name = "zizmor"
-dynamic = ["version"]
+dynamic = ["version", "readme"]
 # Arbitrarily set to the oldest non-EOL Python.
 requires-python = ">=3.9"
 
