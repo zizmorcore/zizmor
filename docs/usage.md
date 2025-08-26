@@ -693,7 +693,7 @@ zizmor --config my-zizmor-config.yml /dir/to/audit
     `ZIZMOR_CONFIG=my-config.yml` is equivalent to
     `--config my-config.yml`.
 
-[will discover it]: ./configuration.md#precedence
+[will discover it]: ./configuration.md#discovery
 
 See [Configuration: `rules.<id>.ignore`](./configuration.md#rulesidignore) for
 more details on writing ignore rules.
