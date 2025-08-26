@@ -9,6 +9,38 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* `zizmor`'s configuration discovery behavior has been significantly refactored,
+  making it easier to audit multiple independent inputs with their own
+  configuration files (#1094)
+
+    For most users, this change should cause no compatibility issues.
+    For example, the following commands will continue to load the same
+    configuration files as before:
+
+    ```sh
+    zizmor .
+    zizmor .github/
+    ```
+
+    For other users, the behavior will change, but in a way that's intended
+    to correct a long-standing bug with configuration discovery.
+    In particular, the following commands will now behave differently:
+
+    ```sh
+    # OLD: would discover config in $CWD
+    # NEW: will discover two different configs, one in each of the repos
+    zizmor ./repoA ./repoB
+    ```
+
+    Separately from these changes, `zizmor` continues to support
+    `--config <path>` and `ZIZMOR_CONFIG` with the exact same behavior as
+    before.
+
+    See [Configuration - Discovery](./configuration.md#discovery) for a
+    detailed explanation of the new behavior.
+
 ## 1.12.1
 
 ### Bug Fixes 🐛
