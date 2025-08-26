@@ -36,6 +36,7 @@ pub struct Zizmor {
     offline: bool,
     inputs: Vec<String>,
     config: Option<String>,
+    no_config: bool,
     output: OutputMode,
     expects_failure: bool,
 }
@@ -51,6 +52,7 @@ impl Zizmor {
             offline: true,
             inputs: vec![],
             config: None,
+            no_config: false,
             output: OutputMode::Stdout,
             expects_failure: false,
         }
@@ -78,6 +80,11 @@ impl Zizmor {
 
     pub fn config(mut self, config: impl Into<String>) -> Self {
         self.config = Some(config.into());
+        self
+    }
+
+    pub fn no_config(mut self, flag: bool) -> Self {
+        self.no_config = flag;
         self
     }
 
@@ -113,10 +120,16 @@ impl Zizmor {
             std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
         }
 
+        if self.no_config && self.config.is_some() {
+            anyhow::bail!("API misuse: cannot set both --no-config and --config");
+        }
+
+        if self.no_config {
+            self.cmd.arg("--no-config");
+        }
+
         if let Some(config) = &self.config {
             self.cmd.arg("--config").arg(config);
-        } else {
-            self.cmd.arg("--no-config");
         }
 
         for input in &self.inputs {

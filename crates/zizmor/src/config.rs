@@ -464,6 +464,9 @@ impl Config {
         // This will hopefully minimize confusion when a finding spans
         // multiple files, as the first location is the one a user will
         // typically ignore, suppressing the rest in the process.
+        // TODO: This needs to filter on something other than filename,
+        // since that doesn't work for action definitions (which are
+        // all `action.yml`).
         for loc in &finding.locations {
             for rule in ignores
                 .iter()
