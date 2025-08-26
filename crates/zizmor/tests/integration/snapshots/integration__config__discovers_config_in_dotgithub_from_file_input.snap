@@ -1,0 +1,6 @@
+---
+source: crates/zizmor/tests/integration/config.rs
+expression: "zizmor().input(input_under_test(\"config-scenarios/config-in-dotgithub/.github/workflows/hackme.yml\")).run()?"
+snapshot_kind: text
+---
+No findings to report. Good job! (1 ignored, 1 suppressed)
