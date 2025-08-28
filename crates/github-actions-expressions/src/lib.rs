@@ -52,6 +52,147 @@ pub struct Call<'src> {
     pub args: Vec<SpannedExpr<'src>>,
 }
 
+impl<'src> Call<'src> {
+    /// Performs constant evaluation of a GitHub Actions expression
+    /// function call.
+    fn consteval(&self) -> Option<Evaluation> {
+        let args = self
+            .args
+            .iter()
+            .map(|arg| arg.consteval())
+            .collect::<Option<Vec<Evaluation>>>()?;
+
+        match &self.func {
+            f if f == "format" => Self::consteval_format(&args),
+            f if f == "contains" => Self::consteval_contains(&args),
+            f if f == "startsWith" => Self::consteval_startswith(&args),
+            f if f == "endsWith" => Self::consteval_endswith(&args),
+            f if f == "toJSON" => Self::consteval_tojson(&args),
+            f if f == "fromJSON" => Self::consteval_fromjson(&args),
+            _ => None,
+        }
+    }
+
+    /// Constant-evaluates a `format(fmtspec, args...)` call.
+    ///
+    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/format.ts>
+    fn consteval_format(args: &[Evaluation]) -> Option<Evaluation> {
+        if args.is_empty() {
+            return None;
+        }
+
+        let format_str = &args[0];
+        let format_template = format_str.to_string();
+
+        let mut result = format_template;
+
+        // Replace {0}, {1}, {2}, etc. with the corresponding arguments
+        for (i, arg) in args.iter().skip(1).enumerate() {
+            let placeholder = format!("{{{}}}", i);
+            result = result.replace(&placeholder, &arg.to_string());
+        }
+
+        Some(Evaluation::String(result))
+    }
+
+    /// Constant-evaluates a `contains(haystack, needle)` call.
+    ///
+    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/contains.ts>
+    fn consteval_contains(args: &[Evaluation]) -> Option<Evaluation> {
+        if args.len() != 2 {
+            return None;
+        }
+
+        let haystack = args[0].to_string();
+        let needle = args[1].to_string();
+
+        Some(Evaluation::Boolean(haystack.contains(&needle)))
+    }
+
+    /// Constant-evaluates a `startsWith(string, prefix)` call.
+    ///
+    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/startswith.ts>
+    fn consteval_startswith(args: &[Evaluation]) -> Option<Evaluation> {
+        if args.len() != 2 {
+            return None;
+        }
+
+        let string = args[0].to_string();
+        let prefix = args[1].to_string();
+
+        Some(Evaluation::Boolean(string.starts_with(&prefix)))
+    }
+
+    /// Constant-evaluates an `endsWith(string, suffix)` call.
+    ///
+    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/endswith.ts>
+    fn consteval_endswith(args: &[Evaluation]) -> Option<Evaluation> {
+        if args.len() != 2 {
+            return None;
+        }
+
+        let string = args[0].to_string();
+        let suffix = args[1].to_string();
+
+        Some(Evaluation::Boolean(string.ends_with(&suffix)))
+    }
+
+    /// Constant-evaluates a `toJSON(value)` call.
+    ///
+    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/tojson.ts>
+    fn consteval_tojson(args: &[Evaluation]) -> Option<Evaluation> {
+        if args.len() != 1 {
+            return None;
+        }
+
+        let value = &args[0];
+
+        let json_str = match value {
+            Evaluation::String(s) => {
+                format!("\"{}\"", s.replace('\\', "\\\\").replace('\"', "\\\""))
+            }
+            Evaluation::Number(n) => n.to_string(),
+            Evaluation::Boolean(b) => b.to_string(),
+            Evaluation::Null => "null".to_string(),
+        };
+
+        Some(Evaluation::String(json_str))
+    }
+
+    /// Constant-evaluates a `fromJSON(json_string)` call.
+    ///
+    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/fromjson.ts>
+    fn consteval_fromjson(args: &[Evaluation]) -> Option<Evaluation> {
+        if args.len() != 1 {
+            return None;
+        }
+
+        let json_str = args[0].to_string();
+
+        // Simple JSON parsing for basic literals
+        match json_str.trim() {
+            "null" => Some(Evaluation::Null),
+            "true" => Some(Evaluation::Boolean(true)),
+            "false" => Some(Evaluation::Boolean(false)),
+            s if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 => {
+                // Simple string unescaping
+                let unescaped = &s[1..s.len() - 1]
+                    .replace("\\\"", "\"")
+                    .replace("\\\\", "\\");
+                Some(Evaluation::String(unescaped.to_string()))
+            }
+            s => {
+                // Try to parse as number
+                if let Ok(n) = s.parse::<f64>() {
+                    Some(Evaluation::Number(n))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
 /// Represents a single identifier in a GitHub Actions expression,
 /// i.e. a single context component.
 ///
@@ -842,7 +983,7 @@ impl<'src> Expr<'src> {
                 }
             }
 
-            Expr::Call(Call { func, args }) => Self::evaluate_function_call(func, args),
+            Expr::Call(call) => call.consteval(),
 
             // Non-constant expressions
             _ => None,
@@ -859,133 +1000,6 @@ impl<'src> Expr<'src> {
 
             // Type coercion rules - convert to string and compare
             (a, b) => a.to_string() == b.to_string(),
-        }
-    }
-
-    /// Evaluates a function call if it's one of the supported constant-reducible functions.
-    fn evaluate_function_call(func: &Function, args: &[SpannedExpr]) -> Option<Evaluation> {
-        match func {
-            f if f == "format" => Self::eval_format_function(args),
-            f if f == "contains" => Self::eval_contains_function(args),
-            f if f == "startsWith" => Self::eval_starts_with_function(args),
-            f if f == "endsWith" => Self::eval_ends_with_function(args),
-            f if f == "toJSON" => Self::eval_to_json_function(args),
-            f if f == "fromJSON" => Self::eval_from_json_function(args),
-            _ => None,
-        }
-    }
-
-    /// Evaluates the `format()` function following GitHub Actions semantics.
-    /// format(format_string, arg1, arg2, ...)
-    fn eval_format_function(args: &[SpannedExpr]) -> Option<Evaluation> {
-        if args.is_empty() {
-            return None;
-        }
-
-        let format_str = args[0].consteval()?;
-        let format_template = format_str.to_string();
-
-        let mut result = format_template;
-
-        // Replace {0}, {1}, {2}, etc. with the corresponding arguments
-        for (i, arg) in args.iter().skip(1).enumerate() {
-            let arg_val = arg.consteval()?;
-            let placeholder = format!("{{{}}}", i);
-            result = result.replace(&placeholder, &arg_val.to_string());
-        }
-
-        Some(Evaluation::String(result))
-    }
-
-    /// Evaluates the `contains()` function.
-    /// contains(search_string, search_value)
-    fn eval_contains_function(args: &[SpannedExpr]) -> Option<Evaluation> {
-        if args.len() != 2 {
-            return None;
-        }
-
-        let haystack = args[0].consteval()?.to_string();
-        let needle = args[1].consteval()?.to_string();
-
-        Some(Evaluation::Boolean(haystack.contains(&needle)))
-    }
-
-    /// Evaluates the `startsWith()` function.
-    /// startsWith(search_string, search_value)
-    fn eval_starts_with_function(args: &[SpannedExpr]) -> Option<Evaluation> {
-        if args.len() != 2 {
-            return None;
-        }
-
-        let string = args[0].consteval()?.to_string();
-        let prefix = args[1].consteval()?.to_string();
-
-        Some(Evaluation::Boolean(string.starts_with(&prefix)))
-    }
-
-    /// Evaluates the `endsWith()` function.
-    /// endsWith(search_string, search_value)
-    fn eval_ends_with_function(args: &[SpannedExpr]) -> Option<Evaluation> {
-        if args.len() != 2 {
-            return None;
-        }
-
-        let string = args[0].consteval()?.to_string();
-        let suffix = args[1].consteval()?.to_string();
-
-        Some(Evaluation::Boolean(string.ends_with(&suffix)))
-    }
-
-    /// Evaluates the `toJSON()` function.
-    /// toJSON(value) - converts value to JSON string
-    fn eval_to_json_function(args: &[SpannedExpr]) -> Option<Evaluation> {
-        if args.len() != 1 {
-            return None;
-        }
-
-        let value = args[0].consteval()?;
-
-        let json_str = match value {
-            Evaluation::String(s) => {
-                format!("\"{}\"", s.replace('\\', "\\\\").replace('\"', "\\\""))
-            }
-            Evaluation::Number(n) => n.to_string(),
-            Evaluation::Boolean(b) => b.to_string(),
-            Evaluation::Null => "null".to_string(),
-        };
-
-        Some(Evaluation::String(json_str))
-    }
-
-    /// Evaluates the `fromJSON()` function.
-    /// fromJSON(json_string) - parses JSON string (limited support for constants)
-    fn eval_from_json_function(args: &[SpannedExpr]) -> Option<Evaluation> {
-        if args.len() != 1 {
-            return None;
-        }
-
-        let json_str = args[0].consteval()?.to_string();
-
-        // Simple JSON parsing for basic literals
-        match json_str.trim() {
-            "null" => Some(Evaluation::Null),
-            "true" => Some(Evaluation::Boolean(true)),
-            "false" => Some(Evaluation::Boolean(false)),
-            s if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 => {
-                // Simple string unescaping
-                let unescaped = &s[1..s.len() - 1]
-                    .replace("\\\"", "\"")
-                    .replace("\\\\", "\\");
-                Some(Evaluation::String(unescaped.to_string()))
-            }
-            s => {
-                // Try to parse as number
-                if let Ok(n) = s.parse::<f64>() {
-                    Some(Evaluation::Number(n))
-                } else {
-                    None
-                }
-            }
         }
     }
 }
