@@ -121,7 +121,7 @@ impl Obfuscation {
 
     /// Evaluates a constant-reducible expression and formats it for GitHub Actions.
     fn evaluate_constant_expr(&self, expr: &SpannedExpr) -> Option<String> {
-        expr.evaluate_constant().map(|result| {
+        expr.consteval().map(|result| {
             // For GitHub Actions replacements, we need to format the result appropriately
             match result {
                 Evaluation::String(s) => s,
@@ -341,21 +341,21 @@ mod tests {
     use super::*;
     use crate::audit::Audit;
     use crate::models::{AsDocument, workflow::Workflow};
-    use crate::registry::InputKey;
+    use crate::registry::input::InputKey;
     use crate::state::AuditState;
 
     /// Helper function to apply a fix and return the result for snapshot testing
     fn apply_fix_for_snapshot(workflow_content: &str, _audit_name: &str) -> String {
-        let key = InputKey::local("test.yml", None::<&str>).unwrap();
+        let key = InputKey::local("dummy".into(), "test.yml", None::<&str>).unwrap();
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let audit_state = AuditState {
-            config: &Default::default(),
             no_online_audits: false,
             gh_client: None,
-            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".into()),
         };
         let audit = Obfuscation::new(&audit_state).unwrap();
-        let findings = audit.audit_workflow(&workflow).unwrap();
+        let findings = audit
+            .audit_workflow(&workflow, &Default::default())
+            .unwrap();
 
         assert!(!findings.is_empty(), "Expected findings but got none");
 

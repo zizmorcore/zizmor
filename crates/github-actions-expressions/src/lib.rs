@@ -129,6 +129,16 @@ impl<'src> Literal<'src> {
             Literal::Null => Cow::Borrowed("null"),
         }
     }
+
+    /// Returns the trivial constant evaluation of the literal.
+    fn consteval(&self) -> Evaluation {
+        match self {
+            Literal::String(s) => Evaluation::String(s.to_string()),
+            Literal::Number(n) => Evaluation::Number(*n),
+            Literal::Boolean(b) => Evaluation::Boolean(*b),
+            Literal::Null => Evaluation::Null,
+        }
+    }
 }
 
 /// Represents the origin of an expression, including its source span
@@ -677,7 +687,7 @@ impl From<bool> for Expr<'_> {
 /// The result of evaluating a GitHub Actions expression.
 ///
 /// This type represents the possible values that can result from evaluating
-/// constant-reducible GitHub Actions expressions.
+/// GitHub Actions expressions.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Evaluation {
     /// A string value (includes both string literals and stringified other types)
@@ -748,7 +758,7 @@ impl std::fmt::Display for Evaluation {
     }
 }
 
-impl<'src> SpannedExpr<'src> {
+impl<'src> Expr<'src> {
     /// Evaluates a constant-reducible expression to its literal value.
     ///
     /// Returns `Some(Evaluation)` if the expression can be constant-evaluated,
@@ -764,42 +774,20 @@ impl<'src> SpannedExpr<'src> {
     /// use github_actions_expressions::{Expr, Evaluation};
     ///
     /// let expr = Expr::parse("'hello'").unwrap();
-    /// let result = expr.evaluate_constant().unwrap();
+    /// let result = expr.consteval().unwrap();
     /// assert_eq!(result.to_string(), "hello");
     ///
     /// let expr = Expr::parse("true && false").unwrap();
-    /// let result = expr.evaluate_constant().unwrap();
+    /// let result = expr.consteval().unwrap();
     /// assert_eq!(result, Evaluation::Boolean(false));
     /// ```
-    pub fn evaluate_constant(&self) -> Option<Evaluation> {
-        self.inner.evaluate_constant()
-    }
-}
-
-impl<'src> Expr<'src> {
-    /// Evaluates a constant-reducible expression to its literal value.
-    ///
-    /// This is the core implementation of GitHub Actions expression evaluation
-    /// for constant-reducible expressions. It handles:
-    ///
-    /// - Literals (strings, numbers, booleans, null)
-    /// - Binary operations (&&, ||, ==, !=, <, <=, >, >=)
-    /// - Unary operations (!)
-    /// - Function calls (format, contains, startsWith, endsWith, toJSON, fromJSON)
-    ///
-    /// The implementation follows GitHub's official evaluation semantics.
-    pub fn evaluate_constant(&self) -> Option<Evaluation> {
+    pub fn consteval(&self) -> Option<Evaluation> {
         match self {
-            Expr::Literal(literal) => Some(match literal {
-                Literal::String(s) => Evaluation::String(s.to_string()),
-                Literal::Number(n) => Evaluation::Number(*n),
-                Literal::Boolean(b) => Evaluation::Boolean(*b),
-                Literal::Null => Evaluation::Null,
-            }),
+            Expr::Literal(literal) => Some(literal.consteval()),
 
             Expr::BinOp { lhs, op, rhs } => {
-                let lhs_val = lhs.evaluate_constant()?;
-                let rhs_val = rhs.evaluate_constant()?;
+                let lhs_val = lhs.consteval()?;
+                let rhs_val = rhs.consteval()?;
 
                 match op {
                     BinOp::And => {
@@ -844,7 +832,7 @@ impl<'src> Expr<'src> {
             }
 
             Expr::UnOp { op, expr } => {
-                let val = expr.evaluate_constant()?;
+                let val = expr.consteval()?;
                 match op {
                     UnOp::Not => Some(Evaluation::Boolean(!val.as_boolean())),
                 }
@@ -890,14 +878,14 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let format_str = args[0].evaluate_constant()?;
+        let format_str = args[0].consteval()?;
         let format_template = format_str.to_string();
 
         let mut result = format_template;
 
         // Replace {0}, {1}, {2}, etc. with the corresponding arguments
         for (i, arg) in args.iter().skip(1).enumerate() {
-            let arg_val = arg.evaluate_constant()?;
+            let arg_val = arg.consteval()?;
             let placeholder = format!("{{{}}}", i);
             result = result.replace(&placeholder, &arg_val.to_string());
         }
@@ -912,8 +900,8 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let haystack = args[0].evaluate_constant()?.to_string();
-        let needle = args[1].evaluate_constant()?.to_string();
+        let haystack = args[0].consteval()?.to_string();
+        let needle = args[1].consteval()?.to_string();
 
         Some(Evaluation::Boolean(haystack.contains(&needle)))
     }
@@ -925,8 +913,8 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let string = args[0].evaluate_constant()?.to_string();
-        let prefix = args[1].evaluate_constant()?.to_string();
+        let string = args[0].consteval()?.to_string();
+        let prefix = args[1].consteval()?.to_string();
 
         Some(Evaluation::Boolean(string.starts_with(&prefix)))
     }
@@ -938,8 +926,8 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let string = args[0].evaluate_constant()?.to_string();
-        let suffix = args[1].evaluate_constant()?.to_string();
+        let string = args[0].consteval()?.to_string();
+        let suffix = args[1].consteval()?.to_string();
 
         Some(Evaluation::Boolean(string.ends_with(&suffix)))
     }
@@ -951,7 +939,7 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let value = args[0].evaluate_constant()?;
+        let value = args[0].consteval()?;
 
         let json_str = match value {
             Evaluation::String(s) => {
@@ -972,7 +960,7 @@ impl<'src> Expr<'src> {
             return None;
         }
 
-        let json_str = args[0].evaluate_constant()?.to_string();
+        let json_str = args[0].consteval()?.to_string();
 
         // Simple JSON parsing for basic literals
         match json_str.trim() {
@@ -1565,7 +1553,7 @@ mod tests {
 
         for (expr_str, expected) in test_cases {
             let expr = Expr::parse(expr_str)?;
-            let result = expr.evaluate_constant().unwrap();
+            let result = expr.consteval().unwrap();
             assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
         }
 
@@ -1610,7 +1598,7 @@ mod tests {
 
         for (expr_str, expected) in test_cases {
             let expr = Expr::parse(expr_str)?;
-            let result = expr.evaluate_constant().unwrap();
+            let result = expr.consteval().unwrap();
             assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
         }
 
@@ -1682,7 +1670,7 @@ mod tests {
 
         for (expr_str, expected) in test_cases {
             let expr = Expr::parse(expr_str)?;
-            let result = expr.evaluate_constant().unwrap();
+            let result = expr.consteval().unwrap();
             assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
         }
 
@@ -1714,7 +1702,7 @@ mod tests {
 
         for (expr_str, expected) in test_cases {
             let expr = Expr::parse(expr_str)?;
-            let result = expr.evaluate_constant().unwrap();
+            let result = expr.consteval().unwrap();
             assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
         }
 
@@ -1787,7 +1775,7 @@ mod tests {
 
         for (expr_str, expected) in test_cases {
             let expr = Expr::parse(expr_str)?;
-            let result = expr.evaluate_constant().unwrap();
+            let result = expr.consteval().unwrap();
             assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
         }
 
