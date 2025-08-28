@@ -38,12 +38,20 @@ typically named `zizmor.yml`.
    looks for configuration files *for each given input*. The rules for this
    discovery are as follows:
 
-    * File inputs (e.g. `zizmor path/to/workflow.yml`): `zizmor` looks for
-      a `zizmor.yml` or `.github/zizmor.yml` in every *grandparent* directory of
-      the input file.
+    * File inputs (e.g. `zizmor path/to/workflow.yml`): `zizmor` performs
+      directory discovery starting in the directory containing the given file.
 
     * Directory inputs (e.g. `zizmor .`): `zizmor` looks for a `zizmor.yml` or
-      `.github/zizmor.yml` in the given directory.
+      `.github/zizmor.yml` in the given directory or any parent, up to the
+      filesystem root or the first `.git` directory.
+
+        !!! note
+
+            `zizmor .github/workflows/` is a special case: in this case,
+            discovery starts in `.github/`, the parent of the given directory.
+
+            This is done to avoid confusion between a `zizmor.yml` config
+            file and a `zizmor.yml` workflow file.
 
     * Remote repository inputs (e.g. `zizmor owner/repo`): `zizmor` looks for
       a `zizmor.yml` or `.github/zizmor.yml` in the root of the repository.
