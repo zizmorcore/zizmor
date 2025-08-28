@@ -367,18 +367,52 @@ impl Config {
     }
 
     /// Discover a [`Config`] in the given directory.
+    ///
+    /// This uses the following discovery procedure:
+    /// 1. If the given directory is `blahblah/.github/workflows/`,
+    ///    start at the parent (i.e. `blahblah/.github/`). Otherwise, start
+    ///    at the given directory. This first directory is the
+    ///    first candidate path.
+    /// 2. Look for `.github/zizmor.yml` or `zizmor.yml` in the
+    ///    candidate path. If found, load and return it.
+    /// 3. Otherwise, continue the search in the candidate path's
+    ///    parent directory, repeating step 2, terminating when
+    ///    we reach the filesystem root or the first .git directory.
     fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>> {
         tracing::debug!("attempting config discovery in `{path}`");
 
-        for candidate in CONFIG_CANDIDATES {
-            let candidate_path = path.join(candidate);
-            if candidate_path.is_file() {
-                tracing::debug!("found config candidate at `{candidate_path}`");
-                return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
-            }
-        }
+        let canonical = path.canonicalize_utf8()?;
 
-        Ok(None)
+        let mut candidate_path = if canonical.file_name() == Some("workflows") {
+            // TODO: Return None here instead of failing?
+            canonical.parent().ok_or_else(|| {
+                anyhow!("cannot discover config: no parent directory of `{canonical}`")
+            })?
+        } else {
+            &canonical
+        };
+
+        loop {
+            for candidate in CONFIG_CANDIDATES {
+                let candidate_path = candidate_path.join(candidate);
+                if candidate_path.is_file() {
+                    tracing::debug!("found config candidate at `{candidate_path}`");
+                    return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
+                }
+            }
+
+            if candidate_path.join(".git").is_dir() {
+                tracing::debug!("found `{candidate_path}/.git`, stopping search");
+                return Ok(None);
+            }
+
+            let Some(parent) = candidate_path.parent() else {
+                tracing::debug!("reached filesystem root without finding a config");
+                return Ok(None);
+            };
+
+            candidate_path = parent;
+        }
     }
 
     /// Discover a [`Config`] using rules applicable to the given path.
@@ -395,22 +429,12 @@ impl Config {
         if path.is_dir() {
             Self::discover_in_dir(path)
         } else if path.is_file() {
-            let Some(mut parent) = path.parent() else {
+            let Some(parent) = path.parent() else {
                 tracing::debug!("no parent for {path:?}, cannot discover config");
                 return Ok(None);
             };
 
-            // TODO: Terminate this walk at $HOME or similar?
-            while let Some(next) = parent.parent() {
-                let candidate_path = next.join("zizmor.yml");
-                if candidate_path.is_file() {
-                    tracing::debug!("found config candidate at `{candidate_path}`");
-                    return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
-                }
-                parent = next;
-            }
-
-            Ok(None)
+            Self::discover_in_dir(parent)
         } else {
             Err(anyhow!(
                 "cannot discover config for `{path}`: not a file or directory"
