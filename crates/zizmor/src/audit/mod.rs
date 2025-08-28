@@ -288,7 +288,7 @@ pub(crate) trait Audit: AuditCore {
     ///
     /// Implementors **should not** override this blanket implementation,
     /// since it's marked with tracing instrumentation.
-    #[instrument(skip(self))]
+    #[instrument(skip(self, config))]
     fn audit<'doc>(
         &self,
         input: &'doc AuditInput,

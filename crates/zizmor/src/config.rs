@@ -336,18 +336,6 @@ impl Config {
         })
     }
 
-    /// Discover a [`Config`] in the given directory.
-    fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>> {
-        for candidate in CONFIG_CANDIDATES {
-            let candidate_path = path.join(candidate);
-            if candidate_path.is_file() {
-                return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
-            }
-        }
-
-        Ok(None)
-    }
-
     /// Discover a [`Config`] according to the collection options.
     ///
     /// This function models zizmor's current precedence rules for
@@ -365,15 +353,32 @@ impl Config {
     {
         if options.no_config {
             // User has explicitly disabled config loading.
+            tracing::debug!("skipping config discovery: explicitly disabled");
             Ok(Self::default())
         } else if let Some(config) = &options.global_config {
             // The user gave us a (legacy) global config file,
             // which takes precedence over any discovered config.
+            tracing::debug!("config discovery: using global config: {config:?}");
             Ok(config.clone())
         } else {
             // Attempt to discover a config file using the provided function.
             discover_fn().map(|conf| conf.unwrap_or_default())
         }
+    }
+
+    /// Discover a [`Config`] in the given directory.
+    fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>> {
+        tracing::debug!("attempting config discovery in `{path}`");
+
+        for candidate in CONFIG_CANDIDATES {
+            let candidate_path = path.join(candidate);
+            if candidate_path.is_file() {
+                tracing::debug!("found config candidate at `{candidate_path}`");
+                return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
+            }
+        }
+
+        Ok(None)
     }
 
     /// Discover a [`Config`] using rules applicable to the given path.
@@ -385,6 +390,8 @@ impl Config {
     /// For directories, this attempts to find a `.github/zizmor.yml` or
     /// `zizmor.yml` in the directory itself.
     pub(crate) fn discover_local(path: &Utf8Path) -> Result<Option<Self>> {
+        tracing::debug!("discovering config for local input `{path}`");
+
         if path.is_dir() {
             Self::discover_in_dir(path)
         } else if path.is_file() {
@@ -397,6 +404,7 @@ impl Config {
             while let Some(next) = parent.parent() {
                 let candidate_path = next.join("zizmor.yml");
                 if candidate_path.is_file() {
+                    tracing::debug!("found config candidate at `{candidate_path}`");
                     return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
                 }
                 parent = next;

@@ -1,8 +1,9 @@
 ---
 source: crates/zizmor/tests/integration/config.rs
-expression: "zizmor().no_config(true).input(input_under_test(\"config-scenarios/config-in-root\")).run()?"
+expression: "zizmor().no_config(true).input(input_under_test(\"config-scenarios/config-in-root\")).setenv(\"RUST_LOG\",\n\"zizmor::config=debug\").output(OutputMode::Both).run()?"
 snapshot_kind: text
 ---
+DEBUG zizmor::config: skipping config discovery: explicitly disabled
 error[template-injection]: code injection via template expansion
   --> @@INPUT@@/.github/workflows/hackme.yml:16:40
    |

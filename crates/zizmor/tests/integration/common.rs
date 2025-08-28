@@ -1,26 +1,33 @@
 use anyhow::{Context as _, Result};
+use camino::Utf8PathBuf;
 use regex::{Captures, Regex};
-use std::{env::current_dir, io::ErrorKind};
+use std::{env::current_dir, io::ErrorKind, sync::LazyLock};
 
 use assert_cmd::Command;
 
-pub fn input_under_test(name: &str) -> String {
+static TEST_PREFIX: LazyLock<Utf8PathBuf> = LazyLock::new(|| {
     let current_dir = current_dir().expect("Cannot figure out current directory");
 
     let file_path = current_dir
         .join("tests")
         .join("integration")
-        .join("test-data")
-        .join(name);
+        .join("test-data");
 
     if !file_path.exists() {
-        panic!("Cannot find input under test: {}", file_path.display());
+        panic!("Cannot find test data directory: {}", file_path.display());
     }
 
-    file_path
-        .to_str()
-        .expect("Cannot create string reference for file path")
-        .to_string()
+    Utf8PathBuf::try_from(file_path).expect("Cannot create UTF-8 path from test data directory")
+});
+
+pub fn input_under_test(name: &str) -> String {
+    let file_path = TEST_PREFIX.join(name);
+
+    if !file_path.exists() {
+        panic!("Cannot find input under test: {file_path}");
+    }
+
+    file_path.to_string()
 }
 
 pub enum OutputMode {
@@ -183,14 +190,14 @@ impl Zizmor {
             }
         }
 
-        let input_placeholder = "@@INPUT@@";
-        for input in &self.inputs {
-            raw = raw.replace(input, input_placeholder);
-        }
-
         let config_placeholder = "@@CONFIG@@";
         if let Some(config) = &self.config {
             raw = raw.replace(config, config_placeholder);
+        }
+
+        let input_placeholder = "@@INPUT@@";
+        for input in &self.inputs {
+            raw = raw.replace(input, input_placeholder);
         }
 
         // Normalize Windows '\' file paths to using '/', to get consistent snapshot test outputs
@@ -202,6 +209,12 @@ impl Zizmor {
                 })
                 .into_owned();
         }
+
+        // Fallback: replace any lingering absolute paths.
+        // TODO: Maybe just use this everywhere instead of the special
+        // replacements above?
+        let test_prefix_placeholder = "@@TEST_PREFIX@@";
+        raw = raw.replace(TEST_PREFIX.as_str(), test_prefix_placeholder);
 
         Ok(raw)
     }
