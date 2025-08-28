@@ -1,6 +1,7 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"template-injection/multiline-expression.yml\")).args([\"--persona=pedantic\"]).run()?"
+snapshot_kind: text
 ---
 note[template-injection]: code injection via template expansion
   --> @@INPUT@@:14:13

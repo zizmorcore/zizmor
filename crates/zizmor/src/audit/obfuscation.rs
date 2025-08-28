@@ -4,6 +4,7 @@ use yamlpatch::{Op, Patch};
 
 use crate::{
     Confidence, Severity,
+    config::Config,
     finding::{
         Finding, Fix, FixDisposition, Persona,
         location::{Feature, Location, Routable},
@@ -242,14 +243,18 @@ impl Obfuscation {
 }
 
 impl Audit for Obfuscation {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_raw<'doc>(&self, input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_raw<'doc>(
+        &self,
+        input: &'doc AuditInput,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         for (expr, expr_span) in parse_fenced_expressions_from_input(input) {
@@ -314,13 +319,18 @@ impl Audit for Obfuscation {
         Ok(findings)
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 
     fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
+        _config: &Config,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
         self.process_step(step)
     }

@@ -3,10 +3,10 @@
 //! Build on synchronous reqwest to avoid octocrab's need to taint
 //! the whole codebase with async.
 
-use std::{io::Read, ops::Deref, path::Path};
+use std::{fmt::Display, io::Read, ops::Deref, str::FromStr};
 
 use anyhow::{Context, Result, anyhow};
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use flate2::read::GzDecoder;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
@@ -22,8 +22,7 @@ use tar::Archive;
 use tracing::instrument;
 
 use crate::{
-    InputRegistry,
-    registry::{InputKey, InputKind, RepoSlug},
+    registry::input::{InputGroup, InputKey, InputKind, RepoSlug},
     utils::PipeSelf,
 };
 
@@ -60,6 +59,29 @@ impl GitHubHost {
     }
 }
 
+impl Default for GitHubHost {
+    fn default() -> Self {
+        Self::Standard("github.com".into())
+    }
+}
+
+impl Display for GitHubHost {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Enterprise(host) => write!(f, "{host}"),
+            Self::Standard(host) => write!(f, "{host}"),
+        }
+    }
+}
+
+impl FromStr for GitHubHost {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
+    }
+}
+
 /// A sanitized GitHub access token.
 #[derive(Clone)]
 pub(crate) struct GitHubToken(String);
@@ -81,14 +103,15 @@ impl GitHubToken {
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
+    host: GitHubHost,
     http: ClientWithMiddleware,
 }
 
 impl Client {
     pub(crate) fn new(
-        hostname: &GitHubHost,
-        token: &GitHubToken,
-        cache_dir: &Path,
+        host: GitHubHost,
+        token: GitHubToken,
+        cache_dir: Utf8PathBuf,
     ) -> anyhow::Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
@@ -128,9 +151,14 @@ impl Client {
         .build();
 
         Ok(Self {
-            api_base: hostname.to_api_url(),
+            api_base: host.to_api_url(),
+            host,
             http,
         })
+    }
+
+    pub(crate) fn host(&self) -> &GitHubHost {
+        &self.host
     }
 
     async fn paginate<T: DeserializeOwned>(
@@ -340,23 +368,74 @@ impl Client {
             .map_err(Into::into)
     }
 
+    /// Fetch a single file from the given remote repository slug.
+    ///
+    /// Returns the file contents as a `String` if the file exists,
+    /// or `None` if the request produces a 404.
+    #[instrument(skip(self, slug, file))]
+    #[tokio::main]
+    pub(crate) async fn fetch_single_file(
+        &self,
+        slug: &RepoSlug,
+        file: &str,
+    ) -> Result<Option<String>> {
+        self.fetch_single_file_async(slug, file).await
+    }
+
+    pub(crate) async fn fetch_single_file_async(
+        &self,
+        slug: &RepoSlug,
+        file: &str,
+    ) -> Result<Option<String>> {
+        tracing::debug!("fetching {file} from {slug}");
+
+        let url = format!(
+            "{api_base}/repos/{owner}/{repo}/contents/{file}",
+            api_base = self.api_base,
+            owner = slug.owner,
+            repo = slug.repo,
+            file = file
+        );
+
+        let resp = self
+            .http
+            .get(&url)
+            .header(ACCEPT, "application/vnd.github.raw+json")
+            .pipe(|req| match slug.git_ref.as_ref() {
+                Some(g) => req.query(&[("ref", g)]),
+                None => req,
+            })
+            .send()
+            .await?;
+
+        match resp.status() {
+            StatusCode::OK => {
+                let contents = resp.text().await?;
+
+                Ok(Some(contents))
+            }
+            StatusCode::NOT_FOUND => Ok(None),
+            _ => Err(resp.error_for_status().unwrap_err().into()),
+        }
+    }
+
     /// Collect all workflows (and only workflows) defined in the given remote
-    /// repository slug into the given input registry.
+    /// repository slug into the given input group.
     ///
     /// This is an optimized variant of `fetch_audit_inputs` for the workflow-only
     /// collection case.
-    #[instrument(skip(self, registry))]
+    #[instrument(skip(self, group))]
     #[tokio::main]
     pub(crate) async fn fetch_workflows(
         &self,
         slug: &RepoSlug,
-        registry: &mut InputRegistry,
+        group: &mut InputGroup,
     ) -> Result<()> {
         let owner = &slug.owner;
         let repo = &slug.repo;
         let git_ref = &slug.git_ref;
 
-        tracing::debug!("fetching workflows for {owner}/{repo}");
+        tracing::debug!("fetching workflows for {slug}");
 
         // It'd be nice if the GitHub contents API allowed us to retrieve
         // all file contents with a directory listing, but it doesn't.
@@ -383,25 +462,19 @@ impl Client {
             .into_iter()
             .filter(|file| file.name.ends_with(".yml") || file.name.ends_with(".yaml"))
         {
-            let file_url = format!("{url}/{file}", file = file.name);
-            tracing::debug!("fetching {file_url}");
-
-            let contents = self
-                .http
-                .get(file_url)
-                .header(ACCEPT, "application/vnd.github.raw+json")
-                .pipe(|req| match git_ref.as_ref() {
-                    Some(g) => req.query(&[("ref", g)]),
-                    None => req,
-                })
-                .send()
-                .await?
-                .error_for_status()?
-                .text()
-                .await?;
+            let Some(contents) = self.fetch_single_file_async(slug, &file.path).await? else {
+                // This can only happen if we have some kind of TOCTOU
+                // discrepancy with the listing call above, e.g. a file
+                // was deleted on a branch immediately after we listed it.
+                anyhow::bail!(
+                    "couldn't fetch workflow file {file} from {slug}",
+                    file = file.name
+                );
+            };
 
             let key = InputKey::remote(slug, file.path)?;
-            registry.register(InputKind::Workflow, contents, key)?;
+            // TODO: Make strictness configurable here?
+            group.register(InputKind::Workflow, contents, key, true)?;
         }
 
         Ok(())
@@ -412,12 +485,12 @@ impl Client {
     ///
     /// This is much slower than `fetch_workflows`, since it involves
     /// retrieving the entire repository archive and decompressing it.
-    #[instrument(skip(self, registry))]
+    #[instrument(skip(self, group))]
     #[tokio::main]
     pub(crate) async fn fetch_audit_inputs(
         &self,
         slug: &RepoSlug,
-        registry: &mut InputRegistry,
+        group: &mut InputGroup,
     ) -> Result<()> {
         let url = format!(
             "{api_base}/repos/{owner}/{repo}/tarball/{git_ref}",
@@ -470,12 +543,14 @@ impl Client {
                 let key = InputKey::remote(slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
-                registry.register(InputKind::Workflow, contents, key)?;
+                // TODO: Make strictness configurable here?
+                group.register(InputKind::Workflow, contents, key, true)?;
             } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
                 let key = InputKey::remote(slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
-                registry.register(InputKind::Action, contents, key)?;
+                // TODO: Make strictness configurable here?
+                group.register(InputKind::Action, contents, key, true)?;
             }
         }
 

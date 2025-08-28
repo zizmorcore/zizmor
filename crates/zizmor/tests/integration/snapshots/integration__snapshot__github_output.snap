@@ -1,6 +1,7 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabilities.yml\")).args([\"--persona=auditor\",\n\"--format=github\"]).run()?"
+snapshot_kind: text
 ---
 ::error file=@@INPUT@@,line=5,title=excessive-permissions::several-vulnerabilities.yml:5: overly broad permissions: uses write-all permissions
 ::error file=@@INPUT@@,line=11,title=excessive-permissions::several-vulnerabilities.yml:11: overly broad permissions: uses write-all permissions

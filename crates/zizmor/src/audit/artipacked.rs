@@ -162,13 +162,14 @@ impl Artipacked {
 }
 
 impl Audit for Artipacked {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
     fn audit_action<'doc>(
         &self,
         action: &'doc crate::models::action::Action,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let Some(steps) = action.steps() else {
             return Ok(vec![]);
@@ -177,7 +178,11 @@ impl Audit for Artipacked {
         self.process_steps(steps)
     }
 
-    fn audit_normal_job<'doc>(&self, job: &super::NormalJob<'doc>) -> Result<Vec<Finding<'doc>>> {
+    fn audit_normal_job<'doc>(
+        &self,
+        job: &super::NormalJob<'doc>,
+        _config: &crate::config::Config,
+    ) -> Result<Vec<Finding<'doc>>> {
         self.process_steps(job.steps())
     }
 }
@@ -186,9 +191,9 @@ impl Audit for Artipacked {
 mod tests {
     use super::*;
     use crate::{
-        github_api::GitHubHost,
+        config::Config,
         models::{AsDocument, workflow::Workflow},
-        registry::InputKey,
+        registry::input::InputKey,
         state::AuditState,
     };
 
@@ -203,16 +208,11 @@ mod tests {
     /// 4. Executes the provided test closure with the findings
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
 
             $test_fn(&workflow, findings)
         }};

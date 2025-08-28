@@ -10,7 +10,7 @@ use crate::{
     FixMode,
     finding::{Finding, Fix, FixDisposition},
     models::AsDocument,
-    registry::{FindingRegistry, InputKey, InputRegistry},
+    registry::{FindingRegistry, input::InputKey, input::InputRegistry},
 };
 
 const FIX_MODE_WARNING: &str = "

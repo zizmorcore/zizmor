@@ -8,10 +8,9 @@ use owo_colors::OwoColorize;
 use terminal_link::Link;
 
 use crate::{
-    App,
     finding::{Finding, Severity, location::Location},
     models::AsDocument,
-    registry::{FindingRegistry, InputKey, InputRegistry},
+    registry::{FindingRegistry, input::InputKey, input::InputRegistry},
 };
 
 impl From<&Severity> for Level {
@@ -77,7 +76,11 @@ pub(crate) fn finding_snippet<'doc>(
     snippets
 }
 
-pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &FindingRegistry) {
+pub(crate) fn render_findings(
+    registry: &InputRegistry,
+    findings: &FindingRegistry,
+    naches_mode: bool,
+) {
     for finding in findings.findings() {
         render_finding(registry, finding);
         println!();
@@ -118,7 +121,7 @@ pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &Fi
             );
         }
 
-        if app.naches {
+        if naches_mode {
             naches();
         }
     } else {

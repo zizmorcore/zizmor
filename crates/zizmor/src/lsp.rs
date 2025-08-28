@@ -11,7 +11,8 @@ use crate::finding::location::Point;
 use crate::finding::{Persona, Severity};
 use crate::models::action::Action;
 use crate::models::workflow::Workflow;
-use crate::registry::{FindingRegistry, InputKey};
+use crate::registry::input::{InputGroup, InputRegistry};
+use crate::registry::{FindingRegistry, input::InputKey};
 use crate::{AuditRegistry, AuditState};
 
 struct LspDocumentCommon {
@@ -170,21 +171,28 @@ impl Backend {
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
             AuditInput::from(Action::from_string(
                 params.text,
-                InputKey::local(path, None)?,
+                InputKey::local("lsp".into(), path, None)?,
             )?)
         } else if matches!(path.extension(), Some("yml" | "yaml")) {
             AuditInput::from(Workflow::from_string(
                 params.text,
-                InputKey::local(path, None)?,
+                InputKey::local("lsp".into(), path, None)?,
             )?)
         } else {
             anyhow::bail!("asked to audit unexpected file: {path}");
         };
 
-        let config = Config::default();
-        let mut registry = FindingRegistry::new(None, None, Persona::Regular, &config);
-        for (_, audit) in self.audit_registry.iter_audits() {
-            registry.extend(audit.audit(&input)?);
+        let mut group = InputGroup::new(Config::default());
+        group.register_input(input)?;
+        let mut input_registry = InputRegistry::new();
+        input_registry.groups.insert("lsp".into(), group);
+
+        let mut registry = FindingRegistry::new(&input_registry, None, None, Persona::Regular);
+
+        for (input_key, input) in input_registry.iter_inputs() {
+            for (_, audit) in self.audit_registry.iter_audits() {
+                registry.extend(audit.audit(input, input_registry.get_config(input_key.group()))?);
+            }
         }
 
         let diagnostics = registry
@@ -256,16 +264,9 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
-    let config = Config::default();
+    let state = AuditState::default();
 
-    let audit_state = AuditState {
-        config: &config,
-        no_online_audits: false,
-        gh_client: None,
-        gh_hostname: crate::GitHubHost::Standard("github.com".into()),
-    };
-
-    let audits = AuditRegistry::default_audits(&audit_state)?;
+    let audits = AuditRegistry::default_audits(&state)?;
     let (service, socket) = LspService::new(|client| Backend {
         audit_registry: audits,
         client,
