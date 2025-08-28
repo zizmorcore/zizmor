@@ -13,31 +13,52 @@ typically named `zizmor.yml`.
 
 [YAML]: https://learnxinyminutes.com/docs/yaml/
 
-## Precedence
+## Discovery
 
 !!! note
 
     Configuration is *always* optional, and can always be disabled with
     `--no-config`. If `--no-config` is passed, no configuration is ever loaded.
 
-`zizmor` will discover and load
-configuration files in the following order of precedence:
+!!! tip
 
-1. Passed explicitly via `--config` on the command line, e.g. `--config
-   my-config.yml`. When passed explicitly, the file does *not* need to be
-   named `zizmor.yml`.
-1. Passed explicitly via `ZIZMOR_CONFIG` in the environment, e.g.
-   `ZIZMOR_CONFIG=my-config.yml`. When passed explicitly, the file does
-   *not* need to be named `zizmor.yml`.
-1. `${CWD}/.github/zizmor.yml`
-1. `${CWD}/zizmor.yml`
+    `zizmor`'s configuration discovery behavior changed significantly
+    in `v1.13.0`. See the [release notes](./release-notes.md) for details.
 
-For the last two discovery methods, `${CWD}` is the current working directory,
-i.e. the directory that `zizmor` was executed from.
+`zizmor` discovers configuration files in two conceptually distinct ways:
 
-Only one configuration file is ever loaded. In other words: if both
-`${CWD}/.github/zizmor.yml` and `${CWD}/zizmor.yml` exist, only the former
-will be loaded, per the precedence rules above.
+1. **Global** discovery: when explicitly given a configuration file via
+   `--config` or `ZIZMOR_CONFIG`, that file is used for **all** inputs.
+
+    In other words: when a global configuration file is used no other
+    configuration files are discovered or loaded, even if they're present
+    according to the local discovery rules below.
+
+2. **Local** discovery: when no global configuration file is given, `zizmor`
+   looks for configuration files *for each given input*. The rules for this
+   discovery are as follows:
+
+    * File inputs (e.g. `zizmor path/to/workflow.yml`): `zizmor` performs
+      directory discovery starting in the directory containing the given file.
+
+    * Directory inputs (e.g. `zizmor .`): `zizmor` looks for a `zizmor.yml` or
+      `.github/zizmor.yml` in the given directory or any parent, up to the
+      filesystem root or the first `.git` directory.
+
+        !!! note
+
+            `zizmor .github/workflows/` is a special case: in this case,
+            discovery starts in `.github/`, the parent of the given directory.
+
+            This is done to avoid confusion between a `zizmor.yml` config
+            file and a `zizmor.yml` workflow file.
+
+    * Remote repository inputs (e.g. `zizmor owner/repo`): `zizmor` looks for
+      a `zizmor.yml` or `.github/zizmor.yml` in the root of the repository.
+
+In general, **most users will want to use local discovery**, which is the
+default behavior. Global discovery only takes precedence when explicitly
+requested with `--config` or `ZIZMOR_CONFIG`.
 
 ## Settings
 

@@ -1,6 +1,7 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-collection\"]).run()?"
+snapshot_kind: text
 ---
 fatal: no audit was performed
 failed to load file://@@INPUT@@ as workflow

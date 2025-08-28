@@ -5,18 +5,18 @@ use std::{
     str::FromStr as _,
 };
 
-use anyhow::Context as _;
+use anyhow::Context;
 use camino::{Utf8Path, Utf8PathBuf};
 use owo_colors::OwoColorize as _;
 use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
-    CollectionMode,
+    CollectionMode, CollectionOptions,
     audit::AuditInput,
-    github_api::GitHubHost,
+    config::Config,
+    github_api::{Client, GitHubHost},
     models::{action::Action, workflow::Workflow},
-    state::AuditState,
     tips,
 };
 
@@ -243,7 +243,7 @@ impl InputKey {
     }
 
     /// Returns the group this input belongs to.
-    fn group(&self) -> &Group {
+    pub(crate) fn group(&self) -> &Group {
         match self {
             InputKey::Local(local) => &local.group,
             InputKey::Remote(remote) => &remote.group,
@@ -270,18 +270,20 @@ impl From<&RepoSlug> for Group {
 /// A group of inputs collected from the same source.
 pub(crate) struct InputGroup {
     /// The collected inputs.
-    pub(crate) inputs: BTreeMap<InputKey, AuditInput>,
-    // TODO: Config will go here.
+    inputs: BTreeMap<InputKey, AuditInput>,
+    /// The configuration for this group.
+    config: Config,
 }
 
 impl InputGroup {
-    fn new() -> Self {
+    pub(crate) fn new(config: Config) -> Self {
         Self {
             inputs: Default::default(),
+            config,
         }
     }
 
-    fn register_input(&mut self, input: AuditInput) -> anyhow::Result<()> {
+    pub(crate) fn register_input(&mut self, input: AuditInput) -> anyhow::Result<()> {
         if self.inputs.contains_key(input.key()) {
             return Err(anyhow::anyhow!(
                 "can't register {key} more than once",
@@ -324,7 +326,12 @@ impl InputGroup {
         }
     }
 
-    fn collect_from_file(&mut self, path: &Utf8Path, strict: bool) -> anyhow::Result<()> {
+    fn collect_from_file(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
+        let config = Config::discover(options, || Config::discover_local(path))
+            .with_context(|| format!("failed to discover configuration for {path}"))?;
+
+        let mut group = Self::new(config);
+
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
@@ -340,15 +347,17 @@ impl InputGroup {
         };
 
         let contents = std::fs::read_to_string(path)?;
-        self.register(kind, contents, key, strict)
+        group.register(kind, contents, key, options.strict)?;
+
+        Ok(group)
     }
 
-    fn collect_from_dir(
-        &mut self,
-        path: &Utf8Path,
-        mode: CollectionMode,
-        strict: bool,
-    ) -> anyhow::Result<()> {
+    fn collect_from_dir(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
+        let config = Config::discover(options, || Config::discover_local(path))
+            .with_context(|| format!("failed to discover configuration for directory {path}"))?;
+
+        let mut group = Self::new(config);
+
         // Start with all filters disabled, i.e. walk everything.
         let mut walker = ignore::WalkBuilder::new(path);
         let walker = walker.standard_filters(false);
@@ -364,7 +373,7 @@ impl InputGroup {
         // zizmor integrators.
         //
         // See: https://github.com/zizmorcore/zizmor/issues/596
-        if mode.respects_gitignore() {
+        if options.mode.respects_gitignore() {
             walker
                 .require_git(false)
                 .git_ignore(true)
@@ -376,7 +385,7 @@ impl InputGroup {
             let entry = entry?;
             let entry = <&Utf8Path>::try_from(entry.path())?;
 
-            if mode.workflows()
+            if options.mode.workflows()
                 && entry.is_file()
                 && matches!(entry.extension(), Some("yml" | "yaml"))
                 && entry
@@ -385,29 +394,27 @@ impl InputGroup {
             {
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
                 let contents = std::fs::read_to_string(entry)?;
-                self.register(InputKind::Workflow, contents, key, strict)?;
+                group.register(InputKind::Workflow, contents, key, options.strict)?;
             }
 
-            if mode.actions()
+            if options.mode.actions()
                 && entry.is_file()
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
                 let contents = std::fs::read_to_string(entry)?;
-                self.register(InputKind::Action, contents, key, strict)?;
+                group.register(InputKind::Action, contents, key, options.strict)?;
             }
         }
 
-        Ok(())
+        Ok(group)
     }
 
     fn collect_from_repo_slug(
-        &mut self,
         raw_slug: &str,
-        state: &AuditState,
-        mode: CollectionMode,
-        _strict: bool,
-    ) -> anyhow::Result<()> {
+        options: &CollectionOptions,
+        gh_client: Option<&Client>,
+    ) -> anyhow::Result<Self> {
         let Ok(slug) = RepoSlug::from_str(raw_slug) else {
             return Err(anyhow::anyhow!(tips(
                 format!("invalid input: {raw_slug}"),
@@ -420,7 +427,7 @@ impl InputGroup {
             )));
         };
 
-        let client = state.gh_client.as_ref().ok_or_else(|| {
+        let client = gh_client.ok_or_else(|| {
             anyhow::anyhow!(tips(
                 format!(
                     "can't retrieve repository: {raw_slug}",
@@ -434,30 +441,36 @@ impl InputGroup {
             ))
         })?;
 
-        if matches!(mode, CollectionMode::WorkflowsOnly) {
+        let config = Config::discover(options, || Config::discover_remote(client, &slug))
+            .with_context(|| format!("failed to discover configuration for {slug}"))?;
+        let mut group = Self::new(config);
+
+        if matches!(options.mode, CollectionMode::WorkflowsOnly) {
             // Performance: if we're *only* collecting workflows, then we
             // can save ourselves a full repo download and only fetch the
             // repo's workflow files.
-            client.fetch_workflows(&slug, self)?;
+            client.fetch_workflows(&slug, &mut group)?;
         } else {
-            let before = self.len();
-            let host = match &state.gh_hostname {
+            let before = group.len();
+            let host = match client.host() {
                 GitHubHost::Enterprise(address) => address.as_str(),
                 GitHubHost::Standard(_) => "github.com",
             };
 
-            client.fetch_audit_inputs(&slug, self).with_context(|| {
-                tips(
-                    format!(
-                        "couldn't collect inputs from https://{host}/{owner}/{repo}",
-                        host = host,
-                        owner = slug.owner,
-                        repo = slug.repo
-                    ),
-                    &["confirm the repository exists and that you have access to it"],
-                )
-            })?;
-            let after = self.len();
+            client
+                .fetch_audit_inputs(&slug, &mut group)
+                .with_context(|| {
+                    tips(
+                        format!(
+                            "couldn't collect inputs from https://{host}/{owner}/{repo}",
+                            host = host,
+                            owner = slug.owner,
+                            repo = slug.repo
+                        ),
+                        &["confirm the repository exists and that you have access to it"],
+                    )
+                })?;
+            let after = group.len();
             let len = after - before;
 
             tracing::info!(
@@ -467,26 +480,22 @@ impl InputGroup {
             );
         }
 
-        Ok(())
+        Ok(group)
     }
 
     pub(crate) fn collect(
         request: &str,
-        mode: CollectionMode,
-        strict: bool,
-        state: &AuditState,
+        options: &CollectionOptions,
+        gh_client: Option<&Client>,
     ) -> anyhow::Result<Self> {
         let path = Utf8Path::new(request);
-        let mut group = Self::new();
         if path.is_file() {
-            group.collect_from_file(path, strict)?;
+            Self::collect_from_file(path, options)
         } else if path.is_dir() {
-            group.collect_from_dir(path, mode, strict)?;
+            Self::collect_from_dir(path, options)
         } else {
-            group.collect_from_repo_slug(request, state, mode, strict)?;
+            Self::collect_from_repo_slug(request, options, gh_client)
         }
-
-        Ok(group)
     }
 
     pub(crate) fn len(&self) -> usize {
@@ -518,15 +527,14 @@ impl InputRegistry {
     pub(crate) fn register_group(
         &mut self,
         name: String,
-        mode: CollectionMode,
-        strict: bool,
-        state: &AuditState,
+        options: &CollectionOptions,
+        gh_client: Option<&Client>,
     ) -> anyhow::Result<()> {
         // If the group has already been registered, then the user probably
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
         if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.clone())) {
-            e.insert(InputGroup::collect(&name, mode, strict, state)?);
+            e.insert(InputGroup::collect(&name, options, gh_client)?);
         }
 
         Ok(())
@@ -543,6 +551,15 @@ impl InputRegistry {
             .get(key.group())
             .and_then(|group| group.inputs.get(key))
             .expect("API misuse: requested an un-registered input")
+    }
+
+    /// Get a reference to the configuration for a given input group.
+    pub(crate) fn get_config(&self, group: &Group) -> &Config {
+        &self
+            .groups
+            .get(group)
+            .expect("API misuse: requested config for an un-registered input")
+            .config
     }
 }
 

@@ -10,6 +10,7 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
+    config::Config,
     finding::{Confidence, Finding, Fix, Severity, location::Routable as _},
     github_api,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
@@ -256,7 +257,7 @@ impl KnownVulnerableActions {
 }
 
 impl Audit for KnownVulnerableActions {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -273,19 +274,21 @@ impl Audit for KnownVulnerableActions {
             .map(|client| KnownVulnerableActions { client })
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> Result<Vec<Finding<'doc>>> {
+    fn audit_step<'doc>(&self, step: &Step<'doc>, _config: &Config) -> Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 
-    fn audit_composite_step<'doc>(&self, step: &CompositeStep<'doc>) -> Result<Vec<Finding<'doc>>> {
+    fn audit_composite_step<'doc>(
+        &self,
+        step: &CompositeStep<'doc>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
     use insta::assert_snapshot;
 
     use super::*;
@@ -296,20 +299,17 @@ mod tests {
 
     // Helper function to create a test KnownVulnerableActions instance
     fn create_test_audit() -> KnownVulnerableActions {
-        let config = crate::config::Config::default();
-        let state = crate::state::AuditState {
-            config: &config,
-            no_online_audits: false,
-            gh_client: Some(
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
                 github_api::Client::new(
-                    &github_api::GitHubHost::Standard("github.com".to_string()),
-                    &github_api::GitHubToken::new("fake").unwrap(),
-                    Path::new("/tmp"),
+                    github_api::GitHubHost::default(),
+                    github_api::GitHubToken::new("fake").unwrap(),
+                    "/tmp".into(),
                 )
                 .unwrap(),
             ),
-            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
-        };
+        );
         KnownVulnerableActions::new(&state).unwrap()
     }
 
@@ -718,13 +718,7 @@ jobs:
     #[test]
     fn test_offline_audit_state_creation() {
         // Test that we can create an audit state without a GitHub token
-        let config = crate::config::Config::default();
-        let state = crate::state::AuditState {
-            config: &config,
-            no_online_audits: true,
-            gh_client: None,
-            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
-        };
+        let state = crate::state::AuditState::default();
 
         // This should fail because no GitHub token is provided
         let audit_result = KnownVulnerableActions::new(&state);
@@ -750,25 +744,22 @@ jobs:
         let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>).unwrap();
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
-        let config = crate::config::Config::default();
-        let state = crate::state::AuditState {
-            config: &config,
-            no_online_audits: false,
-            gh_client: Some(
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
                 github_api::Client::new(
-                    &github_api::GitHubHost::Standard("github.com".to_string()),
-                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
-                    Path::new("/tmp"),
+                    github_api::GitHubHost::default(),
+                    github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
                 )
                 .unwrap(),
             ),
-            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
-        };
+        );
 
         let audit = KnownVulnerableActions::new(&state).unwrap();
 
         let input = workflow.into();
-        let findings = audit.audit(&input).unwrap();
+        let findings = audit.audit(&input, &Config::default()).unwrap();
         assert_eq!(findings.len(), 1);
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
@@ -806,25 +797,22 @@ jobs:
         let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>).unwrap();
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
-        let config = crate::config::Config::default();
-        let state = crate::state::AuditState {
-            config: &config,
-            no_online_audits: false,
-            gh_client: Some(
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
                 github_api::Client::new(
-                    &github_api::GitHubHost::Standard("github.com".to_string()),
-                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
-                    Path::new("/tmp"),
+                    github_api::GitHubHost::default(),
+                    github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
                 )
                 .unwrap(),
             ),
-            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
-        };
+        );
 
         let audit = KnownVulnerableActions::new(&state).unwrap();
 
         let input = workflow.into();
-        let findings = audit.audit(&input).unwrap();
+        let findings = audit.audit(&input, &Config::default()).unwrap();
         assert_eq!(findings.len(), 1);
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();

@@ -1,0 +1,9 @@
+---
+source: crates/zizmor/tests/integration/config.rs
+expression: "zizmor().input(input_under_test(\"config-scenarios/config-in-root/.github/workflows/hackme.yml\")).setenv(\"RUST_LOG\",\n\"zizmor::config=debug\").output(OutputMode::Both).run()?"
+snapshot_kind: text
+---
+DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
+DEBUG zizmor::config: attempting config discovery in `@@TEST_PREFIX@@/config-scenarios/config-in-root/.github/workflows`
+DEBUG zizmor::config: found config candidate at `@@TEST_PREFIX@@/config-scenarios/config-in-root/zizmor.yml`
+No findings to report. Good job! (1 ignored, 1 suppressed)

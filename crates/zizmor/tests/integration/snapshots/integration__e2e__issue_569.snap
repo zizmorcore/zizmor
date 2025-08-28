@@ -1,11 +1,11 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\",\n\"--collect=workflows-only\"]).input(\"python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6\").run()?"
+snapshot_kind: text
 ---
  INFO zizmor::registry: skipping impostor-commit: offline audits only requested
  INFO zizmor::registry: skipping ref-confusion: offline audits only requested
  INFO zizmor::registry: skipping known-vulnerable-actions: offline audits only requested
- INFO zizmor::registry: skipping forbidden-uses: audit not configured
  INFO zizmor::registry: skipping stale-action-refs: offline audits only requested
  INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
@@ -91,18 +91,6 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
     |
     = note: audit confidence → High
 
-error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-  --> .github/workflows/documentation-links.yml:5:1
-   |
- 5 | / on:
- 6 | |   pull_request_target:
-...  |
-10 | |     - 'Doc/**'
-11 | |     - '.github/workflows/doc.yml'
-   | |_________________________________^ pull_request_target is almost always used insecurely
-   |
-   = note: audit confidence → Medium
-
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/documentation-links.yml:25:9
    |
@@ -183,4 +171,4 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
 
-78 findings (59 suppressed): 0 unknown, 0 informational, 1 low, 0 medium, 18 high
+78 findings (1 ignored, 59 suppressed): 0 unknown, 0 informational, 1 low, 0 medium, 17 high
