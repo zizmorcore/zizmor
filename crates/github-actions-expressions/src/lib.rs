@@ -43,6 +43,15 @@ impl PartialEq<str> for Function<'_> {
     }
 }
 
+/// Represents a function call in a GitHub Actions expression.
+#[derive(Debug, PartialEq)]
+pub struct Call<'src> {
+    /// The function name, e.g. `foo` in `foo()`.
+    pub func: Function<'src>,
+    /// The function's arguments.
+    pub args: Vec<SpannedExpr<'src>>,
+}
+
 /// Represents a single identifier in a GitHub Actions expression,
 /// i.e. a single context component.
 ///
@@ -199,7 +208,7 @@ impl<'a> SpannedExpr<'a> {
         let mut contexts = vec![];
 
         match self.deref() {
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 // These functions, when evaluated, produce an evaluation
                 // that includes some or all of the contexts listed in
                 // their arguments.
@@ -243,7 +252,7 @@ impl<'a> SpannedExpr<'a> {
         let mut index_exprs = vec![];
 
         match self.deref() {
-            Expr::Call { func: _, args } => {
+            Expr::Call(Call { func: _, args }) => {
                 for arg in args {
                     index_exprs.extend(arg.computed_indices());
                 }
@@ -287,7 +296,7 @@ impl<'a> SpannedExpr<'a> {
         let mut subexprs = vec![];
 
         match self.deref() {
-            Expr::Call { func: _, args } => {
+            Expr::Call(Call { func: _, args }) => {
                 for arg in args {
                     subexprs.extend(arg.constant_reducible_subexprs());
                 }
@@ -335,12 +344,7 @@ pub enum Expr<'src> {
     /// The `*` literal within an index or context.
     Star,
     /// A function call.
-    Call {
-        /// The function name, e.g. `foo` in `foo()`.
-        func: Function<'src>,
-        /// The function's arguments.
-        args: Vec<SpannedExpr<'src>>,
-    },
+    Call(Call<'src>),
     /// A context identifier component, e.g. `github` in `github.actor`.
     Identifier(Identifier<'src>),
     /// A context index component, e.g. `[0]` in `foo[0]`.
@@ -407,7 +411,7 @@ impl<'src> Expr<'src> {
             Expr::BinOp { lhs, op: _, rhs } => lhs.constant_reducible() && rhs.constant_reducible(),
             // Unops are reducible if their interior expression is reducible.
             Expr::UnOp { op: _, expr } => expr.constant_reducible(),
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 // These functions are reducible if their arguments are reducible.
                 if func == "format"
                     || func == "contains"
@@ -614,10 +618,10 @@ impl<'src> Expr<'src> {
 
                     Ok(SpannedExpr::new(
                         Origin::new(span.start()..span.end(), raw),
-                        Expr::Call {
+                        Expr::Call(Call {
                             func: Function(identifier.as_str()),
                             args,
-                        },
+                        }),
                     )
                     .into())
                 }
@@ -838,7 +842,7 @@ impl<'src> Expr<'src> {
                 }
             }
 
-            Expr::Call { func, args } => Self::evaluate_function_call(func, args),
+            Expr::Call(Call { func, args }) => Self::evaluate_function_call(func, args),
 
             // Non-constant expressions
             _ => None,
@@ -994,7 +998,7 @@ mod tests {
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use crate::{Literal, Origin, SpannedExpr};
+    use crate::{Call, Literal, Origin, SpannedExpr};
 
     use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
@@ -1243,14 +1247,14 @@ mod tests {
                 "foo(1, 2, 3)",
                 SpannedExpr::new(
                     Origin::new(0..12, "foo(1, 2, 3)"),
-                    Expr::Call {
+                    Expr::Call(Call {
                         func: Function("foo"),
                         args: vec![
                             SpannedExpr::new(Origin::new(4..5, "1"), 1.0.into()),
                             SpannedExpr::new(Origin::new(7..8, "2"), 2.0.into()),
                             SpannedExpr::new(Origin::new(10..11, "3"), 3.0.into()),
                         ],
-                    },
+                    }),
                 ),
             ),
             (
@@ -1443,7 +1447,7 @@ mod tests {
                             Origin::new(6..30, "[format('{0}', 'event')]"),
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(7..29, "format('{0}', 'event')"),
-                                Expr::Call {
+                                Expr::Call(Call {
                                     func: Function("format"),
                                     args: vec![
                                         SpannedExpr::new(
@@ -1455,7 +1459,7 @@ mod tests {
                                             Expr::from("event"),
                                         ),
                                     ],
-                                },
+                                }),
                             ))),
                         ),
                     ]),
