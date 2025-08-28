@@ -37,6 +37,25 @@ fn test_discovers_config_in_root_from_file_input() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Ensures we correctly discover a configuration file in the root
+/// directory from a child input directory, i.e. going from
+/// `config-in-root/.github/workflows/` to `config-in-root/zizmor.yml`
+/// in this case.
+#[test]
+fn test_discovers_config_in_root_from_child_dir() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "config-scenarios/config-in-root/.github/workflows"
+            ))
+            .setenv("RUST_LOG", "zizmor::config=debug")
+            .output(OutputMode::Both)
+            .run()?
+    );
+
+    Ok(())
+}
+
 /// Ensures we ignore a configuration file in the root of a given
 /// input directory when `--no-config` is specified.
 #[test]
@@ -62,6 +81,24 @@ fn test_ignores_config_in_root_from_file_input() -> anyhow::Result<()> {
             .no_config(true)
             .input(input_under_test(
                 "config-scenarios/config-in-root/.github/workflows/hackme.yml"
+            ))
+            .setenv("RUST_LOG", "zizmor::config=debug")
+            .output(OutputMode::Both)
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Ensures we ignore a configuration file in the root directory
+/// from a child input directory when `--no-config` is specified.
+#[test]
+fn test_ignores_config_in_root_from_child_dir() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .no_config(true)
+            .input(input_under_test(
+                "config-scenarios/config-in-root/.github/workflows"
             ))
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
