@@ -23,6 +23,7 @@ ashishb/wp2hugo#91
 astral-sh/python-build-standalone#716
 astral-sh/ruff#14844
 astral-sh/ruff-action#206
+astral-sh/ty-vscode#142
 astral-sh/uv#15016
 astral-sh/uv#15018
 aspnet-contrib/AspNet.Security.OAuth.Providers#1095
@@ -276,11 +277,13 @@ stravalib/stravalib#649
 TecharoHQ/anubis#188
 termcolor/termcolor#89
 termux/termux-packages#22519
+textlint/textlint#1711
 theupdateframework/python-tuf#2798
 theupdateframework/tuf-on-ci#548
 torchbox/wagtailmedia#252
 tornadoweb/tornado#3438
 tornadoweb/tornado#3463
+trailofbits/fickling#144
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
