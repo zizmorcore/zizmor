@@ -449,7 +449,7 @@ impl InputGroup {
             // Performance: if we're *only* collecting workflows, then we
             // can save ourselves a full repo download and only fetch the
             // repo's workflow files.
-            client.fetch_workflows(&slug, &mut group)?;
+            client.fetch_workflows(&slug, options, &mut group)?;
         } else {
             let before = group.len();
             let host = match client.host() {
@@ -458,7 +458,7 @@ impl InputGroup {
             };
 
             client
-                .fetch_audit_inputs(&slug, &mut group)
+                .fetch_audit_inputs(&slug, options, &mut group)
                 .with_context(|| {
                     tips(
                         format!(

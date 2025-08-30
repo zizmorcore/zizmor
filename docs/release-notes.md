@@ -41,6 +41,12 @@ of `zizmor`.
     See [Configuration - Discovery](./configuration.md#discovery) for a
     detailed explanation of the new behavior.
 
+### Bug Fixes 🐛
+
+* `zizmor` now correctly honors `--strict-collection` when collecting from
+  remote inputs. This also means that the default collection strictness
+  has changed for remote inputs to match all other inputs (#1122)
+
 ## 1.12.1
 
 ### Bug Fixes 🐛
