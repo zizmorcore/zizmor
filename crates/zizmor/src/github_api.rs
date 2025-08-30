@@ -22,6 +22,7 @@ use tar::Archive;
 use tracing::instrument;
 
 use crate::{
+    CollectionOptions,
     registry::input::{InputGroup, InputKey, InputKind, RepoSlug},
     utils::PipeSelf,
 };
@@ -424,11 +425,12 @@ impl Client {
     ///
     /// This is an optimized variant of `fetch_audit_inputs` for the workflow-only
     /// collection case.
-    #[instrument(skip(self, group))]
+    #[instrument(skip(self, options, group))]
     #[tokio::main]
     pub(crate) async fn fetch_workflows(
         &self,
         slug: &RepoSlug,
+        options: &CollectionOptions,
         group: &mut InputGroup,
     ) -> Result<()> {
         let owner = &slug.owner;
@@ -473,8 +475,7 @@ impl Client {
             };
 
             let key = InputKey::remote(slug, file.path)?;
-            // TODO: Make strictness configurable here?
-            group.register(InputKind::Workflow, contents, key, true)?;
+            group.register(InputKind::Workflow, contents, key, options.strict)?;
         }
 
         Ok(())
@@ -485,11 +486,12 @@ impl Client {
     ///
     /// This is much slower than `fetch_workflows`, since it involves
     /// retrieving the entire repository archive and decompressing it.
-    #[instrument(skip(self, group))]
+    #[instrument(skip(self, options, group))]
     #[tokio::main]
     pub(crate) async fn fetch_audit_inputs(
         &self,
         slug: &RepoSlug,
+        options: &CollectionOptions,
         group: &mut InputGroup,
     ) -> Result<()> {
         let url = format!(
@@ -543,14 +545,12 @@ impl Client {
                 let key = InputKey::remote(slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
-                // TODO: Make strictness configurable here?
-                group.register(InputKind::Workflow, contents, key, true)?;
+                group.register(InputKind::Workflow, contents, key, options.strict)?;
             } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
                 let key = InputKey::remote(slug, file_path.to_string())?;
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
-                // TODO: Make strictness configurable here?
-                group.register(InputKind::Action, contents, key, true)?;
+                group.register(InputKind::Action, contents, key, options.strict)?;
             }
         }
 

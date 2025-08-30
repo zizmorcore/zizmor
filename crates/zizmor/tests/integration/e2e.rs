@@ -267,3 +267,31 @@ fn pr_960_backstop() -> Result<()> {
 
     Ok(())
 }
+
+/// Regression test for #1116.
+/// Ensures that `--strict-collection` is respected for remote inputs.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_1116_strict_collection_remote_input() -> Result<()> {
+    // Fails with `--strict-collection`.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .expects_failure(true)
+            .output(OutputMode::Stderr)
+            .args(["--strict-collection"])
+            .input("woodruffw-experiments/zizmor-issue-1116@f41c414")
+            .run()?
+    );
+
+    // Works without `--strict-collection`.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(OutputMode::Stderr)
+            .input("woodruffw-experiments/zizmor-issue-1116@f41c414")
+            .run()?
+    );
+
+    Ok(())
+}
