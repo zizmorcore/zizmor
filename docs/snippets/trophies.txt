@@ -293,6 +293,8 @@ ViaVersion/ViaVersion#4315
 vlang/v#22681
 wagtail/wagtail-localize#843
 wntrblm/nox#925
+WordPress/gutenberg#69126
+WordPress/wordpress-develop#8007
 zama-ai/tfhe-rs#2292
 zcash/librustzcash#1679
 ZcashFoundation/zebra#9110
