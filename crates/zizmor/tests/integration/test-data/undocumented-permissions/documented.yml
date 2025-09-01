@@ -1,0 +1,33 @@
+name: Test Documented Permissions
+
+on: [push, pull_request]
+
+# GitHub token permissions for all jobs in this workflow
+permissions:
+  contents: read  # Read access to fetch code
+  packages: write # Write access to publish packages
+
+jobs:
+  test-job-1:
+    runs-on: ubuntu-latest
+    # Override workflow permissions for this specific job
+    permissions:
+      contents: write  # Need write access to create releases
+      issues: write    # Need to create and update issues
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Test"
+
+  test-job-2:
+    runs-on: ubuntu-latest
+    permissions: write-all  # Full write access needed for admin operations
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Test"
+
+  test-job-3:
+    runs-on: ubuntu-latest
+    permissions: read-all  # Read-only access for analysis job
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Test"

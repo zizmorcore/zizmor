@@ -1,0 +1,17 @@
+name: Contents Read Only Test
+
+on: [push]
+
+# This should NOT trigger the rule since contents: read is self-explanatory
+permissions:
+  contents: read
+
+jobs:
+  test-job:
+    runs-on: ubuntu-latest
+    # This should also NOT trigger the rule
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Test"
