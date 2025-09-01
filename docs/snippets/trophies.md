@@ -1394,6 +1394,15 @@
         - wntrblm/nox#925
 
 
+-   ![](https://github.com/WordPress.png?size=40){ width="40" loading=lazy align=left } WordPress
+
+    ---
+
+    ??? example "Examples"
+        - WordPress/gutenberg#69126
+        - WordPress/wordpress-develop#8007
+
+
 -   ![](https://github.com/zama-ai.png?size=40){ width="40" loading=lazy align=left } zama-ai
 
     ---
