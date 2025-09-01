@@ -1,0 +1,156 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"undocumented-permissions.yml\")).args([\"--persona=pedantic\"]).run()?"
+---
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:18:9
+   |
+18 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:29:9
+   |
+29 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:36:9
+   |
+36 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:43:9
+   |
+43 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+error[excessive-permissions]: overly broad permissions
+ --> @@INPUT@@:7:3
+  |
+7 |   contents: write
+  |   ^^^^^^^^^^^^^^^ contents: write is overly broad at the workflow level
+  |
+  = note: audit confidence → High
+
+error[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:32:3
+   |
+32 | /   test-job-3:
+33 | |     runs-on: ubuntu-latest
+34 | |     permissions: write-all  # Using write-all for convenience (bad practice)
+   | |     ^^^^^^^^^^^^^^^^^^^^^^ uses write-all permissions
+35 | |     steps:
+36 | |       - uses: actions/checkout@v4
+37 | |       - run: echo "Test"
+   | |________________________^ this job
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:39:3
+   |
+39 | /   test-job-4:
+40 | |     runs-on: ubuntu-latest
+41 | |     permissions: read-all
+   | |     --------------------- uses read-all permissions
+42 | |     steps:
+43 | |       - uses: actions/checkout@v4
+44 | |       - run: echo "Test"
+   | |________________________- this job
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+ --> @@INPUT@@:6:1
+  |
+6 | / permissions:
+7 | |   contents: write
+8 | |   packages: read
+  | |________________- help: consider adding comments to document each permission's purpose
+  |
+  = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> @@INPUT@@:14:5
+   |
+14 | /     permissions:
+15 | |       contents: read  # Need to read repo contents
+16 | |       issues: write   # Need to write issue comments
+   | |____________________________________________________- help: consider adding comments to document each permission's purpose
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> @@INPUT@@:24:5
+   |
+24 | /     permissions:
+25 | |       contents: write
+26 | |       packages: write
+27 | |       actions: write
+   | |____________________- help: consider adding comments to document each permission's purpose
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> @@INPUT@@:11:3
+   |
+11 | /   test-job-1:
+12 | |     runs-on: ubuntu-latest
+...  |
+18 | |       - uses: actions/checkout@v4
+19 | |       - run: echo "Test"
+   | |________________________- info: this job
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> @@INPUT@@:21:3
+   |
+21 | /   test-job-2:
+22 | |     runs-on: ubuntu-latest
+...  |
+29 | |       - uses: actions/checkout@v4
+30 | |       - run: echo "Test"
+   | |________________________- info: this job
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> @@INPUT@@:32:3
+   |
+32 | /   test-job-3:
+33 | |     runs-on: ubuntu-latest
+...  |
+36 | |       - uses: actions/checkout@v4
+37 | |       - run: echo "Test"
+   | |________________________- info: this job
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> @@INPUT@@:39:3
+   |
+39 | /   test-job-4:
+40 | |     runs-on: ubuntu-latest
+...  |
+43 | |       - uses: actions/checkout@v4
+44 | |       - run: echo "Test"
+   | |________________________- info: this job
+   |
+   = note: audit confidence → High
+
+14 findings (4 fixable): 0 unknown, 4 informational, 3 low, 5 medium, 2 high

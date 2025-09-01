@@ -2,4 +2,4 @@
 source: tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"excessive-permissions/issue-336-repro.yml\")).run()?"
 ---
-No findings to report. Good job! (1 suppressed)
+No findings to report. Good job! (2 suppressed)

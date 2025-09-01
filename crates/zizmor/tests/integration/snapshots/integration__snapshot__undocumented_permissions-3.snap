@@ -1,0 +1,124 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"undocumented-permissions/documented.yml\")).args([\"--persona=pedantic\"]).run()?"
+---
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:18:9
+   |
+18 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:25:9
+   |
+25 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:32:9
+   |
+32 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+error[excessive-permissions]: overly broad permissions
+ --> @@INPUT@@:8:3
+  |
+8 |   packages: write # Write access to publish packages
+  |   ^^^^^^^^^^^^^^^ packages: write is overly broad at the workflow level
+  |
+  = note: audit confidence → High
+
+error[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:21:3
+   |
+21 | /   test-job-2:
+22 | |     runs-on: ubuntu-latest
+23 | |     permissions: write-all  # Full write access needed for admin operations
+   | |     ^^^^^^^^^^^^^^^^^^^^^^ uses write-all permissions
+24 | |     steps:
+25 | |       - uses: actions/checkout@v4
+26 | |       - run: echo "Test"
+   | |________________________^ this job
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:28:3
+   |
+28 | /   test-job-3:
+29 | |     runs-on: ubuntu-latest
+30 | |     permissions: read-all  # Read-only access for analysis job
+   | |     --------------------- uses read-all permissions
+31 | |     steps:
+32 | |       - uses: actions/checkout@v4
+33 | |       - run: echo "Test"
+   | |________________________- this job
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+ --> @@INPUT@@:6:1
+  |
+6 | / permissions:
+7 | |   contents: read  # Read access to fetch code
+8 | |   packages: write # Write access to publish packages
+  | |____________________________________________________- help: consider adding comments to document each permission's purpose
+  |
+  = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> @@INPUT@@:14:5
+   |
+14 | /     permissions:
+15 | |       contents: write  # Need write access to create releases
+16 | |       issues: write    # Need to create and update issues
+   | |_________________________________________________________- help: consider adding comments to document each permission's purpose
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> @@INPUT@@:11:3
+   |
+11 | /   test-job-1:
+12 | |     runs-on: ubuntu-latest
+...  |
+18 | |       - uses: actions/checkout@v4
+19 | |       - run: echo "Test"
+   | |________________________- info: this job
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> @@INPUT@@:21:3
+   |
+21 | /   test-job-2:
+22 | |     runs-on: ubuntu-latest
+...  |
+25 | |       - uses: actions/checkout@v4
+26 | |       - run: echo "Test"
+   | |________________________- info: this job
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> @@INPUT@@:28:3
+   |
+28 | /   test-job-3:
+29 | |     runs-on: ubuntu-latest
+...  |
+32 | |       - uses: actions/checkout@v4
+33 | |       - run: echo "Test"
+   | |________________________- info: this job
+   |
+   = note: audit confidence → High
+
+11 findings (3 fixable): 0 unknown, 3 informational, 2 low, 4 medium, 2 high

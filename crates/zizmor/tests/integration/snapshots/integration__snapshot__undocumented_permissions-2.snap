@@ -1,0 +1,69 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"undocumented-permissions.yml\")).run()?"
+---
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:18:9
+   |
+18 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:29:9
+   |
+29 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:36:9
+   |
+36 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:43:9
+   |
+43 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+error[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:32:3
+   |
+32 | /   test-job-3:
+33 | |     runs-on: ubuntu-latest
+34 | |     permissions: write-all  # Using write-all for convenience (bad practice)
+   | |     ^^^^^^^^^^^^^^^^^^^^^^ uses write-all permissions
+35 | |     steps:
+36 | |       - uses: actions/checkout@v4
+37 | |       - run: echo "Test"
+   | |________________________^ this job
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:39:3
+   |
+39 | /   test-job-4:
+40 | |     runs-on: ubuntu-latest
+41 | |     permissions: read-all
+   | |     --------------------- uses read-all permissions
+42 | |     steps:
+43 | |       - uses: actions/checkout@v4
+44 | |       - run: echo "Test"
+   | |________________________- this job
+   |
+   = note: audit confidence → High
+
+14 findings (8 suppressed, 4 fixable): 0 unknown, 0 informational, 0 low, 5 medium, 1 high
