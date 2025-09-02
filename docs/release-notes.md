@@ -41,6 +41,10 @@ of `zizmor`.
     See [Configuration - Discovery](./configuration.md#discovery) for a
     detailed explanation of the new behavior.
 
+* Audit rules can now be disabled entirely in `zizmor`'s configuration.
+  See [`rules.<id>.disable`](./configuration.md#rulesiddisable)
+  for details (#1132)
+
 ### Bug Fixes 🐛
 
 * `zizmor` now correctly honors `--strict-collection` when collecting from
