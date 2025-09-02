@@ -1,7 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"excessive-permissions/issue-336-repro.yml\")).args([\"--pedantic\"]).run()?"
-snapshot_kind: text
 ---
 error[excessive-permissions]: overly broad permissions
  --> @@INPUT@@:6:3
@@ -16,7 +15,7 @@ help[undocumented-permissions]: permissions without explanatory comments
   |
 5 | / permissions:
 6 | |   contents: write
-  | |_________________- help: consider adding comments to document each permission's purpose
+  | |_________________- help: consider adding comments to document the purpose of each permission
   |
   = note: audit confidence → High
 

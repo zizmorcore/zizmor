@@ -136,8 +136,8 @@ impl UndocumentedPermissions {
             // Remove the '#' and trim whitespace
             let comment_content = comment_text.strip_prefix('#').unwrap_or(&comment_text).trim();
 
-            // Require a meaningful comment (more than just empty or very short)
-            if !comment_content.is_empty() && comment_content.len() > 3 {
+            // Require a non-empty comment
+            if !comment_content.is_empty() {
                 return true;
             }
         }
