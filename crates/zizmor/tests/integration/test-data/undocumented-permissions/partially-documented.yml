@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   test-job-1:
+    name: Test Job 1
     runs-on: ubuntu-latest
     # Job with partial documentation
     permissions:
@@ -18,9 +19,12 @@ jobs:
       packages: write  # Needed to publish packages
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - run: echo "Test"
 
   test-job-2:
+    name: Test Job 2
     runs-on: ubuntu-latest
     # Job with no documentation at all
     permissions:
@@ -28,4 +32,6 @@ jobs:
       issues: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - run: echo "Test"

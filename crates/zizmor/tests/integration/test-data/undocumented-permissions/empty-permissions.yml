@@ -7,9 +7,12 @@ permissions: {}
 
 jobs:
   test-job:
+    name: Test Job
     runs-on: ubuntu-latest
     # This should also NOT trigger the rule
     permissions: {}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - run: echo "Test"

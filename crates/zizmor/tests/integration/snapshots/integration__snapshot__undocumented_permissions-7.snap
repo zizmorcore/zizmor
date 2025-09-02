@@ -2,24 +2,6 @@
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"undocumented-permissions/partially-documented.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
-warning[artipacked]: credential persistence through GitHub Actions artifacts
-  --> @@INPUT@@:20:9
-   |
-20 |       - uses: actions/checkout@v4
-   |         ------------------------- does not set persist-credentials: false
-   |
-   = note: audit confidence → Low
-   = note: this finding has an auto-fix
-
-warning[artipacked]: credential persistence through GitHub Actions artifacts
-  --> @@INPUT@@:30:9
-   |
-30 |       - uses: actions/checkout@v4
-   |         ------------------------- does not set persist-credentials: false
-   |
-   = note: audit confidence → Low
-   = note: this finding has an auto-fix
-
 error[excessive-permissions]: overly broad permissions
  --> @@INPUT@@:7:3
   |
@@ -48,48 +30,24 @@ help[undocumented-permissions]: permissions without explanatory comments
   = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:15:5
+  --> @@INPUT@@:16:5
    |
-15 | /     permissions:
-16 | |       contents: read   # Needed to read repo contents
-17 | |       actions: write
-18 | |       packages: write  # Needed to publish packages
+16 | /     permissions:
+17 | |       contents: read   # Needed to read repo contents
+18 | |       actions: write
+19 | |       packages: write  # Needed to publish packages
    | |___________________________________________________- help: consider adding comments to document the purpose of each permission
    |
    = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:26:5
+  --> @@INPUT@@:30:5
    |
-26 | /     permissions:
-27 | |       contents: write
-28 | |       issues: read
+30 | /     permissions:
+31 | |       contents: write
+32 | |       issues: read
    | |__________________- help: consider adding comments to document the purpose of each permission
    |
    = note: audit confidence → High
 
-info[anonymous-definition]: workflow or action definition without a name
-  --> @@INPUT@@:12:3
-   |
-12 | /   test-job-1:
-13 | |     runs-on: ubuntu-latest
-...  |
-20 | |       - uses: actions/checkout@v4
-21 | |       - run: echo "Test"
-   | |________________________- info: this job
-   |
-   = note: audit confidence → High
-
-info[anonymous-definition]: workflow or action definition without a name
-  --> @@INPUT@@:23:3
-   |
-23 | /   test-job-2:
-24 | |     runs-on: ubuntu-latest
-...  |
-30 | |       - uses: actions/checkout@v4
-31 | |       - run: echo "Test"
-   | |________________________- info: this job
-   |
-   = note: audit confidence → High
-
-9 findings (2 fixable): 0 unknown, 2 informational, 3 low, 2 medium, 2 high
+5 findings: 0 unknown, 0 informational, 3 low, 0 medium, 2 high
