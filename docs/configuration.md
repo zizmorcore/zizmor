@@ -68,6 +68,10 @@ _Type_: `boolean`
 
 Disables the audit entirely if `true`.
 
+!!! important
+
+    `rules.<id>.disable` was added in `v1.13.0`.
+
 !!! warning
 
     For most users, disabling audits should be a **measure of last resort**.
