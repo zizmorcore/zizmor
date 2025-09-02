@@ -122,8 +122,9 @@ impl UndocumentedPermissions {
 
         // Try to get the feature for this permission location
         let Ok(feature) = document.query_pretty(&location.route) else {
-            // If we can't find the feature, assume it's documented to be safe
-            return true;
+            // If we can't find the feature, assume it's undocumented to be safe.
+            // This handles rare edge cases like malformed routes or yamlpath internal errors.
+            return false;
         };
 
         // Get comments for this feature - yamlpath already extracts them!
