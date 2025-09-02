@@ -11,12 +11,12 @@ error[excessive-permissions]: overly broad permissions
   = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
- --> @@INPUT@@:6:1
+ --> @@INPUT@@:7:3
   |
-6 | / permissions:
-7 | |   contents: read
-8 | |   issues: write
-  | |_______________- help: consider adding comments to document the purpose of each permission
+7 |   contents: read
+  |   -------------- help: needs an explanatory comment
+8 |   issues: write
+  |   ------------- help: needs an explanatory comment
   |
   = note: audit confidence → High
 

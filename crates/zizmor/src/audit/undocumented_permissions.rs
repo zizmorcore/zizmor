@@ -61,7 +61,7 @@ impl Audit for UndocumentedPermissions {
 impl UndocumentedPermissions {
     fn check_permissions_documentation<'a>(
         &self,
-        permissions: &Permissions,
+        permissions: &'a Permissions,
         location: SymbolicLocation<'a>,
         workflow: &'a crate::models::workflow::Workflow,
     ) -> anyhow::Result<Option<crate::finding::Finding<'a>>> {
@@ -84,33 +84,30 @@ impl UndocumentedPermissions {
         }
 
         // Check each individual permission for documentation
-        let mut undocumented_permissions = Vec::new();
+        let mut finding_builder = Self::finding()
+            .severity(Severity::Low)
+            .confidence(Confidence::High)
+            .persona(Persona::Pedantic);
+
         let base_location = location.clone().primary();
+        let mut has_undocumented = false;
 
         for (perm_name, _perm_value) in perms {
             let individual_perm_location = base_location
                 .clone()
                 .with_keys(["permissions".into(), perm_name.as_str().into()]);
 
-            if !self.has_explanatory_comment(&individual_perm_location, workflow) {
-                undocumented_permissions.push(perm_name.as_str());
+            if !self.has_explanatory_comment(&individual_perm_location, workflow)? {
+                finding_builder = finding_builder.add_location(individual_perm_location.annotated(
+                    "needs an explanatory comment",
+                ));
+                has_undocumented = true;
             }
         }
 
         // Only create a finding if there are actually undocumented permissions
-        if !undocumented_permissions.is_empty() {
-            let perm_location = base_location.with_keys(["permissions".into()]);
-
-            Ok(Some(
-                Self::finding()
-                    .severity(Severity::Low)
-                    .confidence(Confidence::High)
-                    .persona(Persona::Pedantic)
-                    .add_location(perm_location.annotated(
-                        "consider adding comments to document the purpose of each permission",
-                    ))
-                    .build(workflow)?,
-            ))
+        if has_undocumented {
+            Ok(Some(finding_builder.build(workflow)?))
         } else {
             Ok(None)
         }

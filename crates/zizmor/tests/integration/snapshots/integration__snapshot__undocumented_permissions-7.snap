@@ -19,34 +19,28 @@ error[excessive-permissions]: overly broad permissions
   = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
- --> @@INPUT@@:6:1
+ --> @@INPUT@@:8:3
   |
-6 | / permissions:
-7 | |   contents: write  # Needed to create releases
-8 | |   packages: read
-9 | |   issues: write    # Needed to update issue comments
-  | |____________________________________________________- help: consider adding comments to document the purpose of each permission
+8 |   packages: read
+  |   -------------- help: needs an explanatory comment
   |
   = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:16:5
+  --> @@INPUT@@:18:7
    |
-16 | /     permissions:
-17 | |       contents: read   # Needed to read repo contents
-18 | |       actions: write
-19 | |       packages: write  # Needed to publish packages
-   | |___________________________________________________- help: consider adding comments to document the purpose of each permission
+18 |       actions: write
+   |       -------------- help: needs an explanatory comment
    |
    = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:30:5
+  --> @@INPUT@@:31:7
    |
-30 | /     permissions:
-31 | |       contents: write
-32 | |       issues: read
-   | |__________________- help: consider adding comments to document the purpose of each permission
+31 |       contents: write
+   |       --------------- help: needs an explanatory comment
+32 |       issues: read
+   |       ------------ help: needs an explanatory comment
    |
    = note: audit confidence → High
 

@@ -11,44 +11,46 @@ error[excessive-permissions]: overly broad permissions
   = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
- --> @@INPUT@@:6:1
+ --> @@INPUT@@:7:3
   |
-6 | / permissions:
-7 | |   contents: write
-8 | |   packages: read
-  | |________________- help: consider adding comments to document the purpose of each permission
+7 |   contents: write
+  |   --------------- help: needs an explanatory comment
+8 |   packages: read
+  |   -------------- help: needs an explanatory comment
   |
   = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:28:5
+  --> @@INPUT@@:29:7
    |
-28 | /     permissions:
-29 | |       contents: write
-30 | |       packages: write
-31 | |       actions: write
-   | |____________________- help: consider adding comments to document the purpose of each permission
-   |
-   = note: audit confidence → High
-
-help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:42:5
-   |
-42 | /     permissions:
-43 | |       contents: write
-44 | |       packages: write  
-45 | |       actions: write
-   | |____________________- help: consider adding comments to document the purpose of each permission
+29 |       contents: write
+   |       --------------- help: needs an explanatory comment
+30 |       packages: write
+   |       --------------- help: needs an explanatory comment
+31 |       actions: write
+   |       -------------- help: needs an explanatory comment
    |
    = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:55:5
+  --> @@INPUT@@:43:7
    |
-55 | /     permissions:
-56 | |       contents: read
-57 | |       metadata: read
-   | |____________________- help: consider adding comments to document the purpose of each permission
+43 |       contents: write
+   |       --------------- help: needs an explanatory comment
+44 |       packages: write  
+   |       --------------- help: needs an explanatory comment
+45 |       actions: write
+   |       -------------- help: needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> @@INPUT@@:56:7
+   |
+56 |       contents: read
+   |       -------------- help: needs an explanatory comment
+57 |       metadata: read
+   |       -------------- help: needs an explanatory comment
    |
    = note: audit confidence → High
 
