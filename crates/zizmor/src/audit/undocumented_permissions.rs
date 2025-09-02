@@ -123,31 +123,14 @@ impl UndocumentedPermissions {
     ) -> bool {
         let document = workflow.as_document();
 
-        // Try to get the feature for this permission location
-        let Ok(feature) = document.query_pretty(&location.route) else {
-            // If we can't find the feature, assume it's undocumented to be safe.
+        // Use the concretize API to get a Location with concrete Feature
+        let Ok(concrete_location) = location.clone().concretize(&document) else {
+            // If we can't concretize the location, assume it's undocumented to be safe.
             // This handles rare edge cases like malformed routes or yamlpath internal errors.
             return false;
         };
 
-        // Get comments for this feature - yamlpath already extracts them!
-        let comments = document.feature_comments(&feature);
-
-        // Check if there are any meaningful comments
-        for comment_feature in &comments {
-            let comment_text = document.extract(comment_feature);
-            // Remove the '#' and trim whitespace
-            let comment_content = comment_text
-                .strip_prefix('#')
-                .unwrap_or(comment_text)
-                .trim();
-
-            // Require a non-empty comment
-            if !comment_content.is_empty() {
-                return true;
-            }
-        }
-
-        false
+        // Check if there are any comments
+        !concrete_location.concrete.comments.is_empty()
     }
 }
