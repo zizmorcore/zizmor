@@ -35,11 +35,11 @@ help[undocumented-permissions]: permissions without explanatory comments
 help[undocumented-permissions]: permissions without explanatory comments
   --> @@INPUT@@:43:7
    |
-43 |       contents: write
+43 |       contents: read #
+   |       -------------- help: needs an explanatory comment
+44 |       packages: write #
    |       --------------- help: needs an explanatory comment
-44 |       packages: write  
-   |       --------------- help: needs an explanatory comment
-45 |       actions: write
+45 |       actions: write  #    
    |       -------------- help: needs an explanatory comment
    |
    = note: audit confidence → High
@@ -47,10 +47,10 @@ help[undocumented-permissions]: permissions without explanatory comments
 help[undocumented-permissions]: permissions without explanatory comments
   --> @@INPUT@@:56:7
    |
-56 |       contents: read
+56 |       metadata: read
    |       -------------- help: needs an explanatory comment
-57 |       metadata: read
-   |       -------------- help: needs an explanatory comment
+57 |       packages: write #
+   |       --------------- help: needs an explanatory comment
    |
    = note: audit confidence → High
 

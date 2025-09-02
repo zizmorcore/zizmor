@@ -117,17 +117,13 @@ impl UndocumentedPermissions {
         &self,
         location: &SymbolicLocation,
         workflow: &crate::models::workflow::Workflow,
-    ) -> bool {
+    ) -> anyhow::Result<bool> {
         let document = workflow.as_document();
 
         // Use the concretize API to get a Location with concrete Feature
-        let Ok(concrete_location) = location.clone().concretize(&document) else {
-            // If we can't concretize the location, assume it's undocumented to be safe.
-            // This handles rare edge cases like malformed routes or yamlpath internal errors.
-            return false;
-        };
+        let concrete_location = location.clone().concretize(&document)?;
 
-        // Check if there are any comments
-        !concrete_location.concrete.comments.is_empty()
+        // Check if there are any meaningful comments
+        Ok(concrete_location.concrete.comments.iter().any(|comment| comment.is_meaningful()))
     }
 }

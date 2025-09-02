@@ -9,12 +9,12 @@ permissions:
 
 jobs:
   test-job-1:
-    name: Test Job 1 
+    name: Test Job 1
     runs-on: ubuntu-latest
     # This job's permissions block has a comment explaining why
     permissions:
-      contents: read  # Need to read repo contents
-      issues: write   # Need to write issue comments
+      contents: read  # Needed to read repo contents
+      issues: write   # Needed to write issue comments
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,13 +36,13 @@ jobs:
       - run: echo "Test"
 
   test-job-3:
-    name: Test Job 3
+    name: Test Job 3 - Empty Comments
     runs-on: ubuntu-latest
-    # No comments explaining individual permissions
+    # Permissions have empty comments
     permissions:
-      contents: write
-      packages: write  
-      actions: write
+      contents: read #
+      packages: write #
+      actions: write  #    
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,11 +50,24 @@ jobs:
       - run: echo "Test"
 
   test-job-4:
-    name: Test Job 4
+    name: Test Job 4 - Mixed Documentation
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       metadata: read
+      packages: write #
+      issues: write   # Needed to post status updates
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"
+
+  test-job-5:
+    name: Test Job 5 - read contents
+    runs-on: ubuntu-latest
+    # Only one `contents: read` permission, no comment needed
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
