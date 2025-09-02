@@ -43,7 +43,7 @@ help[undocumented-permissions]: permissions without explanatory comments
 7 | |   contents: write  # Needed to create releases
 8 | |   packages: read
 9 | |   issues: write    # Needed to update issue comments
-  | |____________________________________________________- help: consider adding comments to document each permission's purpose
+  | |____________________________________________________- help: consider adding comments to document the purpose of each permission
   |
   = note: audit confidence → High
 
@@ -54,7 +54,7 @@ help[undocumented-permissions]: permissions without explanatory comments
 16 | |       contents: read   # Needed to read repo contents
 17 | |       actions: write
 18 | |       packages: write  # Needed to publish packages
-   | |___________________________________________________- help: consider adding comments to document each permission's purpose
+   | |___________________________________________________- help: consider adding comments to document the purpose of each permission
    |
    = note: audit confidence → High
 
@@ -64,7 +64,7 @@ help[undocumented-permissions]: permissions without explanatory comments
 26 | /     permissions:
 27 | |       contents: write
 28 | |       issues: read
-   | |__________________- help: consider adding comments to document each permission's purpose
+   | |__________________- help: consider adding comments to document the purpose of each permission
    |
    = note: audit confidence → High
 

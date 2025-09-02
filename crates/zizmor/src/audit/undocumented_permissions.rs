@@ -2,6 +2,7 @@ use github_actions_models::common::{Permission, Permissions};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::finding::location::Locatable as _;
+use crate::models::AsDocument;
 use crate::{
     AuditState,
     finding::{Confidence, Persona, Severity, location::SymbolicLocation},
@@ -65,30 +66,82 @@ impl UndocumentedPermissions {
         workflow: &'a crate::models::workflow::Workflow,
     ) -> anyhow::Result<Option<crate::finding::Finding<'a>>> {
         // Only check explicit permissions blocks
-        match permissions {
-            Permissions::Explicit(perms) if !perms.is_empty() => {
-                // Check if this permissions block needs documentation
-                // Skip if it only contains "contents: read" which is common and self-explanatory
-                if perms.len() == 1
-                    && perms.get("contents").map_or(false, |p| *p == Permission::Read) {
-                    return Ok(None);
-                }
+        let Permissions::Explicit(perms) = permissions else {
+            return Ok(None);
+        };
 
-                // For explicit permissions, recommend documenting each permission
-                let perm_location = location.primary().with_keys(["permissions".into()]);
-                Ok(Some(
-                    Self::finding()
-                        .severity(Severity::Low)
-                        .confidence(Confidence::High)
-                        .persona(Persona::Pedantic)
-                        .add_location(perm_location.annotated(
-                            "consider adding comments to document each permission's purpose",
-                        ))
-                        .build(workflow)?,
-                ))
-            }
-            _ => Ok(None),
+        if perms.is_empty() {
+            return Ok(None);
         }
+
+        // Skip if it only contains "contents: read" which is common and self-explanatory
+        if perms.len() == 1
+            && perms.get("contents").map_or(false, |p| *p == Permission::Read) {
+            return Ok(None);
+        }
+
+        // Check each individual permission for documentation
+        let mut undocumented_permissions = Vec::new();
+        let base_location = location.clone().primary();
+
+        for (perm_name, _perm_value) in perms {
+            let individual_perm_location = base_location
+                .clone()
+                .with_keys(["permissions".into(), perm_name.as_str().into()]);
+
+            if !self.has_explanatory_comment(&individual_perm_location, workflow) {
+                undocumented_permissions.push(perm_name.as_str());
+            }
+        }
+
+        // Only create a finding if there are actually undocumented permissions
+        if !undocumented_permissions.is_empty() {
+            let perm_location = base_location.with_keys(["permissions".into()]);
+
+            Ok(Some(
+                Self::finding()
+                    .severity(Severity::Low)
+                    .confidence(Confidence::High)
+                    .persona(Persona::Pedantic)
+                    .add_location(perm_location.annotated(
+                        "consider adding comments to document the purpose of each permission"
+                    ))
+                    .build(workflow)?,
+            ))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn has_explanatory_comment(
+        &self,
+        location: &SymbolicLocation,
+        workflow: &crate::models::workflow::Workflow,
+    ) -> bool {
+        let document = workflow.as_document();
+
+        // Try to get the feature for this permission location
+        let Ok(feature) = document.query_pretty(&location.route) else {
+            // If we can't find the feature, assume it's documented to be safe
+            return true;
+        };
+
+        // Get comments for this feature - yamlpath already extracts them!
+        let comments = document.feature_comments(&feature);
+
+        // Check if there are any meaningful comments
+        for comment_feature in &comments {
+            let comment_text = document.extract(comment_feature);
+            // Remove the '#' and trim whitespace
+            let comment_content = comment_text.strip_prefix('#').unwrap_or(&comment_text).trim();
+
+            // Require a meaningful comment (more than just empty or very short)
+            if !comment_content.is_empty() && comment_content.len() > 3 {
+                return true;
+            }
+        }
+
+        false
     }
 }
 

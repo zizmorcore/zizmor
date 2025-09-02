@@ -25,7 +25,7 @@ help[undocumented-permissions]: permissions without explanatory comments
 6 | / permissions:
 7 | |   contents: read
 8 | |   issues: write
-  | |_______________- help: consider adding comments to document each permission's purpose
+  | |_______________- help: consider adding comments to document the purpose of each permission
   |
   = note: audit confidence → High
 

@@ -80,19 +80,9 @@ help[undocumented-permissions]: permissions without explanatory comments
 6 | / permissions:
 7 | |   contents: write
 8 | |   packages: read
-  | |________________- help: consider adding comments to document each permission's purpose
+  | |________________- help: consider adding comments to document the purpose of each permission
   |
   = note: audit confidence → High
-
-help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:14:5
-   |
-14 | /     permissions:
-15 | |       contents: read  # Need to read repo contents
-16 | |       issues: write   # Need to write issue comments
-   | |____________________________________________________- help: consider adding comments to document each permission's purpose
-   |
-   = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
   --> @@INPUT@@:24:5
@@ -101,7 +91,7 @@ help[undocumented-permissions]: permissions without explanatory comments
 25 | |       contents: write
 26 | |       packages: write
 27 | |       actions: write
-   | |____________________- help: consider adding comments to document each permission's purpose
+   | |____________________- help: consider adding comments to document the purpose of each permission
    |
    = note: audit confidence → High
 
@@ -153,4 +143,4 @@ info[anonymous-definition]: workflow or action definition without a name
    |
    = note: audit confidence → High
 
-14 findings (4 fixable): 0 unknown, 4 informational, 3 low, 5 medium, 2 high
+13 findings (4 fixable): 0 unknown, 4 informational, 2 low, 5 medium, 2 high

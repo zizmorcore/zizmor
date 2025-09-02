@@ -65,26 +65,6 @@ warning[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → High
 
-help[undocumented-permissions]: permissions without explanatory comments
- --> @@INPUT@@:6:1
-  |
-6 | / permissions:
-7 | |   contents: read  # Needed to fetch code
-8 | |   packages: write # Needed to publish packages
-  | |______________________________________________- help: consider adding comments to document each permission's purpose
-  |
-  = note: audit confidence → High
-
-help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:14:5
-   |
-14 | /     permissions:
-15 | |       contents: write  # Needed to create releases
-16 | |       issues: write    # Needed to create and update issues
-   | |___________________________________________________________- help: consider adding comments to document each permission's purpose
-   |
-   = note: audit confidence → High
-
 info[anonymous-definition]: workflow or action definition without a name
   --> @@INPUT@@:11:3
    |
@@ -121,4 +101,4 @@ info[anonymous-definition]: workflow or action definition without a name
    |
    = note: audit confidence → High
 
-11 findings (3 fixable): 0 unknown, 3 informational, 2 low, 4 medium, 2 high
+9 findings (3 fixable): 0 unknown, 3 informational, 0 low, 4 medium, 2 high
