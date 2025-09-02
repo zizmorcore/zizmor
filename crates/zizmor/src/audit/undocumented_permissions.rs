@@ -76,7 +76,10 @@ impl UndocumentedPermissions {
 
         // Skip if it only contains "contents: read" which is common and self-explanatory
         if perms.len() == 1
-            && perms.get("contents").map_or(false, |p| *p == Permission::Read) {
+            && perms
+                .get("contents")
+                .is_some_and(|p| *p == Permission::Read)
+        {
             return Ok(None);
         }
 
@@ -104,7 +107,7 @@ impl UndocumentedPermissions {
                     .confidence(Confidence::High)
                     .persona(Persona::Pedantic)
                     .add_location(perm_location.annotated(
-                        "consider adding comments to document the purpose of each permission"
+                        "consider adding comments to document the purpose of each permission",
                     ))
                     .build(workflow)?,
             ))
@@ -134,7 +137,10 @@ impl UndocumentedPermissions {
         for comment_feature in &comments {
             let comment_text = document.extract(comment_feature);
             // Remove the '#' and trim whitespace
-            let comment_content = comment_text.strip_prefix('#').unwrap_or(&comment_text).trim();
+            let comment_content = comment_text
+                .strip_prefix('#')
+                .unwrap_or(comment_text)
+                .trim();
 
             // Require a non-empty comment
             if !comment_content.is_empty() {
@@ -145,4 +151,3 @@ impl UndocumentedPermissions {
         false
     }
 }
-
