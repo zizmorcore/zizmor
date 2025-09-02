@@ -305,7 +305,7 @@ pub(crate) trait Audit: AuditCore {
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         if config.disables(ident) {
             tracing::debug!(
-                "skipping {ident} is disabled in config for group {group:?}",
+                "skipping: {ident} is disabled in config for group {group:?}",
                 group = input.key().group()
             );
             return Ok(vec![]);
