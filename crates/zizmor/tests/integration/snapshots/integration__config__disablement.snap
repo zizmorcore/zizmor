@@ -1,0 +1,6 @@
+---
+source: crates/zizmor/tests/integration/config.rs
+expression: "zizmor().input(input_under_test(\"config-scenarios/disablement\")).setenv(\"RUST_LOG\",\n\"zizmor::audit=debug\").output(OutputMode::Both).run()?"
+---
+DEBUG audit{input=Workflow(file://@@INPUT@@/.github/workflows/hackme.yml)}: zizmor::audit: skipping: template-injection is disabled in config for group Group("@@INPUT@@")
+No findings to report. Good job!

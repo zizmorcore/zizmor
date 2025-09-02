@@ -538,10 +538,10 @@ fn run() -> Result<ExitCode> {
         for (input_key, input) in registry.iter_inputs() {
             Span::current().pb_set_message(input.key().filename());
             let config = registry.get_config(input_key.group());
-            for (name, audit) in audit_registry.iter_audits() {
-                tracing::debug!("running {name} on {input}", input = input.key());
-                results.extend(audit.audit(input, config).with_context(|| {
-                    format!("{name} failed on {input}", input = input.key().filename())
+            for (ident, audit) in audit_registry.iter_audits() {
+                tracing::debug!("running {ident} on {input}", input = input.key());
+                results.extend(audit.audit(ident, input, config).with_context(|| {
+                    format!("{ident} failed on {input}", input = input.key().filename())
                 })?);
                 Span::current().pb_inc(1);
             }

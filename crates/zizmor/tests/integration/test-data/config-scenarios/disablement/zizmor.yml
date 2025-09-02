@@ -1,0 +1,3 @@
+rules:
+  template-injection:
+    disable: true

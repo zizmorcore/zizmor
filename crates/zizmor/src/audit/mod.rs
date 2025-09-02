@@ -288,12 +288,29 @@ pub(crate) trait Audit: AuditCore {
     ///
     /// Implementors **should not** override this blanket implementation,
     /// since it's marked with tracing instrumentation.
-    #[instrument(skip(self, config))]
+    ///
+    /// NOTE: This method takes the audit's own identifier as an argument,
+    /// so that we can check whether the audit is disabled in the config.
+    /// This is a little silly since the audit would ideally call Self::ident(),
+    /// but this gets invoked through a trait object where `Self` is not `Sized`.
+    ///
+    /// TODO: This also means we effectively run the disablement check on every
+    /// single input in a group, rather than just once per group.
+    #[instrument(skip(self, ident, config))]
     fn audit<'doc>(
         &self,
+        ident: &str,
         input: &'doc AuditInput,
         config: &Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        if config.disables(ident) {
+            tracing::debug!(
+                "skipping: {ident} is disabled in config for group {group:?}",
+                group = input.key().group()
+            );
+            return Ok(vec![]);
+        }
+
         let mut results = match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow, config),
             AuditInput::Action(action) => self.audit_action(action, config),
