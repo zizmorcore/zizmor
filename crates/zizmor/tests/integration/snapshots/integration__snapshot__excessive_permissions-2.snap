@@ -5,18 +5,9 @@ expression: "zizmor().input(input_under_test(\"excessive-permissions/issue-336-r
 error[excessive-permissions]: overly broad permissions
  --> @@INPUT@@:6:3
   |
-6 |   contents: write
+6 |   contents: write  # Needed for the workflow
   |   ^^^^^^^^^^^^^^^ contents: write is overly broad at the workflow level
   |
   = note: audit confidence → High
 
-help[undocumented-permissions]: permissions without explanatory comments
- --> @@INPUT@@:5:1
-  |
-5 | / permissions:
-6 | |   contents: write
-  | |_________________- help: consider adding comments to document the purpose of each permission
-  |
-  = note: audit confidence → High
-
-2 findings: 0 unknown, 0 informational, 1 low, 0 medium, 1 high
+1 finding: 0 unknown, 0 informational, 0 low, 0 medium, 1 high
