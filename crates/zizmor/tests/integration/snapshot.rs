@@ -813,6 +813,66 @@ fn unpinned_images() -> Result<()> {
 }
 
 #[test]
+fn undocumented_permissions() -> Result<()> {
+    // Test with pedantic persona (should find issues)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with regular persona (should not find issues)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions.yml"))
+            .run()?
+    );
+
+    // Test with properly documented permissions (should not find issues even with pedantic)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions/documented.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with only "contents: read" (should not trigger rule)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions/contents-read-only.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with empty permissions (should not trigger rule)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions/empty-permissions.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with contents: read plus other permissions (should trigger rule)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions/contents-read-with-other.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with partially documented permissions (should ideally only flag undocumented ones)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions/partially-documented.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
 fn unsound_condition() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()

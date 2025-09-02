@@ -1,0 +1,44 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"undocumented-permissions/contents-read-with-other.yml\")).args([\"--persona=pedantic\"]).run()?"
+---
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+  --> @@INPUT@@:14:9
+   |
+14 |       - uses: actions/checkout@v4
+   |         ------------------------- does not set persist-credentials: false
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+error[excessive-permissions]: overly broad permissions
+ --> @@INPUT@@:8:3
+  |
+8 |   issues: write
+  |   ^^^^^^^^^^^^^ issues: write is overly broad at the workflow level
+  |
+  = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+ --> @@INPUT@@:6:1
+  |
+6 | / permissions:
+7 | |   contents: read
+8 | |   issues: write
+  | |_______________- help: consider adding comments to document each permission's purpose
+  |
+  = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> @@INPUT@@:11:3
+   |
+11 | /   test-job:
+12 | |     runs-on: ubuntu-latest
+13 | |     steps:
+14 | |       - uses: actions/checkout@v4
+15 | |       - run: echo "Test"
+   | |________________________- info: this job
+   |
+   = note: audit confidence → High
+
+4 findings (1 fixable): 0 unknown, 1 informational, 1 low, 1 medium, 1 high

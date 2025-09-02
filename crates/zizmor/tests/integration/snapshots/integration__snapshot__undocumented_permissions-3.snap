@@ -32,7 +32,7 @@ warning[artipacked]: credential persistence through GitHub Actions artifacts
 error[excessive-permissions]: overly broad permissions
  --> @@INPUT@@:8:3
   |
-8 |   packages: write # Write access to publish packages
+8 |   packages: write # Needed to publish packages
   |   ^^^^^^^^^^^^^^^ packages: write is overly broad at the workflow level
   |
   = note: audit confidence → High
@@ -42,7 +42,7 @@ error[excessive-permissions]: overly broad permissions
    |
 21 | /   test-job-2:
 22 | |     runs-on: ubuntu-latest
-23 | |     permissions: write-all  # Full write access needed for admin operations
+23 | |     permissions: write-all  # Needed for admin operations
    | |     ^^^^^^^^^^^^^^^^^^^^^^ uses write-all permissions
 24 | |     steps:
 25 | |       - uses: actions/checkout@v4
@@ -56,7 +56,7 @@ warning[excessive-permissions]: overly broad permissions
    |
 28 | /   test-job-3:
 29 | |     runs-on: ubuntu-latest
-30 | |     permissions: read-all  # Read-only access for analysis job
+30 | |     permissions: read-all  # Needed for analysis job
    | |     --------------------- uses read-all permissions
 31 | |     steps:
 32 | |       - uses: actions/checkout@v4
@@ -69,9 +69,9 @@ help[undocumented-permissions]: permissions without explanatory comments
  --> @@INPUT@@:6:1
   |
 6 | / permissions:
-7 | |   contents: read  # Read access to fetch code
-8 | |   packages: write # Write access to publish packages
-  | |____________________________________________________- help: consider adding comments to document each permission's purpose
+7 | |   contents: read  # Needed to fetch code
+8 | |   packages: write # Needed to publish packages
+  | |______________________________________________- help: consider adding comments to document each permission's purpose
   |
   = note: audit confidence → High
 
@@ -79,9 +79,9 @@ help[undocumented-permissions]: permissions without explanatory comments
   --> @@INPUT@@:14:5
    |
 14 | /     permissions:
-15 | |       contents: write  # Need write access to create releases
-16 | |       issues: write    # Need to create and update issues
-   | |_________________________________________________________- help: consider adding comments to document each permission's purpose
+15 | |       contents: write  # Needed to create releases
+16 | |       issues: write    # Needed to create and update issues
+   | |___________________________________________________________- help: consider adding comments to document each permission's purpose
    |
    = note: audit confidence → High
 
