@@ -759,7 +759,9 @@ jobs:
         let audit = KnownVulnerableActions::new(&state).unwrap();
 
         let input = workflow.into();
-        let findings = audit.audit(&input, &Config::default()).unwrap();
+        let findings = audit
+            .audit(KnownVulnerableActions::ident(), &input, &Config::default())
+            .unwrap();
         assert_eq!(findings.len(), 1);
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
@@ -812,7 +814,9 @@ jobs:
         let audit = KnownVulnerableActions::new(&state).unwrap();
 
         let input = workflow.into();
-        let findings = audit.audit(&input, &Config::default()).unwrap();
+        let findings = audit
+            .audit(KnownVulnerableActions::ident(), &input, &Config::default())
+            .unwrap();
         assert_eq!(findings.len(), 1);
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
