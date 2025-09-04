@@ -81,18 +81,102 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let format_str = &args[0];
-        let format_template = format_str.to_string();
+        let fs = args[0].to_string();
+        let mut result = String::new();
+        let mut index = 0;
 
-        let mut result = format_template;
+        while index < fs.len() {
+            let lbrace = fs[index..].find('{').map(|pos| index + pos);
+            let rbrace = fs[index..].find('}').map(|pos| index + pos);
 
-        // Replace {0}, {1}, {2}, etc. with the corresponding arguments
-        for (i, arg) in args.iter().skip(1).enumerate() {
-            let placeholder = format!("{{{}}}", i);
-            result = result.replace(&placeholder, &arg.to_string());
+            // Left brace
+            if let Some(lbrace_pos) = lbrace {
+                if rbrace.is_none() || rbrace.unwrap() > lbrace_pos {
+                    // Escaped left brace
+                    if Self::safe_char_at(&fs, lbrace_pos + 1) == '{' {
+                        result.push_str(&fs[index..=lbrace_pos]);
+                        index = lbrace_pos + 2;
+                        continue;
+                    }
+
+                    // Left brace, number, optional format specifiers, right brace
+                    if let Some(rbrace_pos) = rbrace {
+                        if rbrace_pos > lbrace_pos + 1 {
+                            if let Some(arg_index) = Self::read_arg_index(&fs, lbrace_pos + 1) {
+                                // Check parameter count
+                                if 1 + arg_index > args.len() - 1 {
+                                    // Invalid format string - too few arguments
+                                    return None;
+                                }
+
+                                // Append the portion before the left brace
+                                if lbrace_pos > index {
+                                    result.push_str(&fs[index..lbrace_pos]);
+                                }
+
+                                // Append the arg
+                                result.push_str(&args[1 + arg_index].to_string());
+                                index = rbrace_pos + 1;
+                                continue;
+                            }
+                        }
+                    }
+
+                    // Invalid format string
+                    return None;
+                }
+            }
+
+            // Right brace
+            if let Some(rbrace_pos) = rbrace {
+                if lbrace.is_none() || lbrace.unwrap() > rbrace_pos {
+                    // Escaped right brace
+                    if Self::safe_char_at(&fs, rbrace_pos + 1) == '}' {
+                        result.push_str(&fs[index..=rbrace_pos]);
+                        index = rbrace_pos + 2;
+                    } else {
+                        // Invalid format string
+                        return None;
+                    }
+                }
+            } else {
+                // Last segment
+                result.push_str(&fs[index..]);
+                break;
+            }
         }
 
         Some(Evaluation::String(result))
+    }
+
+    /// Helper function to safely get character at index, returns null char if out of bounds.
+    fn safe_char_at(string: &str, index: usize) -> char {
+        string.chars().nth(index).unwrap_or('\0')
+    }
+
+    /// Helper function to read argument index from format string.
+    fn read_arg_index(string: &str, start_index: usize) -> Option<usize> {
+        let mut length = 0;
+        let chars: Vec<char> = string.chars().collect();
+
+        // Count the number of digits
+        while start_index + length < chars.len() {
+            let next_char = chars[start_index + length];
+            if next_char.is_ascii_digit() {
+                length += 1;
+            } else {
+                break;
+            }
+        }
+
+        // Validate at least one digit
+        if length < 1 {
+            return None;
+        }
+
+        // Parse the number
+        let number_str: String = chars[start_index..start_index + length].iter().collect();
+        number_str.parse::<usize>().ok()
     }
 
     /// Constant-evaluates a `contains(haystack, needle)` call.
@@ -2207,6 +2291,97 @@ mod tests {
                 }
                 (a, b) => assert_eq!(a, b),
             }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_format_function() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Basic formatting
+            (
+                "format('Hello {0}', 'world')",
+                Evaluation::String("Hello world".to_string()),
+            ),
+            (
+                "format('{0} {1}', 'Hello', 'world')",
+                Evaluation::String("Hello world".to_string()),
+            ),
+            (
+                "format('Value: {0}', 42)",
+                Evaluation::String("Value: 42".to_string()),
+            ),
+            // Escaped braces
+            (
+                "format('{{0}}', 'test')",
+                Evaluation::String("{0}".to_string()),
+            ),
+            (
+                "format('{{Hello}} {0}', 'world')",
+                Evaluation::String("{Hello} world".to_string()),
+            ),
+            (
+                "format('{0} {{1}}', 'Hello')",
+                Evaluation::String("Hello {1}".to_string()),
+            ),
+            (
+                "format('}}{{', 'test')",
+                Evaluation::String("}{".to_string()),
+            ),
+            // Multiple arguments
+            (
+                "format('{0} {1} {2}', 'a', 'b', 'c')",
+                Evaluation::String("a b c".to_string()),
+            ),
+            (
+                "format('{2} {1} {0}', 'a', 'b', 'c')",
+                Evaluation::String("c b a".to_string()),
+            ),
+            // Repeated arguments
+            (
+                "format('{0} {0} {0}', 'test')",
+                Evaluation::String("test test test".to_string()),
+            ),
+            // No arguments to replace
+            (
+                "format('Hello world')",
+                Evaluation::String("Hello world".to_string()),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_format_function_error_cases() -> Result<()> {
+        let error_cases = &[
+            // Invalid format strings
+            "format('{0', 'test')",        // Missing closing brace
+            "format('0}', 'test')",        // Missing opening brace
+            "format('{a}', 'test')",       // Non-numeric placeholder
+            "format('{1}', 'test')",       // Argument index out of bounds
+            "format('{0} {2}', 'a', 'b')", // Argument index out of bounds
+            "format('{}', 'test')",        // Empty braces
+            "format('{-1}', 'test')",      // Negative index (invalid)
+        ];
+
+        for expr_str in error_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval();
+            assert!(
+                result.is_none(),
+                "Expected None for invalid format string: {}",
+                expr_str
+            );
         }
 
         Ok(())
