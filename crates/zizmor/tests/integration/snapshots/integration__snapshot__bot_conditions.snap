@@ -1,7 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"bot-conditions.yml\")).run()?"
-snapshot_kind: text
 ---
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
  --> @@INPUT@@:1:1
@@ -12,140 +11,135 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   = note: audit confidence → Medium
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:9:5
+  --> @@INPUT@@:11:9
    |
  9 |     name: hackme
-   |     ^^^^^^^^^^^^ this job
+   |     ------------ this job
 10 |     runs-on: ubuntu-latest
 11 |     if: github.actor == 'dependabot[bot]'
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:13:9
+  --> @@INPUT@@:15:17
    |
 13 |       - name: vulnerable-1
-   |         ^^^^^^^^^^^^^^^^^^ this step
+   |         ------------------ this step
 14 |         run: echo hello
 15 |         if: ${{ github.actor == 'dependabot[bot]' }}
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:17:9
+  --> @@INPUT@@:19:17
    |
 17 |       - name: vulnerable-2
-   |         ^^^^^^^^^^^^^^^^^^ this step
+   |         ------------------ this step
 18 |         run: echo hello
 19 |         if: ${{ github.actor == 'dependabot[bot]' && github.repository == 'example/example' }}
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:21:9
+  --> @@INPUT@@:23:13
    |
 21 |       - name: vulnerable-3
-   |         ^^^^^^^^^^^^^^^^^^ this step
+   |         ------------------ this step
 22 |         run: echo hello
 23 |         if: github.actor == 'renovate[bot]'
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:29:9
+  --> @@INPUT@@:32:13
    |
 29 |       - name: vulnerable-5
-   |         ^^^^^^^^^^^^^^^^^^ this step
-30 |         run: echo hello
-31 |         # ensure we're case insensitive
+   |         ------------------ this step
+...
 32 |         if: github.ACTOR == 'dependabot[bot]'
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:34:9
+  --> @@INPUT@@:37:13
    |
 34 |       - name: vulnerable-6
-   |         ^^^^^^^^^^^^^^^^^^ this step
-35 |         run: echo hello
-36 |         # ensure we detect unknown bots
+   |         ------------------ this step
+...
 37 |         if: github.actor == 'mystery[bot]'
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:39:9
+  --> @@INPUT@@:42:13
    |
 39 |       - name: vulnerable-7
-   |         ^^^^^^^^^^^^^^^^^^ this step
-40 |         run: echo hello
-41 |         # ensure we handle index-style contexts
+   |         ------------------ this step
+...
 42 |         if: github['actor'] == 'dependabot[bot]'
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:44:9
+  --> @@INPUT@@:47:13
    |
 44 |       - name: vulnerable-8
-   |         ^^^^^^^^^^^^^^^^^^ this step
-45 |         run: echo hello
-46 |         # ensure we handle index-style contexts with a different case
+   |         ------------------ this step
+...
 47 |         if: github['ACTOR'] == 'dependabot[bot]'
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:49:9
+  --> @@INPUT@@:52:13
    |
 49 |       - name: vulnerable-9
-   |         ^^^^^^^^^^^^^^^^^^ this step
-50 |         run: echo hello
-51 |         # ensure we handle actor ID checks
+   |         ------------------ this step
+...
 52 |         if: github.actor_id == 49699333
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:54:9
+  --> @@INPUT@@:56:13
    |
 54 |       - name: vulnerable-10
-   |         ^^^^^^^^^^^^^^^^^^^ this step
+   |         ------------------- this step
 55 |         run: echo hello
 56 |         if: github['ACTOR_ID'] == 49699333
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
-  --> @@INPUT@@:58:9
+  --> @@INPUT@@:60:17
    |
 58 |       - name: vulnerable-11
-   |         ^^^^^^^^^^^^^^^^^^^ this step
+   |         ------------------- this step
 59 |         run: echo hello
 60 |         if: ${{ github.actor_id == '49699333' }}
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 12 findings (11 fixable): 0 unknown, 0 informational, 0 low, 0 medium, 12 high

@@ -1,7 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"template-injection/pr-317-repro.yml\")).run()?"
-snapshot_kind: text
 ---
 warning[template-injection]: code injection via template expansion
   --> @@INPUT@@:28:20
@@ -9,9 +8,9 @@ warning[template-injection]: code injection via template expansion
 27 |       - run: |
    |         --- this run block
 28 |           echo ${{ matrix.bar }}
-   |                    ---------- may expand into attacker-controllable code
+   |                    ^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 2 findings (1 suppressed, 1 fixable): 0 unknown, 0 informational, 0 low, 1 medium, 0 high

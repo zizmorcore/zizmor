@@ -2,25 +2,40 @@
 
 use std::collections::{HashMap, hash_map::Entry};
 
-use annotate_snippets::{Level, Renderer, Snippet};
+use annotate_snippets::{Annotation, AnnotationKind, Group, Level, Renderer, Snippet};
 use anstream::{eprintln, print, println};
 use owo_colors::OwoColorize;
-use terminal_link::Link;
 
 use crate::{
-    finding::{Finding, Severity, location::Location},
+    finding::{
+        Finding, Severity,
+        location::{Location, LocationKind},
+    },
     models::AsDocument,
-    registry::{FindingRegistry, input::InputKey, input::InputRegistry},
+    registry::{
+        FindingRegistry,
+        input::{InputKey, InputRegistry},
+    },
 };
 
-impl From<&Severity> for Level {
+impl From<LocationKind> for AnnotationKind {
+    fn from(kind: LocationKind) -> Self {
+        match kind {
+            LocationKind::Primary => AnnotationKind::Primary,
+            LocationKind::Related => AnnotationKind::Context,
+            LocationKind::Hidden => unreachable!(),
+        }
+    }
+}
+
+impl From<&Severity> for Level<'_> {
     fn from(sev: &Severity) -> Self {
         match sev {
-            Severity::Unknown => Level::Note,
-            Severity::Informational => Level::Info,
-            Severity::Low => Level::Help,
-            Severity::Medium => Level::Warning,
-            Severity::High => Level::Error,
+            Severity::Unknown => Level::ERROR,
+            Severity::Informational => Level::INFO,
+            Severity::Low => Level::HELP,
+            Severity::Medium => Level::WARNING,
+            Severity::High => Level::ERROR,
         }
     }
 }
@@ -28,7 +43,7 @@ impl From<&Severity> for Level {
 pub(crate) fn finding_snippet<'doc>(
     registry: &'doc InputRegistry,
     finding: &'doc Finding<'doc>,
-) -> Vec<Snippet<'doc>> {
+) -> Vec<Snippet<'doc, Annotation<'doc>>> {
     // Our finding might span multiple workflows, so we need to group locations
     // by their enclosing workflow to generate each snippet correctly.
     let mut locations_by_workflow: HashMap<&InputKey, Vec<&Location<'doc>>> = HashMap::new();
@@ -56,14 +71,14 @@ pub(crate) fn finding_snippet<'doc>(
             Snippet::source(input.as_document().source())
                 .fold(true)
                 .line_start(1)
-                .origin(input.link().unwrap_or(input_key.presentation_path()))
+                .path(input.link().unwrap_or(input_key.presentation_path()))
                 .annotations(locations.iter().map(|loc| {
                     let annotation = match loc.symbolic.link {
                         Some(ref link) => link,
                         None => &loc.symbolic.annotation,
                     };
 
-                    Level::from(&finding.determinations.severity)
+                    AnnotationKind::from(loc.symbolic.kind)
                         .span(
                             loc.concrete.location.offset_span.start
                                 ..loc.concrete.location.offset_span.end,
@@ -177,26 +192,31 @@ pub(crate) fn render_findings(
 }
 
 fn render_finding(registry: &InputRegistry, finding: &Finding) {
-    let link = Link::new(finding.ident, finding.url).to_string();
+    let title = Level::from(&finding.determinations.severity)
+        .primary_title(finding.desc)
+        .id(finding.ident)
+        .id_url(finding.url);
+
     let confidence = format!(
         "audit confidence → {:?}",
         &finding.determinations.confidence
     );
-    let confidence_footer = Level::Note.title(&confidence);
 
-    let mut message = Level::from(&finding.determinations.severity)
-        .title(finding.desc)
-        .id(&link)
-        .snippets(finding_snippet(registry, finding))
-        .footer(confidence_footer);
+    let mut report = vec![
+        Group::with_title(title)
+            .elements(finding_snippet(registry, finding))
+            .element(Level::NOTE.message(confidence)),
+        // Group::with_title(Level::NOTE.secondary_title(&confidence)),
+    ];
 
     if !finding.fixes.is_empty() {
-        let fixes_footer = Level::Note.title("this finding has an auto-fix");
-        message = message.footer(fixes_footer);
+        report.push(Group::with_title(
+            Level::HELP.secondary_title("this finding has an auto-fix"),
+        ));
     }
 
     let renderer = Renderer::styled();
-    println!("{}", renderer.render(message));
+    println!("{}", renderer.render(&report));
 }
 
 fn naches() {

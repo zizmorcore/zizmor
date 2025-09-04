@@ -1,18 +1,17 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"template-injection/multiline-expression.yml\")).args([\"--persona=pedantic\"]).run()?"
-snapshot_kind: text
 ---
-note[template-injection]: code injection via template expansion
+error[template-injection]: code injection via template expansion
   --> @@INPUT@@:14:13
    |
 12 |         - run: |
-   |           --- note: this run block
+   |           --- this run block
 13 |             echo ${{
 14 | /             some.ctx
 15 | |             && foo.bar
 16 | |             || baz.qux
-   | |______________________- note: may expand into attacker-controllable code
+   | |______________________^ may expand into attacker-controllable code
    |
    = note: audit confidence → Unknown
 
@@ -20,11 +19,10 @@ info[template-injection]: code injection via template expansion
   --> @@INPUT@@:15:16
    |
 12 |       - run: |
-   |         --- info: this run block
-13 |           echo ${{
-14 |             some.ctx
+   |         --- this run block
+...
 15 |             && foo.bar
-   |                ------- info: may expand into attacker-controllable code
+   |                ^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → Low
 
@@ -32,25 +30,23 @@ info[template-injection]: code injection via template expansion
   --> @@INPUT@@:16:16
    |
 12 |       - run: |
-   |         --- info: this run block
-13 |           echo ${{
-14 |             some.ctx
-15 |             && foo.bar
+   |         --- this run block
+...
 16 |             || baz.qux
-   |                ------- info: may expand into attacker-controllable code
+   |                ^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → Low
 
-note[template-injection]: code injection via template expansion
+error[template-injection]: code injection via template expansion
   --> @@INPUT@@:22:15
    |
 20 |           run: |
-   |           --- note: this run block
+   |           --- this run block
 21 |             echo "TSAN_OPTIONS=log_path=${GITHUB_WORKSPACE}/tsan_log suppressions=${GITHUB_WORKSPACE}/Tools/tsan/suppressions${{
 22 | /               fromJSON(inputs.free-threading)
 23 | |               && '_free_threading'
 24 | |               || ''
-   | |___________________- note: may expand into attacker-controllable code
+   | |___________________^ may expand into attacker-controllable code
    |
    = note: audit confidence → Unknown
 

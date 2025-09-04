@@ -1,39 +1,38 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"template-injection/static-env.yml\")).run()?"
-snapshot_kind: text
 ---
 help[template-injection]: code injection via template expansion
   --> @@INPUT@@:43:20
    |
 42 |         run: |
-   |         --- help: this run block
+   |         --- this run block
 43 |           echo ${{ env.bar }}
-   |                    ------- help: may expand into attacker-controllable code
+   |                    ^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 help[template-injection]: code injection via template expansion
   --> @@INPUT@@:50:20
    |
 49 |         run: |
-   |         --- help: this run block
+   |         --- this run block
 50 |           echo ${{ env.foo }}
-   |                    ------- help: may expand into attacker-controllable code
+   |                    ^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 help[template-injection]: code injection via template expansion
   --> @@INPUT@@:55:20
    |
 54 |         run: |
-   |         --- help: this run block
+   |         --- this run block
 55 |           echo ${{ env.quux }}
-   |                    -------- help: may expand into attacker-controllable code
+   |                    ^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 12 findings (9 suppressed, 3 fixable): 0 unknown, 0 informational, 3 low, 0 medium, 0 high

@@ -1,7 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"insecure-commands/issue-839-repro.yml\")).args([\"--persona=auditor\"]).run()?"
-snapshot_kind: text
 ---
 error[insecure-commands]: execution of insecure workflow commands is enabled
   --> @@INPUT@@:11:5
@@ -11,7 +10,7 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
    | |_____________________________________________^ insecure commands enabled here
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
+help: this finding has an auto-fix
 
 error[insecure-commands]: execution of insecure workflow commands is enabled
   --> @@INPUT@@:26:9
