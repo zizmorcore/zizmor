@@ -227,10 +227,29 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let string = args[0].to_string();
-        let prefix = args[1].to_string();
+        let search_string = &args[0];
+        let search_value = &args[1];
 
-        Some(Evaluation::Boolean(string.starts_with(&prefix)))
+        // Both arguments must be primitive types (not arrays or dictionaries)
+        match (search_string, search_value) {
+            (
+                Evaluation::String(_)
+                | Evaluation::Number(_)
+                | Evaluation::Boolean(_)
+                | Evaluation::Null,
+                Evaluation::String(_)
+                | Evaluation::Number(_)
+                | Evaluation::Boolean(_)
+                | Evaluation::Null,
+            ) => {
+                // Case-insensitive comparison
+                let string_str = search_string.to_string().to_lowercase();
+                let prefix_str = search_value.to_string().to_lowercase();
+                Some(Evaluation::Boolean(string_str.starts_with(&prefix_str)))
+            }
+            // If either argument is not primitive (array or dictionary), return false
+            _ => Some(Evaluation::Boolean(false)),
+        }
     }
 
     /// Constant-evaluates an `endsWith(string, suffix)` call.
@@ -2706,6 +2725,105 @@ mod tests {
             // Longer suffix than string
             (
                 "endsWith('short', 'very long suffix')",
+                Evaluation::Boolean(false),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_startswith_function() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Basic case-insensitive string startsWith
+            (
+                "startsWith('hello world', 'hello')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "startsWith('hello world', 'HELLO')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "startsWith('HELLO WORLD', 'hello')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "startsWith('hello world', 'world')",
+                Evaluation::Boolean(false),
+            ),
+            (
+                "startsWith('hello world', 'foo')",
+                Evaluation::Boolean(false),
+            ),
+            // Empty string cases
+            ("startsWith('test', '')", Evaluation::Boolean(true)),
+            ("startsWith('', '')", Evaluation::Boolean(true)),
+            ("startsWith('', 'test')", Evaluation::Boolean(false)),
+            // Number to string conversion
+            ("startsWith('123', '1')", Evaluation::Boolean(true)),
+            ("startsWith(123, '1')", Evaluation::Boolean(true)),
+            ("startsWith('123hello', 123)", Evaluation::Boolean(true)),
+            ("startsWith(12345, 123)", Evaluation::Boolean(true)),
+            // Boolean to string conversion
+            ("startsWith('true test', true)", Evaluation::Boolean(true)),
+            ("startsWith('false test', false)", Evaluation::Boolean(true)),
+            ("startsWith(true, 'tr')", Evaluation::Boolean(true)),
+            // Null handling
+            ("startsWith('null test', null)", Evaluation::Boolean(true)),
+            ("startsWith(null, '')", Evaluation::Boolean(true)),
+            (
+                "startsWith('something', null)",
+                Evaluation::Boolean(true), // null converts to empty string
+            ),
+            // Non-primitive types should return false
+            (
+                "startsWith(fromJSON('[1, 2, 3]'), '1')",
+                Evaluation::Boolean(false),
+            ),
+            (
+                "startsWith('test', fromJSON('[1, 2, 3]'))",
+                Evaluation::Boolean(false),
+            ),
+            (
+                "startsWith(fromJSON('{\"key\": \"value\"}'), 'key')",
+                Evaluation::Boolean(false),
+            ),
+            (
+                "startsWith('test', fromJSON('{\"key\": \"value\"}'))",
+                Evaluation::Boolean(false),
+            ),
+            // Mixed case scenarios
+            (
+                "startsWith('TestString', 'TEST')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "startsWith('CamelCase', 'camel')",
+                Evaluation::Boolean(true),
+            ),
+            // Exact match
+            ("startsWith('exact', 'exact')", Evaluation::Boolean(true)),
+            // Longer prefix than string
+            (
+                "startsWith('short', 'very long prefix')",
+                Evaluation::Boolean(false),
+            ),
+            // Partial matches
+            (
+                "startsWith('prefix_suffix', 'prefix')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "startsWith('prefix_suffix', 'suffix')",
                 Evaluation::Boolean(false),
             ),
         ];
