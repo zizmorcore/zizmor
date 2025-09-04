@@ -23,6 +23,7 @@ impl From<LocationKind> for AnnotationKind {
         match kind {
             LocationKind::Primary => AnnotationKind::Primary,
             LocationKind::Related => AnnotationKind::Context,
+            // Unreachable because we filter out hidden locations earlier.
             LocationKind::Hidden => unreachable!(),
         }
     }
@@ -40,7 +41,7 @@ impl From<&Severity> for Level<'_> {
     }
 }
 
-pub(crate) fn finding_snippet<'doc>(
+pub(crate) fn finding_snippets<'doc>(
     registry: &'doc InputRegistry,
     finding: &'doc Finding<'doc>,
 ) -> Vec<Snippet<'doc, Annotation<'doc>>> {
@@ -203,13 +204,14 @@ fn render_finding(registry: &InputRegistry, finding: &Finding) {
     );
 
     let mut group = Group::with_title(title)
-        .elements(finding_snippet(registry, finding))
+        .elements(finding_snippets(registry, finding))
         .element(Level::NOTE.message(confidence));
 
     if !finding.fixes.is_empty() {
         group = group.element(Level::NOTE.message("this finding has an auto-fix"));
     }
 
+    // TODO: Evaluate alternative decor styles.
     let renderer = Renderer::styled();
     println!("{}", renderer.render(&[group]));
 }
