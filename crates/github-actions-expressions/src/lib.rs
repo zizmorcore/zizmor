@@ -69,6 +69,7 @@ impl<'src> Call<'src> {
             f if f == "endsWith" => Self::consteval_endswith(&args),
             f if f == "toJSON" => Self::consteval_tojson(&args),
             f if f == "fromJSON" => Self::consteval_fromjson(&args),
+            f if f == "join" => Self::consteval_join(&args),
             _ => None,
         }
     }
@@ -347,6 +348,43 @@ impl<'src> Call<'src> {
                 }
                 Evaluation::Dictionary(map)
             }
+        }
+    }
+
+    /// Constant-evaluates a `join(array, optionalSeparator)` call.
+    ///
+    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/join.ts>
+    fn consteval_join(args: &[Evaluation]) -> Option<Evaluation> {
+        if args.is_empty() || args.len() > 2 {
+            return None;
+        }
+
+        let array_or_string = &args[0];
+
+        // Get separator (default is comma)
+        let separator = if args.len() > 1 {
+            args[1].to_string()
+        } else {
+            ",".to_string()
+        };
+
+        match array_or_string {
+            // For primitive types (strings, numbers, booleans, null), return as string
+            Evaluation::String(_)
+            | Evaluation::Number(_)
+            | Evaluation::Boolean(_)
+            | Evaluation::Null => Some(Evaluation::String(array_or_string.to_string())),
+            // For arrays, join elements with separator
+            Evaluation::Array(arr) => {
+                let joined = arr
+                    .iter()
+                    .map(|item| item.to_string())
+                    .collect::<Vec<String>>()
+                    .join(&separator);
+                Some(Evaluation::String(joined))
+            }
+            // For dictionaries, return empty string (not supported in reference)
+            Evaluation::Dictionary(_) => Some(Evaluation::String("".to_string())),
         }
     }
 }
@@ -718,6 +756,7 @@ impl<'src> Expr<'src> {
                     || func == "endsWith"
                     || func == "toJSON"
                     || func == "fromJSON"
+                    || func == "join"
                 {
                     args.iter().all(|e| e.constant_reducible())
                 } else {
@@ -2480,6 +2519,94 @@ mod tests {
             (
                 "contains(fromJSON('[1, \"hello\", true, null]'), 1)",
                 Evaluation::Boolean(true),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_join_function() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Basic array joining with default separator
+            (
+                "join(fromJSON('[\"a\", \"b\", \"c\"]'))",
+                Evaluation::String("a,b,c".to_string()),
+            ),
+            (
+                "join(fromJSON('[1, 2, 3]'))",
+                Evaluation::String("1,2,3".to_string()),
+            ),
+            (
+                "join(fromJSON('[true, false, null]'))",
+                Evaluation::String("true,false,".to_string()),
+            ),
+            // Array joining with custom separator
+            (
+                "join(fromJSON('[\"a\", \"b\", \"c\"]'), ' ')",
+                Evaluation::String("a b c".to_string()),
+            ),
+            (
+                "join(fromJSON('[1, 2, 3]'), '-')",
+                Evaluation::String("1-2-3".to_string()),
+            ),
+            (
+                "join(fromJSON('[\"hello\", \"world\"]'), ' | ')",
+                Evaluation::String("hello | world".to_string()),
+            ),
+            (
+                "join(fromJSON('[\"a\", \"b\", \"c\"]'), '')",
+                Evaluation::String("abc".to_string()),
+            ),
+            // Empty array
+            ("join(fromJSON('[]'))", Evaluation::String("".to_string())),
+            (
+                "join(fromJSON('[]'), '-')",
+                Evaluation::String("".to_string()),
+            ),
+            // Single element array
+            (
+                "join(fromJSON('[\"single\"]'))",
+                Evaluation::String("single".to_string()),
+            ),
+            (
+                "join(fromJSON('[\"single\"]'), '-')",
+                Evaluation::String("single".to_string()),
+            ),
+            // Primitive values (should return the value as string)
+            ("join('hello')", Evaluation::String("hello".to_string())),
+            (
+                "join('hello', '-')",
+                Evaluation::String("hello".to_string()),
+            ),
+            ("join(123)", Evaluation::String("123".to_string())),
+            ("join(true)", Evaluation::String("true".to_string())),
+            ("join(null)", Evaluation::String("".to_string())),
+            // Mixed type array
+            (
+                "join(fromJSON('[1, \"hello\", true, null]'))",
+                Evaluation::String("1,hello,true,".to_string()),
+            ),
+            (
+                "join(fromJSON('[1, \"hello\", true, null]'), ' | ')",
+                Evaluation::String("1 | hello | true | ".to_string()),
+            ),
+            // Special separator values
+            (
+                "join(fromJSON('[\"a\", \"b\", \"c\"]'), 123)",
+                Evaluation::String("a123b123c".to_string()),
+            ),
+            (
+                "join(fromJSON('[\"a\", \"b\", \"c\"]'), true)",
+                Evaluation::String("atruebtruec".to_string()),
             ),
         ];
 
