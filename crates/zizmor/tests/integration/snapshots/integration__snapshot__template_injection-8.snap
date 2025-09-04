@@ -11,7 +11,7 @@ error[template-injection]: code injection via template expansion
    |                   ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[template-injection]: code injection via template expansion
   --> @@INPUT@@:20:29

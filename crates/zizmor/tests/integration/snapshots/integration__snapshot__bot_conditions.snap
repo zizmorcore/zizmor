@@ -20,7 +20,7 @@ error[bot-conditions]: spoofable bot actor check
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:15:17
@@ -32,7 +32,7 @@ error[bot-conditions]: spoofable bot actor check
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:19:17
@@ -44,7 +44,7 @@ error[bot-conditions]: spoofable bot actor check
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → Medium
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:23:13
@@ -56,7 +56,7 @@ error[bot-conditions]: spoofable bot actor check
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:32:13
@@ -68,7 +68,7 @@ error[bot-conditions]: spoofable bot actor check
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:37:13
@@ -80,7 +80,7 @@ error[bot-conditions]: spoofable bot actor check
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:42:13
@@ -92,7 +92,7 @@ error[bot-conditions]: spoofable bot actor check
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:47:13
@@ -104,7 +104,7 @@ error[bot-conditions]: spoofable bot actor check
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:52:13
@@ -116,7 +116,7 @@ error[bot-conditions]: spoofable bot actor check
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:56:13
@@ -128,7 +128,7 @@ error[bot-conditions]: spoofable bot actor check
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[bot-conditions]: spoofable bot actor check
   --> @@INPUT@@:60:17
@@ -140,6 +140,6 @@ error[bot-conditions]: spoofable bot actor check
    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 12 findings (11 fixable): 0 unknown, 0 informational, 0 low, 0 medium, 12 high

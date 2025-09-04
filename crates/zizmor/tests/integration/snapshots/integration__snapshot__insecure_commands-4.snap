@@ -10,7 +10,7 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
    | |_____________________________________________^ insecure commands enabled here
    |
    = note: audit confidence → High
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[insecure-commands]: execution of insecure workflow commands is enabled
   --> @@INPUT@@:26:9

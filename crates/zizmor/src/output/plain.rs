@@ -202,21 +202,16 @@ fn render_finding(registry: &InputRegistry, finding: &Finding) {
         &finding.determinations.confidence
     );
 
-    let mut report = vec![
-        Group::with_title(title)
-            .elements(finding_snippet(registry, finding))
-            .element(Level::NOTE.message(confidence)),
-        // Group::with_title(Level::NOTE.secondary_title(&confidence)),
-    ];
+    let mut group = Group::with_title(title)
+        .elements(finding_snippet(registry, finding))
+        .element(Level::NOTE.message(confidence));
 
     if !finding.fixes.is_empty() {
-        report.push(Group::with_title(
-            Level::HELP.secondary_title("this finding has an auto-fix"),
-        ));
+        group = group.element(Level::NOTE.message("this finding has an auto-fix"));
     }
 
     let renderer = Renderer::styled();
-    println!("{}", renderer.render(&report));
+    println!("{}", renderer.render(&[group]));
 }
 
 fn naches() {

@@ -11,7 +11,7 @@ warning[artipacked]: credential persistence through GitHub Actions artifacts
    | |__________________________________________________________________________________^ does not set persist-credentials: false
    |
    = note: audit confidence → Low
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 warning[artipacked]: credential persistence through GitHub Actions artifacts
   --> @@INPUT@@:12:7
@@ -24,6 +24,6 @@ warning[artipacked]: credential persistence through GitHub Actions artifacts
    | |__________________________________^ does not set persist-credentials: false
    |
    = note: audit confidence → Low
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 2 findings (2 fixable): 0 unknown, 0 informational, 0 low, 2 medium, 0 high

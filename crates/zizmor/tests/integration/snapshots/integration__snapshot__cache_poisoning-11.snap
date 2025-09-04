@@ -15,7 +15,7 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
    |
    = note: audit confidence → Low
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
   --> @@INPUT@@:35:9
@@ -34,7 +34,7 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    | |______________________________________________________^ opt-in for caching here
    |
    = note: audit confidence → Low
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
   --> @@INPUT@@:42:9
@@ -51,6 +51,6 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    | |________________________^ opt-in for caching here
    |
    = note: audit confidence → Low
-help: this finding has an auto-fix
+   = note: this finding has an auto-fix
 
 3 findings (3 fixable): 0 unknown, 0 informational, 0 low, 0 medium, 3 high
