@@ -295,3 +295,19 @@ fn issue_1116_strict_collection_remote_input() -> Result<()> {
 
     Ok(())
 }
+
+/// Regression test for #1065.
+///
+/// This was actually a bug in `annotate-snippets` that was fixed
+/// with their 0.12 series, but this ensures that we don't regress.
+#[test]
+fn issue_1065() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Both)
+            .input(input_under_test("issue-1065.yml"))
+            .run()?
+    );
+
+    Ok(())
+}
