@@ -98,9 +98,9 @@ impl UndocumentedPermissions {
                 .with_keys(["permissions".into(), perm_name.as_str().into()]);
 
             if !self.has_explanatory_comment(&individual_perm_location, workflow)? {
-                finding_builder = finding_builder.add_location(individual_perm_location.annotated(
-                    "needs an explanatory comment",
-                ));
+                finding_builder = finding_builder.add_location(
+                    individual_perm_location.annotated("needs an explanatory comment"),
+                );
                 has_undocumented = true;
             }
         }
@@ -124,6 +124,10 @@ impl UndocumentedPermissions {
         let concrete_location = location.clone().concretize(&document)?;
 
         // Check if there are any meaningful comments
-        Ok(concrete_location.concrete.comments.iter().any(|comment| comment.is_meaningful()))
+        Ok(concrete_location
+            .concrete
+            .comments
+            .iter()
+            .any(|comment| comment.is_meaningful()))
     }
 }
