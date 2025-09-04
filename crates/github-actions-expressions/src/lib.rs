@@ -187,10 +187,35 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let haystack = args[0].to_string();
-        let needle = args[1].to_string();
+        let search = &args[0];
+        let item = &args[1];
 
-        Some(Evaluation::Boolean(haystack.contains(&needle)))
+        match search {
+            // For primitive types (strings, numbers, booleans, null), do case-insensitive string search
+            Evaluation::String(_)
+            | Evaluation::Number(_)
+            | Evaluation::Boolean(_)
+            | Evaluation::Null => {
+                let search_str = search.to_string().to_lowercase();
+                let item_str = item.to_string().to_lowercase();
+                Some(Evaluation::Boolean(search_str.contains(&item_str)))
+            }
+            // For arrays, check if any element equals the item
+            Evaluation::Array(arr) => {
+                if arr.is_empty() {
+                    return Some(Evaluation::Boolean(false));
+                }
+
+                for element in arr {
+                    if Expr::values_equal(item, element) {
+                        return Some(Evaluation::Boolean(true));
+                    }
+                }
+                Some(Evaluation::Boolean(false))
+            }
+            // For dictionaries, return false (not supported in reference implementation)
+            Evaluation::Dictionary(_) => Some(Evaluation::Boolean(false)),
+        }
     }
 
     /// Constant-evaluates a `startsWith(string, prefix)` call.
@@ -2382,6 +2407,86 @@ mod tests {
                 "Expected None for invalid format string: {}",
                 expr_str
             );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_contains_function() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Basic string contains (case-insensitive)
+            (
+                "contains('hello world', 'world')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "contains('hello world', 'WORLD')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "contains('HELLO WORLD', 'world')",
+                Evaluation::Boolean(true),
+            ),
+            ("contains('hello world', 'foo')", Evaluation::Boolean(false)),
+            ("contains('test', '')", Evaluation::Boolean(true)),
+            // Number to string conversion
+            ("contains('123', '2')", Evaluation::Boolean(true)),
+            ("contains(123, '2')", Evaluation::Boolean(true)),
+            ("contains('hello123', 123)", Evaluation::Boolean(true)),
+            // Boolean to string conversion
+            ("contains('true', true)", Evaluation::Boolean(true)),
+            ("contains('false', false)", Evaluation::Boolean(true)),
+            // Null handling
+            ("contains('null', null)", Evaluation::Boolean(true)),
+            ("contains(null, '')", Evaluation::Boolean(true)),
+            // Array contains - exact matches
+            (
+                "contains(fromJSON('[1, 2, 3]'), 2)",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "contains(fromJSON('[1, 2, 3]'), 4)",
+                Evaluation::Boolean(false),
+            ),
+            (
+                "contains(fromJSON('[\"a\", \"b\", \"c\"]'), 'b')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "contains(fromJSON('[\"a\", \"b\", \"c\"]'), 'B')",
+                Evaluation::Boolean(false), // Array search is exact match, not case-insensitive
+            ),
+            (
+                "contains(fromJSON('[true, false, null]'), true)",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "contains(fromJSON('[true, false, null]'), null)",
+                Evaluation::Boolean(true),
+            ),
+            // Empty array
+            (
+                "contains(fromJSON('[]'), 'anything')",
+                Evaluation::Boolean(false),
+            ),
+            // Mixed type array
+            (
+                "contains(fromJSON('[1, \"hello\", true, null]'), 'hello')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "contains(fromJSON('[1, \"hello\", true, null]'), 1)",
+                Evaluation::Boolean(true),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
         }
 
         Ok(())
