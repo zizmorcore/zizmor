@@ -370,7 +370,7 @@ pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
     ];
 
     let renderer = Renderer::styled();
-    format!("{}", renderer.render(&report))
+    renderer.render(&report).to_string()
 }
 
 /// State used when collecting input groups.
