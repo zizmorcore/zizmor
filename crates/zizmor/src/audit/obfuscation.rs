@@ -134,6 +134,8 @@ impl Obfuscation {
                 }
                 Evaluation::Boolean(b) => b.to_string(),
                 Evaluation::Null => "null".to_string(),
+                Evaluation::Array(_) => "Array".to_string(),
+                Evaluation::Dictionary(_) => "Object".to_string(),
             }
         })
     }

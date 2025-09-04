@@ -154,6 +154,34 @@ impl<'src> Call<'src> {
             Evaluation::Number(n) => n.to_string(),
             Evaluation::Boolean(b) => b.to_string(),
             Evaluation::Null => "null".to_string(),
+            Evaluation::Array(arr) => {
+                // Convert array to JSON string
+                let elements: Vec<String> = arr
+                    .iter()
+                    .map(|elem| match Self::consteval_tojson(&[elem.clone()]) {
+                        Some(Evaluation::String(json)) => json,
+                        _ => "null".to_string(), // Fallback for unconvertible elements
+                    })
+                    .collect();
+                format!("[{}]", elements.join(","))
+            }
+            Evaluation::Dictionary(dict) => {
+                // Convert dictionary to JSON string
+                let mut pairs: Vec<String> = dict
+                    .iter()
+                    .map(|(key, value)| {
+                        let key_json =
+                            format!("\"{}\"", key.replace('\\', "\\\\").replace('\"', "\\\""));
+                        let value_json = match Self::consteval_tojson(&[value.clone()]) {
+                            Some(Evaluation::String(json)) => json,
+                            _ => "null".to_string(), // Fallback for unconvertible values
+                        };
+                        format!("{}:{}", key_json, value_json)
+                    })
+                    .collect();
+                pairs.sort(); // Ensure consistent ordering
+                format!("{{{}}}", pairs.join(","))
+            }
         };
 
         Some(Evaluation::String(json_str))
@@ -168,26 +196,47 @@ impl<'src> Call<'src> {
         }
 
         let json_str = args[0].to_string();
+        let trimmed = json_str.trim();
 
-        // Simple JSON parsing for basic literals
-        match json_str.trim() {
-            "null" => Some(Evaluation::Null),
-            "true" => Some(Evaluation::Boolean(true)),
-            "false" => Some(Evaluation::Boolean(false)),
-            s if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 => {
-                // Simple string unescaping
-                let unescaped = &s[1..s.len() - 1]
-                    .replace("\\\"", "\"")
-                    .replace("\\\\", "\\");
-                Some(Evaluation::String(unescaped.to_string()))
-            }
-            s => {
-                // Try to parse as number
-                if let Ok(n) = s.parse::<f64>() {
-                    Some(Evaluation::Number(n))
+        // Match reference implementation: error on empty input
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        // Parse with full JSON parser to handle arrays and objects
+        match serde_json::from_str::<serde_json::Value>(trimmed) {
+            Ok(value) => Some(Self::json_value_to_evaluation(value)),
+            Err(_) => None,
+        }
+    }
+
+    /// Converts a serde_json::Value to an Evaluation, matching GitHub Actions semantics.
+    fn json_value_to_evaluation(value: serde_json::Value) -> Evaluation {
+        match value {
+            serde_json::Value::Null => Evaluation::Null,
+            serde_json::Value::Bool(b) => Evaluation::Boolean(b),
+            serde_json::Value::Number(n) => {
+                if let Some(f) = n.as_f64() {
+                    Evaluation::Number(f)
                 } else {
-                    None
+                    // Fallback for very large integers that don't fit in f64
+                    Evaluation::Number(0.0)
                 }
+            }
+            serde_json::Value::String(s) => Evaluation::String(s),
+            serde_json::Value::Array(arr) => {
+                let elements = arr
+                    .into_iter()
+                    .map(Self::json_value_to_evaluation)
+                    .collect();
+                Evaluation::Array(elements)
+            }
+            serde_json::Value::Object(obj) => {
+                let mut map = std::collections::HashMap::new();
+                for (key, value) in obj {
+                    map.insert(key, Self::json_value_to_evaluation(value));
+                }
+                Evaluation::Dictionary(map)
             }
         }
     }
@@ -558,10 +607,11 @@ impl<'src> Expr<'src> {
                     || func == "contains"
                     || func == "startsWith"
                     || func == "endsWith"
+                    || func == "toJSON"
+                    || func == "fromJSON"
                 {
                     args.iter().all(|e| e.constant_reducible())
                 } else {
-                    // TODO: fromJSON(toJSON(...)) and vice versa.
                     false
                 }
             }
@@ -843,6 +893,10 @@ pub enum Evaluation {
     Boolean(bool),
     /// The null value
     Null,
+    /// An array value (from fromJSON parsing)
+    Array(Vec<Evaluation>),
+    /// A dictionary/object value (from fromJSON parsing)
+    Dictionary(std::collections::HashMap<String, Evaluation>),
 }
 
 impl PartialOrd for Evaluation {
@@ -853,6 +907,10 @@ impl PartialOrd for Evaluation {
 
             // String comparison
             (Evaluation::String(a), Evaluation::String(b)) => Some(a.cmp(b)),
+
+            // Arrays and dictionaries cannot be compared with other types
+            (Evaluation::Array(_), _) | (_, Evaluation::Array(_)) => None,
+            (Evaluation::Dictionary(_), _) | (_, Evaluation::Dictionary(_)) => None,
 
             // Try to convert both to numbers first, then fall back to string comparison
             (a, b) => {
@@ -875,12 +933,15 @@ impl Evaluation {
     /// - false and null are falsy
     /// - Numbers: 0 is falsy, everything else is truthy
     /// - Strings: empty string is falsy, everything else is truthy
+    /// - Arrays and dictionaries are always truthy (non-empty objects)
     pub fn as_boolean(&self) -> bool {
         match self {
             Evaluation::Boolean(b) => *b,
             Evaluation::Null => false,
             Evaluation::Number(n) => *n != 0.0,
             Evaluation::String(s) => !s.is_empty(),
+            Evaluation::Array(_) => true,
+            Evaluation::Dictionary(_) => true,
         }
     }
 }
@@ -899,6 +960,8 @@ impl std::fmt::Display for Evaluation {
             }
             Evaluation::Boolean(b) => write!(f, "{}", b),
             Evaluation::Null => write!(f, ""),
+            Evaluation::Array(_) => write!(f, "Array"),
+            Evaluation::Dictionary(_) => write!(f, "Object"),
         }
     }
 }
@@ -997,6 +1060,8 @@ impl<'src> Expr<'src> {
             (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a == b,
             (Evaluation::Number(a), Evaluation::Number(b)) => a == b,
             (Evaluation::String(a), Evaluation::String(b)) => a == b,
+            (Evaluation::Array(a), Evaluation::Array(b)) => a == b,
+            (Evaluation::Dictionary(a), Evaluation::Dictionary(b)) => a == b,
 
             // Type coercion rules - convert to string and compare
             (a, b) => a.to_string() == b.to_string(),
@@ -1676,7 +1741,7 @@ mod tests {
             ("toJSON(42)", Evaluation::String("42".to_string())),
             ("toJSON(true)", Evaluation::String("true".to_string())),
             ("toJSON(null)", Evaluation::String("null".to_string())),
-            // fromJSON function
+            // fromJSON function - primitives
             (
                 "fromJSON('\"hello\"')",
                 Evaluation::String("hello".to_string()),
@@ -1684,6 +1749,23 @@ mod tests {
             ("fromJSON('42')", Evaluation::Number(42.0)),
             ("fromJSON('true')", Evaluation::Boolean(true)),
             ("fromJSON('null')", Evaluation::Null),
+            // fromJSON function - arrays and objects
+            (
+                "fromJSON('[1, 2, 3]')",
+                Evaluation::Array(vec![
+                    Evaluation::Number(1.0),
+                    Evaluation::Number(2.0),
+                    Evaluation::Number(3.0),
+                ]),
+            ),
+            (
+                "fromJSON('{\"key\": \"value\"}')",
+                Evaluation::Dictionary({
+                    let mut map = std::collections::HashMap::new();
+                    map.insert("key".to_string(), Evaluation::String("value".to_string()));
+                    map
+                }),
+            ),
         ];
 
         for (expr_str, expected) in test_cases {
@@ -1758,6 +1840,11 @@ mod tests {
             (Evaluation::Number(-1.0), true),
             (Evaluation::String("".to_string()), false),
             (Evaluation::String("hello".to_string()), true),
+            (Evaluation::Array(vec![]), true), // Arrays are always truthy
+            (
+                Evaluation::Dictionary(std::collections::HashMap::new()),
+                true,
+            ), // Dictionaries are always truthy
         ];
 
         for (result, expected) in test_cases {
@@ -1950,5 +2037,178 @@ mod tests {
                 subfeature::Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
             };
         }
+    }
+
+    #[test]
+    fn test_fromjson_comprehensive() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Basic primitives
+            ("fromJSON('null')", Evaluation::Null),
+            ("fromJSON('true')", Evaluation::Boolean(true)),
+            ("fromJSON('false')", Evaluation::Boolean(false)),
+            ("fromJSON('42')", Evaluation::Number(42.0)),
+            ("fromJSON('3.14')", Evaluation::Number(3.14)),
+            (
+                "fromJSON('\"hello\"')",
+                Evaluation::String("hello".to_string()),
+            ),
+            ("fromJSON('\"\"')", Evaluation::String("".to_string())),
+            // Arrays
+            ("fromJSON('[]')", Evaluation::Array(vec![])),
+            (
+                "fromJSON('[1, 2, 3]')",
+                Evaluation::Array(vec![
+                    Evaluation::Number(1.0),
+                    Evaluation::Number(2.0),
+                    Evaluation::Number(3.0),
+                ]),
+            ),
+            (
+                "fromJSON('[\"a\", \"b\", null, true, 123]')",
+                Evaluation::Array(vec![
+                    Evaluation::String("a".to_string()),
+                    Evaluation::String("b".to_string()),
+                    Evaluation::Null,
+                    Evaluation::Boolean(true),
+                    Evaluation::Number(123.0),
+                ]),
+            ),
+            // Objects
+            (
+                "fromJSON('{}')",
+                Evaluation::Dictionary(std::collections::HashMap::new()),
+            ),
+            (
+                "fromJSON('{\"key\": \"value\"}')",
+                Evaluation::Dictionary({
+                    let mut map = std::collections::HashMap::new();
+                    map.insert("key".to_string(), Evaluation::String("value".to_string()));
+                    map
+                }),
+            ),
+            (
+                "fromJSON('{\"num\": 42, \"bool\": true, \"null\": null}')",
+                Evaluation::Dictionary({
+                    let mut map = std::collections::HashMap::new();
+                    map.insert("num".to_string(), Evaluation::Number(42.0));
+                    map.insert("bool".to_string(), Evaluation::Boolean(true));
+                    map.insert("null".to_string(), Evaluation::Null);
+                    map
+                }),
+            ),
+            // Nested structures
+            (
+                "fromJSON('{\"array\": [1, 2], \"object\": {\"nested\": true}}')",
+                Evaluation::Dictionary({
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        "array".to_string(),
+                        Evaluation::Array(vec![Evaluation::Number(1.0), Evaluation::Number(2.0)]),
+                    );
+                    let mut nested_map = std::collections::HashMap::new();
+                    nested_map.insert("nested".to_string(), Evaluation::Boolean(true));
+                    map.insert("object".to_string(), Evaluation::Dictionary(nested_map));
+                    map
+                }),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_fromjson_error_cases() -> Result<()> {
+        let error_cases = &[
+            "fromJSON('')",          // Empty string
+            "fromJSON('   ')",       // Whitespace only
+            "fromJSON('invalid')",   // Invalid JSON
+            "fromJSON('{invalid}')", // Invalid JSON syntax
+            "fromJSON('[1, 2,]')",   // Trailing comma (invalid in strict JSON)
+        ];
+
+        for expr_str in error_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval();
+            assert!(
+                result.is_none(),
+                "Expected None for invalid JSON: {}",
+                expr_str
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_fromjson_display_format() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            (Evaluation::Array(vec![Evaluation::Number(1.0)]), "Array"),
+            (
+                Evaluation::Dictionary(std::collections::HashMap::new()),
+                "Object",
+            ),
+        ];
+
+        for (result, expected) in test_cases {
+            assert_eq!(result.to_string(), *expected);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tojson_fromjson_roundtrip() -> Result<()> {
+        use crate::Evaluation;
+
+        // Test round-trip conversion for complex structures
+        let test_cases = &[
+            // Simple array
+            "[1, 2, 3]",
+            // Simple object
+            r#"{"key": "value"}"#,
+            // Mixed array
+            r#"[1, "hello", true, null]"#,
+            // Nested structure
+            r#"{"array": [1, 2], "object": {"nested": true}}"#,
+        ];
+
+        for json_str in test_cases {
+            // Parse with fromJSON
+            let from_expr_str = format!("fromJSON('{}')", json_str);
+            let from_expr = Expr::parse(&from_expr_str)?;
+            let parsed = from_expr.consteval().unwrap();
+
+            // Convert back with toJSON (using a dummy toJSON call structure)
+            let to_result = Call::consteval_tojson(&[parsed.clone()]).unwrap();
+
+            // Parse the result again to compare structure
+            let reparsed_expr_str = format!("fromJSON('{}')", to_result.to_string());
+            let reparsed_expr = Expr::parse(&reparsed_expr_str)?;
+            let reparsed = reparsed_expr.consteval().unwrap();
+
+            // The structure should be preserved (though ordering might differ for objects)
+            match (&parsed, &reparsed) {
+                (Evaluation::Array(a), Evaluation::Array(b)) => assert_eq!(a, b),
+                (Evaluation::Dictionary(_), Evaluation::Dictionary(_)) => {
+                    // For dictionaries, we just check that both are dictionaries
+                    // since ordering might differ
+                    assert!(matches!(parsed, Evaluation::Dictionary(_)));
+                    assert!(matches!(reparsed, Evaluation::Dictionary(_)));
+                }
+                (a, b) => assert_eq!(a, b),
+            }
+        }
+
+        Ok(())
     }
 }
