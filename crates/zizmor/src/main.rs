@@ -5,7 +5,7 @@ use std::{
     process::ExitCode,
 };
 
-use annotate_snippets::{Level, Renderer};
+use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
 use camino::Utf8PathBuf;
@@ -362,13 +362,15 @@ pub(crate) enum FixMode {
 }
 
 pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
-    let mut message = Level::Error.title(err.as_ref());
-    for tip in tips {
-        message = message.footer(Level::Note.title(tip.as_ref()));
-    }
+    // NOTE: We use secondary_title here because primary_title doesn't
+    // allow ANSI colors, and some of our errors contain colorized text.
+    let report = vec![
+        Group::with_title(Level::ERROR.secondary_title(err.as_ref()))
+            .elements(tips.iter().map(|tip| Level::HELP.message(tip.as_ref()))),
+    ];
 
     let renderer = Renderer::styled();
-    format!("{}", renderer.render(message))
+    renderer.render(&report).to_string()
 }
 
 /// State used when collecting input groups.

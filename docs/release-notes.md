@@ -51,6 +51,10 @@ of `zizmor`.
   remote inputs. This also means that the default collection strictness
   has changed for remote inputs to match all other inputs (#1122)
 
+* Fixed a bug where `zizmor` would crash on certain UTF-8 inputs lacking
+  an explicit final newline due to a bug in the `annotate-snippets` crate
+  (#1136)
+
 ## 1.12.1
 
 ### Bug Fixes 🐛

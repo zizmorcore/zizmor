@@ -1,19 +1,17 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"cache-poisoning/issue-642-repro.yml\")).run()?"
-snapshot_kind: text
 ---
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-  --> @@INPUT@@:21:9
+  --> @@INPUT@@:16:9
    |
 16 | /         with:
 17 | |           cache-binary: true
 18 | |           version: latest
    | |_________________________^ opt-in for caching here
-19 |
-20 |         - name: Build docker
+...
 21 |           uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355
-   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ runtime artifacts usually published here
+   |           ----------------------------------------------------------------------- runtime artifacts usually published here
    |
    = note: audit confidence → Low
 

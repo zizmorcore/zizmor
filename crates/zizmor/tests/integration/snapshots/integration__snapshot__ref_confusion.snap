@@ -6,7 +6,7 @@ warning[ref-confusion]: git ref for action with ambiguous ref type
   --> @@INPUT@@:11:9
    |
 11 |       - uses: woodruffw/gha-hazmat/ref-confusion@confusable
-   |         --------------------------------------------------- uses a ref that's provided by both the branch and tag namespaces
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a ref that's provided by both the branch and tag namespaces
    |
    = note: audit confidence → High
 

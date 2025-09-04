@@ -1,16 +1,15 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"use-trusted-publishing/demo-action/action.yml\")).run()?"
-snapshot_kind: text
 ---
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:9:7
    |
  9 |     - uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
-   |       -------------------------------------------- info: this step
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 10 |       with:
 11 |         password: ${{ secrets.PYPI_TOKEN }}
-   |         ----------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 

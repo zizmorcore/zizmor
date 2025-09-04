@@ -6,7 +6,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:68:25
    |
 68 |         if: true && ${{ false }}
-   |                         ----- help: can be replaced by its static evaluation
+   |                         ^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -14,7 +14,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:73:17
    |
 73 |         if: ${{ false }} && true
-   |                 ----- help: can be replaced by its static evaluation
+   |                 ^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -22,7 +22,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:78:17
    |
 78 |         if: ${{ false }} lol
-   |                 ----- help: can be replaced by its static evaluation
+   |                 ^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
 
@@ -30,7 +30,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:83:21
    |
 83 |         if: lol ${{ false }}
-   |                     ----- help: can be replaced by its static evaluation
+   |                     ^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
 

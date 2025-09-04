@@ -1,13 +1,12 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"artipacked.yml\")).args([\"--persona=auditor\"]).run()?"
-snapshot_kind: text
 ---
 warning[artipacked]: credential persistence through GitHub Actions artifacts
   --> @@INPUT@@:18:9
    |
 18 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-   |         ---------------------------------------------------------------------------- does not set persist-credentials: false
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
    |
    = note: audit confidence → Low
    = note: this finding has an auto-fix
@@ -16,10 +15,10 @@ warning[artipacked]: credential persistence through GitHub Actions artifacts
   --> @@INPUT@@:24:9
    |
 24 |         - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-   |  _________-
+   |  _________^
 25 | |         with:
 26 | |           persist-credentials: true
-   | |____________________________________- does not set persist-credentials: false
+   | |____________________________________^ does not set persist-credentials: false
    |
    = note: audit confidence → Low
    = note: this finding has an auto-fix
