@@ -241,10 +241,29 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let string = args[0].to_string();
-        let suffix = args[1].to_string();
+        let search_string = &args[0];
+        let search_value = &args[1];
 
-        Some(Evaluation::Boolean(string.ends_with(&suffix)))
+        // Both arguments must be primitive types (not arrays or dictionaries)
+        match (search_string, search_value) {
+            (
+                Evaluation::String(_)
+                | Evaluation::Number(_)
+                | Evaluation::Boolean(_)
+                | Evaluation::Null,
+                Evaluation::String(_)
+                | Evaluation::Number(_)
+                | Evaluation::Boolean(_)
+                | Evaluation::Null,
+            ) => {
+                // Case-insensitive comparison
+                let string_str = search_string.to_string().to_lowercase();
+                let suffix_str = search_value.to_string().to_lowercase();
+                Some(Evaluation::Boolean(string_str.ends_with(&suffix_str)))
+            }
+            // If either argument is not primitive (array or dictionary), return false
+            _ => Some(Evaluation::Boolean(false)),
+        }
     }
 
     /// Constant-evaluates a `toJSON(value)` call.
@@ -2607,6 +2626,87 @@ mod tests {
             (
                 "join(fromJSON('[\"a\", \"b\", \"c\"]'), true)",
                 Evaluation::String("atruebtruec".to_string()),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_endswith_function() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Basic case-insensitive string endsWith
+            (
+                "endsWith('hello world', 'world')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "endsWith('hello world', 'WORLD')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "endsWith('HELLO WORLD', 'world')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "endsWith('hello world', 'hello')",
+                Evaluation::Boolean(false),
+            ),
+            ("endsWith('hello world', 'foo')", Evaluation::Boolean(false)),
+            // Empty string cases
+            ("endsWith('test', '')", Evaluation::Boolean(true)),
+            ("endsWith('', '')", Evaluation::Boolean(true)),
+            ("endsWith('', 'test')", Evaluation::Boolean(false)),
+            // Number to string conversion
+            ("endsWith('123', '3')", Evaluation::Boolean(true)),
+            ("endsWith(123, '3')", Evaluation::Boolean(true)),
+            ("endsWith('hello123', 123)", Evaluation::Boolean(true)),
+            ("endsWith(12345, 345)", Evaluation::Boolean(true)),
+            // Boolean to string conversion
+            ("endsWith('test true', true)", Evaluation::Boolean(true)),
+            ("endsWith('test false', false)", Evaluation::Boolean(true)),
+            ("endsWith(true, 'ue')", Evaluation::Boolean(true)),
+            // Null handling
+            ("endsWith('test null', null)", Evaluation::Boolean(true)),
+            ("endsWith(null, '')", Evaluation::Boolean(true)),
+            ("endsWith('something', null)", Evaluation::Boolean(true)), // null converts to empty string
+            // Non-primitive types should return false
+            (
+                "endsWith(fromJSON('[1, 2, 3]'), '3')",
+                Evaluation::Boolean(false),
+            ),
+            (
+                "endsWith('test', fromJSON('[1, 2, 3]'))",
+                Evaluation::Boolean(false),
+            ),
+            (
+                "endsWith(fromJSON('{\"key\": \"value\"}'), 'value')",
+                Evaluation::Boolean(false),
+            ),
+            (
+                "endsWith('test', fromJSON('{\"key\": \"value\"}'))",
+                Evaluation::Boolean(false),
+            ),
+            // Mixed case scenarios
+            (
+                "endsWith('TestString', 'STRING')",
+                Evaluation::Boolean(true),
+            ),
+            ("endsWith('CamelCase', 'case')", Evaluation::Boolean(true)),
+            // Exact match
+            ("endsWith('exact', 'exact')", Evaluation::Boolean(true)),
+            // Longer suffix than string
+            (
+                "endsWith('short', 'very long suffix')",
+                Evaluation::Boolean(false),
             ),
         ];
 
