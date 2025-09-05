@@ -304,6 +304,11 @@ static IGNORE_EXPR: LazyLock<Regex> =
 pub(crate) struct Comment<'doc>(&'doc str);
 
 impl Comment<'_> {
+    pub(crate) fn is_meaningful(&self) -> bool {
+        let content = self.0.strip_prefix('#').unwrap_or(self.0).trim();
+        !content.is_empty()
+    }
+
     pub(crate) fn ignores(&self, rule_id: &str) -> bool {
         // Extracts foo,bar from `# zizmor: ignore[foo,bar]`
         let Some(caps) = IGNORE_EXPR.captures(self.0) else {

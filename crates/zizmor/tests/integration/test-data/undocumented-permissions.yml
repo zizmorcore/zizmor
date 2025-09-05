@@ -1,0 +1,75 @@
+name: Test Undocumented Permissions
+
+on: [push, pull_request]
+
+# This workflow-level permission block has no comment
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  test-job-1:
+    name: Test Job 1
+    runs-on: ubuntu-latest
+    # This job's permissions block has a comment explaining why
+    permissions:
+      contents: read  # Needed to read repo contents
+      issues: write   # Needed to write issue comments
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"
+
+  test-job-2:
+    name: Test Job 2
+    runs-on: ubuntu-latest
+    # Missing individual permission comments
+    permissions:
+      contents: write
+      packages: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"
+
+  test-job-3:
+    name: Test Job 3 - Empty Comments
+    runs-on: ubuntu-latest
+    # Permissions have empty comments
+    permissions:
+      contents: read #
+      packages: write #
+      actions: write  #    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"
+
+  test-job-4:
+    name: Test Job 4 - Mixed Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      metadata: read
+      packages: write #
+      issues: write   # Needed to post status updates
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"
+
+  test-job-5:
+    name: Test Job 5 - read contents
+    runs-on: ubuntu-latest
+    # Only one `contents: read` permission, no comment needed
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"

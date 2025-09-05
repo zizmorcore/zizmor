@@ -3,7 +3,7 @@ on: push
 name: issue-336-repro
 
 permissions:
-  contents: write
+  contents: write  # Needed for the workflow
 
 jobs:
   single:

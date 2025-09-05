@@ -1092,6 +1092,51 @@ shell quoting/expansion rules.
             ISSUE_TITLE: ${{ github.event.issue.title }}
         ```
 
+## `undocumented-permissions`
+
+| Type     | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|------------------|---------------|----------------|--------------------|--------------|
+| Workflow | [undocumented-permissions.yml] | vx.y.z        | ✅             | ❌                 | ❌            |
+
+[undocumented-permissions.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/undocumented-permissions.yml
+
+Detects explicit permissions blocks that lack explanatory comments.
+
+This audit recommends adding comments to document the purpose of each permission
+in explicit permissions blocks. Well-documented permissions help prevent
+over-scoping and make workflows more maintainable by explaining why specific
+permissions are needed.
+
+The audit skips permissions blocks that only contain `contents: read`, as this
+is a common, self-explanatory permission.
+
+!!! note
+
+    This is a `--pedantic` only audit, as it focuses on code quality and
+    maintainability rather than security vulnerabilities.
+
+### Remediation
+
+Add inline comments explaining why each permission is needed:
+
+=== "Before :warning:"
+
+    ```yaml title="undocumented-permissions.yml" hl_lines="2-4"
+    permissions:
+      contents: write
+      packages: read
+      issues: write
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="undocumented-permissions.yml" hl_lines="2-4"
+    permissions:
+      contents: write  # Needed to create releases and update files
+      packages: read   # Needed to read existing package metadata
+      issues: write    # Needed to create and update issue comments
+    ```
+
 ## `unpinned-images`
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
