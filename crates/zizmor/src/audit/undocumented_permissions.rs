@@ -121,7 +121,7 @@ impl UndocumentedPermissions {
         let document = workflow.as_document();
 
         // Use the concretize API to get a Location with concrete Feature
-        let concrete_location = location.clone().concretize(&document)?;
+        let concrete_location = location.clone().concretize(document)?;
 
         // Check if there are any meaningful comments
         Ok(concrete_location
