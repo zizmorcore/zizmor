@@ -82,20 +82,20 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let fs = args[0].to_string();
+        let template = args[0].to_string();
         let mut result = String::new();
         let mut index = 0;
 
-        while index < fs.len() {
-            let lbrace = fs[index..].find('{').map(|pos| index + pos);
-            let rbrace = fs[index..].find('}').map(|pos| index + pos);
+        while index < template.len() {
+            let lbrace = template[index..].find('{').map(|pos| index + pos);
+            let rbrace = template[index..].find('}').map(|pos| index + pos);
 
             // Left brace
             if let Some(lbrace_pos) = lbrace {
                 if rbrace.is_none() || rbrace.unwrap() > lbrace_pos {
                     // Escaped left brace
-                    if Self::safe_char_at(&fs, lbrace_pos + 1) == '{' {
-                        result.push_str(&fs[index..=lbrace_pos]);
+                    if template.as_bytes().get(lbrace_pos + 1) == Some(&b'{') {
+                        result.push_str(&template[index..=lbrace_pos]);
                         index = lbrace_pos + 2;
                         continue;
                     }
@@ -103,7 +103,8 @@ impl<'src> Call<'src> {
                     // Left brace, number, optional format specifiers, right brace
                     if let Some(rbrace_pos) = rbrace {
                         if rbrace_pos > lbrace_pos + 1 {
-                            if let Some(arg_index) = Self::read_arg_index(&fs, lbrace_pos + 1) {
+                            if let Some(arg_index) = Self::read_arg_index(&template, lbrace_pos + 1)
+                            {
                                 // Check parameter count
                                 if 1 + arg_index > args.len() - 1 {
                                     // Invalid format string - too few arguments
@@ -112,7 +113,7 @@ impl<'src> Call<'src> {
 
                                 // Append the portion before the left brace
                                 if lbrace_pos > index {
-                                    result.push_str(&fs[index..lbrace_pos]);
+                                    result.push_str(&template[index..lbrace_pos]);
                                 }
 
                                 // Append the arg
@@ -132,8 +133,8 @@ impl<'src> Call<'src> {
             if let Some(rbrace_pos) = rbrace {
                 if lbrace.is_none() || lbrace.unwrap() > rbrace_pos {
                     // Escaped right brace
-                    if Self::safe_char_at(&fs, rbrace_pos + 1) == '}' {
-                        result.push_str(&fs[index..=rbrace_pos]);
+                    if template.as_bytes().get(rbrace_pos + 1) == Some(&b'}') {
+                        result.push_str(&template[index..=rbrace_pos]);
                         index = rbrace_pos + 2;
                     } else {
                         // Invalid format string
@@ -142,7 +143,7 @@ impl<'src> Call<'src> {
                 }
             } else {
                 // Last segment
-                result.push_str(&fs[index..]);
+                result.push_str(&template[index..]);
                 break;
             }
         }
@@ -150,20 +151,15 @@ impl<'src> Call<'src> {
         Some(Evaluation::String(result))
     }
 
-    /// Helper function to safely get character at index, returns null char if out of bounds.
-    fn safe_char_at(string: &str, index: usize) -> char {
-        string.chars().nth(index).unwrap_or('\0')
-    }
-
     /// Helper function to read argument index from format string.
     fn read_arg_index(string: &str, start_index: usize) -> Option<usize> {
+        let bytes = string.as_bytes();
         let mut length = 0;
-        let chars: Vec<char> = string.chars().collect();
 
-        // Count the number of digits
-        while start_index + length < chars.len() {
-            let next_char = chars[start_index + length];
-            if next_char.is_ascii_digit() {
+        // Count the number of ASCII digits
+        while start_index + length < bytes.len() {
+            let byte = bytes[start_index + length];
+            if byte.is_ascii_digit() {
                 length += 1;
             } else {
                 break;
@@ -175,8 +171,8 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        // Parse the number
-        let number_str: String = chars[start_index..start_index + length].iter().collect();
+        // Parse the number directly from the byte slice
+        let number_str = &string[start_index..start_index + length];
         number_str.parse::<usize>().ok()
     }
 
@@ -2433,6 +2429,10 @@ mod tests {
                 "format('}}{{', 'test')",
                 Evaluation::String("}{".to_string()),
             ),
+            (
+                "format('{{{{}}}}', 'test')",
+                Evaluation::String("{{}}".to_string()),
+            ),
             // Multiple arguments
             (
                 "format('{0} {1} {2}', 'a', 'b', 'c')",
@@ -2451,6 +2451,13 @@ mod tests {
             (
                 "format('Hello world')",
                 Evaluation::String("Hello world".to_string()),
+            ),
+            // Trailing fragments
+            ("format('abc {{')", Evaluation::String("abc {".to_string())),
+            ("format('abc }}')", Evaluation::String("abc }".to_string())),
+            (
+                "format('abc {{}}')",
+                Evaluation::String("abc {}".to_string()),
             ),
         ];
 
