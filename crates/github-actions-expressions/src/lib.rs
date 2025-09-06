@@ -198,18 +198,11 @@ impl<'src> Call<'src> {
                 Some(Evaluation::Boolean(search_str.contains(&item_str)))
             }
             // For arrays, check if any element equals the item
-            Evaluation::Array(arr) => {
-                if arr.is_empty() {
-                    return Some(Evaluation::Boolean(false));
-                }
-
-                for element in arr {
-                    if Expr::values_equal(item, element) {
-                        return Some(Evaluation::Boolean(true));
-                    }
-                }
-                Some(Evaluation::Boolean(false))
-            }
+            Evaluation::Array(arr) => arr
+                .iter()
+                .any(|element| Expr::values_equal(item, element))
+                .then_some(Some(Evaluation::Boolean(true)))
+                .unwrap_or(Some(Evaluation::Boolean(false))),
             // For dictionaries, return false (not supported in reference implementation)
             Evaluation::Dictionary(_) => Some(Evaluation::Boolean(false)),
         }
