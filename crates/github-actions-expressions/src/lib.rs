@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-use std::{borrow::Cow, ops::Deref};
+use std::{borrow::Cow, ops::Deref, slice};
 
 use crate::context::Context;
 
@@ -153,13 +153,13 @@ impl<'src> Call<'src> {
 
     /// Helper function to read argument index from format string.
     fn read_arg_index(string: &str, start_index: usize) -> Option<usize> {
-        let bytes = string.as_bytes();
         let mut length = 0;
+        let chars: Vec<char> = string.chars().collect();
 
-        // Count the number of ASCII digits
-        while start_index + length < bytes.len() {
-            let byte = bytes[start_index + length];
-            if byte.is_ascii_digit() {
+        // Count the number of digits
+        while start_index + length < chars.len() {
+            let next_char = chars[start_index + length];
+            if next_char.is_ascii_digit() {
                 length += 1;
             } else {
                 break;
@@ -171,8 +171,8 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        // Parse the number directly from the byte slice
-        let number_str = &string[start_index..start_index + length];
+        // Parse the number
+        let number_str: String = chars[start_index..start_index + length].iter().collect();
         number_str.parse::<usize>().ok()
     }
 
@@ -302,7 +302,7 @@ impl<'src> Call<'src> {
                 // Convert array to JSON string
                 let elements: Vec<String> = arr
                     .iter()
-                    .map(|elem| match Self::consteval_tojson(&[elem.clone()]) {
+                    .map(|elem| match Self::consteval_tojson(slice::from_ref(elem)) {
                         Some(Evaluation::String(json)) => json,
                         _ => "null".to_string(), // Fallback for unconvertible elements
                     })
@@ -316,7 +316,7 @@ impl<'src> Call<'src> {
                     .map(|(key, value)| {
                         let key_json =
                             format!("\"{}\"", key.replace('\\', "\\\\").replace('\"', "\\\""));
-                        let value_json = match Self::consteval_tojson(&[value.clone()]) {
+                        let value_json = match Self::consteval_tojson(slice::from_ref(value)) {
                             Some(Evaluation::String(json)) => json,
                             _ => "null".to_string(), // Fallback for unconvertible values
                         };

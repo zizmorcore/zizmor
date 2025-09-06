@@ -289,8 +289,8 @@ impl Audit for Obfuscation {
                 // Check if we can create a fix for constant-reducible expressions
                 if parsed.constant_reducible() {
                     // Get the main expression's origin from the first annotation
-                    if let Some((_, main_origin, _)) = obfuscated_annotations.first() {
-                        if let Some(fix) = self.create_expression_fix(
+                    if let Some((_, main_origin, _)) = obfuscated_annotations.first()
+                        && let Some(fix) = self.create_expression_fix(
                             &parsed,
                             input,
                             expr_span.clone(),
@@ -298,7 +298,6 @@ impl Audit for Obfuscation {
                         ) {
                             finding_builder = finding_builder.fix(fix);
                         }
-                    }
                 } else {
                     // Check for constant-reducible subexpressions
                     for subexpr in parsed.constant_reducible_subexprs() {
