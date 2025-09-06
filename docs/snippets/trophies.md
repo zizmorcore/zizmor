@@ -80,6 +80,7 @@
         - astral-sh/python-build-standalone#716
         - astral-sh/ruff#14844
         - astral-sh/ruff-action#206
+        - astral-sh/ty-vscode#142
         - astral-sh/uv#15016
         - astral-sh/uv#15018
 
@@ -1279,6 +1280,14 @@
         - termux/termux-packages#22519
 
 
+-   ![](https://github.com/textlint.png?size=40){ width="40" loading=lazy align=left } textlint
+
+    ---
+
+    ??? example "Examples"
+        - textlint/textlint#1711
+
+
 -   ![](https://github.com/theupdateframework.png?size=40){ width="40" loading=lazy align=left } theupdateframework
 
     ---
@@ -1303,6 +1312,14 @@
     ??? example "Examples"
         - tornadoweb/tornado#3438
         - tornadoweb/tornado#3463
+
+
+-   ![](https://github.com/trailofbits.png?size=40){ width="40" loading=lazy align=left } trailofbits
+
+    ---
+
+    ??? example "Examples"
+        - trailofbits/fickling#144
 
 
 -   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser
@@ -1375,6 +1392,15 @@
 
     ??? example "Examples"
         - wntrblm/nox#925
+
+
+-   ![](https://github.com/WordPress.png?size=40){ width="40" loading=lazy align=left } WordPress
+
+    ---
+
+    ??? example "Examples"
+        - WordPress/gutenberg#69126
+        - WordPress/wordpress-develop#8007
 
 
 -   ![](https://github.com/zama-ai.png?size=40){ width="40" loading=lazy align=left } zama-ai

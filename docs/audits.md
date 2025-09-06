@@ -271,6 +271,7 @@ fork.
 Other resources:
 
 * [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]
+* [Keeping your GitHub Actions and workflows secure Part 4: New vulnerability patterns and mitigation strategies]
 * [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]
 
 ### Remediation
@@ -312,11 +313,17 @@ Some general pointers:
   request, therefore restricting the target branches reduces the risk of
   a vulnerable `pull_request_target` in a stale or abandoned branch.
 
-* If you have to use a dangerous trigger, consider adding a `github.repository == ...`
-  check to only run for your repository but not in forks of your repository
-  (in case the user has enabled Actions there). This avoids exposing forks
-  to danger in case you fix a vulnerability in the workflow but the fork still
-  contains an old vulnerable version.
+* If you really have to use `pull_request_target`, consider adding a
+  `github.repository == ...` check to only run for your repository but not in
+  forks of your repository (in case the user has enabled Actions there). This
+  avoids exposing forks to danger in case you fix a vulnerability in the
+  workflow but the fork still contains an old vulnerable version.
+
+    !!! important
+
+        Checking `github.repository == ...` is **not** effective on
+        `workflow_run`, since a `workflow_run` **always** runs in the context of
+        the target repository.
 
 [reusable workflow]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 
@@ -1685,6 +1692,7 @@ once it's configured:
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+[Keeping your GitHub Actions and workflows secure Part 4: New vulnerability patterns and mitigation strategies]: https://securitylab.github.com/resources/github-actions-new-patterns-and-mitigations/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
 [Self-hosted runner security]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners#self-hosted-runner-security
 [Keeping your GitHub Actions and workflows secure Part 2: Untrusted input]: https://securitylab.github.com/resources/github-actions-untrusted-input/

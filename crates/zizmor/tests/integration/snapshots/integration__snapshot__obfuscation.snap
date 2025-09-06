@@ -1,13 +1,12 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"obfuscation.yml\")).run()?"
-snapshot_kind: text
 ---
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:13:9
    |
 13 |       - uses: actions/checkout/@v4
-   |         -------------------------- help: actions reference contains empty component
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains empty component
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -16,12 +15,12 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:16:9
    |
 16 |       - uses: actions/checkout////@v4
-   |         -----------------------------
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |         |
-   |         help: actions reference contains empty component
-   |         help: actions reference contains empty component
-   |         help: actions reference contains empty component
-   |         help: actions reference contains empty component
+   |         actions reference contains empty component
+   |         actions reference contains empty component
+   |         actions reference contains empty component
+   |         actions reference contains empty component
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -30,7 +29,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:19:9
    |
 19 |       - uses: github/codeql-action/./init@v2
-   |         ------------------------------------ help: actions reference contains '.'
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains '.'
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -39,7 +38,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:20:9
    |
 20 |       - uses: actions/checkout/.@v4
-   |         --------------------------- help: actions reference contains '.'
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains '.'
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -48,7 +47,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:23:9
    |
 23 |       - uses: actions/cache/save/../save@v4
-   |         ----------------------------------- help: actions reference contains '..'
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains '..'
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -57,7 +56,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:31:20
    |
 31 |           echo ${{ '' }}
-   |                    -- help: can be replaced by its static evaluation
+   |                    ^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -66,7 +65,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:32:20
    |
 32 |           echo ${{ 'a' }}
-   |                    --- help: can be replaced by its static evaluation
+   |                    ^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -75,7 +74,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:33:20
    |
 33 |           echo ${{ true }}
-   |                    ---- help: can be replaced by its static evaluation
+   |                    ^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -84,7 +83,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:34:20
    |
 34 |           echo ${{ true && false }}
-   |                    ------------- help: can be replaced by its static evaluation
+   |                    ^^^^^^^^^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -93,7 +92,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:35:20
    |
 35 |           echo ${{ true || false }}
-   |                    ------------- help: can be replaced by its static evaluation
+   |                    ^^^^^^^^^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -102,7 +101,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:36:20
    |
 36 |           echo ${{ 1 > 2 || true }}
-   |                    ------------- help: can be replaced by its static evaluation
+   |                    ^^^^^^^^^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -111,7 +110,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:37:20
    |
 37 |           echo ${{ 1 != 2}}
-   |                    ------ help: can be replaced by its static evaluation
+   |                    ^^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -120,7 +119,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:41:20
    |
 41 |           echo ${{ format('{0}', 'abc') }}
-   |                    -------------------- help: can be replaced by its static evaluation
+   |                    ^^^^^^^^^^^^^^^^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -129,7 +128,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:42:20
    |
 42 |           echo ${{ format('{0} {1}', 'abc', 'def') }}
-   |                    ------------------------------- help: can be replaced by its static evaluation
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -138,7 +137,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:43:20
    |
 43 |           echo ${{ format('{0} {1}', 'abc', format('{0}', 'def')) }}
-   |                    ---------------------------------------------- help: can be replaced by its static evaluation
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -147,7 +146,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:44:20
    |
 44 |           echo ${{ startsWith('abc', 'a') }}
-   |                    ---------------------- help: can be replaced by its static evaluation
+   |                    ^^^^^^^^^^^^^^^^^^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -156,7 +155,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:45:20
    |
 45 |           echo ${{ ENDSWITH('abc', 'c') }}
-   |                    -------------------- help: can be replaced by its static evaluation
+   |                    ^^^^^^^^^^^^^^^^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -165,7 +164,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:50:60
    |
 50 |           echo ${{ format('{0}, {1}', github.event.number, format('{0}', 'abc')) }}
-   |                                                            -------------------- help: can be reduced to a constant
+   |                                                            ^^^^^^^^^^^^^^^^^^^^ can be reduced to a constant
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -174,7 +173,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:52:99
    |
 52 |           echo ${{ format('{0}, {1}', github.event.number, format('{0} {1}', github.event.number, true || false)) }}
-   |                                                                                                   ------------- help: can be reduced to a constant
+   |                                                                                                   ^^^^^^^^^^^^^ can be reduced to a constant
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
