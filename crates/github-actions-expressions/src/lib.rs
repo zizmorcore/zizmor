@@ -82,7 +82,7 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let template = args[0].to_string();
+        let template = args[0].sema().to_string();
         let mut result = String::new();
         let mut index = 0;
 
@@ -117,7 +117,7 @@ impl<'src> Call<'src> {
                                 }
 
                                 // Append the arg
-                                result.push_str(&args[1 + arg_index].to_string());
+                                result.push_str(&args[1 + arg_index].sema().to_string());
                                 index = rbrace_pos + 1;
                                 continue;
                             }
@@ -193,18 +193,18 @@ impl<'src> Call<'src> {
             | Evaluation::Number(_)
             | Evaluation::Boolean(_)
             | Evaluation::Null => {
-                let search_str = search.to_string().to_lowercase();
-                let item_str = item.to_string().to_lowercase();
+                let search_str = search.sema().to_string().to_lowercase();
+                let item_str = item.sema().to_string().to_lowercase();
                 Some(Evaluation::Boolean(search_str.contains(&item_str)))
             }
             // For arrays, check if any element equals the item
             Evaluation::Array(arr) => arr
                 .iter()
-                .any(|element| Expr::values_equal(item, element))
+                .any(|element| element.sema() == item.sema())
                 .then_some(Some(Evaluation::Boolean(true)))
                 .unwrap_or(Some(Evaluation::Boolean(false))),
-            // For dictionaries, return false (not supported in reference implementation)
-            Evaluation::Dictionary(_) => Some(Evaluation::Boolean(false)),
+            // `contains(object, ...)` is not defined in the reference implementation
+            Evaluation::Object(_) => None,
         }
     }
 
@@ -232,8 +232,8 @@ impl<'src> Call<'src> {
                 | Evaluation::Null,
             ) => {
                 // Case-insensitive comparison
-                let string_str = search_string.to_string().to_lowercase();
-                let prefix_str = search_value.to_string().to_lowercase();
+                let string_str = search_string.sema().to_string().to_lowercase();
+                let prefix_str = search_value.sema().to_string().to_lowercase();
                 Some(Evaluation::Boolean(string_str.starts_with(&prefix_str)))
             }
             // If either argument is not primitive (array or dictionary), return false
@@ -265,8 +265,8 @@ impl<'src> Call<'src> {
                 | Evaluation::Null,
             ) => {
                 // Case-insensitive comparison
-                let string_str = search_string.to_string().to_lowercase();
-                let suffix_str = search_value.to_string().to_lowercase();
+                let string_str = search_string.sema().to_string().to_lowercase();
+                let suffix_str = search_value.sema().to_string().to_lowercase();
                 Some(Evaluation::Boolean(string_str.ends_with(&suffix_str)))
             }
             // If either argument is not primitive (array or dictionary), return false
@@ -302,7 +302,7 @@ impl<'src> Call<'src> {
                     .collect();
                 format!("[{}]", elements.join(","))
             }
-            Evaluation::Dictionary(dict) => {
+            Evaluation::Object(dict) => {
                 // Convert dictionary to JSON string
                 let mut pairs: Vec<String> = dict
                     .iter()
@@ -332,7 +332,7 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let json_str = args[0].to_string();
+        let json_str = args[0].sema().to_string();
         let trimmed = json_str.trim();
 
         // Match reference implementation: error on empty input
@@ -373,7 +373,7 @@ impl<'src> Call<'src> {
                 for (key, value) in obj {
                     map.insert(key, Self::json_value_to_evaluation(value));
                 }
-                Evaluation::Dictionary(map)
+                Evaluation::Object(map)
             }
         }
     }
@@ -390,7 +390,7 @@ impl<'src> Call<'src> {
 
         // Get separator (default is comma)
         let separator = if args.len() > 1 {
-            args[1].to_string()
+            args[1].sema().to_string()
         } else {
             ",".to_string()
         };
@@ -400,18 +400,18 @@ impl<'src> Call<'src> {
             Evaluation::String(_)
             | Evaluation::Number(_)
             | Evaluation::Boolean(_)
-            | Evaluation::Null => Some(Evaluation::String(array_or_string.to_string())),
+            | Evaluation::Null => Some(Evaluation::String(array_or_string.sema().to_string())),
             // For arrays, join elements with separator
             Evaluation::Array(arr) => {
                 let joined = arr
                     .iter()
-                    .map(|item| item.to_string())
+                    .map(|item| item.sema().to_string())
                     .collect::<Vec<String>>()
                     .join(&separator);
                 Some(Evaluation::String(joined))
             }
             // For dictionaries, return empty string (not supported in reference)
-            Evaluation::Dictionary(_) => Some(Evaluation::String("".to_string())),
+            Evaluation::Object(_) => Some(Evaluation::String("".to_string())),
         }
     }
 }
@@ -1060,45 +1060,18 @@ impl From<bool> for Expr<'_> {
 /// GitHub Actions expressions.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Evaluation {
-    /// A string value (includes both string literals and stringified other types)
+    /// A string value (includes both string literals and stringified other types).
     String(String),
-    /// A numeric value
+    /// A numeric value.
     Number(f64),
-    /// A boolean value
+    /// A boolean value.
     Boolean(bool),
-    /// The null value
+    /// The null value.
     Null,
-    /// An array value (from fromJSON parsing)
+    /// An array value. Array evaluations can only be realized through `fromJSON`.
     Array(Vec<Evaluation>),
-    /// A dictionary/object value (from fromJSON parsing)
-    Dictionary(std::collections::HashMap<String, Evaluation>),
-}
-
-impl PartialOrd for Evaluation {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match (self, other) {
-            // Numbers can be compared directly
-            (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
-
-            // String comparison
-            (Evaluation::String(a), Evaluation::String(b)) => Some(a.cmp(b)),
-
-            // Arrays and dictionaries cannot be compared with other types
-            (Evaluation::Array(_), _) | (_, Evaluation::Array(_)) => None,
-            (Evaluation::Dictionary(_), _) | (_, Evaluation::Dictionary(_)) => None,
-
-            // Try to convert both to numbers first, then fall back to string comparison
-            (a, b) => {
-                if let (Ok(a_num), Ok(b_num)) =
-                    (a.to_string().parse::<f64>(), b.to_string().parse::<f64>())
-                {
-                    a_num.partial_cmp(&b_num)
-                } else {
-                    Some(a.to_string().cmp(&b.to_string()))
-                }
-            }
-        }
-    }
+    /// An object value. Object evaluations can only be realized through `fromJSON`.
+    Object(std::collections::HashMap<String, Evaluation>),
 }
 
 impl Evaluation {
@@ -1115,15 +1088,75 @@ impl Evaluation {
             Evaluation::Null => false,
             Evaluation::Number(n) => *n != 0.0,
             Evaluation::String(s) => !s.is_empty(),
-            Evaluation::Array(_) => true,
-            Evaluation::Dictionary(_) => true,
+            // Arrays and objects are always truthy, even if empty.
+            Evaluation::Array(_) | Evaluation::Object(_) => true,
+        }
+    }
+
+    /// Convert to a number following GitHub Actions conversion rules.
+    ///
+    /// See: <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#operators>
+    pub fn as_number(&self) -> f64 {
+        match self {
+            Evaluation::String(s) => {
+                if s.is_empty() {
+                    0.0
+                } else {
+                    s.parse::<f64>().unwrap_or(f64::NAN)
+                }
+            }
+            Evaluation::Number(n) => *n,
+            Evaluation::Boolean(b) => {
+                if *b {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+            Evaluation::Null => 0.0,
+            Evaluation::Array(_) | Evaluation::Object(_) => f64::NAN,
+        }
+    }
+
+    fn sema(&self) -> EvaluationSema<'_> {
+        EvaluationSema(self)
+    }
+}
+
+/// A wrapper around `Evaluation` that implements GitHub Actions
+/// various evaluation semantics (comparison, stringification, etc.).
+struct EvaluationSema<'a>(&'a Evaluation);
+
+impl PartialEq for EvaluationSema<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.0, other.0) {
+            (Evaluation::Null, Evaluation::Null) => true,
+            (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a == b,
+            (Evaluation::Number(a), Evaluation::Number(b)) => a == b,
+            (Evaluation::String(a), Evaluation::String(b)) => a == b,
+
+            // Coercion rules: all others convert to number and compare.
+            (a, b) => a.as_number() == b.as_number(),
         }
     }
 }
 
-impl std::fmt::Display for Evaluation {
+impl PartialOrd for EvaluationSema<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self.0, other.0) {
+            (Evaluation::Null, Evaluation::Null) => Some(std::cmp::Ordering::Equal),
+            (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a.partial_cmp(b),
+            (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
+            (Evaluation::String(a), Evaluation::String(b)) => a.partial_cmp(b),
+            // Coercion rules: all others convert to number and compare.
+            (a, b) => a.as_number().partial_cmp(&b.as_number()),
+        }
+    }
+}
+
+impl std::fmt::Display for EvaluationSema<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
+        match self.0 {
             Evaluation::String(s) => write!(f, "{}", s),
             Evaluation::Number(n) => {
                 // Format numbers like GitHub Actions does
@@ -1136,7 +1169,7 @@ impl std::fmt::Display for Evaluation {
             Evaluation::Boolean(b) => write!(f, "{}", b),
             Evaluation::Null => write!(f, ""),
             Evaluation::Array(_) => write!(f, "Array"),
-            Evaluation::Dictionary(_) => write!(f, "Object"),
+            Evaluation::Object(_) => write!(f, "Object"),
         }
     }
 }
@@ -1189,28 +1222,12 @@ impl<'src> Expr<'src> {
                             Some(rhs_val)
                         }
                     }
-                    BinOp::Eq => Some(Evaluation::Boolean(Self::values_equal(&lhs_val, &rhs_val))),
-                    BinOp::Neq => {
-                        Some(Evaluation::Boolean(!Self::values_equal(&lhs_val, &rhs_val)))
-                    }
-                    BinOp::Lt => lhs_val
-                        .partial_cmp(&rhs_val)
-                        .map(|ord| Evaluation::Boolean(matches!(ord, std::cmp::Ordering::Less))),
-                    BinOp::Le => lhs_val.partial_cmp(&rhs_val).map(|ord| {
-                        Evaluation::Boolean(matches!(
-                            ord,
-                            std::cmp::Ordering::Less | std::cmp::Ordering::Equal
-                        ))
-                    }),
-                    BinOp::Gt => lhs_val
-                        .partial_cmp(&rhs_val)
-                        .map(|ord| Evaluation::Boolean(matches!(ord, std::cmp::Ordering::Greater))),
-                    BinOp::Ge => lhs_val.partial_cmp(&rhs_val).map(|ord| {
-                        Evaluation::Boolean(matches!(
-                            ord,
-                            std::cmp::Ordering::Greater | std::cmp::Ordering::Equal
-                        ))
-                    }),
+                    BinOp::Eq => Some(Evaluation::Boolean(lhs_val.sema() == rhs_val.sema())),
+                    BinOp::Neq => Some(Evaluation::Boolean(lhs_val.sema() != rhs_val.sema())),
+                    BinOp::Lt => Some(Evaluation::Boolean(lhs_val.sema() < rhs_val.sema())),
+                    BinOp::Le => Some(Evaluation::Boolean(lhs_val.sema() <= rhs_val.sema())),
+                    BinOp::Gt => Some(Evaluation::Boolean(lhs_val.sema() > rhs_val.sema())),
+                    BinOp::Ge => Some(Evaluation::Boolean(lhs_val.sema() >= rhs_val.sema())),
                 }
             }
 
@@ -1225,21 +1242,6 @@ impl<'src> Expr<'src> {
 
             // Non-constant expressions
             _ => None,
-        }
-    }
-
-    /// Compares two evaluation results following GitHub Actions comparison semantics.
-    fn values_equal(lhs: &Evaluation, rhs: &Evaluation) -> bool {
-        match (lhs, rhs) {
-            (Evaluation::Null, Evaluation::Null) => true,
-            (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a == b,
-            (Evaluation::Number(a), Evaluation::Number(b)) => a == b,
-            (Evaluation::String(a), Evaluation::String(b)) => a == b,
-            (Evaluation::Array(a), Evaluation::Array(b)) => a == b,
-            (Evaluation::Dictionary(a), Evaluation::Dictionary(b)) => a == b,
-
-            // Type coercion rules - convert to string and compare
-            (a, b) => a.to_string() == b.to_string(),
         }
     }
 }
@@ -1935,7 +1937,7 @@ mod tests {
             ),
             (
                 "fromJSON('{\"key\": \"value\"}')",
-                Evaluation::Dictionary({
+                Evaluation::Object({
                     let mut map = std::collections::HashMap::new();
                     map.insert("key".to_string(), Evaluation::String("value".to_string()));
                     map
@@ -1946,7 +1948,11 @@ mod tests {
         for (expr_str, expected) in test_cases {
             let expr = Expr::parse(expr_str)?;
             let result = expr.consteval().unwrap();
-            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+            assert_eq!(
+                result, *expected,
+                "Failed for expression: {} {result:?}",
+                expr_str
+            );
         }
 
         Ok(())
@@ -1985,7 +1991,7 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluation_result_display() {
+    fn test_evaluation_sema_display() {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -1998,7 +2004,7 @@ mod tests {
         ];
 
         for (result, expected) in test_cases {
-            assert_eq!(result.to_string(), *expected);
+            assert_eq!(result.sema().to_string(), *expected);
         }
     }
 
@@ -2016,10 +2022,7 @@ mod tests {
             (Evaluation::String("".to_string()), false),
             (Evaluation::String("hello".to_string()), true),
             (Evaluation::Array(vec![]), true), // Arrays are always truthy
-            (
-                Evaluation::Dictionary(std::collections::HashMap::new()),
-                true,
-            ), // Dictionaries are always truthy
+            (Evaluation::Object(std::collections::HashMap::new()), true), // Dictionaries are always truthy
         ];
 
         for (result, expected) in test_cases {
@@ -2253,11 +2256,11 @@ mod tests {
             // Objects
             (
                 "fromJSON('{}')",
-                Evaluation::Dictionary(std::collections::HashMap::new()),
+                Evaluation::Object(std::collections::HashMap::new()),
             ),
             (
                 "fromJSON('{\"key\": \"value\"}')",
-                Evaluation::Dictionary({
+                Evaluation::Object({
                     let mut map = std::collections::HashMap::new();
                     map.insert("key".to_string(), Evaluation::String("value".to_string()));
                     map
@@ -2265,7 +2268,7 @@ mod tests {
             ),
             (
                 "fromJSON('{\"num\": 42, \"bool\": true, \"null\": null}')",
-                Evaluation::Dictionary({
+                Evaluation::Object({
                     let mut map = std::collections::HashMap::new();
                     map.insert("num".to_string(), Evaluation::Number(42.0));
                     map.insert("bool".to_string(), Evaluation::Boolean(true));
@@ -2276,7 +2279,7 @@ mod tests {
             // Nested structures
             (
                 "fromJSON('{\"array\": [1, 2], \"object\": {\"nested\": true}}')",
-                Evaluation::Dictionary({
+                Evaluation::Object({
                     let mut map = std::collections::HashMap::new();
                     map.insert(
                         "array".to_string(),
@@ -2284,7 +2287,7 @@ mod tests {
                     );
                     let mut nested_map = std::collections::HashMap::new();
                     nested_map.insert("nested".to_string(), Evaluation::Boolean(true));
-                    map.insert("object".to_string(), Evaluation::Dictionary(nested_map));
+                    map.insert("object".to_string(), Evaluation::Object(nested_map));
                     map
                 }),
             ),
@@ -2329,13 +2332,13 @@ mod tests {
         let test_cases = &[
             (Evaluation::Array(vec![Evaluation::Number(1.0)]), "Array"),
             (
-                Evaluation::Dictionary(std::collections::HashMap::new()),
+                Evaluation::Object(std::collections::HashMap::new()),
                 "Object",
             ),
         ];
 
         for (result, expected) in test_cases {
-            assert_eq!(result.to_string(), *expected);
+            assert_eq!(result.sema().to_string(), *expected);
         }
 
         Ok(())
@@ -2367,18 +2370,18 @@ mod tests {
             let to_result = Call::consteval_tojson(&[parsed.clone()]).unwrap();
 
             // Parse the result again to compare structure
-            let reparsed_expr_str = format!("fromJSON('{}')", to_result.to_string());
+            let reparsed_expr_str = format!("fromJSON('{}')", to_result.sema().to_string());
             let reparsed_expr = Expr::parse(&reparsed_expr_str)?;
             let reparsed = reparsed_expr.consteval().unwrap();
 
             // The structure should be preserved (though ordering might differ for objects)
             match (&parsed, &reparsed) {
                 (Evaluation::Array(a), Evaluation::Array(b)) => assert_eq!(a, b),
-                (Evaluation::Dictionary(_), Evaluation::Dictionary(_)) => {
+                (Evaluation::Object(_), Evaluation::Object(_)) => {
                     // For dictionaries, we just check that both are dictionaries
                     // since ordering might differ
-                    assert!(matches!(parsed, Evaluation::Dictionary(_)));
-                    assert!(matches!(reparsed, Evaluation::Dictionary(_)));
+                    assert!(matches!(parsed, Evaluation::Object(_)));
+                    assert!(matches!(reparsed, Evaluation::Object(_)));
                 }
                 (a, b) => assert_eq!(a, b),
             }

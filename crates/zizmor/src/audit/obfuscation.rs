@@ -135,7 +135,7 @@ impl Obfuscation {
                 Evaluation::Boolean(b) => b.to_string(),
                 Evaluation::Null => "null".to_string(),
                 Evaluation::Array(_) => "Array".to_string(),
-                Evaluation::Dictionary(_) => "Object".to_string(),
+                Evaluation::Object(_) => "Object".to_string(),
             }
         })
     }
@@ -295,9 +295,10 @@ impl Audit for Obfuscation {
                             input,
                             expr_span.clone(),
                             *main_origin,
-                        ) {
-                            finding_builder = finding_builder.fix(fix);
-                        }
+                        )
+                    {
+                        finding_builder = finding_builder.fix(fix);
+                    }
                 } else {
                     // Check for constant-reducible subexpressions
                     for subexpr in parsed.constant_reducible_subexprs() {
