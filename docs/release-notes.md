@@ -45,6 +45,8 @@ of `zizmor`.
   See [`rules.<id>.disable`](./configuration.md#rulesiddisable)
   for details (#1132)
 
+* The [obfuscation] audit now supports auto-fixes for many findings (#1088)
+
 ### Bug Fixes 🐛
 
 * `zizmor` now correctly honors `--strict-collection` when collecting from
