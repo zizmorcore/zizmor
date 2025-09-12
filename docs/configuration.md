@@ -17,7 +17,7 @@ typically named `zizmor.yml`.
 
 !!! note
 
-    Configuration is *always* optional, and can always be disabled with
+    Configuration is *always* optional, and can always be skipped with
     `--no-config`. If `--no-config` is passed, no configuration is ever loaded.
 
 !!! tip
@@ -62,16 +62,57 @@ requested with `--config` or `ZIZMOR_CONFIG`.
 
 ## Settings
 
-### `rules`
+### `rules.<id>.disable`
 
-#### `rules.<id>`
+_Type_: `boolean`
 
-##### `rules.<id>.ignore`
+Disables the audit entirely if `true`.
+
+!!! important
+
+    `rules.<id>.disable` was added in `v1.13.0`.
+
+!!! warning
+
+    For most users, disabling audits should be a **measure of last resort**.
+    Disabled rules don't show up in ignored or suppressed finding counts,
+    making it **very easy** to accidentally miss important new findings.
+
+    Before disabling an audit entirely, consider one of the following
+    alternatives:
+
+    1. Ignoring specific findings via [`rules.<id>.ignore`](#rulesidignore).
+    1. Changing your [persona](./usage.md/#using-personas) to a less sensitive
+       one. For example, consider removing `--persona=pedantic`
+       or `--persona=auditor` if you're using one of those.
+
+When set, inputs covered by this configuration file will not be
+analyzed by the given audit.
+
+For example, here is a configuration file that disables the
+[`template-injection`](./audits.md#template-injection) audit:
+
+```yaml title="zizmor.yml"
+rules:
+  template-injection:
+    disable: true
+```
+
+Multiple audits can be disabled as well:
+
+```yaml title="zizmor.yml"
+rules:
+  template-injection:
+    disable: true
+  unpinned-uses:
+    disable: true
+```
+
+### `rules.<id>.ignore`
 
 _Type_: `array`
 
-Per-audit ignore rules, where `id` is the audit's name, e.g.
-[`template-injection`](./audits.md#template-injection).
+Per-audit ignore rules.
 
 Each member of `rules.<id>.ignore` is a *workflow rule*, formatted as follows:
 
@@ -106,7 +147,7 @@ rules:
       - pypi.yml:12:10
 ```
 
-#### `rules.<id>.config`
+### `rules.<id>.config`
 
 _Type_: `object`
 

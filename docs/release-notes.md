@@ -41,11 +41,21 @@ of `zizmor`.
     See [Configuration - Discovery](./configuration.md#discovery) for a
     detailed explanation of the new behavior.
 
+* Audit rules can now be disabled entirely in `zizmor`'s configuration.
+  See [`rules.<id>.disable`](./configuration.md#rulesiddisable)
+  for details (#1132)
+
+* The [obfuscation] audit now supports auto-fixes for many findings (#1088)
+
 ### Bug Fixes 🐛
 
 * `zizmor` now correctly honors `--strict-collection` when collecting from
   remote inputs. This also means that the default collection strictness
   has changed for remote inputs to match all other inputs (#1122)
+
+* Fixed a bug where `zizmor` would crash on certain UTF-8 inputs lacking
+  an explicit final newline due to a bug in the `annotate-snippets` crate
+  (#1136)
 
 ## 1.12.1
 

@@ -6,7 +6,7 @@ help[stale-action-refs]: commit hash does not point to a Git tag
   --> @@INPUT@@:30:7
    |
 30 |     - uses: actions/checkout@009b9ae9e446ad8d9b8c809870b0fbcc5e03573e
-   |       --------------------------------------------------------------- help: this step
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
    |
    = note: audit confidence → High
 

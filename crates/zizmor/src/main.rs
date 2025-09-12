@@ -5,7 +5,7 @@ use std::{
     process::ExitCode,
 };
 
-use annotate_snippets::{Level, Renderer};
+use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
 use camino::Utf8PathBuf;
@@ -362,13 +362,15 @@ pub(crate) enum FixMode {
 }
 
 pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
-    let mut message = Level::Error.title(err.as_ref());
-    for tip in tips {
-        message = message.footer(Level::Note.title(tip.as_ref()));
-    }
+    // NOTE: We use secondary_title here because primary_title doesn't
+    // allow ANSI colors, and some of our errors contain colorized text.
+    let report = vec![
+        Group::with_title(Level::ERROR.secondary_title(err.as_ref()))
+            .elements(tips.iter().map(|tip| Level::HELP.message(tip.as_ref()))),
+    ];
 
     let renderer = Renderer::styled();
-    format!("{}", renderer.render(message))
+    renderer.render(&report).to_string()
 }
 
 /// State used when collecting input groups.
@@ -538,10 +540,10 @@ fn run() -> Result<ExitCode> {
         for (input_key, input) in registry.iter_inputs() {
             Span::current().pb_set_message(input.key().filename());
             let config = registry.get_config(input_key.group());
-            for (name, audit) in audit_registry.iter_audits() {
-                tracing::debug!("running {name} on {input}", input = input.key());
-                results.extend(audit.audit(input, config).with_context(|| {
-                    format!("{name} failed on {input}", input = input.key().filename())
+            for (ident, audit) in audit_registry.iter_audits() {
+                tracing::debug!("running {ident} on {input}", input = input.key());
+                results.extend(audit.audit(ident, input, config).with_context(|| {
+                    format!("{ident} failed on {input}", input = input.key().filename())
                 })?);
                 Span::current().pb_inc(1);
             }

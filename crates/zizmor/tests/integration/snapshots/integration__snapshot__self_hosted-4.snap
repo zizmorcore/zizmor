@@ -1,14 +1,13 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"self-hosted/self-hosted-runner-group.yml\")).args([\"--persona=auditor\"]).run()?"
-snapshot_kind: text
 ---
-note[self-hosted-runner]: runs on a self-hosted runner
+error[self-hosted-runner]: runs on a self-hosted runner
   --> @@INPUT@@:11:5
    |
 11 | /     runs-on:
 12 | |       group: ubuntu-runners
-   | |___________________________- note: runner group implies self-hosted runner
+   | |___________________________^ runner group implies self-hosted runner
    |
    = note: audit confidence → Low
 

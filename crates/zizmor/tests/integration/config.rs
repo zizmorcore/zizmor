@@ -1,4 +1,4 @@
-//! Configuration discovery tests.
+//! Configuration discovery and functionality tests.
 
 use crate::common::{OutputMode, input_under_test, zizmor};
 
@@ -170,6 +170,20 @@ fn test_ignores_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
                 "config-scenarios/config-in-dotgithub/.github/workflows/hackme.yml"
             ))
             .setenv("RUST_LOG", "zizmor::config=debug")
+            .output(OutputMode::Both)
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Ensures we respect the `disable: true` configuration directive.
+#[test]
+fn test_disablement() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("config-scenarios/disablement"))
+            .setenv("RUST_LOG", "zizmor::audit=debug")
             .output(OutputMode::Both)
             .run()?
     );

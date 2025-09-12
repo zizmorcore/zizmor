@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, SpannedExpr, context::Context};
+use github_actions_expressions::{Expr, SpannedExpr, call::Call, context::Context};
 
 use crate::{
     Confidence, Severity,
@@ -71,7 +71,7 @@ impl UnredactedSecrets {
         // and therefore bypass GitHub's redaction mechanism.
 
         match expr.deref() {
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 if func == "fromJSON"
                     && args.iter().any(
                         |arg| matches!(arg.deref(), Expr::Context(ctx) if ctx.child_of("secrets")),

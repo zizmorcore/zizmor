@@ -80,8 +80,13 @@ impl<'de> Deserialize<'de> for WorkflowRule {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct AuditRuleConfig {
+    /// Disables the audit entirely if `true`.
+    #[serde(default)]
+    disable: bool,
+    /// A list of ignore rules for findings from this audit.
     #[serde(default)]
     ignore: Vec<WorkflowRule>,
+    /// Rule-specific configuration.
     #[serde(default)]
     config: Option<serde_yaml::Mapping>,
 }
@@ -480,6 +485,15 @@ impl Config {
         } else {
             Ok(None)
         }
+    }
+
+    /// Returns `true` if this [`Config`] disables the given audit rule.
+    pub(crate) fn disables(&self, ident: &str) -> bool {
+        self.raw
+            .rules
+            .get(ident)
+            .map(|rule_config| rule_config.disable)
+            .unwrap_or(false)
     }
 
     /// Returns `true` if this [`Config`] has an ignore rule for the
