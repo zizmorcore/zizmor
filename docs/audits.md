@@ -1096,7 +1096,7 @@ shell quoting/expansion rules.
 
 | Type     | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
 |----------|------------------|---------------|----------------|--------------------|--------------|
-| Workflow | [undocumented-permissions.yml] | vx.y.z        | ✅             | ❌                 | ❌            |
+| Workflow | [undocumented-permissions.yml] | v1.13.0        | ✅             | ❌                 | ❌            |
 
 [undocumented-permissions.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/undocumented-permissions.yml
 
