@@ -74,15 +74,6 @@ impl UndocumentedPermissions {
             return Ok(None);
         }
 
-        // Skip if it only contains "contents: read" which is common and self-explanatory
-        if perms.len() == 1
-            && perms
-                .get("contents")
-                .is_some_and(|p| *p == Permission::Read)
-        {
-            return Ok(None);
-        }
-
         // Check each individual permission for documentation
         let mut finding_builder = Self::finding()
             .severity(Severity::Low)
@@ -92,7 +83,12 @@ impl UndocumentedPermissions {
         let base_location = location.clone().primary();
         let mut has_undocumented = false;
 
-        for (perm_name, _perm_value) in perms {
+        for (perm_name, perm) in perms {
+            if perm_name == "contents" && *perm == Permission::Read {
+                // Skip "contents: read" as it's common and self-explanatory
+                continue;
+            }
+
             let individual_perm_location = base_location
                 .clone()
                 .with_keys(["permissions".into(), perm_name.as_str().into()]);

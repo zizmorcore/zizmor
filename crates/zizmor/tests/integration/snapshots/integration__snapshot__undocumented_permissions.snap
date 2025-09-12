@@ -33,10 +33,8 @@ help[undocumented-permissions]: permissions without explanatory comments
    = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:43:7
+  --> @@INPUT@@:44:7
    |
-43 |       contents: read #
-   |       ^^^^^^^^^^^^^^ needs an explanatory comment
 44 |       packages: write #
    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
 45 |       actions: write  #    
