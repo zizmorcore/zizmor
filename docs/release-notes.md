@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [undocumented-permissions] detects explicit permission
+  grants that lack an explanatory comment (#1131)
+
+    Many thanks to @johnbillion for proposing and implementing this audit!
+
 ### Enhancements 🌱
 
 * `zizmor`'s configuration discovery behavior has been significantly refactored,
