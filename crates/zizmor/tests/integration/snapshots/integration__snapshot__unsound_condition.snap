@@ -9,6 +9,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                         ^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:73:17
@@ -17,6 +18,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                 ^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:78:17
@@ -25,6 +27,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                 ^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:83:21
@@ -33,6 +36,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    |                     ^^^^^ can be replaced by its static evaluation
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unsound-condition]: unsound conditional expression
   --> @@INPUT@@:27:9
@@ -95,4 +99,4 @@ error[unsound-condition]: unsound conditional expression
    |
    = note: audit confidence → High
 
-11 findings: 0 unknown, 0 informational, 4 low, 0 medium, 7 high
+11 findings (4 fixable): 0 unknown, 0 informational, 4 low, 0 medium, 7 high

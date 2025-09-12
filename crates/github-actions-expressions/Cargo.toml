@@ -18,6 +18,7 @@ anyhow.workspace = true
 itertools.workspace = true
 pest.workspace = true
 pest_derive.workspace = true
+serde_json.workspace = true
 subfeature.workspace = true
 
 [dev-dependencies]

@@ -1,7 +1,7 @@
 use std::{ops::Deref, sync::LazyLock};
 
 use github_actions_expressions::{
-    BinOp, Expr, SpannedExpr, UnOp,
+    BinOp, Call, Expr, SpannedExpr, UnOp,
     context::{Context, ContextPattern},
 };
 use github_actions_models::{
@@ -262,10 +262,10 @@ impl BotConditions {
             // check to see if any of the call's arguments are
             // bot conditions. We treat a call as non-dominating always.
             // TODO: Should probably check some variant of `contains` here.
-            Expr::Call {
+            Expr::Call(Call {
                 func: _,
                 args: exprs,
-            }
+            })
             | Expr::Context(Context { parts: exprs, .. }) => exprs
                 .iter()
                 .map(|arg| Self::walk_tree_for_bot_condition(arg, false))
