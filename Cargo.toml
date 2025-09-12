@@ -19,7 +19,7 @@ rust-version = "1.88.0"
 
 [workspace.dependencies]
 anyhow = "1.0.99"
-github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.9" }
+github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.10" }
 github-actions-models = { path = "crates/github-actions-models", version = "0.32.0" }
 itertools = "0.14.0"
 pest = "2.8.1"
