@@ -14,9 +14,9 @@ help[undocumented-permissions]: permissions without explanatory comments
  --> @@INPUT@@:7:3
   |
 7 |   contents: write
-  |   --------------- help: needs an explanatory comment
+  |   ^^^^^^^^^^^^^^^ needs an explanatory comment
 8 |   packages: read
-  |   -------------- help: needs an explanatory comment
+  |   ^^^^^^^^^^^^^^ needs an explanatory comment
   |
   = note: audit confidence → High
 
@@ -24,11 +24,11 @@ help[undocumented-permissions]: permissions without explanatory comments
   --> @@INPUT@@:29:7
    |
 29 |       contents: write
-   |       --------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
 30 |       packages: write
-   |       --------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
 31 |       actions: write
-   |       -------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
 
@@ -36,11 +36,11 @@ help[undocumented-permissions]: permissions without explanatory comments
   --> @@INPUT@@:43:7
    |
 43 |       contents: read #
-   |       -------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
 44 |       packages: write #
-   |       --------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
 45 |       actions: write  #    
-   |       -------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
 
@@ -48,9 +48,9 @@ help[undocumented-permissions]: permissions without explanatory comments
   --> @@INPUT@@:56:7
    |
 56 |       metadata: read
-   |       -------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
 57 |       packages: write #
-   |       --------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
 

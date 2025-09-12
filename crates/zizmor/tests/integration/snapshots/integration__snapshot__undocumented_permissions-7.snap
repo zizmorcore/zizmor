@@ -22,7 +22,7 @@ help[undocumented-permissions]: permissions without explanatory comments
  --> @@INPUT@@:8:3
   |
 8 |   packages: read
-  |   -------------- help: needs an explanatory comment
+  |   ^^^^^^^^^^^^^^ needs an explanatory comment
   |
   = note: audit confidence → High
 
@@ -30,7 +30,7 @@ help[undocumented-permissions]: permissions without explanatory comments
   --> @@INPUT@@:18:7
    |
 18 |       actions: write
-   |       -------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
 
@@ -38,9 +38,9 @@ help[undocumented-permissions]: permissions without explanatory comments
   --> @@INPUT@@:31:7
    |
 31 |       contents: write
-   |       --------------- help: needs an explanatory comment
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
 32 |       issues: read
-   |       ------------ help: needs an explanatory comment
+   |       ^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
 
