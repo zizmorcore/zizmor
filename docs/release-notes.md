@@ -1016,3 +1016,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [anonymous-definition]: ./audits.md#anonymous-definition
 [unsound-condition]: ./audits.md#unsound-condition
 [known-vulnerable-actions]: ./audits.md#known-vulnerable-actions
+[undocumented-permissions]: ./audits.md#undocumented-permissions
