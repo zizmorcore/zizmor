@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.13.0
+
 ### New Features 🌈
 
 * **New audit**: [undocumented-permissions] detects explicit permission
