@@ -954,4 +954,97 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_evaluate_constant_functions() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // format function
+            (
+                "format('{0}', 'hello')",
+                Evaluation::String("hello".to_string()),
+            ),
+            (
+                "format('{0} {1}', 'hello', 'world')",
+                Evaluation::String("hello world".to_string()),
+            ),
+            (
+                "format('Value: {0}', 42)",
+                Evaluation::String("Value: 42".to_string()),
+            ),
+            // contains function
+            (
+                "contains('hello world', 'world')",
+                Evaluation::Boolean(true),
+            ),
+            ("contains('hello world', 'foo')", Evaluation::Boolean(false)),
+            ("contains('test', '')", Evaluation::Boolean(true)),
+            // startsWith function
+            (
+                "startsWith('hello world', 'hello')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "startsWith('hello world', 'world')",
+                Evaluation::Boolean(false),
+            ),
+            ("startsWith('test', '')", Evaluation::Boolean(true)),
+            // endsWith function
+            (
+                "endsWith('hello world', 'world')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "endsWith('hello world', 'hello')",
+                Evaluation::Boolean(false),
+            ),
+            ("endsWith('test', '')", Evaluation::Boolean(true)),
+            // toJSON function
+            (
+                "toJSON('hello')",
+                Evaluation::String("\"hello\"".to_string()),
+            ),
+            ("toJSON(42)", Evaluation::String("42".to_string())),
+            ("toJSON(true)", Evaluation::String("true".to_string())),
+            ("toJSON(null)", Evaluation::String("null".to_string())),
+            // fromJSON function - primitives
+            (
+                "fromJSON('\"hello\"')",
+                Evaluation::String("hello".to_string()),
+            ),
+            ("fromJSON('42')", Evaluation::Number(42.0)),
+            ("fromJSON('true')", Evaluation::Boolean(true)),
+            ("fromJSON('null')", Evaluation::Null),
+            // fromJSON function - arrays and objects
+            (
+                "fromJSON('[1, 2, 3]')",
+                Evaluation::Array(vec![
+                    Evaluation::Number(1.0),
+                    Evaluation::Number(2.0),
+                    Evaluation::Number(3.0),
+                ]),
+            ),
+            (
+                "fromJSON('{\"key\": \"value\"}')",
+                Evaluation::Object({
+                    let mut map = std::collections::HashMap::new();
+                    map.insert("key".to_string(), Evaluation::String("value".to_string()));
+                    map
+                }),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(
+                result, *expected,
+                "Failed for expression: {} {result:?}",
+                expr_str
+            );
+        }
+
+        Ok(())
+    }
 }

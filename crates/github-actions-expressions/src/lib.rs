@@ -3,11 +3,14 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-use std::{borrow::Cow, ops::Deref};
+use std::ops::Deref;
 
 use crate::{
     call::{Call, Function},
     context::Context,
+    identifier::Identifier,
+    literal::Literal,
+    op::{BinOp, UnOp},
 };
 
 use self::parser::{ExprParser, Rule};
@@ -17,6 +20,9 @@ use pest::{Parser, iterators::Pair};
 
 pub mod call;
 pub mod context;
+pub mod identifier;
+pub mod literal;
+pub mod op;
 
 // Isolates the ExprParser, Rule and other generated types
 // so that we can do `missing_docs` at the top-level.
@@ -28,104 +34,6 @@ mod parser {
     #[derive(Parser)]
     #[grammar = "expr.pest"]
     pub struct ExprParser;
-}
-
-/// Represents a single identifier in a GitHub Actions expression,
-/// i.e. a single context component.
-///
-/// Identifiers are case-insensitive.
-#[derive(Debug)]
-pub struct Identifier<'src>(&'src str);
-
-impl Identifier<'_> {
-    /// Returns the identifier as a string slice, as it appears in the
-    /// expression.
-    ///
-    /// Important: identifiers are case-insensitive, so this should not
-    /// be used for comparisons.
-    pub fn as_str(&self) -> &str {
-        self.0
-    }
-}
-
-impl PartialEq for Identifier<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq_ignore_ascii_case(other.0)
-    }
-}
-
-impl PartialEq<str> for Identifier<'_> {
-    fn eq(&self, other: &str) -> bool {
-        self.0.eq_ignore_ascii_case(other)
-    }
-}
-
-/// Binary operations allowed in an expression.
-#[derive(Debug, PartialEq)]
-pub enum BinOp {
-    /// `expr && expr`
-    And,
-    /// `expr || expr`
-    Or,
-    /// `expr == expr`
-    Eq,
-    /// `expr != expr`
-    Neq,
-    /// `expr > expr`
-    Gt,
-    /// `expr >= expr`
-    Ge,
-    /// `expr < expr`
-    Lt,
-    /// `expr <= expr`
-    Le,
-}
-
-/// Unary operations allowed in an expression.
-#[derive(Debug, PartialEq)]
-pub enum UnOp {
-    /// `!expr`
-    Not,
-}
-
-/// Represents a literal value in a GitHub Actions expression.
-#[derive(Debug, PartialEq)]
-pub enum Literal<'src> {
-    /// A number literal.
-    Number(f64),
-    /// A string literal.
-    String(Cow<'src, str>),
-    /// A boolean literal.
-    Boolean(bool),
-    /// The `null` literal.
-    Null,
-}
-
-impl<'src> Literal<'src> {
-    /// Returns a string representation of the literal.
-    ///
-    /// This is not guaranteed to be an exact equivalent of the literal
-    /// as it appears in its source expression. For example, the string
-    /// representation of a floating point literal is subject to normalization,
-    /// and string literals are returned without surrounding quotes.
-    pub fn as_str(&self) -> Cow<'src, str> {
-        match self {
-            Literal::String(s) => s.clone(),
-            Literal::Number(n) => Cow::Owned(n.to_string()),
-            Literal::Boolean(b) => Cow::Owned(b.to_string()),
-            Literal::Null => Cow::Borrowed("null"),
-        }
-    }
-
-    /// Returns the trivial constant evaluation of the literal.
-    fn consteval(&self) -> Evaluation {
-        match self {
-            Literal::String(s) => Evaluation::String(s.to_string()),
-            Literal::Number(n) => Evaluation::Number(*n),
-            Literal::Boolean(b) => Evaluation::Boolean(*b),
-            Literal::Null => Evaluation::Null,
-        }
-    }
 }
 
 /// Represents the origin of an expression, including its source span
@@ -1481,167 +1389,6 @@ mod tests {
         ] {
             let expr = Expr::parse(expr)?;
             assert_eq!(expr.constant_reducible(), *reducible);
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_evaluate_constant_literals() -> Result<()> {
-        use crate::Evaluation;
-
-        let test_cases = &[
-            ("'hello'", Evaluation::String("hello".to_string())),
-            ("'world'", Evaluation::String("world".to_string())),
-            ("42", Evaluation::Number(42.0)),
-            ("3.14", Evaluation::Number(3.14)),
-            ("true", Evaluation::Boolean(true)),
-            ("false", Evaluation::Boolean(false)),
-            ("null", Evaluation::Null),
-        ];
-
-        for (expr_str, expected) in test_cases {
-            let expr = Expr::parse(expr_str)?;
-            let result = expr.consteval().unwrap();
-            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_evaluate_constant_binary_operations() -> Result<()> {
-        use crate::Evaluation;
-
-        let test_cases = &[
-            // Boolean operations
-            ("true && true", Evaluation::Boolean(true)),
-            ("true && false", Evaluation::Boolean(false)),
-            ("false && true", Evaluation::Boolean(false)),
-            ("false && false", Evaluation::Boolean(false)),
-            ("true || true", Evaluation::Boolean(true)),
-            ("true || false", Evaluation::Boolean(true)),
-            ("false || true", Evaluation::Boolean(true)),
-            ("false || false", Evaluation::Boolean(false)),
-            // Equality operations
-            ("1 == 1", Evaluation::Boolean(true)),
-            ("1 == 2", Evaluation::Boolean(false)),
-            ("'hello' == 'hello'", Evaluation::Boolean(true)),
-            ("'hello' == 'world'", Evaluation::Boolean(false)),
-            ("true == true", Evaluation::Boolean(true)),
-            ("true == false", Evaluation::Boolean(false)),
-            ("1 != 2", Evaluation::Boolean(true)),
-            ("1 != 1", Evaluation::Boolean(false)),
-            // Comparison operations
-            ("1 < 2", Evaluation::Boolean(true)),
-            ("2 < 1", Evaluation::Boolean(false)),
-            ("1 <= 1", Evaluation::Boolean(true)),
-            ("1 <= 2", Evaluation::Boolean(true)),
-            ("2 <= 1", Evaluation::Boolean(false)),
-            ("2 > 1", Evaluation::Boolean(true)),
-            ("1 > 2", Evaluation::Boolean(false)),
-            ("1 >= 1", Evaluation::Boolean(true)),
-            ("2 >= 1", Evaluation::Boolean(true)),
-            ("1 >= 2", Evaluation::Boolean(false)),
-        ];
-
-        for (expr_str, expected) in test_cases {
-            let expr = Expr::parse(expr_str)?;
-            let result = expr.consteval().unwrap();
-            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_evaluate_constant_functions() -> Result<()> {
-        use crate::Evaluation;
-
-        let test_cases = &[
-            // format function
-            (
-                "format('{0}', 'hello')",
-                Evaluation::String("hello".to_string()),
-            ),
-            (
-                "format('{0} {1}', 'hello', 'world')",
-                Evaluation::String("hello world".to_string()),
-            ),
-            (
-                "format('Value: {0}', 42)",
-                Evaluation::String("Value: 42".to_string()),
-            ),
-            // contains function
-            (
-                "contains('hello world', 'world')",
-                Evaluation::Boolean(true),
-            ),
-            ("contains('hello world', 'foo')", Evaluation::Boolean(false)),
-            ("contains('test', '')", Evaluation::Boolean(true)),
-            // startsWith function
-            (
-                "startsWith('hello world', 'hello')",
-                Evaluation::Boolean(true),
-            ),
-            (
-                "startsWith('hello world', 'world')",
-                Evaluation::Boolean(false),
-            ),
-            ("startsWith('test', '')", Evaluation::Boolean(true)),
-            // endsWith function
-            (
-                "endsWith('hello world', 'world')",
-                Evaluation::Boolean(true),
-            ),
-            (
-                "endsWith('hello world', 'hello')",
-                Evaluation::Boolean(false),
-            ),
-            ("endsWith('test', '')", Evaluation::Boolean(true)),
-            // toJSON function
-            (
-                "toJSON('hello')",
-                Evaluation::String("\"hello\"".to_string()),
-            ),
-            ("toJSON(42)", Evaluation::String("42".to_string())),
-            ("toJSON(true)", Evaluation::String("true".to_string())),
-            ("toJSON(null)", Evaluation::String("null".to_string())),
-            // fromJSON function - primitives
-            (
-                "fromJSON('\"hello\"')",
-                Evaluation::String("hello".to_string()),
-            ),
-            ("fromJSON('42')", Evaluation::Number(42.0)),
-            ("fromJSON('true')", Evaluation::Boolean(true)),
-            ("fromJSON('null')", Evaluation::Null),
-            // fromJSON function - arrays and objects
-            (
-                "fromJSON('[1, 2, 3]')",
-                Evaluation::Array(vec![
-                    Evaluation::Number(1.0),
-                    Evaluation::Number(2.0),
-                    Evaluation::Number(3.0),
-                ]),
-            ),
-            (
-                "fromJSON('{\"key\": \"value\"}')",
-                Evaluation::Object({
-                    let mut map = std::collections::HashMap::new();
-                    map.insert("key".to_string(), Evaluation::String("value".to_string()));
-                    map
-                }),
-            ),
-        ];
-
-        for (expr_str, expected) in test_cases {
-            let expr = Expr::parse(expr_str)?;
-            let result = expr.consteval().unwrap();
-            assert_eq!(
-                result, *expected,
-                "Failed for expression: {} {result:?}",
-                expr_str
-            );
         }
 
         Ok(())
