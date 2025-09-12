@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Call, Expr, Literal, SpannedExpr, context::Context};
+use github_actions_expressions::{Expr, Literal, SpannedExpr, call::Call, context::Context};
 use github_actions_models::common::If;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};

@@ -1,7 +1,8 @@
 use std::{ops::Deref, sync::LazyLock};
 
 use github_actions_expressions::{
-    BinOp, Call, Expr, SpannedExpr, UnOp,
+    BinOp, Expr, SpannedExpr, UnOp,
+    call::Call,
     context::{Context, ContextPattern},
 };
 use github_actions_models::{

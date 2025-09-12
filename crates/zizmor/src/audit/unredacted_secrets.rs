@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Call, Expr, SpannedExpr, context::Context};
+use github_actions_expressions::{Expr, SpannedExpr, call::Call, context::Context};
 
 use crate::{
     Confidence, Severity,
