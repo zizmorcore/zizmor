@@ -61,15 +61,6 @@ impl Obfuscation {
     fn normalize_uses_path(&self, uses: &RepositoryUses) -> Option<String> {
         let subpath = uses.subpath.as_deref()?;
 
-        // Check if normalization is needed
-        let needs_normalization = subpath
-            .split('/')
-            .any(|component| component.is_empty() || component == "." || component == "..");
-
-        if !needs_normalization {
-            return None;
-        }
-
         let mut components = Vec::new();
         for component in subpath.split('/') {
             match component {
@@ -77,6 +68,11 @@ impl Obfuscation {
                 "" | "." => continue,
                 // Handle parent directory references
                 ".." => {
+                    // There's no meaningful normalization if we have no concrete
+                    // component to go back from.
+                    if components.is_empty() {
+                        return None;
+                    }
                     components.pop();
                 }
                 // Keep regular components
@@ -86,15 +82,13 @@ impl Obfuscation {
 
         // If all components were removed, the subpath should be empty
         if components.is_empty() {
-            Some(format!(
-                "{}@{}",
-                format!("{}/{}", uses.owner, uses.repo),
-                uses.git_ref
-            ))
+            Some(format!("{}/{}@{}", uses.owner, uses.repo, uses.git_ref))
         } else {
             Some(format!(
-                "{}@{}",
-                format!("{}/{}/{}", uses.owner, uses.repo, components.join("/")),
+                "{}/{}/{}@{}",
+                uses.owner,
+                uses.repo,
+                components.join("/"),
                 uses.git_ref
             ))
         }
