@@ -1107,8 +1107,8 @@ in explicit permissions blocks. Well-documented permissions help prevent
 over-scoping and make workflows more maintainable by explaining why specific
 permissions are needed.
 
-The audit skips permissions blocks that only contain `contents: read`, as this
-is a common, self-explanatory permission.
+The audit does not flag `contents: read`, as this is a common, self-explanatory
+permission.
 
 !!! note
 
