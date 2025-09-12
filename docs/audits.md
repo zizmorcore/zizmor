@@ -1033,6 +1033,16 @@ used with attacker-controllable expression contexts, such as
 `github.event.issue.title` (which the attacker can fully control by supplying
 a new issue title).
 
+!!! tip
+
+    When used with a "pedantic" or "auditor"
+    [persona](./usage.md#using-personas), this audit will flag *all* template
+    expansions in code contexts, even ones that are likely safe.
+
+    This is because `zizmor` considers all template expansions in code contexts
+    to be code smells, and attempting to selectively permit them is more
+    error-prone than forbidding them in a blanket fashion.
+
 Other resources:
 
 * [Keeping your GitHub Actions and workflows secure Part 2: Untrusted input]
