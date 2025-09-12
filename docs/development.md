@@ -251,7 +251,7 @@ will already be up-to-date.
 !!! tip
 
     Additions to the trophy case are welcome, but we currently limit them
-    to repositories with 100 or more "stars" to keep things tractable.
+    to repositories with 500 or more "stars" to keep things tractable.
 
 The [Trophy Case](./trophy-case.md) is kept up-to-date through the data in
 the `docs/snippets/trophies.txt` file.
