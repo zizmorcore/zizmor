@@ -18,7 +18,7 @@
 use std::{env, ops::Deref, sync::LazyLock, vec};
 
 use fst::Map;
-use github_actions_expressions::{Expr, Literal, context::Context};
+use github_actions_expressions::{Expr, context::Context, literal::Literal};
 use github_actions_models::{
     common::{EnvValue, RepositoryUses, Uses, expr::LoE},
     workflow::job::Strategy,

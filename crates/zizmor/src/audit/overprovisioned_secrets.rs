@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Call, Expr, SpannedExpr};
+use github_actions_expressions::{Expr, SpannedExpr, call::Call};
 
 use crate::{
     finding::{
