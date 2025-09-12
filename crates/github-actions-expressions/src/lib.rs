@@ -91,42 +91,40 @@ impl<'src> Call<'src> {
             let rbrace = template[index..].find('}').map(|pos| index + pos);
 
             // Left brace
-            if let Some(lbrace_pos) = lbrace {
-                if rbrace.is_none() || rbrace.unwrap() > lbrace_pos {
-                    // Escaped left brace
-                    if template.as_bytes().get(lbrace_pos + 1) == Some(&b'{') {
-                        result.push_str(&template[index..=lbrace_pos]);
-                        index = lbrace_pos + 2;
-                        continue;
-                    }
-
-                    // Left brace, number, optional format specifiers, right brace
-                    if let Some(rbrace_pos) = rbrace {
-                        if rbrace_pos > lbrace_pos + 1 {
-                            if let Some(arg_index) = Self::read_arg_index(&template, lbrace_pos + 1)
-                            {
-                                // Check parameter count
-                                if 1 + arg_index > args.len() - 1 {
-                                    // Invalid format string - too few arguments
-                                    return None;
-                                }
-
-                                // Append the portion before the left brace
-                                if lbrace_pos > index {
-                                    result.push_str(&template[index..lbrace_pos]);
-                                }
-
-                                // Append the arg
-                                result.push_str(&args[1 + arg_index].sema().to_string());
-                                index = rbrace_pos + 1;
-                                continue;
-                            }
-                        }
-                    }
-
-                    // Invalid format string
-                    return None;
+            if let Some(lbrace_pos) = lbrace
+                && (rbrace.is_none() || rbrace.unwrap() > lbrace_pos)
+            {
+                // Escaped left brace
+                if template.as_bytes().get(lbrace_pos + 1) == Some(&b'{') {
+                    result.push_str(&template[index..=lbrace_pos]);
+                    index = lbrace_pos + 2;
+                    continue;
                 }
+
+                // Left brace, number, optional format specifiers, right brace
+                if let Some(rbrace_pos) = rbrace
+                    && rbrace_pos > lbrace_pos + 1
+                    && let Some(arg_index) = Self::read_arg_index(&template, lbrace_pos + 1)
+                {
+                    // Check parameter count
+                    if 1 + arg_index > args.len() - 1 {
+                        // Invalid format string - too few arguments
+                        return None;
+                    }
+
+                    // Append the portion before the left brace
+                    if lbrace_pos > index {
+                        result.push_str(&template[index..lbrace_pos]);
+                    }
+
+                    // Append the arg
+                    result.push_str(&args[1 + arg_index].sema().to_string());
+                    index = rbrace_pos + 1;
+                    continue;
+                }
+
+                // Invalid format string
+                return None;
             }
 
             // Right brace
@@ -198,11 +196,13 @@ impl<'src> Call<'src> {
                 Some(Evaluation::Boolean(search_str.contains(&item_str)))
             }
             // For arrays, check if any element equals the item
-            Evaluation::Array(arr) => arr
-                .iter()
-                .any(|element| element.sema() == item.sema())
-                .then_some(Some(Evaluation::Boolean(true)))
-                .unwrap_or(Some(Evaluation::Boolean(false))),
+            Evaluation::Array(arr) => {
+                if arr.iter().any(|element| element.sema() == item.sema()) {
+                    Some(Evaluation::Boolean(true))
+                } else {
+                    Some(Evaluation::Boolean(false))
+                }
+            }
             // `contains(object, ...)` is not defined in the reference implementation
             Evaluation::Object(_) => None,
         }
@@ -1051,15 +1051,9 @@ impl TryInto<serde_json::Value> for Evaluation {
                 // for integers and floats, so we need to handle both cases
                 // to ensure we serialize integers without a decimal point.
                 if n.fract() == 0.0 {
-                    if n.is_sign_positive() {
-                        Ok(serde_json::Value::Number(serde_json::Number::from(
-                            n as u64,
-                        )))
-                    } else {
-                        Ok(serde_json::Value::Number(serde_json::Number::from(
-                            n as i64,
-                        )))
-                    }
+                    Ok(serde_json::Value::Number(serde_json::Number::from(
+                        n as i64,
+                    )))
                 } else if let Some(num) = serde_json::Number::from_f64(n) {
                     Ok(serde_json::Value::Number(num))
                 } else {

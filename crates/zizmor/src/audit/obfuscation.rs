@@ -1,4 +1,4 @@
-use github_actions_expressions::{Evaluation, Expr, Origin, SpannedExpr};
+use github_actions_expressions::{Expr, Origin, SpannedExpr};
 use github_actions_models::common::{RepositoryUses, Uses};
 use yamlpatch::{Op, Patch};
 
@@ -119,27 +119,6 @@ impl Obfuscation {
         })
     }
 
-    /// Evaluates a constant-reducible expression and formats it for GitHub Actions.
-    fn evaluate_constant_expr(&self, expr: &SpannedExpr) -> Option<String> {
-        expr.consteval().map(|result| {
-            // For GitHub Actions replacements, we need to format the result appropriately
-            match result {
-                Evaluation::String(s) => s,
-                Evaluation::Number(n) => {
-                    if n.fract() == 0.0 {
-                        format!("{}", n as i64)
-                    } else {
-                        n.to_string()
-                    }
-                }
-                Evaluation::Boolean(b) => b.to_string(),
-                Evaluation::Null => "null".to_string(),
-                Evaluation::Array(_) => "Array".to_string(),
-                Evaluation::Object(_) => "Object".to_string(),
-            }
-        })
-    }
-
     /// Creates a fix for constant-reducible expressions.
     fn create_expression_fix<'doc>(
         &self,
@@ -148,7 +127,9 @@ impl Obfuscation {
         expr_span: std::ops::Range<usize>,
         origin: Origin<'doc>,
     ) -> Option<Fix<'doc>> {
-        let evaluated = self.evaluate_constant_expr(expr)?;
+        let evaluated = expr
+            .consteval()
+            .map(|evaluation| evaluation.sema().to_string())?;
 
         // Calculate the absolute position in the input
         let after = expr_span.start + origin.span.start;
