@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-use std::{borrow::Cow, ops::Deref, slice};
+use std::{borrow::Cow, ops::Deref};
 
 use crate::context::Context;
 
@@ -283,43 +283,8 @@ impl<'src> Call<'src> {
         }
 
         let value = &args[0];
-
-        let json_str = match value {
-            Evaluation::String(s) => {
-                format!("\"{}\"", s.replace('\\', "\\\\").replace('\"', "\\\""))
-            }
-            Evaluation::Number(n) => n.to_string(),
-            Evaluation::Boolean(b) => b.to_string(),
-            Evaluation::Null => "null".to_string(),
-            Evaluation::Array(arr) => {
-                // Convert array to JSON string
-                let elements: Vec<String> = arr
-                    .iter()
-                    .map(|elem| match Self::consteval_tojson(slice::from_ref(elem)) {
-                        Some(Evaluation::String(json)) => json,
-                        _ => "null".to_string(), // Fallback for unconvertible elements
-                    })
-                    .collect();
-                format!("[{}]", elements.join(","))
-            }
-            Evaluation::Object(dict) => {
-                // Convert dictionary to JSON string
-                let mut pairs: Vec<String> = dict
-                    .iter()
-                    .map(|(key, value)| {
-                        let key_json =
-                            format!("\"{}\"", key.replace('\\', "\\\\").replace('\"', "\\\""));
-                        let value_json = match Self::consteval_tojson(slice::from_ref(value)) {
-                            Some(Evaluation::String(json)) => json,
-                            _ => "null".to_string(), // Fallback for unconvertible values
-                        };
-                        format!("{}:{}", key_json, value_json)
-                    })
-                    .collect();
-                pairs.sort(); // Ensure consistent ordering
-                format!("{{{}}}", pairs.join(","))
-            }
-        };
+        let json_value: serde_json::Value = value.clone().try_into().ok()?;
+        let json_str = serde_json::to_string_pretty(&json_value).ok()?;
 
         Some(Evaluation::String(json_str))
     }
@@ -333,49 +298,16 @@ impl<'src> Call<'src> {
         }
 
         let json_str = args[0].sema().to_string();
-        let trimmed = json_str.trim();
 
         // Match reference implementation: error on empty input
-        if trimmed.is_empty() {
+        if json_str.trim().is_empty() {
             return None;
         }
 
-        // Parse with full JSON parser to handle arrays and objects
-        match serde_json::from_str::<serde_json::Value>(trimmed) {
-            Ok(value) => Some(Self::json_value_to_evaluation(value)),
-            Err(_) => None,
-        }
-    }
-
-    /// Converts a serde_json::Value to an Evaluation, matching GitHub Actions semantics.
-    fn json_value_to_evaluation(value: serde_json::Value) -> Evaluation {
-        match value {
-            serde_json::Value::Null => Evaluation::Null,
-            serde_json::Value::Bool(b) => Evaluation::Boolean(b),
-            serde_json::Value::Number(n) => {
-                if let Some(f) = n.as_f64() {
-                    Evaluation::Number(f)
-                } else {
-                    // Fallback for very large integers that don't fit in f64
-                    Evaluation::Number(0.0)
-                }
-            }
-            serde_json::Value::String(s) => Evaluation::String(s),
-            serde_json::Value::Array(arr) => {
-                let elements = arr
-                    .into_iter()
-                    .map(Self::json_value_to_evaluation)
-                    .collect();
-                Evaluation::Array(elements)
-            }
-            serde_json::Value::Object(obj) => {
-                let mut map = std::collections::HashMap::new();
-                for (key, value) in obj {
-                    map.insert(key, Self::json_value_to_evaluation(value));
-                }
-                Evaluation::Object(map)
-            }
-        }
+        serde_json::from_str::<serde_json::Value>(&json_str)
+            .ok()?
+            .try_into()
+            .ok()
     }
 
     /// Constant-evaluates a `join(array, optionalSeparator)` call.
@@ -1074,6 +1006,85 @@ pub enum Evaluation {
     Object(std::collections::HashMap<String, Evaluation>),
 }
 
+impl TryFrom<serde_json::Value> for Evaluation {
+    type Error = ();
+
+    fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
+        match value {
+            serde_json::Value::Null => Ok(Evaluation::Null),
+            serde_json::Value::Bool(b) => Ok(Evaluation::Boolean(b)),
+            serde_json::Value::Number(n) => {
+                if let Some(f) = n.as_f64() {
+                    Ok(Evaluation::Number(f))
+                } else {
+                    Err(())
+                }
+            }
+            serde_json::Value::String(s) => Ok(Evaluation::String(s)),
+            serde_json::Value::Array(arr) => {
+                let elements = arr
+                    .into_iter()
+                    .map(|elem| elem.try_into())
+                    .collect::<Result<_, _>>()?;
+                Ok(Evaluation::Array(elements))
+            }
+            serde_json::Value::Object(obj) => {
+                let mut map = std::collections::HashMap::new();
+                for (key, value) in obj {
+                    map.insert(key, value.try_into()?);
+                }
+                Ok(Evaluation::Object(map))
+            }
+        }
+    }
+}
+
+impl TryInto<serde_json::Value> for Evaluation {
+    type Error = ();
+
+    fn try_into(self) -> Result<serde_json::Value, Self::Error> {
+        match self {
+            Evaluation::Null => Ok(serde_json::Value::Null),
+            Evaluation::Boolean(b) => Ok(serde_json::Value::Bool(b)),
+            Evaluation::Number(n) => {
+                // NOTE: serde_json has different internal representations
+                // for integers and floats, so we need to handle both cases
+                // to ensure we serialize integers without a decimal point.
+                if n.fract() == 0.0 {
+                    if n.is_sign_positive() {
+                        Ok(serde_json::Value::Number(serde_json::Number::from(
+                            n as u64,
+                        )))
+                    } else {
+                        Ok(serde_json::Value::Number(serde_json::Number::from(
+                            n as i64,
+                        )))
+                    }
+                } else if let Some(num) = serde_json::Number::from_f64(n) {
+                    Ok(serde_json::Value::Number(num))
+                } else {
+                    Err(())
+                }
+            }
+            Evaluation::String(s) => Ok(serde_json::Value::String(s)),
+            Evaluation::Array(arr) => {
+                let elements = arr
+                    .into_iter()
+                    .map(|elem| elem.try_into())
+                    .collect::<Result<_, _>>()?;
+                Ok(serde_json::Value::Array(elements))
+            }
+            Evaluation::Object(obj) => {
+                let mut map = serde_json::Map::new();
+                for (key, value) in obj {
+                    map.insert(key, value.try_into()?);
+                }
+                Ok(serde_json::Value::Object(map))
+            }
+        }
+    }
+}
+
 impl Evaluation {
     /// Convert to a boolean following GitHub Actions truthiness rules.
     ///
@@ -1118,14 +1129,16 @@ impl Evaluation {
         }
     }
 
-    fn sema(&self) -> EvaluationSema<'_> {
+    /// Returns a wrapper around this evaluation that implements
+    /// GitHub Actions evaluation semantics.
+    pub fn sema(&self) -> EvaluationSema<'_> {
         EvaluationSema(self)
     }
 }
 
 /// A wrapper around `Evaluation` that implements GitHub Actions
 /// various evaluation semantics (comparison, stringification, etc.).
-struct EvaluationSema<'a>(&'a Evaluation);
+pub struct EvaluationSema<'a>(&'a Evaluation);
 
 impl PartialEq for EvaluationSema<'_> {
     fn eq(&self, other: &Self) -> bool {
@@ -1191,7 +1204,7 @@ impl<'src> Expr<'src> {
     ///
     /// let expr = Expr::parse("'hello'").unwrap();
     /// let result = expr.consteval().unwrap();
-    /// assert_eq!(result.to_string(), "hello");
+    /// assert_eq!(result.sema().to_string(), "hello");
     ///
     /// let expr = Expr::parse("true && false").unwrap();
     /// let result = expr.consteval().unwrap();
@@ -2228,6 +2241,8 @@ mod tests {
             ("fromJSON('false')", Evaluation::Boolean(false)),
             ("fromJSON('42')", Evaluation::Number(42.0)),
             ("fromJSON('3.14')", Evaluation::Number(3.14)),
+            ("fromJSON('-0')", Evaluation::Number(0.0)),
+            ("fromJSON('0')", Evaluation::Number(0.0)),
             (
                 "fromJSON('\"hello\"')",
                 Evaluation::String("hello".to_string()),
