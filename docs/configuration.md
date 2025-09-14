@@ -117,7 +117,7 @@ Per-audit ignore rules.
 Each member of `rules.<id>.ignore` is a *workflow rule*, formatted as follows:
 
 ```
-filename.yml:<line>?:<column>?
+filename.yml[:line[:column]]
 ```
 
 where `filename.yml` is the base filename of the workflow, and `line` and

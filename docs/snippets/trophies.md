@@ -770,6 +770,14 @@
         - narwhals-dev/narwhals#1567
 
 
+-   ![](https://github.com/nedbat.png?size=40){ width="40" loading=lazy align=left } nedbat
+
+    ---
+
+    ??? example "Examples"
+        - nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
+
+
 -   ![](https://github.com/NetApp.png?size=40){ width="40" loading=lazy align=left } NetApp
 
     ---
