@@ -3,7 +3,7 @@ use github_actions_models::common::Uses;
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::config::{Config, UsesPolicy};
 use crate::finding::{Confidence, Finding, Persona, Severity};
-use crate::models::uses::RepositoryUsesPattern;
+use crate::models::uses::repository::RepositoryUsesPattern;
 use crate::models::{StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step};
 
 pub(crate) struct UnpinnedUses;

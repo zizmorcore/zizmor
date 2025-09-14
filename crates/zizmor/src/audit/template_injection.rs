@@ -33,8 +33,8 @@ use crate::{
         location::{Routable as _, SymbolicLocation},
     },
     models::{
-        self, StepCommon, action::CompositeStep, inputs::Capability, uses::RepositoryUsesPattern,
-        workflow::Step,
+        self, StepCommon, action::CompositeStep, inputs::Capability,
+        uses::repository::RepositoryUsesPattern, workflow::Step,
     },
     state::AuditState,
     utils::{self, DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_fenced_expressions},

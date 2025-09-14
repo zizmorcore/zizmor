@@ -9,7 +9,9 @@ use crate::{
     config::Config,
     finding::{Confidence, Finding, Severity},
     github_api,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
+    models::{
+        StepCommon, action::CompositeStep, uses::repository::RepositoryUsesExt as _, workflow::Step,
+    },
     state::AuditState,
 };
 
