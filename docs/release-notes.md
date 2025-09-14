@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [cache-poisoning] audit would fail to detect
+  some cache usage variants in newer versions of `actions/setup-node`
+  (#1152)
+
 ## 1.13.0
 
 ### New Features 🌈
