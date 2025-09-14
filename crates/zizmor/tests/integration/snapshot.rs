@@ -543,6 +543,12 @@ fn cache_poisoning() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("cache-poisoning/issue-1152-repro.yml"))
+            .run()?
+    );
+
     Ok(())
 }
 
