@@ -51,12 +51,16 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions/setup-node/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-node".parse().unwrap(),
-            control: ControlExpr::single(
-                Toggle::OptIn,
-                "cache",
-                ControlFieldType::FreeString,
-                false,
-            ),
+            control: ControlExpr::any([
+                ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::FreeString, false),
+                // NOTE: Added with `setup-node@v5`.
+                ControlExpr::single(
+                    Toggle::OptIn,
+                    "package-manager-cache",
+                    ControlFieldType::Boolean,
+                    true,
+                ),
+            ]),
         },
         // https://github.com/actions/setup-python/blob/main/action.yml
         ActionCoordinate::Configurable {
