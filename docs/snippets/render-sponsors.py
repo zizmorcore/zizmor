@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# ///
 
 # render-sponsors: take sponsors.json and produce pretty tables
 # in the README and website index for each of our wonderful sponsors

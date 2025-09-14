@@ -1,4 +1,11 @@
-#!/usr/bin/env -S uv run --script --only-group codegen
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "pyyaml",
+# ]
+# ///
+
 
 """
 Processes the CodeQL models from https://github.com/github/codeql/tree/main/actions/ql/lib/ext
@@ -22,7 +29,7 @@ def _debug(msg: str) -> None:
     print(f"[+] {msg}", file=sys.stderr)
 
 
-def _git(args: List[str], cwd: Path = None) -> subprocess.CompletedProcess:
+def _git(args: List[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
     result = subprocess.run(
         ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
     )

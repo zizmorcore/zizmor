@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# ///
 
 # render-trophies: take trophies.txt and produce a pretty
 # mkdocs-material card grid list from it
