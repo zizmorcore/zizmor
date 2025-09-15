@@ -362,6 +362,8 @@ functionality via GitHub Actions.
 See [Workflow Commands for GitHub Actions] for additional information about
 annotations.
 
+[Workflow Commands for GitHub Actions]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands
+
 !!! warning
 
     GitHub annotations come with significant limitations: a single CI step
