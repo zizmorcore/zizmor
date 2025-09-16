@@ -265,6 +265,12 @@ zizmor --color=never ...
 
     `--format=json-v1` is available in `v1.6.0` and later.
 
+!!! important
+
+    `--format=json-v1` uses 0-based line numbering, where line numbers are
+    denoted by the key `row`. This is as opposed to `--format=plain` and `--format=SARIF`,
+    where line numbers are 1-based.
+
 With `--format=json`, `zizmor` will produce a flat array of findings in
 JSON format:
 
@@ -355,6 +361,8 @@ functionality via GitHub Actions.
 
 See [Workflow Commands for GitHub Actions] for additional information about
 annotations.
+
+[Workflow Commands for GitHub Actions]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands
 
 !!! warning
 
@@ -679,6 +687,14 @@ the `--config` argument. With `--config`, the file can be named anything:
 zizmor --config my-zizmor-config.yml /dir/to/audit
 ```
 
+!!! important
+
+    When using `--config`, only a single configuration file is used
+    (instead of potentially discovering multiple configuration files,
+    one per input source). As a result, using `--config` is
+    **generally not recommended** unless auditing a single input source
+    (file, directory, or remote repository).
+
 !!! tip
 
     Starting with `v1.8.0`, you can use the `ZIZMOR_CONFIG` environment
@@ -687,7 +703,7 @@ zizmor --config my-zizmor-config.yml /dir/to/audit
     `ZIZMOR_CONFIG=my-config.yml` is equivalent to
     `--config my-config.yml`.
 
-[will discover it]: ./configuration.md#precedence
+[will discover it]: ./configuration.md#discovery
 
 See [Configuration: `rules.<id>.ignore`](./configuration.md#rulesidignore) for
 more details on writing ignore rules.

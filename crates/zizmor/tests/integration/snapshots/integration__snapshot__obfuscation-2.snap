@@ -6,7 +6,7 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
   --> @@INPUT@@:14:23
    |
 14 |       - if: ${{ inputs[inputs.foo] }}
-   |                       ------------ help: index expression is computed
+   |                       ^^^^^^^^^^^^ index expression is computed
    |
    = note: audit confidence → High
 

@@ -15,7 +15,7 @@ use crate::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
     },
-    registry::InputError,
+    registry::input::InputError,
     utils::{self, ACTION_VALIDATOR, from_str_with_validation},
 };
 

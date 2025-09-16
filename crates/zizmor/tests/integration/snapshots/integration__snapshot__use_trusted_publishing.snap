@@ -1,16 +1,15 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"use-trusted-publishing.yml\")).run()?"
-snapshot_kind: text
 ---
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:18:9
    |
 18 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
-   |         -------------------------------------------- info: this step
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 19 |         with:
 20 |           password: ${{ secrets.PYPI_TOKEN }}
-   |           ----------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 
@@ -18,10 +17,10 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:25:9
    |
 25 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
-   |         -------------------------------------------- info: this step
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 26 |         with:
 27 |           password: ${{ secrets.PYPI_TOKEN }}
-   |           ----------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 
@@ -29,10 +28,10 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:33:9
    |
 33 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
-   |         -------------------------------------------- info: this step
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 34 |         with:
 35 |           password: ${{ secrets.PYPI_TOKEN }}
-   |           ----------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 
@@ -40,10 +39,10 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:51:9
    |
 51 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
-   |         -------------------------------------------- info: this step
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 52 |         with:
 53 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
-   |           ---------------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 
@@ -51,10 +50,10 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:58:9
    |
 58 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
-   |         -------------------------------------------- info: this step
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 59 |         with:
 60 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
-   |           ---------------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 
@@ -62,10 +61,10 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:65:9
    |
 65 |         uses: rubygems/release-gem@v1 # zizmor: ignore[unpinned-uses]
-   |         ----------------------------- info: this step
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 66 |         with:
 67 |           setup-trusted-publisher: false
-   |           ------------------------------ info: uses a manually-configured credential instead of Trusted Publishing
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 
@@ -73,10 +72,10 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:82:9
    |
 82 |         uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
-   |         ------------------------------------------------ info: this step
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 83 |         with:
 84 |           api-token: ${{ secrets.RUBYGEMS_API_TOKEN }}
-   |           -------------------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 
@@ -84,11 +83,11 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:95:9
    |
 95 |         uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
-   |         ------------------------------------------------ info: this step
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 96 |         with:
 97 |           api-token: ${{ secrets.RUBYGEMS_API_TOKEN }}
-   |           -------------------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 
-25 findings (16 ignored, 1 suppressed): 0 unknown, 8 informational, 0 low, 0 medium, 0 high
+26 findings (16 ignored, 2 suppressed): 0 unknown, 8 informational, 0 low, 0 medium, 0 high

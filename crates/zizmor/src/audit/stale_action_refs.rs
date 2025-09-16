@@ -6,6 +6,7 @@ use github_actions_models::common::{RepositoryUses, Uses};
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     Persona,
+    config::Config,
     finding::{Confidence, Finding, Severity},
     github_api,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
@@ -57,7 +58,7 @@ impl StaleActionRefs {
 }
 
 impl Audit for StaleActionRefs {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -74,11 +75,15 @@ impl Audit for StaleActionRefs {
             .map(|client| StaleActionRefs { client })
     }
 
-    fn audit_step<'w>(&self, step: &Step<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_step<'w>(&self, step: &Step<'w>, _config: &Config) -> Result<Vec<Finding<'w>>> {
         self.process_step(step)
     }
 
-    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+    fn audit_composite_step<'a>(
+        &self,
+        step: &CompositeStep<'a>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'a>>> {
         self.process_step(step)
     }
 }

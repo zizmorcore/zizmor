@@ -16,7 +16,7 @@ use std::{
 };
 use std::{fmt::Write, sync::LazyLock};
 
-use crate::{audit::AuditInput, models::AsDocument, registry::InputError};
+use crate::{audit::AuditInput, models::AsDocument, registry::input::InputError};
 
 pub(crate) static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
     validator_for(&serde_json::from_str(include_str!("./data/github-action.json")).unwrap())
@@ -641,7 +641,7 @@ mod tests {
 
     use crate::{
         models::{action::Action, workflow::Workflow},
-        registry::InputKey,
+        registry::input::InputKey,
         utils::{
             env_is_static, extract_fenced_expression, extract_fenced_expressions, normalize_shell,
             parse_fenced_expressions_from_input,
@@ -744,7 +744,10 @@ runs:
       shell: bash
 "#;
 
-        let action = Action::from_string(action.into(), InputKey::local("fake", None)?)?;
+        let action = Action::from_string(
+            action.into(),
+            InputKey::local("fakegroup".into(), "fake", None)?,
+        )?;
         let action = action.into();
 
         let exprs = parse_fenced_expressions_from_input(&action);
@@ -773,7 +776,10 @@ jobs:
       - run: echo hello from ${{ github.actor }}
 "#;
 
-        let workflow = Workflow::from_string(workflow.into(), InputKey::local("fake", None)?)?;
+        let workflow = Workflow::from_string(
+            workflow.into(),
+            InputKey::local("fakegroup".into(), "fake", None)?,
+        )?;
 
         let exprs = parse_fenced_expressions_from_input(&workflow.into())
             .into_iter()

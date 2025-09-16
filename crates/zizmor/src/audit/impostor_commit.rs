@@ -10,6 +10,7 @@ use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
+    config::Config,
     finding::{
         Confidence, Finding, Fix, FixDisposition, Severity,
         location::{Locatable as _, Routable},
@@ -20,7 +21,7 @@ use crate::{
         uses::RepositoryUsesExt as _,
         workflow::{ReusableWorkflowCallJob, Workflow},
     },
-    registry::InputKey,
+    registry::input::InputKey,
     state::AuditState,
 };
 
@@ -130,11 +131,7 @@ impl ImpostorCommit {
             .iter()
             .filter(|tag| {
                 tag.name.starts_with('v')
-                    && tag
-                        .name
-                        .chars()
-                        .nth(1)
-                        .is_some_and(|c| c.is_ascii_digit())
+                    && tag.name.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
             })
             .collect();
 
@@ -219,7 +216,7 @@ impl ImpostorCommit {
 }
 
 impl Audit for ImpostorCommit {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError> {
         if state.no_online_audits {
             return Err(AuditLoadError::Skip(anyhow!(
                 "offline audits only requested"
@@ -233,7 +230,11 @@ impl Audit for ImpostorCommit {
             .map(|client| ImpostorCommit { client })
     }
 
-    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> Result<Vec<Finding<'doc>>> {
+    fn audit_workflow<'doc>(
+        &self,
+        workflow: &'doc Workflow,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
@@ -291,6 +292,7 @@ impl Audit for ImpostorCommit {
     fn audit_composite_step<'a>(
         &self,
         step: &super::CompositeStep<'a>,
+        _config: &Config,
     ) -> Result<Vec<Finding<'a>>> {
         let mut findings = vec![];
         let Some(Uses::Repository(uses)) = step.uses() else {
@@ -316,15 +318,14 @@ impl Audit for ImpostorCommit {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
+    #[cfg(feature = "gh-token-tests")]
     use insta::assert_snapshot;
 
+    #[cfg(feature = "gh-token-tests")]
+    use crate::models::AsDocument as _;
+
     use super::*;
-    use crate::{
-        models::{AsDocument, workflow::Workflow},
-        registry::InputKey,
-    };
+    use crate::{models::workflow::Workflow, registry::input::InputKey};
 
     #[cfg(feature = "gh-token-tests")]
     #[test]
@@ -342,28 +343,16 @@ jobs:
       - uses: actions/hello-world-javascript-action@692973e3d937129bcbf40652eb9f2f61becf3332  # This is a commit from actions/checkout, not hello-world
 "#;
 
-        let key = InputKey::local("test.yml", None::<&str>).unwrap();
+        let key = InputKey::local("dummy".into(), "test.yml", None::<&str>).unwrap();
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
-        let config = crate::config::Config::default();
-        let state = crate::state::AuditState {
-            config: &config,
-            no_online_audits: false,
-            gh_client: Some(
-                crate::github_api::Client::new(
-                    &crate::github_api::GitHubHost::Standard("github.com".to_string()),
-                    &crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
-                        .unwrap(),
-                    Path::new("/tmp"),
-                )
-                .unwrap(),
-            ),
-            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
-        };
+        let state = crate::state::AuditState::default();
 
         let audit = ImpostorCommit::new(&state).unwrap();
         let input = workflow.into();
-        let findings = audit.audit(&input).unwrap();
+        let findings = audit
+            .audit("impostor-commit", &input, &Config::default())
+            .unwrap();
 
         // If we detect an impostor commit, there should be a fix available
         if !findings.is_empty() {
@@ -400,28 +389,27 @@ jobs:
       - uses: actions/checkout@v4
 "#;
 
-        let key = InputKey::local("test.yml", None::<&str>).unwrap();
+        let key = InputKey::local("dummy".into(), "test.yml", None::<&str>).unwrap();
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
-        let config = crate::config::Config::default();
         let state = crate::state::AuditState {
-            config: &config,
             no_online_audits: false,
             gh_client: Some(
                 crate::github_api::Client::new(
-                    &crate::github_api::GitHubHost::Standard("github.com".to_string()),
-                    &crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
+                    crate::github_api::GitHubHost::Standard("github.com".to_string()),
+                    crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
                         .unwrap(),
-                    Path::new("/tmp"),
+                    "/tmp".into(),
                 )
                 .unwrap(),
             ),
-            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".to_string()),
         };
 
         let audit = ImpostorCommit::new(&state).unwrap();
         let input = workflow.into();
-        let findings = audit.audit(&input).unwrap();
+        let findings = audit
+            .audit("impostor-commit", &input, &Config::default())
+            .unwrap();
 
         // With a valid tag, we should not find any impostor commits
         assert!(
@@ -444,14 +432,9 @@ jobs:
       - uses: some/action@abc123def456abc123def456abc123def456abc12
 "#;
 
-        let key = InputKey::local("test-workflow.yml", None::<&str>).unwrap();
+        let key = InputKey::local("dummy".into(), "test-workflow.yml", None::<&str>).unwrap();
         let _workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
-        let audit_state = crate::state::AuditState {
-            config: &Default::default(),
-            no_online_audits: false,
-            gh_client: None, // No GitHub client
-            gh_hostname: crate::github_api::GitHubHost::Standard("github.com".into()),
-        };
+        let audit_state = crate::state::AuditState::default();
 
         match ImpostorCommit::new(&audit_state) {
             Err(crate::audit::AuditLoadError::Skip(_)) => {

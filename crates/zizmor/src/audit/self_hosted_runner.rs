@@ -27,7 +27,7 @@ audit_meta!(
 );
 
 impl Audit for SelfHostedRunner {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -37,6 +37,7 @@ impl Audit for SelfHostedRunner {
     fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
+        _config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>> {
         let mut results = vec![];
 

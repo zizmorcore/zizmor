@@ -9,6 +9,12 @@
 
 `github-actions-expressions` is a parser and library for GitHub Actions expressions.
 
+Key features:
+
+* Faithful parsing of GitHub Actions expressions.
+* Span-aware AST nodes.
+* Limited support for constant expression evaluation.
+
 See the [documentation] for more details.
 
 This library is part of [zizmor].
