@@ -42,13 +42,14 @@ audit_meta!(
 );
 
 impl Audit for UnpinnedImages {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
     fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
         let mut image_refs_with_locations: Vec<(DockerUses, SymbolicLocation<'doc>)> = vec![];

@@ -1,0 +1,37 @@
+name: Partially Documented Permissions Test
+
+on: [push]
+
+# Mixed documentation - some permissions have comments, others don't
+permissions:
+  contents: write  # Needed to create releases
+  packages: read
+  issues: write    # Needed to update issue comments
+
+jobs:
+  test-job-1:
+    name: Test Job 1
+    runs-on: ubuntu-latest
+    # Job with partial documentation
+    permissions:
+      contents: read   # Needed to read repo contents
+      actions: write
+      packages: write  # Needed to publish packages
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"
+
+  test-job-2:
+    name: Test Job 2
+    runs-on: ubuntu-latest
+    # Job with no documentation at all
+    permissions:
+      contents: write
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"

@@ -6,9 +6,9 @@ warning[artipacked]: credential persistence through GitHub Actions artifacts
   --> @@INPUT@@:9:7
    |
  9 |       - name: true-positive-1
-   |  _______-
+   |  _______^
 10 | |       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-   | |__________________________________________________________________________________- does not set persist-credentials: false
+   | |__________________________________________________________________________________^ does not set persist-credentials: false
    |
    = note: audit confidence → Low
    = note: this finding has an auto-fix
@@ -17,11 +17,11 @@ warning[artipacked]: credential persistence through GitHub Actions artifacts
   --> @@INPUT@@:12:7
    |
 12 |       - name: true-positive-2-pedantic
-   |  _______-
+   |  _______^
 13 | |       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
 14 | |       with:
 15 | |         persist-credentials: true
-   | |__________________________________- does not set persist-credentials: false
+   | |__________________________________^ does not set persist-credentials: false
    |
    = note: audit confidence → Low
    = note: this finding has an auto-fix

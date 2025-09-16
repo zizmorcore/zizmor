@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, SpannedExpr};
+use github_actions_expressions::{Expr, SpannedExpr, call::Call};
 
 use crate::{
     finding::{
@@ -31,6 +31,7 @@ impl Audit for OverprovisionedSecrets {
     fn audit_raw<'doc>(
         &self,
         input: &'doc AuditInput,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -68,7 +69,7 @@ impl OverprovisionedSecrets {
         let mut results = vec![];
 
         match &expr.inner {
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
                 // would plausibly call with the entire `secrets` object?

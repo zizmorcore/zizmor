@@ -1,8 +1,10 @@
 use std::{ops::Deref, sync::LazyLock};
 
 use github_actions_expressions::{
-    BinOp, Expr, SpannedExpr, UnOp,
+    Expr, SpannedExpr,
+    call::Call,
     context::{Context, ContextPattern},
+    op::{BinOp, UnOp},
 };
 use github_actions_models::{
     common::If,
@@ -54,7 +56,7 @@ const BOT_ACTOR_IDS: &[&str] = &[
 ];
 
 impl Audit for BotConditions {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -64,6 +66,7 @@ impl Audit for BotConditions {
     fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -261,10 +264,10 @@ impl BotConditions {
             // check to see if any of the call's arguments are
             // bot conditions. We treat a call as non-dominating always.
             // TODO: Should probably check some variant of `contains` here.
-            Expr::Call {
+            Expr::Call(Call {
                 func: _,
                 args: exprs,
-            }
+            })
             | Expr::Context(Context { parts: exprs, .. }) => exprs
                 .iter()
                 .map(|arg| Self::walk_tree_for_bot_condition(arg, false))
@@ -404,26 +407,21 @@ impl BotConditions {
 mod tests {
     use super::*;
     use crate::{
+        config::Config,
         finding::Finding,
-        github_api::GitHubHost,
         models::{AsDocument, workflow::Workflow},
-        registry::InputKey,
+        registry::input::InputKey,
         state::AuditState,
     };
 
     /// Macro for testing workflow audits with common boilerplate
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
 
             $test_fn(&workflow, findings)
         }};

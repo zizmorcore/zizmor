@@ -267,7 +267,6 @@ pub(crate) enum ControlExpr {
     /// Universal quantification: all of the fields must be satisfied.
     All(Vec<ControlExpr>),
     /// Existential quantification: any of the fields must be satisfied.
-    #[allow(dead_code)]
     Any(Vec<ControlExpr>),
     /// Negation: the "opposite" of the expression's satisfaction.
     Not(Box<ControlExpr>),
@@ -290,6 +289,10 @@ impl ControlExpr {
 
     pub(crate) fn all(exprs: impl IntoIterator<Item = ControlExpr>) -> Self {
         Self::All(exprs.into_iter().collect())
+    }
+
+    pub(crate) fn any(exprs: impl IntoIterator<Item = ControlExpr>) -> Self {
+        Self::Any(exprs.into_iter().collect())
     }
 
     pub(crate) fn not(expr: ControlExpr) -> Self {
@@ -389,7 +392,7 @@ mod tests {
             uses::RepositoryUsesPattern,
             workflow::{Job, Workflow},
         },
-        registry::InputKey,
+        registry::input::InputKey,
     };
 
     #[test]
@@ -428,9 +431,11 @@ mod tests {
               disable-cache: false
     "#;
 
-        let workflow =
-            Workflow::from_string(workflow.into(), InputKey::local("dummy", None).unwrap())
-                .unwrap();
+        let workflow = Workflow::from_string(
+            workflow.into(),
+            InputKey::local("fakegroup".into(), "dummy", None).unwrap(),
+        )
+        .unwrap();
 
         let Job::NormalJob(job) = workflow.jobs().next().unwrap() else {
             panic!("Expected a normal job");

@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, SpannedExpr, context::Context};
+use github_actions_expressions::{Expr, SpannedExpr, call::Call, context::Context};
 
 use crate::{
     Confidence, Severity,
@@ -19,7 +19,7 @@ audit_meta!(
 );
 
 impl Audit for UnredactedSecrets {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -29,6 +29,7 @@ impl Audit for UnredactedSecrets {
     fn audit_raw<'doc>(
         &self,
         input: &'doc super::AuditInput,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -70,7 +71,7 @@ impl UnredactedSecrets {
         // and therefore bypass GitHub's redaction mechanism.
 
         match expr.deref() {
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 if func == "fromJSON"
                     && args.iter().any(
                         |arg| matches!(arg.deref(), Expr::Context(ctx) if ctx.child_of("secrets")),

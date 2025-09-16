@@ -3,16 +3,14 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"cache-poisoning/issue-343-repro.yml\")).run()?"
 ---
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-  --> @@INPUT@@:5:1
+  --> @@INPUT@@:28:9
    |
  5 | / on:
  6 | |   push:
  7 | |     tags:
  8 | |       - "v*.*.*"
-   | |________________^ generally used when publishing artifacts generated at runtime
- 9 |
+   | |________________- generally used when publishing artifacts generated at runtime
 ...
-27 |         - name: true-positive-2
 28 |           uses: actions/setup-go@v5
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
    |
@@ -20,16 +18,14 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    = note: this finding has an auto-fix
 
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-  --> @@INPUT@@:5:1
+  --> @@INPUT@@:35:9
    |
  5 | / on:
  6 | |   push:
  7 | |     tags:
  8 | |       - "v*.*.*"
-   | |________________^ generally used when publishing artifacts generated at runtime
- 9 |
+   | |________________- generally used when publishing artifacts generated at runtime
 ...
-34 |           uses: actions/setup-go@v5
 35 | /         with:
 36 | |           go-version: stable
 37 | |           cache: true
@@ -41,16 +37,14 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    = note: this finding has an auto-fix
 
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-  --> @@INPUT@@:5:1
+  --> @@INPUT@@:42:9
    |
  5 | / on:
  6 | |   push:
  7 | |     tags:
  8 | |       - "v*.*.*"
-   | |________________^ generally used when publishing artifacts generated at runtime
- 9 |
+   | |________________- generally used when publishing artifacts generated at runtime
 ...
-41 |           uses: actions/setup-go@v5
 42 | /         with:
 43 | |           go-version: stable
 44 | |           cache: "true"
@@ -59,4 +53,4 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    = note: audit confidence → Low
    = note: this finding has an auto-fix
 
-3 findings (3 fixable): 0 unknown, 0 informational, 0 low, 0 medium, 3 high
+4 findings (1 suppressed, 3 fixable): 0 unknown, 0 informational, 0 low, 0 medium, 3 high

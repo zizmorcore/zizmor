@@ -3,30 +3,29 @@
 use std::{
     io::{Write, stdout},
     process::ExitCode,
-    str::FromStr,
 };
 
-use annotate_snippets::{Level, Renderer};
+use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
-use camino::Utf8Path;
+use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
-use config::Config;
+use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
 use github_api::{GitHubHost, GitHubToken};
-use ignore::WalkBuilder;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
-use registry::{AuditRegistry, FindingRegistry, InputKey, InputKind, InputRegistry};
+use registry::input::{InputKey, InputRegistry};
+use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use crate::registry::RepoSlug;
+use crate::{config::Config, github_api::Client};
 
 mod audit;
 mod config;
@@ -74,7 +73,7 @@ struct App {
     gh_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
-    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::new)]
+    #[arg(long, env = "GH_HOST", default_value_t)]
     gh_hostname: GitHubHost,
 
     /// Perform only offline audits.
@@ -100,8 +99,9 @@ struct App {
     #[arg(long, value_enum, value_name = "MODE")]
     color: Option<ColorMode>,
 
-    /// The configuration file to load. By default, any config will be
-    /// discovered relative to $CWD.
+    /// The configuration file to load.
+    /// This loads a single configuration file across all input groups,
+    /// which may not be what you intend.
     #[arg(
         short,
         long,
@@ -129,8 +129,8 @@ struct App {
 
     /// The directory to use for HTTP caching. By default, a
     /// host-appropriate user-caching directory will be used.
-    #[arg(long)]
-    cache_dir: Option<String>,
+    #[arg(long, default_value_t = App::default_cache_dir(), hide_default_value = true)]
+    cache_dir: Utf8PathBuf,
 
     /// Control which kinds of inputs are collected for auditing.
     ///
@@ -178,6 +178,20 @@ struct App {
     /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
+}
+
+impl App {
+    fn default_cache_dir() -> Utf8PathBuf {
+        etcetera::choose_app_strategy(etcetera::AppStrategyArgs {
+            top_level_domain: "io.github".into(),
+            author: "woodruffw".into(),
+            app_name: "zizmor".into(),
+        })
+        .expect("failed to determine default cache directory")
+        .cache_dir()
+        .try_into()
+        .expect("failed to turn cache directory into a sane path")
+    }
 }
 
 #[cfg(feature = "lsp")]
@@ -348,173 +362,36 @@ pub(crate) enum FixMode {
 }
 
 pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
-    let mut message = Level::Error.title(err.as_ref());
-    for tip in tips {
-        message = message.footer(Level::Note.title(tip.as_ref()));
-    }
+    // NOTE: We use secondary_title here because primary_title doesn't
+    // allow ANSI colors, and some of our errors contain colorized text.
+    let report = vec![
+        Group::with_title(Level::ERROR.secondary_title(err.as_ref()))
+            .elements(tips.iter().map(|tip| Level::HELP.message(tip.as_ref()))),
+    ];
 
     let renderer = Renderer::styled();
-    format!("{}", renderer.render(message))
+    renderer.render(&report).to_string()
 }
 
-#[instrument(skip(mode, registry))]
-fn collect_from_dir(
-    input_path: &Utf8Path,
-    mode: &CollectionMode,
-    registry: &mut InputRegistry,
-) -> Result<()> {
-    // Start with all filters disabled, i.e. walk everything.
-    let mut walker = WalkBuilder::new(input_path);
-    let walker = walker.standard_filters(false);
-
-    // If the user wants to respect `.gitignore` files, then we need to
-    // explicitly enable it. This also enables filtering by a global
-    // `.gitignore` file and the `.git/info/exclude` file, since these
-    // typically align with the user's expectations.
-    //
-    // We honor `.gitignore` and similar files even if `.git/` is not
-    // present, since users may retrieve or reconstruct a source archive
-    // without a `.git/` directory. In particular, this snares some
-    // zizmor integrators.
-    //
-    // See: https://github.com/zizmorcore/zizmor/issues/596
-    if mode.respects_gitignore() {
-        walker
-            .require_git(false)
-            .git_ignore(true)
-            .git_global(true)
-            .git_exclude(true);
-    }
-
-    for entry in walker.build() {
-        let entry = entry?;
-        let entry = <&Utf8Path>::try_from(entry.path())?;
-
-        if mode.workflows()
-            && entry.is_file()
-            && matches!(entry.extension(), Some("yml" | "yaml"))
-            && entry
-                .parent()
-                .is_some_and(|dir| dir.ends_with(".github/workflows"))
-        {
-            let key = InputKey::local(entry, Some(input_path))?;
-            let contents = std::fs::read_to_string(entry)?;
-            registry.register(InputKind::Workflow, contents, key)?;
-        }
-
-        if mode.actions()
-            && entry.is_file()
-            && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
-        {
-            let key = InputKey::local(entry, Some(input_path))?;
-            let contents = std::fs::read_to_string(entry)?;
-            registry.register(InputKind::Action, contents, key)?;
-        }
-    }
-
-    Ok(())
-}
-
-fn collect_from_repo_slug(
-    input: &str,
-    mode: &CollectionMode,
-    state: &AuditState,
-    registry: &mut InputRegistry,
-) -> Result<()> {
-    let Ok(slug) = RepoSlug::from_str(input) else {
-        return Err(anyhow!(tips(
-            format!("invalid input: {input}"),
-            &[format!(
-                "pass a single {file}, {directory}, or entire repo by {slug} slug",
-                file = "file".green(),
-                directory = "directory".green(),
-                slug = "owner/repo".green()
-            )]
-        )));
-    };
-
-    let client = state.gh_client.as_ref().ok_or_else(|| {
-        anyhow!(tips(
-            format!("can't retrieve repository: {input}", input = input.green()),
-            &[format!(
-                "try removing {offline} or passing {gh_token}",
-                offline = "--offline".yellow(),
-                gh_token = "--gh-token <TOKEN>".yellow(),
-            )]
-        ))
-    })?;
-
-    if matches!(mode, CollectionMode::WorkflowsOnly) {
-        // Performance: if we're *only* collecting workflows, then we
-        // can save ourselves a full repo download and only fetch the
-        // repo's workflow files.
-        client.fetch_workflows(&slug, registry)?;
-    } else {
-        let before = registry.len();
-        let host = match &state.gh_hostname {
-            GitHubHost::Enterprise(address) => address.as_str(),
-            GitHubHost::Standard(_) => "github.com",
-        };
-
-        client
-            .fetch_audit_inputs(&slug, registry)
-            .with_context(|| {
-                tips(
-                    format!(
-                        "couldn't collect inputs from https://{host}/{owner}/{repo}",
-                        host = host,
-                        owner = slug.owner,
-                        repo = slug.repo
-                    ),
-                    &["confirm the repository exists and that you have access to it"],
-                )
-            })?;
-        let after = registry.len();
-        let len = after - before;
-
-        tracing::info!(
-            "collected {len} inputs from {owner}/{repo}",
-            owner = slug.owner,
-            repo = slug.repo
-        );
-    }
-
-    Ok(())
+/// State used when collecting input groups.
+pub(crate) struct CollectionOptions {
+    pub(crate) mode: CollectionMode,
+    pub(crate) strict: bool,
+    pub(crate) no_config: bool,
+    /// Global configuration, if any.
+    pub(crate) global_config: Option<Config>,
 }
 
 #[instrument(skip_all)]
 fn collect_inputs(
-    inputs: &[String],
-    mode: &CollectionMode,
-    strict: bool,
-    state: &AuditState,
+    inputs: Vec<String>,
+    options: &CollectionOptions,
+    gh_client: Option<&Client>,
 ) -> Result<InputRegistry> {
-    let mut registry = InputRegistry::new(strict);
+    let mut registry = InputRegistry::new();
 
-    for input in inputs {
-        let input_path = Utf8Path::new(input);
-        if input_path.is_file() {
-            // When collecting individual files, we don't know which part
-            // of the input path is the prefix.
-            let (key, kind) = match (input_path.file_stem(), input_path.extension()) {
-                (Some("action"), Some("yml" | "yaml")) => {
-                    (InputKey::local(input_path, None)?, InputKind::Action)
-                }
-                (Some(_), Some("yml" | "yaml")) => {
-                    (InputKey::local(input_path, None)?, InputKind::Workflow)
-                }
-                _ => return Err(anyhow!("invalid input: {input}")),
-            };
-
-            let contents = std::fs::read_to_string(input_path)?;
-            registry.register(kind, contents, key)?;
-        } else if input_path.is_dir() {
-            collect_from_dir(input_path, mode, &mut registry)?;
-        } else {
-            // If this input isn't a file or directory, it's probably an
-            // `owner/repo(@ref)?` slug.
-            collect_from_repo_slug(input, mode, state, &mut registry)?;
-        }
+    for input in inputs.into_iter() {
+        registry.register_group(input, options, gh_client)?;
     }
 
     if registry.len() == 0 {
@@ -628,28 +505,28 @@ fn run() -> Result<ExitCode> {
         reg.with(indicatif_layer).init();
     }
 
-    let config = Config::new(&app).map_err(|e| {
-        anyhow!(tips(
-            format!("failed to load config: {e:#}"),
-            &[
-                "check your configuration file for errors",
-                "see: https://docs.zizmor.sh/configuration/"
-            ]
-        ))
-    })?;
+    let global_config = Config::global(&app)?;
 
-    let audit_state = AuditState::new(&app, &config)?;
-    let registry = collect_inputs(
-        &app.inputs,
-        &app.collect,
-        app.strict_collection,
-        &audit_state,
-    )?;
+    let gh_client = app
+        .gh_token
+        .map(|token| Client::new(app.gh_hostname, token, app.cache_dir))
+        .transpose()?;
 
-    let audit_registry = AuditRegistry::default_audits(&audit_state)?;
+    let collection_options = CollectionOptions {
+        mode: app.collect,
+        strict: app.strict_collection,
+        no_config: app.no_config,
+        global_config,
+    };
+
+    let registry = collect_inputs(app.inputs, &collection_options, gh_client.as_ref())?;
+
+    let state = AuditState::new(app.no_online_audits, gh_client);
+
+    let audit_registry = AuditRegistry::default_audits(&state)?;
 
     let mut results =
-        FindingRegistry::new(app.min_severity, app.min_confidence, app.persona, &config);
+        FindingRegistry::new(&registry, app.min_severity, app.min_confidence, app.persona);
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");
@@ -660,29 +537,25 @@ fn run() -> Result<ExitCode> {
 
         let _guard = span.enter();
 
-        for (_, input) in registry.iter_inputs() {
+        for (input_key, input) in registry.iter_inputs() {
             Span::current().pb_set_message(input.key().filename());
-            for (name, audit) in audit_registry.iter_audits() {
-                tracing::debug!(
-                    "running {name} on {input}",
-                    name = name,
-                    input = input.key()
-                );
-                results.extend(audit.audit(input).with_context(|| {
-                    format!("{name} failed on {input}", input = input.key().filename())
+            let config = registry.get_config(input_key.group());
+            for (ident, audit) in audit_registry.iter_audits() {
+                tracing::debug!("running {ident} on {input}", input = input.key());
+                results.extend(audit.audit(ident, input, config).with_context(|| {
+                    format!("{ident} failed on {input}", input = input.key().filename())
                 })?);
                 Span::current().pb_inc(1);
             }
             tracing::info!(
-                "🌈 {completed} {input}",
-                completed = "completed".green(),
+                "🌈 completed {input}",
                 input = input.key().presentation_path()
             );
         }
     }
 
     match app.format {
-        OutputFormat::Plain => output::plain::render_findings(&app, &registry, &results),
+        OutputFormat::Plain => output::plain::render_findings(&registry, &results, app.naches),
         OutputFormat::Json | OutputFormat::JsonV1 => {
             output::json::v1::output(stdout(), results.findings())?
         }

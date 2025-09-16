@@ -8,7 +8,7 @@ warning[template-injection]: code injection via template expansion
 27 |       - run: |
    |         --- this run block
 28 |           echo ${{ matrix.bar }}
-   |                    ---------- may expand into attacker-controllable code
+   |                    ^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → Medium
    = note: this finding has an auto-fix

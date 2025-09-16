@@ -18,7 +18,7 @@
 use std::{env, ops::Deref, sync::LazyLock, vec};
 
 use fst::Map;
-use github_actions_expressions::{Expr, Literal, context::Context};
+use github_actions_expressions::{Expr, context::Context, literal::Literal};
 use github_actions_models::{
     common::{EnvValue, RepositoryUses, Uses, expr::LoE},
     workflow::job::Strategy,
@@ -27,6 +27,7 @@ use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
+    config::Config,
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
         location::{Routable as _, SymbolicLocation},
@@ -599,20 +600,25 @@ impl TemplateInjection {
 }
 
 impl Audit for TemplateInjection {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 
     fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
+        _config: &Config,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
         self.process_step(step)
     }
@@ -624,25 +630,20 @@ mod tests {
 
     use crate::audit::Audit;
     use crate::audit::template_injection::{Capability, TemplateInjection};
-    use crate::github_api::GitHubHost;
+    use crate::config::Config;
     use crate::models::AsDocument;
     use crate::models::workflow::Workflow;
-    use crate::registry::InputKey;
+    use crate::registry::input::InputKey;
     use crate::state::AuditState;
 
     /// Macro for testing workflow audits with common boilerplate
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
 
             $test_fn(&workflow, findings)
         }};

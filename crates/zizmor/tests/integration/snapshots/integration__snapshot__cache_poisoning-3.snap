@@ -3,13 +3,11 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"cache-poisoning/caching-opt-in-boolean-toggle.yml\")).run()?"
 ---
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-  --> @@INPUT@@:1:1
+  --> @@INPUT@@:19:9
    |
  1 |   on: release
-   |   ^^^^^^^^^^^ generally used when publishing artifacts generated at runtime
- 2 |
+   |   ----------- generally used when publishing artifacts generated at runtime
 ...
-18 |           uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25
 19 | /         with:
 20 | |           dotnet-version: "5.0.x"
 21 | |           cache: true

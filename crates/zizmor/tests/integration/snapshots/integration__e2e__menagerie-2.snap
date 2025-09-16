@@ -5,7 +5,6 @@ expression: "zizmor().output(OutputMode::Both).args([\"--collect=all\"]).input(i
  INFO zizmor::registry: skipping impostor-commit: can't run without a GitHub API token
  INFO zizmor::registry: skipping ref-confusion: can't run without a GitHub API token
  INFO zizmor::registry: skipping known-vulnerable-actions: can't run without a GitHub API token
- INFO zizmor::registry: skipping forbidden-uses: audit not configured
  INFO zizmor::registry: skipping stale-action-refs: can't run without a GitHub API token
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/dummy-action-2/action.yml
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/another-dummy.yml

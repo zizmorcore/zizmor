@@ -9,6 +9,69 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [cache-poisoning] audit would fail to detect
+  some cache usage variants in newer versions of `actions/setup-node`
+  (#1152)
+
+## 1.13.0
+
+### New Features 🌈
+
+* **New audit**: [undocumented-permissions] detects explicit permission
+  grants that lack an explanatory comment (#1131)
+
+    Many thanks to @johnbillion for proposing and implementing this audit!
+
+### Enhancements 🌱
+
+* `zizmor`'s configuration discovery behavior has been significantly refactored,
+  making it easier to audit multiple independent inputs with their own
+  configuration files (#1094)
+
+    For most users, this change should cause no compatibility issues.
+    For example, the following commands will continue to load the same
+    configuration files as before:
+
+    ```sh
+    zizmor .
+    zizmor .github/
+    ```
+
+    For other users, the behavior will change, but in a way that's intended
+    to correct a long-standing bug with configuration discovery.
+    In particular, the following commands will now behave differently:
+
+    ```sh
+    # OLD: would discover config in $CWD
+    # NEW: will discover two different configs, one in each of the repos
+    zizmor ./repoA ./repoB
+    ```
+
+    Separately from these changes, `zizmor` continues to support
+    `--config <path>` and `ZIZMOR_CONFIG` with the exact same behavior as
+    before.
+
+    See [Configuration - Discovery](./configuration.md#discovery) for a
+    detailed explanation of the new behavior.
+
+* Audit rules can now be disabled entirely in `zizmor`'s configuration.
+  See [`rules.<id>.disable`](./configuration.md#rulesiddisable)
+  for details (#1132)
+
+* The [obfuscation] audit now supports auto-fixes for many findings (#1088)
+
+### Bug Fixes 🐛
+
+* `zizmor` now correctly honors `--strict-collection` when collecting from
+  remote inputs. This also means that the default collection strictness
+  has changed for remote inputs to match all other inputs (#1122)
+
+* Fixed a bug where `zizmor` would crash on certain UTF-8 inputs lacking
+  an explicit final newline due to a bug in the `annotate-snippets` crate
+  (#1136)
+
 ## 1.12.1
 
 ### Bug Fixes 🐛
@@ -959,3 +1022,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [anonymous-definition]: ./audits.md#anonymous-definition
 [unsound-condition]: ./audits.md#unsound-condition
 [known-vulnerable-actions]: ./audits.md#known-vulnerable-actions
+[undocumented-permissions]: ./audits.md#undocumented-permissions

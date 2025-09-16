@@ -38,7 +38,7 @@ info[unsound-contains]: unsound contains condition
   --> @@INPUT@@:32:9
    |
 32 |         if: contains('runner1,runner2', runner.name)
-   |         -------------------------------------------- info: contains(..) condition can be bypassed if attacker can control 'runner.name'
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'runner.name'
    |
    = note: audit confidence → High
 

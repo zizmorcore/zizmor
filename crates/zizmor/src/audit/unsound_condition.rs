@@ -149,7 +149,7 @@ impl UnsoundCondition {
 }
 
 impl Audit for UnsoundCondition {
-    fn new(_state: &crate::state::AuditState<'_>) -> Result<Self, super::AuditLoadError>
+    fn new(_state: &crate::state::AuditState) -> Result<Self, super::AuditLoadError>
     where
         Self: Sized,
     {
@@ -159,6 +159,7 @@ impl Audit for UnsoundCondition {
     fn audit_normal_job<'doc>(
         &self,
         job: &crate::models::workflow::NormalJob<'doc>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         self.process_conditions(job.parent(), job.conditions())
     }
@@ -166,6 +167,7 @@ impl Audit for UnsoundCondition {
     fn audit_reusable_job<'doc>(
         &self,
         job: &crate::models::workflow::ReusableWorkflowCallJob<'doc>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let conds = job.r#if.iter().map(|cond| (cond, job.location()));
         self.process_conditions(job.parent(), conds)
@@ -174,6 +176,7 @@ impl Audit for UnsoundCondition {
     fn audit_action<'doc>(
         &self,
         action: &'doc crate::models::action::Action,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         self.process_conditions(action, action.conditions())
     }
@@ -183,25 +186,20 @@ impl Audit for UnsoundCondition {
 mod tests {
     use super::*;
     use crate::{
-        github_api::GitHubHost,
+        config::Config,
         models::{AsDocument, workflow::Workflow},
-        registry::InputKey,
+        registry::input::InputKey,
         state::AuditState,
     };
 
     /// Macro for testing workflow audits with common boilerplate
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
 
             $test_fn(&workflow, findings)
         }};
