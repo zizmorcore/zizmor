@@ -59,12 +59,13 @@ impl UnsoundCondition {
         raw_expr.len() > expr.as_raw().len()
     }
 
-    /// Attempts to create a fix for an unsound condition by converting
-    /// the block scalar to a plain expression.
-    fn attempt_fix<'doc>(
+    /// Attempts to create a fix for an unsound condition by replacing
+    /// the block scalar style with a stripped version (| -> |-, > -> >-).
+    fn attempt_fix<'a, 'doc>(
         &self,
         cond: &common::If,
         loc: &SymbolicLocation<'doc>,
+        doc: &'a impl AsDocument<'a, 'doc>,
     ) -> Option<Fix<'doc>> {
         let common::If::Expr(raw_expr) = cond else {
             return None;
@@ -76,38 +77,32 @@ impl UnsoundCondition {
             return None;
         }
 
-        // Get the inner expression content, cleaning up whitespace
-        let inner_expr = expr.as_raw().trim();
+        // Get the document and feature for this condition
+        let yaml_doc = doc.as_document();
+        let feature =
+            yamlpatch::route_to_feature_exact(&loc.route.with_key("if"), yaml_doc).ok()??;
 
-        // For simple cases, we can directly replace with the fenced expression
-        // For multiline expressions, we need to clean up the formatting
-        let fixed_expr = if inner_expr.contains('\n') {
-            // Clean up multiline expressions by normalizing whitespace
-            let cleaned = inner_expr
-                .lines()
-                .map(|line| line.trim())
-                .filter(|line| !line.is_empty())
-                .collect::<Vec<_>>()
-                .join(" ");
+        // Determine the current scalar style
+        let style = yamlpatch::Style::from_feature(&feature, yaml_doc);
 
-            // Remove any existing ${{ }} wrapping and re-wrap properly
-            let unwrapped = if cleaned.starts_with("${{") && cleaned.ends_with("}}") {
-                cleaned[3..cleaned.len() - 2].trim()
-            } else {
-                &cleaned
-            };
-            format!("${{{{ {unwrapped} }}}}")
-        } else {
-            inner_expr.to_string()
+        // Only fix literal (|) and folded (>) scalar styles
+        let (old_indicator, new_indicator) = match style {
+            yamlpatch::Style::MultilineLiteralScalar => ("|", "|-"),
+            yamlpatch::Style::MultilineFoldedScalar => (">", ">-"),
+            _ => return None, // Not a style we can fix this way
         };
 
+        // Create a patch that replaces the scalar indicator
         Some(Fix {
-            title: "convert block scalar condition to plain expression".into(),
+            title: format!("replace unsound block scalar style '{old_indicator}' with sound style '{new_indicator}'").into(),
             key: loc.key,
             disposition: FixDisposition::Safe,
             patches: vec![Patch {
                 route: loc.route.with_key("if"),
-                operation: Op::Replace(serde_yaml::Value::String(fixed_expr)),
+                operation: Op::RewriteFragment {
+                    from: subfeature::Subfeature::new(0, old_indicator),
+                    to: new_indicator.into(),
+                },
             }],
         })
     }
@@ -131,7 +126,7 @@ impl UnsoundCondition {
                     );
 
                 // Attempt to add a fix
-                if let Some(fix) = self.attempt_fix(cond, &loc) {
+                if let Some(fix) = self.attempt_fix(cond, &loc, doc) {
                     finding_builder = finding_builder.fix(fix);
                 }
 
@@ -215,10 +210,7 @@ mod tests {
         assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
 
         let fix = &finding.fixes[0];
-        assert_eq!(
-            fix.title,
-            "convert block scalar condition to plain expression"
-        );
+        assert!(fix.title.contains("replace unsound block scalar style"));
 
         fix.apply(document).unwrap()
     }
@@ -254,7 +246,8 @@ jobs:
                     runs-on: ubuntu-latest
                     steps:
                       - name: simple case
-                        if: ${{ github.event_name == 'push' }}
+                        if: |-
+                          ${{ github.event_name == 'push' }}
                         run: echo "test"
                 "#);
             }
@@ -292,7 +285,8 @@ jobs:
                     runs-on: ubuntu-latest
                     steps:
                       - name: folded case
-                        if: ${{ github.actor == 'dependabot[bot]' }}
+                        if: >-
+                          ${{ github.actor == 'dependabot[bot]' }}
                         run: echo "test"
                 "#);
             }
@@ -331,7 +325,9 @@ jobs:
                     runs-on: ubuntu-latest
                     steps:
                       - name: multiline case
-                        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+                        if: |-
+                          ${{ github.event_name == 'push'
+                            && github.ref == 'refs/heads/main' }}
                         run: echo "test"
                 "#);
             }
@@ -373,7 +369,12 @@ jobs:
                     runs-on: ubuntu-latest
                     steps:
                       - name: complex case
-                        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) }}
+                        if: |-
+                          ${{
+                            github.event_name == 'push' &&
+                            (github.ref == 'refs/heads/main' ||
+                             startsWith(github.ref, 'refs/heads/release/'))
+                          }}
                         run: echo "test"
                 "#);
             }
@@ -405,7 +406,8 @@ jobs:
                 on: push
                 jobs:
                   reusable-job:
-                    if: ${{ github.event_name == 'pull_request' }}
+                    if: |-
+                      ${{ github.event_name == 'pull_request' }}
                     uses: ./.github/workflows/reusable.yml
                 "#);
             }
@@ -463,15 +465,19 @@ jobs:
                     runs-on: ubuntu-latest
                     steps:
                       - name: literal block
-                        if: ${{ github.event_name == 'push' }}
+                        if: |-
+                          ${{ github.event_name == 'push' }}
                         run: echo "test"
 
                       - name: folded block
-                        if: ${{ github.actor == 'dependabot[bot]' }}
+                        if: >-
+                          ${{ github.actor == 'dependabot[bot]' }}
                         run: echo "test"
 
                       - name: multiline expression
-                        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+                        if: |-
+                          ${{ github.event_name == 'push'
+                            && github.ref == 'refs/heads/main' }}
                         run: echo "test"
                 "#);
             }
