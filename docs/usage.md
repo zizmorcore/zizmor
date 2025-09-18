@@ -384,7 +384,7 @@ annotations.
     Exit codes 11 and above are **not used** if `--no-exit-codes` or
     `--format sarif` is passed.
 
-!!! note
+!!! warning "Removal"
 
     Versions of zizmor prior to `v1.14.0` used exit code `10` to indicate
     the highest finding having "unknown" severity. This exit code is
@@ -583,11 +583,11 @@ There are two straightforward ways to filter `zizmor`'s results:
 
         `--min-severity` and `--min-confidence` are available in `v0.6.0` and later.
 
-    !!! tip
+    !!! warning "Deprecation"
 
-        `--min-severity=unknown` and `--min-confidence=unknown` are deprecated
-        values as of `v1.14.0` and will be removed in a future release. Users
-        should omit these entirely, as they were no-ops even prior to
+        `--min-severity=unknown` and `--min-confidence=unknown` are
+        **deprecated** as of `v1.14.0` and will be removed in a future release.
+        Users should omit these entirely, as they were no-ops even prior to
         deprecation.
 
      ```bash
