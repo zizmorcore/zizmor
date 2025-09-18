@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"template-injection/multiline-expression.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
-error[template-injection]: code injection via template expansion
+help[template-injection]: code injection via template expansion
   --> @@INPUT@@:14:13
    |
 12 |         - run: |
@@ -13,7 +13,7 @@ error[template-injection]: code injection via template expansion
 16 | |             || baz.qux
    | |______________________^ may expand into attacker-controllable code
    |
-   = note: audit confidence → Unknown
+   = note: audit confidence → High
 
 info[template-injection]: code injection via template expansion
   --> @@INPUT@@:15:16
@@ -37,7 +37,7 @@ info[template-injection]: code injection via template expansion
    |
    = note: audit confidence → Low
 
-error[template-injection]: code injection via template expansion
+help[template-injection]: code injection via template expansion
   --> @@INPUT@@:22:15
    |
 20 |           run: |
@@ -48,6 +48,6 @@ error[template-injection]: code injection via template expansion
 24 | |               || ''
    | |___________________^ may expand into attacker-controllable code
    |
-   = note: audit confidence → Unknown
+   = note: audit confidence → High
 
-4 findings: 2 unknown, 2 informational, 0 low, 0 medium, 0 high
+4 findings: 2 informational, 2 low, 0 medium, 0 high
