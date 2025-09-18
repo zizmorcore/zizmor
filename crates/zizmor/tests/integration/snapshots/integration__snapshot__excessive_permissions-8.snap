@@ -18,7 +18,7 @@ error[excessive-permissions]: overly broad permissions
   |
   = note: audit confidence → High
 
-error[excessive-permissions]: overly broad permissions
+warning[excessive-permissions]: overly broad permissions
  --> @@INPUT@@:9:3
   |
 9 |   nonexistent: write
@@ -26,4 +26,4 @@ error[excessive-permissions]: overly broad permissions
   |
   = note: audit confidence → High
 
-5 findings (2 suppressed): 1 unknown, 0 informational, 0 low, 0 medium, 2 high
+5 findings (2 suppressed): 0 informational, 0 low, 1 medium, 2 high

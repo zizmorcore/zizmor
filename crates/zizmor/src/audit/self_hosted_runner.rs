@@ -59,7 +59,7 @@ impl Audit for SelfHostedRunner {
                             results.push(
                                 Self::finding()
                                     .confidence(Confidence::High)
-                                    .severity(Severity::Unknown)
+                                    .severity(Severity::Medium)
                                     .persona(Persona::Auditor)
                                     .add_location(
                                         job.location()
@@ -77,7 +77,7 @@ impl Audit for SelfHostedRunner {
                             results.push(
                                 Self::finding()
                                     .confidence(Confidence::Low)
-                                    .severity(Severity::Unknown)
+                                    .severity(Severity::Medium)
                                     .persona(Persona::Auditor)
                                     .add_location(
                                         job.location()
@@ -100,7 +100,7 @@ impl Audit for SelfHostedRunner {
                 LoE::Literal(RunsOn::Group { .. }) => results.push(
                     Self::finding()
                         .confidence(Confidence::Low)
-                        .severity(Severity::Unknown)
+                        .severity(Severity::Medium)
                         .persona(Persona::Auditor)
                         .add_location(
                             job.location()
@@ -127,7 +127,7 @@ impl Audit for SelfHostedRunner {
                         results.push(
                             Self::finding()
                                 .confidence(Confidence::High)
-                                .severity(Severity::Unknown)
+                                .severity(Severity::Medium)
                                 .persona(Persona::Auditor)
                                 .add_location(
                                     job.location()

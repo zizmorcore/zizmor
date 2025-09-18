@@ -10,4 +10,4 @@ help[stale-action-refs]: commit hash does not point to a Git tag
    |
    = note: audit confidence → High
 
-1 finding: 0 unknown, 0 informational, 1 low, 0 medium, 0 high
+1 finding: 0 informational, 1 low, 0 medium, 0 high

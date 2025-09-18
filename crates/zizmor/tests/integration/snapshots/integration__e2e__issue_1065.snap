@@ -31,4 +31,4 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
 
-4 findings (2 suppressed): 0 unknown, 0 informational, 0 low, 1 medium, 1 high
+4 findings (2 suppressed): 0 informational, 0 low, 1 medium, 1 high

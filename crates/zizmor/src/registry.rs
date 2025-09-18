@@ -211,7 +211,6 @@ impl<'a> FindingRegistry<'a> {
     pub(crate) fn exit_code(&self) -> ExitCode {
         match self.highest_seen_severity {
             Some(sev) => match sev {
-                Severity::Unknown => ExitCode::from(10),
                 Severity::Informational => ExitCode::from(11),
                 Severity::Low => ExitCode::from(12),
                 Severity::Medium => ExitCode::from(13),

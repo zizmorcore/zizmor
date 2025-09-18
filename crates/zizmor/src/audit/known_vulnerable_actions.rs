@@ -99,11 +99,12 @@ impl KnownVulnerableActions {
 
         for vuln in vulns {
             let severity = match vuln.severity.as_str() {
-                "low" => Severity::Unknown,
+                "low" => Severity::Low,
                 "medium" => Severity::Medium,
                 "high" => Severity::High,
                 "critical" => Severity::High,
-                _ => Severity::Unknown,
+                // Seems like a safe fallback.
+                _ => Severity::High,
             };
 
             // Get the first patched version from the first vulnerability in the advisory
