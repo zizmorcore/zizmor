@@ -48,18 +48,14 @@ pub(crate) enum Persona {
     Regular,
 }
 
-#[derive(
-    Copy, Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, Deserialize, ValueEnum,
-)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Confidence {
     Low,
     Medium,
     High,
 }
 
-#[derive(
-    Copy, Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, Deserialize, ValueEnum,
-)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Severity {
     Informational,
     Low,

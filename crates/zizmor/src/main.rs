@@ -194,6 +194,8 @@ impl App {
     }
 }
 
+// NOTE(ww): This can be removed once `--min-severity=unknown`
+// is fully removed.
 #[derive(Debug, Copy, Clone, ValueEnum)]
 enum CliSeverity {
     Unknown,
@@ -203,6 +205,8 @@ enum CliSeverity {
     High,
 }
 
+// NOTE(ww): This can be removed once `--min-confidence=unknown`
+// is fully removed.
 #[derive(Debug, Copy, Clone, ValueEnum)]
 enum CliConfidence {
     Unknown,

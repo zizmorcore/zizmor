@@ -381,8 +381,14 @@ annotations.
 
 !!! note
 
-    Exit codes 10 and above are **not used** if `--no-exit-codes` or
+    Exit codes 11 and above are **not used** if `--no-exit-codes` or
     `--format sarif` is passed.
+
+!!! note
+
+    Versions of zizmor prior to `v1.14.0` used exit code `10` to indicate
+    the highest finding having "unknown" severity. This exit code is
+    no longer used as of `v1.14.0`.
 
 `zizmor` uses various exit codes to summarize the results of a run:
 
@@ -390,7 +396,6 @@ annotations.
 | ---- | ------- |
 | 0    | Successful audit; no findings to report (or SARIF mode enabled). |
 | 1    | Error during audit; consult output. |
-| 10   | One or more findings found; highest finding is "unknown" level. |
 | 11   | One or more findings found; highest finding is "informational" level. |
 | 12   | One or more findings found; highest finding is "low" level. |
 | 13   | One or more findings found; highest finding is "medium" level. |
@@ -468,7 +473,7 @@ sensitive `zizmor`'s analyses are:
     For example, with the default persona:
 
     ```console
-    $ zizmor tests/test-data/self-hosted.yml
+    $ zizmor self-hosted.yml
     🌈 completed self-hosted.yml
     No findings to report. Good job! (1 suppressed)
     ```
@@ -476,16 +481,16 @@ sensitive `zizmor`'s analyses are:
     and with `--persona=auditor`:
 
     ```console
-    $ zizmor --persona=auditor tests/test-data/self-hosted.yml
-    note[self-hosted-runner]: runs on a self-hosted runner
-      --> tests/test-data/self-hosted.yml:8:5
-        |
-      8 |     runs-on: [self-hosted, my-ubuntu-box]
-        |     ------------------------------------- note: self-hosted runner used here
-        |
-        = note: audit confidence → High
+    $ zizmor --persona=auditor self-hosted.yml
+    warning[self-hosted-runner]: runs on a self-hosted runner
+      --> self-hosted.yml:13:5
+       |
+    13 |     runs-on: [self-hosted, my-ubuntu-box]
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ self-hosted runner used here
+       |
+       = note: audit confidence → High
 
-      1 finding: 1 unknown, 0 informational, 0 low, 0 medium, 0 high
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
     ```
 
 ## Auto-fixing results *&#8203;*{.chip .chip-experimental} { #auto-fixing-results }
@@ -578,8 +583,15 @@ There are two straightforward ways to filter `zizmor`'s results:
 
         `--min-severity` and `--min-confidence` are available in `v0.6.0` and later.
 
+    !!! tip
+
+        `--min-severity=unknown` and `--min-confidence=unknown` are deprecated
+        values as of `v1.14.0` and will be removed in a future release. Users
+        should omit these entirely, as they were no-ops even prior to
+        deprecation.
+
      ```bash
-     # filter unknown, informational, and low findings with unknown, low confidence
+     # filter informational, and low findings with low confidence
      zizmor --min-severity=medium --min-confidence=medium ...
      ```
 
