@@ -1,0 +1,6 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().expects_failure(false).output(OutputMode::Stderr).setenv(\"RUST_LOG\",\n\"warn\").args([\"--min-confidence=unknown\"]).input(input_under_test(\"e2e-menagerie\")).run()?"
+---
+ WARN zizmor: `unknown` is a deprecated minimum confidence that has no effect
+ WARN zizmor: future versions of zizmor will reject this value

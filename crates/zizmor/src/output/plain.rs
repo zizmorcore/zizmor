@@ -32,7 +32,6 @@ impl From<LocationKind> for AnnotationKind {
 impl From<&Severity> for Level<'_> {
     fn from(sev: &Severity) -> Self {
         match sev {
-            Severity::Unknown => Level::ERROR,
             Severity::Informational => Level::INFO,
             Severity::Low => Level::HELP,
             Severity::Medium => Level::WARNING,
@@ -170,8 +169,7 @@ pub(crate) fn render_findings(
         }
 
         println!(
-            "{nunknown} unknown, {ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
-            nunknown = findings_by_severity.get(&Severity::Unknown).unwrap_or(&0),
+            "{ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
             ninformational = findings_by_severity
                 .get(&Severity::Informational)
                 .unwrap_or(&0)

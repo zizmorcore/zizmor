@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"self-hosted/self-hosted-matrix-inclusion.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
-error[self-hosted-runner]: runs on a self-hosted runner
+warning[self-hosted-runner]: runs on a self-hosted runner
   --> @@INPUT@@:11:5
    |
 11 |       runs-on: ${{ matrix.os }}
@@ -17,4 +17,4 @@ error[self-hosted-runner]: runs on a self-hosted runner
    |
    = note: audit confidence → High
 
-1 finding: 1 unknown, 0 informational, 0 low, 0 medium, 0 high
+1 finding: 0 informational, 0 low, 1 medium, 0 high

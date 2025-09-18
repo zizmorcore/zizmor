@@ -121,11 +121,11 @@ struct App {
 
     /// Filter all results below this severity.
     #[arg(long)]
-    min_severity: Option<Severity>,
+    min_severity: Option<CliSeverity>,
 
     /// Filter all results below this confidence.
     #[arg(long)]
-    min_confidence: Option<Confidence>,
+    min_confidence: Option<CliConfidence>,
 
     /// The directory to use for HTTP caching. By default, a
     /// host-appropriate user-caching directory will be used.
@@ -192,6 +192,23 @@ impl App {
         .try_into()
         .expect("failed to turn cache directory into a sane path")
     }
+}
+
+#[derive(Debug, Copy, Clone, ValueEnum)]
+enum CliSeverity {
+    Unknown,
+    Informational,
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Debug, Copy, Clone, ValueEnum)]
+enum CliConfidence {
+    Unknown,
+    Low,
+    Medium,
+    High,
 }
 
 #[cfg(feature = "lsp")]
@@ -505,6 +522,31 @@ fn run() -> Result<ExitCode> {
         reg.with(indicatif_layer).init();
     }
 
+    let min_severity = match app.min_severity {
+        Some(CliSeverity::Unknown) => {
+            tracing::warn!("`unknown` is a deprecated minimum severity that has no effect");
+            tracing::warn!("future versions of zizmor will reject this value");
+            None
+        }
+        Some(CliSeverity::Informational) => Some(Severity::Informational),
+        Some(CliSeverity::Low) => Some(Severity::Low),
+        Some(CliSeverity::Medium) => Some(Severity::Medium),
+        Some(CliSeverity::High) => Some(Severity::High),
+        None => None,
+    };
+
+    let min_confidence = match app.min_confidence {
+        Some(CliConfidence::Unknown) => {
+            tracing::warn!("`unknown` is a deprecated minimum confidence that has no effect");
+            tracing::warn!("future versions of zizmor will reject this value");
+            None
+        }
+        Some(CliConfidence::Low) => Some(Confidence::Low),
+        Some(CliConfidence::Medium) => Some(Confidence::Medium),
+        Some(CliConfidence::High) => Some(Confidence::High),
+        None => None,
+    };
+
     let global_config = Config::global(&app)?;
 
     let gh_client = app
@@ -525,8 +567,7 @@ fn run() -> Result<ExitCode> {
 
     let audit_registry = AuditRegistry::default_audits(&state)?;
 
-    let mut results =
-        FindingRegistry::new(&registry, app.min_severity, app.min_confidence, app.persona);
+    let mut results = FindingRegistry::new(&registry, min_severity, min_confidence, app.persona);
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");

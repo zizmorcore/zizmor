@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"template-injection/template-injection-dynamic-matrix.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
-error[template-injection]: code injection via template expansion
+help[template-injection]: code injection via template expansion
   --> @@INPUT@@:22:36
    |
 21 |         run: |
@@ -10,7 +10,7 @@ error[template-injection]: code injection via template expansion
 22 |           echo "doing a thing: ${{ matrix.dynamic }}"
    |                                    ^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
-   = note: audit confidence → Unknown
+   = note: audit confidence → High
 
 warning[template-injection]: code injection via template expansion
   --> @@INPUT@@:22:36
@@ -23,4 +23,4 @@ warning[template-injection]: code injection via template expansion
    = note: audit confidence → Medium
    = note: this finding has an auto-fix
 
-2 findings (1 fixable): 1 unknown, 0 informational, 0 low, 1 medium, 0 high
+2 findings (1 fixable): 0 informational, 1 low, 1 medium, 0 high
