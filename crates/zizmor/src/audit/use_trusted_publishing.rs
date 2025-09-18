@@ -362,8 +362,9 @@ impl Audit for UseTrustedPublishing {
                     // This indicates a hybrid/incomplete migration that should be flagged
                     Confidence::High
                 } else {
-                    // Medium confidence when no id-token - could be intentional for non-TP registries
-                    Confidence::Medium
+                    // Low confidence when no id-token - could be intentional for non-TP registries
+                    // or legitimate reasons not to use trusted publishing
+                    Confidence::Low
                 };
 
                 findings.push(

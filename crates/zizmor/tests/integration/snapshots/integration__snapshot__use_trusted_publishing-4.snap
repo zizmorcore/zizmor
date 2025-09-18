@@ -21,7 +21,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         this step
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:26:9
@@ -42,7 +42,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         this step
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:43:14
@@ -52,7 +52,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         this step
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:49:14
@@ -62,7 +62,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         this step
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:57:11
@@ -73,7 +73,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
 57 |           npm publish --access public
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:63:14
@@ -83,7 +83,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         this step
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:69:14
@@ -93,7 +93,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         this step
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:75:14
@@ -103,7 +103,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         this step
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:81:14
@@ -113,7 +113,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         this step
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
    --> @@INPUT@@:100:14
