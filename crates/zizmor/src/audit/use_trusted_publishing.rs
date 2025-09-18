@@ -29,10 +29,8 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
     "https://test.pypi.org/legacy/",
 ];
 
-const KNOWN_NPMJS_TP_INDICES: &[&str] = &[
-    "https://registry.npmjs.org",
-    "https://registry.npmjs.org/",
-];
+const KNOWN_NPMJS_TP_INDICES: &[&str] =
+    &["https://registry.npmjs.org", "https://registry.npmjs.org/"];
 
 static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str])>> =
     LazyLock::new(|| {
@@ -174,7 +172,7 @@ const NON_TP_COMMAND_PATTERNS: &[&str] = &[
     r"(?s)yarn\s+(?:run\s+)?publish",
     // npm run publish
     r"(?s)npm\s+run\s+publish",
-    // pnpm run publish  
+    // pnpm run publish
     r"(?s)pnpm\s+run\s+publish",
 ];
 
