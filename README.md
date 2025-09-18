@@ -71,6 +71,13 @@ Grafana Labs
 Trail of Bits
 </a>
 </td>
+<td align="center" valign="top" width="15%">
+<a href="https://www.shipfox.io">
+<img src="https://avatars.githubusercontent.com/u/163036520?s=100&v=4" width="100px">
+<br>
+Shipfox
+</a>
+</td>
 </tr>
 </tbody>
 </table>
