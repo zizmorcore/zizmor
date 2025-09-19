@@ -573,7 +573,7 @@ impl InputRegistry {
         name: String,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), CollectionError> {
         // If the group has already been registered, then the user probably
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
