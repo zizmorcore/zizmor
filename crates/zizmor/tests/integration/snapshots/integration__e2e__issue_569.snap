@@ -6,6 +6,7 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-onlin
  INFO zizmor::registry: skipping ref-confusion: offline audits only requested
  INFO zizmor::registry: skipping known-vulnerable-actions: offline audits only requested
  INFO zizmor::registry: skipping stale-action-refs: offline audits only requested
+ INFO zizmor::registry: skipping ref-version-mismatch: offline audits only requested
  INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/documentation-links.yml
