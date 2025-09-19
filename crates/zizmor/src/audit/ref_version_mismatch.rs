@@ -46,11 +46,10 @@ impl RefVersionMismatch {
     ) -> Option<&'doc str> {
         for comment in comments {
             for pattern in VERSION_COMMENT_PATTERNS.iter() {
-                if let Some(captures) = pattern.captures(comment.as_ref()) {
-                    if let Some(version_match) = captures.get(1) {
+                if let Some(captures) = pattern.captures(comment.as_ref())
+                    && let Some(version_match) = captures.get(1) {
                         return Some(version_match.as_str());
                     }
-                }
             }
         }
         None
@@ -113,7 +112,7 @@ impl RefVersionMismatch {
                 self.client
                     .longest_tag_for_commit(&uses.owner, &uses.repo, commit_sha)?
             {
-                builder = builder.add_location(uses_location.symbolic.annotated(&format!(
+                builder = builder.add_location(uses_location.symbolic.annotated(format!(
                     "is pointed to by tag {tag}",
                     tag = suggestion.name
                 )));
