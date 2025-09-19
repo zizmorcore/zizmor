@@ -5,7 +5,7 @@ use itertools::Itertools as _;
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
-    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _},
+    models::{StepBodyCommon, StepCommon, uses::repository::RepositoryUsesExt as _},
     state::AuditState,
     utils::split_patterns,
 };

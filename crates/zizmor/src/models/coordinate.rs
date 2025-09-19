@@ -20,7 +20,7 @@ use indexmap::IndexMap;
 
 use crate::utils::ExtractedExpr;
 
-use super::{StepBodyCommon, StepCommon, uses::RepositoryUsesPattern};
+use super::{StepBodyCommon, StepCommon, uses::repository::RepositoryUsesPattern};
 
 pub(crate) enum ActionCoordinate {
     Configurable {
@@ -389,7 +389,7 @@ mod tests {
     use crate::{
         models::{
             coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
-            uses::RepositoryUsesPattern,
+            uses::repository::RepositoryUsesPattern,
             workflow::{Job, Workflow},
         },
         registry::input::InputKey,

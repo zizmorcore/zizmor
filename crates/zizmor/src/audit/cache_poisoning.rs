@@ -9,6 +9,7 @@ use crate::finding::location::{Locatable as _, Routable};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
 use crate::models::StepCommon;
 use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
+use crate::models::uses::repository::RepositoryUsesPattern;
 use crate::models::workflow::{JobExt as _, NormalJob, Step, Steps};
 use crate::state::AuditState;
 
@@ -339,7 +340,7 @@ impl CachePoisoning {
 
     fn create_configurable_action_fix<'doc>(
         &self,
-        _uses_pattern: &crate::models::uses::RepositoryUsesPattern,
+        _uses_pattern: &RepositoryUsesPattern,
         control: &ControlExpr,
         step: &Step<'doc>,
     ) -> Option<Fix<'doc>> {
