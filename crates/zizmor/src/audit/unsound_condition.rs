@@ -71,9 +71,8 @@ impl UnsoundCondition {
             return None;
         };
 
-        // Extract the fenced expression and ensure this is indeed an unsound condition
-        let (expr, _) = utils::extract_fenced_expression(raw_expr, 0)?;
-        if raw_expr.len() <= expr.as_raw().len() {
+        // The fix we apply below only works for trailing newlines.
+        if !raw_expr.ends_with('\n') {
             return None;
         }
 
