@@ -9,11 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
-### Bug Fixes 🐛
+### New Features 🌈
 
-* Fixed a bug where the [cache-poisoning] audit would fail to detect
-  some cache usage variants in newer versions of `actions/setup-node`
-  (#1152)
+* **New audit**: [ref-version-mismatch] detects mismatches between
+  hash-pinned action references and their version comments (#972)
+
+    Many thanks to @segiddins for implementing this audit!
 
 ### Enhancements 🌱
 
@@ -30,6 +31,12 @@ of `zizmor`.
   findings (#1089)
 
     Many thanks to @mostafa for implementing this improvement!
+
+### Bug Fixes 🐛
+
+* Fixed a bug where the [cache-poisoning] audit would fail to detect
+  some cache usage variants in newer versions of `actions/setup-node`
+  (#1152)
 
 ### Deprecations ⚠️
 
