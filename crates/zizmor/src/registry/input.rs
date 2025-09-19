@@ -41,7 +41,7 @@ pub(crate) enum CollectionError {
     InputLoad(#[from] InputError),
     /// A single input file failed to load as a specific kind.
     #[error("failed to load {1} as {2}")]
-    InputKind(#[source] InputError, Utf8PathBuf, InputKind),
+    InputKind(#[source] InputError, InputKey, InputKind),
     /// The input doesn't have a `.yml` or `.yaml` extension.
     #[error("invalid input: must have .yml or .yaml extension")]
     InvalidExtension,
@@ -342,11 +342,7 @@ impl InputGroup {
                 tracing::warn!("failed to validate input as {kind}: {e}");
                 Ok(())
             }
-            Err(e) => Err(CollectionError::InputKind(
-                e,
-                key.presentation_path().into(),
-                kind,
-            )),
+            Err(e) => Err(CollectionError::InputKind(e, key, kind)),
         }
     }
 
@@ -363,20 +359,20 @@ impl InputGroup {
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
             (Some("action"), Some("yml" | "yaml")) => (
-                InputKey::local(Group(path.as_str().into()), path, None)
-                    .map_err(|e| CollectionError::InputKind(e, path.into(), InputKind::Action))?,
+                // NOTE: Safe unwrap because we just checked the filename.
+                InputKey::local(Group(path.as_str().into()), path, None).unwrap(),
                 InputKind::Action,
             ),
             (Some(_), Some("yml" | "yaml")) => (
-                InputKey::local(Group(path.as_str().into()), path, None)
-                    .map_err(|e| CollectionError::InputKind(e, path.into(), InputKind::Workflow))?,
+                // NOTE: Safe unwrap because we just checked the filename.
+                InputKey::local(Group(path.as_str().into()), path, None).unwrap(),
                 InputKind::Workflow,
             ),
             _ => return Err(CollectionError::InvalidExtension),
         };
 
         let contents = std::fs::read_to_string(path)
-            .map_err(|e| CollectionError::InputKind(e.into(), path.into(), kind))?;
+            .map_err(|e| CollectionError::InputKind(e.into(), key.clone(), kind))?;
         group.register(kind, contents, key, options.strict)?;
 
         Ok(group)
@@ -426,11 +422,10 @@ impl InputGroup {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).map_err(
-                    |e| CollectionError::InputKind(e, entry.into(), InputKind::Workflow),
-                )?;
+                // NOTE: Safe unwrap because we just checked the filename.
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
-                    CollectionError::InputKind(e.into(), entry.into(), InputKind::Workflow)
+                    CollectionError::InputKind(e.into(), key.clone(), InputKind::Workflow)
                 })?;
                 group.register(InputKind::Workflow, contents, key, options.strict)?;
             }
@@ -439,10 +434,10 @@ impl InputGroup {
                 && entry.is_file()
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))
-                    .map_err(|e| CollectionError::InputKind(e, entry.into(), InputKind::Action))?;
+                // NOTE: Safe unwrap because we just checked the filename.
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
-                    CollectionError::InputKind(e.into(), entry.into(), InputKind::Action)
+                    CollectionError::InputKind(e.into(), key.clone(), InputKind::Action)
                 })?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
             }
