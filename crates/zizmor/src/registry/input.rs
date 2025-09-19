@@ -42,7 +42,7 @@ pub(crate) enum CollectionError {
     InputLoad(#[from] InputError),
     /// A single input file failed to load as a specific kind.
     #[error("failed to load {1} as {2}")]
-    InputKind(#[source] InputError, InputKey, InputKind),
+    InputKind(#[source] InputError, String, InputKind),
     /// The input doesn't have a `.yml` or `.yaml` extension.
     #[error("invalid input: must have .yml or .yaml extension")]
     InvalidExtension,
@@ -349,7 +349,7 @@ impl InputGroup {
                 tracing::warn!("failed to validate input as {kind}: {e}");
                 Ok(())
             }
-            Err(e) => Err(CollectionError::InputKind(e, key, kind)),
+            Err(e) => Err(CollectionError::InputKind(e, key.to_string(), kind)),
         }
     }
 
@@ -379,7 +379,7 @@ impl InputGroup {
         };
 
         let contents = std::fs::read_to_string(path)
-            .map_err(|e| CollectionError::InputKind(e.into(), key.clone(), kind))?;
+            .map_err(|e| CollectionError::InputKind(e.into(), key.to_string(), kind))?;
         group.register(kind, contents, key, options.strict)?;
 
         Ok(group)
@@ -433,7 +433,7 @@ impl InputGroup {
                 // NOTE: Safe unwrap because we just checked the filename.
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
-                    CollectionError::InputKind(e.into(), key.clone(), InputKind::Workflow)
+                    CollectionError::InputKind(e.into(), key.to_string(), InputKind::Workflow)
                 })?;
                 group.register(InputKind::Workflow, contents, key, options.strict)?;
             }
@@ -445,7 +445,7 @@ impl InputGroup {
                 // NOTE: Safe unwrap because we just checked the filename.
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
-                    CollectionError::InputKind(e.into(), key.clone(), InputKind::Action)
+                    CollectionError::InputKind(e.into(), key.to_string(), InputKind::Action)
                 })?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
             }
