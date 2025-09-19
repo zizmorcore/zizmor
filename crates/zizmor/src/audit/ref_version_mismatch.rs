@@ -86,6 +86,9 @@ impl RefVersionMismatch {
             self.client
                 .commit_for_ref(&uses.owner, &uses.repo, version_from_comment)?
         else {
+            // TODO(ww): Does it make sense to flag this as well?
+            // This indicates a completely bogus version comment,
+            // rather than a mismatch.
             return Ok(findings);
         };
 
