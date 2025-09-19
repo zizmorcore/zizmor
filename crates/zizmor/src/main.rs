@@ -7,7 +7,7 @@ use std::{
 
 use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, anyhow};
 use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
@@ -25,7 +25,7 @@ use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use crate::{config::Config, github_api::Client};
+use crate::{config::Config, github_api::Client, registry::input::CollectionError};
 
 mod audit;
 mod config;
@@ -408,7 +408,7 @@ fn collect_inputs(
     inputs: Vec<String>,
     options: &CollectionOptions,
     gh_client: Option<&Client>,
-) -> Result<InputRegistry> {
+) -> Result<InputRegistry, CollectionError> {
     let mut registry = InputRegistry::new();
 
     for input in inputs.into_iter() {
@@ -416,7 +416,7 @@ fn collect_inputs(
     }
 
     if registry.len() == 0 {
-        return Err(anyhow!("no inputs collected"));
+        return Err(CollectionError::NoInputs);
     }
 
     Ok(registry)
@@ -431,7 +431,7 @@ fn completions<G: clap_complete::Generator>(generator: G, cmd: &mut clap::Comman
     );
 }
 
-fn run() -> Result<ExitCode> {
+fn run() -> anyhow::Result<ExitCode> {
     human_panic::setup_panic!();
 
     let mut app = App::parse();
@@ -565,7 +565,28 @@ fn run() -> Result<ExitCode> {
         global_config,
     };
 
-    let registry = collect_inputs(app.inputs, &collection_options, gh_client.as_ref())?;
+    let registry = match collect_inputs(app.inputs, &collection_options, gh_client.as_ref()) {
+        Ok(registry) => Ok(registry),
+        Err(err @ CollectionError::NoGitHubClient(_)) => {
+            let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
+
+            if app.offline {
+                group = group.elements([
+                    Level::HELP.message("remove --offline to audit remote repositories")
+                ]);
+            } else if gh_client.is_none() {
+                group = group.elements([
+                    Level::HELP.message("set a GitHub token with --gh-token or GH_TOKEN")
+                ]);
+            }
+
+            let renderer = Renderer::styled();
+            let report = renderer.render(&[group]);
+
+            Err(anyhow!(report))
+        }
+        Err(err) => Err(anyhow!(err)),
+    }?;
 
     let state = AuditState::new(app.no_online_audits, gh_client);
 

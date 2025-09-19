@@ -46,6 +46,9 @@ pub(crate) enum CollectionError {
     /// The input doesn't have a `.yml` or `.yaml` extension.
     #[error("invalid input: must have .yml or .yaml extension")]
     InvalidExtension,
+    /// No inputs were collected.
+    #[error("no inputs collected")]
+    NoInputs,
 }
 
 /// Errors that can occur while loading a single input file.
