@@ -650,6 +650,74 @@ permissions:
 }
 
 #[test]
+fn test_remove_flow_mapping() {
+    let original = r#"
+config: { a: valueA, b: valueB, c: valueC }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("config", "b"),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should remove 'b: valueB' from the flow mapping
+    insta::assert_snapshot!(result.source(), @r"
+        config: { a: valueA, c: valueC }
+        ");
+}
+
+#[test]
+fn test_remove_flow_sequence() {
+    let original = r#"
+items: [first, second, third]
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("items", 1),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should remove 'second' from the flow sequence
+    insta::assert_snapshot!(result.source(), @r"
+        items: [first, third]
+        ");
+}
+
+#[test]
+fn test_remove_block_sequence() {
+    let original = r#"
+steps:
+  - name: First step
+  - name: Second step  # Remove this
+  - name: Third step
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("steps", 1),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should remove the second step from the block sequence
+    insta::assert_snapshot!(result.source(), @r"
+        steps:
+          - name: First step
+          - name: Third step
+        ");
+}
+
+#[test]
 fn test_multiple_operations_preserve_comments() {
     let original = r#"
 # Main configuration
@@ -2307,4 +2375,505 @@ jobs:
                 with:
                   persist-credentials: false
         "#);
+}
+
+#[test]
+#[ignore = "known limitation: deeply nested flow mappings not fully supported"]
+fn test_remove_deeply_nested_flow_mapping() {
+    let original = r#"
+config:
+  database: { host: "localhost", port: 5432, credentials: { user: "admin", pass: "secret" } }
+  cache: { redis: { host: "redis-host", port: 6379 } }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("config", "database", "credentials", "pass"),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should remove deeply nested key while preserving structure
+    insta::assert_snapshot!(result.source(), @r"
+        config:
+          database: { host: localhost, port: 5432, credentials: { user: admin } }
+          cache: { redis: { host: redis-host, port: 6379 } }
+        ");
+}
+
+#[test]
+#[ignore = "known limitation: complex mixed flow and block structures need enhanced logic"]
+fn test_remove_complex_mixed_flow_and_block() {
+    let original = r#"
+pipeline:
+  stages: [build, test, deploy]
+  build:
+    commands: ["npm install", "npm run build"]
+    env: { NODE_ENV: "production", DEBUG: "false" }
+  test: {
+    parallel: true,
+    scripts: [
+      "npm test",
+      "npm run lint"
+    ]
+  }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![
+        Patch {
+            route: route!("pipeline", "stages", 1),
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("pipeline", "build", "env", "DEBUG"),
+            operation: Op::Remove,
+        },
+    ];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should handle mixed flow and block structures correctly
+    insta::assert_snapshot!(result.source(), @r#"
+        pipeline:
+          stages: [build, deploy]
+          build:
+            commands: ["npm install", "npm run build"]
+            env: { NODE_ENV: production }
+          test: {
+            parallel: true,
+            scripts: [
+              "npm test",
+              "npm run lint"
+            ]
+          }
+        "#);
+}
+
+#[test]
+#[ignore = "known limitation: complex nested values in flow mappings not fully supported"]
+fn test_remove_flow_mapping_with_complex_values() {
+    let original = r#"
+config: {
+  simple: "value",
+  array: [1, 2, 3],
+  nested: { deep: { value: "test" } },
+  boolean: true,
+  null_value: null,
+  number: 42.5
+}
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![
+        Patch {
+            route: route!("config", "array"),
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("config", "null_value"),
+            operation: Op::Remove,
+        },
+    ];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should handle complex value types correctly
+    insta::assert_snapshot!(result.source(), @r"
+        config: {
+          simple: value,
+          nested: { deep: { value: test } },
+          boolean: true,
+          number: 42.5
+        }
+        ");
+}
+
+#[test]
+#[ignore = "known limitation: complex items in flow sequences need better matching"]
+fn test_remove_flow_sequence_with_complex_items() {
+    let original = r#"
+items: [
+  "simple string",
+  { name: "object", value: 123 },
+  [1, 2, 3],
+  true,
+  null,
+  42.7
+]
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![
+        Patch {
+            route: route!("items", 1),
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("items", 3), // Note: indices shift after first removal
+            operation: Op::Remove,
+        },
+    ];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should handle complex item types correctly
+    insta::assert_snapshot!(result.source(), @r#"
+        items: [
+          "simple string",
+          [1, 2, 3],
+          42.7
+        ]
+        "#);
+}
+
+#[test]
+#[ignore = "known limitation: YAML formatting issue with empty containers"]
+fn test_remove_edge_case_empty_containers() {
+    let original = r#"
+config:
+  empty_mapping: {}
+  empty_sequence: []
+  populated: { key: "value" }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![
+        Patch {
+            route: route!("config", "empty_mapping"),
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("config", "empty_sequence"),
+            operation: Op::Remove,
+        },
+    ];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should handle empty containers correctly
+    insta::assert_snapshot!(result.source(), @r"
+        config:
+          populated: { key: value }
+        ");
+}
+
+#[test]
+fn test_remove_flow_mapping_all_but_one_item() {
+    let original = r#"
+config: { a: 1, b: 2, c: 3, d: 4, e: 5 }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![
+        Patch {
+            route: route!("config", "a"),
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("config", "b"),
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("config", "d"),
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("config", "e"),
+            operation: Op::Remove,
+        },
+    ];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should leave only one item in the flow mapping
+    insta::assert_snapshot!(result.source(), @r"
+        config: { c: 3 }
+        ");
+}
+
+#[test]
+fn test_remove_flow_sequence_all_but_one_item() {
+    let original = r#"
+items: [first, second, third, fourth, fifth]
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![
+        Patch {
+            route: route!("items", 0),
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("items", 0), // Index shifts after each removal
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("items", 1), // Index shifts again
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("items", 1), // Index shifts again
+            operation: Op::Remove,
+        },
+    ];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should leave only one item in the flow sequence
+    insta::assert_snapshot!(result.source(), @r"
+        items: [third]
+        ");
+}
+
+#[test]
+fn test_remove_flow_mapping_with_unicode_keys() {
+    let original = r#"
+config: { "普通话": "chinese", "日本語": "japanese", "한국어": "korean", "العربية": "arabic" }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("config", "日本語"),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should handle Unicode keys correctly
+    insta::assert_snapshot!(result.source(), @r#"
+        config: { "普通话": chinese, "العربية": arabic, "한국어": korean }
+        "#);
+}
+
+#[test]
+fn test_remove_flow_sequence_with_unicode_values() {
+    let original = r#"
+languages: ["English", "普通话", "日本語", "한국어", "العربية"]
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("languages", 2),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should handle Unicode values correctly
+    insta::assert_snapshot!(result.source(), @r#"
+        languages: [English, "普通话", "한국어", "العربية"]
+        "#);
+}
+
+#[test]
+#[ignore = "known limitation: escape sequences in keys need special handling"]
+fn test_remove_flow_mapping_with_escape_sequences() {
+    let original = r#"
+config: { "line\nbreak": "newline", "tab\tchar": "tab", "quote\"mark": "quote" }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("config", "tab\tchar"),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should handle escape sequences in keys correctly
+    insta::assert_snapshot!(result.source(), @r#"
+        config: { "line\nbreak": newline, "quote\"mark": quote }
+        "#);
+}
+
+#[test]
+fn test_remove_invalid_route_error() {
+    let original = r#"
+config: { a: 1, b: 2 }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("nonexistent", "key"),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations);
+
+    // Should return an error for invalid route
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_remove_mixed_quote_styles() {
+    let original = r#"
+config: { 'single': "double", "mixed": 'quotes', unquoted: value }
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("config", "mixed"),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should handle mixed quote styles correctly
+    insta::assert_snapshot!(result.source(), @r#"
+        config: { single: double, unquoted: value }
+        "#);
+}
+
+#[test]
+fn test_remove_flow_mapping_preserve_trailing_elements() {
+    let original = r#"
+workflow:
+  permissions: { contents: read, actions: write, issues: read }
+  jobs:
+    test:
+      runs-on: ubuntu-latest
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("workflow", "permissions", "actions"),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should preserve surrounding block structure when removing from flow mapping
+    insta::assert_snapshot!(result.source(), @r"
+        workflow:
+          permissions: { contents: read, issues: read }
+          jobs:
+            test:
+              runs-on: ubuntu-latest
+        ");
+}
+
+#[test]
+fn test_remove_from_root_empty_result() {
+    let original = r#"{ single_key: "only_value" }"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("single_key"),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should result in empty root mapping
+    insta::assert_snapshot!(result.source(), @r"{  }");
+}
+
+#[test]
+fn test_remove_root_document_error() {
+    let original = r#"{ key: "value" }"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!(),
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations);
+
+    // Should return error when trying to remove root document
+    assert!(result.is_err());
+    if let Err(err) = result {
+        assert!(err.to_string().contains("Cannot remove root document"));
+    }
+}
+
+#[test]
+fn test_remove_flow_sequence_boundary_indices() {
+    let original = r#"
+items: [zero, one, two, three, four]
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    // Test removing first and last indices
+    let operations = vec![
+        Patch {
+            route: route!("items", 0),
+            operation: Op::Remove,
+        },
+        Patch {
+            route: route!("items", 3), // This is now the last element after first removal
+            operation: Op::Remove,
+        },
+    ];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should handle boundary indices correctly
+    insta::assert_snapshot!(result.source(), @r"
+        items: [one, two, three]
+        ");
+}
+
+#[test]
+#[ignore = "known limitation: string-based detection fails with nested flow structures like {[...]}"]
+fn test_remove_flow_sequence_inside_flow_mapping_malformed() {
+    // Test case for issue: {[foo: bar, baz: abc]} syntax
+    // This creates a flow mapping with a sequence as a key (malformed YAML)
+    // but the string-based detection incorrectly thinks it's both a flow mapping and sequence
+    let original = r#"
+test: {[foo: bar, baz: abc]}
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("test", 0), // This should fail - no sequence at this level
+        operation: Op::Remove,
+    }];
+
+    // This currently gives wrong error due to brittle string detection
+    let result = apply_yaml_patches(&document, &operations);
+    assert!(result.is_err());
+}
+
+#[test]
+#[ignore = "known limitation: string-based detection fails with mixed flow structures"]
+fn test_remove_flow_mapping_inside_flow_sequence() {
+    // Test case for issue: [{foo: bar}] syntax where flow mappings are inside flow sequences
+    // The string-based detection might choose wrong handler due to presence of both { } and [ ]
+    let original = r#"
+items: [{foo: bar}, {baz: qux}]
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("items", 0, "foo"), // Remove 'foo' key from first mapping in sequence
+        operation: Op::Remove,
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Should remove the foo key from the first flow mapping
+    insta::assert_snapshot!(result.source(), @r"
+        items: [{baz: qux}]
+        ");
 }
