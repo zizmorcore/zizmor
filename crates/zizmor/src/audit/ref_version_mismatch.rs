@@ -42,7 +42,7 @@ static VERSION_COMMENT_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
 impl RefVersionMismatch {
     fn extract_version_from_comments<'doc>(
         &self,
-        comments: &'doc Vec<Comment<'doc>>,
+        comments: &'doc [Comment<'doc>],
     ) -> Option<&'doc str> {
         for comment in comments {
             for pattern in VERSION_COMMENT_PATTERNS.iter() {

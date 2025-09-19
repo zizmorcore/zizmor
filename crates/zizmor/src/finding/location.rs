@@ -325,8 +325,8 @@ impl Comment<'_> {
     }
 }
 
-impl AsRef<str> for Comment<'_> {
-    fn as_ref(&self) -> &str {
+impl<'a> AsRef<str> for Comment<'a> {
+    fn as_ref(&self) -> &'a str {
         self.0
     }
 }
