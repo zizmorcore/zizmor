@@ -7,7 +7,6 @@ use std::{
 
 use anyhow::Context;
 use camino::{Utf8Path, Utf8PathBuf};
-use owo_colors::OwoColorize as _;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -20,6 +19,35 @@ use crate::{
     tips,
 };
 
+/// Errors that can occur while collecting input groups.
+#[derive(Debug, Error)]
+pub(crate) enum CollectionError {
+    /// An error in the group's configuration.
+    #[error(transparent)]
+    Config(#[from] anyhow::Error),
+    /// The user provided the same input in the same group more than once.
+    #[error("can't register the same input more than once: {0}")]
+    DuplicateInput(InputKey),
+    /// The user wants us to fetch a remote repo, but we don't have a
+    /// functional GitHub client (maybe because we're offline, or
+    /// because no token was provided).
+    #[error("can't fetch remote repository: {0}")]
+    NoGitHubClient(RepoSlug),
+    /// An error occurred while processing ignore rules.
+    #[error("error while processing ignore rules")]
+    Ignore(#[from] ignore::Error),
+    /// A single input failed to load before we could figure out what kind it is.
+    #[error("failed to load input")]
+    InputLoad(#[from] InputError),
+    /// A single input file failed to load as a specific kind.
+    #[error("failed to load {1} as {2}")]
+    InputKind(#[source] InputError, Utf8PathBuf, InputKind),
+    /// The input doesn't have a `.yml` or `.yaml` extension.
+    #[error("invalid input: must have .yml or .yaml extension")]
+    InvalidExtension,
+}
+
+/// Errors that can occur while loading a single input file.
 #[derive(Error, Debug)]
 pub(crate) enum InputError {
     /// The input's syntax is invalid.
@@ -40,6 +68,9 @@ pub(crate) enum InputError {
     /// The input's name is missing.
     #[error("invalid input: no filename component")]
     MissingName,
+    /// The input couldn't be parsed as a repository slug.
+    #[error("invalid repository slug: {0}: {1}")]
+    RepoSlug(&'static str, String),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
@@ -73,7 +104,7 @@ pub(crate) struct RepoSlug {
 }
 
 impl std::str::FromStr for RepoSlug {
-    type Err = anyhow::Error;
+    type Err = InputError;
 
     /// NOTE: This is almost exactly the same as
     /// [`github_actions_models::common::RepositoryUses`],
@@ -92,14 +123,8 @@ impl std::str::FromStr for RepoSlug {
                 repo: components[1].into(),
                 git_ref: git_ref.map(|s| s.into()),
             }),
-            x if x < 2 => Err(anyhow::anyhow!(tips(
-                "invalid repo slug (too short)",
-                &["pass owner/repo or owner/repo@ref"]
-            ))),
-            _ => Err(anyhow::anyhow!(tips(
-                "invalid repo slug (too many parts)",
-                &["pass owner/repo or owner/repo@ref"]
-            ))),
+            x if x < 2 => Err(InputError::RepoSlug("missing parts", s.into())),
+            _ => Err(InputError::RepoSlug("too many parts", s.into())),
         }
     }
 }
@@ -283,12 +308,9 @@ impl InputGroup {
         }
     }
 
-    pub(crate) fn register_input(&mut self, input: AuditInput) -> anyhow::Result<()> {
+    pub(crate) fn register_input(&mut self, input: AuditInput) -> Result<(), CollectionError> {
         if self.inputs.contains_key(input.key()) {
-            return Err(anyhow::anyhow!(
-                "can't register {key} more than once",
-                key = input.key()
-            ));
+            return Err(CollectionError::DuplicateInput(input.key().clone()));
         }
 
         self.inputs.insert(input.key().clone(), input);
@@ -302,7 +324,7 @@ impl InputGroup {
         contents: String,
         key: InputKey,
         strict: bool,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), CollectionError> {
         tracing::debug!("registering {kind} input as with key {key}");
 
         let input: Result<AuditInput, InputError> = match kind {
@@ -320,13 +342,18 @@ impl InputGroup {
                 tracing::warn!("failed to validate input as {kind}: {e}");
                 Ok(())
             }
-            Err(e) => {
-                Err(anyhow::anyhow!(e)).with_context(|| format!("failed to load {key} as {kind}"))
-            }
+            Err(e) => Err(CollectionError::InputKind(
+                e,
+                key.presentation_path().into(),
+                kind,
+            )),
         }
     }
 
-    fn collect_from_file(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
+    fn collect_from_file(
+        path: &Utf8Path,
+        options: &CollectionOptions,
+    ) -> Result<Self, CollectionError> {
         let config = Config::discover(options, || Config::discover_local(path))
             .with_context(|| format!("failed to discover configuration for {path}"))?;
 
@@ -336,23 +363,29 @@ impl InputGroup {
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
             (Some("action"), Some("yml" | "yaml")) => (
-                InputKey::local(Group(path.as_str().into()), path, None)?,
+                InputKey::local(Group(path.as_str().into()), path, None)
+                    .map_err(|e| CollectionError::InputKind(e, path.into(), InputKind::Action))?,
                 InputKind::Action,
             ),
             (Some(_), Some("yml" | "yaml")) => (
-                InputKey::local(Group(path.as_str().into()), path, None)?,
+                InputKey::local(Group(path.as_str().into()), path, None)
+                    .map_err(|e| CollectionError::InputKind(e, path.into(), InputKind::Workflow))?,
                 InputKind::Workflow,
             ),
-            _ => return Err(anyhow::anyhow!("invalid input: {path}")),
+            _ => return Err(CollectionError::InvalidExtension),
         };
 
-        let contents = std::fs::read_to_string(path)?;
+        let contents = std::fs::read_to_string(path)
+            .map_err(|e| CollectionError::InputKind(e.into(), path.into(), kind))?;
         group.register(kind, contents, key, options.strict)?;
 
         Ok(group)
     }
 
-    fn collect_from_dir(path: &Utf8Path, options: &CollectionOptions) -> anyhow::Result<Self> {
+    fn collect_from_dir(
+        path: &Utf8Path,
+        options: &CollectionOptions,
+    ) -> Result<Self, CollectionError> {
         let config = Config::discover(options, || Config::discover_local(path))
             .with_context(|| format!("failed to discover configuration for directory {path}"))?;
 
@@ -383,7 +416,8 @@ impl InputGroup {
 
         for entry in walker.build() {
             let entry = entry?;
-            let entry = <&Utf8Path>::try_from(entry.path())?;
+            let entry = <&Utf8Path>::try_from(entry.path())
+                .map_err(|e| CollectionError::InputLoad(e.into_io_error().into()))?;
 
             if options.mode.workflows()
                 && entry.is_file()
@@ -392,8 +426,12 @@ impl InputGroup {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
-                let contents = std::fs::read_to_string(entry)?;
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).map_err(
+                    |e| CollectionError::InputKind(e, entry.into(), InputKind::Workflow),
+                )?;
+                let contents = std::fs::read_to_string(entry).map_err(|e| {
+                    CollectionError::InputKind(e.into(), entry.into(), InputKind::Workflow)
+                })?;
                 group.register(InputKind::Workflow, contents, key, options.strict)?;
             }
 
@@ -401,8 +439,11 @@ impl InputGroup {
                 && entry.is_file()
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))?;
-                let contents = std::fs::read_to_string(entry)?;
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path))
+                    .map_err(|e| CollectionError::InputKind(e, entry.into(), InputKind::Action))?;
+                let contents = std::fs::read_to_string(entry).map_err(|e| {
+                    CollectionError::InputKind(e.into(), entry.into(), InputKind::Action)
+                })?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
             }
         }
@@ -414,32 +455,35 @@ impl InputGroup {
         raw_slug: &str,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
-    ) -> anyhow::Result<Self> {
-        let Ok(slug) = RepoSlug::from_str(raw_slug) else {
-            return Err(anyhow::anyhow!(tips(
-                format!("invalid input: {raw_slug}"),
-                &[format!(
-                    "pass a single {file}, {directory}, or entire repo by {slug} slug",
-                    file = "file".green(),
-                    directory = "directory".green(),
-                    slug = "owner/repo".green()
-                )]
-            )));
-        };
+    ) -> Result<Self, CollectionError> {
+        let slug = RepoSlug::from_str(raw_slug)?;
 
-        let client = gh_client.ok_or_else(|| {
-            anyhow::anyhow!(tips(
-                format!(
-                    "can't retrieve repository: {raw_slug}",
-                    raw_slug = raw_slug.green()
-                ),
-                &[format!(
-                    "try removing {offline} or passing {gh_token}",
-                    offline = "--offline".yellow(),
-                    gh_token = "--gh-token <TOKEN>".yellow(),
-                )]
-            ))
-        })?;
+        // let Ok(slug) = RepoSlug::from_str(raw_slug) else {
+        //     return Err(anyhow::anyhow!(tips(
+        //         format!("invalid input: {raw_slug}"),
+        //         &[format!(
+        //             "pass a single {file}, {directory}, or entire repo by {slug} slug",
+        //             file = "file".green(),
+        //             directory = "directory".green(),
+        //             slug = "owner/repo".green()
+        //         )]
+        //     )));
+        // };
+
+        let client = gh_client.ok_or_else(|| CollectionError::NoGitHubClient(slug.clone()))?;
+        // let client = gh_client.ok_or_else(|| {
+        //     anyhow::anyhow!(tips(
+        //         format!(
+        //             "can't retrieve repository: {raw_slug}",
+        //             raw_slug = raw_slug.green()
+        //         ),
+        //         &[format!(
+        //             "try removing {offline} or passing {gh_token}",
+        //             offline = "--offline".yellow(),
+        //             gh_token = "--gh-token <TOKEN>".yellow(),
+        //         )]
+        //     ))
+        // })?;
 
         let config = Config::discover(options, || Config::discover_remote(client, &slug))
             .with_context(|| format!("failed to discover configuration for {slug}"))?;
@@ -487,7 +531,7 @@ impl InputGroup {
         request: &str,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, CollectionError> {
         let path = Utf8Path::new(request);
         if path.is_file() {
             Self::collect_from_file(path, options)
