@@ -48,4 +48,4 @@ warning[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → Medium
 
-3 findings: 0 unknown, 0 informational, 0 low, 3 medium, 0 high
+3 findings: 0 informational, 0 low, 3 medium, 0 high

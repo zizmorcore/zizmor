@@ -245,7 +245,6 @@ impl From<Severity> for lsp_types::DiagnosticSeverity {
     fn from(value: Severity) -> Self {
         // TODO: Does this mapping make sense?
         match value {
-            Severity::Unknown => lsp_types::DiagnosticSeverity::HINT,
             Severity::Informational => lsp_types::DiagnosticSeverity::INFORMATION,
             Severity::Low => lsp_types::DiagnosticSeverity::WARNING,
             Severity::Medium => lsp_types::DiagnosticSeverity::WARNING,

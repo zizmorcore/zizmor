@@ -264,7 +264,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |         |
    |         this step
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → Low
 
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
   --> .github/workflows/cache-poisoning.yml:36:9
@@ -998,4 +998,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-162 findings (76 suppressed): 0 unknown, 7 informational, 0 low, 29 medium, 50 high
+162 findings (76 suppressed): 7 informational, 0 low, 29 medium, 50 high

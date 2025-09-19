@@ -13,4 +13,4 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |
    = note: audit confidence → High
 
-2 findings (1 ignored): 0 unknown, 1 informational, 0 low, 0 medium, 0 high
+2 findings (1 ignored): 1 informational, 0 low, 0 medium, 0 high

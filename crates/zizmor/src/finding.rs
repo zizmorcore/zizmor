@@ -48,45 +48,15 @@ pub(crate) enum Persona {
     Regular,
 }
 
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    Hash,
-    Ord,
-    PartialOrd,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    ValueEnum,
-)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Confidence {
-    #[default]
-    Unknown,
     Low,
     Medium,
     High,
 }
 
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    Hash,
-    Ord,
-    PartialOrd,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    ValueEnum,
-)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Severity {
-    #[default]
-    Unknown,
     Informational,
     Low,
     Medium,
@@ -215,8 +185,8 @@ impl<'doc> FindingBuilder<'doc> {
             ident,
             desc,
             url,
-            severity: Default::default(),
-            confidence: Default::default(),
+            severity: Severity::Low,
+            confidence: Confidence::Low,
             persona: Default::default(),
             raw_locations: vec![],
             locations: vec![],

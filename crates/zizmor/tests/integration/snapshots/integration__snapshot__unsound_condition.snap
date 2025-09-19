@@ -102,4 +102,4 @@ error[unsound-condition]: unsound conditional expression
    |
    = note: audit confidence → High
 
-11 findings (7 fixable): 0 unknown, 0 informational, 4 low, 0 medium, 7 high
+11 findings (7 fixable): 0 informational, 4 low, 0 medium, 7 high

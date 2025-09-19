@@ -15,6 +15,25 @@ of `zizmor`.
   some cache usage variants in newer versions of `actions/setup-node`
   (#1152)
 
+### Enhancements 🌱
+
+* zizmor no longer uses the "Unknown" severity or confidence levels
+  for any findings. All findings previously categorized at these levels
+  are now given a more meaningful level (#1164)
+* The [use-trusted-publishing] audit now detects various Trusted Publishing
+  patterns for the npm ecosystem (#1161)
+
+    Many thanks to @KristianGrafana for implementing this improvement!
+
+### Deprecations ⚠️
+
+* The `unknown` values for `--min-severity` and `--min-confidence`
+  are now deprecated. These values were already no-ops (and have
+  been since introduction), and will be removed in a future release
+  (#1164)
+
+    Until removal, using these values will emit a warning.
+
 ## 1.13.0
 
 ### New Features 🌈
