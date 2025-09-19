@@ -17,13 +17,19 @@ of `zizmor`.
 
 ### Enhancements 🌱
 
-* zizmor no longer uses the "Unknown" severity or confidence levels
+* `zizmor` no longer uses the "Unknown" severity or confidence levels
   for any findings. All findings previously categorized at these levels
   are now given a more meaningful level (#1164)
+
 * The [use-trusted-publishing] audit now detects various Trusted Publishing
   patterns for the npm ecosystem (#1161)
 
     Many thanks to @KristianGrafana for implementing this improvement!
+
+* The [unsound-condition] audit now supports auto-fixes for many
+  findings (#1089)
+
+    Many thanks to @mostafa for implementing this improvement!
 
 ### Deprecations ⚠️
 

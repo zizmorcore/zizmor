@@ -82,3 +82,13 @@ jobs:
         # NOT OK: evaluates to true because of stringification
         if: lol ${{ false }}
         run: echo not ok
+
+      - name: 14-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: "${{ false }} "
+        run: echo not ok
+
+      - name: 15-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: " ${{ false }}"
+        run: echo not ok
