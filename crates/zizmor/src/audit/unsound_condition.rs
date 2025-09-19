@@ -93,7 +93,9 @@ impl UnsoundCondition {
 
         // Create a patch that replaces the scalar indicator
         Some(Fix {
-            title: format!("replace unsound block scalar style '{old_indicator}' with sound style '{new_indicator}'").into(),
+            title: format!(
+                "replace unsound block scalar style '{old_indicator}' with sound style '{new_indicator}'"
+            ),
             key: loc.key,
             disposition: FixDisposition::Safe,
             patches: vec![Patch {
