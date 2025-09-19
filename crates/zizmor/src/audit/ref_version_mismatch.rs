@@ -94,26 +94,29 @@ impl RefVersionMismatch {
                 uses_location.concrete.location.offset_span.end,
                 version_from_comment,
             );
+
             let mut builder = Self::finding()
-                .severity(Severity::Low)
+                .severity(Severity::Medium)
                 .confidence(Confidence::High)
                 .add_raw_location(Location::new(
-                    uses_location
-                        .symbolic
-                        .clone()
-                        .primary()
-                        .annotated(format!("points to commit {commit_for_ref:?}")),
+                    // NOTE(ww): We trim the commit SHA to 12 characters
+                    // for display purposes; 12 is a conservative length
+                    // that avoids collisions in Linux-sized repositories.
+                    uses_location.symbolic.clone().primary().annotated(format!(
+                        "points to commit {short_commit}",
+                        short_commit = &commit_sha[..12]
+                    )),
                     Feature::from_subfeature(&subfeature, step),
                 ));
+
             if let Some(suggestion) =
                 self.client
                     .longest_tag_for_commit(&uses.owner, &uses.repo, commit_sha)?
             {
-                builder = builder.add_location(
-                    uses_location
-                        .symbolic
-                        .annotated(&format!("is pointed to by tag {:?}", suggestion.name)),
-                );
+                builder = builder.add_location(uses_location.symbolic.annotated(&format!(
+                    "is pointed to by tag {tag}",
+                    tag = suggestion.name
+                )));
             }
             findings.push(builder.build(step)?);
         }
