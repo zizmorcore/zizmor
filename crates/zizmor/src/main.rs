@@ -25,7 +25,11 @@ use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use crate::{config::Config, github_api::Client, registry::input::CollectionError};
+use crate::{
+    config::Config,
+    github_api::Client,
+    registry::input::{CollectionError, InputError},
+};
 
 mod audit;
 mod config;
@@ -567,6 +571,23 @@ fn run() -> anyhow::Result<ExitCode> {
 
     let registry = match collect_inputs(app.inputs, &collection_options, gh_client.as_ref()) {
         Ok(registry) => Ok(registry),
+        Err(err @ CollectionError::InputLoad(InputError::RepoSlug(..))) => {
+            let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                .element(Level::HELP.message(format!(
+                    "repository slugs should be in {slug} format",
+                    slug = "user/repo[@ref]".green()
+                )))
+                .element(Level::HELP.message(format!(
+                    "examples: {ex1} or {ex2}",
+                    ex1 = "example/example".green(),
+                    ex2 = "example/example@v1.2.3".green()
+                )));
+
+            let renderer = Renderer::styled();
+            let report = renderer.render(&[group]);
+
+            Err(anyhow!(err).context(report))
+        }
         Err(err @ CollectionError::NoGitHubClient(_)) => {
             let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
 
@@ -583,7 +604,7 @@ fn run() -> anyhow::Result<ExitCode> {
             let renderer = Renderer::styled();
             let report = renderer.render(&[group]);
 
-            Err(anyhow!(report))
+            Err(anyhow!(err).context(report))
         }
         Err(err) => Err(anyhow!(err)),
     }?;

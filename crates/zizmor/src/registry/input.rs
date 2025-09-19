@@ -20,7 +20,7 @@ use crate::{
     tips,
 };
 
-/// Errors that can occur while collecting input groups.
+/// Errors that can occur while collecting inputs.
 #[derive(Debug, Error)]
 pub(crate) enum CollectionError {
     /// An error in the group's configuration.
@@ -38,7 +38,7 @@ pub(crate) enum CollectionError {
     #[error("error while processing ignore rules")]
     Ignore(#[from] ignore::Error),
     /// A single input failed to load before we could figure out what kind it is.
-    #[error("failed to load input")]
+    #[error("invalid input")]
     InputLoad(#[from] InputError),
     /// A single input file failed to load as a specific kind.
     #[error("failed to load {1} as {2}")]
@@ -73,8 +73,8 @@ pub(crate) enum InputError {
     #[error("invalid input: no filename component")]
     MissingName,
     /// The input couldn't be parsed as a repository slug.
-    #[error("invalid repository slug: {0}: {1}")]
-    RepoSlug(&'static str, String),
+    #[error("invalid repository slug: {0}")]
+    RepoSlug(String),
     /// The input path isn't valid UTF-8.
     #[error("invalid path (not UTF-8): {1:?}")]
     Path(#[source] camino::FromPathError, PathBuf),
@@ -122,7 +122,7 @@ impl std::str::FromStr for RepoSlug {
             None => (s, None),
         };
 
-        let components = path.splitn(2, '/').collect::<Vec<_>>();
+        let components = path.split('/').collect::<Vec<_>>();
 
         match components.len() {
             2 => Ok(Self {
@@ -130,8 +130,8 @@ impl std::str::FromStr for RepoSlug {
                 repo: components[1].into(),
                 git_ref: git_ref.map(|s| s.into()),
             }),
-            x if x < 2 => Err(InputError::RepoSlug("missing parts", s.into())),
-            _ => Err(InputError::RepoSlug("too many parts", s.into())),
+            x if x < 2 => Err(InputError::RepoSlug(s.into())),
+            _ => Err(InputError::RepoSlug(s.into())),
         }
     }
 }
