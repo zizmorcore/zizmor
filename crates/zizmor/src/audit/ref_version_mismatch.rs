@@ -3,12 +3,14 @@ use std::sync::LazyLock;
 use anyhow::{Result, anyhow};
 use github_actions_models::common::Uses;
 use regex::Regex;
+use subfeature::Subfeature;
 
 use crate::{
     audit::{Audit, AuditLoadError, AuditState, audit_meta},
+    config::Config,
     finding::{
         Confidence, Finding, Severity,
-        location::{Comment, Feature, Location, Subfeature},
+        location::{Comment, Feature, Location},
     },
     github_api,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt, workflow::Step},
@@ -71,7 +73,7 @@ impl RefVersionMismatch {
 
         let step_location = step.location();
         let uses_location = step_location
-            .with_keys(&["uses".into()])
+            .with_keys(["uses".into()])
             .concretize(step.document())?;
 
         let Some(version_from_comment) =
@@ -121,29 +123,32 @@ impl RefVersionMismatch {
 }
 
 impl Audit for RefVersionMismatch {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError> {
         if state.no_online_audits {
             return Err(AuditLoadError::Skip(anyhow!(
                 "offline audits only requested"
             )));
         }
 
-        let Some(client) = state.github_client() else {
-            return Err(AuditLoadError::Skip(anyhow!(
-                "can't run without a GitHub API token"
-            )));
-        };
-
-        Ok(Self { client })
+        state
+            .gh_client
+            .clone()
+            .ok_or_else(|| AuditLoadError::Skip(anyhow!("can't run without a GitHub API token")))
+            .map(|client| Self { client })
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.audit_step_common(step)
     }
 
     fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
+        _config: &Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.audit_step_common(step)
     }

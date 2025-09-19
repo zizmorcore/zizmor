@@ -1,5 +1,6 @@
 # 🌈 zizmor
 
+[![zizmor](https://img.shields.io/badge/%F0%9F%8C%88-zizmor-white?labelColor=white)](https://zizmor.sh/)
 [![CI](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml/badge.svg)](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/zizmor)](https://crates.io/crates/zizmor)
 [![Packaging status](https://repology.org/badge/tiny-repos/zizmor.svg)](https://repology.org/project/zizmor/versions)
@@ -19,7 +20,7 @@ including:
 
 [and much more]: https://docs.zizmor.sh/audits/
 
-![zizmor demo](https://raw.githubusercontent.com/zizmorcore/zizmor/main/docs/assets/zizmor-demo.gif)
+![zizmor demo](https://zizmor.sh/assets/zizmor-demo.gif)
 
 See [`zizmor`'s documentation](https://docs.zizmor.sh/)
 for [installation steps], as well as a [quickstart] and
@@ -57,13 +58,6 @@ See [our contributing guide!](./CONTRIBUTING.md)
 <tbody>
 <tr>
 <td align="center" valign="top" width="15%">
-<a href="https://astral.sh/">
-<img src="https://avatars.githubusercontent.com/u/115962839?s=100&v=4" width="100px">
-<br>
-Astral
-</a>
-</td>
-<td align="center" valign="top" width="15%">
 <a href="https://grafana.com/">
 <img src="https://avatars.githubusercontent.com/u/7195757?s=100&v=4" width="100px">
 <br>
@@ -75,6 +69,13 @@ Grafana Labs
 <img src="https://avatars.githubusercontent.com/u/2314423?s=100&v=4" width="100px">
 <br>
 Trail of Bits
+</a>
+</td>
+<td align="center" valign="top" width="15%">
+<a href="https://www.shipfox.io">
+<img src="https://avatars.githubusercontent.com/u/163036520?s=100&v=4" width="100px">
+<br>
+Shipfox
 </a>
 </td>
 </tr>
@@ -90,10 +91,22 @@ Trail of Bits
 Tenki Cloud
 </a>
 </td>
+<td align="center" valign="top">
+<a href="https://github.com/ariccio">
+Alexander Riccio
+</a>
+</td>
 </tr>
 </tbody>
 </table>
 <!-- @@end-sponsors@@ -->
+
+Want to see your name or logo above? Consider becoming a sponsor
+through one of the following:
+
+- [GitHub Sponsors](https://github.com/sponsors/woodruffw) (preferred)
+- [thanks.dev](https://thanks.dev/u/gh/woodruffw)
+- [ko-fi](https://ko-fi.com/woodruffw)
 
 ## Star History
 

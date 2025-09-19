@@ -271,6 +271,7 @@ fork.
 Other resources:
 
 * [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]
+* [Keeping your GitHub Actions and workflows secure Part 4: New vulnerability patterns and mitigation strategies]
 * [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]
 
 ### Remediation
@@ -312,11 +313,17 @@ Some general pointers:
   request, therefore restricting the target branches reduces the risk of
   a vulnerable `pull_request_target` in a stale or abandoned branch.
 
-* If you have to use a dangerous trigger, consider adding a `github.repository == ...`
-  check to only run for your repository but not in forks of your repository
-  (in case the user has enabled Actions there). This avoids exposing forks
-  to danger in case you fix a vulnerability in the workflow but the fork still
-  contains an old vulnerable version.
+* If you really have to use `pull_request_target`, consider adding a
+  `github.repository == ...` check to only run for your repository but not in
+  forks of your repository (in case the user has enabled Actions there). This
+  avoids exposing forks to danger in case you fix a vulnerability in the
+  workflow but the fork still contains an old vulnerable version.
+
+    !!! important
+
+        Checking `github.repository == ...` is **not** effective on
+        `workflow_run`, since a `workflow_run` **always** runs in the context of
+        the target repository.
 
 [reusable workflow]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 
@@ -1026,6 +1033,16 @@ used with attacker-controllable expression contexts, such as
 `github.event.issue.title` (which the attacker can fully control by supplying
 a new issue title).
 
+!!! tip
+
+    When used with a "pedantic" or "auditor"
+    [persona](./usage.md#using-personas), this audit will flag *all* template
+    expansions in code contexts, even ones that are likely safe.
+
+    This is because `zizmor` considers all template expansions in code contexts
+    to be code smells, and attempting to selectively permit them is more
+    error-prone than forbidding them in a blanket fashion.
+
 Other resources:
 
 * [Keeping your GitHub Actions and workflows secure Part 2: Untrusted input]
@@ -1084,6 +1101,51 @@ shell quoting/expansion rules.
           env:
             ISSUE_TITLE: ${{ github.event.issue.title }}
         ```
+
+## `undocumented-permissions`
+
+| Type     | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|------------------|---------------|----------------|--------------------|--------------|
+| Workflow | [undocumented-permissions.yml] | v1.13.0        | ✅             | ❌                 | ❌            |
+
+[undocumented-permissions.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/undocumented-permissions.yml
+
+Detects explicit permissions blocks that lack explanatory comments.
+
+This audit recommends adding comments to document the purpose of each permission
+in explicit permissions blocks. Well-documented permissions help prevent
+over-scoping and make workflows more maintainable by explaining why specific
+permissions are needed.
+
+The audit does not flag `contents: read`, as this is a common, self-explanatory
+permission.
+
+!!! note
+
+    This is a `--pedantic` only audit, as it focuses on code quality and
+    maintainability rather than security vulnerabilities.
+
+### Remediation
+
+Add inline comments explaining why each permission is needed:
+
+=== "Before :warning:"
+
+    ```yaml title="undocumented-permissions.yml" hl_lines="2-4"
+    permissions:
+      contents: write
+      packages: read
+      issues: write
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="undocumented-permissions.yml" hl_lines="2-4"
+    permissions:
+      contents: write  # Needed to create releases and update files
+      packages: read   # Needed to read existing package metadata
+      issues: write    # Needed to create and update issue comments
+    ```
 
 ## `unpinned-images`
 
@@ -1209,8 +1271,7 @@ actions should be pinned by SHA reference.
 By default, this audit applies the following policy:
 
 * Official GitHub actions namespaces can be pinned by branch or tag.
-  In other words, `actions/checkout@v4` is acceptable, but `actions/checkout`
-  is not.
+  In other words, `actions/checkout@v4` is acceptable.
 * All other actions must be pinned by SHA reference.
 
 This audit can be configured with a custom set of rules, e.g. to
@@ -1255,6 +1316,12 @@ The valid policies are:
   pinned either symbolic or SHA reference.
 * `any`: no pinning is required for any `#!yaml uses:` clauses that match the associated
   pattern.
+
+    !!! tip
+
+        For repository `#!yaml uses` clauses like `#!yaml uses: actions/checkout@v4`
+        this is equivalent to `ref-pin`, as GitHub Actions does not permit
+        completely unpinned repository actions.
 
 If a `#!yaml uses:` clauses matches multiple rules, the most specific one is used
 regardless of definition order.
@@ -1312,7 +1379,7 @@ regardless of definition order.
     - :simple-go: @stacklok/frizbee: supports hash-pinning (but not updating)
       workflow definitions.
 
-        See also @stacklok/frizbee#184 for current usage caveats.
+        See also stacklok/frizbee#184 for current usage caveats.
 
 For repository actions (like @actions/checkout): add a branch, tag, or SHA
 reference.
@@ -1332,14 +1399,14 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
           unpinned-uses:
               runs-on: ubuntu-latest
               steps:
-              - uses: actions/checkout
-                with:
-                persist-credentials: false
+                - uses: pypa/gh-action-pypi-publish@v1.12.4
+                  with:
+                    persist-credentials: false
 
-              - uses: docker://ubuntu
-                with:
-                entrypoint: /bin/echo
-                args: hello!
+                - uses: docker://ubuntu
+                  with:
+                    entrypoint: /bin/echo
+                    args: hello!
         ```
 
     === "After :white_check_mark:"
@@ -1352,14 +1419,14 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
           unpinned-uses:
               runs-on: ubuntu-latest
               steps:
-              - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-                with:
-                persist-credentials: false
+                - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc  # v1.12.4
+                  with:
+                    persist-credentials: false
 
-              - uses: docker://ubuntu:24.04
-                with:
-                entrypoint: /bin/echo
-                args: hello!
+                - uses: docker://ubuntu:24.04
+                  with:
+                    entrypoint: /bin/echo
+                    args: hello!
         ```
 
 ## `unredacted-secrets`
@@ -1431,6 +1498,98 @@ individual fields as separate secrets.
                   PASSWORD: ${{ secrets.MY_SECRET_PASSWORD }}
         ```
 
+
+## `unsound-condition`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [unsound-condition.yml]   | v1.12.0      | ✅             | ✅                 | ❌  |
+
+[unsound-condition.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unsound-condition.yml
+
+Detects conditions that are inadvertently always true despite containing
+an expression that should control the evaluation.
+
+A common source of these is an unintentional interaction
+between multi-line YAML strings and fenced GitHub Actions expressions.
+For example, the following condition always evaluates to `true`, despite
+appearing to evaluate to `false`:
+
+```yaml
+if: |
+  ${{ false }}
+```
+
+This happens because YAML's "block" scalars include a trailing newline
+by default, which is left *outside* of the GitHub Actions expression.
+This results in an expansion like `'false\n'` instead of `'false'`,
+which GitHub Actions interprets as a truthy value.
+
+### Remediation
+
+There are two ways to remediate this:
+
+* Avoid fenced expressions in `#!yaml if:` conditions. Instead, write
+  the expression as a "bare" expression.
+
+    This will still include the trailing newline, but it will be *inside*
+    of the expression as seen from the GitHub Actions expression parser.
+
+    !!! example
+
+        === "Before :warning:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will incorrectly always run"
+                    if: |
+                      ${{ false }}
+            ```
+
+        === "After :white_check_mark:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will correctly not run"
+                    if: |
+                      false
+            ```
+
+* Use fenced expressions, but use a YAML block scalar that does not
+  include a trailing newline. Either `|-` or `>-` is appropriate for
+  this purpose.
+
+    !!! example
+
+        === "Before :warning:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will incorrectly always run"
+                    if: |
+                      ${{ false }}
+            ```
+
+        === "After :white_check_mark:"
+
+            ```yaml title="unsound-condition.yml" hl_lines="6-7"
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo "This will correctly not run"
+                    if: |-
+                      ${{ false }}
+            ```
 
 ## `unsound-contains`
 
@@ -1537,8 +1696,6 @@ and possible.
 Other resources:
 
 * [Trusted Publishers for All Package Repositories]
-* [Publishing to PyPI with a Trusted Publisher]
-* [Trusted Publishing - RubyGems Guides]
 * [Trusted publishing: a new benchmark for packaging security]
 
 ### Remediation
@@ -1546,17 +1703,59 @@ Other resources:
 In general, enabling Trusted Publishing requires a one-time change to your
 package's configuration on its associated index (e.g. PyPI or RubyGems).
 
-Once your Trusted Publisher is registered, see @pypa/gh-action-pypi-publish
-or @rubygems/release-gem for canonical examples of using it.
+Each ecosystem has its own resources for using a Trusted Publisher
+once it's configured:
+
+<div class="grid cards" markdown>
+-   :simple-pypi:{.lg .middle} Python (PyPI)
+
+    ---
+
+    Usage: @pypa/gh-action-pypi-publish
+
+    See: [Publishing to PyPI with a Trusted Publisher]
+
+-   :simple-rubygems:{.lg .middle} Ruby (RubyGems)
+
+    ---
+
+    Usage: @rubygems/release-gem
+
+    See: [Trusted Publishing - RubyGems Guides]
+
+-   :material-language-rust:{.lg .middle} Rust (crates.io)
+
+    ---
+
+    Usage: @rust-lang/crates-io-auth-action.
+
+    See: [Trusted Publishing - crates.io]
+
+-   :simple-dart:{.lg .middle} Dart (pub.dev)
+
+    ---
+
+    See: [Automated publishing of packages to pub.dev]
+
+-   :material-npm:{.lg .middle} JavaScript (npm)
+
+    ---
+
+    See: [Trusted publishing for npm packages]
+</div>
 
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+[Keeping your GitHub Actions and workflows secure Part 4: New vulnerability patterns and mitigation strategies]: https://securitylab.github.com/resources/github-actions-new-patterns-and-mitigations/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
 [Self-hosted runner security]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners#self-hosted-runner-security
 [Keeping your GitHub Actions and workflows secure Part 2: Untrusted input]: https://securitylab.github.com/resources/github-actions-untrusted-input/
 [Publishing to PyPI with a Trusted Publisher]: https://docs.pypi.org/trusted-publishers/
 [Trusted Publishing - RubyGems Guides]: https://guides.rubygems.org/trusted-publishing/
+[Trusted Publishing - crates.io]: https://crates.io/docs/trusted-publishing
+[Automated publishing of packages to pub.dev]: https://dart.dev/tools/pub/automated-publishing
+[Trusted publishing for npm packages]: https://docs.npmjs.com/trusted-publishers
 [Trusted publishing: a new benchmark for packaging security]: https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/
 [Trusted Publishers for All Package Repositories]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
 [were deprecated by GitHub]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/

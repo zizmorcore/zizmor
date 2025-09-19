@@ -1,6 +1,6 @@
 # Quickstart
 
-First, run `zizmor -h` to make sure your installation succeeded.
+First, run `zizmor -h` to make sure your [installation](./installation.md) succeeded.
 
 You should see something like this:
 

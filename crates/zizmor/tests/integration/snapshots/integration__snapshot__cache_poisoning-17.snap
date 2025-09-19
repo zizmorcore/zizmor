@@ -1,0 +1,39 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"cache-poisoning/issue-1152-repro.yml\")).run()?"
+---
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:16:9
+   |
+ 5 | on: release
+   | ----------- generally used when publishing artifacts generated at runtime
+...
+16 |         uses: actions/setup-node@v5
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+   |
+   = note: audit confidence → Low
+
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:21:9
+   |
+ 5 |   on: release
+   |   ----------- generally used when publishing artifacts generated at runtime
+...
+21 | /         with:
+22 | |           package-manager-cache: true
+   | |_____________________________________^ opt-in for caching here
+   |
+   = note: audit confidence → Low
+
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:42:9
+   |
+ 5 | on: release
+   | ----------- generally used when publishing artifacts generated at runtime
+...
+42 |       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+   |
+   = note: audit confidence → Low
+
+3 findings: 0 informational, 0 low, 0 medium, 3 high

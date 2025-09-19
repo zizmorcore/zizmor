@@ -32,7 +32,7 @@
         "using": {
           "$comment": "https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runsusing",
           "description": "The application used to execute the code specified in `main`.",
-          "enum": ["node12", "node16", "node20"]
+          "enum": ["node12", "node16", "node20", "node24"]
         },
         "main": {
           "$comment": "https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runsmain",

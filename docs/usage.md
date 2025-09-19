@@ -180,13 +180,11 @@ you may need to provision permissions for the token:
 In addition to these permissions, some integrations of `zizmor`
 (like GitHub Advanced Security) may require additional permissions
 in the context of GitHub Actions. See
-[Use in GitHub Actions](#use-in-github-actions) for more details.
+[Integration - GitHub Actions](./integrations.md#github-actions) for more details.
 
 ## Output formats
 
 `zizmor` always produces output on `stdout`.
-
-See [Integration](#integration) for suggestions on when to use each format.
 
 ### Cargo-style output ("plain")
 
@@ -212,6 +210,36 @@ disable output colorization by setting `NO_COLOR=1` in their environment.
 
 This format can also be explicitly selected with `--format=plain`.
 
+#### Color customization
+
+When invoked from a terminal, `zizmor` will attempt to enrich its output
+with ANSI colors.
+
+!!! note
+
+    `--color` is available in `v1.5.0` and later.
+
+Some users may prefer to explicitly enable or disable this behavior. For
+example, GitHub Actions is not a terminal but it does support ANSI colors,
+so enabling colors in GitHub Actions can make logs more readable.
+
+To explicitly control `zizmor`'s colorization behavior, use the
+`--color` option:
+
+```bash
+# force colorization
+zizmor --color=always ...
+
+# force no colorization
+zizmor --color=never ...
+```
+
+`zizmor` also respects various environment variables for colorization:
+
+* [`NO_COLOR`](https://no-color.org/): if set to any value, disables colorization
+* [`FORCE_COLOR`](https://force-color.org/): if set to any value, enables colorization
+* [`CLICOLOR_FORCE`](https://bixense.com/clicolors/): if set to any value, enables colorization
+
 ### JSON
 
 !!! important
@@ -236,6 +264,12 @@ This format can also be explicitly selected with `--format=plain`.
 !!! important
 
     `--format=json-v1` is available in `v1.6.0` and later.
+
+!!! important
+
+    `--format=json-v1` uses 0-based line numbering, where line numbers are
+    denoted by the key `row`. This is as opposed to `--format=plain` and `--format=SARIF`,
+    where line numbers are 1-based.
 
 With `--format=json`, `zizmor` will produce a flat array of findings in
 JSON format:
@@ -308,13 +342,12 @@ zizmor --format=json . | jq .[0]
     }
     ```
 
-
 ### SARIF
 
-`zizmor` supports [SARIF] via `--format=sarif`.
+`zizmor` supports SARIF via `--format=sarif`.
 SARIF is a JSON-based standard for representing static analysis results.
 
-See [Use in GitHub Actions](#use-in-github-actions) for
+See [Integration - GitHub Actions](./integrations.md#github-actions) for
 information on using `zizmor` with GitHub's Advanced Security
 functionality via GitHub Actions.
 
@@ -328,6 +361,8 @@ functionality via GitHub Actions.
 
 See [Workflow Commands for GitHub Actions] for additional information about
 annotations.
+
+[Workflow Commands for GitHub Actions]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands
 
 !!! warning
 
@@ -346,8 +381,14 @@ annotations.
 
 !!! note
 
-    Exit codes 10 and above are **not used** if `--no-exit-codes` or
+    Exit codes 11 and above are **not used** if `--no-exit-codes` or
     `--format sarif` is passed.
+
+!!! warning "Removal"
+
+    Versions of zizmor prior to `v1.14.0` used exit code `10` to indicate
+    the highest finding having "unknown" severity. This exit code is
+    no longer used as of `v1.14.0`.
 
 `zizmor` uses various exit codes to summarize the results of a run:
 
@@ -355,7 +396,6 @@ annotations.
 | ---- | ------- |
 | 0    | Successful audit; no findings to report (or SARIF mode enabled). |
 | 1    | Error during audit; consult output. |
-| 10   | One or more findings found; highest finding is "unknown" level. |
 | 11   | One or more findings found; highest finding is "informational" level. |
 | 12   | One or more findings found; highest finding is "low" level. |
 | 13   | One or more findings found; highest finding is "medium" level. |
@@ -433,7 +473,7 @@ sensitive `zizmor`'s analyses are:
     For example, with the default persona:
 
     ```console
-    $ zizmor tests/test-data/self-hosted.yml
+    $ zizmor self-hosted.yml
     🌈 completed self-hosted.yml
     No findings to report. Good job! (1 suppressed)
     ```
@@ -441,17 +481,95 @@ sensitive `zizmor`'s analyses are:
     and with `--persona=auditor`:
 
     ```console
-    $ zizmor --persona=auditor tests/test-data/self-hosted.yml
-    note[self-hosted-runner]: runs on a self-hosted runner
-      --> tests/test-data/self-hosted.yml:8:5
-        |
-      8 |     runs-on: [self-hosted, my-ubuntu-box]
-        |     ------------------------------------- note: self-hosted runner used here
-        |
-        = note: audit confidence → High
+    $ zizmor --persona=auditor self-hosted.yml
+    warning[self-hosted-runner]: runs on a self-hosted runner
+      --> self-hosted.yml:13:5
+       |
+    13 |     runs-on: [self-hosted, my-ubuntu-box]
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ self-hosted runner used here
+       |
+       = note: audit confidence → High
 
-      1 finding: 1 unknown, 0 informational, 0 low, 0 medium, 0 high
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
     ```
+
+## Auto-fixing results *&#8203;*{.chip .chip-experimental} { #auto-fixing-results }
+
+!!! warning
+
+    `zizmor`'s auto-fix mode is currently **experimental** and subject to
+    breaking changes.
+
+    You **will** encounter bugs while experimenting with it;
+    please [file them]!
+
+    [file them]: https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml
+
+!!! tip
+
+    `--fix=[MODE]` is available in `v1.10.0` and later.
+
+Starting with `v1.10.0`, `zizmor` can automatically fix a subset of its findings.
+
+Auto-fixable findings are marked with an additional `note:` annotation
+beneath their body, e.g.:
+
+```console hl_lines="10"
+error[template-injection]: code injection via template expansion
+  --> example.yml:18:36
+   |
+17 |       - run: |
+   |         ^^^ this run block
+18 |           echo "doing a thing: ${{ inputs.test }}"
+   |                                    ^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+```
+
+To attempt auto-fixes for *safe* fixes, you can use the `--fix` or
+`--fix=safe` option:
+
+```bash
+# these two are equivalent
+zizmor --fix example.yml
+zizmor --fix=safe example.yml
+```
+
+### Unsafe fixes
+
+!!! important
+
+    Unsafe fixes **must** be manually reviewed for semantic correctness.
+
+By default, `--fix` will only apply *safe* fixes, i.e. fixes that are
+safe to apply with minimal human oversight due to their low breakage risk.
+
+Not all changes are safe, however, and `zizmor` offers *unsafe* fixes
+for some findings as well. These fixes are *often* correct, but require
+human review.
+
+To apply *unsafe* fixes, you can either use `--fix=all` (to enable both
+safe and unsafe fixes) or `--fix=unsafe-only` (to enable only unsafe fixes):
+
+```bash
+zizmor --fix=all example.yml
+zizmor --fix=unsafe-only example.yml
+```
+
+### Limitations
+
+`zizmor`'s auto-fix mode has several limitations that are important
+to keep in mind:
+
+* **In-place modification**: `--fix=[MODE]` modifies fixable inputs
+  in-place, meaning that the original files will be modified.
+* **No remote fixes**: as a corollary to the above, `--fix=[MODE]`
+  does not support remote inputs (e.g. `zizmor example/example`).
+* **Format preservation**: `--fix=[MODE]` attempts to preserve
+  the original format of the input files, including exact indentation
+  and comments. However, this is ultimately a heuristic, and
+  some patches may not match the file's exact style.
 
 ## Filtering results
 
@@ -465,8 +583,15 @@ There are two straightforward ways to filter `zizmor`'s results:
 
         `--min-severity` and `--min-confidence` are available in `v0.6.0` and later.
 
+    !!! warning "Deprecation"
+
+        `--min-severity=unknown` and `--min-confidence=unknown` are
+        **deprecated** as of `v1.14.0` and will be removed in a future release.
+        Users should omit these entirely, as they were no-ops even prior to
+        deprecation.
+
      ```bash
-     # filter unknown, informational, and low findings with unknown, low confidence
+     # filter informational, and low findings with low confidence
      zizmor --min-severity=medium --min-confidence=medium ...
      ```
 
@@ -574,6 +699,14 @@ the `--config` argument. With `--config`, the file can be named anything:
 zizmor --config my-zizmor-config.yml /dir/to/audit
 ```
 
+!!! important
+
+    When using `--config`, only a single configuration file is used
+    (instead of potentially discovering multiple configuration files,
+    one per input source). As a result, using `--config` is
+    **generally not recommended** unless auditing a single input source
+    (file, directory, or remote repository).
+
 !!! tip
 
     Starting with `v1.8.0`, you can use the `ZIZMOR_CONFIG` environment
@@ -582,7 +715,7 @@ zizmor --config my-zizmor-config.yml /dir/to/audit
     `ZIZMOR_CONFIG=my-config.yml` is equivalent to
     `--config my-config.yml`.
 
-[will discover it]: ./configuration.md#precedence
+[will discover it]: ./configuration.md#discovery
 
 See [Configuration: `rules.<id>.ignore`](./configuration.md#rulesidignore) for
 more details on writing ignore rules.
@@ -614,222 +747,21 @@ To override the default caching directory, pass `--cache-dir`:
 zizmor --cache-dir /tmp/zizmor ...
 ```
 
-## Integration
+## Other GitHub hosts
 
-### Use in GitHub Actions
+!!! warning
 
-`zizmor` is designed to integrate with GitHub Actions.
-
-The easiest way to use `zizmor` in GitHub Actions is
-with @zizmorcore/zizmor-action. However, expert users or those who want
-more fine-grained control over their integration can also use the
-[Manual integration](#manual-integration) steps further below.
-
-#### With @zizmorcore/zizmor-action *&#8203;*{.chip .chip-recommended}
-
-To get started with @zizmorcore/zizmor-action, you can use the following
-workflow skeleton:
-
-```yaml title="zizmor.yml"
-name: GitHub Actions Security Analysis with zizmor 🌈
-
-on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["**"]
-
-permissions: {}
-
-jobs:
-  zizmor:
-    name: Run zizmor 🌈
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      contents: read # only needed for private repos
-      actions: read # only needed for private repos
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: false
-
-      - name: Run zizmor 🌈
-        uses: zizmorcore/zizmor-action@f52a838cfabf134edcbaa7c8b3677dde20045018 # v0.1.1
-```
-
-See the action's [`inputs` documentation][inputs-documentation] for
-additional configuration options.
-
-[inputs-documentation]: https://github.com/zizmorcore/zizmor-action#inputs
-
-#### Manual integration *&#8203;*{.chip .chip-expert}
-
-If you don't want to use @zizmorcore/zizmor-action, you can always
-use `zizmor` directly in your GitHub Actions workflows.
-
-All of the same functionality is available, but you'll need to do a bit
-more explicit scaffolding.
-
-There are two main ways to manually integrate `zizmor` into your
-GitHub Actions setup:
-
-1. With `--format=sarif` via Advanced Security *&#8203;*{.chip .chip-recommended}
-2. With `--format=github` via GitHub Annotations
-
-=== "With Advanced Security *&#8203;*{.chip .chip-recommended}"
-
-    GitHub's Advanced Security and [code scanning functionality] supports
-    [SARIF], which `zizmor` can produce via `--format=sarif`.
-
-    !!! important
-
-        The workflow below performs a [SARIF] upload, which is available for public
-        repositories and for GitHub Enterprise Cloud organizations that have
-        [Advanced Security]. If neither of these apply to you, then you can
-        use `--format=github` or adapt the `--format=json` or `--format=plain`
-        output formats to your needs.
-
-    ```yaml title="zizmor.yml"
-    name: GitHub Actions Security Analysis with zizmor 🌈
-
-    on:
-      push:
-        branches: ["main"]
-      pull_request:
-        branches: ["**"]
-
-    permissions: {}
-
-    jobs:
-      zizmor:
-        name: zizmor latest via PyPI
-        runs-on: ubuntu-latest
-        permissions:
-          security-events: write # needed for SARIF uploads
-          contents: read # only needed for private repos
-          actions: read # only needed for private repos
-        steps:
-          - name: Checkout repository
-            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-            with:
-              persist-credentials: false
-
-          - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
-
-          - name: Run zizmor 🌈
-            run: uvx zizmor --format=sarif . > results.sarif # (2)!
-            env:
-              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
-
-          - name: Upload SARIF file
-            uses: github/codeql-action/upload-sarif@ff0a06e83cb2de871e5a09832bc6a81e7276941f # v3.28.18
-            with:
-              sarif_file: results.sarif
-              category: zizmor
-    ```
-
-    1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
-
-    2. This installs the [zizmor package from PyPI], since it's pre-compiled
-       and therefore completes much faster. You could instead compile `zizmor`
-       within CI/CD with `cargo install zizmor`.
-
-    For more inspiration, see `zizmor`'s own [repository workflow scan], as well
-    as GitHub's example of [running ESLint] as a security workflow.
-
-    !!! important
-
-        When using `--format=sarif`, `zizmor` does not use its
-        [exit codes](#exit-codes) to signal the presence of findings. As a result,
-        `zizmor` will always exit with code `0` even if findings are present,
-        **unless** an internal error occurs during the audit.
-
-        As a result of this, the `zizmor.yml` workflow itself will always
-        succeed, resulting in a green checkmark in GitHub Actions.
-        This should **not** be confused with a lack of findings.
-
-        To prevent a branch from being merged with findings present, you can
-        use GitHub's rulesets feature. For more information, see
-        [About code scanning alerts - Pull request check failures for code scanning alerts].
-
-=== "With annotations"
-
-    A simpler (but more limited) way to use `zizmor` in GitHub Actions is
-    with annotations, which `zizmor` can produce via `--format=github`.
-
-    This is a good option if:
-
-    1. You don't have Advanced Security (or you don't want to use it)
-    1. You don't want to run `zizmor` with `security-events: write`
-
-    ```yaml title="zizmor.yml"
-    name: GitHub Actions Security Analysis with zizmor 🌈
-
-    on:
-      push:
-        branches: ["main"]
-      pull_request:
-        branches: ["**"]
-
-    jobs:
-      zizmor:
-        name: zizmor latest via PyPI
-        runs-on: ubuntu-latest
-        permissions:
-          contents: read # only needed for private repos
-          actions: read # only needed for private repos
-        steps:
-          - name: Checkout repository
-            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-          - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
-
-          - name: Run zizmor 🌈
-            run: uvx zizmor --format=github . # (2)!
-            env:
-              GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
-    ```
-
-    1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
-
-    2. This installs the [zizmor package from PyPI], since it's pre-compiled
-       and therefore completes much faster. You could instead compile `zizmor`
-       within CI/CD with `cargo install zizmor`.
-
-    !!! warning
-
-        GitHub Actions has a limit of 10 annotations per step.
-
-        If your `zizmor` run produces more than 10 findings, only the first 10 will
-        be rendered; all subsequent findings will be logged in the actions log but
-        **will not be rendered** as annotations.
-
-[zizmor package from PyPI]: https://pypi.org/p/zizmor
-
-[SARIF]: https://sarifweb.azurewebsites.net/
-
-[Workflow Commands for GitHub Actions]: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions
-
-[code scanning functionality]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
-
-[repository workflow scan]: https://github.com/zizmorcore/zizmor/blob/main/.github/workflows/zizmor.yml
-
-[running ESLint]: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github#example-workflow-that-runs-the-eslint-analysis-tool
-
-[Advanced Security]: https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security
-
-[About code scanning alerts - Pull request check failures for code scanning alerts]: https://docs.github.com/en/code-security/code-scanning/managing-code-scanning-alerts/about-code-scanning-alerts#pull-request-check-failures-for-code-scanning-alerts
-
-### Use with GitHub Enterprise
+    Support for custom GitHub Enterprise instances is provided on a **best-effort**
+    basis. If you're a corporate user of `zizmor` who is interested in improving
+    `zizmor`'s GitHub Enterprise support, please
+    [let us know](https://github.com/zizmorcore/zizmor/issues/new)
+    and [consider sponsoring](./index.md#sponsoring) development in this area!
 
 `zizmor` supports GitHub instances other than `github.com`.
 
-To use it with your [GitHub Enterprise] instance (either cloud or self-hosted),
-pass your instance's domain with `--gh-hostname` or `GH_HOST`:
+To use it with your [GitHub Enterprise](https://github.com/enterprise) instance
+(either cloud or self-hosted), pass your instance's domain with `--gh-hostname`
+or `GH_HOST`:
 
 ```bash
 zizmor --gh-hostname custom.example.com ...
@@ -837,85 +769,6 @@ zizmor --gh-hostname custom.example.com ...
 # or, with GH_HOST
 GH_HOST=custom.ghe.com zizmor ...
 ```
-
-[GitHub Enterprise]: https://github.com/enterprise
-
-### Use with `pre-commit`
-
-`zizmor` can be used with the [`pre-commit`](https://pre-commit.com/) framework.
-To do so, add the following to your `.pre-commit-config.yaml` `repos` section:
-
-```yaml
-- repo: https://github.com/zizmorcore/zizmor-pre-commit
-  rev: v1.9.0 # (1)!
-  hooks:
-  - id: zizmor
-```
-
-1. Don't forget to update this version to the latest `zizmor` release!
-
-This will run `zizmor` on every commit.
-
-!!! tip
-
-    If you want to run `zizmor` only on specific files, you can use the
-    `files` option. This setting is *optional*, as `zizmor` will
-    scan the entire repository by default.
-
-    See [`pre-commit`](https://pre-commit.com/) documentation for more
-    information on how to configure `pre-commit`.
-
-### Color customization
-
-When invoked from a terminal, `zizmor` will attempt to enrich its output
-with ANSI colors.
-
-!!! note
-
-    `--color` is available in `v1.5.0` and later.
-
-Some users may prefer to explicitly enable or disable this behavior. For
-example, GitHub Actions is not a terminal but it does support ANSI colors,
-so enabling colors in GitHub Actions can make logs more readable.
-
-To explicitly control `zizmor`'s colorization behavior, use the
-`--color` option:
-
-```bash
-# force colorization
-zizmor --color=always ...
-
-# force no colorization
-zizmor --color=never ...
-```
-
-`zizmor` also respects various environment variables for colorization:
-
-* [`NO_COLOR`](https://no-color.org/): if set to any value, disables colorization
-* [`FORCE_COLOR`](https://force-color.org/): if set to any value, enables colorization
-* [`CLICOLOR_FORCE`](https://bixense.com/clicolors/): if set to any value, enables colorization
-
-### Tab completion
-
-!!! note
-
-    Tab completion is available in `v1.7.0` and later.
-
-`zizmor` comes with built-in tab completion. It supports all of the
-shells supported by [`clap_complete`](https://crates.io/crates/clap_complete),
-which includes popular shells like `bash`, `zsh`, and `fish`.
-
-To enable tab completion, you can use the `--completions=<shell>` flag
-to emit a completion script for the specified shell. For example,
-to enable tab completion for `bash`, you can run:
-
-```bash
-zizmor --completions=bash > ~/.bash_completion.d/zizmor # (1)!
-```
-
-1. The correct location of your completion script will depend on your
-   shell and its configuration. Consult your shell's documentation
-   for more information.
 
 ## Limitations
 

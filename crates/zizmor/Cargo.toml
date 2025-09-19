@@ -1,12 +1,11 @@
 [package]
 name = "zizmor"
 description = "Static analysis for GitHub Actions"
-version = "1.9.0"
+version = "1.13.0"
 repository = "https://github.com/zizmorcore/zizmor"
 documentation = "https://docs.zizmor.sh"
 keywords = ["cli", "github-actions", "static-analysis", "security"]
 categories = ["command-line-utilities", "security"]
-rust-version = "1.85.0"
 
 homepage.workspace = true
 license.workspace = true
@@ -18,6 +17,8 @@ edition.workspace = true
 workspace = true
 
 [features]
+default = ["lsp"]
+lsp = ["dep:tower-lsp"]
 # Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
 gh-token-tests = []
 # Test-only: enable all online audits.
@@ -55,10 +56,12 @@ serde = { workspace = true, features = ["derive"] }
 serde-sarif.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
+subfeature.workspace = true
 tar.workspace = true
 terminal-link.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "io-std"] }
+tower-lsp = { workspace = true, optional = true }
 tracing.workspace = true
 tracing-indicatif.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
@@ -66,6 +69,7 @@ tree-sitter.workspace = true
 tree-sitter-bash.workspace = true
 tree-sitter-powershell.workspace = true
 yamlpath.workspace = true
+yamlpatch.workspace = true
 
 [build-dependencies]
 csv.workspace = true

@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::ops::{Deref, Range};
 use std::sync::LazyLock;
 
@@ -7,10 +6,11 @@ use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
 use regex::Regex;
 use tree_sitter::{
-    Language, Parser, Query, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
+    Language, Parser, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
 };
 
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{workflow::JobExt as _, workflow::Step};
@@ -22,48 +22,17 @@ static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 pub(crate) struct GitHubEnv {
-    // NOTE: interior mutability used since Parser::parse requires &mut self
-    bash_parser: RefCell<Parser>,
-    pwsh_parser: RefCell<Parser>,
+    bash: Language,
+    pwsh: Language,
 
     // cached queries
-    bash_redirect_query: SpannedQuery,
-    bash_pipeline_query: SpannedQuery,
-    pwsh_redirect_query: SpannedQuery,
-    pwsh_pipeline_query: SpannedQuery,
+    bash_redirect_query: utils::SpannedQuery,
+    bash_pipeline_query: utils::SpannedQuery,
+    pwsh_redirect_query: utils::SpannedQuery,
+    pwsh_pipeline_query: utils::SpannedQuery,
 }
 
 audit_meta!(GitHubEnv, "github-env", "dangerous use of environment file");
-
-/// Holds a tree-sitter query that contains a `@span` capture that
-/// covers the entire range of the query.
-struct SpannedQuery {
-    inner: Query,
-    span_idx: u32,
-    destination_idx: u32,
-}
-
-impl Deref for SpannedQuery {
-    type Target = Query;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl SpannedQuery {
-    fn new(query: &'static str, language: &Language) -> Self {
-        let query = Query::new(language, query).expect("malformed query");
-        let span_idx = query.capture_index_for_name("span").unwrap();
-        let destination_idx = query.capture_index_for_name("destination").unwrap();
-
-        Self {
-            inner: query,
-            span_idx,
-            destination_idx,
-        }
-    }
-}
 
 const BASH_REDIRECT_QUERY: &str = r#"
 (redirected_statement
@@ -166,7 +135,7 @@ impl GitHubEnv {
 
     fn query<'a>(
         &self,
-        query: &'a SpannedQuery,
+        query: &'a utils::SpannedQuery,
         cursor: &'a mut QueryCursor,
         tree: &'a Tree,
         source: &'a str,
@@ -178,11 +147,14 @@ impl GitHubEnv {
         &self,
         script_body: &'hay str,
     ) -> Result<Vec<(&'hay str, Range<usize>)>> {
+        let mut parser = Parser::new();
+        parser
+            .set_language(&self.bash)
+            .context("failed to set bash language for parser")?;
+
         let mut cursor = QueryCursor::new();
 
-        let tree = self
-            .bash_parser
-            .borrow_mut()
+        let tree = parser
             .parse(script_body, None)
             .context("failed to parse `run:` body as bash")?;
 
@@ -280,9 +252,12 @@ impl GitHubEnv {
         &self,
         script_body: &'hay str,
     ) -> Result<Vec<(&'hay str, Range<usize>)>> {
-        let tree = &self
-            .pwsh_parser
-            .borrow_mut()
+        let mut parser = Parser::new();
+        parser
+            .set_language(&self.pwsh)
+            .context("failed to set pwsh language for parser")?;
+
+        let tree = parser
             .parse(script_body, None)
             .context("failed to parse `run:` body as pwsh")?;
 
@@ -291,7 +266,7 @@ impl GitHubEnv {
         let mut matching_spans = vec![];
 
         for query in queries {
-            let matches = self.query(query, &mut cursor, tree, script_body);
+            let matches = self.query(query, &mut cursor, &tree, script_body);
             matches.for_each(|mat| {
                 let span = mat
                     .captures
@@ -326,7 +301,8 @@ impl GitHubEnv {
         let normalized = utils::normalize_shell(shell);
 
         match normalized {
-            "bash" | "sh" => self.bash_uses_github_env(run_step_body),
+            // NOTE(ww): zsh is probably close enough in syntax to slide here. Hopefully.
+            "bash" | "sh" | "zsh" => self.bash_uses_github_env(run_step_body),
             "cmd" => Ok(self.cmd_uses_github_env(run_step_body)),
             "pwsh" | "powershell" => self.pwsh_uses_github_env(run_step_body),
             // TODO: handle python.
@@ -341,7 +317,7 @@ impl GitHubEnv {
 }
 
 impl Audit for GitHubEnv {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -360,16 +336,20 @@ impl Audit for GitHubEnv {
             .map_err(AuditLoadError::Skip)?;
 
         Ok(Self {
-            bash_parser: RefCell::new(bash_parser),
-            pwsh_parser: RefCell::new(pwsh_parser),
-            bash_redirect_query: SpannedQuery::new(BASH_REDIRECT_QUERY, &bash),
-            bash_pipeline_query: SpannedQuery::new(BASH_PIPELINE_QUERY, &bash),
-            pwsh_redirect_query: SpannedQuery::new(PWSH_REDIRECT_QUERY, &pwsh),
-            pwsh_pipeline_query: SpannedQuery::new(PWSH_PIPELINE_QUERY, &pwsh),
+            bash_redirect_query: utils::SpannedQuery::new(BASH_REDIRECT_QUERY, &bash),
+            bash_pipeline_query: utils::SpannedQuery::new(BASH_PIPELINE_QUERY, &bash),
+            pwsh_redirect_query: utils::SpannedQuery::new(PWSH_REDIRECT_QUERY, &pwsh),
+            pwsh_pipeline_query: utils::SpannedQuery::new(PWSH_PIPELINE_QUERY, &pwsh),
+            bash,
+            pwsh,
         })
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let workflow = step.workflow();
@@ -406,7 +386,7 @@ impl Audit for GitHubEnv {
                         .add_location(
                             step.location()
                                 .primary()
-                                .with_keys(&["run".into()])
+                                .with_keys(["run".into()])
                                 .annotated(format!("write to {dest} may allow code execution")),
                         )
                         .build(step.workflow())?,
@@ -420,6 +400,7 @@ impl Audit for GitHubEnv {
     fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
+        _config: &Config,
     ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -436,7 +417,7 @@ impl Audit for GitHubEnv {
                     .add_location(
                         step.location()
                             .primary()
-                            .with_keys(&["run".into()])
+                            .with_keys(["run".into()])
                             .annotated(format!("write to {dest} may allow code execution")),
                     )
                     .build(step.action())?,
@@ -451,7 +432,6 @@ impl Audit for GitHubEnv {
 mod tests {
     use crate::audit::Audit;
     use crate::audit::github_env::{GITHUB_ENV_WRITE_CMD, GitHubEnv};
-    use crate::github_api::GitHubHost;
     use crate::state::AuditState;
 
     #[test]
@@ -516,13 +496,7 @@ mod tests {
             ("echo 'completely-static' \"foo\" >> $GITHUB_ENV", false), // LHS is completely static
             ("echo \"completely-static\" >> $GITHUB_ENV", false), // LHS is completely static
         ] {
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                cache_dir: "/tmp/zizmor".into(),
-                gh_token: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
 
             let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 
@@ -633,13 +607,7 @@ mod tests {
                 false,
             ), // GITHUB_ENV is not a variable
         ] {
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                cache_dir: "/tmp/zizmor".into(),
-                gh_token: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
 
             let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 

@@ -277,6 +277,18 @@ fn use_trusted_publishing() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/cargo-publish.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/npm-publish.yml"))
+            .run()?
+    );
+
     Ok(())
 }
 
@@ -413,6 +425,13 @@ fn template_injection() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("template-injection/issue-988-repro.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
     Ok(())
 }
 
@@ -521,6 +540,18 @@ fn cache_poisoning() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("cache-poisoning/issue-642-repro.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("cache-poisoning/issue-1081-repro.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("cache-poisoning/issue-1152-repro.yml"))
             .run()?
     );
 
@@ -800,6 +831,85 @@ fn ref_version_mismatch() -> Result<()> {
         zizmor()
             .offline(false)
             .input(input_under_test("ref-version-mismatch.yml"))
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
+fn undocumented_permissions() -> Result<()> {
+    // Test with pedantic persona (should find issues)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with regular persona (should not find issues)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions.yml"))
+            .run()?
+    );
+
+    // Test with properly documented permissions (should not find issues even with pedantic)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions/documented.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with only "contents: read" (should not trigger rule)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "undocumented-permissions/contents-read-only.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with empty permissions (should not trigger rule)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "undocumented-permissions/empty-permissions.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with contents: read plus other permissions (should trigger rule)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "undocumented-permissions/contents-read-with-other.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with partially documented permissions (should ideally only flag undocumented ones)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "undocumented-permissions/partially-documented.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
+fn unsound_condition() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unsound-condition.yml"))
             .run()?
     );
 

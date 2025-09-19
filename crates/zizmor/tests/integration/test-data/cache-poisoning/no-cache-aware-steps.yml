@@ -15,5 +15,5 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Publish on crates.io
+      - name: Publish on crates.io # zizmor: ignore[use-trusted-publishing]
         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}

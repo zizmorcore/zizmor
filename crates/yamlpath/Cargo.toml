@@ -1,6 +1,6 @@
 [package]
 name = "yamlpath"
-version = "0.22.0"
+version = "0.25.0"
 description = "Format-preserving YAML feature extraction"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/yamlpath"
 readme = "README.md"
@@ -16,10 +16,10 @@ workspace = true
 
 [dependencies]
 line-index.workspace = true
+serde.workspace = true
 thiserror.workspace = true
 tree-sitter.workspace = true
 tree-sitter-yaml = { workspace = true }
 
 [dev-dependencies]
-serde.workspace = true
 serde_yaml.workspace = true

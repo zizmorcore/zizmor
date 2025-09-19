@@ -1,0 +1,139 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"unsound-condition.yml\")).run()?"
+---
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:68:25
+   |
+68 |         if: true && ${{ false }}
+   |                         ^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:73:17
+   |
+73 |         if: ${{ false }} && true
+   |                 ^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:78:17
+   |
+78 |         if: ${{ false }} lol
+   |                 ^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:83:21
+   |
+83 |         if: lol ${{ false }}
+   |                     ^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:88:18
+   |
+88 |         if: "${{ false }} "
+   |                  ^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:93:19
+   |
+93 |         if: " ${{ false }}"
+   |                   ^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:27:9
+   |
+27 | /         if: |
+28 | |           ${{ some.context }}
+   | |_____________________________^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:33:9
+   |
+33 | /         if: >
+34 | |           ${{ some.context }}
+   | |_____________________________^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:60:9
+   |
+60 | /         if: |
+61 | |           ${{ some.context
+62 | |             && other.context
+63 | |           }}
+   | |____________^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:68:9
+   |
+68 |         if: true && ${{ false }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:73:9
+   |
+73 |         if: ${{ false }} && true
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:78:9
+   |
+78 |         if: ${{ false }} lol
+   |         ^^^^^^^^^^^^^^^^^^^^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:83:9
+   |
+83 |         if: lol ${{ false }}
+   |         ^^^^^^^^^^^^^^^^^^^^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:88:9
+   |
+88 |         if: "${{ false }} "
+   |         ^^^^^^^^^^^^^^^^^^^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:93:9
+   |
+93 |         if: " ${{ false }}"
+   |         ^^^^^^^^^^^^^^^^^^^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+15 findings (9 fixable): 0 informational, 6 low, 0 medium, 9 high

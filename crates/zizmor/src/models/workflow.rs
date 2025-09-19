@@ -20,13 +20,13 @@ use terminal_link::Link;
 
 use crate::{
     InputKey,
-    finding::location::{Locatable, Route, SymbolicFeature, SymbolicLocation},
+    finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
     models::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
     },
-    registry::InputError,
-    utils::{self, WORKFLOW_VALIDATOR, extract_expressions, from_str_with_validation},
+    registry::input::InputError,
+    utils::{self, WORKFLOW_VALIDATOR, extract_fenced_expressions, from_str_with_validation},
 };
 
 /// Represents an entire GitHub Actions workflow.
@@ -195,7 +195,7 @@ impl Workflow {
             key: &self.key,
             annotation: "this workflow".to_string(),
             link: None,
-            route: Route::new(),
+            route: Default::default(),
             feature_kind: SymbolicFeature::Normal,
             kind: Default::default(),
         }
@@ -221,6 +221,26 @@ impl<'doc> NormalJob<'doc> {
     /// An iterator of this job's constituent [`Step`]s.
     pub(crate) fn steps(&self) -> Steps<'doc> {
         Steps::new(self)
+    }
+
+    /// Returns whether this job has the `id-token: write` permission.
+    pub(crate) fn has_id_token(&self) -> bool {
+        // Figure out which permissions we need to be looking at.
+        // We look at the job's own permissions unless they indicate
+        // that they're the default, in which case we know the effective
+        // permissions are the parent workflow's.
+        let effective_permissions = match self.permissions {
+            common::Permissions::Base(common::BasePermission::Default) => &self.parent.permissions,
+            _ => &self.permissions,
+        };
+
+        match effective_permissions {
+            common::Permissions::Base(common::BasePermission::WriteAll) => true,
+            common::Permissions::Explicit(explicit) => explicit
+                .get("id-token")
+                .is_some_and(|perm| matches!(perm, common::Permission::Write)),
+            _ => false,
+        }
     }
 
     /// Perform feats of heroism to figure of what this job's runner's
@@ -251,6 +271,20 @@ impl<'doc> NormalJob<'doc> {
                 None
             }
         }
+    }
+
+    /// Returns an iterator over this job's conditions, including all
+    /// step-level conditions.
+    ///
+    /// Each [`common::If`] is paired with a [`SymbolicLocation`]
+    /// for its *parent*, i.e. a job or step.
+    pub(crate) fn conditions(
+        &self,
+    ) -> impl Iterator<Item = (&'doc common::If, SymbolicLocation<'doc>)> {
+        self.r#if.iter().map(|cond| (cond, self.location())).chain(
+            self.steps()
+                .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location()))),
+        )
     }
 }
 
@@ -337,12 +371,12 @@ impl<'doc, T: JobExt<'doc>> Locatable<'doc> for T {
         self.parent()
             .location()
             .annotated("this job")
-            .with_keys(&["jobs".into(), self.id().into()])
+            .with_keys(["jobs".into(), self.id().into()])
     }
 
     fn location_with_name(&self) -> SymbolicLocation<'doc> {
         match self.name() {
-            Some(_) => self.location().with_keys(&["name".into()]),
+            Some(_) => self.location().with_keys(["name".into()]),
             None => self.location(),
         }
     }
@@ -443,7 +477,7 @@ impl<'doc> Matrix<'doc> {
             // one or more expressions (e.g. `foo-${{ bar }}-${{ baz }}`). So we
             // need to check for *any* expression in the expanded value,
             // not just that it starts and ends with the expression delimiters.
-            let expansion_contains_expression = !extract_expressions(expansion).is_empty();
+            let expansion_contains_expression = !extract_fenced_expressions(expansion).is_empty();
             context.matches(path.as_str()) && expansion_contains_expression
         });
 
@@ -517,7 +551,7 @@ impl<'doc> Matrix<'doc> {
     fn expand(values: HashMap<String, serde_json::Value>) -> Vec<(String, String)> {
         values
             .iter()
-            .flat_map(|(key, value)| Matrix::walk_path(value, format!("matrix.{}", key)))
+            .flat_map(|(key, value)| Matrix::walk_path(value, format!("matrix.{key}")))
             .collect()
     }
 
@@ -581,13 +615,13 @@ impl<'doc> Locatable<'doc> for Step<'doc> {
     fn location(&self) -> SymbolicLocation<'doc> {
         self.parent
             .location()
-            .with_keys(&["steps".into(), self.index.into()])
+            .with_keys(["steps".into(), self.index.into()])
             .annotated("this step")
     }
 
     fn location_with_name(&self) -> SymbolicLocation<'doc> {
         match self.inner.name {
-            Some(_) => self.location().with_keys(&["name".into()]),
+            Some(_) => self.location().with_keys(["name".into()]),
             None => self.location(),
         }
     }
@@ -637,6 +671,11 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
 
     fn document(&self) -> &'doc yamlpath::Document {
         self.workflow().as_document()
+    }
+
+    fn shell(&self) -> Option<&str> {
+        // For workflow steps, we can use the existing shell() method
+        self.shell()
     }
 }
 
@@ -759,8 +798,10 @@ jobs:
       - run: true
 "#;
 
-        let workflow =
-            Workflow::from_string(workflow.into(), crate::InputKey::local("dummy", None)?)?;
+        let workflow = Workflow::from_string(
+            workflow.into(),
+            crate::InputKey::local("fakegroup".into(), "dummy", None)?,
+        )?;
 
         // `foo` unifies in favor of the more permissive capability,
         // which is `Capability::Arbitrary` from the `string` input type

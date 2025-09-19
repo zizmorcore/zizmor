@@ -4,6 +4,8 @@ use anyhow::Result;
 
 use crate::common::{OutputMode, input_under_test, zizmor};
 
+mod json_v1;
+
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn gha_hazmat() -> Result<()> {
@@ -15,7 +17,7 @@ fn gha_hazmat() -> Result<()> {
             .offline(false)
             .output(OutputMode::Both)
             .args(["--no-online-audits"])
-            .input("woodruffw/gha-hazmat@33cd22cdd7823a5795768388aff977fe992b5aad")
+            .input("woodruffw/gha-hazmat@83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61")
             .run()?
     );
     Ok(())
@@ -263,5 +265,82 @@ fn pr_960_backstop() -> Result<()> {
             .run()?
     );
 
+    Ok(())
+}
+
+/// Regression test for #1116.
+/// Ensures that `--strict-collection` is respected for remote inputs.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_1116_strict_collection_remote_input() -> Result<()> {
+    // Fails with `--strict-collection`.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .expects_failure(true)
+            .output(OutputMode::Stderr)
+            .args(["--strict-collection"])
+            .input("woodruffw-experiments/zizmor-issue-1116@f41c414")
+            .run()?
+    );
+
+    // Works without `--strict-collection`.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(OutputMode::Stderr)
+            .input("woodruffw-experiments/zizmor-issue-1116@f41c414")
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Regression test for #1065.
+///
+/// This was actually a bug in `annotate-snippets` that was fixed
+/// with their 0.12 series, but this ensures that we don't regress.
+#[test]
+fn issue_1065() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Both)
+            .input(input_under_test("issue-1065.yml"))
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Ensures that we emit an appropriate warning when the user
+/// passes `--min-severity=unknown`.
+#[test]
+fn warn_on_min_severity_unknown() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .args(["--min-severity=unknown"])
+            .input(input_under_test("e2e-menagerie"))
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Ensures that we emit an appropriate warning when the user
+/// passes `--min-confidence=unknown`.
+#[test]
+fn warn_on_min_confidence_unknown() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .args(["--min-confidence=unknown"])
+            .input(input_under_test("e2e-menagerie"))
+            .run()?
+    );
     Ok(())
 }

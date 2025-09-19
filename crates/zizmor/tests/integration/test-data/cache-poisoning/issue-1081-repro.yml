@@ -1,0 +1,29 @@
+# repro case for https://github.com/zizmorcore/zizmor/issues/1081
+
+name: issue-1081
+
+on: release
+
+permissions: {}
+
+jobs:
+  issue-1081-true-positive:
+    name: issue-1081-true-positive
+    runs-on: ubuntu-latest
+    steps:
+      # TRUE POSITIVE: enable-cache enabled by default
+      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+
+      # TRUE POSITIVE: enable-cache explicitly set to true
+      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+        with:
+          enable-cache: true
+
+  issue-1081-true-negative:
+    name: issue-1081-true-negative
+    runs-on: ubuntu-latest
+    steps:
+      # TRUE NEGATIVE: enable-cache explicitly set to false
+      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+        with:
+          enable-cache: false

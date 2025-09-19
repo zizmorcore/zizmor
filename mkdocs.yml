@@ -13,13 +13,12 @@ nav:
   - "installation.md"
   - "quickstart.md"
   - "usage.md"
+  - "integrations.md"
   - "release-notes.md"
   - "configuration.md"
   - "audits.md"
   - "development.md"
   - "trophy-case.md"
-  - External links:
-      - "crates.io 🔗": https://crates.io/crates/zizmor
 
 plugins:
   - search
@@ -90,7 +89,10 @@ markdown_extensions:
       base_path:
         - "docs/snippets"
       check_paths: true
+      auto_append:
+        - abbreviations.md
   - md_in_html
+  - abbr
   - attr_list
   - toc:
       permalink: 🔗
@@ -129,5 +131,8 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/zizmor/
       name: "Zizmor on PyPI"
+    - icon: fontawesome/brands/rust
+      link: https://crates.io/crates/zizmor
+      name: "Zizmor on crates.io"
 
 copyright: "&copy; 2024 William Woodruff"

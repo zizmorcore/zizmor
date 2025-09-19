@@ -40,7 +40,7 @@ audit_meta!(
 pub(crate) struct ExcessivePermissions;
 
 impl Audit for ExcessivePermissions {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -50,6 +50,7 @@ impl Audit for ExcessivePermissions {
     fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -159,14 +160,14 @@ impl ExcessivePermissions {
                     Severity::Medium,
                     Confidence::High,
                     location
-                        .with_keys(&["permissions".into()])
+                        .with_keys(["permissions".into()])
                         .annotated("uses read-all permissions"),
                 )),
                 BasePermission::WriteAll => results.push((
                     Severity::High,
                     Confidence::High,
                     location
-                        .with_keys(&["permissions".into()])
+                        .with_keys(["permissions".into()])
                         .annotated("uses write-all permissions"),
                 )),
             },
@@ -179,14 +180,14 @@ impl ExcessivePermissions {
                     let severity = KNOWN_PERMISSIONS.get(name.as_str()).unwrap_or_else(|| {
                         tracing::warn!("unknown permission: {name}");
 
-                        &Severity::Unknown
+                        &Severity::Medium
                     });
 
                     results.push((
                         *severity,
                         Confidence::High,
                         location
-                            .with_keys(&["permissions".into(), name.as_str().into()])
+                            .with_keys(["permissions".into(), name.as_str().into()])
                             .annotated(format!(
                                 "{name}: write is overly broad at the workflow level"
                             )),
@@ -219,14 +220,14 @@ impl ExcessivePermissions {
                     Severity::Medium,
                     Confidence::High,
                     location
-                        .with_keys(&["permissions".into()])
+                        .with_keys(["permissions".into()])
                         .annotated("uses read-all permissions"),
                 )),
                 BasePermission::WriteAll => Some((
                     Severity::High,
                     Confidence::High,
                     location
-                        .with_keys(&["permissions".into()])
+                        .with_keys(["permissions".into()])
                         .annotated("uses write-all permissions"),
                 )),
             },

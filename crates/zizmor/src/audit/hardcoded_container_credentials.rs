@@ -18,7 +18,7 @@ audit_meta!(
 );
 
 impl Audit for HardcodedContainerCredentials {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -28,6 +28,7 @@ impl Audit for HardcodedContainerCredentials {
     fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -55,7 +56,7 @@ impl Audit for HardcodedContainerCredentials {
                             .add_location(
                                 job.location()
                                     .primary()
-                                    .with_keys(&["container".into(), "credentials".into()])
+                                    .with_keys(["container".into(), "credentials".into()])
                                     .annotated("container registry password is hard-coded"),
                             )
                             .build(workflow)?,
@@ -73,28 +74,27 @@ impl Audit for HardcodedContainerCredentials {
                         }),
                     ..
                 } = &config
+                    && ExplicitExpr::from_curly(password).is_none()
                 {
-                    if ExplicitExpr::from_curly(password).is_none() {
-                        findings.push(
-                            Self::finding()
-                                .severity(Severity::High)
-                                .confidence(Confidence::High)
-                                .add_location(
-                                    job.location()
-                                        .primary()
-                                        .with_keys(&[
-                                            "services".into(),
-                                            service.as_str().into(),
-                                            "credentials".into(),
-                                        ])
-                                        .annotated(format!(
-                                            "service {service}: container registry password is \
+                    findings.push(
+                        Self::finding()
+                            .severity(Severity::High)
+                            .confidence(Confidence::High)
+                            .add_location(
+                                job.location()
+                                    .primary()
+                                    .with_keys([
+                                        "services".into(),
+                                        service.as_str().into(),
+                                        "credentials".into(),
+                                    ])
+                                    .annotated(format!(
+                                        "service {service}: container registry password is \
                                          hard-coded"
-                                        )),
-                                )
-                                .build(workflow)?,
-                        )
-                    }
+                                    )),
+                            )
+                            .build(workflow)?,
+                    )
                 }
             }
         }

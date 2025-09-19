@@ -37,7 +37,7 @@ static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 /// Represents a pattern for matching repository `uses` references.
 /// These patterns are ordered by specificity; more specific patterns
 /// should be listed first.
-#[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub(crate) enum RepositoryUsesPattern {
     /// Matches exactly `owner/repo/subpath@ref`.
     ExactWithRef {
@@ -75,7 +75,7 @@ impl RepositoryUsesPattern {
                 uses.owner.eq_ignore_ascii_case(owner)
                     && uses.repo.eq_ignore_ascii_case(repo)
                     && uses.subpath == *subpath
-                    && uses.git_ref.as_deref().is_some_and(|s| s == git_ref)
+                    && uses.git_ref.as_str() == git_ref
             }
             RepositoryUsesPattern::ExactPath {
                 owner,
@@ -194,22 +194,19 @@ impl RepositoryUsesExt for RepositoryUses {
     }
 
     fn ref_is_commit(&self) -> bool {
-        match &self.git_ref {
-            Some(git_ref) => git_ref.len() == 40 && git_ref.chars().all(|c| c.is_ascii_hexdigit()),
-            None => false,
-        }
+        self.git_ref.len() == 40 && self.git_ref.chars().all(|c| c.is_ascii_hexdigit())
     }
 
     fn commit_ref(&self) -> Option<&str> {
         match &self.git_ref {
-            Some(git_ref) if self.ref_is_commit() => Some(git_ref),
+            git_ref if self.ref_is_commit() => Some(git_ref),
             _ => None,
         }
     }
 
     fn symbolic_ref(&self) -> Option<&str> {
         match &self.git_ref {
-            Some(git_ref) if !self.ref_is_commit() => Some(git_ref),
+            git_ref if !self.ref_is_commit() => Some(git_ref),
             _ => None,
         }
     }
@@ -226,7 +223,7 @@ impl UsesExt for Uses {
     fn unpinned(&self) -> bool {
         match self {
             Uses::Docker(docker) => docker.hash.is_none() && docker.tag.is_none(),
-            Uses::Repository(repo) => repo.git_ref.is_none(),
+            Uses::Repository(_) => false,
             // Local `uses:` are always unpinned; any `@ref` component
             // is actually part of the path.
             Uses::Local(_) => true,
@@ -407,65 +404,54 @@ mod tests {
         for (uses, pattern, matches) in [
             // OK: case-insensitive, except subpath and tag
             ("actions/checkout@v3", "Actions/Checkout@v3", true),
-            ("actions/checkout/foo", "actions/checkout/Foo", false),
             ("actions/checkout/foo@v3", "Actions/Checkout/foo", true),
             ("actions/checkout@v3", "actions/checkout@V3", false),
             // NOT OK: owner/repo do not match
             ("actions/checkout@v3", "foo/checkout", false),
             ("actions/checkout@v3", "actions/bar", false),
             // NOT OK: subpath does not match
-            ("actions/checkout/foo", "actions/checkout", false),
             ("actions/checkout/foo@v3", "actions/checkout@v3", false),
             // NOT OK: template is more specific than `uses:`
-            ("actions/checkout", "actions/checkout@v3", false),
-            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
+            ("actions/checkout@v3", "actions/checkout/foo@v3", false),
             // owner/repo/subpath matches regardless of ref and casing
             // but only when the subpath matches.
             // the subpath must share the same case but might not be
             // normalized
-            ("actions/checkout/foo", "actions/checkout/foo", true),
-            ("ACTIONS/CHECKOUT/foo", "actions/checkout/foo", true),
             ("actions/checkout/foo@v3", "actions/checkout/foo", true),
             ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo", true),
             // TODO: See comment in `RepositoryUsesPattern::matches`
             // ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo/", true),
             // ("ACTIONS/CHECKOUT/foo@v3", "actions/checkout/foo//", true),
             // ("ACTIONS/CHECKOUT//foo////@v3", "actions/checkout/foo", true),
-            ("actions/checkout/FOO", "actions/checkout/foo", false),
-            ("actions/checkout/foo/bar", "actions/checkout/foo", false),
             // owner/repo matches regardless of ref and casing
             // but does not match subpaths
-            ("actions/checkout", "actions/checkout", true),
-            ("ACTIONS/CHECKOUT", "actions/checkout", true),
+            ("ACTIONS/CHECKOUT@v3", "actions/checkout", true),
             ("actions/checkout@v3", "actions/checkout", true),
             ("actions/checkout/foo@v3", "actions/checkout", false),
-            ("actions/somethingelse", "actions/checkout", false),
-            ("whatever/checkout", "actions/checkout", false),
+            ("actions/somethingelse@v3", "actions/checkout", false),
+            ("whatever/checkout@v3", "actions/checkout", false),
             // owner/repo/* matches regardless of ref and casing
             // including subpaths
             // but does not match when owner diverges
-            ("actions/checkout", "actions/checkout/*", true),
-            ("ACTIONS/CHECKOUT", "actions/checkout/*", true),
+            ("ACTIONS/CHECKOUT@v3", "actions/checkout/*", true),
             ("actions/checkout@v3", "actions/checkout/*", true),
             ("actions/checkout/foo@v3", "actions/checkout/*", true),
             ("actions/checkout/foo/bar@v3", "actions/checkout/*", true),
-            ("someoneelse/checkout", "actions/checkout/*", false),
+            ("someoneelse/checkout@v3", "actions/checkout/*", false),
             // owner/* matches regardless of ref, casing, and subpath
             // but rejects when owner diverges
-            ("actions/checkout", "actions/*", true),
-            ("ACTIONS/CHECKOUT", "actions/*", true),
+            ("ACTIONS/CHECKOUT@v3", "actions/*", true),
             ("actions/checkout@v3", "actions/*", true),
             ("actions/checkout/foo@v3", "actions/*", true),
-            ("someoneelse/checkout", "actions/*", false),
+            ("someoneelse/checkout@v3", "actions/*", false),
             // * matches everything
-            ("actions/checkout", "*", true),
             ("actions/checkout@v3", "*", true),
             ("actions/checkout/foo@v3", "*", true),
-            ("whatever/checkout", "*", true),
+            ("whatever/checkout@v3", "*", true),
             // exact matches
             ("actions/checkout@v3", "actions/checkout@v3", true),
             ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
-            ("actions/checkout/foo", "actions/checkout/foo@v3", false),
+            ("actions/checkout/foo@v1", "actions/checkout/foo@v3", false),
         ] {
             let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
                 return Err(anyhow!("invalid uses: {uses}"));

@@ -1,0 +1,63 @@
+# benchmark-base.yml: submit benchmarks to Bencher.
+#
+# This workflow provides baseline results, via the main branch.
+
+name: Benchmark baseline
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  benchmark_base_branch:
+    name: Continuous Benchmarking with Bencher
+    runs-on: ubuntu-latest
+
+    permissions:
+      checks: write
+
+    environment:
+      name: bencher
+      url: https://bencher.dev/console/projects/zizmor
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Bencher
+        uses: bencherdev/bencher@d84683bed6747f23f9903a02cd2a70502cee0b8d # v0.5.5
+
+      - name: Installer hyperfine
+        run: |
+          sudo apt-get remove --purge man-db
+          sudo apt install -y hyperfine
+
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2.8.0
+
+      - uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+
+      # TODO: use actions/cache to cache the plan phase here.
+      - name: Run benchmarks
+        run: make bench
+
+      - name: Upload benchmark results
+        # Take each result file in bench/results/*.json and use
+        # `bencher run` to upload it.
+        run: |
+          for file in bench/results/*.json; do
+            bencher run \
+              --project zizmor \
+              --token "${BENCHER_API_TOKEN}" \
+              --branch main \
+              --testbed ubuntu-latest \
+              --err \
+              --adapter shell_hyperfine \
+              --github-actions "${GITHUB_TOKEN}" \
+              --file "${file}"
+          done
+        env:
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

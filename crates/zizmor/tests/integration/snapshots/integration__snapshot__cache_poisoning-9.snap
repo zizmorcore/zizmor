@@ -3,13 +3,11 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"cache-poisoning/caching-opt-in-boolish-toggle.yml\")).run()?"
 ---
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-  --> @@INPUT@@:4:1
+  --> @@INPUT@@:18:9
    |
  4 |   on: release
-   |   ^^^^^^^^^^^ generally used when publishing artifacts generated at runtime
- 5 |
+   |   ----------- generally used when publishing artifacts generated at runtime
 ...
-17 |           uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
 18 | /         with:
 19 | |           target: ${{ matrix.platform.target }}
 20 | |           args: --release --out dist
@@ -17,5 +15,6 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    | |__________________________^ opt-in for caching here
    |
    = note: audit confidence → Low
+   = note: this finding has an auto-fix
 
-1 finding: 0 unknown, 0 informational, 0 low, 0 medium, 1 high
+1 findings (1 fixable): 0 informational, 0 low, 0 medium, 1 high

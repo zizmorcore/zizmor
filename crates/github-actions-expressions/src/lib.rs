@@ -3,16 +3,26 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-use std::{borrow::Cow, ops::Deref};
+use std::ops::Deref;
 
-use crate::context::Context;
+use crate::{
+    call::{Call, Function},
+    context::Context,
+    identifier::Identifier,
+    literal::Literal,
+    op::{BinOp, UnOp},
+};
 
 use self::parser::{ExprParser, Rule};
 use anyhow::Result;
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 
+pub mod call;
 pub mod context;
+pub mod identifier;
+pub mod literal;
+pub mod op;
 
 // Isolates the ExprParser, Rule and other generated types
 // so that we can do `missing_docs` at the top-level.
@@ -26,163 +36,12 @@ mod parser {
     pub struct ExprParser;
 }
 
-/// Represents a function in a GitHub Actions expression.
-///
-/// Function names are case-insensitive.
-#[derive(Debug)]
-pub struct Function<'src>(pub(crate) &'src str);
-
-impl PartialEq for Function<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq_ignore_ascii_case(other.0)
-    }
-}
-impl PartialEq<str> for Function<'_> {
-    fn eq(&self, other: &str) -> bool {
-        self.0.eq_ignore_ascii_case(other)
-    }
-}
-
-/// Represents a single identifier in a GitHub Actions expression,
-/// i.e. a single context component.
-///
-/// Identifiers are case-insensitive.
-#[derive(Debug)]
-pub struct Identifier<'src>(&'src str);
-
-impl Identifier<'_> {
-    /// Returns the identifier as a string slice, as it appears in the
-    /// expression.
-    ///
-    /// Important: identifiers are case-insensitive, so this should not
-    /// be used for comparisons.
-    pub fn as_str(&self) -> &str {
-        self.0
-    }
-}
-
-impl PartialEq for Identifier<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq_ignore_ascii_case(other.0)
-    }
-}
-
-impl PartialEq<str> for Identifier<'_> {
-    fn eq(&self, other: &str) -> bool {
-        self.0.eq_ignore_ascii_case(other)
-    }
-}
-
-/// Binary operations allowed in an expression.
-#[derive(Debug, PartialEq)]
-pub enum BinOp {
-    /// `expr && expr`
-    And,
-    /// `expr || expr`
-    Or,
-    /// `expr == expr`
-    Eq,
-    /// `expr != expr`
-    Neq,
-    /// `expr > expr`
-    Gt,
-    /// `expr >= expr`
-    Ge,
-    /// `expr < expr`
-    Lt,
-    /// `expr <= expr`
-    Le,
-}
-
-/// Unary operations allowed in an expression.
-#[derive(Debug, PartialEq)]
-pub enum UnOp {
-    /// `!expr`
-    Not,
-}
-
-/// Represents a literal value in a GitHub Actions expression.
-#[derive(Debug, PartialEq)]
-pub enum Literal<'src> {
-    /// A number literal.
-    Number(f64),
-    /// A string literal.
-    String(Cow<'src, str>),
-    /// A boolean literal.
-    Boolean(bool),
-    /// The `null` literal.
-    Null,
-}
-
-impl<'src> Literal<'src> {
-    /// Returns a string representation of the literal.
-    ///
-    /// This is not guaranteed to be an exact equivalent of the literal
-    /// as it appears in its source expression. For example, the string
-    /// representation of a floating point literal is subject to normalization,
-    /// and string literals are returned without surrounding quotes.
-    pub fn as_str(&self) -> Cow<'src, str> {
-        match self {
-            Literal::String(s) => s.clone(),
-            Literal::Number(n) => Cow::Owned(n.to_string()),
-            Literal::Boolean(b) => Cow::Owned(b.to_string()),
-            Literal::Null => Cow::Borrowed("null"),
-        }
-    }
-}
-
-// TODO: Move this type to some kind of common crate? It's useful to have
-// a single span type everywhere, instead of the current mash of span helpers
-// and ranges we have throughout zizmor.
-/// Represents a `[start, end)` span for a source expression.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Span {
-    /// The start of the span, inclusive.
-    pub start: usize,
-    /// The end of the span, exclusive.
-    pub end: usize,
-}
-
-impl Span {
-    /// Adjust this span by the given bias.
-    pub fn adjust(self, bias: usize) -> Self {
-        Self {
-            start: self.start + bias,
-            end: self.end + bias,
-        }
-    }
-}
-
-impl From<pest::Span<'_>> for Span {
-    fn from(span: pest::Span<'_>) -> Self {
-        Self {
-            start: span.start(),
-            end: span.end(),
-        }
-    }
-}
-
-impl From<std::ops::Range<usize>> for Span {
-    fn from(range: std::ops::Range<usize>) -> Self {
-        Self {
-            start: range.start,
-            end: range.end,
-        }
-    }
-}
-
-impl From<Span> for std::ops::Range<usize> {
-    fn from(span: Span) -> Self {
-        span.start..span.end
-    }
-}
-
 /// Represents the origin of an expression, including its source span
 /// and unparsed form.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Origin<'src> {
     /// The expression's source span.
-    pub span: Span,
+    pub span: subfeature::Span,
     /// The expression's unparsed form, as it appears in the source.
     ///
     /// This is recorded exactly as it appears in the source, *except*
@@ -194,7 +53,7 @@ pub struct Origin<'src> {
 
 impl<'a> Origin<'a> {
     /// Create a new origin from the given span and raw form.
-    pub fn new(span: impl Into<Span>, raw: &'a str) -> Self {
+    pub fn new(span: impl Into<subfeature::Span>, raw: &'a str) -> Self {
         Self {
             span: span.into(),
             raw: raw.trim(),
@@ -235,7 +94,7 @@ impl<'a> SpannedExpr<'a> {
         let mut contexts = vec![];
 
         match self.deref() {
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 // These functions, when evaluated, produce an evaluation
                 // that includes some or all of the contexts listed in
                 // their arguments.
@@ -279,7 +138,7 @@ impl<'a> SpannedExpr<'a> {
         let mut index_exprs = vec![];
 
         match self.deref() {
-            Expr::Call { func: _, args } => {
+            Expr::Call(Call { func: _, args }) => {
                 for arg in args {
                     index_exprs.extend(arg.computed_indices());
                 }
@@ -323,7 +182,7 @@ impl<'a> SpannedExpr<'a> {
         let mut subexprs = vec![];
 
         match self.deref() {
-            Expr::Call { func: _, args } => {
+            Expr::Call(Call { func: _, args }) => {
                 for arg in args {
                     subexprs.extend(arg.constant_reducible_subexprs());
                 }
@@ -357,6 +216,12 @@ impl<'a> Deref for SpannedExpr<'a> {
     }
 }
 
+impl<'doc> From<&SpannedExpr<'doc>> for subfeature::Fragment<'doc> {
+    fn from(expr: &SpannedExpr<'doc>) -> Self {
+        Self::new(expr.origin.raw)
+    }
+}
+
 /// Represents a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
 pub enum Expr<'src> {
@@ -365,12 +230,7 @@ pub enum Expr<'src> {
     /// The `*` literal within an index or context.
     Star,
     /// A function call.
-    Call {
-        /// The function name, e.g. `foo` in `foo()`.
-        func: Function<'src>,
-        /// The function's arguments.
-        args: Vec<SpannedExpr<'src>>,
-    },
+    Call(Call<'src>),
     /// A context identifier component, e.g. `github` in `github.actor`.
     Identifier(Identifier<'src>),
     /// A context index component, e.g. `[0]` in `foo[0]`.
@@ -437,16 +297,18 @@ impl<'src> Expr<'src> {
             Expr::BinOp { lhs, op: _, rhs } => lhs.constant_reducible() && rhs.constant_reducible(),
             // Unops are reducible if their interior expression is reducible.
             Expr::UnOp { op: _, expr } => expr.constant_reducible(),
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 // These functions are reducible if their arguments are reducible.
                 if func == "format"
                     || func == "contains"
                     || func == "startsWith"
                     || func == "endsWith"
+                    || func == "toJSON"
+                    || func == "fromJSON"
+                    || func == "join"
                 {
                     args.iter().all(|e| e.constant_reducible())
                 } else {
-                    // TODO: fromJSON(toJSON(...)) and vice versa.
                     false
                 }
             }
@@ -465,7 +327,7 @@ impl<'src> Expr<'src> {
             .next()
             .unwrap();
 
-        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr>> {
+        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr<'_>>> {
             // We're parsing a pest grammar, which isn't left-recursive.
             // As a result, we have constructions like
             // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
@@ -484,7 +346,7 @@ impl<'src> Expr<'src> {
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: BinOp::Or,
@@ -500,7 +362,7 @@ impl<'src> Expr<'src> {
                     let lhs = parse_pair(pairs.next().unwrap())?;
                     pairs.try_fold(lhs, |expr, next| {
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: BinOp::And,
@@ -530,7 +392,7 @@ impl<'src> Expr<'src> {
                         };
 
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: eq_op,
@@ -560,7 +422,7 @@ impl<'src> Expr<'src> {
                         };
 
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::BinOp {
                                 lhs: expr,
                                 op: eq_op,
@@ -577,7 +439,7 @@ impl<'src> Expr<'src> {
 
                     match inner_pair.as_rule() {
                         Rule::unary_op => Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             Expr::UnOp {
                                 op: UnOp::Not,
                                 expr: parse_pair(pairs.next().unwrap())?,
@@ -593,7 +455,7 @@ impl<'src> Expr<'src> {
                     parse_pair(pair.into_inner().next().unwrap())
                 }
                 Rule::number => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     pair.as_str().parse::<f64>().unwrap().into(),
                 )
                 .into()),
@@ -605,27 +467,31 @@ impl<'src> Expr<'src> {
                     // Optimization: if our string literal doesn't have any
                     // escaped quotes in it, we can save ourselves a clone.
                     if !string_inner.contains('\'') {
-                        Ok(SpannedExpr::new(Origin::new(span, raw), string_inner.into()).into())
+                        Ok(SpannedExpr::new(
+                            Origin::new(span.start()..span.end(), raw),
+                            string_inner.into(),
+                        )
+                        .into())
                     } else {
                         Ok(SpannedExpr::new(
-                            Origin::new(span, raw),
+                            Origin::new(span.start()..span.end(), raw),
                             string_inner.replace("''", "'").into(),
                         )
                         .into())
                     }
                 }
                 Rule::boolean => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     pair.as_str().parse::<bool>().unwrap().into(),
                 )
                 .into()),
                 Rule::null => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     Expr::Literal(Literal::Null),
                 )
                 .into()),
                 Rule::star => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     Expr::Star,
                 )
                 .into()),
@@ -639,21 +505,21 @@ impl<'src> Expr<'src> {
                         .collect::<Result<_, _>>()?;
 
                     Ok(SpannedExpr::new(
-                        Origin::new(span, raw),
-                        Expr::Call {
+                        Origin::new(span.start()..span.end(), raw),
+                        Expr::Call(Call {
                             func: Function(identifier.as_str()),
                             args,
-                        },
+                        }),
                     )
                     .into())
                 }
                 Rule::identifier => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     Expr::ident(pair.as_str()),
                 )
                 .into()),
                 Rule::index => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span(), pair.as_str()),
+                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
                     Expr::Index(parse_pair(pair.into_inner().next().unwrap())?),
                 )
                 .into()),
@@ -671,7 +537,11 @@ impl<'src> Expr<'src> {
                     if inner.len() == 1 && matches!(inner[0].inner, Expr::Call { .. }) {
                         Ok(inner.remove(0).into())
                     } else {
-                        Ok(SpannedExpr::new(Origin::new(span, raw), Expr::context(inner)).into())
+                        Ok(SpannedExpr::new(
+                            Origin::new(span.start()..span.end(), raw),
+                            Expr::context(inner),
+                        )
+                        .into())
                     }
                 }
                 r => panic!("unrecognized rule: {r:?}"),
@@ -706,6 +576,273 @@ impl From<bool> for Expr<'_> {
     }
 }
 
+/// The result of evaluating a GitHub Actions expression.
+///
+/// This type represents the possible values that can result from evaluating
+/// GitHub Actions expressions.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Evaluation {
+    /// A string value (includes both string literals and stringified other types).
+    String(String),
+    /// A numeric value.
+    Number(f64),
+    /// A boolean value.
+    Boolean(bool),
+    /// The null value.
+    Null,
+    /// An array value. Array evaluations can only be realized through `fromJSON`.
+    Array(Vec<Evaluation>),
+    /// An object value. Object evaluations can only be realized through `fromJSON`.
+    Object(std::collections::HashMap<String, Evaluation>),
+}
+
+impl TryFrom<serde_json::Value> for Evaluation {
+    type Error = ();
+
+    fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
+        match value {
+            serde_json::Value::Null => Ok(Evaluation::Null),
+            serde_json::Value::Bool(b) => Ok(Evaluation::Boolean(b)),
+            serde_json::Value::Number(n) => {
+                if let Some(f) = n.as_f64() {
+                    Ok(Evaluation::Number(f))
+                } else {
+                    Err(())
+                }
+            }
+            serde_json::Value::String(s) => Ok(Evaluation::String(s)),
+            serde_json::Value::Array(arr) => {
+                let elements = arr
+                    .into_iter()
+                    .map(|elem| elem.try_into())
+                    .collect::<Result<_, _>>()?;
+                Ok(Evaluation::Array(elements))
+            }
+            serde_json::Value::Object(obj) => {
+                let mut map = std::collections::HashMap::new();
+                for (key, value) in obj {
+                    map.insert(key, value.try_into()?);
+                }
+                Ok(Evaluation::Object(map))
+            }
+        }
+    }
+}
+
+impl TryInto<serde_json::Value> for Evaluation {
+    type Error = ();
+
+    fn try_into(self) -> Result<serde_json::Value, Self::Error> {
+        match self {
+            Evaluation::Null => Ok(serde_json::Value::Null),
+            Evaluation::Boolean(b) => Ok(serde_json::Value::Bool(b)),
+            Evaluation::Number(n) => {
+                // NOTE: serde_json has different internal representations
+                // for integers and floats, so we need to handle both cases
+                // to ensure we serialize integers without a decimal point.
+                if n.fract() == 0.0 {
+                    Ok(serde_json::Value::Number(serde_json::Number::from(
+                        n as i64,
+                    )))
+                } else if let Some(num) = serde_json::Number::from_f64(n) {
+                    Ok(serde_json::Value::Number(num))
+                } else {
+                    Err(())
+                }
+            }
+            Evaluation::String(s) => Ok(serde_json::Value::String(s)),
+            Evaluation::Array(arr) => {
+                let elements = arr
+                    .into_iter()
+                    .map(|elem| elem.try_into())
+                    .collect::<Result<_, _>>()?;
+                Ok(serde_json::Value::Array(elements))
+            }
+            Evaluation::Object(obj) => {
+                let mut map = serde_json::Map::new();
+                for (key, value) in obj {
+                    map.insert(key, value.try_into()?);
+                }
+                Ok(serde_json::Value::Object(map))
+            }
+        }
+    }
+}
+
+impl Evaluation {
+    /// Convert to a boolean following GitHub Actions truthiness rules.
+    ///
+    /// GitHub Actions truthiness:
+    /// - false and null are falsy
+    /// - Numbers: 0 is falsy, everything else is truthy
+    /// - Strings: empty string is falsy, everything else is truthy
+    /// - Arrays and dictionaries are always truthy (non-empty objects)
+    pub fn as_boolean(&self) -> bool {
+        match self {
+            Evaluation::Boolean(b) => *b,
+            Evaluation::Null => false,
+            Evaluation::Number(n) => *n != 0.0,
+            Evaluation::String(s) => !s.is_empty(),
+            // Arrays and objects are always truthy, even if empty.
+            Evaluation::Array(_) | Evaluation::Object(_) => true,
+        }
+    }
+
+    /// Convert to a number following GitHub Actions conversion rules.
+    ///
+    /// See: <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#operators>
+    pub fn as_number(&self) -> f64 {
+        match self {
+            Evaluation::String(s) => {
+                if s.is_empty() {
+                    0.0
+                } else {
+                    s.parse::<f64>().unwrap_or(f64::NAN)
+                }
+            }
+            Evaluation::Number(n) => *n,
+            Evaluation::Boolean(b) => {
+                if *b {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+            Evaluation::Null => 0.0,
+            Evaluation::Array(_) | Evaluation::Object(_) => f64::NAN,
+        }
+    }
+
+    /// Returns a wrapper around this evaluation that implements
+    /// GitHub Actions evaluation semantics.
+    pub fn sema(&self) -> EvaluationSema<'_> {
+        EvaluationSema(self)
+    }
+}
+
+/// A wrapper around `Evaluation` that implements GitHub Actions
+/// various evaluation semantics (comparison, stringification, etc.).
+pub struct EvaluationSema<'a>(&'a Evaluation);
+
+impl PartialEq for EvaluationSema<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.0, other.0) {
+            (Evaluation::Null, Evaluation::Null) => true,
+            (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a == b,
+            (Evaluation::Number(a), Evaluation::Number(b)) => a == b,
+            (Evaluation::String(a), Evaluation::String(b)) => a == b,
+
+            // Coercion rules: all others convert to number and compare.
+            (a, b) => a.as_number() == b.as_number(),
+        }
+    }
+}
+
+impl PartialOrd for EvaluationSema<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self.0, other.0) {
+            (Evaluation::Null, Evaluation::Null) => Some(std::cmp::Ordering::Equal),
+            (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a.partial_cmp(b),
+            (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
+            (Evaluation::String(a), Evaluation::String(b)) => a.partial_cmp(b),
+            // Coercion rules: all others convert to number and compare.
+            (a, b) => a.as_number().partial_cmp(&b.as_number()),
+        }
+    }
+}
+
+impl std::fmt::Display for EvaluationSema<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0 {
+            Evaluation::String(s) => write!(f, "{}", s),
+            Evaluation::Number(n) => {
+                // Format numbers like GitHub Actions does
+                if n.fract() == 0.0 {
+                    write!(f, "{}", *n as i64)
+                } else {
+                    write!(f, "{}", n)
+                }
+            }
+            Evaluation::Boolean(b) => write!(f, "{}", b),
+            Evaluation::Null => write!(f, ""),
+            Evaluation::Array(_) => write!(f, "Array"),
+            Evaluation::Object(_) => write!(f, "Object"),
+        }
+    }
+}
+
+impl<'src> Expr<'src> {
+    /// Evaluates a constant-reducible expression to its literal value.
+    ///
+    /// Returns `Some(Evaluation)` if the expression can be constant-evaluated,
+    /// or `None` if the expression contains non-constant elements (like contexts or
+    /// non-reducible function calls).
+    ///
+    /// This implementation follows GitHub Actions' evaluation semantics as documented at:
+    /// https://docs.github.com/en/actions/reference/workflows-and-actions/expressions
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use github_actions_expressions::{Expr, Evaluation};
+    ///
+    /// let expr = Expr::parse("'hello'").unwrap();
+    /// let result = expr.consteval().unwrap();
+    /// assert_eq!(result.sema().to_string(), "hello");
+    ///
+    /// let expr = Expr::parse("true && false").unwrap();
+    /// let result = expr.consteval().unwrap();
+    /// assert_eq!(result, Evaluation::Boolean(false));
+    /// ```
+    pub fn consteval(&self) -> Option<Evaluation> {
+        match self {
+            Expr::Literal(literal) => Some(literal.consteval()),
+
+            Expr::BinOp { lhs, op, rhs } => {
+                let lhs_val = lhs.consteval()?;
+                let rhs_val = rhs.consteval()?;
+
+                match op {
+                    BinOp::And => {
+                        // GitHub Actions && semantics: if LHS is falsy, return LHS, else return RHS
+                        if lhs_val.as_boolean() {
+                            Some(rhs_val)
+                        } else {
+                            Some(lhs_val)
+                        }
+                    }
+                    BinOp::Or => {
+                        // GitHub Actions || semantics: if LHS is truthy, return LHS, else return RHS
+                        if lhs_val.as_boolean() {
+                            Some(lhs_val)
+                        } else {
+                            Some(rhs_val)
+                        }
+                    }
+                    BinOp::Eq => Some(Evaluation::Boolean(lhs_val.sema() == rhs_val.sema())),
+                    BinOp::Neq => Some(Evaluation::Boolean(lhs_val.sema() != rhs_val.sema())),
+                    BinOp::Lt => Some(Evaluation::Boolean(lhs_val.sema() < rhs_val.sema())),
+                    BinOp::Le => Some(Evaluation::Boolean(lhs_val.sema() <= rhs_val.sema())),
+                    BinOp::Gt => Some(Evaluation::Boolean(lhs_val.sema() > rhs_val.sema())),
+                    BinOp::Ge => Some(Evaluation::Boolean(lhs_val.sema() >= rhs_val.sema())),
+                }
+            }
+
+            Expr::UnOp { op, expr } => {
+                let val = expr.consteval()?;
+                match op {
+                    UnOp::Not => Some(Evaluation::Boolean(!val.as_boolean())),
+                }
+            }
+
+            Expr::Call(call) => call.consteval(),
+
+            // Non-constant expressions
+            _ => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
@@ -714,7 +851,7 @@ mod tests {
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use crate::{Literal, Origin, SpannedExpr};
+    use crate::{Call, Literal, Origin, SpannedExpr};
 
     use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
@@ -860,6 +997,7 @@ mod tests {
         ]";
 
         let cases = &[
+            "true",
             "fromJSON(inputs.free-threading) && '--disable-gil' || ''",
             "foo || bar || baz",
             "foo || bar && baz || foo && 1 && 2 && 3 || 4",
@@ -962,14 +1100,14 @@ mod tests {
                 "foo(1, 2, 3)",
                 SpannedExpr::new(
                     Origin::new(0..12, "foo(1, 2, 3)"),
-                    Expr::Call {
+                    Expr::Call(Call {
                         func: Function("foo"),
                         args: vec![
                             SpannedExpr::new(Origin::new(4..5, "1"), 1.0.into()),
                             SpannedExpr::new(Origin::new(7..8, "2"), 2.0.into()),
                             SpannedExpr::new(Origin::new(10..11, "3"), 3.0.into()),
                         ],
-                    },
+                    }),
                 ),
             ),
             (
@@ -1162,7 +1300,7 @@ mod tests {
                             Origin::new(6..30, "[format('{0}', 'event')]"),
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(7..29, "format('{0}', 'event')"),
-                                Expr::Call {
+                                Expr::Call(Call {
                                     func: Function("format"),
                                     args: vec![
                                         SpannedExpr::new(
@@ -1174,7 +1312,7 @@ mod tests {
                                             Expr::from("event"),
                                         ),
                                     ],
-                                },
+                                }),
                             ))),
                         ),
                     ]),
@@ -1251,6 +1389,113 @@ mod tests {
         ] {
             let expr = Expr::parse(expr)?;
             assert_eq!(expr.constant_reducible(), *reducible);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluate_constant_complex_expressions() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Nested operations
+            ("!false", Evaluation::Boolean(true)),
+            ("!true", Evaluation::Boolean(false)),
+            ("!(true && false)", Evaluation::Boolean(true)),
+            // Complex boolean logic
+            ("true && (false || true)", Evaluation::Boolean(true)),
+            ("false || (true && false)", Evaluation::Boolean(false)),
+            // Mixed function calls
+            (
+                "contains(format('{0} {1}', 'hello', 'world'), 'world')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "startsWith(format('prefix_{0}', 'test'), 'prefix')",
+                Evaluation::Boolean(true),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluation_sema_display() {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            (Evaluation::String("hello".to_string()), "hello"),
+            (Evaluation::Number(42.0), "42"),
+            (Evaluation::Number(3.14), "3.14"),
+            (Evaluation::Boolean(true), "true"),
+            (Evaluation::Boolean(false), "false"),
+            (Evaluation::Null, ""),
+        ];
+
+        for (result, expected) in test_cases {
+            assert_eq!(result.sema().to_string(), *expected);
+        }
+    }
+
+    #[test]
+    fn test_evaluation_result_to_boolean() {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            (Evaluation::Boolean(true), true),
+            (Evaluation::Boolean(false), false),
+            (Evaluation::Null, false),
+            (Evaluation::Number(0.0), false),
+            (Evaluation::Number(1.0), true),
+            (Evaluation::Number(-1.0), true),
+            (Evaluation::String("".to_string()), false),
+            (Evaluation::String("hello".to_string()), true),
+            (Evaluation::Array(vec![]), true), // Arrays are always truthy
+            (Evaluation::Object(std::collections::HashMap::new()), true), // Dictionaries are always truthy
+        ];
+
+        for (result, expected) in test_cases {
+            assert_eq!(result.as_boolean(), *expected);
+        }
+    }
+
+    #[test]
+    fn test_github_actions_logical_semantics() -> Result<()> {
+        use crate::Evaluation;
+
+        // Test GitHub Actions-specific && and || semantics
+        let test_cases = &[
+            // && returns the first falsy value, or the last value if all are truthy
+            ("false && 'hello'", Evaluation::Boolean(false)),
+            ("null && 'hello'", Evaluation::Null),
+            ("'' && 'hello'", Evaluation::String("".to_string())),
+            (
+                "'hello' && 'world'",
+                Evaluation::String("world".to_string()),
+            ),
+            ("true && 42", Evaluation::Number(42.0)),
+            // || returns the first truthy value, or the last value if all are falsy
+            ("true || 'hello'", Evaluation::Boolean(true)),
+            (
+                "'hello' || 'world'",
+                Evaluation::String("hello".to_string()),
+            ),
+            ("false || 'hello'", Evaluation::String("hello".to_string())),
+            ("null || false", Evaluation::Boolean(false)),
+            ("'' || null", Evaluation::Null),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
         }
 
         Ok(())
@@ -1386,5 +1631,25 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_fragment_from_expr() {
+        for (expr, expected) in &[
+            ("foo==bar", "foo==bar"),
+            ("foo    ==   bar", "foo    ==   bar"),
+            ("foo == bar", r"foo == bar"),
+            ("foo(bar)", "foo(bar)"),
+            ("foo(bar, baz)", "foo(bar, baz)"),
+            ("foo (bar, baz)", "foo (bar, baz)"),
+            ("a . b . c . d", "a . b . c . d"),
+            ("true \n && \n false", r"true\s+\&\&\s+false"),
+        ] {
+            let expr = Expr::parse(expr).unwrap();
+            match subfeature::Fragment::from(&expr) {
+                subfeature::Fragment::Raw(actual) => assert_eq!(actual, *expected),
+                subfeature::Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
+            };
+        }
     }
 }

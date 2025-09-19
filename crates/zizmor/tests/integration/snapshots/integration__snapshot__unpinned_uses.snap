@@ -2,36 +2,20 @@
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"unpinned-uses.yml\")).args([\"--pedantic\"]).run()?"
 ---
-error[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:12:9
+warning[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:17:9
    |
-12 |       - uses: actions/checkout
-   |         ^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a ref or hash (required by actions/* policy)
-   |
-   = note: audit confidence → High
-
-error[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:22:9
-   |
-22 |       - uses: github/codeql-action/upload-sarif
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a ref or hash (required by github/* policy)
+17 |       - uses: docker://ubuntu
+   |         ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
    |
    = note: audit confidence → High
 
 warning[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:25:9
+  --> @@INPUT@@:23:9
    |
-25 |       - uses: docker://ubuntu
-   |         --------------------- action is not pinned to a tag, branch, or hash ref
-   |
-   = note: audit confidence → High
-
-warning[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:31:9
-   |
-31 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
-   |         -------------------------------------------------- action is not pinned to a tag, branch, or hash ref
+23 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
    |
    = note: audit confidence → High
 
-4 findings: 0 unknown, 0 informational, 0 low, 2 medium, 2 high
+2 findings: 0 informational, 0 low, 2 medium, 0 high

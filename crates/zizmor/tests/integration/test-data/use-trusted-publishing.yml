@@ -12,7 +12,112 @@ jobs:
     permissions:
       id-token: write
     steps:
+      # NOT OK: password present and we know the default index supports
+      # trusted publishing.
+      - name: vulnerable-1
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+
+      # NOT OK: explicit repository-url, but for an index we know supports
+      # trusted publishing.
       - name: vulnerable-2
         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
         with:
           password: ${{ secrets.PYPI_TOKEN }}
+          repository-url: https://upload.pypi.org/legacy/
+
+      # NOT OK: explicit repository_url, but for an index we know supports
+      # trusted publishing.
+      - name: vulnerable-3
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+          repository_url: https://upload.pypi.org/legacy/
+
+      # OK: no password, so we assume trusted publishing is used.
+      - name: not-vulnerable-4
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+
+      # OK: no passwords, so we assume trusted publishing is used,
+      # even with an explicit repository-url.
+      - name: not-vulnerable-5
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+        with:
+          repository-url: https://upload.pypi.org/legacy/
+
+      # NOT OK: like above, but with TestPyPI's repository-url.
+      - name: vulnerable-6
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+        with:
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+
+      # NOT OK: like above, but with TestPyPI's repository_url.
+      - name: vulnerable-7
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+        with:
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
+
+      # NOT OK: rubygems/release-gem with setup-trusted-publisher: false
+      - name: vulnerable-8
+        uses: rubygems/release-gem@v1 # zizmor: ignore[unpinned-uses]
+        with:
+          setup-trusted-publisher: false
+
+      # OK: rubygems/release-gem with setup-trusted-publisher: true
+      - name: not-vulnerable-9
+        uses: rubygems/release-gem@v1 # zizmor: ignore[unpinned-uses]
+        with:
+          setup-trusted-publisher: true
+
+      # OK: rubygems/release-gem with setup-trusted-publisher not set
+      - name: not-vulnerable-10
+        uses: rubygems/release-gem@v1 # zizmor: ignore[unpinned-uses]
+
+      # NOT OK: rubygems/configure-rubygems-credentials with
+      # api-token set
+      - name: vulnerable-11
+        uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
+        with:
+          api-token: ${{ secrets.RUBYGEMS_API_TOKEN }}
+
+      # OK: rubygems/configure-rubygems-credentials with
+      # api-token not set
+      - name: not-vulnerable-12
+        uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
+
+      # NOT OK: rubygems/configure-rubygems-credentials with
+      # api-token set, and with a gem-server that we know supports
+      # trusted publishing.
+      - name: vulnerable-13
+        uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
+        with:
+          api-token: ${{ secrets.RUBYGEMS_API_TOKEN }}
+          gem-server: https://rubygems.org
+
+      # OK: rubygems/configure-rubygems-credentials with
+      # api-token set, but with a server that we don't know
+      # anything about (and therefore can't recommend trusted publishing for).
+      - name: not-vulnerable-14
+        uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
+        with:
+          api-token: ${{ secrets.RUBYGEMS_API_TOKEN }}
+          gem-server: https://example.com
+
+      # OK: pypa/gh-action-pypi-publish with an explicit password,
+      # but with a repository-url that we don't know anything about
+      - name: not-vulnerable-15
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+          repository-url: https://example.com/legacy/
+
+      # OK: pypa/gh-action-pypi-publish with an explicit password,
+      # but with a repository_url that we don't know anything about
+      - name: not-vulnerable-16
+        uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+          repository_url: https://example.com/legacy/

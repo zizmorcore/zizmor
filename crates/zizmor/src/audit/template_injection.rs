@@ -15,10 +15,10 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{collections::HashMap, env, ops::Deref, sync::LazyLock, vec};
+use std::{env, ops::Deref, sync::LazyLock, vec};
 
 use fst::Map;
-use github_actions_expressions::{Expr, Literal, context::Context};
+use github_actions_expressions::{Expr, context::Context, literal::Literal};
 use github_actions_models::{
     common::{EnvValue, RepositoryUses, Uses, expr::LoE},
     workflow::job::Strategy,
@@ -27,18 +27,20 @@ use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
+    config::Config,
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
-        location::{Routable as _, Subfeature, SymbolicLocation},
+        location::{Routable as _, SymbolicLocation},
     },
     models::{
         self, StepCommon, action::CompositeStep, inputs::Capability, uses::RepositoryUsesPattern,
         workflow::Step,
     },
     state::AuditState,
-    utils::{DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_expressions},
-    yaml_patch::{Op, Patch},
+    utils::{self, DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_fenced_expressions},
 };
+use subfeature::Subfeature;
+use yamlpatch::{Op, Patch};
 
 pub(crate) struct TemplateInjection;
 
@@ -55,16 +57,22 @@ static ACTION_INJECTION_SINKS: LazyLock<Vec<(RepositoryUsesPattern, Vec<&str>)>>
         )
         .unwrap();
 
-        // These sinks are not tracked by CodeQL (yet)
-        sinks.push(("amadevus/pwsh-script".parse().unwrap(), vec!["script"]));
-        sinks.push((
-            "jannekem/run-python-script-action".parse().unwrap(),
-            vec!["script"],
-        ));
-        sinks.push((
-            "cardinalby/js-eval-action".parse().unwrap(),
-            vec!["expression"],
-        ));
+        sinks.extend([
+            // These sinks are not tracked by CodeQL (yet)
+            ("amadevus/pwsh-script".parse().unwrap(), vec!["script"]),
+            (
+                "jannekem/run-python-script-action".parse().unwrap(),
+                vec!["script"],
+            ),
+            (
+                "cardinalby/js-eval-action".parse().unwrap(),
+                vec!["expression"],
+            ),
+            (
+                "addnab/docker-run-action".parse().unwrap(),
+                vec!["options", "run"],
+            ),
+        ]);
         sinks
     });
 
@@ -130,16 +138,16 @@ impl TemplateInjection {
                         .map(|script| {
                             (
                                 script,
-                                step.location().with_keys(&["with".into(), input.into()]),
+                                step.location().with_keys(["with".into(), input.into()]),
                                 vec![
                                     // TODO: Plumb the step name/id as a related
                                     // location here and below; this will require us
                                     // to add it to StepCommon.
                                     step.location()
-                                        .with_keys(&["uses".into()])
+                                        .with_keys(["uses".into()])
                                         .annotated("action accepts arbitrary code"),
                                     step.location()
-                                        .with_keys(&["with".into(), input.into()])
+                                        .with_keys(["with".into(), input.into()])
                                         .annotated("via this input")
                                         .key_only(),
                                 ],
@@ -150,16 +158,38 @@ impl TemplateInjection {
             models::StepBodyCommon::Run { run, .. } => {
                 vec![(
                     run,
-                    step.location().with_keys(&["run".into()]),
+                    step.location().with_keys(["run".into()]),
                     vec![
                         step.location()
-                            .with_keys(&["run".into()])
+                            .with_keys(["run".into()])
                             .annotated("this run block")
                             .key_only(),
                     ],
                 )]
             }
             _ => vec![],
+        }
+    }
+
+    /// Returns the appropriate variable expansion syntax for the given variable
+    /// based on the step's shell type. Returns `None` if the shell type is unsupported
+    /// for auto-fixing.
+    fn variable_expansion_for_shell<'doc>(
+        env_var: &str,
+        step: &impl StepCommon<'doc>,
+    ) -> Option<String> {
+        // Only provide fixes for run steps
+        if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
+            return None;
+        }
+
+        let shell = utils::normalize_shell(step.shell()?);
+
+        match shell {
+            "bash" | "sh" | "zsh" => Some(format!("${{{env_var}}}")),
+            "cmd" => Some(format!("%{env_var}%")),
+            "pwsh" | "powershell" => Some(format!("$env:{env_var}")),
+            _ => None,
         }
     }
 
@@ -257,9 +287,6 @@ impl TemplateInjection {
             return None;
         }
 
-        // FIXME: We should only produce a fix if we're confident that
-        // the `run:` block has bash syntax.
-
         // If our expression isn't a single context, then we can't fix it yet.
         let Expr::Context(ctx) = parsed else {
             return None;
@@ -267,8 +294,9 @@ impl TemplateInjection {
 
         // From here, our fix consists of two patch operations:
         // 1. Replacing the expression in the script with an environment
-        //    variable of our generation. For example, `${{ foo.bar }}`
-        //    becomes `${FOO_BAR}`.
+        //    variable of our generation. The variable syntax depends on
+        //    the shell type: `${VAR}` for bash/sh, `%VAR%` for cmd,
+        //    `$env:VAR` for PowerShell.
         // 2. Inserting the new environment variable into the step's
         //    `env:` block, e.g. `FOO_BAR: ${{ foo.bar }}`.
         //
@@ -282,37 +310,45 @@ impl TemplateInjection {
         // index. In those kinds of cases, we don't produce a fix.
         let env_var = Self::context_to_env_var(ctx)?;
 
+        // Express the variable's expansion according to the step's shell.
+        // For example, `VAR` becomes `${VAR}` in bash/sh/zsh,
+        let var_expansion = Self::variable_expansion_for_shell(&env_var, step)?;
+
         let mut patches = vec![];
         patches.push(Patch {
-            route: step.route().with_keys(&["run".into()]),
+            route: step.route().with_key("run"),
             operation: Op::RewriteFragment {
-                from: raw.as_raw().to_string().into(),
-                to: format!("${{{env_var}}}").into(),
-                after: None,
+                from: subfeature::Subfeature::new(0, raw.as_raw()),
+                to: var_expansion.into(),
             },
         });
 
-        // We only need to add the environment variable if it doesn't
-        // match one of the runner's default environment variables.
-        if !DEFAULT_ENVIRONMENT_VARIABLES
+        // We need to insert a new key into the `env:` block, unless the
+        // variable is already a default *or* the context is `env.FOO`,
+        // since the latter implies that `FOO` is already present.
+        let needs_new_env = !DEFAULT_ENVIRONMENT_VARIABLES
             .iter()
             .map(|t| t.0)
             .contains(&env_var.as_str())
-        {
+            && !ctx.child_of("env");
+
+        if needs_new_env {
             patches.push(Patch {
                 route: step.route(),
                 operation: Op::MergeInto {
                     key: "env".to_string(),
-                    value: serde_yaml::to_value(HashMap::from([(env_var.as_str(), raw.as_raw())]))
-                        .unwrap(),
+                    updates: indexmap::IndexMap::from_iter([(
+                        env_var.clone(),
+                        serde_yaml::Value::String(raw.as_raw().into()),
+                    )]),
                 },
             });
         }
 
         Some(Fix {
             title: "replace expression with environment variable".into(),
-            description: "todo".into(),
             key: step.location().key,
+            disposition: Default::default(),
             patches,
         })
     }
@@ -329,7 +365,7 @@ impl TemplateInjection {
         Persona,
     )> {
         let mut bad_expressions = vec![];
-        for (expr, expr_span) in extract_expressions(script) {
+        for (expr, expr_span) in extract_fenced_expressions(script) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_raw());
                 continue;
@@ -342,8 +378,8 @@ impl TemplateInjection {
                 Subfeature::new(expr_span.start, &parsed),
                 // Intentionally not providing a fix here.
                 None,
-                Severity::Unknown,
-                Confidence::Unknown,
+                Severity::Low,
+                Confidence::High,
                 Persona::Pedantic,
             ));
 
@@ -404,7 +440,7 @@ impl TemplateInjection {
                                             (Severity::High, Confidence::High, Persona::default())
                                         }
                                         None => {
-                                            (Severity::Unknown, Confidence::Low, Persona::default())
+                                            (Severity::Low, Confidence::Low, Persona::default())
                                         }
                                     };
 
@@ -441,7 +477,7 @@ impl TemplateInjection {
                                                 origin.raw,
                                             ),
                                             self.attempt_fix(&expr, &parsed, step),
-                                            Severity::Unknown,
+                                            Severity::Low,
                                             Confidence::High,
                                             Persona::Pedantic,
                                         ));
@@ -564,20 +600,25 @@ impl TemplateInjection {
 }
 
 impl Audit for TemplateInjection {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 
     fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
+        _config: &Config,
     ) -> anyhow::Result<Vec<Finding<'a>>> {
         self.process_step(step)
     }
@@ -589,47 +630,40 @@ mod tests {
 
     use crate::audit::Audit;
     use crate::audit::template_injection::{Capability, TemplateInjection};
-    use crate::github_api::GitHubHost;
+    use crate::config::Config;
+    use crate::models::AsDocument;
     use crate::models::workflow::Workflow;
-    use crate::registry::InputKey;
+    use crate::registry::input::InputKey;
     use crate::state::AuditState;
 
     /// Macro for testing workflow audits with common boilerplate
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                cache_dir: "/tmp/zizmor".into(),
-                gh_token: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
 
-            $test_fn(findings)
+            $test_fn(&workflow, findings)
         }};
     }
 
     /// Helper function to apply a specific fix by title and return the result for snapshot testing
     fn apply_fix_by_title_for_snapshot(
-        workflow_content: &str,
+        document: &yamlpath::Document,
         finding: &crate::finding::Finding,
         expected_title: &str,
-    ) -> String {
+    ) -> yamlpath::Document {
         assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
 
         let fix = finding
             .fixes
             .iter()
             .find(|f| f.title == expected_title)
-            .unwrap_or_else(|| {
-                panic!("Expected fix with title '{}' but not found", expected_title)
-            });
+            .unwrap_or_else(|| panic!("Expected fix with title '{expected_title}' but not found"));
 
-        fix.apply_to_content(workflow_content).unwrap().unwrap()
+        fix.apply(document).unwrap()
     }
 
     #[test]
@@ -649,7 +683,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_github_ref_name.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -662,11 +696,11 @@ jobs:
 
                 if let Some(finding) = finding_with_fix {
                     let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow_content,
+                        workflow.as_document(),
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content, @r#"
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
                     name: Test Template Injection
                     on: push
                     jobs:
@@ -700,7 +734,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_github_actor.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -713,11 +747,11 @@ jobs:
 
                 if let Some(finding) = finding_with_fix {
                     let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow_content,
+                        workflow.as_document(),
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content, @r#"
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
                     name: Test Template Injection
                     on: push
                     jobs:
@@ -753,7 +787,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_with_existing_env.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -766,11 +800,11 @@ jobs:
 
                 if let Some(finding) = finding_with_fix {
                     let fixed_content = apply_fix_by_title_for_snapshot(
-                        workflow_content,
+                        workflow.as_document(),
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content, @r#"
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
                     name: Test Template Injection
                     on: push
                     jobs:
@@ -780,7 +814,7 @@ jobs:
                           - name: Vulnerable step with existing env
                             run: echo "Event name is ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
                             env:
-                              EXISTING_VAR: existing_value
+                              EXISTING_VAR: "existing_value"
                               GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
                     "#);
                 }
@@ -808,7 +842,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_no_fix_for_action_sinks.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -844,7 +878,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_multiple_expressions.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find multiple template injections
                 assert!(!findings.is_empty());
 
@@ -857,7 +891,7 @@ jobs:
                 // Our comprehensive fix approach now handles all expressions in a single operation:
                 // All expressions in the script are replaced with environment variables,
                 // and all corresponding environment variables are defined in the env section.
-                let mut current_content = workflow_content.to_string();
+                let mut current_document = workflow.as_document().clone();
                 let findings_with_fixes: Vec<_> =
                     findings.iter().filter(|f| !f.fixes.is_empty()).collect();
 
@@ -873,13 +907,13 @@ jobs:
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
                     {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
-                            current_content = new_content;
+                        if let Ok(new_document) = fix.apply(&current_document) {
+                            current_document = new_document;
                         }
                     }
                 }
 
-                insta::assert_snapshot!(current_content, @r#"
+                insta::assert_snapshot!(current_document.source(), @r#"
                 name: Test Multiple Template Injections
                 on: push
                 jobs:
@@ -919,7 +953,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_duplicate_expressions.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -932,20 +966,20 @@ jobs:
                 );
 
                 // Apply each fix in sequence
-                let mut current_content = workflow_content.to_string();
+                let mut current_document = workflow.as_document().clone();
                 for finding in findings_with_fixes {
                     if let Some(fix) = finding
                         .fixes
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
                     {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
-                            current_content = new_content;
+                        if let Ok(new_document) = fix.apply(&current_document) {
+                            current_document = new_document;
                         }
                     }
                 }
 
-                insta::assert_snapshot!(current_content, @r#"
+                insta::assert_snapshot!(current_document.source(), @r#"
                 name: Test Duplicate Template Injections
                 on: push
                 jobs:
@@ -983,7 +1017,7 @@ jobs:
             TemplateInjection,
             "test_template_injection_fix_equivalent_expressions.yml",
             workflow_content,
-            |findings: Vec<crate::finding::Finding>| {
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection
                 assert!(!findings.is_empty());
 
@@ -992,20 +1026,20 @@ jobs:
                     findings.iter().filter(|f| !f.fixes.is_empty()).collect();
 
                 // Apply each fix in sequence
-                let mut current_content = workflow_content.to_string();
+                let mut current_document = workflow.as_document().clone();
                 for finding in findings_with_fixes {
                     if let Some(fix) = finding
                         .fixes
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
                     {
-                        if let Ok(Some(new_content)) = fix.apply_to_content(&current_content) {
-                            current_content = new_content;
+                        if let Ok(new_document) = fix.apply(&current_document) {
+                            current_document = new_document;
                         }
                     }
                 }
 
-                insta::assert_snapshot!(current_content, @r#"
+                insta::assert_snapshot!(current_document.source(), @r#"
                 name: Test Duplicate Template Injections
                 on: push
                 jobs:
@@ -1018,6 +1052,66 @@ jobs:
                           echo "User: ${GITHUB_ACTOR}"
                           echo "User: ${GITHUB_ACTOR}"
                           echo "User: ${GITHUB_ACTOR}"
+                "#);
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_no_env_overcorrection() {
+        // Testcase for #1052.
+        let workflow_content = r#"
+name: Test Duplicate Template Injections
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Equivalent vulnerable expressions
+        run: |
+          echo "User: ${{ env.THIS_IS_NOT_A_DEFAULT }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_no_env_overcorrection.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                // Should find template injection
+                assert!(!findings.is_empty());
+
+                // Should have at least one finding with a fix
+                let findings_with_fixes: Vec<_> =
+                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
+                assert!(
+                    !findings_with_fixes.is_empty(),
+                    "Expected at least one finding with a fix"
+                );
+
+                // Apply each fix in sequence
+                let mut current_document = workflow.as_document().clone();
+                for finding in findings_with_fixes {
+                    if let Some(fix) = finding
+                        .fixes
+                        .iter()
+                        .find(|f| f.title == "replace expression with environment variable")
+                    {
+                        if let Ok(new_document) = fix.apply(&current_document) {
+                            current_document = new_document;
+                        }
+                    }
+                }
+
+                insta::assert_snapshot!(current_document.source(), @r#"
+                name: Test Duplicate Template Injections
+                on: push
+                jobs:
+                  test:
+                    runs-on: ubuntu-latest
+                    steps:
+                      - name: Equivalent vulnerable expressions
+                        run: |
+                          echo "User: ${THIS_IS_NOT_A_DEFAULT}"
                 "#);
             }
         );
@@ -1092,5 +1186,359 @@ jobs:
                 expected
             );
         }
+    }
+
+    #[test]
+    fn test_template_injection_fix_bash_shell() {
+        let workflow_content = r#"
+name: Test Template Injection - Bash
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with bash shell
+        shell: bash
+        run: echo "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_bash_shell.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - Bash
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step with bash shell
+                            shell: bash
+                            run: echo "User is ${GITHUB_ACTOR}"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_bash_shell_full_path() {
+        let workflow_content = r#"
+name: Test Template Injection - Bash
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with bash shell
+        shell: /bin/bash
+        run: echo "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_bash_shell.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - Bash
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step with bash shell
+                            shell: /bin/bash
+                            run: echo "User is ${GITHUB_ACTOR}"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_cmd_shell() {
+        let workflow_content = r#"
+name: Test Template Injection - CMD
+on: push
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Vulnerable step with cmd shell
+        shell: cmd
+        run: echo User is ${{ github.actor }}
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_cmd_shell.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - CMD
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: windows-latest
+                        steps:
+                          - name: Vulnerable step with cmd shell
+                            shell: cmd
+                            run: echo User is %GITHUB_ACTOR%
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_pwsh_shell() {
+        let workflow_content = r#"
+name: Test Template Injection - PowerShell
+on: push
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Vulnerable step with pwsh shell
+        shell: pwsh
+        run: Write-Host "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_pwsh_shell.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - PowerShell
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: windows-latest
+                        steps:
+                          - name: Vulnerable step with pwsh shell
+                            shell: pwsh
+                            run: Write-Host "User is $env:GITHUB_ACTOR"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_default_shell_ubuntu() {
+        let workflow_content = r#"
+name: Test Template Injection - Default Shell Ubuntu
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with default shell
+        run: echo "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_default_shell_ubuntu.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    // Ubuntu default shell is bash, so should use ${VAR} syntax
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - Default Shell Ubuntu
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - name: Vulnerable step with default shell
+                            run: echo "User is ${GITHUB_ACTOR}"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_default_shell_windows() {
+        let workflow_content = r#"
+name: Test Template Injection - Default Shell Windows
+on: push
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Vulnerable step with default shell
+        run: Write-Host "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_default_shell_windows.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    // Windows default shell is pwsh, so should use $env:VAR syntax
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - Default Shell Windows
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: windows-latest
+                        steps:
+                          - name: Vulnerable step with default shell
+                            run: Write-Host "User is $env:GITHUB_ACTOR"
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_fix_cmd_shell_with_custom_env() {
+        let workflow_content = r#"
+name: Test Template Injection - CMD with Custom Env
+on: push
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Vulnerable step with custom context
+        shell: cmd
+        run: echo PR title is ${{ github.event.pull_request.title }}
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_cmd_shell_with_custom_env.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
+                assert!(finding_with_fix.is_some());
+
+                if let Some(finding) = finding_with_fix {
+                    let fixed_content = apply_fix_by_title_for_snapshot(
+                        workflow.as_document(),
+                        finding,
+                        "replace expression with environment variable",
+                    );
+                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    name: Test Template Injection - CMD with Custom Env
+                    on: push
+                    jobs:
+                      test:
+                        runs-on: windows-latest
+                        steps:
+                          - name: Vulnerable step with custom context
+                            shell: cmd
+                            run: echo PR title is %GITHUB_EVENT_PULL_REQUEST_TITLE%
+                            env:
+                              GITHUB_EVENT_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
+                    "#);
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_injection_no_fix_unknown_shell() {
+        let workflow_content = r#"
+name: Test Template Injection - Unknown Shell
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vulnerable step with unknown shell
+        shell: fish
+        run: echo "User is ${{ github.actor }}"
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_no_fix_unknown_shell.yml",
+            workflow_content,
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                // Should find the vulnerability but not provide a fix for unknown shell
+                assert!(!findings.is_empty());
+
+                let findings_with_fixes: Vec<_> =
+                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
+                assert!(
+                    findings_with_fixes.is_empty(),
+                    "Expected no fixes for unknown shell type"
+                );
+            }
+        );
     }
 }

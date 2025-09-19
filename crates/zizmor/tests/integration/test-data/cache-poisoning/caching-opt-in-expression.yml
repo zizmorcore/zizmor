@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
           enable-cache: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: Publish on Pypi
+      - name: Publish on Pypi # zizmor: ignore[use-trusted-publishing]
         run: uv build publish
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_PUBLISH_TOKEN }}

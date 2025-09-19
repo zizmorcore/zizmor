@@ -6,6 +6,7 @@ use github_actions_models::common::{RepositoryUses, Uses};
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     Persona,
+    config::Config,
     finding::{Confidence, Finding, Severity},
     github_api,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
@@ -47,7 +48,7 @@ impl StaleActionRefs {
                     .confidence(Confidence::High)
                     .severity(Severity::Low)
                     .persona(Persona::Pedantic)
-                    .add_location(step.location().primary().with_keys(&["uses".into()]))
+                    .add_location(step.location().primary().with_keys(["uses".into()]))
                     .build(step)?,
             );
         }
@@ -57,7 +58,7 @@ impl StaleActionRefs {
 }
 
 impl Audit for StaleActionRefs {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -67,20 +68,22 @@ impl Audit for StaleActionRefs {
             )));
         }
 
-        let Some(client) = state.github_client() else {
-            return Err(AuditLoadError::Skip(anyhow!(
-                "can't run without a GitHub API token"
-            )));
-        };
-
-        Ok(Self { client })
+        state
+            .gh_client
+            .clone()
+            .ok_or_else(|| AuditLoadError::Skip(anyhow!("can't run without a GitHub API token")))
+            .map(|client| StaleActionRefs { client })
     }
 
-    fn audit_step<'w>(&self, step: &Step<'w>) -> Result<Vec<Finding<'w>>> {
+    fn audit_step<'w>(&self, step: &Step<'w>, _config: &Config) -> Result<Vec<Finding<'w>>> {
         self.process_step(step)
     }
 
-    fn audit_composite_step<'a>(&self, step: &CompositeStep<'a>) -> Result<Vec<Finding<'a>>> {
+    fn audit_composite_step<'a>(
+        &self,
+        step: &CompositeStep<'a>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'a>>> {
         self.process_step(step)
     }
 }

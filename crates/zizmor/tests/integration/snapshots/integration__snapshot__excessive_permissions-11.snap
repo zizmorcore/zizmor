@@ -9,11 +9,11 @@ warning[excessive-permissions]: overly broad permissions
  8 | |     name: job1
  9 | |     # finding: reusable jobs should always specify their permissions
 10 | |     uses: ./.github/workflows/zizmor-child.yml
-   | |                                               -
-   | |_______________________________________________|
-   |                                                 this job
+   | |                                               ^
+   | |                                               |
+   | |_______________________________________________this job
    |                                                 default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
-2 findings (1 suppressed): 0 unknown, 0 informational, 0 low, 1 medium, 0 high
+2 findings (1 suppressed): 0 informational, 0 low, 1 medium, 0 high

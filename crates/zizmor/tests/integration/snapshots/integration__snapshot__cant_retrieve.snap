@@ -1,7 +1,8 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().expects_failure(true).offline(true).unsetenv(\"GH_TOKEN\").args([\"pypa/sampleproject\"]).run()?"
 ---
 fatal: no audit was performed
 error: can't retrieve repository: pypa/sampleproject
- = note: try removing --offline or passing --gh-token <TOKEN>
+  |
+  = help: try removing --offline or passing --gh-token <TOKEN>

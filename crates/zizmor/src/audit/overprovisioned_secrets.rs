@@ -1,13 +1,13 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, SpannedExpr};
+use github_actions_expressions::{Expr, SpannedExpr, call::Call};
 
 use crate::{
     finding::{
         Confidence, Severity,
         location::{Feature, Location},
     },
-    utils::parse_expressions_from_input,
+    utils::parse_fenced_expressions_from_input,
 };
 
 use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
@@ -31,10 +31,11 @@ impl Audit for OverprovisionedSecrets {
     fn audit_raw<'doc>(
         &self,
         input: &'doc AuditInput,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
-        for (expr, span) in parse_expressions_from_input(input) {
+        for (expr, span) in parse_fenced_expressions_from_input(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
@@ -68,7 +69,7 @@ impl OverprovisionedSecrets {
         let mut results = vec![];
 
         match &expr.inner {
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
                 // would plausibly call with the entire `secrets` object?

@@ -27,7 +27,7 @@ audit_meta!(
 );
 
 impl Audit for SelfHostedRunner {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -37,6 +37,7 @@ impl Audit for SelfHostedRunner {
     fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
+        _config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>> {
         let mut results = vec![];
 
@@ -58,12 +59,12 @@ impl Audit for SelfHostedRunner {
                             results.push(
                                 Self::finding()
                                     .confidence(Confidence::High)
-                                    .severity(Severity::Unknown)
+                                    .severity(Severity::Medium)
                                     .persona(Persona::Auditor)
                                     .add_location(
                                         job.location()
                                             .primary()
-                                            .with_keys(&["runs-on".into()])
+                                            .with_keys(["runs-on".into()])
                                             .annotated("self-hosted runner used here"),
                                     )
                                     .build(workflow)?,
@@ -76,12 +77,12 @@ impl Audit for SelfHostedRunner {
                             results.push(
                                 Self::finding()
                                     .confidence(Confidence::Low)
-                                    .severity(Severity::Unknown)
+                                    .severity(Severity::Medium)
                                     .persona(Persona::Auditor)
                                     .add_location(
                                         job.location()
                                             .primary()
-                                            .with_keys(&["runs-on".into()])
+                                            .with_keys(["runs-on".into()])
                                             .annotated(
                                                 "expression may expand into a self-hosted runner",
                                             ),
@@ -99,12 +100,12 @@ impl Audit for SelfHostedRunner {
                 LoE::Literal(RunsOn::Group { .. }) => results.push(
                     Self::finding()
                         .confidence(Confidence::Low)
-                        .severity(Severity::Unknown)
+                        .severity(Severity::Medium)
                         .persona(Persona::Auditor)
                         .add_location(
                             job.location()
                                 .primary()
-                                .with_keys(&["runs-on".into()])
+                                .with_keys(["runs-on".into()])
                                 .annotated("runner group implies self-hosted runner"),
                         )
                         .build(workflow)?,
@@ -126,17 +127,17 @@ impl Audit for SelfHostedRunner {
                         results.push(
                             Self::finding()
                                 .confidence(Confidence::High)
-                                .severity(Severity::Unknown)
+                                .severity(Severity::Medium)
                                 .persona(Persona::Auditor)
                                 .add_location(
                                     job.location()
-                                        .with_keys(&["strategy".into()])
+                                        .with_keys(["strategy".into()])
                                         .annotated("matrix declares self-hosted runner"),
                                 )
                                 .add_location(
                                     job.location()
                                         .primary()
-                                        .with_keys(&["runs-on".into()])
+                                        .with_keys(["runs-on".into()])
                                         .annotated(
                                             "expression may expand into a self-hosted runner",
                                         ),

@@ -2,11 +2,12 @@
 
 use std::{ops::Range, sync::LazyLock};
 
-use crate::{models::AsDocument, registry::InputKey};
-use github_actions_expressions::{Span, SpannedExpr};
+use crate::models::AsDocument;
+use crate::registry::input::InputKey;
 use line_index::{LineCol, TextSize};
 use regex::Regex;
 use serde::Serialize;
+use subfeature::Subfeature;
 use terminal_link::Link;
 
 /// Represents a location's type.
@@ -32,207 +33,13 @@ pub(crate) enum LocationKind {
     Hidden,
 }
 
-#[derive(Serialize, Clone, Debug)]
-pub(crate) enum RouteComponent<'doc> {
-    Key(&'doc str),
-    Index(usize),
-}
-
-impl From<usize> for RouteComponent<'_> {
-    fn from(value: usize) -> Self {
-        Self::Index(value)
-    }
-}
-
-impl<'doc> From<&'doc str> for RouteComponent<'doc> {
-    fn from(value: &'doc str) -> Self {
-        Self::Key(value)
-    }
-}
-
-#[derive(Serialize, Clone, Debug)]
-pub(crate) struct Route<'doc> {
-    components: Vec<RouteComponent<'doc>>,
-}
-
-impl<'doc> Route<'doc> {
-    pub(crate) fn new() -> Route<'doc> {
-        Self {
-            components: Default::default(),
-        }
-    }
-
-    pub(crate) fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> Route<'doc> {
-        let mut components = self.components.clone();
-        components.extend(keys.iter().cloned());
-        Route { components }
-    }
-
-    pub(crate) fn is_root(&self) -> bool {
-        self.components.is_empty()
-    }
-
-    pub(crate) fn to_query(&self) -> Option<yamlpath::Query<'doc>> {
-        if self.is_root() {
-            return None;
-        }
-
-        let mut builder = yamlpath::QueryBuilder::new();
-
-        for component in &self.components {
-            builder = match component {
-                RouteComponent::Key(key) => builder.key(key),
-                RouteComponent::Index(idx) => builder.index(*idx),
-            }
-        }
-
-        Some(builder.build())
-    }
-}
-
-impl<'doc> From<Vec<RouteComponent<'doc>>> for Route<'doc> {
-    fn from(components: Vec<RouteComponent<'doc>>) -> Self {
-        Self { components }
-    }
-}
-
-#[macro_export]
-macro_rules! route {
-    ($($key:expr),* $(,)?) => {
-        $crate::finding::location::Route::from(
-            vec![$($crate::finding::location::RouteComponent::from($key)),*]
-        )
-    };
-    () => {
-        $crate::finding::location::Route::new()
-    };
-}
-
-/// Represent's a subfeature's fragment.
-///
-/// This is used to locate a subfeature's exact location within a surrounding
-/// feature.
-#[derive(Serialize, Clone, Debug)]
-pub(crate) enum Fragment<'doc> {
-    /// A raw subfeature fragment.
-    ///
-    /// This is useful primarily for matching an exact fragment within
-    /// a larger feature, e.g. a string literal.
-    ///
-    /// It *shouldn't* be used to match things like expressions, since they
-    /// might contain whitespace that won't exactly match the surrounding
-    /// feature. For that, [`Fragment::Regex`] is appropriate.
-    Raw(&'doc str),
-    /// A regular expression for matching a subfeature.
-    ///
-    /// This is useful primarily for matching any kind of subfeature that
-    /// might contain multiple lines, e.g. a multi-line GitHub Actions
-    /// expression, since the subfeature's indentation won't necessarily match
-    /// the surrounding feature's YAML-level indentation.
-    Regex(#[serde(serialize_with = "Fragment::serialize_regex")] regex::Regex),
-}
-
-impl<'doc> Fragment<'doc> {
-    fn serialize_regex<S>(regex: &regex::Regex, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let pattern = regex.as_str();
-        serializer.serialize_str(pattern)
-    }
-
-    /// Create a new [`Fragment`] from the given string.
-    ///
-    /// The created fragment's behavior depends on whether the input
-    /// contains newlines or not: if there are no newlines then the fragment
-    /// is a "raw" fragment that gets matched verbatim. If there are newlines,
-    /// then the fragment is a "regex" fragment that allows a degree of
-    /// whitespace malleability to allow for matching against a YAML feature
-    /// with its own syntactically relevant whitespace.
-    fn new(fragment: &'doc str) -> Self {
-        if !fragment.contains('\n') {
-            // Silly optimization: we don't need to build up a pattern for this
-            // expression if it doesn't have any newlines.
-            Fragment::Raw(fragment)
-        } else {
-            // We turn a spanned expression into a regular expression by
-            // replacing all whitespace with `\\s+`.
-            //
-            // This is a ridiculous overapproximation of the actual difference
-            // in expected whitespace, but it works well enough and saves
-            // us having to walk the expression's nodes and build up a more
-            // precise pattern manually (which ends up being nontrivial,
-            // since our current AST doesn't preserve parentheses).
-            //
-            // This approach is not strictly correct, since it doesn't distinguish
-            // between syntactical whitespace and whitespace within e.g.
-            // string literals.
-            let escaped = regex::escape(fragment);
-
-            static WHITESPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").unwrap());
-            let regex = WHITESPACE.replace_all(&escaped, "\\s+");
-
-            Fragment::Regex(Regex::new(&regex).unwrap())
-        }
-    }
-}
-
-impl<'doc> From<&SpannedExpr<'doc>> for Fragment<'doc> {
-    fn from(expr: &SpannedExpr<'doc>) -> Self {
-        Self::new(expr.origin.raw)
-    }
-}
-
-impl<'doc> From<&'doc str> for Fragment<'doc> {
-    fn from(fragment: &'doc str) -> Self {
-        Self::new(fragment)
-    }
-}
-
-/// Represents a "subfeature" of a symbolic location, such as a substring
-/// within a YAML string.
-#[derive(Serialize, Clone, Debug)]
-pub(crate) struct Subfeature<'doc> {
-    pub(crate) after: usize,
-    pub(crate) fragment: Fragment<'doc>,
-}
-
-impl<'doc> Subfeature<'doc> {
-    pub(crate) fn new(after: usize, fragment: impl Into<Fragment<'doc>>) -> Self {
-        Self {
-            after,
-            fragment: fragment.into(),
-        }
-    }
-
-    /// Locate this subfeature within the given feature.
-    ///
-    /// Returns the subfeature's span within the feature, or `None` if it
-    /// can't be found. The returned span is relative to the feature's
-    /// start.
-    fn locate_within(&self, feature: &str) -> Option<Span> {
-        let bias = self.after;
-        let focus = &feature[bias..];
-
-        match &self.fragment {
-            Fragment::Raw(fragment) => focus.find(fragment).map(|start| {
-                let end = start + fragment.len();
-                Span::from(start..end).adjust(bias)
-            }),
-            Fragment::Regex(regex) => regex
-                .find(focus)
-                .map(|m| Span::from(m.range()).adjust(bias)),
-        }
-    }
-}
-
 /// The kind of feature referred to by a symbolic location.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) enum SymbolicFeature<'doc> {
     /// A "normal" feature, i.e. a whole extracted YAML feature.
     Normal,
     /// A "subfeature", i.e. a subspan of a normal feature.
-    Subfeature(Subfeature<'doc>),
+    Subfeature(subfeature::Subfeature<'doc>),
     /// A "key-only" feature, i.e. one where we only want the feature
     /// for the key, without including any value.
     KeyOnly,
@@ -254,7 +61,7 @@ pub(crate) struct SymbolicLocation<'doc> {
     pub(crate) link: Option<String>,
 
     /// A symbolic route (of keys and indices) to the final location.
-    pub(crate) route: Route<'doc>,
+    pub(crate) route: yamlpath::Route<'doc>,
 
     pub(crate) feature_kind: SymbolicFeature<'doc>,
 
@@ -263,7 +70,10 @@ pub(crate) struct SymbolicLocation<'doc> {
 }
 
 impl<'doc> SymbolicLocation<'doc> {
-    pub(crate) fn with_keys(&self, keys: &[RouteComponent<'doc>]) -> SymbolicLocation<'doc> {
+    pub(crate) fn with_keys(
+        &self,
+        keys: impl IntoIterator<Item = yamlpath::Component<'doc>>,
+    ) -> SymbolicLocation<'doc> {
         SymbolicLocation {
             key: self.key,
             annotation: self.annotation.clone(),
@@ -275,7 +85,10 @@ impl<'doc> SymbolicLocation<'doc> {
     }
 
     /// Adds a subfeature to the current `SymbolicLocation`.
-    pub(crate) fn subfeature(mut self, subfeature: Subfeature<'doc>) -> SymbolicLocation<'doc> {
+    pub(crate) fn subfeature(
+        mut self,
+        subfeature: subfeature::Subfeature<'doc>,
+    ) -> SymbolicLocation<'doc> {
         self.feature_kind = SymbolicFeature::Subfeature(subfeature);
         self
     }
@@ -327,19 +140,16 @@ impl<'doc> SymbolicLocation<'doc> {
             SymbolicFeature::Subfeature(subfeature) => {
                 // If we have a subfeature, we have to extract its exact
                 // parent feature.
-                let feature = match self.route.to_query() {
-                    Some(query) => document.query_exact(&query)?.ok_or_else(|| {
-                        // This should never fail in practice, unless our
-                        // route is malformed or ends in a key-only feature
-                        // (e.g. `foo:`). The latter shouldn't really happen,
-                        // since there's no meaningful subfeature in that case.
-                        anyhow::anyhow!(
-                            "failed to extract exact feature for symbolic location: {}",
-                            self.annotation
-                        )
-                    })?,
-                    None => document.root(),
-                };
+                let feature = document.query_exact(&self.route)?.ok_or_else(|| {
+                    // This should never fail in practice, unless our
+                    // route is malformed or ends in a key-only feature
+                    // (e.g. `foo:`). The latter shouldn't really happen,
+                    // since there's no meaningful subfeature in that case.
+                    anyhow::anyhow!(
+                        "failed to extract exact feature for symbolic location: {}",
+                        self.annotation
+                    )
+                })?;
 
                 let extracted = document.extract(&feature);
 
@@ -354,15 +164,12 @@ impl<'doc> SymbolicLocation<'doc> {
 
                 (
                     extracted,
-                    ConcreteLocation::from_span(subfeature_span.into(), document),
+                    ConcreteLocation::from_span(subfeature_span.as_range(), document),
                     feature,
                 )
             }
             SymbolicFeature::Normal => {
-                let feature = match self.route.to_query() {
-                    Some(query) => document.query_pretty(&query)?,
-                    None => document.root(),
-                };
+                let feature = document.query_pretty(&self.route)?;
 
                 (
                     document.extract_with_leading_whitespace(&feature),
@@ -371,13 +178,7 @@ impl<'doc> SymbolicLocation<'doc> {
                 )
             }
             SymbolicFeature::KeyOnly => {
-                let feature = match self.route.to_query() {
-                    Some(query) => document.query_key_only(&query)?,
-                    None => {
-                        // NOTE: Technically API misuse; maybe we should panic instead?
-                        anyhow::bail!("can't concretize a key-only route without a query");
-                    }
-                };
+                let feature = document.query_key_only(&self.route)?;
 
                 (
                     document.extract(&feature),
@@ -395,7 +196,7 @@ impl<'doc> SymbolicLocation<'doc> {
                 comments: document
                     .feature_comments(&feature)
                     .into_iter()
-                    .map(Comment)
+                    .map(|f| Comment(document.extract(&f)))
                     .collect(),
             },
         })
@@ -419,17 +220,17 @@ pub(crate) trait Locatable<'doc> {
 }
 
 pub(crate) trait Routable<'a, 'doc> {
-    fn route(&'a self) -> Route<'doc>;
+    fn route(&'a self) -> yamlpath::Route<'doc>;
 }
 
 impl<'a, 'doc, T: Locatable<'doc>> Routable<'a, 'doc> for T {
-    fn route(&'a self) -> Route<'doc> {
+    fn route(&'a self) -> yamlpath::Route<'doc> {
         self.location().route
     }
 }
 
 /// Represents a `(row, column)` point within a file.
-#[derive(Serialize)]
+#[derive(Copy, Clone, Serialize)]
 pub(crate) struct Point {
     pub(crate) row: usize,
     pub(crate) column: usize,
@@ -505,6 +306,11 @@ static IGNORE_EXPR: LazyLock<Regex> =
 pub(crate) struct Comment<'doc>(&'doc str);
 
 impl Comment<'_> {
+    pub(crate) fn is_meaningful(&self) -> bool {
+        let content = self.0.strip_prefix('#').unwrap_or(self.0).trim();
+        !content.is_empty()
+    }
+
     pub(crate) fn ignores(&self, rule_id: &str) -> bool {
         // Extracts foo,bar from `# zizmor: ignore[foo,bar]`
         let Some(caps) = IGNORE_EXPR.captures(self.0) else {
@@ -545,7 +351,7 @@ impl<'doc> Feature<'doc> {
     ) -> Self {
         let contents = input.as_document().source();
 
-        let span = subfeature.locate_within(contents).unwrap().into();
+        let span = subfeature.locate_within(contents).unwrap().as_range();
 
         Self::from_span(&span, input)
     }
@@ -610,10 +416,6 @@ impl<'doc> Location<'doc> {
 
 #[cfg(test)]
 mod tests {
-    use github_actions_expressions::Expr;
-
-    use crate::finding::location::Fragment;
-
     use super::Comment;
 
     #[test]
@@ -660,41 +462,6 @@ mod tests {
                 *ignores,
                 "{comment} does not ignore {rule}"
             )
-        }
-    }
-
-    #[test]
-    fn test_fragment_from_expr() {
-        for (expr, expected) in &[
-            ("foo==bar", "foo==bar"),
-            ("foo    ==   bar", "foo    ==   bar"),
-            ("foo == bar", r"foo == bar"),
-            ("foo(bar)", "foo(bar)"),
-            ("foo(bar, baz)", "foo(bar, baz)"),
-            ("foo (bar, baz)", "foo (bar, baz)"),
-            ("a . b . c . d", "a . b . c . d"),
-            ("true \n && \n false", r"true\s+\&\&\s+false"),
-        ] {
-            let expr = Expr::parse(expr).unwrap();
-            match Fragment::from(&expr) {
-                Fragment::Raw(actual) => assert_eq!(actual, *expected),
-                Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
-            };
-        }
-    }
-
-    #[test]
-    fn test_fragment_from_context() {
-        for (ctx, expected) in &[
-            ("foo.bar", "foo.bar"),
-            ("foo . bar", "foo . bar"),
-            ("foo['bar']", "foo['bar']"),
-            ("foo [\n'bar'\n]", r"foo\s+\[\s+'bar'\s+\]"),
-        ] {
-            match Fragment::from(*ctx) {
-                Fragment::Raw(actual) => assert_eq!(actual, *expected),
-                Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
-            }
         }
     }
 }

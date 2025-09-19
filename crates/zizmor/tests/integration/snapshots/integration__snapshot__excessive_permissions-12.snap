@@ -7,10 +7,12 @@ warning[excessive-permissions]: overly broad permissions
    |
  1 | / name: reusable-workflow-other-triggers
  2 | |
+ 3 | | on:
+ 4 | |   workflow_call:
 ...  |
 22 | |     # responsible for setting permissions
 23 | |     uses: ./.github/workflows/fake.yml
-   | |_______________________________________- default permissions used due to no permissions: block
+   | |_______________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
@@ -19,12 +21,14 @@ warning[excessive-permissions]: overly broad permissions
    |
 11 | /   job1:
 12 | |     name: job1
-...  |
+13 | |     # regular job-level finding, since we can be triggered by
+14 | |     # either a workflow call or a push
+15 | |     runs-on: ubuntu-24.04
 16 | |     steps:
 17 | |       - run: echo hello
-   | |                       -
-   | |_______________________|
-   |                         this job
+   | |                       ^
+   | |                       |
+   | |_______________________this job
    |                         default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
@@ -37,11 +41,11 @@ warning[excessive-permissions]: overly broad permissions
 21 | |     # normal permissions finding here, since callers are always
 22 | |     # responsible for setting permissions
 23 | |     uses: ./.github/workflows/fake.yml
-   | |                                       -
-   | |_______________________________________|
-   |                                         this job
+   | |                                       ^
+   | |                                       |
+   | |_______________________________________this job
    |                                         default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
-3 findings: 0 unknown, 0 informational, 0 low, 3 medium, 0 high
+3 findings: 0 informational, 0 low, 3 medium, 0 high

@@ -1,0 +1,69 @@
+on: [push]
+
+name: use-trusted-publishing
+
+jobs:
+  publish-1:
+    name: publish-1
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: vulnerable-1
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: vulnerable-2
+        run: cargo +nightly publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      # multiline bash commands are detected
+      - name: vulnerable-3
+        run: |
+          cargo \
+            publish \
+            --allow-dirty \
+            --no-verify
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  publish-2:
+    name: publish-2
+    runs-on: windows-latest
+    permissions: {}
+    steps:
+      - name: vulnerable-1
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: vulnerable-2
+        run: cargo +nightly publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      # multiline powershell commands are detected
+      - name: vulnerable-3
+        run: |
+          cargo `
+            publish `
+            --allow-dirty `
+            --no-verify
+
+      # works on shell: cmd too
+      - name: vulnerable-4
+        run: cargo publish --allow-dirty --no-verify
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        shell: cmd
+
+      - name: vulnerable-5
+        run: |
+          cargo ^
+            --allow-dirty ^
+            --no-verify ^
+            publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        shell: cmd

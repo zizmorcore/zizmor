@@ -1,0 +1,27 @@
+# testcases for addnab/docker-run-action
+
+name: test-addnab-docker-run-action
+on: [push]
+
+permissions: {}
+
+jobs:
+  some-job:
+    name: some-job
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: injection-in-run
+        uses: addnab/docker-run-action@4f65fabd2431ebc8d299f8e5a018d79a769ae185
+        with:
+          image: ubuntu:latest
+          options: --rm
+          run: |
+            echo "The current branch is ${{ github.ref }}"
+
+      - name: injection-in-options
+        uses: addnab/docker-run-action@4f65fabd2431ebc8d299f8e5a018d79a769ae185
+        with:
+          image: ubuntu:latest
+          options: ${{ github.ref }}
+          run: echo "lol"

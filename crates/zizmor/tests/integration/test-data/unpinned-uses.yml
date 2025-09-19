@@ -8,18 +8,10 @@ jobs:
     name: unpinned-0
     runs-on: ubuntu-latest
     steps:
-      # NOT OK: unpinned
-      - uses: actions/checkout
-        with:
-          persist-credentials: false
-
       # PEDANTIC: pinned but unhashed
       - uses: actions/checkout@v3
         with:
           persist-credentials: false
-
-      # NOT OK: unpinned
-      - uses: github/codeql-action/upload-sarif
 
       # NOT OK: unpinned
       - uses: docker://ubuntu

@@ -50,4 +50,4 @@ error[unpinned-images]: unpinned image references
    |
    = note: audit confidence → High
 
-6 findings: 0 unknown, 0 informational, 0 low, 0 medium, 6 high
+6 findings: 0 informational, 0 low, 0 medium, 6 high

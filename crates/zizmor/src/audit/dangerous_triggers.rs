@@ -1,6 +1,7 @@
 use anyhow::Result;
 
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::workflow::Workflow;
 use crate::state::AuditState;
@@ -14,11 +15,15 @@ audit_meta!(
 );
 
 impl Audit for DangerousTriggers {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> Result<Vec<Finding<'doc>>> {
+    fn audit_workflow<'doc>(
+        &self,
+        workflow: &'doc Workflow,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
         if workflow.has_pull_request_target() {
             findings.push(
@@ -29,7 +34,7 @@ impl Audit for DangerousTriggers {
                         workflow
                             .location()
                             .primary()
-                            .with_keys(&["on".into()])
+                            .with_keys(["on".into()])
                             .annotated("pull_request_target is almost always used insecurely"),
                     )
                     .build(workflow)?,
@@ -44,7 +49,7 @@ impl Audit for DangerousTriggers {
                         workflow
                             .location()
                             .primary()
-                            .with_keys(&["on".into()])
+                            .with_keys(["on".into()])
                             .annotated("workflow_run is almost always used insecurely"),
                     )
                     .build(workflow)?,

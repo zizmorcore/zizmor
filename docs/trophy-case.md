@@ -8,7 +8,7 @@ secure!
 
 !!! tip "Give yourself a trophy!"
 
-    Do you contribute to or maintain a big (>100 star) project that had its GitHub
+    Do you contribute to or maintain a big (>500 star) project that had its GitHub
     Actions security improved by `zizmor`?
     [Add it to our list](./development.md#updating-the-trophy-case)!
 

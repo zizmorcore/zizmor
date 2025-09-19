@@ -2,7 +2,8 @@
     {
         "name": "Astral",
         "url": "https://astral.sh/",
-        "img": "https://avatars.githubusercontent.com/u/115962839?s=100&v=4"
+        "img": "https://avatars.githubusercontent.com/u/115962839?s=100&v=4",
+        "former": true
     },
     {
         "name": "Grafana Labs",
@@ -17,5 +18,14 @@
     {
         "name": "Tenki Cloud",
         "url": "http://tenki.cloud/"
+    },
+    {
+        "name": "Alexander Riccio",
+        "url": "https://github.com/ariccio"
+    },
+    {
+        "name": "Shipfox",
+        "url": "https://www.shipfox.io",
+        "img": "https://avatars.githubusercontent.com/u/163036520?s=100&v=4"
     }
 ]

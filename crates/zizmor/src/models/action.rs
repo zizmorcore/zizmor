@@ -10,12 +10,12 @@ use terminal_link::Link;
 
 use crate::{
     InputKey,
-    finding::location::{Locatable, Route, SymbolicFeature, SymbolicLocation},
+    finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
     models::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
     },
-    registry::InputError,
+    registry::input::InputError,
     utils::{self, ACTION_VALIDATOR, from_str_with_validation},
 };
 
@@ -97,10 +97,21 @@ impl Action {
             key: &self.key,
             annotation: "this action".to_string(),
             link: None,
-            route: Route::new(),
+            route: Default::default(),
             feature_kind: SymbolicFeature::Normal,
             kind: Default::default(),
         }
+    }
+
+    /// Returns an iterator over this action's step-level conditions.
+    ///
+    /// Each [`common::If`] is paired with a [`SymbolicLocation`].
+    /// for its *parent*, i.e. a composite step.
+    pub(crate) fn conditions(&self) -> impl Iterator<Item = (&common::If, SymbolicLocation<'_>)> {
+        self.steps()
+            .into_iter()
+            .flatten()
+            .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location())))
     }
 }
 
@@ -155,7 +166,7 @@ impl<'a> std::ops::Deref for CompositeStep<'a> {
 
 impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
     fn location(&self) -> SymbolicLocation<'doc> {
-        self.parent.location().annotated("this step").with_keys(&[
+        self.parent.location().annotated("this step").with_keys([
             "runs".into(),
             "steps".into(),
             self.index.into(),
@@ -164,7 +175,7 @@ impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
 
     fn location_with_name(&self) -> SymbolicLocation<'doc> {
         match self.inner.name {
-            Some(_) => self.location().with_keys(&["name".into()]),
+            Some(_) => self.location().with_keys(["name".into()]),
             None => self.location(),
         }
     }
@@ -214,6 +225,15 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
 
     fn document(&self) -> &'doc yamlpath::Document {
         self.action().as_document()
+    }
+
+    fn shell(&self) -> Option<&str> {
+        // For composite action steps, shell is always explicitly specified in the YAML
+        if let action::StepBody::Run { shell, .. } = &self.inner.body {
+            Some(shell)
+        } else {
+            None
+        }
     }
 }
 

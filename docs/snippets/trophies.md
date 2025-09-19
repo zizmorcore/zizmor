@@ -7,6 +7,14 @@
         - adafruit/circuitpython#9785
 
 
+-   ![](https://github.com/ag2ai.png?size=40){ width="40" loading=lazy align=left } ag2ai
+
+    ---
+
+    ??? example "Examples"
+        - ag2ai/faststream#2398
+
+
 -   ![](https://github.com/aio-libs.png?size=40){ width="40" loading=lazy align=left } aio-libs
 
     ---
@@ -14,6 +22,14 @@
     ??? example "Examples"
         - aio-libs/aiobotocore#1344
         - aio-libs/aiobotocore#1355
+
+
+-   ![](https://github.com/anchore.png?size=40){ width="40" loading=lazy align=left } anchore
+
+    ---
+
+    ??? example "Examples"
+        - anchore/vunnel#832
 
 
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
@@ -48,12 +64,34 @@
         - ashishb/wp2hugo#91
 
 
+-   ![](https://github.com/aspnet-contrib.png?size=40){ width="40" loading=lazy align=left } aspnet-contrib
+
+    ---
+
+    ??? example "Examples"
+        - aspnet-contrib/AspNet.Security.OAuth.Providers#1095
+
+
 -   ![](https://github.com/astral-sh.png?size=40){ width="40" loading=lazy align=left } astral-sh
 
     ---
 
     ??? example "Examples"
+        - astral-sh/python-build-standalone#716
         - astral-sh/ruff#14844
+        - astral-sh/ruff-action#206
+        - astral-sh/ty-vscode#142
+        - astral-sh/uv#15016
+        - astral-sh/uv#15018
+
+
+-   ![](https://github.com/astronomer.png?size=40){ width="40" loading=lazy align=left } astronomer
+
+    ---
+
+    ??? example "Examples"
+        - astronomer/astronomer-cosmos#1870
+        - astronomer/dag-factory#482
 
 
 -   ![](https://github.com/astropy.png?size=40){ width="40" loading=lazy align=left } astropy
@@ -105,6 +143,22 @@
         - brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 
 
+-   ![](https://github.com/bw2.png?size=40){ width="40" loading=lazy align=left } bw2
+
+    ---
+
+    ??? example "Examples"
+        - bw2/ConfigArgParse#336
+
+
+-   ![](https://github.com/cachix.png?size=40){ width="40" loading=lazy align=left } cachix
+
+    ---
+
+    ??? example "Examples"
+        - cachix/git-hooks.nix#606
+
+
 -   ![](https://github.com/cakephp.png?size=40){ width="40" loading=lazy align=left } cakephp
 
     ---
@@ -131,6 +185,22 @@
         - certbot/josepy#193
 
 
+-   ![](https://github.com/coder.png?size=40){ width="40" loading=lazy align=left } coder
+
+    ---
+
+    ??? example "Examples"
+        - coder/coder#19459
+
+
+-   ![](https://github.com/conda.png?size=40){ width="40" loading=lazy align=left } conda
+
+    ---
+
+    ??? example "Examples"
+        - conda/conda-lock#814
+
+
 -   ![](https://github.com/cunla.png?size=40){ width="40" loading=lazy align=left } cunla
 
     ---
@@ -149,6 +219,14 @@
         - curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
         - curl/curl@17a669426f36b467dfd945b4b35f6211598b7977
         - curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
+
+
+-   ![](https://github.com/dani-garcia.png?size=40){ width="40" loading=lazy align=left } dani-garcia
+
+    ---
+
+    ??? example "Examples"
+        - dani-garcia/vaultwarden#5537
 
 
 -   ![](https://github.com/danmar.png?size=40){ width="40" loading=lazy align=left } danmar
@@ -225,6 +303,14 @@
         - earthobservations/wetterdienst#1440
 
 
+-   ![](https://github.com/edgelesssys.png?size=40){ width="40" loading=lazy align=left } edgelesssys
+
+    ---
+
+    ??? example "Examples"
+        - edgelesssys/contrast#1604
+
+
 -   ![](https://github.com/Electric-Coin-Company.png?size=40){ width="40" loading=lazy align=left } Electric-Coin-Company
 
     ---
@@ -255,6 +341,14 @@
 
     ??? example "Examples"
         - fatiando/harmonica#550
+
+
+-   ![](https://github.com/Flexget.png?size=40){ width="40" loading=lazy align=left } Flexget
+
+    ---
+
+    ??? example "Examples"
+        - Flexget/Flexget#4299
 
 
 -   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
@@ -478,6 +572,16 @@
         - immich-app/immich#17651
 
 
+-   ![](https://github.com/indygreg.png?size=40){ width="40" loading=lazy align=left } indygreg
+
+    ---
+
+    ??? example "Examples"
+        - indygreg/apple-platform-rs@5bded60cbfc2b81e1bedd745ab41417e5c3a76ea
+        - indygreg/cryptography-rs@d0ae52a8040c7be8fd2024a5e2dc1cc1705c3469
+        - indygreg/python-zstandard@d0bf56011d85faf1c76da38f63d174b275c2cdeb
+
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---
@@ -494,6 +598,15 @@
         - jj-vcs/jj#5076
 
 
+-   ![](https://github.com/junit-team.png?size=40){ width="40" loading=lazy align=left } junit-team
+
+    ---
+
+    ??? example "Examples"
+        - junit-team/junit-framework#4838
+        - junit-team/junit-framework#4840
+
+
 -   ![](https://github.com/jupyterhub.png?size=40){ width="40" loading=lazy align=left } jupyterhub
 
     ---
@@ -508,6 +621,15 @@
 
     ??? example "Examples"
         - kanidm/kanidm#3430
+
+
+-   ![](https://github.com/kata-containers.png?size=40){ width="40" loading=lazy align=left } kata-containers
+
+    ---
+
+    ??? example "Examples"
+        - kata-containers/kata-containers#11392
+        - kata-containers/kata-containers#11475
 
 
 -   ![](https://github.com/libssh2.png?size=40){ width="40" loading=lazy align=left } libssh2
@@ -634,6 +756,7 @@
     ---
 
     ??? example "Examples"
+        - mozilla/addons#15751
         - mozilla/fxa#18628
         - mozilla/neqo#2413
         - mozilla/neqo#2721
@@ -645,6 +768,14 @@
 
     ??? example "Examples"
         - narwhals-dev/narwhals#1567
+
+
+-   ![](https://github.com/nedbat.png?size=40){ width="40" loading=lazy align=left } nedbat
+
+    ---
+
+    ??? example "Examples"
+        - nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
 
 
 -   ![](https://github.com/NetApp.png?size=40){ width="40" loading=lazy align=left } NetApp
@@ -722,6 +853,7 @@
 
     ??? example "Examples"
         - openpubkey/opkssh#198
+        - openpubkey/opkssh#247
 
 
 -   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource
@@ -881,6 +1013,7 @@
 
     ??? example "Examples"
         - pytest-dev/pytest#13062
+        - pytest-dev/pytest-asyncio#1122
         - pytest-dev/pytest-django#1211
         - pytest-dev/pytest-django#1214
 
@@ -980,6 +1113,14 @@
 
     ??? example "Examples"
         - quarkslab/quokka#46
+
+
+-   ![](https://github.com/ratatui.png?size=40){ width="40" loading=lazy align=left } ratatui
+
+    ---
+
+    ??? example "Examples"
+        - ratatui/ratatui#1961
 
 
 -   ![](https://github.com/reubeno.png?size=40){ width="40" loading=lazy align=left } reubeno
@@ -1113,6 +1254,16 @@
         - slackapi/python-slack-events-api#110
 
 
+-   ![](https://github.com/stravalib.png?size=40){ width="40" loading=lazy align=left } stravalib
+
+    ---
+
+    ??? example "Examples"
+        - stravalib/stravalib#645
+        - stravalib/stravalib#648
+        - stravalib/stravalib#649
+
+
 -   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
 
     ---
@@ -1135,6 +1286,14 @@
 
     ??? example "Examples"
         - termux/termux-packages#22519
+
+
+-   ![](https://github.com/textlint.png?size=40){ width="40" loading=lazy align=left } textlint
+
+    ---
+
+    ??? example "Examples"
+        - textlint/textlint#1711
 
 
 -   ![](https://github.com/theupdateframework.png?size=40){ width="40" loading=lazy align=left } theupdateframework
@@ -1161,6 +1320,14 @@
     ??? example "Examples"
         - tornadoweb/tornado#3438
         - tornadoweb/tornado#3463
+
+
+-   ![](https://github.com/trailofbits.png?size=40){ width="40" loading=lazy align=left } trailofbits
+
+    ---
+
+    ??? example "Examples"
+        - trailofbits/fickling#144
 
 
 -   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser
@@ -1233,6 +1400,15 @@
 
     ??? example "Examples"
         - wntrblm/nox#925
+
+
+-   ![](https://github.com/WordPress.png?size=40){ width="40" loading=lazy align=left } WordPress
+
+    ---
+
+    ??? example "Examples"
+        - WordPress/gutenberg#69126
+        - WordPress/wordpress-develop#8007
 
 
 -   ![](https://github.com/zama-ai.png?size=40){ width="40" loading=lazy align=left } zama-ai

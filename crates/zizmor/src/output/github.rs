@@ -13,7 +13,6 @@ impl Severity {
     fn as_github_command(&self) -> &str {
         // TODO: Does this mapping make sense?
         match self {
-            Severity::Unknown => "notice",
             Severity::Informational => "notice",
             Severity::Low => "warning",
             Severity::Medium => "warning",

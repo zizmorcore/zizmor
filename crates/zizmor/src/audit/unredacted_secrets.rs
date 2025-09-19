@@ -1,11 +1,11 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, SpannedExpr, context::Context};
+use github_actions_expressions::{Expr, SpannedExpr, call::Call, context::Context};
 
 use crate::{
     Confidence, Severity,
     finding::location::{Feature, Location},
-    utils::parse_expressions_from_input,
+    utils::parse_fenced_expressions_from_input,
 };
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
@@ -19,7 +19,7 @@ audit_meta!(
 );
 
 impl Audit for UnredactedSecrets {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -29,10 +29,11 @@ impl Audit for UnredactedSecrets {
     fn audit_raw<'doc>(
         &self,
         input: &'doc super::AuditInput,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
-        for (expr, span) in parse_expressions_from_input(input) {
+        for (expr, span) in parse_fenced_expressions_from_input(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
@@ -70,7 +71,7 @@ impl UnredactedSecrets {
         // and therefore bypass GitHub's redaction mechanism.
 
         match expr.deref() {
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 if func == "fromJSON"
                     && args.iter().any(
                         |arg| matches!(arg.deref(), Expr::Context(ctx) if ctx.child_of("secrets")),

@@ -18,13 +18,13 @@ snippets: trophies sponsors
 trophies: docs/snippets/trophies.md
 
 docs/snippets/trophies.md: docs/snippets/trophies.txt docs/snippets/render-trophies.py
-	uv run --no-project docs/snippets/render-trophies.py > $@
+	docs/snippets/render-trophies.py > $@
 
 .PHONY: sponsors
 sponsors: docs/snippets/sponsors.html
 
 docs/snippets/sponsors.html: docs/snippets/sponsors.json docs/snippets/render-sponsors.py
-	uv run --no-project docs/snippets/render-sponsors.py > $@
+	docs/snippets/render-sponsors.py > $@
 
 .PHONY: refresh-schemas
 refresh-schemas:
@@ -44,3 +44,8 @@ crates/zizmor/data/codeql-injection-sinks.json: support/codeql-injection-sinks.p
 .PHONY: pinact
 pinact:
 	pinact run --update --verify
+
+
+.PHONY: bench
+bench:
+	uv run bench/benchmark.py

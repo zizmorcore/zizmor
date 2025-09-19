@@ -1,0 +1,35 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().output(OutputMode::Both).input(input_under_test(\"issue-1065.yml\")).run()?"
+---
+ INFO zizmor::registry: skipping impostor-commit: can't run without a GitHub API token
+ INFO zizmor::registry: skipping ref-confusion: can't run without a GitHub API token
+ INFO zizmor::registry: skipping known-vulnerable-actions: can't run without a GitHub API token
+ INFO zizmor::registry: skipping stale-action-refs: can't run without a GitHub API token
+ INFO zizmor::registry: skipping ref-version-mismatch: can't run without a GitHub API token
+ INFO audit: zizmor: 🌈 completed @@INPUT@@
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:12:3
+   |
+12 | /   issue-1065:
+13 | |     runs-on: ubuntu-latest
+14 | |     steps:
+15 | |       - name: Comment PR
+...  |
+24 | |             Please review the changes and provide any feedback. Thanks! 🚀
+   | |                                                                          ^
+   | |                                                                          |
+   | |__________________________________________________________________________this job
+   |                                                                            default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+error[unpinned-uses]: unpinned action reference
+  --> @@INPUT@@:16:9
+   |
+16 |         uses: thollander/actions-comment-pull-request@v3
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+4 findings (2 suppressed): 0 informational, 0 low, 1 medium, 1 high

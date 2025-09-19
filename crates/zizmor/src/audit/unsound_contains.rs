@@ -1,13 +1,15 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, Literal, SpannedExpr, context::Context};
+use github_actions_expressions::{
+    Expr, SpannedExpr, call::Call, context::Context, literal::Literal,
+};
 use github_actions_models::common::If;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
-    finding::{Confidence, Severity, location::Locatable as _},
+    finding::{Confidence, Severity},
     models::workflow::JobExt as _,
-    utils::ExtractedExpr,
+    utils::{self, ExtractedExpr},
 };
 
 // TODO: Merge this with the list in `template_injection.rs`?
@@ -33,7 +35,7 @@ audit_meta!(
 );
 
 impl Audit for UnsoundContains {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -43,22 +45,15 @@ impl Audit for UnsoundContains {
     fn audit_normal_job<'w>(
         &self,
         job: &super::NormalJob<'w>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<super::Finding<'w>>> {
-        let conditions = job
-            .r#if
-            .iter()
-            .map(|cond| (cond, job.location()))
-            .chain(
-                job.steps()
-                    .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location()))),
-            )
-            .filter_map(|(cond, loc)| {
-                if let If::Expr(expr) = cond {
-                    Some((expr.as_str(), loc))
-                } else {
-                    None
-                }
-            });
+        let conditions = job.conditions().filter_map(|(cond, loc)| {
+            if let If::Expr(expr) = cond {
+                Some((expr.as_str(), loc))
+            } else {
+                None
+            }
+        });
 
         conditions
             .flat_map(|(expr, loc)| {
@@ -67,7 +62,7 @@ impl Audit for UnsoundContains {
                         .severity(severity)
                         .confidence(Confidence::High)
                         .add_location(
-                            loc.with_keys(&["if".into()])
+                            loc.with_keys(["if".into()])
                                 .primary()
                                 .annotated(format!("contains(..) condition can be bypassed if attacker can control '{context}'")),
                         )
@@ -83,23 +78,25 @@ impl UnsoundContains {
         expr: &'a SpannedExpr,
     ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>, &'a str)> + 'a> {
         match expr.deref() {
-            Expr::Call { func, args: exprs } if func == "contains" => match exprs.as_slice() {
-                [
-                    SpannedExpr {
-                        inner: Expr::Literal(Literal::String(s)),
-                        ..
-                    },
-                    ctx_expr @ SpannedExpr {
-                        inner: Expr::Context(c),
-                        ..
-                    },
-                ] => Box::new(std::iter::once((s.as_ref(), c, ctx_expr.origin.raw))),
-                args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
-            },
-            Expr::Call {
+            Expr::Call(Call { func, args: exprs }) if func == "contains" => {
+                match exprs.as_slice() {
+                    [
+                        SpannedExpr {
+                            inner: Expr::Literal(Literal::String(s)),
+                            ..
+                        },
+                        ctx_expr @ SpannedExpr {
+                            inner: Expr::Context(c),
+                            ..
+                        },
+                    ] => Box::new(std::iter::once((s.as_ref(), c, ctx_expr.origin.raw))),
+                    args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
+                }
+            }
+            Expr::Call(Call {
                 func: _,
                 args: exprs,
-            }
+            })
             | Expr::Context(Context { parts: exprs, .. }) => {
                 Box::new(exprs.iter().flat_map(Self::walk_tree_for_unsound_contains))
             }
@@ -116,7 +113,14 @@ impl UnsoundContains {
     }
 
     fn unsound_contains(expr: &str) -> Vec<(Severity, String)> {
-        let bare = ExtractedExpr::new(expr).as_bare();
+        // Handle a fenced `if:` by extracting it explicitly.
+        // We need this indirection because of multiline YAML strings,
+        // e.g. where the literal string value might be something like
+        // `${{ ... }}\n`.
+        let bare = match utils::extract_fenced_expression(expr, 0) {
+            Some((expr, _)) => expr.as_bare(),
+            None => ExtractedExpr::new(expr).as_bare(),
+        };
 
         Expr::parse(bare)
             .inspect_err(|_err| tracing::warn!("couldn't parse expression: {expr}"))

@@ -3,13 +3,11 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"cache-poisoning/caching-opt-in-multi-value-toggle.yml\")).run()?"
 ---
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-  --> @@INPUT@@:1:1
+  --> @@INPUT@@:19:9
    |
  1 |   on: release
-   |   ^^^^^^^^^^^ generally used when publishing artifacts generated at runtime
- 2 |
+   |   ----------- generally used when publishing artifacts generated at runtime
 ...
-18 |           uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
 19 | /         with:
 20 | |           distribution: "zulu"
 21 | |           cache: "gradle"
@@ -18,4 +16,4 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    |
    = note: audit confidence → Low
 
-1 finding: 0 unknown, 0 informational, 0 low, 0 medium, 1 high
+1 finding: 0 informational, 0 low, 0 medium, 1 high

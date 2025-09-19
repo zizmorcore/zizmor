@@ -29,6 +29,14 @@ testcase:
       foo: bar # comment
       baz: qux # another comment
 
+  jobs:
+    test:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Step1
+          uses: actions/checkout@v4
+          # empty with: block
+          with:
 
 queries:
   - query: [foo]
@@ -86,3 +94,7 @@ queries:
     expected: |2-
             foo: bar # comment
             baz: qux # another comment
+
+  - query: [jobs, test, steps, 0, with]
+    mode: exact
+    expected: "<<empty>>"

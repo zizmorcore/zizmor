@@ -3,6 +3,7 @@ name: zizmor binary releases for GitHub 🐙
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions: {}
 
@@ -14,9 +15,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - runner: ubuntu-latest
+          - runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-          - runner: ubuntu-24.04-arm
+          - runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
           - runner: macos-latest
             target: x86_64-apple-darwin
@@ -24,22 +25,24 @@ jobs:
             target: aarch64-apple-darwin
           - runner: windows-latest
             target: x86_64-pc-windows-msvc
-          - runner: windows-latest
-            target: i686-pc-windows-msvc
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
 
-      - name: Rust toolchain and target information
-        run: |
-          rustup show
-
       - name: Install Rust target for ${{ matrix.target }}
-        run: rustup target add "${TARGET}"
+        run: |
+          rustup update
+          rustup target add "${TARGET}"
         env:
           TARGET: ${{ matrix.target }}
+        shell: bash
+
+      - name: Rust toolchain and target information
+        run: |
+          rustc --version
+          rustup show
         shell: bash
 
       - name: Build release
@@ -75,7 +78,7 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           pattern: artifacts-*
           path: distrib/
@@ -85,11 +88,13 @@ jobs:
         run: ls -l distrib/
 
       - name: Attest to artifacts
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        if: github.event_name == 'release'
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         with:
           subject-path: "distrib/*"
 
       - name: Upload to release
+        if: github.event_name == 'release'
         run: |
           gh release upload --repo zizmorcore/zizmor "${GITHUB_REF_NAME}" distrib/*
         env:

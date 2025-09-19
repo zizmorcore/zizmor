@@ -1,0 +1,13 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().offline(false).expects_failure(true).output(OutputMode::Stderr).args([\"--strict-collection\"]).input(\"woodruffw-experiments/zizmor-issue-1116@f41c414\").run()?"
+---
+fatal: no audit was performed
+error: couldn't collect inputs from https://github.com/woodruffw-experiments/zizmor-issue-1116
+  |
+  = help: confirm the repository exists and that you have access to it
+
+Caused by:
+    0: failed to load https://github.com/woodruffw-experiments/zizmor-issue-1116/blob/f41c414/invalid-action/action.yml as action
+    1: input does not match expected validation schema
+    2: null is not of type "object"

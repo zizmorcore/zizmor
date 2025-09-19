@@ -1,0 +1,55 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"undocumented-permissions.yml\")).args([\"--persona=pedantic\"]).run()?"
+---
+error[excessive-permissions]: overly broad permissions
+ --> @@INPUT@@:7:3
+  |
+7 |   contents: write
+  |   ^^^^^^^^^^^^^^^ contents: write is overly broad at the workflow level
+  |
+  = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+ --> @@INPUT@@:7:3
+  |
+7 |   contents: write
+  |   ^^^^^^^^^^^^^^^ needs an explanatory comment
+8 |   packages: read
+  |   ^^^^^^^^^^^^^^ needs an explanatory comment
+  |
+  = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> @@INPUT@@:29:7
+   |
+29 |       contents: write
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+30 |       packages: write
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+31 |       actions: write
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> @@INPUT@@:44:7
+   |
+44 |       packages: write #
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+45 |       actions: write  #    
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> @@INPUT@@:56:7
+   |
+56 |       metadata: read
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
+57 |       packages: write #
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+5 findings: 0 informational, 4 low, 0 medium, 1 high

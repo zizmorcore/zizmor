@@ -7,14 +7,15 @@ warning[excessive-permissions]: overly broad permissions
    |
 20 | /   job2:
 21 | |     name: job2
-...  |
+22 | |     # normal permissions finding here, since callers are always
+23 | |     # responsible for setting permissions, even if the workflow
 24 | |     # is reusable-only
 25 | |     uses: ./.github/workflows/fake.yml
-   | |                                       -
-   | |_______________________________________|
-   |                                         this job
+   | |                                       ^
+   | |                                       |
+   | |_______________________________________this job
    |                                         default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
-3 findings (2 suppressed): 0 unknown, 0 informational, 0 low, 1 medium, 0 high
+3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high

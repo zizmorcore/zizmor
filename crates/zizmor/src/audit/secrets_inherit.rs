@@ -15,7 +15,7 @@ audit_meta!(
 );
 
 impl Audit for SecretsInherit {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -25,6 +25,7 @@ impl Audit for SecretsInherit {
     fn audit_reusable_job<'doc>(
         &self,
         job: &super::ReusableWorkflowCallJob<'doc>,
+        _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
         let mut findings = vec![];
 
@@ -34,12 +35,12 @@ impl Audit for SecretsInherit {
                     .add_location(
                         job.location()
                             .primary()
-                            .with_keys(&["uses".into()])
+                            .with_keys(["uses".into()])
                             .annotated("this reusable workflow"),
                     )
                     .add_location(
                         job.location()
-                            .with_keys(&["secrets".into()])
+                            .with_keys(["secrets".into()])
                             .annotated("inherits all parent secrets"),
                     )
                     .confidence(Confidence::High)

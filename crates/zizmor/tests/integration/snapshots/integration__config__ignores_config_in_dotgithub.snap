@@ -1,0 +1,19 @@
+---
+source: crates/zizmor/tests/integration/config.rs
+expression: "zizmor().no_config(true).input(input_under_test(\"config-scenarios/config-in-dotgithub\")).setenv(\"RUST_LOG\",\n\"zizmor::config=debug\").output(OutputMode::Both).run()?"
+---
+DEBUG zizmor::config: skipping config discovery: explicitly disabled
+error[template-injection]: code injection via template expansion
+  --> @@INPUT@@/.github/workflows/hackme.yml:16:40
+   |
+13 |       - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # tag=v7.0.1
+   |         -------------------------------------------------------------------- action accepts arbitrary code
+14 |         with:
+15 |           script: |
+   |           ------ via this input
+16 |             return "doing a thing: ${{ github.event.issue.title }}"
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high

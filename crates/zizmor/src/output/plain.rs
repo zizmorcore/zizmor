@@ -2,34 +2,48 @@
 
 use std::collections::{HashMap, hash_map::Entry};
 
-use annotate_snippets::{Level, Renderer, Snippet};
+use annotate_snippets::{Annotation, AnnotationKind, Group, Level, Renderer, Snippet};
 use anstream::{eprintln, print, println};
 use owo_colors::OwoColorize;
-use terminal_link::Link;
 
 use crate::{
-    App,
-    finding::{Finding, Severity, location::Location},
+    finding::{
+        Finding, Severity,
+        location::{Location, LocationKind},
+    },
     models::AsDocument,
-    registry::{FindingRegistry, InputKey, InputRegistry},
+    registry::{
+        FindingRegistry,
+        input::{InputKey, InputRegistry},
+    },
 };
 
-impl From<&Severity> for Level {
-    fn from(sev: &Severity) -> Self {
-        match sev {
-            Severity::Unknown => Level::Note,
-            Severity::Informational => Level::Info,
-            Severity::Low => Level::Help,
-            Severity::Medium => Level::Warning,
-            Severity::High => Level::Error,
+impl From<LocationKind> for AnnotationKind {
+    fn from(kind: LocationKind) -> Self {
+        match kind {
+            LocationKind::Primary => AnnotationKind::Primary,
+            LocationKind::Related => AnnotationKind::Context,
+            // Unreachable because we filter out hidden locations earlier.
+            LocationKind::Hidden => unreachable!(),
         }
     }
 }
 
-pub(crate) fn finding_snippet<'doc>(
+impl From<&Severity> for Level<'_> {
+    fn from(sev: &Severity) -> Self {
+        match sev {
+            Severity::Informational => Level::INFO,
+            Severity::Low => Level::HELP,
+            Severity::Medium => Level::WARNING,
+            Severity::High => Level::ERROR,
+        }
+    }
+}
+
+pub(crate) fn finding_snippets<'doc>(
     registry: &'doc InputRegistry,
     finding: &'doc Finding<'doc>,
-) -> Vec<Snippet<'doc>> {
+) -> Vec<Snippet<'doc, Annotation<'doc>>> {
     // Our finding might span multiple workflows, so we need to group locations
     // by their enclosing workflow to generate each snippet correctly.
     let mut locations_by_workflow: HashMap<&InputKey, Vec<&Location<'doc>>> = HashMap::new();
@@ -57,14 +71,14 @@ pub(crate) fn finding_snippet<'doc>(
             Snippet::source(input.as_document().source())
                 .fold(true)
                 .line_start(1)
-                .origin(input.link().unwrap_or(input_key.presentation_path()))
+                .path(input.link().unwrap_or(input_key.presentation_path()))
                 .annotations(locations.iter().map(|loc| {
                     let annotation = match loc.symbolic.link {
                         Some(ref link) => link,
                         None => &loc.symbolic.annotation,
                     };
 
-                    Level::from(&finding.determinations.severity)
+                    AnnotationKind::from(loc.symbolic.kind)
                         .span(
                             loc.concrete.location.offset_span.start
                                 ..loc.concrete.location.offset_span.end,
@@ -77,23 +91,37 @@ pub(crate) fn finding_snippet<'doc>(
     snippets
 }
 
-pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &FindingRegistry) {
+pub(crate) fn render_findings(
+    registry: &InputRegistry,
+    findings: &FindingRegistry,
+    naches_mode: bool,
+) {
     for finding in findings.findings() {
         render_finding(registry, finding);
         println!();
     }
 
     let mut qualifiers = vec![];
+
     if !findings.ignored().is_empty() {
         qualifiers.push(format!(
             "{nignored} ignored",
             nignored = findings.ignored().len().bright_yellow()
         ));
     }
+
     if !findings.suppressed().is_empty() {
         qualifiers.push(format!(
             "{nsuppressed} suppressed",
             nsuppressed = findings.suppressed().len().bright_yellow()
+        ));
+    }
+
+    let nfixable = findings.fixable_findings().count();
+    if nfixable > 0 {
+        qualifiers.push(format!(
+            "{nfixable} fixable",
+            nfixable = nfixable.bright_green()
         ));
     }
 
@@ -108,7 +136,7 @@ pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &Fi
             );
         }
 
-        if app.naches {
+        if naches_mode {
             naches();
         }
     } else {
@@ -141,8 +169,7 @@ pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &Fi
         }
 
         println!(
-            "{nunknown} unknown, {ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
-            nunknown = findings_by_severity.get(&Severity::Unknown).unwrap_or(&0),
+            "{ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
             ninformational = findings_by_severity
                 .get(&Severity::Informational)
                 .unwrap_or(&0)
@@ -164,21 +191,27 @@ pub(crate) fn render_findings(app: &App, registry: &InputRegistry, findings: &Fi
 }
 
 fn render_finding(registry: &InputRegistry, finding: &Finding) {
-    let link = Link::new(finding.ident, finding.url).to_string();
+    let title = Level::from(&finding.determinations.severity)
+        .primary_title(finding.desc)
+        .id(finding.ident)
+        .id_url(finding.url);
+
     let confidence = format!(
         "audit confidence → {:?}",
         &finding.determinations.confidence
     );
-    let confidence_footer = Level::Note.title(&confidence);
 
-    let message = Level::from(&finding.determinations.severity)
-        .title(finding.desc)
-        .id(&link)
-        .snippets(finding_snippet(registry, finding))
-        .footer(confidence_footer);
+    let mut group = Group::with_title(title)
+        .elements(finding_snippets(registry, finding))
+        .element(Level::NOTE.message(confidence));
 
+    if !finding.fixes.is_empty() {
+        group = group.element(Level::NOTE.message("this finding has an auto-fix"));
+    }
+
+    // TODO: Evaluate alternative decor styles.
     let renderer = Renderer::styled();
-    println!("{}", renderer.render(message));
+    println!("{}", renderer.render(&[group]));
 }
 
 fn naches() {

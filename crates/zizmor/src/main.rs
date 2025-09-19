@@ -3,41 +3,41 @@
 use std::{
     io::{Write, stdout},
     process::ExitCode,
-    str::FromStr,
 };
 
-use annotate_snippets::{Level, Renderer};
+use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
 use anyhow::{Context, Result, anyhow};
-use audit::{Audit, AuditLoadError};
-use camino::{Utf8Path, Utf8PathBuf};
-use clap::{CommandFactory, Parser, ValueEnum};
+use camino::Utf8PathBuf;
+use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
-use config::Config;
+use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
-use github_actions_models::common::Uses;
-use github_api::GitHubHost;
-use ignore::WalkBuilder;
+use github_api::{GitHubHost, GitHubToken};
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
-use registry::{AuditRegistry, FindingRegistry, InputKey, InputKind, InputRegistry};
+use registry::input::{InputKey, InputRegistry};
+use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
+use crate::{config::Config, github_api::Client};
+
 mod audit;
 mod config;
 mod finding;
 mod github_api;
+#[cfg(feature = "lsp")]
+mod lsp;
 mod models;
 mod output;
 mod registry;
 mod state;
 mod utils;
-mod yaml_patch;
 
 // TODO: Dedupe this with the top-level `sponsors.json` used by the
 // README + docs site.
@@ -47,6 +47,10 @@ const THANKS: &[(&str, &str)] = &[("Grafana Labs", "https://grafana.com")];
 #[derive(Parser)]
 #[command(about, version)]
 struct App {
+    #[cfg(feature = "lsp")]
+    #[command(flatten)]
+    lsp: LspArgs,
+
     /// Emit 'pedantic' findings.
     ///
     /// This is an alias for --persona=pedantic.
@@ -65,11 +69,11 @@ struct App {
     offline: bool,
 
     /// The GitHub API token to use.
-    #[arg(long, env)]
-    gh_token: Option<String>,
+    #[arg(long, env, value_parser = GitHubToken::new)]
+    gh_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
-    #[arg(long, env = "GH_HOST", default_value = "github.com", value_parser = GitHubHost::from_clap)]
+    #[arg(long, env = "GH_HOST", default_value_t)]
     gh_hostname: GitHubHost,
 
     /// Perform only offline audits.
@@ -95,10 +99,17 @@ struct App {
     #[arg(long, value_enum, value_name = "MODE")]
     color: Option<ColorMode>,
 
-    /// The configuration file to load. By default, any config will be
-    /// discovered relative to $CWD.
-    #[arg(short, long, env = "ZIZMOR_CONFIG", group = "conf")]
-    config: Option<Utf8PathBuf>,
+    /// The configuration file to load.
+    /// This loads a single configuration file across all input groups,
+    /// which may not be what you intend.
+    #[arg(
+        short,
+        long,
+        env = "ZIZMOR_CONFIG",
+        group = "conf",
+        value_parser = NonEmptyStringValueParser::new()
+    )]
+    config: Option<String>,
 
     /// Disable all configuration loading.
     #[arg(long, group = "conf")]
@@ -110,16 +121,16 @@ struct App {
 
     /// Filter all results below this severity.
     #[arg(long)]
-    min_severity: Option<Severity>,
+    min_severity: Option<CliSeverity>,
 
     /// Filter all results below this confidence.
     #[arg(long)]
-    min_confidence: Option<Confidence>,
+    min_confidence: Option<CliConfidence>,
 
     /// The directory to use for HTTP caching. By default, a
     /// host-appropriate user-caching directory will be used.
-    #[arg(long)]
-    cache_dir: Option<Utf8PathBuf>,
+    #[arg(long, default_value_t = App::default_cache_dir(), hide_default_value = true)]
+    cache_dir: Utf8PathBuf,
 
     /// Control which kinds of inputs are collected for auditing.
     ///
@@ -137,17 +148,27 @@ struct App {
     #[arg(long, value_enum, value_name = "SHELL", exclusive = true)]
     completions: Option<Shell>,
 
-    /// Emit thank-you messages for zizmor's sponsors.
-    #[arg(long, exclusive = true)]
-    thanks: bool,
-
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
     naches: bool,
 
-    /// Apply fixes automatically if available.
-    #[arg(long, hide = true)]
-    fix: bool,
+    /// Fix findings automatically, when available (EXPERIMENTAL).
+    #[arg(
+        long,
+        value_enum,
+        value_name = "MODE",
+        // NOTE: These attributes are needed to make `--fix` behave as the
+        // default for `--fix=safe`. Unlike other flags we don't support
+        // `--fix safe`, since `clap` can't disambiguate that.
+        num_args=0..=1,
+        require_equals = true,
+        default_missing_value = "safe",
+    )]
+    fix: Option<FixMode>,
+
+    /// Emit thank-you messages for zizmor's sponsors.
+    #[arg(long, exclusive = true)]
+    thanks: bool,
 
     /// The inputs to audit.
     ///
@@ -157,6 +178,59 @@ struct App {
     /// to audit the repository at a particular git reference state.
     #[arg(required = true)]
     inputs: Vec<String>,
+}
+
+impl App {
+    fn default_cache_dir() -> Utf8PathBuf {
+        etcetera::choose_app_strategy(etcetera::AppStrategyArgs {
+            top_level_domain: "io.github".into(),
+            author: "woodruffw".into(),
+            app_name: "zizmor".into(),
+        })
+        .expect("failed to determine default cache directory")
+        .cache_dir()
+        .try_into()
+        .expect("failed to turn cache directory into a sane path")
+    }
+}
+
+// NOTE(ww): This can be removed once `--min-severity=unknown`
+// is fully removed.
+#[derive(Debug, Copy, Clone, ValueEnum)]
+enum CliSeverity {
+    Unknown,
+    Informational,
+    Low,
+    Medium,
+    High,
+}
+
+// NOTE(ww): This can be removed once `--min-confidence=unknown`
+// is fully removed.
+#[derive(Debug, Copy, Clone, ValueEnum)]
+enum CliConfidence {
+    Unknown,
+    Low,
+    Medium,
+    High,
+}
+
+#[cfg(feature = "lsp")]
+#[derive(Args)]
+#[group(multiple = true, conflicts_with = "inputs")]
+struct LspArgs {
+    /// Run in language server mode (EXPERIMENTAL).
+    ///
+    /// This flag cannot be used with any other flags.
+    #[arg(long)]
+    lsp: bool,
+
+    // This flag exists solely because VS Code's LSP client implementation
+    // insists on appending `--stdio` to the LSP server's arguments when
+    // using the 'stdio' transport. It has no actual meaning or use.
+    // See: <https://github.com/microsoft/vscode-languageserver-node/issues/1222
+    #[arg(long, hide = true)]
+    stdio: bool,
 }
 
 /// Shell with auto-generated completion script available.
@@ -298,183 +372,47 @@ impl CollectionMode {
     }
 }
 
-fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
-    let mut message = Level::Error.title(err.as_ref());
-    for tip in tips {
-        message = message.footer(Level::Note.title(tip.as_ref()));
-    }
+#[derive(Copy, Clone, Debug, ValueEnum)]
+pub(crate) enum FixMode {
+    /// Apply only safe fixes (the default).
+    Safe,
+    /// Apply only unsafe fixes.
+    UnsafeOnly,
+    /// Apply all fixes, both safe and unsafe.
+    All,
+}
+
+pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
+    // NOTE: We use secondary_title here because primary_title doesn't
+    // allow ANSI colors, and some of our errors contain colorized text.
+    let report = vec![
+        Group::with_title(Level::ERROR.secondary_title(err.as_ref()))
+            .elements(tips.iter().map(|tip| Level::HELP.message(tip.as_ref()))),
+    ];
 
     let renderer = Renderer::styled();
-    format!("{}", renderer.render(message))
+    renderer.render(&report).to_string()
 }
 
-#[instrument(skip(mode, registry))]
-fn collect_from_dir(
-    input_path: &Utf8Path,
-    mode: &CollectionMode,
-    registry: &mut InputRegistry,
-) -> Result<()> {
-    // Start with all filters disabled, i.e. walk everything.
-    let mut walker = WalkBuilder::new(input_path);
-    let walker = walker.standard_filters(false);
-
-    // If the user wants to respect `.gitignore` files, then we need to
-    // explicitly enable it. This also enables filtering by a global
-    // `.gitignore` file and the `.git/info/exclude` file, since these
-    // typically align with the user's expectations.
-    //
-    // We honor `.gitignore` and similar files even if `.git/` is not
-    // present, since users may retrieve or reconstruct a source archive
-    // without a `.git/` directory. In particular, this snares some
-    // zizmor integrators.
-    //
-    // See: https://github.com/zizmorcore/zizmor/issues/596
-    if mode.respects_gitignore() {
-        walker
-            .require_git(false)
-            .git_ignore(true)
-            .git_global(true)
-            .git_exclude(true);
-    }
-
-    for entry in walker.build() {
-        let entry = entry?;
-        let entry = <&Utf8Path>::try_from(entry.path())?;
-
-        if mode.workflows()
-            && entry.is_file()
-            && matches!(entry.extension(), Some("yml" | "yaml"))
-            && entry
-                .parent()
-                .is_some_and(|dir| dir.ends_with(".github/workflows"))
-        {
-            let key = InputKey::local(entry, Some(input_path))?;
-            let contents = std::fs::read_to_string(entry)?;
-            registry.register(InputKind::Workflow, contents, key)?;
-        }
-
-        if mode.actions()
-            && entry.is_file()
-            && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
-        {
-            let key = InputKey::local(entry, Some(input_path))?;
-            let contents = std::fs::read_to_string(entry)?;
-            registry.register(InputKind::Action, contents, key)?;
-        }
-    }
-
-    Ok(())
-}
-
-fn collect_from_repo_slug(
-    input: &str,
-    mode: &CollectionMode,
-    state: &AuditState,
-    registry: &mut InputRegistry,
-) -> Result<()> {
-    // Our pre-existing `uses: <slug>` parser does 90% of the work for us.
-    let Ok(Uses::Repository(slug)) = Uses::from_str(input) else {
-        return Err(anyhow!(tips(
-            format!("invalid input: {input}"),
-            &[format!(
-                "pass a single {file}, {directory}, or entire repo by {slug} slug",
-                file = "file".green(),
-                directory = "directory".green(),
-                slug = "owner/repo".green()
-            )]
-        )));
-    };
-
-    // We don't expect subpaths here.
-    if slug.subpath.is_some() {
-        return Err(anyhow!(tips(
-            "invalid GitHub repository reference",
-            &["pass owner/repo or owner/repo@ref"]
-        )));
-    }
-
-    let client = state.github_client().ok_or_else(|| {
-        anyhow!(tips(
-            format!("can't retrieve repository: {input}", input = input.green()),
-            &[format!(
-                "try removing {offline} or passing {gh_token}",
-                offline = "--offline".yellow(),
-                gh_token = "--gh-token <TOKEN>".yellow(),
-            )]
-        ))
-    })?;
-
-    if matches!(mode, CollectionMode::WorkflowsOnly) {
-        // Performance: if we're *only* collecting workflows, then we
-        // can save ourselves a full repo download and only fetch the
-        // repo's workflow files.
-        client.fetch_workflows(&slug, registry)?;
-    } else {
-        let before = registry.len();
-        let host = match &state.gh_hostname {
-            GitHubHost::Enterprise(address) => address.as_str(),
-            GitHubHost::Standard(_) => "github.com",
-        };
-
-        client
-            .fetch_audit_inputs(&slug, registry)
-            .with_context(|| {
-                tips(
-                    format!(
-                        "couldn't collect inputs from https://{host}/{owner}/{repo}",
-                        host = host,
-                        owner = slug.owner,
-                        repo = slug.repo
-                    ),
-                    &["confirm the repository exists and that you have access to it"],
-                )
-            })?;
-        let after = registry.len();
-        let len = after - before;
-
-        tracing::info!(
-            "collected {len} inputs from {owner}/{repo}",
-            owner = slug.owner,
-            repo = slug.repo
-        );
-    }
-
-    Ok(())
+/// State used when collecting input groups.
+pub(crate) struct CollectionOptions {
+    pub(crate) mode: CollectionMode,
+    pub(crate) strict: bool,
+    pub(crate) no_config: bool,
+    /// Global configuration, if any.
+    pub(crate) global_config: Option<Config>,
 }
 
 #[instrument(skip_all)]
 fn collect_inputs(
-    inputs: &[String],
-    mode: &CollectionMode,
-    strict: bool,
-    state: &AuditState,
+    inputs: Vec<String>,
+    options: &CollectionOptions,
+    gh_client: Option<&Client>,
 ) -> Result<InputRegistry> {
-    let mut registry = InputRegistry::new(strict);
+    let mut registry = InputRegistry::new();
 
-    for input in inputs {
-        let input_path = Utf8Path::new(input);
-        if input_path.is_file() {
-            // When collecting individual files, we don't know which part
-            // of the input path is the prefix.
-            let (key, kind) = match (input_path.file_stem(), input_path.extension()) {
-                (Some("action"), Some("yml" | "yaml")) => {
-                    (InputKey::local(input_path, None)?, InputKind::Action)
-                }
-                (Some(_), Some("yml" | "yaml")) => {
-                    (InputKey::local(input_path, None)?, InputKind::Workflow)
-                }
-                _ => return Err(anyhow!("invalid input: {input}")),
-            };
-
-            let contents = std::fs::read_to_string(input_path)?;
-            registry.register(kind, contents, key)?;
-        } else if input_path.is_dir() {
-            collect_from_dir(input_path, mode, &mut registry)?;
-        } else {
-            // If this input isn't a file or directory, it's probably an
-            // `owner/repo(@ref)?` slug.
-            collect_from_repo_slug(input, mode, state, &mut registry)?;
-        }
+    for input in inputs.into_iter() {
+        registry.register_group(input, options, gh_client)?;
     }
 
     if registry.len() == 0 {
@@ -497,6 +435,12 @@ fn run() -> Result<ExitCode> {
     human_panic::setup_panic!();
 
     let mut app = App::parse();
+
+    #[cfg(feature = "lsp")]
+    if app.lsp.lsp {
+        lsp::run()?;
+        return Ok(ExitCode::SUCCESS);
+    }
 
     if app.thanks {
         println!("zizmor's development is sustained by our generous sponsors:");
@@ -582,72 +526,52 @@ fn run() -> Result<ExitCode> {
         reg.with(indicatif_layer).init();
     }
 
-    let config = Config::new(&app).map_err(|e| {
-        anyhow!(tips(
-            format!("failed to load config: {e:#}"),
-            &[
-                "check your configuration file for errors",
-                "see: https://docs.zizmor.sh/configuration/"
-            ]
-        ))
-    })?;
+    let min_severity = match app.min_severity {
+        Some(CliSeverity::Unknown) => {
+            tracing::warn!("`unknown` is a deprecated minimum severity that has no effect");
+            tracing::warn!("future versions of zizmor will reject this value");
+            None
+        }
+        Some(CliSeverity::Informational) => Some(Severity::Informational),
+        Some(CliSeverity::Low) => Some(Severity::Low),
+        Some(CliSeverity::Medium) => Some(Severity::Medium),
+        Some(CliSeverity::High) => Some(Severity::High),
+        None => None,
+    };
 
-    let audit_state = AuditState::new(&app, &config);
-    let registry = collect_inputs(
-        &app.inputs,
-        &app.collect,
-        app.strict_collection,
-        &audit_state,
-    )?;
+    let min_confidence = match app.min_confidence {
+        Some(CliConfidence::Unknown) => {
+            tracing::warn!("`unknown` is a deprecated minimum confidence that has no effect");
+            tracing::warn!("future versions of zizmor will reject this value");
+            None
+        }
+        Some(CliConfidence::Low) => Some(Confidence::Low),
+        Some(CliConfidence::Medium) => Some(Confidence::Medium),
+        Some(CliConfidence::High) => Some(Confidence::High),
+        None => None,
+    };
 
-    let mut audit_registry = AuditRegistry::new();
-    macro_rules! register_audit {
-        ($rule:path) => {{
-            // HACK: https://github.com/rust-lang/rust/issues/48067
-            use crate::audit::AuditCore as _;
-            use $rule as base;
-            match base::new(&audit_state) {
-                Ok(audit) => audit_registry.register_audit(base::ident(), Box::new(audit)),
-                Err(AuditLoadError::Skip(e)) => {
-                    tracing::info!("skipping {audit}: {e}", audit = base::ident())
-                }
-                Err(AuditLoadError::Fail(e)) => {
-                    return Err(anyhow!(tips(
-                        format!("failed to load audit: {audit}", audit = base::ident()),
-                        &[format!("{e:#}"), format!("see: {url}", url = base::url())]
-                    )));
-                }
-            }
-        }};
-    }
+    let global_config = Config::global(&app)?;
 
-    register_audit!(audit::artipacked::Artipacked);
-    register_audit!(audit::unsound_contains::UnsoundContains);
-    register_audit!(audit::excessive_permissions::ExcessivePermissions);
-    register_audit!(audit::dangerous_triggers::DangerousTriggers);
-    register_audit!(audit::impostor_commit::ImpostorCommit);
-    register_audit!(audit::ref_confusion::RefConfusion);
-    register_audit!(audit::use_trusted_publishing::UseTrustedPublishing);
-    register_audit!(audit::template_injection::TemplateInjection);
-    register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
-    register_audit!(audit::self_hosted_runner::SelfHostedRunner);
-    register_audit!(audit::known_vulnerable_actions::KnownVulnerableActions);
-    register_audit!(audit::unpinned_uses::UnpinnedUses);
-    register_audit!(audit::insecure_commands::InsecureCommands);
-    register_audit!(audit::github_env::GitHubEnv);
-    register_audit!(audit::cache_poisoning::CachePoisoning);
-    register_audit!(audit::secrets_inherit::SecretsInherit);
-    register_audit!(audit::bot_conditions::BotConditions);
-    register_audit!(audit::overprovisioned_secrets::OverprovisionedSecrets);
-    register_audit!(audit::unredacted_secrets::UnredactedSecrets);
-    register_audit!(audit::forbidden_uses::ForbiddenUses);
-    register_audit!(audit::obfuscation::Obfuscation);
-    register_audit!(audit::stale_action_refs::StaleActionRefs);
-    register_audit!(audit::unpinned_images::UnpinnedImages);
-    register_audit!(audit::anonymous_definition::AnonymousDefinition);
-    register_audit!(audit::ref_version_mismatch::RefVersionMismatch);
+    let gh_client = app
+        .gh_token
+        .map(|token| Client::new(app.gh_hostname, token, app.cache_dir))
+        .transpose()?;
 
-    let mut results = FindingRegistry::new(&app, &config);
+    let collection_options = CollectionOptions {
+        mode: app.collect,
+        strict: app.strict_collection,
+        no_config: app.no_config,
+        global_config,
+    };
+
+    let registry = collect_inputs(app.inputs, &collection_options, gh_client.as_ref())?;
+
+    let state = AuditState::new(app.no_online_audits, gh_client);
+
+    let audit_registry = AuditRegistry::default_audits(&state)?;
+
+    let mut results = FindingRegistry::new(&registry, min_severity, min_confidence, app.persona);
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");
@@ -658,31 +582,27 @@ fn run() -> Result<ExitCode> {
 
         let _guard = span.enter();
 
-        for (_, input) in registry.iter_inputs() {
+        for (input_key, input) in registry.iter_inputs() {
             Span::current().pb_set_message(input.key().filename());
-            for (name, audit) in audit_registry.iter_audits() {
-                tracing::debug!(
-                    "running {name} on {input}",
-                    name = name,
-                    input = input.key()
-                );
-                results.extend(audit.audit(input).with_context(|| {
-                    format!("{name} failed on {input}", input = input.key().filename())
+            let config = registry.get_config(input_key.group());
+            for (ident, audit) in audit_registry.iter_audits() {
+                tracing::debug!("running {ident} on {input}", input = input.key());
+                results.extend(audit.audit(ident, input, config).with_context(|| {
+                    format!("{ident} failed on {input}", input = input.key().filename())
                 })?);
                 Span::current().pb_inc(1);
             }
             tracing::info!(
-                "🌈 {completed} {input}",
-                completed = "completed".green(),
+                "🌈 completed {input}",
                 input = input.key().presentation_path()
             );
         }
     }
 
     match app.format {
-        OutputFormat::Plain => output::plain::render_findings(&app, &registry, &results),
+        OutputFormat::Plain => output::plain::render_findings(&registry, &results, app.naches),
         OutputFormat::Json | OutputFormat::JsonV1 => {
-            serde_json::to_writer_pretty(stdout(), &results.findings())?
+            output::json::v1::output(stdout(), results.findings())?
         }
         OutputFormat::Sarif => {
             serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))?
@@ -690,14 +610,14 @@ fn run() -> Result<ExitCode> {
         OutputFormat::Github => output::github::output(stdout(), results.findings())?,
     };
 
-    if app.fix {
-        output::fix::apply_fixes(&results, &registry)?;
+    if let Some(fix_mode) = app.fix {
+        output::fix::apply_fixes(fix_mode, &results, &registry)?;
     }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
         Ok(ExitCode::SUCCESS)
     } else {
-        Ok(results.into())
+        Ok(results.exit_code())
     }
 }
 

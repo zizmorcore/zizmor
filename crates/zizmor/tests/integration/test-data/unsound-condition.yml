@@ -1,0 +1,94 @@
+name: unsound-condition
+on: push
+permissions: {}
+
+jobs:
+  unsound-condition:
+    name: unsound-condition
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1-ok
+        if: some.context
+        run: echo ok
+
+      - name: 2-ok
+        if: ${{ some.context }}
+        run: echo ok
+
+      - name: 3-ok
+        # OK because, despite being a block with a trailing newline,
+        # there's no fence to excludes the trailing newline.
+        if: |
+          some.context
+        run: echo ok
+
+      - name: 4-not-ok
+        # NOT OK because this is a fenced block with a trailing newline.
+        if: |
+          ${{ some.context }}
+        run: echo not ok
+
+      - name: 5-not-ok
+        # NOT OK because this is a fenced block with a trailing newline.
+        if: >
+          ${{ some.context }}
+        run: echo not ok
+
+      - name: 6-ok
+        # OK because this is a fenced multiline block, but the
+        # trailing newline is stripped by |-
+        if: |-
+          ${{ some.context }}
+        run: echo ok
+
+      - name: 7-ok
+        # OK because this is a fenced multiline block, but the
+        # trailing newline is stripped by >-
+        if: >-
+          ${{ some.context }}
+        run: echo ok
+
+      - name: 8-ok
+        # OK despite multiple lines because this is a bare expression
+        if: |
+          some.context
+            && other.context
+        run: echo ok
+
+      - name: 9-not-ok
+        # NOT OK because this is a fenced multiline block with a trailing newline.
+        if: |
+          ${{ some.context
+            && other.context
+          }}
+        run: echo not ok
+
+      - name: 10-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: true && ${{ false }}
+        run: echo not ok
+
+      - name: 11-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: ${{ false }} && true
+        run: echo not ok
+
+      - name: 12-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: ${{ false }} lol
+        run: echo not ok
+
+      - name: 13-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: lol ${{ false }}
+        run: echo not ok
+
+      - name: 14-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: "${{ false }} "
+        run: echo not ok
+
+      - name: 15-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: " ${{ false }}"
+        run: echo not ok

@@ -1,0 +1,30 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"cache-poisoning/issue-1081-repro.yml\")).run()?"
+---
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:15:9
+   |
+ 5 | on: release
+   | ----------- generally used when publishing artifacts generated at runtime
+...
+15 |       - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+  --> @@INPUT@@:19:9
+   |
+ 5 |   on: release
+   |   ----------- generally used when publishing artifacts generated at runtime
+...
+19 | /         with:
+20 | |           enable-cache: true
+   | |____________________________^ opt-in for caching here
+   |
+   = note: audit confidence → Low
+   = note: this finding has an auto-fix
+
+2 findings (2 fixable): 0 informational, 0 low, 0 medium, 2 high

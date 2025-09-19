@@ -6,11 +6,11 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> @@INPUT@@:9:7
    |
  9 |     - uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
-   |       -------------------------------------------- info: this step
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 10 |       with:
 11 |         password: ${{ secrets.PYPI_TOKEN }}
-   |         ----------------------------------- info: uses a manually-configured credential instead of Trusted Publishing
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
    |
    = note: audit confidence → High
 
-2 findings (1 ignored): 0 unknown, 1 informational, 0 low, 0 medium, 0 high
+2 findings (1 ignored): 1 informational, 0 low, 0 medium, 0 high

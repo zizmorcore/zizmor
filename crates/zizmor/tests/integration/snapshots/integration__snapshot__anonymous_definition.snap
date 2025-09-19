@@ -3,14 +3,16 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"anonymous-definition.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
 help[anonymous-definition]: workflow or action definition without a name
-  --> @@INPUT@@:1:1
+  --> @@INPUT@@:5:1
    |
- 1 | / # see https://github.com/zizmorcore/zizmor/issues/795
- 2 | |
+ 5 | / on:
+ 6 | |   issues:
+ 7 | |
+ 8 | | permissions: {}
 ...  |
 19 | |     steps:
 20 | |       - run: "echo this job will trigger"
-   | |__________________________________________- help: this workflow
+   | |__________________________________________^ this workflow
    |
    = note: audit confidence → High
 
@@ -21,8 +23,8 @@ info[anonymous-definition]: workflow or action definition without a name
 18 | |     runs-on: ubuntu-latest
 19 | |     steps:
 20 | |       - run: "echo this job will trigger"
-   | |__________________________________________- info: this job
+   | |__________________________________________^ this job
    |
    = note: audit confidence → High
 
-2 findings: 0 unknown, 1 informational, 1 low, 0 medium, 0 high
+2 findings: 1 informational, 1 low, 0 medium, 0 high

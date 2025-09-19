@@ -23,3 +23,12 @@
 .chip-expert::before {
     content: "for experts";
 }
+
+.chip-experimental {
+    color: black;
+    background: orange;
+}
+
+.chip-experimental::before {
+    content: "⚠️ experimental";
+}
