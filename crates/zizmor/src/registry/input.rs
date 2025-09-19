@@ -2,6 +2,7 @@
 
 use std::{
     collections::{BTreeMap, btree_map},
+    path::PathBuf,
     str::FromStr as _,
 };
 
@@ -71,6 +72,9 @@ pub(crate) enum InputError {
     /// The input couldn't be parsed as a repository slug.
     #[error("invalid repository slug: {0}: {1}")]
     RepoSlug(&'static str, String),
+    /// The input path isn't valid UTF-8.
+    #[error("invalid path (not UTF-8): {1:?}")]
+    Path(#[source] camino::FromPathError, PathBuf),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
@@ -412,8 +416,9 @@ impl InputGroup {
 
         for entry in walker.build() {
             let entry = entry?;
-            let entry = <&Utf8Path>::try_from(entry.path())
-                .map_err(|e| CollectionError::InputLoad(e.into_io_error().into()))?;
+            let entry = <&Utf8Path>::try_from(entry.path()).map_err(|e| {
+                CollectionError::InputLoad(InputError::Path(e, entry.path().into()))
+            })?;
 
             if options.mode.workflows()
                 && entry.is_file()
