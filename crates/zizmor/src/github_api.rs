@@ -262,52 +262,40 @@ impl Client {
         repo: &str,
         git_ref: &str,
     ) -> Result<Option<String>> {
-        // GitHub Actions generally resolves branches before tags, so try
-        // the repo's branches first.
-        if let Some(branch_ref) = self
-            ._get_ref(owner, repo, &format!("ref/heads/{git_ref}"))
-            .await?
-        {
-            // assert_eq!(branch_ref.object.r#type, Some(ObjectType::Commit));
-            return Ok(Some(branch_ref.object.sha));
-        }
-
-        let Some(mut tag_ref) = self
-            ._get_ref(owner, repo, &format!("ref/tags/{git_ref}"))
-            .await?
-        else {
-            return Ok(None);
-        };
-
-        while !matches!(tag_ref.object.r#type, Some(ObjectType::Commit)) {
-            let Some(next_ref) = self._get_ref(owner, repo, &tag_ref.object.sha).await? else {
-                return Ok(None);
-            };
-            tag_ref = next_ref;
-        }
-
-        return Ok(Some(tag_ref.object.sha));
-    }
-
-    pub(crate) async fn _get_ref(
-        &self,
-        owner: &str,
-        repo: &str,
-        git_ref: &str,
-    ) -> Result<Option<GitRef>> {
-        let url = format!(
-            "{api_base}/repos/{owner}/{repo}/git/{git_ref}",
-            api_base = self.api_base
+        let base_url = format!(
+            "{api_base}/repos/{owner}/{repo}/commits",
+            api_base = self.api_base,
         );
 
-        let resp = self.http.get(url).send().await?;
-        match resp.status() {
-            StatusCode::OK => Ok(Some(resp.json::<GitRef>().await?)),
-            StatusCode::NOT_FOUND => Ok(None),
-            s => Err(anyhow!(
-                "{owner}/{repo}: error from GitHub API while accessing ref {git_ref}: {s}"
-            )),
+        // GitHub Actions resolves branches before tags.
+        for ref_type in &["heads", "tags"] {
+            let url = format!("{base_url}/refs/{ref_type}/{git_ref}");
+
+            let resp = self.http.get(&url).send().await?;
+            match resp.status() {
+                StatusCode::OK => {
+                    let commit = resp.json::<Commit>().await?;
+                    return Ok(Some(commit.sha));
+                }
+                // HACK(ww): GitHub's API documents 404 for a missing ref,
+                // but actually returns 422. We handle both cases here
+                // just in case GitHub decides to fix this in the future.
+                //
+                // In principle we're over-capturing errors here, but in
+                // practice we shouldn't see any causes of 422 other than
+                // a missing ref. The alternative would be to poke into the
+                // 422's JSON response and try to suss out whether it's
+                // actually a missing ref or something else, but that would
+                // be brittle without a commitment from GitHub to maintain
+                // a specific error string.
+                //
+                // See: <https://github.com/zizmorcore/zizmor/pull/972/files#r2167674833>
+                StatusCode::NOT_FOUND | StatusCode::UNPROCESSABLE_ENTITY => continue,
+                _ => return Err(resp.error_for_status().unwrap_err().into()),
+            }
         }
+
+        Ok(None)
     }
 
     #[instrument(skip(self))]
@@ -400,11 +388,7 @@ impl Client {
         self.fetch_single_file_async(slug, file).await
     }
 
-    pub(crate) async fn fetch_single_file_async(
-        &self,
-        slug: &RepoSlug,
-        file: &str,
-    ) -> Result<Option<String>> {
+    async fn fetch_single_file_async(&self, slug: &RepoSlug, file: &str) -> Result<Option<String>> {
         tracing::debug!("fetching {file} from {slug}");
 
         let url = format!(
@@ -583,7 +567,7 @@ impl Client {
 #[derive(Deserialize, Clone)]
 pub(crate) struct Branch {
     pub(crate) name: String,
-    pub(crate) commit: Object,
+    pub(crate) commit: Commit,
 }
 
 /// A single tag, as returned by GitHub's tags endpoints.
@@ -592,26 +576,15 @@ pub(crate) struct Branch {
 #[derive(Deserialize, Clone)]
 pub(crate) struct Tag {
     pub(crate) name: String,
-    pub(crate) commit: Object,
+    pub(crate) commit: Commit,
 }
 
+/// A single commit, as returned by GitHub's commits endpoints.
+///
+/// This model is intentionally incomplete.
 #[derive(Deserialize, Clone)]
-#[serde(rename_all = "kebab-case")]
-pub(crate) enum ObjectType {
-    Tag,
-    Commit,
-}
-
-/// Represents a git object.
-#[derive(Deserialize, Clone)]
-pub(crate) struct Object {
+pub(crate) struct Commit {
     pub(crate) sha: String,
-    pub(crate) r#type: Option<ObjectType>,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct GitRef {
-    pub(crate) object: Object,
 }
 
 #[derive(Clone, Deserialize)]
