@@ -461,32 +461,7 @@ impl InputGroup {
     ) -> Result<Self, CollectionError> {
         let slug = RepoSlug::from_str(raw_slug)?;
 
-        // let Ok(slug) = RepoSlug::from_str(raw_slug) else {
-        //     return Err(anyhow::anyhow!(tips(
-        //         format!("invalid input: {raw_slug}"),
-        //         &[format!(
-        //             "pass a single {file}, {directory}, or entire repo by {slug} slug",
-        //             file = "file".green(),
-        //             directory = "directory".green(),
-        //             slug = "owner/repo".green()
-        //         )]
-        //     )));
-        // };
-
         let client = gh_client.ok_or_else(|| CollectionError::NoGitHubClient(slug.clone()))?;
-        // let client = gh_client.ok_or_else(|| {
-        //     anyhow::anyhow!(tips(
-        //         format!(
-        //             "can't retrieve repository: {raw_slug}",
-        //             raw_slug = raw_slug.green()
-        //         ),
-        //         &[format!(
-        //             "try removing {offline} or passing {gh_token}",
-        //             offline = "--offline".yellow(),
-        //             gh_token = "--gh-token <TOKEN>".yellow(),
-        //         )]
-        //     ))
-        // })?;
 
         let config = Config::discover(options, || Config::discover_remote(client, &slug))
             .with_context(|| format!("failed to discover configuration for {slug}"))?;
@@ -536,6 +511,7 @@ impl InputGroup {
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
         let path = Utf8Path::new(request);
+
         if path.is_file() {
             Self::collect_from_file(path, options)
         } else if path.is_dir() {
