@@ -15,7 +15,7 @@ use crate::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
     },
-    registry::input::InputError,
+    registry::input::CollectionError,
     utils::{self, ACTION_VALIDATOR, from_str_with_validation},
 };
 
@@ -60,7 +60,7 @@ impl HasInputs for Action {
 
 impl Action {
     /// Load an action from a buffer, with an assigned name.
-    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
+    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
         let inner = from_str_with_validation(&contents, &ACTION_VALIDATOR)?;
 
         let document = yamlpath::Document::new(&contents)

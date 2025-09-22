@@ -6,7 +6,5 @@ fatal: no audit was performed
 failed to load config file at `@@CONFIG@@`
 
 Caused by:
-    error: failed to load config: missing field `rules`
-      |
-      = help: check your configuration file for errors
-      = help: see: https://docs.zizmor.sh/configuration/
+    0: invalid syntax
+    1: missing field `rules`

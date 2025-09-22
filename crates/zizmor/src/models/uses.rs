@@ -150,6 +150,31 @@ impl FromStr for RepositoryUsesPattern {
     }
 }
 
+impl std::fmt::Display for RepositoryUsesPattern {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RepositoryUsesPattern::Any => write!(f, "*"),
+            RepositoryUsesPattern::InOwner(owner) => write!(f, "{owner}/*"),
+            RepositoryUsesPattern::InRepo { owner, repo } => write!(f, "{owner}/{repo}/*"),
+            RepositoryUsesPattern::ExactRepo { owner, repo } => write!(f, "{owner}/{repo}"),
+            RepositoryUsesPattern::ExactPath {
+                owner,
+                repo,
+                subpath,
+            } => write!(f, "{owner}/{repo}/{subpath}"),
+            RepositoryUsesPattern::ExactWithRef {
+                owner,
+                repo,
+                subpath,
+                git_ref,
+            } => match subpath {
+                Some(subpath) => write!(f, "{owner}/{repo}/{subpath}@{git_ref}"),
+                None => write!(f, "{owner}/{repo}@{git_ref}"),
+            },
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for RepositoryUsesPattern {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

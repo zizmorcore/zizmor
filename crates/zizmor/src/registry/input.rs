@@ -15,7 +15,7 @@ use crate::{
     CollectionMode, CollectionOptions,
     audit::AuditInput,
     config::Config,
-    github_api::{Client, GitHubHost},
+    github_api::{Client, ClientError, GitHubHost},
     models::{action::Action, workflow::Workflow},
     tips,
 };
@@ -23,63 +23,70 @@ use crate::{
 /// Errors that can occur while collecting inputs.
 #[derive(Debug, Error)]
 pub(crate) enum CollectionError {
-    /// An error in the group's configuration.
+    /// The input's syntax is invalid.
+    /// This typically indicates a user error.
+    #[error("invalid YAML syntax: {0}")]
+    Syntax(#[source] anyhow::Error),
+
+    /// The input doesn't match the schema for the expected model.
+    /// This typically indicates a user error.
+    #[error("input does not match expected validation schema")]
+    Schema(#[source] anyhow::Error),
+
+    /// The input couldn't be converted into the expected model.
+    /// This typically indicates a bug in `github-actions-models`.
+    #[error("couldn't turn input into a an appropriate model")]
+    Model(#[source] anyhow::Error),
+
+    /// An error in a group or global configuration.
     #[error(transparent)]
     Config(#[from] anyhow::Error),
+
+    /// The input couldn't be parsed as a repository slug.
+    #[error("invalid repository slug: {0}")]
+    RepoSlug(String),
+
     /// The user provided the same input in the same group more than once.
     #[error("can't register the same input more than once: {0}")]
     DuplicateInput(InputKey),
+
     /// The user wants us to fetch a remote repo, but we don't have a
     /// functional GitHub client (maybe because we're offline, or
     /// because no token was provided).
     #[error("can't fetch remote repository: {0}")]
     NoGitHubClient(RepoSlug),
+
     /// An error occurred while processing ignore rules.
     #[error("error while processing ignore rules")]
     Ignore(#[from] ignore::Error),
-    /// A single input failed to load before we could figure out what kind it is.
-    #[error("invalid input")]
-    InputLoad(#[from] InputError),
+
     /// A single input file failed to load as a specific kind.
     #[error("failed to load {1} as {2}")]
-    InputKind(#[source] InputError, String, InputKind),
+    Inner(#[source] Box<CollectionError>, String, InputKind),
+
     /// The input doesn't have a `.yml` or `.yaml` extension.
     #[error("invalid input: must have .yml or .yaml extension")]
     InvalidExtension,
-    /// No inputs were collected.
-    #[error("no inputs collected")]
-    NoInputs,
-}
 
-/// Errors that can occur while loading a single input file.
-#[derive(Error, Debug)]
-pub(crate) enum InputError {
-    /// The input's syntax is invalid.
-    /// This typically indicates a user error.
-    #[error("invalid YAML syntax: {0}")]
-    Syntax(#[source] anyhow::Error),
-    /// The input couldn't be converted into the expected model.
-    /// This typically indicates a bug in `github-actions-models`.
-    #[error("couldn't turn input into a an appropriate model")]
-    Model(#[source] anyhow::Error),
-    /// The input doesn't match the schema for the expected model.
-    /// This typically indicates a user error.
-    #[error("input does not match expected validation schema")]
-    Schema(#[source] anyhow::Error),
+    /// A GitHub API error occurred while fetching a remote input.
+    #[error("GitHub API error while fetching remote input")]
+    Client(#[from] ClientError),
+
     /// An I/O error occurred while loading the input.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+
     /// The input's name is missing.
     #[error("invalid input: no filename component")]
     MissingName,
-    /// The input couldn't be parsed as a repository slug.
-    #[error("invalid repository slug: {0}")]
-    RepoSlug(String),
+
     /// The input path isn't valid UTF-8.
     #[error("invalid path (not UTF-8): {1:?}")]
-    Path(#[source] camino::FromPathError, PathBuf),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
+    InvalidPath(#[source] camino::FromPathError, PathBuf),
+
+    /// No inputs were collected.
+    #[error("no inputs collected")]
+    NoInputs,
 }
 
 #[derive(Debug, Copy, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
@@ -111,7 +118,7 @@ pub(crate) struct RepoSlug {
 }
 
 impl std::str::FromStr for RepoSlug {
-    type Err = InputError;
+    type Err = CollectionError;
 
     /// NOTE: This is almost exactly the same as
     /// [`github_actions_models::common::RepositoryUses`],
@@ -130,8 +137,8 @@ impl std::str::FromStr for RepoSlug {
                 repo: components[1].into(),
                 git_ref: git_ref.map(|s| s.into()),
             }),
-            x if x < 2 => Err(InputError::RepoSlug(s.into())),
-            _ => Err(InputError::RepoSlug(s.into())),
+            x if x < 2 => Err(CollectionError::RepoSlug(s.into())),
+            _ => Err(CollectionError::RepoSlug(s.into())),
         }
     }
 }
@@ -202,10 +209,10 @@ impl InputKey {
         group: Group,
         path: P,
         prefix: Option<P>,
-    ) -> Result<Self, InputError> {
+    ) -> Result<Self, CollectionError> {
         // All keys must have a filename component.
         if path.as_ref().file_name().is_none() {
-            return Err(InputError::MissingName);
+            return Err(CollectionError::MissingName);
         }
 
         Ok(Self::Local(LocalKey {
@@ -215,9 +222,9 @@ impl InputKey {
         }))
     }
 
-    pub(crate) fn remote(slug: &RepoSlug, path: String) -> Result<Self, InputError> {
+    pub(crate) fn remote(slug: &RepoSlug, path: String) -> Result<Self, CollectionError> {
         if Utf8Path::new(&path).file_name().is_none() {
-            return Err(InputError::MissingName);
+            return Err(CollectionError::MissingName);
         }
 
         Ok(Self::Remote(RemoteKey {
@@ -334,22 +341,22 @@ impl InputGroup {
     ) -> Result<(), CollectionError> {
         tracing::debug!("registering {kind} input as with key {key}");
 
-        let input: Result<AuditInput, InputError> = match kind {
+        let input: Result<AuditInput, CollectionError> = match kind {
             InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(|wf| wf.into()),
             InputKind::Action => Action::from_string(contents, key.clone()).map(|a| a.into()),
         };
 
         match input {
             Ok(input) => self.register_input(input),
-            Err(InputError::Syntax(e)) if !strict => {
+            Err(CollectionError::Syntax(e)) if !strict => {
                 tracing::warn!("failed to parse input: {e}");
                 Ok(())
             }
-            Err(e @ InputError::Schema { .. }) if !strict => {
+            Err(e @ CollectionError::Schema { .. }) if !strict => {
                 tracing::warn!("failed to validate input as {kind}: {e}");
                 Ok(())
             }
-            Err(e) => Err(CollectionError::InputKind(e, key.to_string(), kind)),
+            Err(e) => Err(CollectionError::Inner(e.into(), key.to_string(), kind)),
         }
     }
 
@@ -378,8 +385,9 @@ impl InputGroup {
             _ => return Err(CollectionError::InvalidExtension),
         };
 
-        let contents = std::fs::read_to_string(path)
-            .map_err(|e| CollectionError::InputKind(e.into(), key.to_string(), kind))?;
+        let contents = std::fs::read_to_string(path).map_err(|e| {
+            CollectionError::Inner(CollectionError::Io(e).into(), key.to_string(), kind)
+        })?;
         group.register(kind, contents, key, options.strict)?;
 
         Ok(group)
@@ -419,9 +427,8 @@ impl InputGroup {
 
         for entry in walker.build() {
             let entry = entry?;
-            let entry = <&Utf8Path>::try_from(entry.path()).map_err(|e| {
-                CollectionError::InputLoad(InputError::Path(e, entry.path().into()))
-            })?;
+            let entry = <&Utf8Path>::try_from(entry.path())
+                .map_err(|e| CollectionError::InvalidPath(e, entry.path().into()))?;
 
             if options.mode.workflows()
                 && entry.is_file()
@@ -433,7 +440,11 @@ impl InputGroup {
                 // NOTE: Safe unwrap because we just checked the filename.
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
-                    CollectionError::InputKind(e.into(), key.to_string(), InputKind::Workflow)
+                    CollectionError::Inner(
+                        CollectionError::Io(e).into(),
+                        key.to_string(),
+                        InputKind::Workflow,
+                    )
                 })?;
                 group.register(InputKind::Workflow, contents, key, options.strict)?;
             }
@@ -445,7 +456,11 @@ impl InputGroup {
                 // NOTE: Safe unwrap because we just checked the filename.
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
-                    CollectionError::InputKind(e.into(), key.to_string(), InputKind::Action)
+                    CollectionError::Inner(
+                        CollectionError::Io(e).into(),
+                        key.to_string(),
+                        InputKind::Action,
+                    )
                 })?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
             }

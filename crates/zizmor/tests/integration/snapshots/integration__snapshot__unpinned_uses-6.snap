@@ -1,11 +1,10 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().expects_failure(true).config(input_under_test(&format!(\"unpinned-uses/configs/{tc}.yml\",))).input(input_under_test(\"unpinned-uses/menagerie-of-uses.yml\")).run()?"
-snapshot_kind: text
 ---
 fatal: no audit was performed
 failed to load config file at `@@CONFIG@@`
 
 Caused by:
-    0: invalid unpinned-uses configuration
+    0: invalid syntax for audit `unpinned-uses`
     1: invalid type: sequence, expected a map

@@ -25,11 +25,7 @@ use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use crate::{
-    config::Config,
-    github_api::Client,
-    registry::input::{CollectionError, InputError},
-};
+use crate::{config::Config, github_api::Client, registry::input::CollectionError};
 
 mod audit;
 mod config;
@@ -571,7 +567,7 @@ fn run() -> anyhow::Result<ExitCode> {
 
     let registry = match collect_inputs(app.inputs, &collection_options, gh_client.as_ref()) {
         Ok(registry) => Ok(registry),
-        Err(err @ CollectionError::InputLoad(InputError::RepoSlug(..))) => {
+        Err(err @ CollectionError::RepoSlug(..)) => {
             let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
                 .element(Level::HELP.message(format!(
                     "repository slugs should be in {slug} format",
