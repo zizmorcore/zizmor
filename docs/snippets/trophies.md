@@ -1264,6 +1264,14 @@
         - stravalib/stravalib#649
 
 
+-   ![](https://github.com/Swatinem.png?size=40){ width="40" loading=lazy align=left } Swatinem
+
+    ---
+
+    ??? example "Examples"
+        - Swatinem/rust-cache#262
+
+
 -   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
 
     ---
