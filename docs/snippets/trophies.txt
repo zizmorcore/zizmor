@@ -275,6 +275,7 @@ slackapi/python-slack-events-api#110
 stravalib/stravalib#645
 stravalib/stravalib#648
 stravalib/stravalib#649
+Swatinem/rust-cache#262
 TecharoHQ/anubis#188
 termcolor/termcolor#89
 termux/termux-packages#22519
