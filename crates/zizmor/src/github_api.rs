@@ -137,7 +137,7 @@ pub(crate) enum ClientError {
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
-    host: GitHubHost,
+    _host: GitHubHost,
     http: ClientWithMiddleware,
 }
 
@@ -181,13 +181,9 @@ impl Client {
 
         Ok(Self {
             api_base: host.to_api_url(),
-            host,
+            _host: host,
             http,
         })
-    }
-
-    pub(crate) fn host(&self) -> &GitHubHost {
-        &self.host
     }
 
     async fn paginate<T: DeserializeOwned>(

@@ -5,7 +5,6 @@
 
 use std::collections::HashMap;
 
-use anyhow::Context as _;
 use github_actions_expressions::context::{self, Context};
 use github_actions_models::{
     common::{self, expr::LoE},
@@ -123,8 +122,7 @@ impl Workflow {
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
         let inner = from_str_with_validation(&contents, &WORKFLOW_VALIDATOR)?;
 
-        let document = yamlpath::Document::new(&contents)
-            .context("failed to load internal pathing document")?;
+        let document = yamlpath::Document::new(&contents)?;
 
         let link = match key {
             InputKey::Local(_) => None,

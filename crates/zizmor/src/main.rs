@@ -567,16 +567,18 @@ fn run() -> anyhow::Result<ExitCode> {
 
     let registry = match collect_inputs(app.inputs, &collection_options, gh_client.as_ref()) {
         Ok(registry) => Ok(registry),
-        Err(err @ CollectionError::RepoSlug(..)) => {
+        Err(err @ CollectionError::InvalidInput(..)) => {
             let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
                 .element(Level::HELP.message(format!(
-                    "repository slugs should be in {slug} format",
+                    "valid inputs are files, directories, or GitHub {slug} slugs",
                     slug = "user/repo[@ref]".green()
                 )))
                 .element(Level::HELP.message(format!(
-                    "examples: {ex1} or {ex2}",
-                    ex1 = "example/example".green(),
-                    ex2 = "example/example@v1.2.3".green()
+                    "examples: {ex1}, {ex2}, {ex3}, or {ex4}",
+                    ex1 = "path/to/workflow.yml".green(),
+                    ex2 = ".github/".green(),
+                    ex3 = "example/example".green(),
+                    ex4 = "example/example@v1.2.3".green()
                 )));
 
             let renderer = Renderer::styled();
@@ -597,6 +599,19 @@ fn run() -> anyhow::Result<ExitCode> {
                 ]);
             }
 
+            let renderer = Renderer::styled();
+            let report = renderer.render(&[group]);
+
+            Err(anyhow!(err).context(report))
+        }
+        Err(err @ CollectionError::Yamlpath(_)) => {
+            let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
+            group = group.elements([
+                Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
+                Level::HELP.message(
+                    "https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml",
+                ),
+            ]);
             let renderer = Renderer::styled();
             let report = renderer.render(&[group]);
 

@@ -6,7 +6,6 @@ use std::{
     str::FromStr as _,
 };
 
-use anyhow::Context;
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Serialize;
 use thiserror::Error;
@@ -14,10 +13,9 @@ use thiserror::Error;
 use crate::{
     CollectionMode, CollectionOptions,
     audit::AuditInput,
-    config::Config,
-    github_api::{Client, ClientError, GitHubHost},
+    config::{Config, ConfigError},
+    github_api::{Client, ClientError},
     models::{action::Action, workflow::Workflow},
-    tips,
 };
 
 /// Errors that can occur while collecting inputs.
@@ -38,13 +36,19 @@ pub(crate) enum CollectionError {
     #[error("couldn't turn input into a an appropriate model")]
     Model(#[source] anyhow::Error),
 
+    /// The input couldn't be loaded into an internal yamlpath document.
+    /// This typically indicates a bug in `yamlpath`.
+    #[error("failed to load internal pathing document")]
+    Yamlpath(#[from] yamlpath::QueryError),
+
     /// An error in a group or global configuration.
     #[error(transparent)]
-    Config(#[from] anyhow::Error),
+    Config(#[from] ConfigError),
 
-    /// The input couldn't be parsed as a repository slug.
-    #[error("invalid repository slug: {0}")]
-    RepoSlug(String),
+    /// The input couldn't be parsed as one of our known input sources
+    /// (file, directory, or GitHub repo).
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
 
     /// The user provided the same input in the same group more than once.
     #[error("can't register the same input more than once: {0}")]
@@ -137,8 +141,8 @@ impl std::str::FromStr for RepoSlug {
                 repo: components[1].into(),
                 git_ref: git_ref.map(|s| s.into()),
             }),
-            x if x < 2 => Err(CollectionError::RepoSlug(s.into())),
-            _ => Err(CollectionError::RepoSlug(s.into())),
+            x if x < 2 => Err(CollectionError::InvalidInput(s.into())),
+            _ => Err(CollectionError::InvalidInput(s.into())),
         }
     }
 }
@@ -364,8 +368,7 @@ impl InputGroup {
         path: &Utf8Path,
         options: &CollectionOptions,
     ) -> Result<Self, CollectionError> {
-        let config = Config::discover(options, || Config::discover_local(path))
-            .with_context(|| format!("failed to discover configuration for {path}"))?;
+        let config = Config::discover(options, || Config::discover_local(path))?;
 
         let mut group = Self::new(config);
 
@@ -397,8 +400,7 @@ impl InputGroup {
         path: &Utf8Path,
         options: &CollectionOptions,
     ) -> Result<Self, CollectionError> {
-        let config = Config::discover(options, || Config::discover_local(path))
-            .with_context(|| format!("failed to discover configuration for directory {path}"))?;
+        let config = Config::discover(options, || Config::discover_local(path))?;
 
         let mut group = Self::new(config);
 
@@ -470,16 +472,13 @@ impl InputGroup {
     }
 
     fn collect_from_repo_slug(
-        raw_slug: &str,
+        slug: RepoSlug,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
-        let slug = RepoSlug::from_str(raw_slug)?;
-
         let client = gh_client.ok_or_else(|| CollectionError::NoGitHubClient(slug.clone()))?;
 
-        let config = Config::discover(options, || Config::discover_remote(client, &slug))
-            .with_context(|| format!("failed to discover configuration for {slug}"))?;
+        let config = Config::discover(options, || Config::discover_remote(client, &slug))?;
         let mut group = Self::new(config);
 
         if matches!(options.mode, CollectionMode::WorkflowsOnly) {
@@ -489,24 +488,23 @@ impl InputGroup {
             client.fetch_workflows(&slug, options, &mut group)?;
         } else {
             let before = group.len();
-            let host = match client.host() {
-                GitHubHost::Enterprise(address) => address.as_str(),
-                GitHubHost::Standard(_) => "github.com",
-            };
+            // let host = match client.host() {
+            //     GitHubHost::Enterprise(address) => address.as_str(),
+            //     GitHubHost::Standard(_) => "github.com",
+            // };
 
-            client
-                .fetch_audit_inputs(&slug, options, &mut group)
-                .with_context(|| {
-                    tips(
-                        format!(
-                            "couldn't collect inputs from https://{host}/{owner}/{repo}",
-                            host = host,
-                            owner = slug.owner,
-                            repo = slug.repo
-                        ),
-                        &["confirm the repository exists and that you have access to it"],
-                    )
-                })?;
+            client.fetch_audit_inputs(&slug, options, &mut group)?;
+            // .with_context(|| {
+            //     tips(
+            //         format!(
+            //             "couldn't collect inputs from https://{host}/{owner}/{repo}",
+            //             host = host,
+            //             owner = slug.owner,
+            //             repo = slug.repo
+            //         ),
+            //         &["confirm the repository exists and that you have access to it"],
+            //     )
+            // })?;
             let after = group.len();
             let len = after - before;
 
@@ -532,7 +530,8 @@ impl InputGroup {
         } else if path.is_dir() {
             Self::collect_from_dir(path, options)
         } else {
-            Self::collect_from_repo_slug(request, options, gh_client)
+            let slug = RepoSlug::from_str(request)?;
+            Self::collect_from_repo_slug(slug, options, gh_client)
         }
     }
 
