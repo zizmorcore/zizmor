@@ -190,3 +190,28 @@ fn test_disablement() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Various invalid config scenarios.
+#[test]
+fn test_invalid_configs() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("neutral.yml"))
+            .config(input_under_test(
+                "config-scenarios/zizmor.invalid-schema-1.yml"
+            ))
+            .output(OutputMode::Both)
+            .run()?,
+        @r"
+    fatal: no audit was performed
+    configuration error in @@CONFIG@@
+
+    Caused by:
+        0: invalid configuration syntax
+        1: unknown field `rule`, expected `rules` at line 4 column 1
+    ",
+    );
+
+    Ok(())
+}

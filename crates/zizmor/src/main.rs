@@ -7,7 +7,7 @@ use std::{
 
 use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
-use anyhow::{Context, anyhow};
+use anyhow::anyhow;
 use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
@@ -21,11 +21,16 @@ use registry::input::{InputKey, InputRegistry};
 use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
+use thiserror::Error;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use crate::{config::Config, github_api::Client, registry::input::CollectionError};
+use crate::{
+    config::{Config, ConfigError, ConfigErrorInner},
+    github_api::Client,
+    registry::input::CollectionError,
+};
 
 mod audit;
 mod config;
@@ -431,7 +436,37 @@ fn completions<G: clap_complete::Generator>(generator: G, cmd: &mut clap::Comman
     );
 }
 
-fn run() -> anyhow::Result<ExitCode> {
+/// Top-level errors.
+#[derive(Debug, Error)]
+enum Error {
+    /// An error in global configuration.
+    #[error(transparent)]
+    GlobalConfig(#[from] ConfigError),
+    /// An error while collecting inputs.
+    #[error(transparent)]
+    Collection(#[from] CollectionError),
+    /// An error while running the LSP server.
+    #[error(transparent)]
+    Lsp(#[from] lsp::Error),
+    /// An error from the GitHub API client.
+    #[error(transparent)]
+    Client(#[from] github_api::ClientError),
+    /// An error while running an audit.
+    #[error("{ident} failed on {input}")]
+    Audit {
+        source: anyhow::Error,
+        ident: &'static str,
+        input: InputKey,
+    },
+    /// An error while rendering output.
+    #[error("failed to render output")]
+    Output(#[source] anyhow::Error),
+    /// An error while performing fixes.
+    #[error("failed to apply fixes")]
+    Fix(#[source] anyhow::Error),
+}
+
+fn run() -> Result<ExitCode, Error> {
     human_panic::setup_panic!();
 
     let mut app = App::parse();
@@ -567,6 +602,36 @@ fn run() -> anyhow::Result<ExitCode> {
 
     let registry = match collect_inputs(app.inputs, &collection_options, gh_client.as_ref()) {
         Ok(registry) => Ok(registry),
+        Err(CollectionError::Config(err)) => {
+            let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
+
+            match err.source {
+                ConfigErrorInner::Syntax(_) => {
+                    group = group.elements([
+                        Level::HELP.message("check your configuration file for syntax errors"),
+                        Level::HELP.message("see: https://docs.zizmor.sh/configuration/"),
+                    ]);
+                }
+                ConfigErrorInner::AuditSyntax(_, ident) => {
+                    group = group.elements([
+                        Level::HELP.message(format!(
+                            "check the configuration for the '{ident}' rule",
+                            ident = ident
+                        )),
+                        Level::HELP.message(format!(
+                            "see: https://docs.zizmor.sh/audits/#{ident}-configuration",
+                            ident = ident
+                        )),
+                    ]);
+                }
+                _ => {}
+            }
+
+            let renderer = Renderer::styled();
+            let report = renderer.render(&[group]);
+
+            Err(anyhow!(err).context(report))
+        }
         Err(err @ CollectionError::InvalidInput(..)) => {
             let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
                 .element(Level::HELP.message(format!(
@@ -605,8 +670,7 @@ fn run() -> anyhow::Result<ExitCode> {
             Err(anyhow!(err).context(report))
         }
         Err(err @ CollectionError::Yamlpath(_)) => {
-            let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
-            group = group.elements([
+            let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
                 Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
                 Level::HELP.message(
                     "https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml",
@@ -640,9 +704,17 @@ fn run() -> anyhow::Result<ExitCode> {
             let config = registry.get_config(input_key.group());
             for (ident, audit) in audit_registry.iter_audits() {
                 tracing::debug!("running {ident} on {input}", input = input.key());
-                results.extend(audit.audit(ident, input, config).with_context(|| {
-                    format!("{ident} failed on {input}", input = input.key().filename())
-                })?);
+
+                results.extend(
+                    audit
+                        .audit(ident, input, config)
+                        .map_err(|err| Error::Audit {
+                            source: err,
+                            ident,
+                            input: input.key().clone(),
+                        })?,
+                );
+
                 Span::current().pb_inc(1);
             }
             tracing::info!(
@@ -655,16 +727,19 @@ fn run() -> anyhow::Result<ExitCode> {
     match app.format {
         OutputFormat::Plain => output::plain::render_findings(&registry, &results, app.naches),
         OutputFormat::Json | OutputFormat::JsonV1 => {
-            output::json::v1::output(stdout(), results.findings())?
+            output::json::v1::output(stdout(), results.findings()).map_err(Error::Output)?
         }
         OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))?
+            serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))
+                .map_err(|err| Error::Output(anyhow!(err)))?
         }
-        OutputFormat::Github => output::github::output(stdout(), results.findings())?,
+        OutputFormat::Github => {
+            output::github::output(stdout(), results.findings()).map_err(Error::Output)?
+        }
     };
 
     if let Some(fix_mode) = app.fix {
-        output::fix::apply_fixes(fix_mode, &results, &registry)?;
+        output::fix::apply_fixes(fix_mode, &results, &registry).map_err(Error::Fix)?;
     }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {

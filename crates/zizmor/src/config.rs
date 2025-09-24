@@ -21,13 +21,22 @@ use crate::{
 const CONFIG_CANDIDATES: &[&str] = &[".github/zizmor.yml", "zizmor.yml"];
 
 #[derive(Error, Debug)]
-pub(crate) enum ConfigError {
+#[error("configuration error in {path}")]
+pub(crate) struct ConfigError {
+    /// The path to the configuration file that caused this error.
+    path: String,
+    /// The source of this error.
+    pub(crate) source: ConfigErrorInner,
+}
+
+#[derive(Error, Debug)]
+pub(crate) enum ConfigErrorInner {
     /// An I/O error occurred while loading the input.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
     /// The overall configuration file is syntactically invalid.
-    #[error("invalid syntax")]
+    #[error("invalid configuration syntax")]
     Syntax(#[source] serde_yaml::Error),
 
     /// A specific audit's configuration is syntactically invalid.
@@ -125,20 +134,11 @@ struct RawConfig {
 }
 
 impl RawConfig {
-    fn load(contents: &str) -> Result<Self, ConfigError> {
-        serde_yaml::from_str(contents).map_err(ConfigError::Syntax)
-        // serde_yaml::from_str(contents).map_err(|e| {
-        //     anyhow!(tips(
-        //         format!("failed to load config: {e:#}"),
-        //         &[
-        //             "check your configuration file for errors",
-        //             "see: https://docs.zizmor.sh/configuration/"
-        //         ]
-        //     ))
-        // })
+    fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
+        serde_yaml::from_str(contents).map_err(ConfigErrorInner::Syntax)
     }
 
-    fn rule_config<T>(&self, ident: &'static str) -> Result<Option<T>, ConfigError>
+    fn rule_config<T>(&self, ident: &'static str) -> Result<Option<T>, ConfigErrorInner>
     where
         T: DeserializeOwned,
     {
@@ -148,7 +148,7 @@ impl RawConfig {
             .and_then(|rule_config| rule_config.config.as_ref())
             .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
             .transpose()
-            .map_err(|e| ConfigError::AuditSyntax(e, ident))?)
+            .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))?)
     }
 }
 
@@ -349,7 +349,7 @@ pub(crate) struct Config {
 
 impl Config {
     /// Loads a [`Config`] from the given contents.
-    fn load(contents: &str) -> Result<Self, ConfigError> {
+    fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
         let raw = RawConfig::load(contents)?;
 
         let forbidden_uses_config = raw.rule_config(ForbiddenUses::ident())?;
@@ -416,7 +416,7 @@ impl Config {
     /// 3. Otherwise, continue the search in the candidate path's
     ///    parent directory, repeating step 2, terminating when
     ///    we reach the filesystem root or the first .git directory.
-    fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>, ConfigError> {
+    fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>, ConfigErrorInner> {
         tracing::debug!("attempting config discovery in `{path}`");
 
         let canonical = path.canonicalize_utf8()?;
@@ -467,14 +467,20 @@ impl Config {
         tracing::debug!("discovering config for local input `{path}`");
 
         if path.is_dir() {
-            Self::discover_in_dir(path)
+            Self::discover_in_dir(path).map_err(|err| ConfigError {
+                path: path.to_string(),
+                source: err,
+            })
         } else {
             let Some(parent) = path.parent() else {
                 tracing::debug!("no parent for {path:?}, cannot discover config");
                 return Ok(None);
             };
 
-            Self::discover_in_dir(parent)
+            Self::discover_in_dir(parent).map_err(|err| ConfigError {
+                path: path.to_string(),
+                source: err,
+            })
         }
     }
 
@@ -491,14 +497,24 @@ impl Config {
             .find_map(|candidate| {
                 client
                     .fetch_single_file(slug, candidate)
-                    .map_err(ConfigError::from)
+                    .map_err(|err| ConfigError {
+                        path: candidate.to_string(),
+                        source: err.into(),
+                    })
+                    .and_then(|contents| {
+                        contents
+                            .map(|contents| {
+                                tracing::debug!(
+                                    "retrieved config candidate `{candidate}` for {slug}"
+                                );
+                                Self::load(&contents).map_err(|err| ConfigError {
+                                    path: candidate.to_string(),
+                                    source: err,
+                                })
+                            })
+                            .transpose()
+                    })
                     .transpose()
-            })
-            .map(|contents| {
-                contents.and_then(|contents| {
-                    tracing::debug!("retrieved config for {slug}");
-                    Self::load(&contents)
-                })
             })
             .transpose()?;
 
@@ -509,17 +525,20 @@ impl Config {
     ///
     /// Returns `Ok(None)` unless the user explicitly specifies
     /// a config file with `--config`.
-    pub(crate) fn global(app: &App) -> anyhow::Result<Option<Self>> {
+    pub(crate) fn global(app: &App) -> Result<Option<Self>, ConfigError> {
         if app.no_config {
             Ok(None)
         } else if let Some(path) = &app.config {
             tracing::debug!("loading config from `{path}`");
 
-            let contents = fs::read_to_string(path)
-                .with_context(|| format!("failed to read config file at `{path}`"))?;
+            let contents = fs::read_to_string(path).map_err(|err| ConfigError {
+                path: path.to_string(),
+                source: ConfigErrorInner::Io(err),
+            })?;
 
-            Ok(Some(Self::load(&contents).with_context(|| {
-                format!("failed to load config file at `{path}`")
+            Ok(Some(Self::load(&contents).map_err(|err| ConfigError {
+                path: path.to_string(),
+                source: err,
             })?))
         } else {
             Ok(None)

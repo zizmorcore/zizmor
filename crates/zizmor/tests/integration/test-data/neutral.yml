@@ -1,0 +1,13 @@
+# a workflow that has nothing wrong with it.
+
+name: neutral
+on: [push, pull_request]
+permissions: {}
+
+jobs:
+  neutral:
+    name: neutral
+    runs-on: ubuntu-latest
+    steps:
+      - name: neutral
+        run: echo "This workflow has nothing wrong with it."
