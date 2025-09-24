@@ -410,7 +410,7 @@ pub(crate) struct CollectionOptions {
 
 #[instrument(skip_all)]
 fn collect_inputs(
-    inputs: Vec<String>,
+    inputs: &[String],
     options: &CollectionOptions,
     gh_client: Option<&Client>,
 ) -> Result<InputRegistry, CollectionError> {
@@ -451,6 +451,9 @@ enum Error {
     /// An error from the GitHub API client.
     #[error(transparent)]
     Client(#[from] github_api::ClientError),
+    /// An error while loading audit rules.
+    #[error("failed to load audit rules")]
+    AuditLoad(#[source] anyhow::Error),
     /// An error while running an audit.
     #[error("{ident} failed on {input}")]
     Audit {
@@ -466,11 +469,7 @@ enum Error {
     Fix(#[source] anyhow::Error),
 }
 
-fn run() -> Result<ExitCode, Error> {
-    human_panic::setup_panic!();
-
-    let mut app = App::parse();
-
+fn run(app: &mut App) -> Result<ExitCode, Error> {
     #[cfg(feature = "lsp")]
     if app.lsp.lsp {
         lsp::run()?;
@@ -543,7 +542,8 @@ fn run() -> Result<ExitCode, Error> {
 
     let filter = EnvFilter::builder()
         .with_default_directive(app.verbose.tracing_level_filter().into())
-        .from_env()?;
+        .from_env()
+        .expect("failed to parse RUST_LOG");
 
     let reg = tracing_subscriber::registry()
         .with(
@@ -590,7 +590,8 @@ fn run() -> Result<ExitCode, Error> {
 
     let gh_client = app
         .gh_token
-        .map(|token| Client::new(app.gh_hostname, token, app.cache_dir))
+        .as_ref()
+        .map(|token| Client::new(&app.gh_hostname, &token, &app.cache_dir))
         .transpose()?;
 
     let collection_options = CollectionOptions {
@@ -600,93 +601,15 @@ fn run() -> Result<ExitCode, Error> {
         global_config,
     };
 
-    let registry = match collect_inputs(app.inputs, &collection_options, gh_client.as_ref()) {
-        Ok(registry) => Ok(registry),
-        Err(CollectionError::Config(err)) => {
-            let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
-
-            match err.source {
-                ConfigErrorInner::Syntax(_) => {
-                    group = group.elements([
-                        Level::HELP.message("check your configuration file for syntax errors"),
-                        Level::HELP.message("see: https://docs.zizmor.sh/configuration/"),
-                    ]);
-                }
-                ConfigErrorInner::AuditSyntax(_, ident) => {
-                    group = group.elements([
-                        Level::HELP.message(format!(
-                            "check the configuration for the '{ident}' rule",
-                            ident = ident
-                        )),
-                        Level::HELP.message(format!(
-                            "see: https://docs.zizmor.sh/audits/#{ident}-configuration",
-                            ident = ident
-                        )),
-                    ]);
-                }
-                _ => {}
-            }
-
-            let renderer = Renderer::styled();
-            let report = renderer.render(&[group]);
-
-            Err(anyhow!(err).context(report))
-        }
-        Err(err @ CollectionError::InvalidInput(..)) => {
-            let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
-                .element(Level::HELP.message(format!(
-                    "valid inputs are files, directories, or GitHub {slug} slugs",
-                    slug = "user/repo[@ref]".green()
-                )))
-                .element(Level::HELP.message(format!(
-                    "examples: {ex1}, {ex2}, {ex3}, or {ex4}",
-                    ex1 = "path/to/workflow.yml".green(),
-                    ex2 = ".github/".green(),
-                    ex3 = "example/example".green(),
-                    ex4 = "example/example@v1.2.3".green()
-                )));
-
-            let renderer = Renderer::styled();
-            let report = renderer.render(&[group]);
-
-            Err(anyhow!(err).context(report))
-        }
-        Err(err @ CollectionError::NoGitHubClient(_)) => {
-            let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
-
-            if app.offline {
-                group = group.elements([
-                    Level::HELP.message("remove --offline to audit remote repositories")
-                ]);
-            } else if gh_client.is_none() {
-                group = group.elements([
-                    Level::HELP.message("set a GitHub token with --gh-token or GH_TOKEN")
-                ]);
-            }
-
-            let renderer = Renderer::styled();
-            let report = renderer.render(&[group]);
-
-            Err(anyhow!(err).context(report))
-        }
-        Err(err @ CollectionError::Yamlpath(_)) => {
-            let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
-                Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
-                Level::HELP.message(
-                    "https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml",
-                ),
-            ]);
-            let renderer = Renderer::styled();
-            let report = renderer.render(&[group]);
-
-            Err(anyhow!(err).context(report))
-        }
-        Err(err) => Err(anyhow!(err)),
-    }?;
+    let registry = collect_inputs(
+        app.inputs.as_slice(),
+        &collection_options,
+        gh_client.as_ref(),
+    )?;
 
     let state = AuditState::new(app.no_online_audits, gh_client);
 
-    let audit_registry = AuditRegistry::default_audits(&state)?;
+    let audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
 
     let mut results = FindingRegistry::new(&registry, min_severity, min_confidence, app.persona);
     {
@@ -750,15 +673,111 @@ fn run() -> Result<ExitCode, Error> {
 }
 
 fn main() -> ExitCode {
+    human_panic::setup_panic!();
+
+    let mut app = App::parse();
+
     // This is a little silly, but returning an ExitCode like this ensures
     // we always exit cleanly, rather than performing a hard process exit.
-    match run() {
+    match run(&mut app) {
         Ok(exit) => exit,
         Err(err) => {
             eprintln!(
                 "{fatal}: no audit was performed",
                 fatal = "fatal".red().bold()
             );
+
+            let report = match &err {
+                // NOTE(ww): Slightly annoying that we have two different config error
+                // wrapper states, but oh well.
+                Error::GlobalConfig(err) | Error::Collection(CollectionError::Config(err)) => {
+                    let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
+
+                    match err.source {
+                        ConfigErrorInner::Syntax(_) => {
+                            group = group.elements([
+                                Level::HELP
+                                    .message("check your configuration file for syntax errors"),
+                                Level::HELP.message("see: https://docs.zizmor.sh/configuration/"),
+                            ]);
+                        }
+                        ConfigErrorInner::AuditSyntax(_, ident) => {
+                            group = group.elements([
+                                Level::HELP.message(format!(
+                                    "check the configuration for the '{ident}' rule",
+                                    ident = ident
+                                )),
+                                Level::HELP.message(format!(
+                                    "see: https://docs.zizmor.sh/audits/#{ident}-configuration",
+                                    ident = ident
+                                )),
+                            ]);
+                        }
+                        _ => {}
+                    }
+
+                    let renderer = Renderer::styled();
+                    let report = renderer.render(&[group]);
+
+                    Some(report)
+                }
+                Error::Collection(err @ CollectionError::InvalidInput(..)) => {
+                    let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                        .element(Level::HELP.message(format!(
+                            "valid inputs are files, directories, or GitHub {slug} slugs",
+                            slug = "user/repo[@ref]".green()
+                        )))
+                        .element(Level::HELP.message(format!(
+                            "examples: {ex1}, {ex2}, {ex3}, or {ex4}",
+                            ex1 = "path/to/workflow.yml".green(),
+                            ex2 = ".github/".green(),
+                            ex3 = "example/example".green(),
+                            ex4 = "example/example@v1.2.3".green()
+                        )));
+
+                    let renderer = Renderer::styled();
+                    let report = renderer.render(&[group]);
+
+                    Some(report)
+                }
+                Error::Collection(err @ CollectionError::NoGitHubClient(_)) => {
+                    let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
+
+                    if app.offline {
+                        group = group
+                            .elements([Level::HELP
+                                .message("remove --offline to audit remote repositories")]);
+                    } else if app.gh_token.is_none() {
+                        group = group
+                            .elements([Level::HELP
+                                .message("set a GitHub token with --gh-token or GH_TOKEN")]);
+                    }
+
+                    let renderer = Renderer::styled();
+                    let report = renderer.render(&[group]);
+
+                    Some(report)
+                }
+                Error::Collection(err @ CollectionError::Yamlpath(_)) => {
+                    let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
+                        Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
+                        Level::HELP.message(
+                            "https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml",
+                        ),
+                    ]);
+                    let renderer = Renderer::styled();
+                    let report = renderer.render(&[group]);
+
+                    Some(report)
+                }
+                _ => None,
+            };
+
+            let mut err = anyhow!(err);
+            if let Some(report) = report {
+                err = err.context(report);
+            }
+
             eprintln!("{err:?}");
             ExitCode::FAILURE
         }

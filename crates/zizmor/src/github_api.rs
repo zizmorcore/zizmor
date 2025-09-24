@@ -5,7 +5,7 @@
 
 use std::{fmt::Display, io::Read, ops::Deref, str::FromStr};
 
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use flate2::read::GzDecoder;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
@@ -143,9 +143,9 @@ pub(crate) struct Client {
 
 impl Client {
     pub(crate) fn new(
-        host: GitHubHost,
-        token: GitHubToken,
-        cache_dir: Utf8PathBuf,
+        host: &GitHubHost,
+        token: &GitHubToken,
+        cache_dir: &Utf8Path,
     ) -> Result<Self, ClientError> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
@@ -181,7 +181,7 @@ impl Client {
 
         Ok(Self {
             api_base: host.to_api_url(),
-            _host: host,
+            _host: host.clone(),
             http,
         })
     }

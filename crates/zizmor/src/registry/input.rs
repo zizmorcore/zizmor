@@ -563,14 +563,14 @@ impl InputRegistry {
 
     pub(crate) fn register_group(
         &mut self,
-        name: String,
+        name: &str,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<(), CollectionError> {
         // If the group has already been registered, then the user probably
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
-        if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.clone())) {
+        if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.into())) {
             e.insert(InputGroup::collect(&name, options, gh_client)?);
         }
 

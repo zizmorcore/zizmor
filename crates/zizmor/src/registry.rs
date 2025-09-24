@@ -96,7 +96,7 @@ impl AuditRegistry {
 
     pub(crate) fn iter_audits(
         &self,
-    ) -> indexmap::map::Iter<'_, &str, Box<dyn Audit + Send + Sync>> {
+    ) -> indexmap::map::Iter<'_, &'static str, Box<dyn Audit + Send + Sync>> {
         self.audits.iter()
     }
 }

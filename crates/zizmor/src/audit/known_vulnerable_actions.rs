@@ -304,8 +304,8 @@ mod tests {
             false,
             Some(
                 github_api::Client::new(
-                    github_api::GitHubHost::default(),
-                    github_api::GitHubToken::new("fake").unwrap(),
+                    &github_api::GitHubHost::default(),
+                    &github_api::GitHubToken::new("fake").unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),
@@ -749,8 +749,8 @@ jobs:
             false,
             Some(
                 github_api::Client::new(
-                    github_api::GitHubHost::default(),
-                    github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    &github_api::GitHubHost::default(),
+                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),
@@ -804,8 +804,8 @@ jobs:
             false,
             Some(
                 github_api::Client::new(
-                    github_api::GitHubHost::default(),
-                    github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    &github_api::GitHubHost::default(),
+                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),

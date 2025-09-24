@@ -205,11 +205,15 @@ fn test_invalid_configs() -> anyhow::Result<()> {
             .run()?,
         @r"
     fatal: no audit was performed
-    configuration error in @@CONFIG@@
+    error: configuration error in @@CONFIG@@
+      |
+      = help: check your configuration file for syntax errors
+      = help: see: https://docs.zizmor.sh/configuration/
 
     Caused by:
-        0: invalid configuration syntax
-        1: unknown field `rule`, expected `rules` at line 4 column 1
+        0: configuration error in @@CONFIG@@
+        1: invalid configuration syntax
+        2: unknown field `rule`, expected `rules` at line 4 column 1
     ",
     );
 
