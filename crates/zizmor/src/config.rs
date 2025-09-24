@@ -13,7 +13,7 @@ use crate::{
     audit::{AuditCore, forbidden_uses::ForbiddenUses, unpinned_uses::UnpinnedUses},
     finding::Finding,
     github_api::Client,
-    models::uses::RepositoryUsesPattern,
+    models::uses::repository::RepositoryUsesPattern,
     registry::input::RepoSlug,
     tips,
 };

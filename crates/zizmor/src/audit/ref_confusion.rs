@@ -16,7 +16,7 @@ use crate::models::{StepCommon, action::CompositeStep};
 use crate::{
     finding::{Confidence, Severity},
     github_api,
-    models::uses::RepositoryUsesExt as _,
+    models::uses::repository::RepositoryUsesExt as _,
     state::AuditState,
 };
 
