@@ -304,8 +304,9 @@ impl<'src> Expr<'src> {
                     || func == "startsWith"
                     || func == "endsWith"
                     || func == "toJSON"
-                    // NOTE(ww): `fromJSON` is only usefully constant-reducible
-                    // if its input is a literal that *isn't* an array or object.
+                    // TODO(ww): `fromJSON` *is* frequently reducible, but
+                    // doing so soundly with subexpressions is annoying.
+                    // We overapproximate for now and consider it non-reducible.
                     // || func == "fromJSON"
                     || func == "join"
                 {
