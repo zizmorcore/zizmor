@@ -67,6 +67,7 @@ edgelesssys/contrast#1604
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
+external-secrets/external-secrets#5368
 fatiando/harmonica#550
 Flexget/Flexget#4299
 foyer-rs/foyer#859
