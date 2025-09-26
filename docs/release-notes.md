@@ -41,6 +41,9 @@ of `zizmor`.
   some cache usage variants in newer versions of `actions/setup-node`
   (#1152)
 
+* Fixed a bug where the [obfuscation] audit would incorrectly flag
+  some subexpressions as constant-reducible when they were not (#1170)
+
 ### Deprecations ⚠️
 
 * The `unknown` values for `--min-severity` and `--min-confidence`
