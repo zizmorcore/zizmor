@@ -1061,3 +1061,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [unsound-condition]: ./audits.md#unsound-condition
 [known-vulnerable-actions]: ./audits.md#known-vulnerable-actions
 [undocumented-permissions]: ./audits.md#undocumented-permissions
+[ref-version-mismatch]: ./audits.md#ref-version-mismatch
