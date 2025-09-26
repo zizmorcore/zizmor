@@ -335,6 +335,14 @@
         - ethereum/hevm#615
 
 
+-   ![](https://github.com/external-secrets.png?size=40){ width="40" loading=lazy align=left } external-secrets
+
+    ---
+
+    ??? example "Examples"
+        - external-secrets/external-secrets#5368
+
+
 -   ![](https://github.com/fatiando.png?size=40){ width="40" loading=lazy align=left } fatiando
 
     ---
