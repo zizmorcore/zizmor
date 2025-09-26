@@ -488,23 +488,7 @@ impl InputGroup {
             client.fetch_workflows(&slug, options, &mut group)?;
         } else {
             let before = group.len();
-            // let host = match client.host() {
-            //     GitHubHost::Enterprise(address) => address.as_str(),
-            //     GitHubHost::Standard(_) => "github.com",
-            // };
-
             client.fetch_audit_inputs(&slug, options, &mut group)?;
-            // .with_context(|| {
-            //     tips(
-            //         format!(
-            //             "couldn't collect inputs from https://{host}/{owner}/{repo}",
-            //             host = host,
-            //             owner = slug.owner,
-            //             repo = slug.repo
-            //         ),
-            //         &["confirm the repository exists and that you have access to it"],
-            //     )
-            // })?;
             let after = group.len();
             let len = after - before;
 
