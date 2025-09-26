@@ -194,6 +194,7 @@ fn test_disablement() -> anyhow::Result<()> {
 /// Various invalid config scenarios.
 #[test]
 fn test_invalid_configs() -> anyhow::Result<()> {
+    // Top-level config schema is invalid.
     insta::assert_snapshot!(
         zizmor()
             .expects_failure(true)
@@ -201,20 +202,32 @@ fn test_invalid_configs() -> anyhow::Result<()> {
             .config(input_under_test(
                 "config-scenarios/zizmor.invalid-schema-1.yml"
             ))
-            .output(OutputMode::Both)
-            .run()?,
-        @r"
-    fatal: no audit was performed
-    error: configuration error in @@CONFIG@@
-      |
-      = help: check your configuration file for syntax errors
-      = help: see: https://docs.zizmor.sh/configuration/
+            .output(OutputMode::Stderr)
+            .run()?
+    );
 
-    Caused by:
-        0: configuration error in @@CONFIG@@
-        1: invalid configuration syntax
-        2: unknown field `rule`, expected `rules` at line 4 column 1
-    ",
+    // forbidden-uses audit config is invalid.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("neutral.yml"))
+            .config(input_under_test(
+                "config-scenarios/zizmor.invalid-schema-2.yml"
+            ))
+            .output(OutputMode::Stderr)
+            .run()?,
+    );
+
+    // unpinned-uses audit config is invalid.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("neutral.yml"))
+            .config(input_under_test(
+                "config-scenarios/zizmor.invalid-schema-3.yml"
+            ))
+            .output(OutputMode::Stderr)
+            .run()?,
     );
 
     Ok(())

@@ -1,0 +1,8 @@
+# zizmor.yml config file with an invalid schema
+
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # invalid uses pattern in this context
+        actions/checkout@v3: hash-pin

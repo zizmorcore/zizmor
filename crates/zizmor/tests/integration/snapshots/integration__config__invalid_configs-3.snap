@@ -1,0 +1,11 @@
+---
+source: crates/zizmor/tests/integration/config.rs
+expression: "zizmor().expects_failure(true).input(input_under_test(\"neutral.yml\")).config(input_under_test(\"config-scenarios/zizmor.invalid-schema-3.yml\")).output(OutputMode::Stderr).run()?"
+---
+fatal: no audit was performed
+error: configuration error in @@CONFIG@@
+
+Caused by:
+    0: configuration error in @@CONFIG@@
+    1: invalid `unpinned-uses` config
+    2: cannot use exact ref patterns here: `actions/checkout@v3`
