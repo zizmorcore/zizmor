@@ -93,6 +93,8 @@ impl RefVersionMismatch {
         };
 
         if commit_for_ref != commit_sha {
+            tracing::warn!("{commit_for_ref} != {commit_sha}");
+
             let subfeature = Subfeature::new(
                 uses_location.concrete.location.offset_span.end,
                 version_from_comment,
@@ -107,7 +109,7 @@ impl RefVersionMismatch {
                     // that avoids collisions in Linux-sized repositories.
                     uses_location.symbolic.clone().primary().annotated(format!(
                         "points to commit {short_commit}",
-                        short_commit = &commit_sha[..12]
+                        short_commit = &commit_for_ref[..12]
                     )),
                     Feature::from_subfeature(&subfeature, step),
                 ));

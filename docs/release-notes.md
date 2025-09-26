@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [ref-version-mismatch] would incorrectly show the
+  wrong commit SHAs in its findings (#1183)
+
 ## 1.14.0
 
 ### New Features 🌈
