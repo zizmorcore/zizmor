@@ -812,6 +812,13 @@ fn obfuscation() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("obfuscation/issue-1177-repro.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
     Ok(())
 }
 

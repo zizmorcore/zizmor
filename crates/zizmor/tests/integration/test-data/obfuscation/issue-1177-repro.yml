@@ -1,0 +1,16 @@
+# https://github.com/zizmorcore/zizmor/issues/1177
+
+name: Issue 1177 Repro
+on: [push, pull_request]
+
+permissions: {}
+
+jobs:
+  issue-1177-repro:
+    # we should not flag this as an obfuscation finding, since it's
+    # not actually constant reducible to `!contains(Array, ...)`
+    if: ${{ !contains(fromJSON('["push", "pull_request"]'), github.event_name) }}
+    name: issue-1177-repro
+    runs-on: ubuntu-latest
+    steps:
+      - run: true
