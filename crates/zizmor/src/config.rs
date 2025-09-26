@@ -142,13 +142,12 @@ impl RawConfig {
     where
         T: DeserializeOwned,
     {
-        Ok(self
-            .rules
+        self.rules
             .get(ident)
             .and_then(|rule_config| rule_config.config.as_ref())
             .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
             .transpose()
-            .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))?)
+            .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))
     }
 }
 
@@ -273,7 +272,7 @@ impl Default for UnpinnedUsesPolicies {
 pub(crate) enum UnpinnedUsesConfigError {
     /// A pattern with a ref was used in the config.
     #[error("cannot use exact ref patterns here: `{0}`")]
-    ExactWithRefUsed(RepositoryUsesPattern),
+    ExactWithRefUsed(String),
 }
 
 impl TryFrom<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
@@ -289,7 +288,9 @@ impl TryFrom<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
                 // Patterns with refs don't make sense in this context, since
                 // we're establishing policies for the refs themselves.
                 RepositoryUsesPattern::ExactWithRef { .. } => {
-                    return Err(UnpinnedUsesConfigError::ExactWithRefUsed(pattern));
+                    return Err(UnpinnedUsesConfigError::ExactWithRefUsed(
+                        pattern.to_string(),
+                    ));
                 }
                 RepositoryUsesPattern::ExactPath { ref owner, .. } => {
                     policy_tree

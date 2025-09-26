@@ -416,7 +416,7 @@ fn collect_inputs(
 ) -> Result<InputRegistry, CollectionError> {
     let mut registry = InputRegistry::new();
 
-    for input in inputs.into_iter() {
+    for input in inputs.iter() {
         registry.register_group(input, options, gh_client)?;
     }
 
@@ -459,7 +459,7 @@ enum Error {
     Audit {
         source: anyhow::Error,
         ident: &'static str,
-        input: InputKey,
+        input: String,
     },
     /// An error while rendering output.
     #[error("failed to render output")]
@@ -586,12 +586,12 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
         None => None,
     };
 
-    let global_config = Config::global(&app)?;
+    let global_config = Config::global(app)?;
 
     let gh_client = app
         .gh_token
         .as_ref()
-        .map(|token| Client::new(&app.gh_hostname, &token, &app.cache_dir))
+        .map(|token| Client::new(&app.gh_hostname, token, &app.cache_dir))
         .transpose()?;
 
     let collection_options = CollectionOptions {
@@ -634,7 +634,7 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
                         .map_err(|err| Error::Audit {
                             source: err,
                             ident,
-                            input: input.key().clone(),
+                            input: input.key().to_string(),
                         })?,
                 );
 

@@ -131,7 +131,7 @@ pub(crate) enum ClientError {
     /// We couldn't fetch a single file because it disappeared
     /// between listing and fetching it.
     #[error("couldn't fetch file {file} from {slug}: is the branch/tag being modified?")]
-    FileTOCTOU { file: String, slug: RepoSlug },
+    FileTOCTOU { file: String, slug: String },
 }
 
 #[derive(Clone)]
@@ -517,7 +517,7 @@ impl Client {
                 // was deleted on a branch immediately after we listed it.
                 return Err(ClientError::FileTOCTOU {
                     file: file.path,
-                    slug: slug.clone(),
+                    slug: slug.to_string(),
                 }
                 .into());
             };

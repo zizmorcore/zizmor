@@ -571,7 +571,7 @@ impl InputRegistry {
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
         if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.into())) {
-            e.insert(InputGroup::collect(&name, options, gh_client)?);
+            e.insert(InputGroup::collect(name, options, gh_client)?);
         }
 
         Ok(())
