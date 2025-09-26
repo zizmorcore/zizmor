@@ -304,7 +304,9 @@ impl<'src> Expr<'src> {
                     || func == "startsWith"
                     || func == "endsWith"
                     || func == "toJSON"
-                    || func == "fromJSON"
+                    // NOTE(ww): `fromJSON` is only usefully constant-reducible
+                    // if its input is a literal that *isn't* an array or object.
+                    // || func == "fromJSON"
                     || func == "join"
                 {
                     args.iter().all(|e| e.constant_reducible())
