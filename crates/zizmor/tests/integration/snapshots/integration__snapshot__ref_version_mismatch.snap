@@ -6,7 +6,7 @@ warning[ref-version-mismatch]: detects commit SHAs that don't match their versio
   --> @@INPUT@@:21:77
    |
 21 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
-   |         -----------------------------------------------------------------   ^^^^^^ points to commit 1a4442cacd43
+   |         -----------------------------------------------------------------   ^^^^^^ points to commit 5e21ff4d9bc1
    |         |
    |         is pointed to by tag v3.8.2
    |
