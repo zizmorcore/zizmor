@@ -1,7 +1,7 @@
 //! zizmor's language server.
 
 use camino::Utf8Path;
-use tower_lsp::jsonrpc::Result;
+use thiserror::Error;
 use tower_lsp::lsp_types;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
@@ -14,6 +14,13 @@ use crate::models::workflow::Workflow;
 use crate::registry::input::{InputGroup, InputRegistry};
 use crate::registry::{FindingRegistry, input::InputKey};
 use crate::{AuditRegistry, AuditState};
+
+#[derive(Debug, Error)]
+#[error("LSP server error")]
+pub(crate) struct Error {
+    #[from]
+    inner: anyhow::Error,
+}
 
 struct LspDocumentCommon {
     uri: lsp_types::Url,
@@ -32,7 +39,7 @@ impl LanguageServer for Backend {
     async fn initialize(
         &self,
         _: lsp_types::InitializeParams,
-    ) -> Result<lsp_types::InitializeResult> {
+    ) -> tower_lsp::jsonrpc::Result<lsp_types::InitializeResult> {
         Ok(lsp_types::InitializeResult {
             server_info: Some(lsp_types::ServerInfo {
                 name: "zizmor (LSP)".into(),
@@ -121,7 +128,7 @@ impl LanguageServer for Backend {
             .await;
     }
 
-    async fn shutdown(&self) -> Result<()> {
+    async fn shutdown(&self) -> tower_lsp::jsonrpc::Result<()> {
         tracing::debug!("graceful shutdown requested");
         Ok(())
     }
@@ -263,7 +270,7 @@ impl From<Point> for lsp_types::Position {
 }
 
 #[tokio::main]
-pub(crate) async fn run() -> anyhow::Result<()> {
+pub(crate) async fn run() -> Result<(), Error> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 

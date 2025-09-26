@@ -1,24 +1,56 @@
 use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context as _, anyhow};
 use camino::Utf8Path;
 use github_actions_models::common::RepositoryUses;
 use serde::{
     Deserialize,
     de::{self, DeserializeOwned},
 };
+use thiserror::Error;
 
 use crate::{
     App, CollectionOptions,
     audit::{AuditCore, forbidden_uses::ForbiddenUses, unpinned_uses::UnpinnedUses},
     finding::Finding,
-    github_api::Client,
+    github_api::{Client, ClientError},
     models::uses::RepositoryUsesPattern,
     registry::input::RepoSlug,
-    tips,
 };
 
 const CONFIG_CANDIDATES: &[&str] = &[".github/zizmor.yml", "zizmor.yml"];
+
+#[derive(Error, Debug)]
+#[error("configuration error in {path}")]
+pub(crate) struct ConfigError {
+    /// The path to the configuration file that caused this error.
+    path: String,
+    /// The source of this error.
+    pub(crate) source: ConfigErrorInner,
+}
+
+#[derive(Error, Debug)]
+pub(crate) enum ConfigErrorInner {
+    /// An I/O error occurred while loading the input.
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+
+    /// The overall configuration file is syntactically invalid.
+    #[error("invalid configuration syntax")]
+    Syntax(#[source] serde_yaml::Error),
+
+    /// A specific audit's configuration is syntactically invalid.
+    #[error("invalid syntax for audit `{1}`")]
+    AuditSyntax(#[source] serde_yaml::Error, &'static str),
+
+    /// The `unpinned-uses` config is semantically invalid.
+    #[error("invalid `unpinned-uses` config")]
+    UnpinnedUsesConfig(#[from] UnpinnedUsesConfigError),
+
+    /// A GitHub API error occurred while fetching a remote config.
+    #[error("GitHub API error while fetching remote config")]
+    Client(#[from] ClientError),
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct WorkflowRule {
@@ -33,7 +65,7 @@ pub(crate) struct WorkflowRule {
 impl FromStr for WorkflowRule {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> anyhow::Result<Self, Self::Err> {
         // A rule has three parts, delimited by `:`, two of which
         // are optional: `foobar.yml:line:col`, where `line` and `col`
         // are optional. `col` can only be provided if `line` is provided.
@@ -68,7 +100,7 @@ impl FromStr for WorkflowRule {
 }
 
 impl<'de> Deserialize<'de> for WorkflowRule {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> anyhow::Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
@@ -102,28 +134,20 @@ struct RawConfig {
 }
 
 impl RawConfig {
-    fn load(contents: &str) -> Result<Self> {
-        serde_yaml::from_str(contents).map_err(|e| {
-            anyhow!(tips(
-                format!("failed to load config: {e:#}"),
-                &[
-                    "check your configuration file for errors",
-                    "see: https://docs.zizmor.sh/configuration/"
-                ]
-            ))
-        })
+    fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
+        serde_yaml::from_str(contents).map_err(ConfigErrorInner::Syntax)
     }
 
-    fn rule_config<T>(&self, ident: &str) -> Result<Option<T>>
+    fn rule_config<T>(&self, ident: &'static str) -> Result<Option<T>, ConfigErrorInner>
     where
         T: DeserializeOwned,
     {
-        Ok(self
-            .rules
+        self.rules
             .get(ident)
             .and_then(|rule_config| rule_config.config.as_ref())
             .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
-            .transpose()?)
+            .transpose()
+            .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))
     }
 }
 
@@ -242,10 +266,19 @@ impl Default for UnpinnedUsesPolicies {
     }
 }
 
-impl TryFrom<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
-    type Error = anyhow::Error;
+/// Semantic errors that can occur while processing an `UnpinnedUsesConfig`
+/// into an `UnpinnedUsesPolicies`.
+#[derive(Error, Debug)]
+pub(crate) enum UnpinnedUsesConfigError {
+    /// A pattern with a ref was used in the config.
+    #[error("cannot use exact ref patterns here: `{0}`")]
+    ExactWithRefUsed(String),
+}
 
-    fn try_from(config: UnpinnedUsesConfig) -> Result<Self, Self::Error> {
+impl TryFrom<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
+    type Error = UnpinnedUsesConfigError;
+
+    fn try_from(config: UnpinnedUsesConfig) -> anyhow::Result<Self, Self::Error> {
         let mut policy_tree: HashMap<String, Vec<(RepositoryUsesPattern, UsesPolicy)>> =
             HashMap::new();
         let mut default_policy = UsesPolicy::HashPin;
@@ -255,7 +288,9 @@ impl TryFrom<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
                 // Patterns with refs don't make sense in this context, since
                 // we're establishing policies for the refs themselves.
                 RepositoryUsesPattern::ExactWithRef { .. } => {
-                    return Err(anyhow::anyhow!("can't use exact ref patterns here"));
+                    return Err(UnpinnedUsesConfigError::ExactWithRefUsed(
+                        pattern.to_string(),
+                    ));
                 }
                 RepositoryUsesPattern::ExactPath { ref owner, .. } => {
                     policy_tree
@@ -315,20 +350,16 @@ pub(crate) struct Config {
 
 impl Config {
     /// Loads a [`Config`] from the given contents.
-    fn load(contents: &str) -> Result<Self> {
+    fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
         let raw = RawConfig::load(contents)?;
 
-        let forbidden_uses_config = raw
-            .rule_config(ForbiddenUses::ident())
-            .context("invalid forbidden-uses configuration")?;
+        let forbidden_uses_config = raw.rule_config(ForbiddenUses::ident())?;
 
         let unpinned_uses_policies = {
-            if let Some(unpinned_uses_config) = raw
-                .rule_config::<UnpinnedUsesConfig>(UnpinnedUses::ident())
-                .context("invalid unpinned-uses configuration")?
+            if let Some(unpinned_uses_config) =
+                raw.rule_config::<UnpinnedUsesConfig>(UnpinnedUses::ident())?
             {
-                UnpinnedUsesPolicies::try_from(unpinned_uses_config)
-                    .context("invalid unpinned-uses configuration")?
+                UnpinnedUsesPolicies::try_from(unpinned_uses_config)?
             } else {
                 UnpinnedUsesPolicies::default()
             }
@@ -352,9 +383,12 @@ impl Config {
     ///    to discover a config file. This function is typically one
     ///    of [`Config::discover_local`] or [`Config::discover_remote`]
     ///    depending on the input type.
-    pub(crate) fn discover<F>(options: &CollectionOptions, discover_fn: F) -> Result<Self>
+    pub(crate) fn discover<F>(
+        options: &CollectionOptions,
+        discover_fn: F,
+    ) -> Result<Self, ConfigError>
     where
-        F: FnOnce() -> Result<Option<Self>>,
+        F: FnOnce() -> Result<Option<Self>, ConfigError>,
     {
         if options.no_config {
             // User has explicitly disabled config loading.
@@ -383,18 +417,20 @@ impl Config {
     /// 3. Otherwise, continue the search in the candidate path's
     ///    parent directory, repeating step 2, terminating when
     ///    we reach the filesystem root or the first .git directory.
-    fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>> {
+    fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>, ConfigErrorInner> {
         tracing::debug!("attempting config discovery in `{path}`");
 
         let canonical = path.canonicalize_utf8()?;
 
         let mut candidate_path = if canonical.file_name() == Some("workflows") {
-            // TODO: Return None here instead of failing?
-            canonical.parent().ok_or_else(|| {
-                anyhow!("cannot discover config: no parent directory of `{canonical}`")
-            })?
+            let Some(parent) = canonical.parent() else {
+                tracing::debug!("no parent for `{canonical}`, cannot discover config");
+                return Ok(None);
+            };
+
+            parent
         } else {
-            &canonical
+            canonical.as_path()
         };
 
         loop {
@@ -428,22 +464,24 @@ impl Config {
     ///
     /// For directories, this attempts to find a `.github/zizmor.yml` or
     /// `zizmor.yml` in the directory itself.
-    pub(crate) fn discover_local(path: &Utf8Path) -> Result<Option<Self>> {
+    pub(crate) fn discover_local(path: &Utf8Path) -> Result<Option<Self>, ConfigError> {
         tracing::debug!("discovering config for local input `{path}`");
 
         if path.is_dir() {
-            Self::discover_in_dir(path)
-        } else if path.is_file() {
+            Self::discover_in_dir(path).map_err(|err| ConfigError {
+                path: path.to_string(),
+                source: err,
+            })
+        } else {
             let Some(parent) = path.parent() else {
                 tracing::debug!("no parent for {path:?}, cannot discover config");
                 return Ok(None);
             };
 
-            Self::discover_in_dir(parent)
-        } else {
-            Err(anyhow!(
-                "cannot discover config for `{path}`: not a file or directory"
-            ))
+            Self::discover_in_dir(parent).map_err(|err| ConfigError {
+                path: path.to_string(),
+                source: err,
+            })
         }
     }
 
@@ -451,15 +489,33 @@ impl Config {
     ///
     /// This will look for a `.github/zizmor.yml` or `zizmor.yml`
     /// in the repository's root directory.
-    pub(crate) fn discover_remote(client: &Client, slug: &RepoSlug) -> Result<Option<Self>> {
+    pub(crate) fn discover_remote(
+        client: &Client,
+        slug: &RepoSlug,
+    ) -> Result<Option<Self>, ConfigError> {
         let conf = CONFIG_CANDIDATES
             .iter()
-            .find_map(|candidate| client.fetch_single_file(slug, candidate).transpose())
-            .map(|contents| {
-                contents.and_then(|contents| {
-                    tracing::debug!("retrieved config for {slug}");
-                    Self::load(&contents)
-                })
+            .find_map(|candidate| {
+                client
+                    .fetch_single_file(slug, candidate)
+                    .map_err(|err| ConfigError {
+                        path: candidate.to_string(),
+                        source: err.into(),
+                    })
+                    .and_then(|contents| {
+                        contents
+                            .map(|contents| {
+                                tracing::debug!(
+                                    "retrieved config candidate `{candidate}` for {slug}"
+                                );
+                                Self::load(&contents).map_err(|err| ConfigError {
+                                    path: candidate.to_string(),
+                                    source: err,
+                                })
+                            })
+                            .transpose()
+                    })
+                    .transpose()
             })
             .transpose()?;
 
@@ -470,17 +526,20 @@ impl Config {
     ///
     /// Returns `Ok(None)` unless the user explicitly specifies
     /// a config file with `--config`.
-    pub(crate) fn global(app: &App) -> Result<Option<Self>> {
+    pub(crate) fn global(app: &App) -> Result<Option<Self>, ConfigError> {
         if app.no_config {
             Ok(None)
         } else if let Some(path) = &app.config {
             tracing::debug!("loading config from `{path}`");
 
-            let contents = fs::read_to_string(path)
-                .with_context(|| format!("failed to read config file at `{path}`"))?;
+            let contents = fs::read_to_string(path).map_err(|err| ConfigError {
+                path: path.to_string(),
+                source: ConfigErrorInner::Io(err),
+            })?;
 
-            Ok(Some(Self::load(&contents).with_context(|| {
-                format!("failed to load config file at `{path}`")
+            Ok(Some(Self::load(&contents).map_err(|err| ConfigError {
+                path: path.to_string(),
+                source: err,
             })?))
         } else {
             Ok(None)
@@ -554,12 +613,10 @@ impl Config {
 mod tests {
     use std::str::FromStr;
 
-    use anyhow::Result;
-
     use super::WorkflowRule;
 
     #[test]
-    fn test_parse_workflow_rule() -> Result<()> {
+    fn test_parse_workflow_rule() -> anyhow::Result<()> {
         assert_eq!(
             WorkflowRule::from_str("foo.yml:1:2")?,
             WorkflowRule {

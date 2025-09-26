@@ -32,6 +32,9 @@ of `zizmor`.
 
     Many thanks to @mostafa for implementing this improvement!
 
+* `zizmor`'s error handling has been restructured, improving the quality
+  of error messages and their associated suggestions (#1169)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [cache-poisoning] audit would fail to detect

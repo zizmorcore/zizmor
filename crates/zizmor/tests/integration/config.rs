@@ -190,3 +190,45 @@ fn test_disablement() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Various invalid config scenarios.
+#[test]
+fn test_invalid_configs() -> anyhow::Result<()> {
+    // Top-level config schema is invalid.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("neutral.yml"))
+            .config(input_under_test(
+                "config-scenarios/zizmor.invalid-schema-1.yml"
+            ))
+            .output(OutputMode::Stderr)
+            .run()?
+    );
+
+    // forbidden-uses audit config is invalid.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("neutral.yml"))
+            .config(input_under_test(
+                "config-scenarios/zizmor.invalid-schema-2.yml"
+            ))
+            .output(OutputMode::Stderr)
+            .run()?,
+    );
+
+    // unpinned-uses audit config is invalid.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("neutral.yml"))
+            .config(input_under_test(
+                "config-scenarios/zizmor.invalid-schema-3.yml"
+            ))
+            .output(OutputMode::Stderr)
+            .run()?,
+    );
+
+    Ok(())
+}

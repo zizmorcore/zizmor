@@ -7,7 +7,7 @@ use std::{
 
 use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stream::IsTerminal};
-use anyhow::{Context, Result, anyhow};
+use anyhow::anyhow;
 use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
@@ -21,11 +21,16 @@ use registry::input::{InputKey, InputRegistry};
 use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
+use thiserror::Error;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use crate::{config::Config, github_api::Client};
+use crate::{
+    config::{Config, ConfigError, ConfigErrorInner},
+    github_api::Client,
+    registry::input::CollectionError,
+};
 
 mod audit;
 mod config;
@@ -405,18 +410,18 @@ pub(crate) struct CollectionOptions {
 
 #[instrument(skip_all)]
 fn collect_inputs(
-    inputs: Vec<String>,
+    inputs: &[String],
     options: &CollectionOptions,
     gh_client: Option<&Client>,
-) -> Result<InputRegistry> {
+) -> Result<InputRegistry, CollectionError> {
     let mut registry = InputRegistry::new();
 
-    for input in inputs.into_iter() {
+    for input in inputs.iter() {
         registry.register_group(input, options, gh_client)?;
     }
 
     if registry.len() == 0 {
-        return Err(anyhow!("no inputs collected"));
+        return Err(CollectionError::NoInputs);
     }
 
     Ok(registry)
@@ -431,11 +436,40 @@ fn completions<G: clap_complete::Generator>(generator: G, cmd: &mut clap::Comman
     );
 }
 
-fn run() -> Result<ExitCode> {
-    human_panic::setup_panic!();
+/// Top-level errors.
+#[derive(Debug, Error)]
+enum Error {
+    /// An error in global configuration.
+    #[error(transparent)]
+    GlobalConfig(#[from] ConfigError),
+    /// An error while collecting inputs.
+    #[error(transparent)]
+    Collection(#[from] CollectionError),
+    /// An error while running the LSP server.
+    #[error(transparent)]
+    Lsp(#[from] lsp::Error),
+    /// An error from the GitHub API client.
+    #[error(transparent)]
+    Client(#[from] github_api::ClientError),
+    /// An error while loading audit rules.
+    #[error("failed to load audit rules")]
+    AuditLoad(#[source] anyhow::Error),
+    /// An error while running an audit.
+    #[error("{ident} failed on {input}")]
+    Audit {
+        source: anyhow::Error,
+        ident: &'static str,
+        input: String,
+    },
+    /// An error while rendering output.
+    #[error("failed to render output")]
+    Output(#[source] anyhow::Error),
+    /// An error while performing fixes.
+    #[error("failed to apply fixes")]
+    Fix(#[source] anyhow::Error),
+}
 
-    let mut app = App::parse();
-
+fn run(app: &mut App) -> Result<ExitCode, Error> {
     #[cfg(feature = "lsp")]
     if app.lsp.lsp {
         lsp::run()?;
@@ -508,7 +542,8 @@ fn run() -> Result<ExitCode> {
 
     let filter = EnvFilter::builder()
         .with_default_directive(app.verbose.tracing_level_filter().into())
-        .from_env()?;
+        .from_env()
+        .expect("failed to parse RUST_LOG");
 
     let reg = tracing_subscriber::registry()
         .with(
@@ -551,11 +586,12 @@ fn run() -> Result<ExitCode> {
         None => None,
     };
 
-    let global_config = Config::global(&app)?;
+    let global_config = Config::global(app)?;
 
     let gh_client = app
         .gh_token
-        .map(|token| Client::new(app.gh_hostname, token, app.cache_dir))
+        .as_ref()
+        .map(|token| Client::new(&app.gh_hostname, token, &app.cache_dir))
         .transpose()?;
 
     let collection_options = CollectionOptions {
@@ -565,11 +601,15 @@ fn run() -> Result<ExitCode> {
         global_config,
     };
 
-    let registry = collect_inputs(app.inputs, &collection_options, gh_client.as_ref())?;
+    let registry = collect_inputs(
+        app.inputs.as_slice(),
+        &collection_options,
+        gh_client.as_ref(),
+    )?;
 
     let state = AuditState::new(app.no_online_audits, gh_client);
 
-    let audit_registry = AuditRegistry::default_audits(&state)?;
+    let audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
 
     let mut results = FindingRegistry::new(&registry, min_severity, min_confidence, app.persona);
     {
@@ -587,9 +627,17 @@ fn run() -> Result<ExitCode> {
             let config = registry.get_config(input_key.group());
             for (ident, audit) in audit_registry.iter_audits() {
                 tracing::debug!("running {ident} on {input}", input = input.key());
-                results.extend(audit.audit(ident, input, config).with_context(|| {
-                    format!("{ident} failed on {input}", input = input.key().filename())
-                })?);
+
+                results.extend(
+                    audit
+                        .audit(ident, input, config)
+                        .map_err(|err| Error::Audit {
+                            source: err,
+                            ident,
+                            input: input.key().to_string(),
+                        })?,
+                );
+
                 Span::current().pb_inc(1);
             }
             tracing::info!(
@@ -602,16 +650,19 @@ fn run() -> Result<ExitCode> {
     match app.format {
         OutputFormat::Plain => output::plain::render_findings(&registry, &results, app.naches),
         OutputFormat::Json | OutputFormat::JsonV1 => {
-            output::json::v1::output(stdout(), results.findings())?
+            output::json::v1::output(stdout(), results.findings()).map_err(Error::Output)?
         }
         OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))?
+            serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))
+                .map_err(|err| Error::Output(anyhow!(err)))?
         }
-        OutputFormat::Github => output::github::output(stdout(), results.findings())?,
+        OutputFormat::Github => {
+            output::github::output(stdout(), results.findings()).map_err(Error::Output)?
+        }
     };
 
     if let Some(fix_mode) = app.fix {
-        output::fix::apply_fixes(fix_mode, &results, &registry)?;
+        output::fix::apply_fixes(fix_mode, &results, &registry).map_err(Error::Fix)?;
     }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
@@ -622,15 +673,111 @@ fn run() -> Result<ExitCode> {
 }
 
 fn main() -> ExitCode {
+    human_panic::setup_panic!();
+
+    let mut app = App::parse();
+
     // This is a little silly, but returning an ExitCode like this ensures
     // we always exit cleanly, rather than performing a hard process exit.
-    match run() {
+    match run(&mut app) {
         Ok(exit) => exit,
         Err(err) => {
             eprintln!(
                 "{fatal}: no audit was performed",
                 fatal = "fatal".red().bold()
             );
+
+            let report = match &err {
+                // NOTE(ww): Slightly annoying that we have two different config error
+                // wrapper states, but oh well.
+                Error::GlobalConfig(err) | Error::Collection(CollectionError::Config(err)) => {
+                    let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
+
+                    match err.source {
+                        ConfigErrorInner::Syntax(_) => {
+                            group = group.elements([
+                                Level::HELP
+                                    .message("check your configuration file for syntax errors"),
+                                Level::HELP.message("see: https://docs.zizmor.sh/configuration/"),
+                            ]);
+                        }
+                        ConfigErrorInner::AuditSyntax(_, ident) => {
+                            group = group.elements([
+                                Level::HELP.message(format!(
+                                    "check the configuration for the '{ident}' rule",
+                                    ident = ident
+                                )),
+                                Level::HELP.message(format!(
+                                    "see: https://docs.zizmor.sh/audits/#{ident}-configuration",
+                                    ident = ident
+                                )),
+                            ]);
+                        }
+                        _ => {}
+                    }
+
+                    let renderer = Renderer::styled();
+                    let report = renderer.render(&[group]);
+
+                    Some(report)
+                }
+                Error::Collection(err @ CollectionError::InvalidInput(..)) => {
+                    let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                        .element(Level::HELP.message(format!(
+                            "valid inputs are files, directories, or GitHub {slug} slugs",
+                            slug = "user/repo[@ref]".green()
+                        )))
+                        .element(Level::HELP.message(format!(
+                            "examples: {ex1}, {ex2}, {ex3}, or {ex4}",
+                            ex1 = "path/to/workflow.yml".green(),
+                            ex2 = ".github/".green(),
+                            ex3 = "example/example".green(),
+                            ex4 = "example/example@v1.2.3".green()
+                        )));
+
+                    let renderer = Renderer::styled();
+                    let report = renderer.render(&[group]);
+
+                    Some(report)
+                }
+                Error::Collection(err @ CollectionError::NoGitHubClient(_)) => {
+                    let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
+
+                    if app.offline {
+                        group = group
+                            .elements([Level::HELP
+                                .message("remove --offline to audit remote repositories")]);
+                    } else if app.gh_token.is_none() {
+                        group = group
+                            .elements([Level::HELP
+                                .message("set a GitHub token with --gh-token or GH_TOKEN")]);
+                    }
+
+                    let renderer = Renderer::styled();
+                    let report = renderer.render(&[group]);
+
+                    Some(report)
+                }
+                Error::Collection(err @ CollectionError::Yamlpath(_)) => {
+                    let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
+                        Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
+                        Level::HELP.message(
+                            "https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml",
+                        ),
+                    ]);
+                    let renderer = Renderer::styled();
+                    let report = renderer.render(&[group]);
+
+                    Some(report)
+                }
+                _ => None,
+            };
+
+            let mut err = anyhow!(err);
+            if let Some(report) = report {
+                err = err.context(report);
+            }
+
             eprintln!("{err:?}");
             ExitCode::FAILURE
         }

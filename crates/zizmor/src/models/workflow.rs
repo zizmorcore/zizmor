@@ -5,7 +5,6 @@
 
 use std::collections::HashMap;
 
-use anyhow::Context as _;
 use github_actions_expressions::context::{self, Context};
 use github_actions_models::{
     common::{self, expr::LoE},
@@ -25,7 +24,7 @@ use crate::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
     },
-    registry::input::InputError,
+    registry::input::CollectionError,
     utils::{self, WORKFLOW_VALIDATOR, extract_fenced_expressions, from_str_with_validation},
 };
 
@@ -120,11 +119,10 @@ impl HasInputs for Workflow {
 
 impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
-    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
+    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
         let inner = from_str_with_validation(&contents, &WORKFLOW_VALIDATOR)?;
 
-        let document = yamlpath::Document::new(&contents)
-            .context("failed to load internal pathing document")?;
+        let document = yamlpath::Document::new(&contents)?;
 
         let link = match key {
             InputKey::Local(_) => None,
