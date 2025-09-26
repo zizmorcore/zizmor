@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.14.0
+
 ### New Features 🌈
 
 * **New audit**: [ref-version-mismatch] detects mismatches between
