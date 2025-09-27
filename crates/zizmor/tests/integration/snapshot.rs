@@ -306,6 +306,15 @@ fn use_trusted_publishing() -> Result<()> {
             .run()?
     );
 
+    // Trusted Publishing for crates.io should suppress findings for cargo publish
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "use-trusted-publishing/cargo-publish-trusted.yml"
+            ))
+            .run()?
+    );
+
     Ok(())
 }
 
