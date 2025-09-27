@@ -201,6 +201,77 @@ audit_meta!(
 );
 
 impl UseTrustedPublishing {
+    // Detect whether this job is using crates.io Trusted Publishing by checking for
+    // a prior step that uses rust-lang/crates-io-auth-action and that this step
+    // wires its token into cargo via env or inline token usage.
+    fn uses_crates_io_trusted_publishing(
+        &self,
+        step: &crate::models::workflow::Step,
+        run: &str,
+    ) -> bool {
+        // Collect IDs of prior steps in the same job that use rust-lang/crates-io-auth-action
+        let mut auth_step_ids: Vec<&str> = Vec::new();
+
+        for prior in step.job().steps() {
+            if prior.index >= step.index {
+                break;
+            }
+
+            // Only consider uses: steps that reference the crates-io auth action
+            let Some(common_uses) = prior.uses() else { continue };
+            let github_actions_models::common::Uses::Repository(repo_uses) = common_uses else {
+                continue;
+            };
+
+            if repo_uses.owner.eq_ignore_ascii_case("rust-lang")
+                && repo_uses.repo.eq_ignore_ascii_case("crates-io-auth-action")
+            {
+                if let Some(id) = &prior.id {
+                    auth_step_ids.push(id);
+                }
+            }
+        }
+
+        if auth_step_ids.is_empty() {
+            return false;
+        }
+
+        // Helper: does a string reference any of the known auth step outputs?
+        let references_auth_output = |s: &str| {
+            auth_step_ids
+                .iter()
+                .any(|id| s.contains(&format!("steps.{id}.outputs.token")))
+        };
+
+        // 1) Check inline usage in the run: body, e.g.:
+        //    cargo publish --token ${{ steps.auth.outputs.token }}
+        if references_auth_output(run) {
+            return true;
+        }
+
+        // 2) Check env wiring, e.g.:
+        //    env:
+        //      CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        match &step.env {
+            github_actions_models::common::expr::LoE::Literal(env) => {
+                if let Some(val) = env.get("CARGO_REGISTRY_TOKEN") {
+                    if references_auth_output(&val.to_string()) {
+                        return true;
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        false
+    }
+
+    fn is_cargo_publish_command(cmd: &str) -> bool {
+        static CARGO_PUBLISH_RE: LazyLock<regex::Regex> =
+            LazyLock::new(|| regex::Regex::new(r"(?s)^\s*cargo\s+(.+\s+)?publish\b").unwrap());
+        CARGO_PUBLISH_RE.is_match(cmd)
+    }
+
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
@@ -356,6 +427,21 @@ impl Audit for UseTrustedPublishing {
             });
 
             for subfeature in self.trusted_publishing_command_candidates(run, shell)? {
+                // If this looks like cargo publish and the job wires in a token
+                // from rust-lang/crates-io-auth-action, treat it as Trusted Publishing
+                // and don't emit a finding.
+                let skip_for_crates_io_tp = match &subfeature.fragment {
+                    subfeature::Fragment::Raw(cmd) => {
+                        Self::is_cargo_publish_command(cmd)
+                            && self.uses_crates_io_trusted_publishing(step, run)
+                    }
+                    _ => false,
+                };
+
+                if skip_for_crates_io_tp {
+                    continue;
+                }
+
                 // Adjust confidence based on whether id-token permission is present
                 let confidence = if step.parent.has_id_token() {
                     // Higher confidence when id-token is present but manual tokens are still used

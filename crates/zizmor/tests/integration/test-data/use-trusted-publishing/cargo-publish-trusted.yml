@@ -1,0 +1,20 @@
+on: [push]
+
+name: use-trusted-publishing
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: authenticate with crates.io (TP)
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1 # zizmor: ignore[unpinned-uses]
+
+      # Should NOT be flagged: token comes from Trusted Publishing action outputs via env
+      - name: cargo publish with env token
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
