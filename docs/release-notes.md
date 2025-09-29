@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.14.2
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [use-trusted-publishing] audit would produce-false
