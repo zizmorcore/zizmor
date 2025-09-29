@@ -41,6 +41,7 @@
         - apache/airflow#47258
         - apache/airflow#50749
         - apache/iceberg-rust#1123
+        - apache/lucene#15216
         - apache/opennlp#736
         - apache/sedona#1976
 
