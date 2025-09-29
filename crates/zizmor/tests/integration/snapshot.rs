@@ -306,6 +306,15 @@ fn use_trusted_publishing() -> Result<()> {
             .run()?
     );
 
+    // No use-trusted-publishing findings expected here.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "use-trusted-publishing/issue-1191-repro.yml"
+            ))
+            .run()?
+    );
+
     Ok(())
 }
 
