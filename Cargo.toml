@@ -45,12 +45,12 @@ indicatif = "0.18"
 insta = "1.43.2"
 jsonschema = "0.30.0"
 line-index = "0.1.2"
-memchr = "2.7.5"
+memchr = "2.7.6"
 owo-colors = "4.2.2"
-regex = "1.11.2"
+regex = "1.11.3"
 reqwest = { version = "0.12.23", default-features = false }
 reqwest-middleware = "0.4.2"
-serde = { version = "1.0.226", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde-sarif = "0.8.0"
 serde_json = "1.0.145"
 serde_json_path = "0.7.2"
@@ -58,13 +58,13 @@ serde_yaml = "0.9.34"
 subfeature = { path = "crates/subfeature", version = "0.0.3" }
 tar = "0.4.44"
 terminal-link = "0.1.0"
-thiserror = "2.0.16"
+thiserror = "2.0.17"
 tokio = { version = "1.47.1", features = ["rt-multi-thread", "io-std"] }
 tower-lsp = { version = "0.20.0" }
 tracing = "0.1.41"
 tracing-indicatif = "0.3.13"
 tracing-subscriber = "0.3.20"
-tree-sitter = "0.25.9"
+tree-sitter = "0.25.10"
 tree-sitter-bash = "0.23.3"
 tree-sitter-powershell = "0.25.9"
 yamlpath = { path = "crates/yamlpath", version = "0.25.0" }
