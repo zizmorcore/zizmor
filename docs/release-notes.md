@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [use-trusted-publishing] audit would produce-false
+  positive findings for some `run:` blocks that implicitly performed
+  trusted publishing (#1191)
+
 ## 1.14.1
 
 ### Bug Fixes 🐛

@@ -340,10 +340,19 @@ impl Audit for UseTrustedPublishing {
         // In addition to the shared action matching above, we can
         // also check for some `run:` patterns that indicate publishing
         // without Trusted Publishing.
-        // We check this regardless of id-token permission state because:
-        // 1. If no id-token: indicates missing trusted publishing setup
-        // 2. If has id-token but uses manual tokens: indicates hybrid/incomplete migration
-        if let StepBodyCommon::Run { run, .. } = step.body() {
+
+        // We can only check these reliably on workflows and not actions,
+        // since we need to be able to see the `id-token` permission's
+        // state to filter out any false positives.
+        //
+        // NOTE(ww): With #1161 we loosened this check and turned the
+        // "has ID token" check into a confidence modifier rather than
+        // a strict filter. This ended up being overly imprecise, since a lot
+        // of publishing commands use trusted publishing implicitly if
+        // the environment supports it. We reverted this with #1191.
+        if let StepBodyCommon::Run { run, .. } = step.body()
+            && !step.parent.has_id_token()
+        {
             let shell = step.shell().unwrap_or_else(|| {
                 tracing::debug!(
                     "use-trusted-publishing: couldn't determine shell type for {workflow}:{job} step {stepno}",
@@ -356,21 +365,10 @@ impl Audit for UseTrustedPublishing {
             });
 
             for subfeature in self.trusted_publishing_command_candidates(run, shell)? {
-                // Adjust confidence based on whether id-token permission is present
-                let confidence = if step.parent.has_id_token() {
-                    // Higher confidence when id-token is present but manual tokens are still used
-                    // This indicates a hybrid/incomplete migration that should be flagged
-                    Confidence::High
-                } else {
-                    // Low confidence when no id-token - could be intentional for non-TP registries
-                    // or legitimate reasons not to use trusted publishing
-                    Confidence::Low
-                };
-
                 findings.push(
                     Self::finding()
                         .severity(Severity::Informational)
-                        .confidence(confidence)
+                        .confidence(Confidence::High)
                         .add_location(step.location().hidden())
                         .add_location(
                             step.location()

@@ -1,0 +1,5 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"use-trusted-publishing/issue-1191-repro.yml\")).run()?"
+---
+No findings to report. Good job! (2 suppressed)
