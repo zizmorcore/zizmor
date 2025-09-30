@@ -2,6 +2,7 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw-experiments/zizmor-bug-726@a038d1a35\").run()?"
 ---
+🌈 zizmor v@@VERSION@@
  INFO collect_inputs: zizmor::registry::input: collected 6 inputs from woodruffw-experiments/zizmor-bug-726
  INFO zizmor::registry: skipping impostor-commit: offline audits only requested
  INFO zizmor::registry: skipping ref-confusion: offline audits only requested

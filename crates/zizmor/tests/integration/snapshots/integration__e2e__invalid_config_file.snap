@@ -2,6 +2,7 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().expects_failure(true).config(if cfg!(windows) { \"NUL\" } else\n{ \"/dev/null\" }).input(input_under_test(\"e2e-menagerie\")).run()?"
 ---
+🌈 zizmor v@@VERSION@@
 fatal: no audit was performed
 error: configuration error in @@CONFIG@@
   |

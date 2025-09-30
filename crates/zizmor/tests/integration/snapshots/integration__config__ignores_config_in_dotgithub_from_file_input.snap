@@ -2,6 +2,7 @@
 source: crates/zizmor/tests/integration/config.rs
 expression: "zizmor().no_config(true).input(input_under_test(\"config-scenarios/config-in-dotgithub/.github/workflows/hackme.yml\")).setenv(\"RUST_LOG\",\n\"zizmor::config=debug\").output(OutputMode::Both).run()?"
 ---
+🌈 zizmor v@@VERSION@@
 DEBUG zizmor::config: skipping config discovery: explicitly disabled
 error[template-injection]: code injection via template expansion
   --> @@INPUT@@:16:40
