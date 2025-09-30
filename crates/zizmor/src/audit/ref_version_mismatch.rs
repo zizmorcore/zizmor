@@ -93,8 +93,6 @@ impl RefVersionMismatch {
         };
 
         if commit_for_ref != commit_sha {
-            tracing::warn!("{commit_for_ref} != {commit_sha}");
-
             let subfeature = Subfeature::new(
                 uses_location.concrete.location.offset_span.end,
                 version_from_comment,
