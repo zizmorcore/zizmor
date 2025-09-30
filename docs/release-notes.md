@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* zizmor now unconditionally emits its version number to stderr on
+  startup (#1199)
+
 ## 1.14.2
 
 ### Bug Fixes 🐛
