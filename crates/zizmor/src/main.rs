@@ -44,7 +44,15 @@ mod registry;
 mod state;
 mod utils;
 
-#[cfg(not(target_env = "msvc"))]
+#[cfg(all(
+    not(target_env = "msvc"),
+    any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        // NOTE(ww): Not a build we currently support.
+        // target_arch = "powerpc64"
+    )
+))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
