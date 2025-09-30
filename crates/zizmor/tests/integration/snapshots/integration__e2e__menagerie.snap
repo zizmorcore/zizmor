@@ -2,6 +2,7 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().output(OutputMode::Both).input(input_under_test(\"e2e-menagerie\")).run()?"
 ---
+🌈 zizmor v@@VERSION@@
  INFO zizmor::registry: skipping impostor-commit: can't run without a GitHub API token
  INFO zizmor::registry: skipping ref-confusion: can't run without a GitHub API token
  INFO zizmor::registry: skipping known-vulnerable-actions: can't run without a GitHub API token

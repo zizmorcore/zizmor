@@ -216,6 +216,9 @@ impl Zizmor {
         let test_prefix_placeholder = "@@TEST_PREFIX@@";
         raw = raw.replace(TEST_PREFIX.as_str(), test_prefix_placeholder);
 
+        let version_placeholder = "@@VERSION@@";
+        raw = raw.replace(env!("CARGO_PKG_VERSION"), version_placeholder);
+
         Ok(raw)
     }
 }

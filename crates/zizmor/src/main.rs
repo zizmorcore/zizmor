@@ -561,6 +561,8 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
         reg.with(indicatif_layer).init();
     }
 
+    eprintln!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
+
     let min_severity = match app.min_severity {
         Some(CliSeverity::Unknown) => {
             tracing::warn!("`unknown` is a deprecated minimum severity that has no effect");
