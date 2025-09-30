@@ -44,6 +44,10 @@ mod registry;
 mod state;
 mod utils;
 
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 // TODO: Dedupe this with the top-level `sponsors.json` used by the
 // README + docs site.
 const THANKS: &[(&str, &str)] = &[("Grafana Labs", "https://grafana.com")];
