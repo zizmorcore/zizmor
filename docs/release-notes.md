@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Performance Improvements 🚄
+
+* zizmor now uses `jemalloc` as its default allocator on non-MSVC targets,
+  which should significantly improve performance for Linux and macOS users
+  (#1200)
+
 ### Enhancements 🌱
 
 * zizmor now unconditionally emits its version number to stderr on
