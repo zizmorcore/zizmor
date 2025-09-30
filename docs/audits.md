@@ -37,7 +37,7 @@ Add a `name:` field to your workflow or action.
 
 === "Before :warning:"
 
-    ```yaml title="anonymous-definition.yml" hl_lines="7"
+    ```yaml title="anonymous-definition.yml"
     on: push
 
     jobs:
@@ -49,7 +49,7 @@ Add a `name:` field to your workflow or action.
 
 === "After :white_check_mark:"
 
-    ```yaml title="anonymous-definition.yml" hl_lines="7-9"
+    ```yaml title="anonymous-definition.yml" hl_lines="1"
     name: Echo Test
     on: push
 
@@ -898,7 +898,7 @@ Switch to hash-pinned actions.
 Detects `#!yaml uses:` clauses where the action is hash-pinned, but the associated
 tag comment (used by tools like Dependabot) does not match the pinned commit.
 
-This can happen when innocently when a user (or automation) updates a
+This can happen innocently when a user (or automation) updates a
 hash-pinned `#!yaml uses:` clause to a newer commit, but fails to update the
 associated tag comment. When this happens, tools like Dependabot will silently
 ignore the comment instead of refreshing it on subsequent updates, making
