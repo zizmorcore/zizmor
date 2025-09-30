@@ -71,6 +71,9 @@ tree-sitter-powershell.workspace = true
 yamlpath.workspace = true
 yamlpatch.workspace = true
 
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator.workspace = true
+
 [build-dependencies]
 csv.workspace = true
 fst.workspace = true
