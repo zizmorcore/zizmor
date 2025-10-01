@@ -18,7 +18,7 @@ workspace = true
 
 [features]
 default = ["lsp"]
-lsp = ["dep:tower-lsp"]
+lsp = ["dep:tower-lsp-server"]
 # Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
 gh-token-tests = []
 # Test-only: enable all online audits.
@@ -61,7 +61,7 @@ tar.workspace = true
 terminal-link.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "io-std"] }
-tower-lsp = { workspace = true, optional = true }
+tower-lsp-server = { workspace = true, optional = true }
 tracing.workspace = true
 tracing-indicatif.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }

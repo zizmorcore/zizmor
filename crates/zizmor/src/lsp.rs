@@ -1,9 +1,11 @@
 //! zizmor's language server.
 
+use std::str::FromStr;
+
 use camino::Utf8Path;
 use thiserror::Error;
-use tower_lsp::lsp_types;
-use tower_lsp::{Client, LanguageServer, LspService, Server};
+use tower_lsp_server::lsp_types::{self, TextDocumentSyncKind};
+use tower_lsp_server::{Client, LanguageServer, LspService, Server};
 
 use crate::audit::AuditInput;
 use crate::config::Config;
@@ -23,7 +25,7 @@ pub(crate) struct Error {
 }
 
 struct LspDocumentCommon {
-    uri: lsp_types::Url,
+    uri: lsp_types::Uri,
     text: String,
     version: Option<i32>,
 }
@@ -34,12 +36,11 @@ struct Backend {
     client: Client,
 }
 
-#[tower_lsp::async_trait]
 impl LanguageServer for Backend {
     async fn initialize(
         &self,
         _: lsp_types::InitializeParams,
-    ) -> tower_lsp::jsonrpc::Result<lsp_types::InitializeResult> {
+    ) -> tower_lsp_server::jsonrpc::Result<lsp_types::InitializeResult> {
         Ok(lsp_types::InitializeResult {
             server_info: Some(lsp_types::ServerInfo {
                 name: "zizmor (LSP)".into(),
@@ -90,7 +91,7 @@ impl LanguageServer for Backend {
                     register_options: Some(
                         serde_json::to_value(lsp_types::TextDocumentChangeRegistrationOptions {
                             document_selector: Some(selectors.clone()),
-                            sync_kind: 1, // FULL
+                            sync_kind: TextDocumentSyncKind::FULL,
                         })
                         .unwrap(),
                     ),
@@ -128,7 +129,7 @@ impl LanguageServer for Backend {
             .await;
     }
 
-    async fn shutdown(&self) -> tower_lsp::jsonrpc::Result<()> {
+    async fn shutdown(&self) -> tower_lsp_server::jsonrpc::Result<()> {
         tracing::debug!("graceful shutdown requested");
         Ok(())
     }
@@ -174,7 +175,7 @@ impl LanguageServer for Backend {
 impl Backend {
     async fn audit_inner(&self, params: LspDocumentCommon) -> anyhow::Result<()> {
         tracing::debug!("analyzing: {:?} (version={:?})", params.uri, params.version);
-        let path = Utf8Path::new(params.uri.path());
+        let path = Utf8Path::new(params.uri.path().as_str());
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
             AuditInput::from(Action::from_string(
                 params.text,
@@ -219,7 +220,7 @@ impl Backend {
                     severity: Some(finding.determinations.severity.into()),
                     code: Some(lsp_types::NumberOrString::String(finding.ident.into())),
                     code_description: Some(lsp_types::CodeDescription {
-                        href: lsp_types::Url::parse(finding.url)
+                        href: lsp_types::Uri::from_str(finding.url)
                             .expect("finding contains an invalid URL somehow"),
                     }),
                     source: Some("zizmor".into()),
