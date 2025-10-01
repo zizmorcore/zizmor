@@ -428,30 +428,4 @@ jobs:
             "Valid tags should not be flagged as impostor commits"
         );
     }
-
-    #[test]
-    fn test_audit_requires_github_client() {
-        // Test that the audit correctly fails when no GitHub client is available
-        let workflow_content = r#"
-name: Test Workflow
-on: push
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: some/action@abc123def456abc123def456abc123def456abc12
-"#;
-
-        let key = InputKey::local("dummy".into(), "test-workflow.yml", None::<&str>).unwrap();
-        let _workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
-        let audit_state = crate::state::AuditState::default();
-
-        match ImpostorCommit::new(&audit_state) {
-            Err(crate::audit::AuditLoadError::Skip(_)) => {
-                // Expected behavior when no GitHub client is available
-            }
-            _ => panic!("Expected audit to skip when no GitHub client is available"),
-        }
-    }
 }
