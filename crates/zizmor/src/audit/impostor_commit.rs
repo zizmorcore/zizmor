@@ -186,7 +186,7 @@ impl ImpostorCommit {
                 return None;
             }
             Err(e) => {
-                tracing::warn!(
+                tracing::error!(
                     "Failed to get latest tag for {}/{}: {}",
                     uses.owner,
                     uses.repo,
