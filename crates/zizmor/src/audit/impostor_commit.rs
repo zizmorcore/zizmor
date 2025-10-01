@@ -346,7 +346,18 @@ jobs:
         let key = InputKey::local("dummy".into(), "test.yml", None::<&str>).unwrap();
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
-        let state = crate::state::AuditState::default();
+        let state = crate::state::AuditState {
+            no_online_audits: false,
+            gh_client: Some(
+                crate::github_api::Client::new(
+                    crate::github_api::GitHubHost::Standard("github.com".to_string()),
+                    crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
+                        .unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        };
 
         let audit = ImpostorCommit::new(&state).unwrap();
         let input = workflow.into();
