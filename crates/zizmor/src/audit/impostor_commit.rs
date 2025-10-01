@@ -206,7 +206,7 @@ impl ImpostorCommit {
         Some(Fix {
             title: format!("pin to latest tag {latest_tag}"),
             key,
-            disposition: FixDisposition::Safe,
+            disposition: FixDisposition::Unsafe,
             patches: vec![Patch {
                 route,
                 operation: Op::Replace(fixed_uses.into()),
