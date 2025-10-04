@@ -486,11 +486,6 @@ impl Config {
                 }
             };
 
-            // let Some(parent) = path.parent() else {
-            //     tracing::debug!("no parent for {path:?}, cannot discover config");
-            //     return Ok(None);
-            // };
-
             Self::discover_in_dir(parent).map_err(|err| ConfigError {
                 path: path.to_string(),
                 source: err,
