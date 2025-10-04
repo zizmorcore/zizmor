@@ -118,6 +118,11 @@ impl Zizmor {
         self
     }
 
+    pub fn working_dir(mut self, dir: impl Into<String>) -> Self {
+        self.cmd.current_dir(dir.into());
+        self
+    }
+
     pub fn run(mut self) -> Result<String> {
         if self.offline {
             self.cmd.arg("--offline");
