@@ -20,6 +20,12 @@ of `zizmor`.
 * zizmor now unconditionally emits its version number to stderr on
   startup (#1199)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail instead of analyzing single-file
+  inputs that lacked an explicit parent path component, e.g.
+  `zizmor foo.yml` instead of `zizmor ./foo.yml` (#1210)
+
 ## 1.14.2
 
 ### Bug Fixes 🐛
