@@ -345,13 +345,13 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
     Ok(())
 }
 
-/// Regression test for #1210.
+/// Regression test for #1207.
 ///
 /// Ensures that we correctly handle single-inputs that aren't given
 /// with an explicit parent path, e.g. `action.yml` instead of
 /// `./action.yml`.
 #[test]
-fn issue_1210() -> Result<()> {
+fn issue_1207() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .expects_failure(false)
