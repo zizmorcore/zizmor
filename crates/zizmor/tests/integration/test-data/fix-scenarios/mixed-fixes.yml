@@ -1,0 +1,29 @@
+# Test file with multiple types of fixable issues
+name: mixed-fixes
+on: [push]
+
+jobs:
+  mixed-issues:
+    runs-on: ubuntu-latest
+    steps:
+      # Template injection fix
+      - name: Template injection
+        run: |
+          echo "Title: ${{ github.event.head_commit.message }}"
+
+      # Cache poisoning fix
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      # Artipacked fix
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      # Unsound condition fix
+      - name: Unsound condition
+        if: |
+          github.ref == 'refs/heads/main'
+        run: echo "Main branch check"

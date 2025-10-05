@@ -1,0 +1,21 @@
+# Test file for unsound condition fixes
+name: unsound-condition-fixes
+on: [push]
+
+jobs:
+  unsound-condition:
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/main'
+    steps:
+      - name: Check condition
+        run: echo "Running on main branch"
+
+  another-job:
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    steps:
+      - name: Another check
+        run: echo "Another condition check"

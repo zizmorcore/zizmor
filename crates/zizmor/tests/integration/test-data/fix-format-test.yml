@@ -1,0 +1,17 @@
+# Test workflow for JSON Patch functionality
+name: Fix Format Test
+on:
+  push:
+
+jobs:
+  test-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # This should trigger artipacked fix (add persist-credentials: false)
+
+      - name: Test step with template injection
+        run: |
+          echo "Hello ${{ github.ref_name }}"
+          echo "Repository: ${{ github.repository }}"
+        # This should trigger template injection fixes

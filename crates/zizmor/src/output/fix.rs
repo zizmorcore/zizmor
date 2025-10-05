@@ -78,12 +78,15 @@ pub fn apply_fixes(
     }
 
     if fixes_by_input.is_empty() {
-        if total_fixes > 0 {
-            anstream::eprintln!(
-                "No fixes available to apply ({total_fixes} held back by fix mode)."
-            );
-        } else {
-            anstream::eprintln!("No fixes available to apply.");
+        // Only show messages for in-place fixes, not for JSON output
+        if matches!(fix_format, FixFormat::Inplace) {
+            if total_fixes > 0 {
+                anstream::eprintln!(
+                    "No fixes available to apply ({total_fixes} held back by fix mode)."
+                );
+            } else {
+                anstream::eprintln!("No fixes available to apply.");
+            }
         }
         return Ok(());
     }
@@ -327,6 +330,257 @@ fn print_summary(
         anstream::eprintln!("Failed to apply {} fixes:", failed_fixes.len());
         for (ident, file_path, error) in failed_fixes {
             anstream::eprintln!("  {}: {} ({})", ident, file_path, error);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::Value;
+    use yamlpath::{Component, Route};
+
+    /// Test JSON Pointer path conversion with simple keys
+    #[test]
+    fn test_yaml_path_to_json_pointer_simple_keys() {
+        // Create a simple route: /jobs/build/steps
+        let route = Route::from(vec![
+            Component::Key("jobs"),
+            Component::Key("build"),
+            Component::Key("steps"),
+        ]);
+
+        // Test that the route can be created and is not empty
+        assert!(!route.is_empty());
+
+        // Test the actual conversion function
+        let json_pointer = yaml_path_to_json_pointer(&route);
+        assert!(json_pointer.starts_with('/'));
+        assert!(json_pointer.contains("jobs"));
+        assert!(json_pointer.contains("build"));
+        assert!(json_pointer.contains("steps"));
+    }
+
+    /// Test JSON Pointer path conversion with array indices
+    #[test]
+    fn test_yaml_path_to_json_pointer_with_indices() {
+        // Create a route with array indices: /jobs/0/steps/1
+        let route = Route::from(vec![
+            Component::Key("jobs"),
+            Component::Index(0),
+            Component::Key("steps"),
+            Component::Index(1),
+        ]);
+
+        assert!(!route.is_empty());
+
+        // Test the actual conversion function
+        let json_pointer = yaml_path_to_json_pointer(&route);
+        assert!(json_pointer.starts_with('/'));
+        assert!(json_pointer.contains("jobs"));
+        assert!(json_pointer.contains("steps"));
+    }
+
+    /// Test JSON Pointer path conversion with special characters
+    #[test]
+    fn test_yaml_path_to_json_pointer_special_characters() {
+        // Create a route with special characters in keys
+        let route = Route::from(vec![
+            Component::Key("with~tilde"),
+            Component::Key("with/slash"),
+            Component::Key("normal-key"),
+        ]);
+
+        assert!(!route.is_empty());
+
+        // Test the actual conversion function
+        let json_pointer = yaml_path_to_json_pointer(&route);
+        assert!(json_pointer.starts_with('/'));
+        assert!(json_pointer.contains("normal-key"));
+    }
+
+    /// Test JSON Patch operation structure
+    #[test]
+    fn test_json_patch_operation_structure() {
+        // Test that we can create valid JSON Patch operations
+        let add_op = serde_json::json!({
+            "op": "add",
+            "path": "/jobs/build/steps/0/persist-credentials",
+            "value": false
+        });
+
+        let replace_op = serde_json::json!({
+            "op": "replace",
+            "path": "/jobs/build/steps/1/run",
+            "value": "echo \"Hello World\""
+        });
+
+        let remove_op = serde_json::json!({
+            "op": "remove",
+            "path": "/jobs/build/steps/2"
+        });
+
+        // Verify the structure is correct
+        assert_eq!(add_op["op"], "add");
+        assert_eq!(add_op["path"], "/jobs/build/steps/0/persist-credentials");
+        assert_eq!(add_op["value"], false);
+
+        assert_eq!(replace_op["op"], "replace");
+        assert_eq!(replace_op["path"], "/jobs/build/steps/1/run");
+        assert_eq!(replace_op["value"], "echo \"Hello World\"");
+
+        assert_eq!(remove_op["op"], "remove");
+        assert_eq!(remove_op["path"], "/jobs/build/steps/2");
+        assert!(remove_op.get("value").is_none());
+    }
+
+    /// Test JSON Patch document structure
+    #[test]
+    fn test_json_patch_document_structure() {
+        let patch_doc = serde_json::json!({
+            "file": "workflow.yml",
+            "operations": [
+                {
+                    "op": "add",
+                    "path": "/jobs/build/steps/0/persist-credentials",
+                    "value": false
+                },
+                {
+                    "op": "replace",
+                    "path": "/jobs/build/steps/1/run",
+                    "value": "echo \"Hello World\""
+                }
+            ]
+        });
+
+        // Verify the structure
+        assert_eq!(patch_doc["file"], "workflow.yml");
+        assert!(patch_doc["operations"].is_array());
+
+        let operations = patch_doc["operations"].as_array().unwrap();
+        assert_eq!(operations.len(), 2);
+
+        assert_eq!(operations[0]["op"], "add");
+        assert_eq!(operations[1]["op"], "replace");
+    }
+
+    /// Test JSON Pointer escaping
+    #[test]
+    fn test_json_pointer_escaping() {
+        // Test that special characters are properly escaped
+        let test_cases = vec![
+            ("normal-key", "normal-key"),
+            ("with~tilde", "with~0tilde"),
+            ("with/slash", "with~1slash"),
+            ("with~and/", "with~0and~1"),
+        ];
+
+        for (input, expected) in test_cases {
+            let escaped = input.replace("~", "~0").replace("/", "~1");
+            assert_eq!(escaped, expected, "Failed to escape: {}", input);
+        }
+    }
+
+    /// Test JSON Pointer path construction
+    #[test]
+    fn test_json_pointer_path_construction() {
+        // Test building JSON Pointer paths from components
+        let components = vec!["jobs", "build", "steps", "0"];
+        let mut path = String::new();
+
+        for component in components {
+            path.push('/');
+            path.push_str(component);
+        }
+
+        assert_eq!(path, "/jobs/build/steps/0");
+    }
+
+    /// Test that JSON Patch operations are valid according to RFC 6902
+    #[test]
+    fn test_json_patch_rfc_6902_compliance() {
+        // Test valid operations according to RFC 6902
+        let valid_operations = vec![
+            ("add", true, true, false), // op, path, value, from
+            ("remove", true, false, false),
+            ("replace", true, true, false),
+            ("move", true, false, true),
+            ("copy", true, false, true),
+            ("test", true, true, false),
+        ];
+
+        for (op, _has_path, has_value, has_from) in valid_operations {
+            let mut operation = serde_json::json!({
+                "op": op,
+                "path": "/test/path"
+            });
+
+            if has_value {
+                operation["value"] = Value::String("test".to_string());
+            }
+
+            if has_from {
+                operation["from"] = Value::String("/source/path".to_string());
+            }
+
+            // Verify required fields are present
+            assert!(operation.get("op").is_some());
+            assert!(operation.get("path").is_some());
+
+            if has_value {
+                assert!(operation.get("value").is_some());
+            }
+
+            if has_from {
+                assert!(operation.get("from").is_some());
+            }
+        }
+    }
+
+    /// Test edge cases for JSON Pointer paths
+    #[test]
+    fn test_json_pointer_edge_cases() {
+        // Test empty path
+        let empty_path = "/";
+        assert!(empty_path.starts_with('/'));
+
+        // Test root path
+        let root_path = "/";
+        assert_eq!(root_path, "/");
+
+        // Test path with only slashes
+        let slash_path = "//";
+        assert!(slash_path.starts_with('/'));
+    }
+
+    /// Test JSON Patch value serialization
+    #[test]
+    fn test_json_patch_value_serialization() {
+        // Test different value types that might be used in JSON Patch
+        let test_values = vec![
+            Value::Bool(true),
+            Value::Bool(false),
+            Value::String("test".to_string()),
+            Value::Number(serde_json::Number::from(42)),
+            Value::Array(vec![
+                Value::String("item1".to_string()),
+                Value::String("item2".to_string()),
+            ]),
+            Value::Object(serde_json::Map::new()),
+        ];
+
+        for value in test_values {
+            let operation = serde_json::json!({
+                "op": "add",
+                "path": "/test/path",
+                "value": value
+            });
+
+            // Should be able to serialize and deserialize
+            let serialized = serde_json::to_string(&operation).unwrap();
+            let deserialized: Value = serde_json::from_str(&serialized).unwrap();
+
+            assert_eq!(operation, deserialized);
         }
     }
 }

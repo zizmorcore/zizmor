@@ -9,5 +9,7 @@ mod config;
 /// "Big picture" end-to-end tests, i.e. tests that typically exercise
 /// more than one audit or complex CLI functionality.
 mod e2e;
+/// Tests for the --fix-format json functionality.
+mod fix_format_json;
 /// General snapshot tests, including repro cases for specific audits.
 mod snapshot;
