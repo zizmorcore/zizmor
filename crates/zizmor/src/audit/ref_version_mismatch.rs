@@ -262,27 +262,22 @@ jobs:
             .unwrap();
 
         // We expect at least one finding if there's a version mismatch
-        if !findings.is_empty() {
-            if !findings[0].fixes.is_empty() {
-                let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-                insta::assert_snapshot!(new_doc.source(), @r"
-                name: Test Version Comment Mismatch
-                on: push
-                permissions: {}
-                jobs:
-                  test:
-                    runs-on: ubuntu-latest
-                    steps:
-                      - name: Checkout with mismatched version comment
-                        uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.2
-                ");
-            } else {
-                println!(
-                    "Finding detected but no fix available - commit hash may not have a corresponding tag"
-                );
-            }
-        } else {
-            println!("No findings detected - commit hash may not have a version mismatch");
+        assert!(!findings.is_empty(), "Expected to find version mismatch");
+
+        // Only test the fix if one is available (depends on GitHub API response)
+        if !findings[0].fixes.is_empty() {
+            let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+            insta::assert_snapshot!(new_doc.source(), @r"
+            name: Test Version Comment Mismatch
+            on: push
+            permissions: {}
+            jobs:
+              test:
+                runs-on: ubuntu-latest
+                steps:
+                  - name: Checkout with mismatched version comment
+                    uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.2
+            ");
         }
     }
 
@@ -333,7 +328,10 @@ jobs:
             .audit(RefVersionMismatch::ident(), &input, &Config::default())
             .unwrap();
 
-        if !findings.is_empty() && !findings[0].fixes.is_empty() {
+        assert!(!findings.is_empty(), "Expected to find version mismatch");
+
+        // Only test the fix if one is available (depends on GitHub API response)
+        if !findings[0].fixes.is_empty() {
             let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
             insta::assert_snapshot!(new_doc.source(), @r"
             name: Test Different Version Formats
@@ -350,10 +348,6 @@ jobs:
                   - name: Version format
                     uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # version: 3.0.0
             ");
-        } else {
-            println!(
-                "No fixes available - this is expected if the commit hash doesn't have corresponding tags"
-            );
         }
     }
 }
