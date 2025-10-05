@@ -183,6 +183,16 @@ struct App {
     )]
     fix: Option<FixMode>,
 
+    /// Format for fix output when using --fix.
+    #[arg(
+        long,
+        value_enum,
+        value_name = "FORMAT",
+        default_value_t = FixFormat::Inplace,
+        requires = "fix"
+    )]
+    fix_format: FixFormat,
+
     /// Emit thank-you messages for zizmor's sponsors.
     #[arg(long, exclusive = true)]
     thanks: bool,
@@ -397,6 +407,14 @@ pub(crate) enum FixMode {
     UnsafeOnly,
     /// Apply all fixes, both safe and unsafe.
     All,
+}
+
+#[derive(Copy, Clone, Debug, ValueEnum)]
+pub(crate) enum FixFormat {
+    /// Apply fixes in-place, modifying the original files using YAML Patch (the default).
+    Inplace,
+    /// Output fixes as JSON Patch format instead of modifying files.
+    Json,
 }
 
 pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
@@ -676,7 +694,8 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
     };
 
     if let Some(fix_mode) = app.fix {
-        output::fix::apply_fixes(fix_mode, &results, &registry).map_err(Error::Fix)?;
+        output::fix::apply_fixes(fix_mode, app.fix_format, &results, &registry)
+            .map_err(Error::Fix)?;
     }
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
