@@ -218,6 +218,11 @@ mod tests {
     #[test]
     fn test_fix_version_comment_mismatch() {
         use crate::config::Config;
+        use crate::{
+            models::{AsDocument, workflow::Workflow},
+            registry::input::InputKey,
+        };
+
         let workflow_content = r#"
 name: Test Version Comment Mismatch
 on: push
@@ -281,6 +286,11 @@ jobs:
     #[test]
     fn test_fix_version_comment_different_formats() {
         use crate::config::Config;
+        use crate::{
+            models::{AsDocument, workflow::Workflow},
+            registry::input::InputKey,
+        };
+
         let workflow_content = r#"
 name: Test Different Version Formats
 on: push

@@ -388,10 +388,6 @@ jobs:
     #[cfg(feature = "gh-token-tests")]
     #[test]
     fn test_no_impostor_with_valid_tag() {
-        use insta::assert_snapshot;
-
-        use crate::models::AsDocument as _;
-
         use super::*;
         use crate::{models::workflow::Workflow, registry::input::InputKey};
 
