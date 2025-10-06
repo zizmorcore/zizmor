@@ -8,7 +8,8 @@ github-actions-models
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/woodruffw?style=flat&logo=githubsponsors&labelColor=white&color=white)](https://github.com/sponsors/woodruffw)
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.com/invite/PGU3zGZuGG)
 
-Unofficial, high-quality data models for GitHub Actions workflows, actions, and related components.
+Unofficial, high-quality data models for GitHub Actions workflows, actions, and
+Dependabot configuration files.
 
 ## Why?
 
