@@ -186,10 +186,6 @@ impl Audit for RefVersionMismatch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        models::{AsDocument, workflow::Workflow},
-        registry::input::InputKey,
-    };
 
     #[test]
     fn test_version_comment_patterns() {

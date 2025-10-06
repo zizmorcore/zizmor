@@ -318,18 +318,17 @@ impl Audit for ImpostorCommit {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "gh-token-tests")]
-    use insta::assert_snapshot;
-
-    #[cfg(feature = "gh-token-tests")]
-    use crate::models::AsDocument as _;
-
-    use super::*;
-    use crate::{models::workflow::Workflow, registry::input::InputKey};
 
     #[cfg(feature = "gh-token-tests")]
     #[test]
     fn test_impostor_commit_fix_snapshot() {
+        use insta::assert_snapshot;
+
+        use crate::models::AsDocument as _;
+
+        use super::*;
+        use crate::{models::workflow::Workflow, registry::input::InputKey};
+
         // Test with a workflow that uses a commit hash that doesn't exist in the target repository
         // We'll use actions/hello-world-javascript-action with a commit from actions/checkout
         // This creates an impostor scenario: valid commit, wrong repository
@@ -350,8 +349,8 @@ jobs:
             no_online_audits: false,
             gh_client: Some(
                 crate::github_api::Client::new(
-                    crate::github_api::GitHubHost::Standard("github.com".to_string()),
-                    crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
+                    &crate::github_api::GitHubHost::Standard("github.com".to_string()),
+                    &crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
                         .unwrap(),
                     "/tmp".into(),
                 )
@@ -389,6 +388,13 @@ jobs:
     #[cfg(feature = "gh-token-tests")]
     #[test]
     fn test_no_impostor_with_valid_tag() {
+        use insta::assert_snapshot;
+
+        use crate::models::AsDocument as _;
+
+        use super::*;
+        use crate::{models::workflow::Workflow, registry::input::InputKey};
+
         // Test with a valid tag to ensure we don't get false positives
         let workflow_content = r#"
 name: Test Valid Tag
@@ -407,8 +413,8 @@ jobs:
             no_online_audits: false,
             gh_client: Some(
                 crate::github_api::Client::new(
-                    crate::github_api::GitHubHost::Standard("github.com".to_string()),
-                    crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
+                    &crate::github_api::GitHubHost::Standard("github.com".to_string()),
+                    &crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
                         .unwrap(),
                     "/tmp".into(),
                 )
