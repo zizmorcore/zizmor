@@ -381,6 +381,11 @@ impl InputGroup {
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
+            (Some("dependabot"), Some("yml" | "yaml")) => (
+                // NOTE: Safe unwrap because we just checked the filename.
+                InputKey::local(Group(path.as_str().into()), path, None).unwrap(),
+                InputKind::Dependabot,
+            ),
             (Some("action"), Some("yml" | "yaml")) => (
                 // NOTE: Safe unwrap because we just checked the filename.
                 InputKey::local(Group(path.as_str().into()), path, None).unwrap(),
@@ -471,6 +476,25 @@ impl InputGroup {
                     )
                 })?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
+            }
+
+            if options.mode.dependabot()
+                && entry.is_file()
+                && matches!(
+                    entry.file_name(),
+                    Some("dependabot.yml" | "dependabot.yaml")
+                )
+            {
+                // NOTE: Safe unwrap because we just checked the filename.
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
+                let contents = std::fs::read_to_string(entry).map_err(|e| {
+                    CollectionError::Inner(
+                        CollectionError::Io(e).into(),
+                        key.to_string(),
+                        InputKind::Dependabot,
+                    )
+                })?;
+                group.register(InputKind::Dependabot, contents, key, options.strict)?;
             }
         }
 

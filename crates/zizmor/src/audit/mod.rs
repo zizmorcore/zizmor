@@ -282,6 +282,14 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
+    fn audit_dependabot<'doc>(
+        &self,
+        _dependabot: &'doc Dependabot,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        Ok(vec![])
+    }
+
     fn audit_raw<'doc>(
         &self,
         _input: &'doc AuditInput,
@@ -320,7 +328,7 @@ pub(crate) trait Audit: AuditCore {
         let mut results = match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow, config),
             AuditInput::Action(action) => self.audit_action(action, config),
-            AuditInput::Dependabot(_) => todo!(),
+            AuditInput::Dependabot(dependabot) => self.audit_dependabot(dependabot, config),
         }?;
 
         results.extend(self.audit_raw(input, config)?);
