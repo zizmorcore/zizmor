@@ -22,6 +22,7 @@ pub(crate) mod artipacked;
 pub(crate) mod bot_conditions;
 pub(crate) mod cache_poisoning;
 pub(crate) mod dangerous_triggers;
+pub(crate) mod dependabot_execution;
 pub(crate) mod excessive_permissions;
 pub(crate) mod forbidden_uses;
 pub(crate) mod github_env;
