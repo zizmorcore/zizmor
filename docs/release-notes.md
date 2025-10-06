@@ -25,6 +25,11 @@ of `zizmor`.
 
     Many thanks to @mostafa for implementing this improvement!
 
+* The [impostor-commit] audit now supports auto-fixes for many findings
+  (#1090)
+
+    Many thanks to @mostafa for implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would fail instead of analyzing single-file
