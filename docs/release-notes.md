@@ -20,6 +20,11 @@ of `zizmor`.
 * zizmor now unconditionally emits its version number to stderr on
   startup (#1199)
 
+* The [ref-version-mismatch] audit now supports auto-fixes for many findings
+  (#1205)
+
+    Many thanks to @mostafa for implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would fail instead of analyzing single-file

@@ -718,12 +718,10 @@ fn main() -> ExitCode {
                         ConfigErrorInner::AuditSyntax(_, ident) => {
                             group = group.elements([
                                 Level::HELP.message(format!(
-                                    "check the configuration for the '{ident}' rule",
-                                    ident = ident
+                                    "check the configuration for the '{ident}' rule"
                                 )),
                                 Level::HELP.message(format!(
-                                    "see: https://docs.zizmor.sh/audits/#{ident}-configuration",
-                                    ident = ident
+                                    "see: https://docs.zizmor.sh/audits/#{ident}-configuration"
                                 )),
                             ]);
                         }

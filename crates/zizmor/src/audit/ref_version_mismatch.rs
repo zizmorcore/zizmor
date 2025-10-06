@@ -4,13 +4,14 @@ use anyhow::{Result, anyhow};
 use github_actions_models::common::Uses;
 use regex::Regex;
 use subfeature::Subfeature;
+use yamlpatch::{Op, Patch};
 
 use crate::{
     audit::{Audit, AuditLoadError, AuditState, audit_meta},
     config::Config,
     finding::{
-        Confidence, Finding, Severity,
-        location::{Comment, Feature, Location},
+        Confidence, Finding, Fix, Severity,
+        location::{Comment, Feature, Location, Routable},
     },
     github_api,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt, workflow::Step},
@@ -54,6 +55,25 @@ impl RefVersionMismatch {
             }
         }
         None
+    }
+
+    /// Create a Fix for updating the version comment to match the pinned hash
+    fn create_version_comment_fix<'doc, S: StepCommon<'doc>>(
+        &self,
+        step: &S,
+        correct_tag: &str,
+    ) -> Fix<'doc> {
+        Fix {
+            title: format!("update version comment to match pinned hash: {correct_tag}"),
+            key: step.location().key,
+            disposition: Default::default(),
+            patches: vec![Patch {
+                route: step.route().with_key("uses"),
+                operation: Op::ReplaceComment {
+                    new: format!("# {correct_tag}").into(),
+                },
+            }],
+        }
     }
 
     fn audit_step_common<'doc, S: StepCommon<'doc>>(
@@ -121,6 +141,8 @@ impl RefVersionMismatch {
                         .symbolic
                         .annotated(format!("is pointed to by tag {tag}", tag = suggestion.name)),
                 );
+                // Add auto-fix to update the version comment to match the pinned hash
+                builder = builder.fix(self.create_version_comment_fix(step, &suggestion.name));
             }
             findings.push(builder.build(step)?);
         }
@@ -158,5 +180,174 @@ impl Audit for RefVersionMismatch {
         _config: &Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
         self.audit_step_common(step)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        models::{AsDocument, workflow::Workflow},
+        registry::input::InputKey,
+    };
+
+    #[test]
+    fn test_version_comment_patterns() {
+        let test_cases = vec![
+            ("# tag=v2.8.0", Some("v2.8.0")),
+            ("# v2.8.0", Some("v2.8.0")),
+            ("# tag=2.8.0", Some("2.8.0")),
+            ("# version: 2.8.0", Some("2.8.0")),
+            ("# ver=1.0.0", Some("1.0.0")),
+            ("# some other comment", None),
+        ];
+
+        for (comment, expected) in test_cases {
+            // Test the pattern matching directly
+            let comment_text = comment;
+            let mut found_version = None;
+            for pattern in VERSION_COMMENT_PATTERNS.iter() {
+                if let Some(captures) = pattern.captures(comment_text) {
+                    if let Some(version_match) = captures.get(1) {
+                        found_version = Some(version_match.as_str());
+                        break;
+                    }
+                }
+            }
+            assert_eq!(found_version, expected, "Failed for comment: {}", comment);
+        }
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    #[test]
+    fn test_fix_version_comment_mismatch() {
+        use crate::config::Config;
+        let workflow_content = r#"
+name: Test Version Comment Mismatch
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with mismatched version comment
+        uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.0
+"#;
+
+        let key = InputKey::local(
+            "fakegroup".into(),
+            "test_version_mismatch.yml",
+            None::<&str>,
+        )
+        .unwrap();
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github_api::Client::new(
+                    &github_api::GitHubHost::default(),
+                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = RefVersionMismatch::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .unwrap();
+
+        // We expect at least one finding if there's a version mismatch
+        assert!(!findings.is_empty(), "Expected to find version mismatch");
+
+        // Only test the fix if one is available (depends on GitHub API response)
+        if !findings[0].fixes.is_empty() {
+            let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+            insta::assert_snapshot!(new_doc.source(), @r"
+            name: Test Version Comment Mismatch
+            on: push
+            permissions: {}
+            jobs:
+              test:
+                runs-on: ubuntu-latest
+                steps:
+                  - name: Checkout with mismatched version comment
+                    uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.2
+            ");
+        }
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    #[test]
+    fn test_fix_version_comment_different_formats() {
+        use crate::config::Config;
+        let workflow_content = r#"
+name: Test Different Version Formats
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tag format
+        uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # tag=v3.0.0
+      - name: Simple format
+        uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.0
+      - name: Version format
+        uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # version: 3.0.0
+"#;
+
+        let key = InputKey::local(
+            "fakegroup".into(),
+            "test_different_formats.yml",
+            None::<&str>,
+        )
+        .unwrap();
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github_api::Client::new(
+                    &github_api::GitHubHost::default(),
+                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = RefVersionMismatch::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .unwrap();
+
+        assert!(!findings.is_empty(), "Expected to find version mismatch");
+
+        // Only test the fix if one is available (depends on GitHub API response)
+        if !findings[0].fixes.is_empty() {
+            let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+            insta::assert_snapshot!(new_doc.source(), @r"
+            name: Test Different Version Formats
+            on: push
+            permissions: {}
+            jobs:
+              test:
+                runs-on: ubuntu-latest
+                steps:
+                  - name: Tag format
+                    uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.2
+                  - name: Simple format
+                    uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.0
+                  - name: Version format
+                    uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # version: 3.0.0
+            ");
+        }
     }
 }
