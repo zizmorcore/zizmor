@@ -11,13 +11,13 @@ of `zizmor`.
 
 ### Performance Improvements 🚄
 
-* zizmor now uses `jemalloc` as its default allocator on non-MSVC targets,
+* `zizmor` now uses `jemalloc` as its default allocator on non-MSVC targets,
   which should significantly improve performance for Linux and macOS users
   (#1200)
 
 ### Enhancements 🌱
 
-* zizmor now unconditionally emits its version number to stderr on
+* `zizmor` now unconditionally emits its version number to stderr on
   startup (#1199)
 
 * The [ref-version-mismatch] audit now supports auto-fixes for many findings
@@ -29,6 +29,9 @@ of `zizmor`.
   (#1090)
 
     Many thanks to @mostafa for implementing this improvement!
+
+* `zizmor` is now more resilient to sporadic request failures when performing
+  GitHub API requests (#1219)
 
 ### Bug Fixes 🐛
 

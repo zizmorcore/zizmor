@@ -13,6 +13,7 @@ use http_cache_reqwest::{
 use reqwest::{
     Response, StatusCode,
     header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, InvalidHeaderValue, USER_AGENT},
+    retry,
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, de::DeserializeOwned};
@@ -51,10 +52,17 @@ impl GitHubHost {
         }
     }
 
+    fn to_api_host(&self) -> String {
+        match self {
+            Self::Enterprise(host) => host.clone(),
+            Self::Standard(host) => format!("api.{host}"),
+        }
+    }
+
     fn to_api_url(&self) -> String {
         match self {
-            Self::Enterprise(host) => format!("https://{host}/api/v3"),
-            Self::Standard(host) => format!("https://api.{host}"),
+            Self::Enterprise(_) => format!("https://{host}/api/v3", host = self.to_api_host()),
+            Self::Standard(_) => format!("https://{host}", host = self.to_api_host()),
         }
     }
 }
@@ -156,6 +164,29 @@ impl Client {
         let http = ClientBuilder::new(
             reqwest::Client::builder()
                 .default_headers(headers)
+                .retry(
+                    retry::for_host(host.to_api_host())
+                        .max_retries_per_request(3)
+                        // NOTE(ww): No budget at the moment,
+                        // since we cap at 3 retries anyway.
+                        .no_budget()
+                        .classify_fn(|req_rep| match req_rep.status() {
+                            // NOTE(ww): At the moment we send only GETs,
+                            // so we don't need to think about retry semantics
+                            // on non-idempotent methods.
+
+                            // NOTE(ww): In the context of the retry classifier,
+                            // "success" means "don't retry".
+                            Some(status) => {
+                                if status.is_client_error() || status.is_server_error() {
+                                    req_rep.retryable()
+                                } else {
+                                    req_rep.success()
+                                }
+                            }
+                            None => req_rep.success(),
+                        }),
+                )
                 .build()
                 .expect("couldn't build GitHub client?"),
         )
