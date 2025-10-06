@@ -633,6 +633,14 @@ impl Client {
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
+            } else if matches!(
+                file_path.file_name(),
+                Some("dependabot.yml" | "dependabot.yaml")
+            ) {
+                let key = InputKey::remote(slug, file_path.to_string())?;
+                let mut contents = String::with_capacity(entry.size() as usize);
+                entry.read_to_string(&mut contents)?;
+                group.register(InputKind::Dependabot, contents, key, options.strict)?;
             }
         }
 

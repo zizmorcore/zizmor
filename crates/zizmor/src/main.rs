@@ -364,6 +364,8 @@ pub(crate) enum CollectionMode {
     WorkflowsOnly,
     /// Collect only action definitions (i.e. `action.yml`).
     ActionsOnly,
+    /// Collect only Dependabot configuration files (i.e. `dependabot.yml`).
+    DependabotOnly,
 }
 
 impl CollectionMode {
@@ -385,6 +387,13 @@ impl CollectionMode {
         matches!(
             self,
             CollectionMode::All | CollectionMode::Default | CollectionMode::ActionsOnly
+        )
+    }
+
+    pub(crate) fn dependabot(&self) -> bool {
+        matches!(
+            self,
+            CollectionMode::All | CollectionMode::Default | CollectionMode::DependabotOnly
         )
     }
 }

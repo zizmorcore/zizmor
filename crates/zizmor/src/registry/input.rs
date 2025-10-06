@@ -15,7 +15,7 @@ use crate::{
     audit::AuditInput,
     config::{Config, ConfigError},
     github_api::{Client, ClientError},
-    models::{action::Action, workflow::Workflow},
+    models::{action::Action, dependabot::Dependabot, workflow::Workflow},
 };
 
 /// Errors that can occur while collecting inputs.
@@ -99,6 +99,8 @@ pub(crate) enum InputKind {
     Workflow,
     /// An action definition.
     Action,
+    /// A Dependabot configuration file.
+    Dependabot,
 }
 
 impl std::fmt::Display for InputKind {
@@ -106,6 +108,7 @@ impl std::fmt::Display for InputKind {
         match self {
             InputKind::Workflow => write!(f, "workflow"),
             InputKind::Action => write!(f, "action"),
+            InputKind::Dependabot => write!(f, "dependabot config"),
         }
     }
 }
@@ -348,6 +351,9 @@ impl InputGroup {
         let input: Result<AuditInput, CollectionError> = match kind {
             InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(|wf| wf.into()),
             InputKind::Action => Action::from_string(contents, key.clone()).map(|a| a.into()),
+            InputKind::Dependabot => {
+                Dependabot::from_string(contents, key.clone()).map(|d| d.into())
+            }
         };
 
         match input {
@@ -375,6 +381,11 @@ impl InputGroup {
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
+            (Some("dependabot"), Some("yml" | "yaml")) => (
+                // NOTE: Safe unwrap because we just checked the filename.
+                InputKey::local(Group(path.as_str().into()), path, None).unwrap(),
+                InputKind::Dependabot,
+            ),
             (Some("action"), Some("yml" | "yaml")) => (
                 // NOTE: Safe unwrap because we just checked the filename.
                 InputKey::local(Group(path.as_str().into()), path, None).unwrap(),
@@ -465,6 +476,25 @@ impl InputGroup {
                     )
                 })?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
+            }
+
+            if options.mode.dependabot()
+                && entry.is_file()
+                && matches!(
+                    entry.file_name(),
+                    Some("dependabot.yml" | "dependabot.yaml")
+                )
+            {
+                // NOTE: Safe unwrap because we just checked the filename.
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
+                let contents = std::fs::read_to_string(entry).map_err(|e| {
+                    CollectionError::Inner(
+                        CollectionError::Io(e).into(),
+                        key.to_string(),
+                        InputKind::Dependabot,
+                    )
+                })?;
+                group.register(InputKind::Dependabot, contents, key, options.strict)?;
             }
         }
 
