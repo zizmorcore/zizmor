@@ -473,9 +473,17 @@ impl Config {
                 source: err,
             })
         } else {
-            let Some(parent) = path.parent() else {
-                tracing::debug!("no parent for {path:?}, cannot discover config");
-                return Ok(None);
+            let parent = match path.parent().map(|p| p.as_str()) {
+                // NOTE(ww): Annoying: `parent()` returns `None` for root paths,
+                // but `Some("")` for paths like `action.yml` (i.e. no parent dir).
+                // We have to handle this sentinel case explicitly, since
+                // `canonicalize("")` isn't valid.
+                Some("") => Utf8Path::new("."),
+                Some(p) => p.into(),
+                None => {
+                    tracing::debug!("no parent for {path:?}, cannot discover config");
+                    return Ok(None);
+                }
             };
 
             Self::discover_in_dir(parent).map_err(|err| ConfigError {

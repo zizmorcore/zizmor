@@ -344,3 +344,24 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
     );
     Ok(())
 }
+
+/// Regression test for #1207.
+///
+/// Ensures that we correctly handle single-inputs that aren't given
+/// with an explicit parent path, e.g. `action.yml` instead of
+/// `./action.yml`.
+#[test]
+fn issue_1207() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Both)
+            .working_dir(input_under_test("e2e-menagerie/dummy-action-1"))
+            // Input doesn't matter, as long as it's relative without a leading
+            // `./` or other path component.
+            .input("action.yaml")
+            .run()?
+    );
+
+    Ok(())
+}
