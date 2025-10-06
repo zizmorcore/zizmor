@@ -1,6 +1,5 @@
 //! Core namespace for zizmor's audits.
 
-use line_index::LineIndex;
 use thiserror::Error;
 use tracing::instrument;
 use yamlpath::Document;
@@ -32,6 +31,7 @@ pub(crate) mod known_vulnerable_actions;
 pub(crate) mod obfuscation;
 pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
+pub(crate) mod ref_version_mismatch;
 pub(crate) mod secrets_inherit;
 pub(crate) mod self_hosted_runner;
 pub(crate) mod stale_action_refs;
@@ -55,13 +55,6 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => &workflow.key,
             AuditInput::Action(action) => &action.key,
-        }
-    }
-
-    pub(crate) fn line_index(&self) -> &LineIndex {
-        match self {
-            AuditInput::Workflow(workflow) => workflow.as_document().line_index(),
-            AuditInput::Action(action) => action.as_document().line_index(),
         }
     }
 

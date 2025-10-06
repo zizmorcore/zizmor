@@ -1,11 +1,15 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().expects_failure(true).config(input_under_test(&format!(\"unpinned-uses/configs/{tc}.yml\",))).input(input_under_test(\"unpinned-uses/menagerie-of-uses.yml\")).run()?"
-snapshot_kind: text
 ---
+🌈 zizmor v@@VERSION@@
 fatal: no audit was performed
-failed to load config file at `@@CONFIG@@`
+error: configuration error in @@CONFIG@@
+  |
+  = help: check the configuration for the 'unpinned-uses' rule
+  = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
 
 Caused by:
-    0: invalid unpinned-uses configuration
-    1: invalid pattern: foo/b*r
+    0: configuration error in @@CONFIG@@
+    1: invalid syntax for audit `unpinned-uses`
+    2: invalid pattern: foo/b*r

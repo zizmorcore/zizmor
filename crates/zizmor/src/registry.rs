@@ -77,6 +77,7 @@ impl AuditRegistry {
         register_audit!(audit::unpinned_images::UnpinnedImages);
         register_audit!(audit::anonymous_definition::AnonymousDefinition);
         register_audit!(audit::unsound_condition::UnsoundCondition);
+        register_audit!(audit::ref_version_mismatch::RefVersionMismatch);
 
         Ok(registry)
     }
@@ -95,7 +96,7 @@ impl AuditRegistry {
 
     pub(crate) fn iter_audits(
         &self,
-    ) -> indexmap::map::Iter<'_, &str, Box<dyn Audit + Send + Sync>> {
+    ) -> indexmap::map::Iter<'_, &'static str, Box<dyn Audit + Send + Sync>> {
         self.audits.iter()
     }
 }
@@ -211,7 +212,6 @@ impl<'a> FindingRegistry<'a> {
     pub(crate) fn exit_code(&self) -> ExitCode {
         match self.highest_seen_severity {
             Some(sev) => match sev {
-                Severity::Unknown => ExitCode::from(10),
                 Severity::Informational => ExitCode::from(11),
                 Severity::Low => ExitCode::from(12),
                 Severity::Medium => ExitCode::from(13),

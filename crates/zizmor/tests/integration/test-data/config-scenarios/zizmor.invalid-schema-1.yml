@@ -1,0 +1,10 @@
+# zizmor.yml config file with an invalid schema
+
+# should be 'rules'
+rule:
+  template-injection:
+    ignore:
+      # ignore line 100 in ci.yml, any column
+      - ci.yml:100
+      # ignore all lines and columns in tests.yml
+      - tests.yml

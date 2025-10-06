@@ -44,4 +44,4 @@ help[undocumented-permissions]: permissions without explanatory comments
    |
    = note: audit confidence → High
 
-5 findings: 0 unknown, 0 informational, 3 low, 0 medium, 2 high
+5 findings: 0 informational, 3 low, 0 medium, 2 high

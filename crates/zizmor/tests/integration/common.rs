@@ -118,6 +118,11 @@ impl Zizmor {
         self
     }
 
+    pub fn working_dir(mut self, dir: impl Into<String>) -> Self {
+        self.cmd.current_dir(dir.into());
+        self
+    }
+
     pub fn run(mut self) -> Result<String> {
         if self.offline {
             self.cmd.arg("--offline");
@@ -215,6 +220,9 @@ impl Zizmor {
         // replacements above?
         let test_prefix_placeholder = "@@TEST_PREFIX@@";
         raw = raw.replace(TEST_PREFIX.as_str(), test_prefix_placeholder);
+
+        let version_placeholder = "@@VERSION@@";
+        raw = raw.replace(env!("CARGO_PKG_VERSION"), version_placeholder);
 
         Ok(raw)
     }

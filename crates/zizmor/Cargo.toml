@@ -1,7 +1,7 @@
 [package]
 name = "zizmor"
 description = "Static analysis for GitHub Actions"
-version = "1.13.0"
+version = "1.14.2"
 repository = "https://github.com/zizmorcore/zizmor"
 documentation = "https://docs.zizmor.sh"
 keywords = ["cli", "github-actions", "static-analysis", "security"]
@@ -18,7 +18,7 @@ workspace = true
 
 [features]
 default = ["lsp"]
-lsp = ["dep:tower-lsp"]
+lsp = ["dep:tower-lsp-server"]
 # Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
 gh-token-tests = []
 # Test-only: enable all online audits.
@@ -61,7 +61,7 @@ tar.workspace = true
 terminal-link.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "io-std"] }
-tower-lsp = { workspace = true, optional = true }
+tower-lsp-server = { workspace = true, optional = true }
 tracing.workspace = true
 tracing-indicatif.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
@@ -70,6 +70,9 @@ tree-sitter-bash.workspace = true
 tree-sitter-powershell.workspace = true
 yamlpath.workspace = true
 yamlpatch.workspace = true
+
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator.workspace = true
 
 [build-dependencies]
 csv.workspace = true

@@ -5,13 +5,11 @@
 
 use std::{fmt::Display, io::Read, ops::Deref, str::FromStr};
 
-use anyhow::{Context, Result, anyhow};
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use flate2::read::GzDecoder;
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
 };
-use owo_colors::OwoColorize;
 use reqwest::{
     Response, StatusCode,
     header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, InvalidHeaderValue, USER_AGENT},
@@ -19,11 +17,12 @@ use reqwest::{
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, de::DeserializeOwned};
 use tar::Archive;
+use thiserror::Error;
 use tracing::instrument;
 
 use crate::{
     CollectionOptions,
-    registry::input::{InputGroup, InputKey, InputKind, RepoSlug},
+    registry::input::{CollectionError, InputGroup, InputKey, InputKind, RepoSlug},
     utils::PipeSelf,
 };
 
@@ -35,7 +34,7 @@ pub(crate) enum GitHubHost {
 }
 
 impl GitHubHost {
-    pub(crate) fn new(hostname: &str) -> Result<Self, String> {
+    pub(crate) fn new(hostname: &str) -> anyhow::Result<Self, String> {
         let normalized = hostname.to_lowercase();
 
         // NOTE: ideally we'd do a full domain validity check here.
@@ -78,7 +77,7 @@ impl Display for GitHubHost {
 impl FromStr for GitHubHost {
     type Err = String;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> anyhow::Result<Self, Self::Err> {
         Self::new(s)
     }
 }
@@ -88,7 +87,7 @@ impl FromStr for GitHubHost {
 pub(crate) struct GitHubToken(String);
 
 impl GitHubToken {
-    pub(crate) fn new(token: &str) -> Result<Self, String> {
+    pub(crate) fn new(token: &str) -> anyhow::Result<Self, String> {
         let token = token.trim();
         if token.is_empty() {
             return Err("GitHub token cannot be empty".into());
@@ -101,27 +100,56 @@ impl GitHubToken {
     }
 }
 
+/// Errors that can occur while using the GitHub API client.
+#[derive(Debug, Error)]
+pub(crate) enum ClientError {
+    /// An error originating from the underlying HTTP client.
+    #[error("request error while accessing GitHub API")]
+    Request(#[from] reqwest::Error),
+    /// An error originating from the HTTP client (and its middleware).
+    #[error("request error while accessing GitHub API")]
+    Middleware(#[from] reqwest_middleware::Error),
+    /// We couldn't turn the user's token into a valid header value.
+    #[error("invalid token header")]
+    InvalidTokenHeader(#[from] InvalidHeaderValue),
+    /// We couldn't list branches because of an underlying error.
+    #[error("couldn't list branches for {owner}/{repo}")]
+    ListBranches {
+        #[source]
+        source: Box<ClientError>,
+        owner: String,
+        repo: String,
+    },
+    /// We couldn't list tags because of an underlying error.
+    #[error("couldn't list tags for {owner}/{repo}")]
+    ListTags {
+        #[source]
+        source: Box<ClientError>,
+        owner: String,
+        repo: String,
+    },
+    /// We couldn't fetch a single file because it disappeared
+    /// between listing and fetching it.
+    #[error("couldn't fetch file {file} from {slug}: is the branch/tag being modified?")]
+    FileTOCTOU { file: String, slug: String },
+}
+
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
-    host: GitHubHost,
+    _host: GitHubHost,
     http: ClientWithMiddleware,
 }
 
 impl Client {
     pub(crate) fn new(
-        host: GitHubHost,
-        token: GitHubToken,
-        cache_dir: Utf8PathBuf,
-    ) -> anyhow::Result<Self> {
+        host: &GitHubHost,
+        token: &GitHubToken,
+        cache_dir: &Utf8Path,
+    ) -> Result<Self, ClientError> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "zizmor".parse().unwrap());
-        headers.insert(
-            AUTHORIZATION,
-            token
-                .to_header_value()
-                .context("couldn't build authorization header for GitHub client")?,
-        );
+        headers.insert(AUTHORIZATION, token.to_header_value()?);
         headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
         headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
 
@@ -153,13 +181,9 @@ impl Client {
 
         Ok(Self {
             api_base: host.to_api_url(),
-            host,
+            _host: host.clone(),
             http,
         })
-    }
-
-    pub(crate) fn host(&self) -> &GitHubHost {
-        &self.host
     }
 
     async fn paginate<T: DeserializeOwned>(
@@ -200,58 +224,75 @@ impl Client {
     ///
     /// The error variants communicate all other status codes,
     /// with additional context where helpful.
-    fn resp_present(resp: Response) -> Result<bool> {
+    fn resp_present(resp: Response) -> Result<bool, ClientError> {
         match resp.status() {
             StatusCode::OK => Ok(true),
             StatusCode::NOT_FOUND => Ok(false),
-            StatusCode::FORBIDDEN => Err(anyhow::Error::from(resp.error_for_status().unwrap_err())
-                .context("request forbidden; token permissions may be insufficient")),
+            StatusCode::FORBIDDEN => Err(resp.error_for_status().unwrap_err().into()),
             _ => Err(resp.error_for_status().unwrap_err().into()),
         }
     }
 
     #[instrument(skip(self))]
     #[tokio::main]
-    pub(crate) async fn list_branches(&self, owner: &str, repo: &str) -> Result<Vec<Branch>> {
+    pub(crate) async fn list_branches(
+        &self,
+        owner: &str,
+        repo: &str,
+    ) -> Result<Vec<Branch>, ClientError> {
         self.paginate(&format!("repos/{owner}/{repo}/branches"))
             .await
-            .map_err(Into::into)
+            .map_err(|e| ClientError::ListBranches {
+                source: ClientError::from(e).into(),
+                owner: owner.to_string(),
+                repo: repo.to_string(),
+            })
     }
 
     #[instrument(skip(self))]
     #[tokio::main]
-    pub(crate) async fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>> {
+    pub(crate) async fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>, ClientError> {
         self.paginate(&format!("repos/{owner}/{repo}/tags"))
             .await
-            .map_err(Into::into)
+            .map_err(|e| ClientError::ListTags {
+                source: ClientError::from(e).into(),
+                owner: owner.to_string(),
+                repo: repo.to_string(),
+            })
     }
 
     #[instrument(skip(self))]
     #[tokio::main]
-    pub(crate) async fn has_branch(&self, owner: &str, repo: &str, branch: &str) -> Result<bool> {
+    pub(crate) async fn has_branch(
+        &self,
+        owner: &str,
+        repo: &str,
+        branch: &str,
+    ) -> Result<bool, ClientError> {
         let url = format!(
             "{api_base}/repos/{owner}/{repo}/git/ref/heads/{branch}",
             api_base = self.api_base
         );
 
         let resp = self.http.get(&url).send().await?;
-        Client::resp_present(resp).with_context(|| {
-            format!("{owner}/{repo}: error from the GitHub API while checking {branch}")
-        })
+        Client::resp_present(resp)
     }
 
     #[instrument(skip(self))]
     #[tokio::main]
-    pub(crate) async fn has_tag(&self, owner: &str, repo: &str, tag: &str) -> Result<bool> {
+    pub(crate) async fn has_tag(
+        &self,
+        owner: &str,
+        repo: &str,
+        tag: &str,
+    ) -> Result<bool, ClientError> {
         let url = format!(
             "{api_base}/repos/{owner}/{repo}/git/ref/tags/{tag}",
             api_base = self.api_base
         );
 
         let resp = self.http.get(&url).send().await?;
-        Client::resp_present(resp).with_context(|| {
-            format!("{owner}/{repo}: error from the GitHub API while checking {tag}")
-        })
+        Client::resp_present(resp)
     }
 
     #[instrument(skip(self))]
@@ -261,36 +302,41 @@ impl Client {
         owner: &str,
         repo: &str,
         git_ref: &str,
-    ) -> Result<Option<String>> {
-        // GitHub Actions generally resolves branches before tags, so try
-        // the repo's branches first.
-        let url = format!(
-            "{api_base}/repos/{owner}/{repo}/git/ref/heads/{git_ref}",
-            api_base = self.api_base
+    ) -> Result<Option<String>, ClientError> {
+        let base_url = format!(
+            "{api_base}/repos/{owner}/{repo}/commits",
+            api_base = self.api_base,
         );
 
-        let resp = self.http.get(url).send().await?;
-        match resp.status() {
-            StatusCode::OK => Ok(Some(resp.json::<GitRef>().await?.object.sha)),
-            StatusCode::NOT_FOUND => {
-                let url = format!(
-                    "{api_base}/repos/{owner}/{repo}/git/ref/tags/{git_ref}",
-                    api_base = self.api_base
-                );
+        // GitHub Actions resolves branches before tags.
+        for ref_type in &["heads", "tags"] {
+            let url = format!("{base_url}/refs/{ref_type}/{git_ref}");
 
-                let resp = self.http.get(url).send().await?;
-                match resp.status() {
-                    StatusCode::OK => Ok(Some(resp.json::<GitRef>().await?.object.sha)),
-                    StatusCode::NOT_FOUND => Ok(None),
-                    s => Err(anyhow!(
-                        "{owner}/{repo}: error from GitHub API while accessing ref {git_ref}: {s}"
-                    )),
+            let resp = self.http.get(&url).send().await?;
+            match resp.status() {
+                StatusCode::OK => {
+                    let commit = resp.json::<Commit>().await?;
+                    return Ok(Some(commit.sha));
                 }
+                // HACK(ww): GitHub's API documents 404 for a missing ref,
+                // but actually returns 422. We handle both cases here
+                // just in case GitHub decides to fix this in the future.
+                //
+                // In principle we're over-capturing errors here, but in
+                // practice we shouldn't see any causes of 422 other than
+                // a missing ref. The alternative would be to poke into the
+                // 422's JSON response and try to suss out whether it's
+                // actually a missing ref or something else, but that would
+                // be brittle without a commitment from GitHub to maintain
+                // a specific error string.
+                //
+                // See: <https://github.com/zizmorcore/zizmor/pull/972/files#r2167674833>
+                StatusCode::NOT_FOUND | StatusCode::UNPROCESSABLE_ENTITY => continue,
+                _ => return Err(resp.error_for_status().unwrap_err().into()),
             }
-            s => Err(anyhow!(
-                "{owner}/{repo}: error from GitHub API while accessing ref {git_ref}: {s}"
-            )),
         }
+
+        Ok(None)
     }
 
     #[instrument(skip(self))]
@@ -299,15 +345,13 @@ impl Client {
         owner: &str,
         repo: &str,
         commit: &str,
-    ) -> Result<Option<Tag>> {
+    ) -> Result<Option<Tag>, ClientError> {
         // Annoying: GitHub doesn't provide a rev-parse or similar API to
         // perform the commit -> tag lookup, so we download every tag and
         // do it for them.
         // This could be optimized in various ways, not least of which
         // is not pulling every tag eagerly before scanning them.
-        let tags = self
-            .list_tags(owner, repo)
-            .with_context(|| format!("couldn't retrieve tags for {owner}/{repo}@{commit}"))?;
+        let tags = self.list_tags(owner, repo)?;
 
         // Heuristic: there can be multiple tags for a commit, so we pick
         // the longest one. This isn't super sound, but it gets us from
@@ -326,7 +370,7 @@ impl Client {
         repo: &str,
         base: &str,
         head: &str,
-    ) -> Result<Option<ComparisonStatus>> {
+    ) -> Result<Option<ComparisonStatus>, ClientError> {
         let url = format!(
             "{api_base}/repos/{owner}/{repo}/compare/{base}...{head}",
             api_base = self.api_base
@@ -351,7 +395,7 @@ impl Client {
         owner: &str,
         repo: &str,
         version: &str,
-    ) -> Result<Vec<Advisory>> {
+    ) -> Result<Vec<Advisory>, ClientError> {
         // TODO: Paginate this as well.
         let url = format!("{api_base}/advisories", api_base = self.api_base);
 
@@ -379,15 +423,15 @@ impl Client {
         &self,
         slug: &RepoSlug,
         file: &str,
-    ) -> Result<Option<String>> {
+    ) -> Result<Option<String>, ClientError> {
         self.fetch_single_file_async(slug, file).await
     }
 
-    pub(crate) async fn fetch_single_file_async(
+    async fn fetch_single_file_async(
         &self,
         slug: &RepoSlug,
         file: &str,
-    ) -> Result<Option<String>> {
+    ) -> Result<Option<String>, ClientError> {
         tracing::debug!("fetching {file} from {slug}");
 
         let url = format!(
@@ -432,7 +476,7 @@ impl Client {
         slug: &RepoSlug,
         options: &CollectionOptions,
         group: &mut InputGroup,
-    ) -> Result<()> {
+    ) -> Result<(), CollectionError> {
         let owner = &slug.owner;
         let repo = &slug.repo;
         let git_ref = &slug.git_ref;
@@ -455,10 +499,13 @@ impl Client {
                 None => req,
             })
             .send()
-            .await?
-            .error_for_status()?
+            .await
+            .map_err(ClientError::from)?
+            .error_for_status()
+            .map_err(ClientError::from)?
             .json()
-            .await?;
+            .await
+            .map_err(ClientError::from)?;
 
         for file in resp
             .into_iter()
@@ -468,10 +515,11 @@ impl Client {
                 // This can only happen if we have some kind of TOCTOU
                 // discrepancy with the listing call above, e.g. a file
                 // was deleted on a branch immediately after we listed it.
-                anyhow::bail!(
-                    "couldn't fetch workflow file {file} from {slug}",
-                    file = file.name
-                );
+                return Err(ClientError::FileTOCTOU {
+                    file: file.path,
+                    slug: slug.to_string(),
+                }
+                .into());
             };
 
             let key = InputKey::remote(slug, file.path)?;
@@ -493,7 +541,7 @@ impl Client {
         slug: &RepoSlug,
         options: &CollectionOptions,
         group: &mut InputGroup,
-    ) -> Result<()> {
+    ) -> Result<(), CollectionError> {
         let url = format!(
             "{api_base}/repos/{owner}/{repo}/tarball/{git_ref}",
             api_base = self.api_base,
@@ -506,16 +554,16 @@ impl Client {
         // TODO: Could probably make this slightly faster by
         // streaming asynchronously into the decompression,
         // probably with the async-compression crate.
-        let resp = self.http.get(&url).send().await?;
+        let resp = self
+            .http
+            .get(&url)
+            .send()
+            .await
+            .map_err(ClientError::from)?
+            .error_for_status()
+            .map_err(ClientError::from)?;
 
-        if !resp.status().is_success() {
-            return Err(anyhow!(
-                "failed to fetch {url}: {status}",
-                status = resp.status().red()
-            ));
-        }
-
-        let contents = resp.bytes().await?;
+        let contents = resp.bytes().await.map_err(ClientError::from)?;
         let tar = GzDecoder::new(contents.deref());
 
         let mut archive = Archive::new(tar);
@@ -534,7 +582,10 @@ impl Client {
             let file_path: &Utf8Path = {
                 let mut components = entry_path.components();
                 components.next();
-                components.as_path().try_into()?
+                components
+                    .as_path()
+                    .try_into()
+                    .map_err(|e| CollectionError::InvalidPath(e, entry_path.clone().into_owned()))?
             };
 
             if matches!(file_path.extension(), Some("yaml" | "yml"))
@@ -566,7 +617,7 @@ impl Client {
 #[derive(Deserialize, Clone)]
 pub(crate) struct Branch {
     pub(crate) name: String,
-    pub(crate) commit: Object,
+    pub(crate) commit: Commit,
 }
 
 /// A single tag, as returned by GitHub's tags endpoints.
@@ -575,18 +626,15 @@ pub(crate) struct Branch {
 #[derive(Deserialize, Clone)]
 pub(crate) struct Tag {
     pub(crate) name: String,
-    pub(crate) commit: Object,
+    pub(crate) commit: Commit,
 }
 
-/// Represents a git object.
+/// A single commit, as returned by GitHub's commits endpoints.
+///
+/// This model is intentionally incomplete.
 #[derive(Deserialize, Clone)]
-pub(crate) struct Object {
+pub(crate) struct Commit {
     pub(crate) sha: String,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct GitRef {
-    pub(crate) object: Object,
 }
 
 #[derive(Clone, Deserialize)]

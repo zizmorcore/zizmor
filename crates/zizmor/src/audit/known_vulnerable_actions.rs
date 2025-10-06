@@ -99,11 +99,12 @@ impl KnownVulnerableActions {
 
         for vuln in vulns {
             let severity = match vuln.severity.as_str() {
-                "low" => Severity::Unknown,
+                "low" => Severity::Low,
                 "medium" => Severity::Medium,
                 "high" => Severity::High,
                 "critical" => Severity::High,
-                _ => Severity::Unknown,
+                // Seems like a safe fallback.
+                _ => Severity::High,
             };
 
             // Get the first patched version from the first vulnerability in the advisory
@@ -303,8 +304,8 @@ mod tests {
             false,
             Some(
                 github_api::Client::new(
-                    github_api::GitHubHost::default(),
-                    github_api::GitHubToken::new("fake").unwrap(),
+                    &github_api::GitHubHost::default(),
+                    &github_api::GitHubToken::new("fake").unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),
@@ -748,8 +749,8 @@ jobs:
             false,
             Some(
                 github_api::Client::new(
-                    github_api::GitHubHost::default(),
-                    github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    &github_api::GitHubHost::default(),
+                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),
@@ -803,8 +804,8 @@ jobs:
             false,
             Some(
                 github_api::Client::new(
-                    github_api::GitHubHost::default(),
-                    github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    &github_api::GitHubHost::default(),
+                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),

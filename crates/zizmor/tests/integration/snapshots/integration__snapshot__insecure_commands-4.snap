@@ -20,4 +20,4 @@ error[insecure-commands]: execution of insecure workflow commands is enabled
    |
    = note: audit confidence → Low
 
-2 findings (1 fixable): 0 unknown, 0 informational, 0 low, 0 medium, 2 high
+2 findings (1 fixable): 0 informational, 0 low, 0 medium, 2 high

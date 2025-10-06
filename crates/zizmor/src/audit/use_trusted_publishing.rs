@@ -29,6 +29,9 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
     "https://test.pypi.org/legacy/",
 ];
 
+const KNOWN_NPMJS_TP_INDICES: &[&str] =
+    &["https://registry.npmjs.org", "https://registry.npmjs.org/"];
+
 static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str])>> =
     LazyLock::new(|| {
         vec![
@@ -111,6 +114,29 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
                 },
                 &["with", "api-token"],
             ),
+            // NPM publishing actions that should use trusted publishing
+            // Detects when actions/setup-node is configured for npmjs with always-auth
+            (
+                ActionCoordinate::Configurable {
+                    uses_pattern: "actions/setup-node".parse().unwrap(),
+                    control: ControlExpr::all([
+                        ControlExpr::single(
+                            Toggle::OptIn,
+                            "registry-url",
+                            ControlFieldType::Exact(KNOWN_NPMJS_TP_INDICES),
+                            true,
+                        ),
+                        // Detect when always-auth is enabled (indicating manual token usage)
+                        ControlExpr::single(
+                            Toggle::OptIn,
+                            "always-auth",
+                            ControlFieldType::Boolean,
+                            false,
+                        ),
+                    ]),
+                },
+                &["with", "always-auth"],
+            ),
         ]
     });
 
@@ -136,6 +162,18 @@ const NON_TP_COMMAND_PATTERNS: &[&str] = &[
     r"(?s)twine\s+(.+\s+)?upload",
     // gem ... push ...
     r"(?s)gem\s+(.+\s+)?push",
+    // npm ... publish ...
+    r"(?s)npm\s+(.+\s+)?publish",
+    // yarn ... npm publish ...
+    r"(?s)yarn\s+(.+\s+)?npm\s+publish",
+    // pnpm ... publish ...
+    r"(?s)pnpm\s+(.+\s+)?publish",
+    // yarn run publish / yarn publish (lerna/npm workspaces)
+    r"(?s)yarn\s+(?:run\s+)?publish",
+    // npm run publish
+    r"(?s)npm\s+run\s+publish",
+    // pnpm run publish
+    r"(?s)pnpm\s+run\s+publish",
 ];
 
 static NON_TP_COMMAND_PATTERN_SET: LazyLock<RegexSet> =
@@ -302,9 +340,16 @@ impl Audit for UseTrustedPublishing {
         // In addition to the shared action matching above, we can
         // also check for some `run:` patterns that indicate publishing
         // without Trusted Publishing.
+
         // We can only check these reliably on workflows and not actions,
         // since we need to be able to see the `id-token` permission's
         // state to filter out any false positives.
+        //
+        // NOTE(ww): With #1161 we loosened this check and turned the
+        // "has ID token" check into a confidence modifier rather than
+        // a strict filter. This ended up being overly imprecise, since a lot
+        // of publishing commands use trusted publishing implicitly if
+        // the environment supports it. We reverted this with #1191.
         if let StepBodyCommon::Run { run, .. } = step.body()
             && !step.parent.has_id_token()
         {
@@ -323,12 +368,7 @@ impl Audit for UseTrustedPublishing {
                 findings.push(
                     Self::finding()
                         .severity(Severity::Informational)
-                        // Our confidence is lower here, since we have less
-                        // insight into the publishing command's context
-                        // (e.g. whether it's influenced by something in
-                        // the environment to publish to a different index
-                        // that doesn't support Trusted Publishing).
-                        .confidence(Confidence::Medium)
+                        .confidence(Confidence::High)
                         .add_location(step.location().hidden())
                         .add_location(
                             step.location()

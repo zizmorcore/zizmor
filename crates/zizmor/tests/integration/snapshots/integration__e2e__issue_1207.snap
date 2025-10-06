@@ -1,0 +1,12 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().expects_failure(false).output(OutputMode::Both).working_dir(input_under_test(\"e2e-menagerie/dummy-action-1\")).input(\"action.yaml\").run()?"
+---
+🌈 zizmor v@@VERSION@@
+ INFO zizmor::registry: skipping impostor-commit: can't run without a GitHub API token
+ INFO zizmor::registry: skipping ref-confusion: can't run without a GitHub API token
+ INFO zizmor::registry: skipping known-vulnerable-actions: can't run without a GitHub API token
+ INFO zizmor::registry: skipping stale-action-refs: can't run without a GitHub API token
+ INFO zizmor::registry: skipping ref-version-mismatch: can't run without a GitHub API token
+ INFO audit: zizmor: 🌈 completed @@INPUT@@
+No findings to report. Good job!

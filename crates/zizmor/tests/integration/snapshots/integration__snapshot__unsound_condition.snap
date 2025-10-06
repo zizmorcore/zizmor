@@ -38,6 +38,24 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:88:18
+   |
+88 |         if: "${{ false }} "
+   |                  ^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:93:19
+   |
+93 |         if: " ${{ false }}"
+   |                   ^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
 error[unsound-condition]: unsound conditional expression
   --> @@INPUT@@:27:9
    |
@@ -46,6 +64,7 @@ error[unsound-condition]: unsound conditional expression
    | |_____________________________^ condition always evaluates to true
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unsound-condition]: unsound conditional expression
   --> @@INPUT@@:33:9
@@ -55,6 +74,7 @@ error[unsound-condition]: unsound conditional expression
    | |_____________________________^ condition always evaluates to true
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unsound-condition]: unsound conditional expression
   --> @@INPUT@@:60:9
@@ -66,6 +86,7 @@ error[unsound-condition]: unsound conditional expression
    | |____________^ condition always evaluates to true
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unsound-condition]: unsound conditional expression
   --> @@INPUT@@:68:9
@@ -99,4 +120,20 @@ error[unsound-condition]: unsound conditional expression
    |
    = note: audit confidence → High
 
-11 findings (4 fixable): 0 unknown, 0 informational, 4 low, 0 medium, 7 high
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:88:9
+   |
+88 |         if: "${{ false }} "
+   |         ^^^^^^^^^^^^^^^^^^^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+error[unsound-condition]: unsound conditional expression
+  --> @@INPUT@@:93:9
+   |
+93 |         if: " ${{ false }}"
+   |         ^^^^^^^^^^^^^^^^^^^ condition always evaluates to true
+   |
+   = note: audit confidence → High
+
+15 findings (9 fixable): 0 informational, 6 low, 0 medium, 9 high

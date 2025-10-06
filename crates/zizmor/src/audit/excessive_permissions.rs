@@ -180,7 +180,7 @@ impl ExcessivePermissions {
                     let severity = KNOWN_PERMISSIONS.get(name.as_str()).unwrap_or_else(|| {
                         tracing::warn!("unknown permission: {name}");
 
-                        &Severity::Unknown
+                        &Severity::Medium
                     });
 
                     results.push((

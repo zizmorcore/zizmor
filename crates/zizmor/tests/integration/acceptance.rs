@@ -168,7 +168,7 @@ fn audit_self_hosted() -> anyhow::Result<()> {
 
     let execution = zizmor().args(cli_args).output()?;
 
-    assert_eq!(execution.status.code(), Some(10));
+    assert_eq!(execution.status.code(), Some(13));
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 

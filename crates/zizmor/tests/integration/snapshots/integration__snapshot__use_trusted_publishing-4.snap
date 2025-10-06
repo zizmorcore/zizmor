@@ -1,0 +1,129 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"use-trusted-publishing/npm-publish.yml\")).run()?"
+---
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:14:9
+   |
+14 |         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+...
+18 |           always-auth: true
+   |           ^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:20:14
+   |
+20 |         run: npm publish
+   |         ---  ^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:26:9
+   |
+26 |         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+...
+30 |           always-auth: true
+   |           ^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:32:14
+   |
+32 |         run: npm publish
+   |         ---  ^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:43:14
+   |
+43 |         run: npm publish
+   |         ---  ^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:49:14
+   |
+49 |         run: npm publish --access public
+   |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:57:11
+   |
+55 |         run: |
+   |         --- this step
+56 |           npm config set registry https://registry.npmjs.org
+57 |           npm publish --access public
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:63:14
+   |
+63 |         run: yarn npm publish
+   |         ---  ^^^^^^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:69:14
+   |
+69 |         run: yarn npm publish --access public
+   |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:75:14
+   |
+75 |         run: pnpm publish
+   |         ---  ^^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:81:14
+   |
+81 |         run: pnpm publish --access public
+   |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+   --> @@INPUT@@:129:9
+    |
+129 |         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+...
+132 |           always-auth: true
+    |           ^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
+    |
+    = note: audit confidence → High
+
+13 findings (1 suppressed): 12 informational, 0 low, 0 medium, 0 high

@@ -311,3 +311,57 @@ fn issue_1065() -> Result<()> {
 
     Ok(())
 }
+
+/// Ensures that we emit an appropriate warning when the user
+/// passes `--min-severity=unknown`.
+#[test]
+fn warn_on_min_severity_unknown() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .args(["--min-severity=unknown"])
+            .input(input_under_test("e2e-menagerie"))
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Ensures that we emit an appropriate warning when the user
+/// passes `--min-confidence=unknown`.
+#[test]
+fn warn_on_min_confidence_unknown() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .args(["--min-confidence=unknown"])
+            .input(input_under_test("e2e-menagerie"))
+            .run()?
+    );
+    Ok(())
+}
+
+/// Regression test for #1207.
+///
+/// Ensures that we correctly handle single-inputs that aren't given
+/// with an explicit parent path, e.g. `action.yml` instead of
+/// `./action.yml`.
+#[test]
+fn issue_1207() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Both)
+            .working_dir(input_under_test("e2e-menagerie/dummy-action-1"))
+            // Input doesn't matter, as long as it's relative without a leading
+            // `./` or other path component.
+            .input("action.yaml")
+            .run()?
+    );
+
+    Ok(())
+}

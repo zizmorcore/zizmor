@@ -1,0 +1,16 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().offline(false).input(input_under_test(\"ref-version-mismatch.yml\")).run()?"
+---
+warning[ref-version-mismatch]: detects commit SHAs that don't match their version comment tags
+  --> @@INPUT@@:21:77
+   |
+21 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
+   |         -----------------------------------------------------------------   ^^^^^^ points to commit 5e21ff4d9bc1
+   |         |
+   |         is pointed to by tag v3.8.2
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high

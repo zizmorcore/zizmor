@@ -378,8 +378,8 @@ impl TemplateInjection {
                 Subfeature::new(expr_span.start, &parsed),
                 // Intentionally not providing a fix here.
                 None,
-                Severity::Unknown,
-                Confidence::Unknown,
+                Severity::Low,
+                Confidence::High,
                 Persona::Pedantic,
             ));
 
@@ -440,7 +440,7 @@ impl TemplateInjection {
                                             (Severity::High, Confidence::High, Persona::default())
                                         }
                                         None => {
-                                            (Severity::Unknown, Confidence::Low, Persona::default())
+                                            (Severity::Low, Confidence::Low, Persona::default())
                                         }
                                     };
 
@@ -477,7 +477,7 @@ impl TemplateInjection {
                                                 origin.raw,
                                             ),
                                             self.attempt_fix(&expr, &parsed, step),
-                                            Severity::Unknown,
+                                            Severity::Low,
                                             Confidence::High,
                                             Persona::Pedantic,
                                         ));

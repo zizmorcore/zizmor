@@ -37,7 +37,7 @@ Add a `name:` field to your workflow or action.
 
 === "Before :warning:"
 
-    ```yaml title="anonymous-definition.yml" hl_lines="7"
+    ```yaml title="anonymous-definition.yml"
     on: push
 
     jobs:
@@ -49,7 +49,7 @@ Add a `name:` field to your workflow or action.
 
 === "After :white_check_mark:"
 
-    ```yaml title="anonymous-definition.yml" hl_lines="7-9"
+    ```yaml title="anonymous-definition.yml" hl_lines="1"
     name: Echo Test
     on: push
 
@@ -887,6 +887,50 @@ pre-existing consumers of that action without having to modify those consumers.
 
 Switch to hash-pinned actions.
 
+## `ref-version-mismatch`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [ref-version-mismatch.yml] | v1.14.0       | ✅             | ✅                 | ❌  |
+
+[ref-version-mismatch.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/ref-version-mismatch.yml
+
+Detects `#!yaml uses:` clauses where the action is hash-pinned, but the associated
+tag comment (used by tools like Dependabot) does not match the pinned commit.
+
+This can happen innocently when a user (or automation) updates a
+hash-pinned `#!yaml uses:` clause to a newer commit, but fails to update the
+associated tag comment. When this happens, tools like Dependabot will silently
+ignore the comment instead of refreshing it on subsequent updates, making
+it progressively more out-of-date over time.
+
+### Remediation
+
+Update the tag comment to match the pinned commit. Tools like
+@suzuki-shunsuke/pinact may be able to do this automatically for you.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="ref-version-mismatch.yml" hl_lines="5"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.2.2
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="ref-version-mismatch.yml" hl_lines="5"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        ```
+
 ## `secrets-inherit`
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
@@ -930,8 +974,6 @@ that explicitly forwards each secret actually needed by the reusable workflow.
               forward-me: ${{ secrets.forward-me }}
               me-too: ${{ secrets.me-too }}
         ```
-
-
 
 ## `self-hosted-runner`
 

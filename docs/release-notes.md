@@ -9,11 +9,88 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Performance Improvements 🚄
+
+* zizmor now uses `jemalloc` as its default allocator on non-MSVC targets,
+  which should significantly improve performance for Linux and macOS users
+  (#1200)
+
+### Enhancements 🌱
+
+* zizmor now unconditionally emits its version number to stderr on
+  startup (#1199)
+
+* The [ref-version-mismatch] audit now supports auto-fixes for many findings
+  (#1205)
+
+    Many thanks to @mostafa for implementing this improvement!
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail instead of analyzing single-file
+  inputs that lacked an explicit parent path component, e.g.
+  `zizmor foo.yml` instead of `zizmor ./foo.yml` (#1212)
+
+## 1.14.2
+
+### Bug Fixes 🐛
+
+* Fixed a bug where the [use-trusted-publishing] audit would produce-false
+  positive findings for some `run:` blocks that implicitly performed
+  trusted publishing (#1191)
+
+## 1.14.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where the [ref-version-mismatch] would incorrectly show the
+  wrong commit SHAs in its findings (#1183)
+
+## 1.14.0
+
+### New Features 🌈
+
+* **New audit**: [ref-version-mismatch] detects mismatches between
+  hash-pinned action references and their version comments (#972)
+
+    Many thanks to @segiddins for implementing this audit!
+
+### Enhancements 🌱
+
+* `zizmor` no longer uses the "Unknown" severity or confidence levels
+  for any findings. All findings previously categorized at these levels
+  are now given a more meaningful level (#1164)
+
+* The [use-trusted-publishing] audit now detects various Trusted Publishing
+  patterns for the npm ecosystem (#1161)
+
+    Many thanks to @KristianGrafana for implementing this improvement!
+
+* The [unsound-condition] audit now supports auto-fixes for many
+  findings (#1089)
+
+    Many thanks to @mostafa for implementing this improvement!
+
+* `zizmor`'s error handling has been restructured, improving the quality
+  of error messages and their associated suggestions (#1169)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [cache-poisoning] audit would fail to detect
   some cache usage variants in newer versions of `actions/setup-node`
   (#1152)
+
+* Fixed a bug where the [obfuscation] audit would incorrectly flag
+  some subexpressions as constant-reducible when they were not (#1170)
+
+### Deprecations ⚠️
+
+* The `unknown` values for `--min-severity` and `--min-confidence`
+  are now deprecated. These values were already no-ops (and have
+  been since introduction), and will be removed in a future release
+  (#1164)
+
+    Until removal, using these values will emit a warning.
 
 ## 1.13.0
 
@@ -1023,3 +1100,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [unsound-condition]: ./audits.md#unsound-condition
 [known-vulnerable-actions]: ./audits.md#known-vulnerable-actions
 [undocumented-permissions]: ./audits.md#undocumented-permissions
+[ref-version-mismatch]: ./audits.md#ref-version-mismatch

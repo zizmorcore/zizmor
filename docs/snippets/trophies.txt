@@ -13,6 +13,7 @@ apache/airflow#45408
 apache/airflow#47258
 apache/airflow#50749
 apache/iceberg-rust#1123
+apache/lucene#15216
 apache/opennlp#736
 apache/sedona#1976
 artichoke/artichoke#2825
@@ -67,6 +68,7 @@ edgelesssys/contrast#1604
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
+external-secrets/external-secrets#5368
 fatiando/harmonica#550
 Flexget/Flexget#4299
 foyer-rs/foyer#859
@@ -275,6 +277,7 @@ slackapi/python-slack-events-api#110
 stravalib/stravalib#645
 stravalib/stravalib#648
 stravalib/stravalib#649
+Swatinem/rust-cache#262
 TecharoHQ/anubis#188
 termcolor/termcolor#89
 termux/termux-packages#22519

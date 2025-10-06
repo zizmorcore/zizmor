@@ -7,11 +7,28 @@ use crate::common::{input_under_test, zizmor};
 use anyhow::Result;
 
 #[test]
-fn test_cant_retrieve() -> Result<()> {
+fn test_cant_retrieve_offline() -> Result<()> {
+    // Fails because --offline prevents network access.
     insta::assert_snapshot!(
         zizmor()
             .expects_failure(true)
             .offline(true)
+            .unsetenv("GH_TOKEN")
+            .args(["pypa/sampleproject"])
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_cant_retrieve_no_gh_token() -> Result<()> {
+    // Fails because GH_TOKEN is not set.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .offline(false)
             .unsetenv("GH_TOKEN")
             .args(["pypa/sampleproject"])
             .run()?
@@ -280,6 +297,21 @@ fn use_trusted_publishing() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("use-trusted-publishing/cargo-publish.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/npm-publish.yml"))
+            .run()?
+    );
+
+    // No use-trusted-publishing findings expected here.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "use-trusted-publishing/issue-1191-repro.yml"
+            ))
             .run()?
     );
 
@@ -789,6 +821,13 @@ fn obfuscation() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("obfuscation/issue-1177-repro.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
     Ok(())
 }
 
@@ -812,6 +851,19 @@ fn unpinned_images() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-images.yml"))
             .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn ref_version_mismatch() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .input(input_under_test("ref-version-mismatch.yml"))
             .run()?
     );
 

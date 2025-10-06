@@ -16,7 +16,7 @@ use std::{
 };
 use std::{fmt::Write, sync::LazyLock};
 
-use crate::{audit::AuditInput, models::AsDocument, registry::input::InputError};
+use crate::{audit::AuditInput, models::AsDocument, registry::input::CollectionError};
 
 pub(crate) static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
     validator_for(&serde_json::from_str(include_str!("./data/github-action.json")).unwrap())
@@ -322,7 +322,7 @@ fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Er
 pub(crate) fn from_str_with_validation<'de, T>(
     contents: &'de str,
     validator: &'static Validator,
-) -> Result<T, InputError>
+) -> Result<T, CollectionError>
 where
     T: serde::Deserialize<'de>,
 {
@@ -356,11 +356,13 @@ where
                 Ok(raw_value) => match validator.apply(&raw_value).basic() {
                     Valid(_) => Err(e)
                         .context("this suggests a bug in zizmor; please report it!")
-                        .map_err(InputError::Model),
-                    Invalid(errors) => Err(InputError::Schema(parse_validation_errors(errors))),
+                        .map_err(CollectionError::Model),
+                    Invalid(errors) => {
+                        Err(CollectionError::Schema(parse_validation_errors(errors)))
+                    }
                 },
                 // Syntax error.
-                Err(e) => Err(InputError::Syntax(e.into())),
+                Err(e) => Err(CollectionError::Syntax(e.into())),
             }
         }
     }

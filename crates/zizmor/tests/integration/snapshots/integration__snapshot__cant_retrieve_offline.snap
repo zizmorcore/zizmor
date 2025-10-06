@@ -1,0 +1,12 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().expects_failure(true).offline(true).unsetenv(\"GH_TOKEN\").args([\"pypa/sampleproject\"]).run()?"
+---
+🌈 zizmor v@@VERSION@@
+fatal: no audit was performed
+error: can't fetch remote repository: pypa/sampleproject
+  |
+  = help: remove --offline to audit remote repositories
+
+Caused by:
+    can't fetch remote repository: pypa/sampleproject

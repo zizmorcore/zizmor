@@ -41,6 +41,7 @@
         - apache/airflow#47258
         - apache/airflow#50749
         - apache/iceberg-rust#1123
+        - apache/lucene#15216
         - apache/opennlp#736
         - apache/sedona#1976
 
@@ -333,6 +334,14 @@
 
     ??? example "Examples"
         - ethereum/hevm#615
+
+
+-   ![](https://github.com/external-secrets.png?size=40){ width="40" loading=lazy align=left } external-secrets
+
+    ---
+
+    ??? example "Examples"
+        - external-secrets/external-secrets#5368
 
 
 -   ![](https://github.com/fatiando.png?size=40){ width="40" loading=lazy align=left } fatiando
@@ -1262,6 +1271,14 @@
         - stravalib/stravalib#645
         - stravalib/stravalib#648
         - stravalib/stravalib#649
+
+
+-   ![](https://github.com/Swatinem.png?size=40){ width="40" loading=lazy align=left } Swatinem
+
+    ---
+
+    ??? example "Examples"
+        - Swatinem/rust-cache#262
 
 
 -   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
