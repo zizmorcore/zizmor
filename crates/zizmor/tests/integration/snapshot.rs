@@ -948,3 +948,16 @@ fn unsound_condition() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn dependabot_execution() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dependabot-execution/basic/dependabot.yml"
+            ))
+            .run()?
+    );
+
+    Ok(())
+}
