@@ -11,6 +11,7 @@ use crate::models::inputs::HasInputs;
 
 pub(crate) mod action;
 pub(crate) mod coordinate;
+pub(crate) mod dependabot;
 pub(crate) mod inputs;
 pub(crate) mod uses;
 pub(crate) mod workflow;

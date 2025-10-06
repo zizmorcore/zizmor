@@ -15,7 +15,7 @@ use crate::{
     audit::AuditInput,
     config::{Config, ConfigError},
     github_api::{Client, ClientError},
-    models::{action::Action, workflow::Workflow},
+    models::{action::Action, dependabot::Dependabot, workflow::Workflow},
 };
 
 /// Errors that can occur while collecting inputs.
@@ -99,6 +99,8 @@ pub(crate) enum InputKind {
     Workflow,
     /// An action definition.
     Action,
+    /// A Dependabot configuration file.
+    Dependabot,
 }
 
 impl std::fmt::Display for InputKind {
@@ -106,6 +108,7 @@ impl std::fmt::Display for InputKind {
         match self {
             InputKind::Workflow => write!(f, "workflow"),
             InputKind::Action => write!(f, "action"),
+            InputKind::Dependabot => write!(f, "dependabot config"),
         }
     }
 }
@@ -348,6 +351,9 @@ impl InputGroup {
         let input: Result<AuditInput, CollectionError> = match kind {
             InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(|wf| wf.into()),
             InputKind::Action => Action::from_string(contents, key.clone()).map(|a| a.into()),
+            InputKind::Dependabot => {
+                Dependabot::from_string(contents, key.clone()).map(|d| d.into())
+            }
         };
 
         match input {

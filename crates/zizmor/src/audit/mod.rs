@@ -10,6 +10,7 @@ use crate::{
     models::{
         AsDocument,
         action::{Action, CompositeStep},
+        dependabot::Dependabot,
         workflow::{Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
     },
     registry::input::InputKey,
@@ -48,6 +49,7 @@ pub(crate) mod use_trusted_publishing;
 pub(crate) enum AuditInput {
     Workflow(Workflow),
     Action(Action),
+    Dependabot(Dependabot),
 }
 
 impl AuditInput {
@@ -55,6 +57,7 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => &workflow.key,
             AuditInput::Action(action) => &action.key,
+            AuditInput::Dependabot(dependabot) => &dependabot.key,
         }
     }
 
@@ -62,6 +65,7 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => workflow.link.as_deref(),
             AuditInput::Action(action) => action.link.as_deref(),
+            AuditInput::Dependabot(dependabot) => dependabot.link.as_deref(),
         }
     }
 
@@ -69,6 +73,7 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => workflow.location(),
             AuditInput::Action(action) => action.location(),
+            AuditInput::Dependabot(dependabot) => dependabot.location(),
         }
     }
 }
@@ -78,6 +83,7 @@ impl<'a> AsDocument<'a, 'a> for AuditInput {
         match self {
             AuditInput::Workflow(workflow) => workflow.as_document(),
             AuditInput::Action(action) => action.as_document(),
+            AuditInput::Dependabot(dependabot) => dependabot.as_document(),
         }
     }
 }
@@ -91,6 +97,12 @@ impl From<Workflow> for AuditInput {
 impl From<Action> for AuditInput {
     fn from(value: Action) -> Self {
         Self::Action(value)
+    }
+}
+
+impl From<Dependabot> for AuditInput {
+    fn from(value: Dependabot) -> Self {
+        Self::Dependabot(value)
     }
 }
 
@@ -308,6 +320,7 @@ pub(crate) trait Audit: AuditCore {
         let mut results = match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow, config),
             AuditInput::Action(action) => self.audit_action(action, config),
+            AuditInput::Dependabot(_) => todo!(),
         }?;
 
         results.extend(self.audit_raw(input, config)?);
