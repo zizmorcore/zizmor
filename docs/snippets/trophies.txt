@@ -82,6 +82,7 @@ getsops/sops#1704
 GenericMappingTools/pygmt#3861
 git-lfs/git-lfs#5930
 gitbutlerapp/gitbutler#5946
+github-aws-runners/terraform-aws-github-runner#4808
 grafana/agent#7148
 grafana/beyla#1868
 grafana/carbon-relay-ng#601
@@ -142,6 +143,7 @@ jupyterhub/jupyterhub#5049
 kanidm/kanidm#3430
 kata-containers/kata-containers#11392
 kata-containers/kata-containers#11475
+kubecolor/kubecolor#273
 libssh2/libssh2#1609
 lmstudio-ai/venvstacks#51
 matplotlib/matplotlib#29251
