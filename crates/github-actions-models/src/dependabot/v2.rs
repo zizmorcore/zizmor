@@ -88,6 +88,14 @@ pub enum Registry {
     },
 }
 
+/// A `directory` or `directories` field in a Dependabot `update` directive.
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum Directories {
+    Directory(String),
+    Directories(Vec<String>),
+}
+
 /// A single `update` directive.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
@@ -97,7 +105,8 @@ pub struct Update {
     #[serde(default)]
     pub assignees: IndexSet<String>,
     pub commit_message: Option<CommitMessage>,
-    pub directory: String,
+    #[serde(flatten)]
+    pub directories: Directories,
     #[serde(default)]
     pub groups: IndexMap<String, Group>,
     #[serde(default)]
