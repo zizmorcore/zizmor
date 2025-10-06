@@ -1,0 +1,20 @@
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/optimizing-pr-creation-version-updates#setting-up-a-cooldown-period-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+      include:
+        - "requests"
+        - "numpy"
+        - "pandas*"
+        - "django"
+      exclude:
+        - "pandas"
