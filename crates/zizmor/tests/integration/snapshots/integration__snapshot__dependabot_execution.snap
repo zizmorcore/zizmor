@@ -3,14 +3,14 @@ source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().input(input_under_test(\"dependabot-execution/basic/dependabot.yml\")).run()?"
 ---
 error[dependabot-execution]: external code execution in Dependabot updates
- --> @@INPUT@@:8:5
-  |
-4 |   - package-ecosystem: pip
-  |     ---------------------- this ecosystem
+  --> @@INPUT@@:10:5
+   |
+ 4 |   - package-ecosystem: pip
+   |     ---------------------- this ecosystem
 ...
-8 |     insecure-external-code-execution: allow
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enabled here
-  |
-  = note: audit confidence → High
+10 |     insecure-external-code-execution: allow
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enabled here
+   |
+   = note: audit confidence → High
 
 1 finding: 0 informational, 0 low, 0 medium, 1 high
