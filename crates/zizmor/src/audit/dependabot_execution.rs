@@ -1,6 +1,9 @@
 use github_actions_models::dependabot::v2::AllowDeny;
 
-use crate::audit::{Audit, audit_meta};
+use crate::{
+    audit::{Audit, audit_meta},
+    finding::location::Locatable as _,
+};
 
 audit_meta!(
     DependabotExecution,
@@ -25,33 +28,20 @@ impl Audit for DependabotExecution {
     ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
         let mut findings = vec![];
 
-        for (idx, update) in dependabot.updates.iter().enumerate() {
+        for update in dependabot.updates() {
             if matches!(update.insecure_external_code_execution, AllowDeny::Allow) {
                 findings.push(
                     Self::finding()
                         .confidence(crate::finding::Confidence::High)
                         .severity(crate::finding::Severity::High)
                         .add_location(
-                            dependabot
+                            update
                                 .location()
-                                .with_keys([
-                                    "updates".into(),
-                                    idx.into(),
-                                    "insecure-external-code-execution".into(),
-                                ])
+                                .with_keys(["insecure-external-code-execution".into()])
                                 .primary()
                                 .annotated("enabled here"),
                         )
-                        .add_location(
-                            dependabot
-                                .location()
-                                .with_keys([
-                                    "updates".into(),
-                                    idx.into(),
-                                    "package-ecosystem".into(),
-                                ])
-                                .annotated("this ecosystem"),
-                        )
+                        .add_location(update.location_with_name())
                         .build(dependabot)?,
                 );
             }

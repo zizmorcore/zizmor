@@ -7,7 +7,7 @@ use github_actions_models::dependabot;
 use terminal_link::Link;
 
 use crate::{
-    finding::location::{SymbolicFeature, SymbolicLocation},
+    finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
     models::AsDocument,
     registry::input::{CollectionError, InputKey},
     utils::{DEPENDABOT_VALIDATOR, from_str_with_validation},
@@ -75,5 +75,65 @@ impl Dependabot {
             feature_kind: SymbolicFeature::Normal,
             kind: Default::default(),
         }
+    }
+
+    pub(crate) fn updates(&self) -> Updates<'_> {
+        Updates::new(self)
+    }
+}
+
+pub(crate) struct Updates<'doc> {
+    parent: &'doc Dependabot,
+    inner:
+        std::iter::Enumerate<std::slice::Iter<'doc, github_actions_models::dependabot::v2::Update>>,
+}
+
+impl<'doc> Updates<'doc> {
+    fn new(parent: &'doc Dependabot) -> Self {
+        Self {
+            parent,
+            inner: parent.inner.updates.iter().enumerate(),
+        }
+    }
+}
+
+impl<'doc> Iterator for Updates<'doc> {
+    type Item = Update<'doc>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|(idx, update)| Update {
+            parent: self.parent,
+            index: idx,
+            inner: update,
+        })
+    }
+}
+
+pub(crate) struct Update<'doc> {
+    parent: &'doc Dependabot,
+    index: usize,
+    inner: &'doc github_actions_models::dependabot::v2::Update,
+}
+
+impl<'doc> std::ops::Deref for Update<'doc> {
+    type Target = github_actions_models::dependabot::v2::Update;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner
+    }
+}
+
+impl<'doc> Locatable<'doc> for Update<'doc> {
+    fn location(&self) -> SymbolicLocation<'doc> {
+        self.parent
+            .location()
+            .with_keys(["updates".into(), self.index.into()])
+            .annotated("this update rule")
+    }
+
+    fn location_with_name(&self) -> SymbolicLocation<'doc> {
+        self.location()
+            .with_keys(["package-ecosystem".into()])
+            .annotated("this ecosystem")
     }
 }
