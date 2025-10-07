@@ -78,6 +78,7 @@ impl AuditRegistry {
         register_audit!(audit::anonymous_definition::AnonymousDefinition);
         register_audit!(audit::unsound_condition::UnsoundCondition);
         register_audit!(audit::ref_version_mismatch::RefVersionMismatch);
+        register_audit!(audit::dependabot_execution::DependabotExecution);
 
         Ok(registry)
     }

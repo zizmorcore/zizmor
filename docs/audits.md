@@ -327,6 +327,71 @@ Some general pointers:
 
 [reusable workflow]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 
+## `dependabot-execution`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Dependabot  | [dependabot.yml]       | v1.15.0       | ✅             | ✅                 | ❌  |
+
+[dependabot.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-execution/basic/dependabot.yml
+
+Detects usages of `insecure-external-code-execution` in Dependabot configuration
+files.
+
+By default, Dependabot does not execution code from dependency manifests
+during updates. However, users can opt in to this behavior by setting
+`#!yaml insecure-external-code-execution: allow` in their Dependabot
+configuration.
+
+Some ecosystems (including but not limited to Python, Ruby, and JavaScript)
+depend partially on code execution during dependency resolution.
+
+In these ecosystems fully avoiding build-time code execution is impossible.
+However, build-time code execution *should* be avoided in automated dependency
+update contexts like Dependabot, since a compromised dependency may be able
+to obtain credentials or private source access automatically through
+a Dependabot job.
+
+Other resources:
+
+* [`insecure-external-code-execution` documentation](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#insecure-external-code-execution--)
+* [Dependabot: Allowing external code execution](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-access-to-private-registries-for-dependabot#allowing-external-code-execution)
+
+### Remediation
+
+In general, automatic dependency updates should be limited to only updates
+that do not require code execution at resolution time.
+
+In practice, this means that users should set
+`#!yaml insecure-external-code-execution: deny` **or** omit the field entirely
+(and rely on the default of `deny`).
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="dependabot.yml" hl_lines="7"
+        version: 2
+        updates:
+          - package-ecosystem: "pip"
+            directory: "/"
+            schedule:
+              interval: "daily"
+            insecure-external-code-execution: allow
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="dependabot.yml" hl_lines="7"
+        version: 2
+        updates:
+          - package-ecosystem: "pip"
+            directory: "/"
+            schedule:
+              interval: "daily"
+            insecure-external-code-execution: deny
+        ```
+
 ## `excessive-permissions`
 
 | Type     | Examples                    | Introduced in | Works offline  | Enabled by default | Configurable |
