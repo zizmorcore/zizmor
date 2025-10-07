@@ -49,9 +49,8 @@ sources can be mixed and matched:
 zizmor ../example.yml ../other-repo/ example/example
 ```
 
-When auditing local and/or remote repositories, `zizmor` will collect both
-workflows (e.g. `.github/workflows/ci.yml`) **and** action definitions
-(e.g. `custom-action/foo.yml`) by default. To configure collection behavior,
+When auditing local and/or remote repositories, `zizmor` will collect
+all known input kinds by default. To configure collection behavior,
 you can use the `--collect=...` option.
 
 ```bash
@@ -66,6 +65,9 @@ zizmor --collect=workflows-only example/example
 
 # collect only actions
 zizmor --collect=actions-only example/example
+
+# collect only Dependabot configs
+zizmor --collect=dependabot-only example/example
 ```
 
 !!! tip
@@ -81,8 +83,8 @@ zizmor --collect=actions-only example/example
     *will* audit `workflow.yml`, since it was passed explicitly and not
     collected indirectly.
 
-By default, `zizmor` will warn (but not fail) if it fails to parse a
-workflow or action definition. To turn these warnings into failures,
+By default, `zizmor` will warn (but not fail) if it fails to parse an
+input file. To turn these warnings into failures,
 you can use the `--strict-collection` option:
 
 ```bash
