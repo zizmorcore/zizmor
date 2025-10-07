@@ -333,7 +333,7 @@ Some general pointers:
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Dependabot  | [dependabot.yml]       | v1.15.0       | ✅             | ✅                 | ❌  |
 
-[dependabot.yml]: index.md
+[dependabot.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-execution/basic/dependabot.yml
 
 Detects usages of `insecure-external-code-execution` in Dependabot configuration
 files.
