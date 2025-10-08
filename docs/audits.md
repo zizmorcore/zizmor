@@ -327,13 +327,79 @@ Some general pointers:
 
 [reusable workflow]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 
+## `dependabot-cooldown`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Dependabot  | [dependabot-cooldown/]       | v1.15.0       | ✅             | ✅                 | ❌  |
+
+[dependabot-cooldown/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-cooldown/
+
+Detects missing or insufficient `cooldown` settings in Dependabot configuration
+files.
+
+By default, Dependabot does not perform any "cooldown" on dependency updates.
+In other words, a regularly scheduled Dependabot run may perform an update on a
+dependency that was just released moments before the run began. This presents
+both stability and supply-chain security risks:
+
+* **Stability**: updating to the newest version of a dependency immediately after its
+  release increases the risk of breakage, since new releases may contain
+  regressions or other issues that other users have not yet discovered.
+* **Supply-chain security**: package compromises are frequently *opportunistic*,
+  meaning that the attacker expects to have their compromised version taken
+  down by the packaging ecosystem relatively quickly. Updating immediately to
+  a newly released version increases the risk of automatically pulling in
+  a compromised version before it can be taken down.
+
+To mitigate these risks, Dependabot supports per-updater `cooldown` settings.
+However, these settings are not enabled by default; users **must** explicitly
+enable them.
+
+Other resources:
+
+* [Dependabot options reference - `cooldown`](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#cooldown-)
+
+### Remediation
+
+In general, you should enable `cooldown` for all updaters. The audit currently
+enforces the following minimums:
+
+* `default-days`: must be at least `4`.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="dependabot.yml"
+        version: 2
+        updates:
+          - package-ecosystem: "pip"
+            directory: "/"
+            schedule:
+              interval: "daily"
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="dependabot.yml" hl_lines="7-8"
+        version: 2
+        updates:
+          - package-ecosystem: "pip"
+            directory: "/"
+            schedule:
+              interval: "daily"
+            cooldown:
+              default-days: 7
+        ```
+
 ## `dependabot-execution`
 
 | Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Dependabot  | [dependabot.yml]       | v1.15.0       | ✅             | ✅                 | ❌  |
+| Dependabot  | [dependabot-execution/]       | v1.15.0       | ✅             | ✅                 | ❌  |
 
-[dependabot.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-execution/basic/dependabot.yml
+[dependabot-execution/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-execution/
 
 Detects usages of `insecure-external-code-execution` in Dependabot configuration
 files.

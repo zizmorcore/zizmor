@@ -956,8 +956,82 @@ fn dependabot_execution() -> Result<()> {
             .input(input_under_test(
                 "dependabot-execution/basic/dependabot.yml"
             ))
-            .run()?
+            .run()?,
+        @r"
+    error[dependabot-execution]: external code execution in Dependabot updates
+      --> @@INPUT@@:10:5
+       |
+     4 |   - package-ecosystem: pip
+       |     ---------------------- this ecosystem
+    ...
+    10 |     insecure-external-code-execution: allow
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enabled here
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "
     );
+
+    Ok(())
+}
+
+#[test]
+fn dependabot_cooldown() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dependabot-cooldown/missing/dependabot.yml"
+            ))
+            .run()?,
+        @r"
+    warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+     --> @@INPUT@@:4:5
+      |
+    4 |   - package-ecosystem: pip
+      |     ^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dependabot-cooldown/no-default-days/dependabot.yml"
+            ))
+            .run()?,
+        @r"
+    warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+     --> @@INPUT@@:6:5
+      |
+    6 |     cooldown: {}
+      |     ^^^^^^^^^^^^ no default-days configured
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    ");
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dependabot-cooldown/default-days-too-short/dependabot.yml"
+            ))
+            .run()?,
+        @r"
+    help[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+     --> @@INPUT@@:7:7
+      |
+    7 |       default-days: 2
+      |       ^^^^^^^^^^^^^^^ insufficient default-days configured
+      |
+      = note: audit confidence → Medium
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    ");
 
     Ok(())
 }

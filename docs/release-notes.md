@@ -9,6 +9,24 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+This release comes with support for auditing
+[Dependabot](https://docs.github.com/en/code-security/dependabot) configuration
+files! Like with composite action definition auditing (introduced in
+[v1.0.0](#v100)), Dependabot configuration auditing is **enabled by default**
+but can be disabled as part of input collection.
+
+To complement this new functionality, this release comes with two new audits:
+[dependabot-execution] and [dependabot-cooldown].
+
+### New Features 🌈
+
+* **New audit**: [dependabot-execution] detects Dependabot configurations
+  that allow insecure external code execution (#1220)
+
+* **New audit**: [dependabot-cooldown] detects Dependabot configurations
+  that do not include cooldown settings, or that set an insufficient
+  cooldown (#1223)
+
 ### Performance Improvements 🚄
 
 * `zizmor` now uses `jemalloc` as its default allocator on non-MSVC targets,
@@ -32,6 +50,9 @@ of `zizmor`.
 
 * `zizmor` is now more resilient to sporadic request failures when performing
   GitHub API requests (#1219)
+
+* `--collect=dependabot-only` is now supported as a collection option,
+  allowing users to audit only Dependabot configuration files (#1215)
 
 ### Bug Fixes 🐛
 
@@ -1109,3 +1130,5 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [known-vulnerable-actions]: ./audits.md#known-vulnerable-actions
 [undocumented-permissions]: ./audits.md#undocumented-permissions
 [ref-version-mismatch]: ./audits.md#ref-version-mismatch
+[dependabot-execution]: ./audits.md#dependabot-execution
+[dependabot-cooldown]: ./audits.md#dependabot-cooldown

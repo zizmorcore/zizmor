@@ -96,7 +96,9 @@ pub struct Cooldown {
     pub semver_major_days: Option<u64>,
     pub semver_minor_days: Option<u64>,
     pub semver_patch_days: Option<u64>,
+    #[serde(default)]
     pub include: Vec<String>,
+    #[serde(default)]
     pub exclude: Vec<String>,
 }
 
