@@ -1,0 +1,33 @@
+---
+source: crates/zizmor/tests/integration/fix_format_json.rs
+expression: "zizmor().input(input_under_test(\"fix-scenarios/mixed-fixes.yml\")).args([\"--fix=safe\",\n\"--fix-format=json\", \"--quiet\"]).run()?"
+---
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:6:3
+   |
+ 6 | /   mixed-issues:
+ 7 | |     runs-on: ubuntu-latest
+ 8 | |     steps:
+ 9 | |       # Template injection fix
+...  |
+28 | |           github.ref == 'refs/heads/main'
+29 | |         run: echo "Main branch check"
+   | |                                      ^
+   | |                                      |
+   | |______________________________________this job
+   |                                        default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+error[template-injection]: code injection via template expansion
+  --> @@INPUT@@:12:28
+   |
+11 |         run: |
+   |         --- this run block
+12 |           echo "Title: ${{ github.event.head_commit.message }}"
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+6 findings (4 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 1 high

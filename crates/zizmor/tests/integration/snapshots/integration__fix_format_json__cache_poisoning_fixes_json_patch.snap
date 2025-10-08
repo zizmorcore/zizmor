@@ -1,0 +1,45 @@
+---
+source: crates/zizmor/tests/integration/fix_format_json.rs
+expression: "zizmor().input(input_under_test(\"fix-scenarios/cache-poisoning-fixes.yml\")).args([\"--fix=all\",\n\"--fix-format=json\", \"--quiet\"]).run()?"
+---
+warning[artipacked]: credential persistence through GitHub Actions artifacts
+ --> @@INPUT@@:9:9
+  |
+9 |       - uses: actions/checkout@v4
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+  |
+  = note: audit confidence → Low
+  = note: this finding has an auto-fix
+
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:6:3
+   |
+ 6 | /   cache-poisoning:
+ 7 | |     runs-on: ubuntu-latest
+ 8 | |     steps:
+ 9 | |       - uses: actions/checkout@v4
+...  |
+17 | |       - name: Build
+18 | |         run: npm run build
+   | |                           ^
+   | |                           |
+   | |___________________________this job
+   |                             default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+4 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 2 medium, 0 high
+[
+  {
+    "file": "@@INPUT@@",
+    "operations": [
+      {
+        "op": "add",
+        "path": "/jobs/cache-poisoning/steps/0/with",
+        "value": {
+          "persist-credentials": false
+        }
+      }
+    ]
+  }
+]

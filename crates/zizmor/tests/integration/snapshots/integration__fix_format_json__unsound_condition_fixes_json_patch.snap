@@ -1,0 +1,53 @@
+---
+source: crates/zizmor/tests/integration/fix_format_json.rs
+expression: "zizmor().input(input_under_test(\"fix-scenarios/unsound-condition-fixes.yml\")).args([\"--fix=all\",\n\"--fix-format=json\", \"--quiet\"]).run()?"
+---
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:2:1
+   |
+ 2 | / name: unsound-condition-fixes
+ 3 | | on: [push]
+ 4 | |
+ 5 | | jobs:
+...  |
+20 | |       - name: Another check
+21 | |         run: echo "Another condition check"
+   | |____________________________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:6:3
+   |
+ 6 | /   unsound-condition:
+ 7 | |     runs-on: ubuntu-latest
+ 8 | |     if: |
+ 9 | |       github.ref == 'refs/heads/main'
+10 | |     steps:
+11 | |       - name: Check condition
+12 | |         run: echo "Running on main branch"
+   | |                                          ^
+   | |                                          |
+   | |__________________________________________this job
+   |                                            default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> @@INPUT@@:14:3
+   |
+14 | /   another-job:
+15 | |     runs-on: ubuntu-latest
+16 | |     if: >
+17 | |       github.event_name == 'push' &&
+...  |
+20 | |       - name: Another check
+21 | |         run: echo "Another condition check"
+   | |                                            ^
+   | |                                            |
+   | |____________________________________________this job
+   |                                              default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+5 findings (2 suppressed): 0 informational, 0 low, 3 medium, 0 high

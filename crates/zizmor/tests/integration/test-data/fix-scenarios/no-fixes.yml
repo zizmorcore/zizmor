@@ -1,0 +1,13 @@
+# Test file with no fixable issues (only warnings/info)
+name: no-fixes
+on: [push]
+
+jobs:
+  no-fixes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simple step
+        run: echo "This step has no fixable issues"
+
+      - name: Another step
+        run: echo "Another simple step"
