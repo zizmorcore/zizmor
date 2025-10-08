@@ -9,6 +9,15 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [dependabot-execution] detects Dependabot configurations
+  that allow insecure external code execution (#1220)
+
+* **New audit**: [dependabot-cooldown] detects Dependabot configurations
+  that do not include cooldown settings, or that set an insufficient
+  cooldown (#1223)
+
 ### Performance Improvements 🚄
 
 * `zizmor` now uses `jemalloc` as its default allocator on non-MSVC targets,
