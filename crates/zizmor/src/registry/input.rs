@@ -11,7 +11,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
-    CollectionMode, CollectionOptions,
+    CollectionOptions,
     audit::AuditInput,
     config::{Config, ConfigError},
     github_api::{Client, ClientError},
@@ -430,7 +430,7 @@ impl InputGroup {
         // zizmor integrators.
         //
         // See: https://github.com/zizmorcore/zizmor/issues/596
-        if options.mode.respects_gitignore() {
+        if options.mode_set.respects_gitignore() {
             walker
                 .require_git(false)
                 .git_ignore(true)
@@ -443,7 +443,7 @@ impl InputGroup {
             let entry = <&Utf8Path>::try_from(entry.path())
                 .map_err(|e| CollectionError::InvalidPath(e, entry.path().into()))?;
 
-            if options.mode.workflows()
+            if options.mode_set.workflows()
                 && entry.is_file()
                 && matches!(entry.extension(), Some("yml" | "yaml"))
                 && entry
@@ -462,7 +462,7 @@ impl InputGroup {
                 group.register(InputKind::Workflow, contents, key, options.strict)?;
             }
 
-            if options.mode.actions()
+            if options.mode_set.actions()
                 && entry.is_file()
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
@@ -478,7 +478,7 @@ impl InputGroup {
                 group.register(InputKind::Action, contents, key, options.strict)?;
             }
 
-            if options.mode.dependabot()
+            if options.mode_set.dependabot()
                 && entry.is_file()
                 && matches!(
                     entry.file_name(),
@@ -511,7 +511,7 @@ impl InputGroup {
         let config = Config::discover(options, || Config::discover_remote(client, &slug))?;
         let mut group = Self::new(config);
 
-        if matches!(options.mode, CollectionMode::WorkflowsOnly) {
+        if options.mode_set.workflows_only() {
             // Performance: if we're *only* collecting workflows, then we
             // can save ourselves a full repo download and only fetch the
             // repo's workflow files.
