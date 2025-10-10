@@ -52,7 +52,7 @@ impl Audit for ConcurrencyCancel {
                             findings.push(
                                 Self::finding()
                                     .confidence(Confidence::High)
-                                    .severity(Severity::Low)
+                                    .severity(Severity::Medium)
                                     .add_location(
                                         workflow
                                             .location()
@@ -73,7 +73,7 @@ impl Audit for ConcurrencyCancel {
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
-                        .severity(Severity::Low)
+                        .severity(Severity::Medium)
                         .add_location(
                             workflow
                                 .location()
@@ -87,7 +87,7 @@ impl Audit for ConcurrencyCancel {
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
-                        .severity(Severity::Low)
+                        .severity(Severity::Medium)
                         .add_location(
                             workflow
                                 .location()
