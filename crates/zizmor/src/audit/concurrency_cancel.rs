@@ -1,11 +1,11 @@
-use anyhow::Result;
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{audit_meta, Audit, AuditLoadError};
 use crate::{
     config::Config,
     finding::{Confidence, Finding, Severity},
     models::workflow::Workflow,
     state::AuditState,
 };
+use anyhow::Result;
 use github_actions_models::{common::expr::LoE, workflow::Concurrency};
 
 // NOTE:
@@ -40,29 +40,35 @@ impl Audit for ConcurrencyCancel {
     ) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
         match &workflow.concurrency {
-            Some(Concurrency::Rich { group, cancel_in_progress }) => {
-                if let LoE::Literal(cancel) = &cancel_in_progress {
-                    println!("cancel-in-progress is set");
-                    // FIXME: It's saying false even when true
-                    if !cancel {
-                         findings.push(
-                             Self::finding()
-                                 .confidence(Confidence::High)
-                                 .severity(Severity::Low)
-                                 .add_location(
-                                     workflow
-                                         .location()
-                                         .primary()
-                                         .annotated("cancel_in_progress set to false")
-                                 )
-                                 .build(workflow)?
-                         );
+            Some(Concurrency::Rich {
+                group,
+                cancel_in_progress,
+            }) => {
+                match &cancel_in_progress {
+                    LoE::Literal(cancel) => {
+                        println!("cancel-in-progress is set");
+                        // FIXME: It's saying false even when true
+                        if !cancel {
+                            findings.push(
+                                Self::finding()
+                                    .confidence(Confidence::High)
+                                    .severity(Severity::Low)
+                                    .add_location(
+                                        workflow
+                                            .location()
+                                            .primary()
+                                            .annotated("cancel_in_progress set to false"),
+                                    )
+                                    .build(workflow)?,
+                            );
+                        };
                     }
                     // TODO: Account for case of an expression, too
+                    LoE::Expr(_) => println!("TODO: expression case"),
                 };
                 println!("group: {group}")
                 // TODO: Also need to check group
-            },
+            }
             Some(Concurrency::Bare(_)) => {
                 findings.push(
                     Self::finding()
@@ -72,11 +78,11 @@ impl Audit for ConcurrencyCancel {
                             workflow
                                 .location()
                                 .primary()
-                                .annotated("concurrency is missing cancel-in-progress")
+                                .annotated("concurrency is missing cancel-in-progress"),
                         )
-                        .build(workflow)?
+                        .build(workflow)?,
                 );
-            },
+            }
             None => {
                 findings.push(
                     Self::finding()
@@ -86,9 +92,9 @@ impl Audit for ConcurrencyCancel {
                             workflow
                                 .location()
                                 .primary()
-                                .annotated("missing concurrency setting")
+                                .annotated("missing concurrency setting"),
                         )
-                        .build(workflow)?
+                        .build(workflow)?,
                 );
             }
         }
