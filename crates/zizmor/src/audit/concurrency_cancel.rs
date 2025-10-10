@@ -57,6 +57,7 @@ impl Audit for ConcurrencyCancel {
                                         workflow
                                             .location()
                                             .primary()
+                                            .with_keys(["concurrency".into()])
                                             .annotated("cancel_in_progress set to false"),
                                     )
                                     .build(workflow)?,
