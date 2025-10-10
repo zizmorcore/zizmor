@@ -1,0 +1,14 @@
+name: Workflow with cancel-in-progress=false
+on: push
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fypp-checks:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 1-ok
+      run: echo ok

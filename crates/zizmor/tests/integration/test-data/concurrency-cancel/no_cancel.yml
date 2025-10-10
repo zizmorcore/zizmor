@@ -1,0 +1,12 @@
+name: Workflow without cancel-in-progress
+on: push
+permissions: {}
+
+concurrency: group
+
+jobs:
+  fypp-checks:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 1-ok
+      run: echo ok
