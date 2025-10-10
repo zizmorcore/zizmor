@@ -1035,3 +1035,69 @@ fn dependabot_cooldown() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn concurrency_cancel() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-cancel/missing.yml"
+            ))
+            .run()?,
+        @r"
+    warning[concurrency-cancel]: cancel running jobs when they are re-triggered
+      --> @@INPUT@@:1:1
+       |
+     1 | name: Workflow without concurrency
+       | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing concurrency setting
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 1 medium, 1 high
+    "
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-cancel/cancel_false.yml"
+            ))
+            .run()?,
+        @r"
+    warning[concurrency-cancel]: cancel running jobs when they are re-triggered
+      --> @@INPUT@@:7:1
+       |
+     5 | / concurrency:
+     6 | |   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+     7 | |   cancel-in-progress: false
+     | |___________________________^ cancel-in-progress set to false
+     |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 1 medium, 1 high
+    "
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-cancel/no_cancel.yml"
+            ))
+            .run()?,
+        @r"
+    warning[concurrency-cancel]: cancel running jobs when they are re-triggered
+      --> @@INPUT@@:7:1
+       |
+     5 | concurrency: group
+     | | ^^^^^^^^^^^^^^^^^^ concurrency is missing cancel-in-progress
+     |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 1 medium, 1 high
+    "
+    );
+
+    // TODO: Check that cancel_true.yml doesn't raise any issues
+
+    Ok(())
+}

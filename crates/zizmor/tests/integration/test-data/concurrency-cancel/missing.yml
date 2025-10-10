@@ -1,0 +1,10 @@
+name: Workflow without concurrency
+on: push
+permissions: {}
+
+jobs:
+  fypp-checks:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 1-ok
+      run: echo ok
