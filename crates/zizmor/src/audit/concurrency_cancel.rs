@@ -6,19 +6,7 @@ use crate::{
     state::AuditState,
 };
 use anyhow::Result;
-use github_actions_models::{common::expr::LoE, workflow::Concurrency};
-
-// NOTE:
-// #[derive(Deserialize, Debug)]
-// #[serde(rename_all = "kebab-case", untagged)]
-// pub enum Concurrency {
-//     Bare(String),
-//     Rich {
-//         group: String,
-//         #[serde(default)]
-//         cancel_in_progress: BoE,
-//     },
-// }
+use github_actions_models::{common::expr::BoE, workflow::Concurrency};
 
 pub(crate) struct ConcurrencyCancel;
 
@@ -45,9 +33,9 @@ impl Audit for ConcurrencyCancel {
                 cancel_in_progress,
             }) => {
                 match &cancel_in_progress {
-                    LoE::Literal(cancel) => {
-                        println!("cancel-in-progress is set");
+                    BoE::Literal(cancel) => {
                         // FIXME: It's saying false even when true
+                        println!("cancel-in-progress is set to {cancel}");
                         if !cancel {
                             findings.push(
                                 Self::finding()
@@ -58,17 +46,17 @@ impl Audit for ConcurrencyCancel {
                                             .location()
                                             .primary()
                                             .with_keys(["concurrency".into()])
-                                            .annotated("cancel_in_progress set to false"),
+                                            .annotated("cancel-in-progress set to false"),
                                     )
                                     .build(workflow)?,
                             );
                         };
                     }
                     // TODO: Account for case of an expression, too
-                    LoE::Expr(_) => println!("TODO: expression case"),
+                    BoE::Expr(_) => println!("TODO: expression case"),
                 };
-                println!("group: {group}")
                 // TODO: Also need to check group
+                println!("group: {group}");
             }
             Some(Concurrency::Bare(_)) => {
                 findings.push(
