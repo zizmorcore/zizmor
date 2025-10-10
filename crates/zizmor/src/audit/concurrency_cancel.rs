@@ -1,4 +1,4 @@
-use super::{audit_meta, Audit, AuditLoadError};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     config::Config,
     finding::{Confidence, Finding, Severity},
