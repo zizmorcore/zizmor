@@ -216,6 +216,7 @@ impl App {
 // is fully removed.
 #[derive(Debug, Copy, Clone, ValueEnum)]
 enum CliSeverity {
+    #[value(hide = true)]
     Unknown,
     Informational,
     Low,
@@ -227,6 +228,7 @@ enum CliSeverity {
 // is fully removed.
 #[derive(Debug, Copy, Clone, ValueEnum)]
 enum CliConfidence {
+    #[value(hide = true)]
     Unknown,
     Low,
     Medium,
@@ -364,10 +366,12 @@ pub(crate) enum CliCollectionMode {
     /// Collect only workflow definitions.
     ///
     /// Deprecated; use `--collect=workflows`
+    #[value(hide = true)]
     WorkflowsOnly,
     /// Collect only action definitions (i.e. `action.yml`).
     ///
     /// Deprecated; use `--collect=actions`
+    #[value(hide = true)]
     ActionsOnly,
     /// Collect workflows.
     Workflows,
