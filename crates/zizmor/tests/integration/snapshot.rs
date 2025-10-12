@@ -992,8 +992,9 @@ fn dependabot_cooldown() -> Result<()> {
       |     ^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
       |
       = note: audit confidence → High
+      = note: this finding has an auto-fix
 
-    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -1011,8 +1012,9 @@ fn dependabot_cooldown() -> Result<()> {
       |     ^^^^^^^^^^^^ no default-days configured
       |
       = note: audit confidence → High
+      = note: this finding has an auto-fix
 
-    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
     ");
 
     insta::assert_snapshot!(
@@ -1029,8 +1031,9 @@ fn dependabot_cooldown() -> Result<()> {
       |       ^^^^^^^^^^^^^^^ insufficient default-days configured
       |
       = note: audit confidence → Medium
+      = note: this finding has an auto-fix
 
-    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    1 findings (1 fixable): 0 informational, 1 low, 0 medium, 0 high
     ");
 
     Ok(())
