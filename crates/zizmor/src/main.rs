@@ -1,6 +1,7 @@
 #![warn(clippy::all, clippy::dbg_macro)]
 
 use std::{
+    collections::HashSet,
     io::{Write, stdout},
     process::ExitCode,
 };
@@ -22,7 +23,7 @@ use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
 use thiserror::Error;
-use tracing::{Span, info_span, instrument};
+use tracing::{Span, info_span, instrument, warn};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
@@ -153,8 +154,8 @@ struct App {
     ///
     /// By default, all workflows and composite actions are collected,
     /// while honoring `.gitignore` files.
-    #[arg(long, value_enum, default_value_t)]
-    collect: CollectionMode,
+    #[arg(long, default_values = ["default"], num_args=1.., value_delimiter=',')]
+    collect: Vec<CliCollectionMode>,
 
     /// Fail instead of warning on syntax and schema errors
     /// in collected inputs.
@@ -215,6 +216,7 @@ impl App {
 // is fully removed.
 #[derive(Debug, Copy, Clone, ValueEnum)]
 enum CliSeverity {
+    #[value(hide = true)]
     Unknown,
     Informational,
     Low,
@@ -226,6 +228,7 @@ enum CliSeverity {
 // is fully removed.
 #[derive(Debug, Copy, Clone, ValueEnum)]
 enum CliConfidence {
+    #[value(hide = true)]
     Unknown,
     Low,
     Medium,
@@ -353,48 +356,128 @@ impl From<ColorMode> for anstream::ColorChoice {
 }
 
 /// How `zizmor` collects inputs from local and remote repository sources.
-#[derive(Copy, Clone, Debug, Default, ValueEnum)]
-pub(crate) enum CollectionMode {
+#[derive(Copy, Clone, Debug, Default, ValueEnum, Eq, PartialEq, Hash)]
+pub(crate) enum CliCollectionMode {
     /// Collect all possible inputs, ignoring `.gitignore` files.
     All,
     /// Collect all possible inputs, respecting `.gitignore` files.
     #[default]
     Default,
     /// Collect only workflow definitions.
+    ///
+    /// Deprecated; use `--collect=workflows`
+    #[value(hide = true)]
     WorkflowsOnly,
     /// Collect only action definitions (i.e. `action.yml`).
+    ///
+    /// Deprecated; use `--collect=actions`
+    #[value(hide = true)]
     ActionsOnly,
-    /// Collect only Dependabot configuration files (i.e. `dependabot.yml`).
-    DependabotOnly,
+    /// Collect workflows.
+    Workflows,
+    /// Collect action definitions (i.e. `action.yml`).
+    Actions,
+    /// Collect Dependabot configuration files (i.e. `dependabot.yml`).
+    Dependabot,
 }
 
-impl CollectionMode {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub(crate) enum CollectionMode {
+    All,
+    Default,
+    Workflows,
+    Actions,
+    Dependabot,
+}
+
+pub(crate) struct CollectionModeSet(HashSet<CollectionMode>);
+
+impl From<&[CliCollectionMode]> for CollectionModeSet {
+    fn from(modes: &[CliCollectionMode]) -> Self {
+        if modes.len() > 1
+            && modes.iter().any(|mode| {
+                matches!(
+                    mode,
+                    CliCollectionMode::WorkflowsOnly | CliCollectionMode::ActionsOnly
+                )
+            })
+        {
+            let mut cmd = App::command();
+
+            cmd.error(
+                clap::error::ErrorKind::ArgumentConflict,
+                "`workflows-only` and `actions-only` cannot be combined with other collection modes",
+            )
+            .exit();
+        }
+
+        Self(
+            modes
+                .iter()
+                .map(|mode| match mode {
+                    CliCollectionMode::All => CollectionMode::All,
+                    CliCollectionMode::Default => CollectionMode::Default,
+                    CliCollectionMode::WorkflowsOnly => {
+                        warn!("--collect=workflows-only is deprecated; use --collect=workflows instead");
+                        warn!("future versions of zizmor will reject this mode");
+
+                        CollectionMode::Workflows
+                    }
+                    CliCollectionMode::ActionsOnly => {
+                        warn!("--collect=actions-only is deprecated; use --collect=actions instead");
+                        warn!("future versions of zizmor will reject this mode");
+
+                        CollectionMode::Actions
+                    }
+                    CliCollectionMode::Workflows => CollectionMode::Workflows,
+                    CliCollectionMode::Actions => CollectionMode::Actions,
+                    CliCollectionMode::Dependabot => CollectionMode::Dependabot,
+                })
+                .collect(),
+        )
+    }
+}
+
+impl CollectionModeSet {
+    /// Does our collection mode respect `.gitignore` files?
     pub(crate) fn respects_gitignore(&self) -> bool {
-        matches!(
-            self,
-            CollectionMode::Default | CollectionMode::WorkflowsOnly | CollectionMode::ActionsOnly
-        )
+        // All modes except 'all' respect .gitignore files.
+        !self.0.contains(&CollectionMode::All)
     }
 
+    /// Should we collect workflows?
     pub(crate) fn workflows(&self) -> bool {
-        matches!(
-            self,
-            CollectionMode::All | CollectionMode::Default | CollectionMode::WorkflowsOnly
-        )
+        self.0.iter().any(|mode| {
+            matches!(
+                mode,
+                CollectionMode::All | CollectionMode::Default | CollectionMode::Workflows
+            )
+        })
     }
 
+    /// Should we collect *only* workflows?
+    pub(crate) fn workflows_only(&self) -> bool {
+        self.0.len() == 1 && self.0.contains(&CollectionMode::Workflows)
+    }
+
+    /// Should we collect actions?
     pub(crate) fn actions(&self) -> bool {
-        matches!(
-            self,
-            CollectionMode::All | CollectionMode::Default | CollectionMode::ActionsOnly
-        )
+        self.0.iter().any(|mode| {
+            matches!(
+                mode,
+                CollectionMode::All | CollectionMode::Default | CollectionMode::Actions
+            )
+        })
     }
 
+    /// Should we collect Dependabot configuration files?
     pub(crate) fn dependabot(&self) -> bool {
-        matches!(
-            self,
-            CollectionMode::All | CollectionMode::Default | CollectionMode::DependabotOnly
-        )
+        self.0.iter().any(|mode| {
+            matches!(
+                mode,
+                CollectionMode::All | CollectionMode::Default | CollectionMode::Dependabot
+            )
+        })
     }
 }
 
@@ -422,7 +505,7 @@ pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
 
 /// State used when collecting input groups.
 pub(crate) struct CollectionOptions {
-    pub(crate) mode: CollectionMode,
+    pub(crate) mode_set: CollectionModeSet,
     pub(crate) strict: bool,
     pub(crate) no_config: bool,
     /// Global configuration, if any.
@@ -584,6 +667,8 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     eprintln!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
 
+    let collection_mode_set = CollectionModeSet::from(app.collect.as_slice());
+
     let min_severity = match app.min_severity {
         Some(CliSeverity::Unknown) => {
             tracing::warn!("`unknown` is a deprecated minimum severity that has no effect");
@@ -618,7 +703,7 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
         .transpose()?;
 
     let collection_options = CollectionOptions {
-        mode: app.collect,
+        mode_set: collection_mode_set,
         strict: app.strict_collection,
         no_config: app.no_config,
         global_config,

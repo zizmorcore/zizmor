@@ -44,13 +44,13 @@ There are three input sources that `zizmor` knows about:
 sources can be mixed and matched:
 
 ```bash
-# audit a single local workflow, an entire local repository, and
+# audit a single local workflow, an entire local directory, and
 # a remote repository all in the same run
 zizmor ../example.yml ../other-repo/ example/example
 ```
 
-When auditing local and/or remote repositories, `zizmor` will collect
-all known input kinds by default. To configure collection behavior,
+When auditing local directories and/or remote repositories, `zizmor` will
+collect all known input kinds by default. To configure collection behavior,
 you can use the `--collect=...` option.
 
 ```bash
@@ -61,14 +61,26 @@ zizmor --collect=all example/example
 zizmor --collect=default example/example
 
 # collect only workflows
-zizmor --collect=workflows-only example/example
+zizmor --collect=workflows example/example
 
 # collect only actions
-zizmor --collect=actions-only example/example
+zizmor --collect=actions example/example
 
 # collect only Dependabot configs
-zizmor --collect=dependabot-only example/example
+zizmor --collect=dependabot example/example
+
+# collect only workflows and actions (not Dependabot configs)
+zizmor --collect=workflows,actions example/example
 ```
+
+!!! warning "Deprecation"
+
+  `--collect=workflows-only` and `--collect=actions-only` are
+  deprecated aliases for `--collect=workflows` and
+  `--collect=actions`, respectively, as of `v1.15.0`.
+
+  Users should switch to the non-deprecated forms, as the deprecated
+  forms will be removed in a future release.
 
 !!! tip
 
@@ -79,7 +91,7 @@ zizmor --collect=dependabot-only example/example
 !!! tip
 
     `--collect=...` only controls input collection from repository input
-    sources. In other words, `zizmor --collect=actions-only workflow.yml`
+    sources. In other words, `zizmor --collect=actions workflow.yml`
     *will* audit `workflow.yml`, since it was passed explicitly and not
     collected indirectly.
 
@@ -398,6 +410,7 @@ annotations.
 | ---- | ------- |
 | 0    | Successful audit; no findings to report (or SARIF mode enabled). |
 | 1    | Error during audit; consult output. |
+| 2    | Argument parsing failure; consult output. |
 | 11   | One or more findings found; highest finding is "informational" level. |
 | 12   | One or more findings found; highest finding is "low" level. |
 | 13   | One or more findings found; highest finding is "medium" level. |

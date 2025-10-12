@@ -51,7 +51,7 @@ To complement this new functionality, this release comes with two new audits:
 * `zizmor` is now more resilient to sporadic request failures when performing
   GitHub API requests (#1219)
 
-* `--collect=dependabot-only` is now supported as a collection option,
+* `--collect=dependabot` is now supported as a collection option,
   allowing users to audit only Dependabot configuration files (#1215)
 
 ### Bug Fixes 🐛
@@ -59,6 +59,16 @@ To complement this new functionality, this release comes with two new audits:
 * Fixed a bug where `zizmor` would fail instead of analyzing single-file
   inputs that lacked an explicit parent path component, e.g.
   `zizmor foo.yml` instead of `zizmor ./foo.yml` (#1212)
+
+### Deprecations ⚠️
+
+* The `workflows-only` and `actions-only` values for `--collect` are now
+  deprecated. These values have been replaced with `workflows` and
+  `actions`, respectively, which have the same behavior but
+  can be composed together with other collection modes. The deprecated
+  modes will be removed in a future release (#1228)
+
+    Until removal, using these values will emit a warning.
 
 ## 1.14.2
 
