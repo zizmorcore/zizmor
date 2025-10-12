@@ -33,7 +33,7 @@ fn issue_569() -> Result<()> {
         zizmor()
             .offline(false)
             .output(OutputMode::Both)
-            .args(["--no-online-audits", "--collect=workflows-only"])
+            .args(["--no-online-audits", "--collect=workflows"])
             .input("python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6")
             .run()?
     );
