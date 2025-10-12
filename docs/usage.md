@@ -69,7 +69,7 @@ zizmor --collect=actions example/example
 # collect only Dependabot configs
 zizmor --collect=dependabot example/example
 
-# collect only workflows and actions
+# collect only workflows and actions (not Dependabot configs)
 zizmor --collect=workflows,actions example/example
 ```
 
