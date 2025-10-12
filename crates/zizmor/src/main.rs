@@ -419,11 +419,13 @@ impl From<&[CliCollectionMode]> for CollectionModeSet {
                     CliCollectionMode::Default => CollectionMode::Default,
                     CliCollectionMode::WorkflowsOnly => {
                         warn!("--collect=workflows-only is deprecated; use --collect=workflows instead");
+                        warn!("future versions of zizmor will reject this mode");
 
                         CollectionMode::Workflows
                     }
                     CliCollectionMode::ActionsOnly => {
                         warn!("--collect=actions-only is deprecated; use --collect=actions instead");
+                        warn!("future versions of zizmor will reject this mode");
 
                         CollectionMode::Actions
                     }

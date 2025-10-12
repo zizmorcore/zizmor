@@ -70,6 +70,7 @@ fn test_warn_deprecated_modes() -> Result<()> {
         @r"
     🌈 zizmor v@@VERSION@@
      WARN zizmor: --collect=workflows-only is deprecated; use --collect=workflows instead
+     WARN zizmor: future versions of zizmor will reject this mode
     No findings to report. Good job!
     ");
 
@@ -83,6 +84,7 @@ fn test_warn_deprecated_modes() -> Result<()> {
         @r"
     🌈 zizmor v@@VERSION@@
      WARN zizmor: --collect=actions-only is deprecated; use --collect=actions instead
+     WARN zizmor: future versions of zizmor will reject this mode
     No findings to report. Good job!
     ");
 
