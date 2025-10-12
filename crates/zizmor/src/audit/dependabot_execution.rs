@@ -2,8 +2,9 @@ use github_actions_models::dependabot::v2::AllowDeny;
 
 use crate::{
     audit::{Audit, audit_meta},
-    finding::location::Locatable as _,
+    finding::{Fix, FixDisposition, location::Locatable as _},
 };
+use yamlpatch::{Op, Patch};
 
 audit_meta!(
     DependabotExecution,
@@ -12,6 +13,24 @@ audit_meta!(
 );
 
 pub(crate) struct DependabotExecution;
+
+impl DependabotExecution {
+    /// Creates a fix that changes insecure-external-code-execution from allow to deny
+    fn create_set_deny_fix<'doc>(update: crate::models::dependabot::Update<'doc>) -> Fix<'doc> {
+        Fix {
+            title: "set insecure-external-code-execution to deny".to_string(),
+            key: update.location().key,
+            disposition: FixDisposition::Safe,
+            patches: vec![Patch {
+                route: update
+                    .location()
+                    .route
+                    .with_keys(["insecure-external-code-execution".into()]),
+                operation: Op::Replace(serde_yaml::Value::String("deny".to_string())),
+            }],
+        }
+    }
+}
 
 impl Audit for DependabotExecution {
     fn new(_state: &crate::state::AuditState) -> Result<Self, super::AuditLoadError>
@@ -42,11 +61,155 @@ impl Audit for DependabotExecution {
                                 .annotated("enabled here"),
                         )
                         .add_location(update.location_with_name())
+                        .fix(Self::create_set_deny_fix(update))
                         .build(dependabot)?,
                 );
             }
         }
 
         Ok(findings)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        config::Config,
+        models::{AsDocument, dependabot::Dependabot},
+        registry::input::InputKey,
+        state::AuditState,
+    };
+
+    /// Macro for testing dependabot audits with common boilerplate
+    macro_rules! test_dependabot_audit {
+        ($audit_type:ty, $filename:expr, $dependabot_content:expr, $test_fn:expr) => {{
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
+            let dependabot = Dependabot::from_string($dependabot_content.to_string(), key).unwrap();
+            let audit_state = AuditState::default();
+            let audit = <$audit_type>::new(&audit_state).unwrap();
+            let findings = audit
+                .audit_dependabot(&dependabot, &Config::default())
+                .unwrap();
+
+            $test_fn(&dependabot, findings)
+        }};
+    }
+
+    #[test]
+    fn test_fix_allow_to_deny() {
+        let dependabot_content = r#"
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+    insecure-external-code-execution: allow
+"#;
+
+        test_dependabot_audit!(
+            DependabotExecution,
+            "test_fix_allow_to_deny.yml",
+            dependabot_content,
+            |dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty(), "Expected findings but got none");
+                let finding = &findings[0];
+                assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
+
+                let fix = &finding.fixes[0];
+                let fixed_document = fix.apply(dependabot.as_document()).unwrap();
+                insta::assert_snapshot!(fixed_document.source(), @r"
+                version: 2
+
+                updates:
+                  - package-ecosystem: pip
+                    directory: /
+                    schedule:
+                      interval: daily
+                    insecure-external-code-execution: deny
+                ");
+            }
+        );
+    }
+
+    #[test]
+    fn test_no_fix_needed_for_deny() {
+        let dependabot_content = r#"
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+    insecure-external-code-execution: deny
+"#;
+
+        test_dependabot_audit!(
+            DependabotExecution,
+            "test_no_fix_needed_for_deny.yml",
+            dependabot_content,
+            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                insta::assert_snapshot!(findings.len(), @"0");
+            }
+        );
+    }
+
+    #[test]
+    fn test_no_fix_needed_when_omitted() {
+        let dependabot_content = r#"
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+"#;
+
+        test_dependabot_audit!(
+            DependabotExecution,
+            "test_no_fix_needed_when_omitted.yml",
+            dependabot_content,
+            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                insta::assert_snapshot!(findings.len(), @"0");
+            }
+        );
+    }
+
+    #[test]
+    fn test_fix_multiple_updates() {
+        let dependabot_content = r#"
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+    insecure-external-code-execution: allow
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    insecure-external-code-execution: allow
+"#;
+
+        test_dependabot_audit!(
+            DependabotExecution,
+            "test_fix_multiple_updates.yml",
+            dependabot_content,
+            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                insta::assert_snapshot!(findings.len(), @"2");
+
+                // Verify both findings have fixes
+                for finding in &findings {
+                    assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
+                }
+            }
+        );
     }
 }
