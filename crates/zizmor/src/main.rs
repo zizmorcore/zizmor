@@ -23,7 +23,7 @@ use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
 use thiserror::Error;
-use tracing::{Span, info_span, instrument};
+use tracing::{Span, info_span, instrument, warn};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
@@ -417,12 +417,18 @@ impl From<&[CliCollectionMode]> for CollectionModeSet {
                 .map(|mode| match mode {
                     CliCollectionMode::All => CollectionMode::All,
                     CliCollectionMode::Default => CollectionMode::Default,
-                    CliCollectionMode::WorkflowsOnly | CliCollectionMode::Workflows => {
+                    CliCollectionMode::WorkflowsOnly => {
+                        warn!("--collect=workflows-only is deprecated; use --collect=workflows instead");
+
                         CollectionMode::Workflows
                     }
-                    CliCollectionMode::ActionsOnly | CliCollectionMode::Actions => {
+                    CliCollectionMode::ActionsOnly => {
+                        warn!("--collect=actions-only is deprecated; use --collect=actions instead");
+
                         CollectionMode::Actions
                     }
+                    CliCollectionMode::Workflows => CollectionMode::Workflows,
+                    CliCollectionMode::Actions => CollectionMode::Actions,
                     CliCollectionMode::Dependabot => CollectionMode::Dependabot,
                 })
                 .collect(),
@@ -587,8 +593,6 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
         return Ok(ExitCode::SUCCESS);
     }
 
-    let collection_mode_set = CollectionModeSet::from(app.collect.as_slice());
-
     let color_mode = match app.color {
         Some(color_mode) => color_mode,
         None => {
@@ -660,6 +664,8 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
     }
 
     eprintln!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
+
+    let collection_mode_set = CollectionModeSet::from(app.collect.as_slice());
 
     let min_severity = match app.min_severity {
         Some(CliSeverity::Unknown) => {

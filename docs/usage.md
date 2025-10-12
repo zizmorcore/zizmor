@@ -410,6 +410,7 @@ annotations.
 | ---- | ------- |
 | 0    | Successful audit; no findings to report (or SARIF mode enabled). |
 | 1    | Error during audit; consult output. |
+| 2    | Argument parsing failure; consult output. |
 | 11   | One or more findings found; highest finding is "informational" level. |
 | 12   | One or more findings found; highest finding is "low" level. |
 | 13   | One or more findings found; highest finding is "medium" level. |

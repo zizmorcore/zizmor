@@ -4,6 +4,7 @@ use anyhow::Result;
 
 use crate::common::{OutputMode, input_under_test, zizmor};
 
+mod collect;
 mod json_v1;
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
