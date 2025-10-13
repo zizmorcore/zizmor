@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.15.0
+
 This release comes with support for auditing
 [Dependabot](https://docs.github.com/en/code-security/dependabot) configuration
 files! Like with composite action definition auditing (introduced in
