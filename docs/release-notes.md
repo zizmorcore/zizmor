@@ -54,6 +54,9 @@ To complement this new functionality, this release comes with two new audits:
 * `--collect=dependabot` is now supported as a collection option,
   allowing users to audit only Dependabot configuration files (#1215)
 
+* The `--fix` mode (introduced with v1.10.0) is now considered
+  **stable** and no longer experimental (#1232)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would fail instead of analyzing single-file

@@ -508,21 +508,12 @@ sensitive `zizmor`'s analyses are:
     1 finding: 0 informational, 0 low, 1 medium, 0 high
     ```
 
-## Auto-fixing results *&#8203;*{.chip .chip-experimental} { #auto-fixing-results }
-
-!!! warning
-
-    `zizmor`'s auto-fix mode is currently **experimental** and subject to
-    breaking changes.
-
-    You **will** encounter bugs while experimenting with it;
-    please [file them]!
-
-    [file them]: https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml
+## Auto-fixing results { #auto-fixing-results }
 
 !!! tip
 
-    `--fix=[MODE]` is available in `v1.10.0` and later.
+    `--fix=[MODE]` is available in `v1.10.0` and later, and is
+    considered stable as of `v1.15.0`.
 
 Starting with `v1.10.0`, `zizmor` can automatically fix a subset of its findings.
 
