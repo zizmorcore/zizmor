@@ -607,6 +607,14 @@
         - Instagram/LibCST#1262
 
 
+-   ![](https://github.com/ispc.png?size=40){ width="40" loading=lazy align=left } ispc
+
+    ---
+
+    ??? example "Examples"
+        - ispc/ispc#3589
+
+
 -   ![](https://github.com/jj-vcs.png?size=40){ width="40" loading=lazy align=left } jj-vcs
 
     ---
