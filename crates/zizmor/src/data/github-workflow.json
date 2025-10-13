@@ -337,53 +337,6 @@
       "$ref": "#/definitions/globs",
       "description": "When using the push and pull_request events, you can configure a workflow to run when at least one file does not match paths-ignore or at least one modified file matches the configured paths. Path filters are not evaluated for pushes to tags.\nThe paths-ignore and paths keywords accept glob patterns that use the * and ** wildcard characters to match more than one path name. For more information, see https://help.github.com/en/github/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet.\nYou can exclude paths using two types of filters. You cannot use both of these filters for the same event in a workflow.\n- paths-ignore - Use the paths-ignore filter when you only need to exclude path names.\n- paths - Use the paths filter when you need to filter paths for positive matches and exclude paths."
     },
-    "ref": {
-      "properties": {
-        "branches": {
-          "$ref": "#/definitions/branch"
-        },
-        "branches-ignore": {
-          "$ref": "#/definitions/branch"
-        },
-        "tags": {
-          "$ref": "#/definitions/branch"
-        },
-        "tags-ignore": {
-          "$ref": "#/definitions/branch"
-        },
-        "paths": {
-          "$ref": "#/definitions/path"
-        },
-        "paths-ignore": {
-          "$ref": "#/definitions/path"
-        }
-      },
-      "oneOf": [
-        {
-          "type": "object",
-          "allOf": [
-            {
-              "not": {
-                "required": ["branches", "branches-ignore"]
-              }
-            },
-            {
-              "not": {
-                "required": ["tags", "tags-ignore"]
-              }
-            },
-            {
-              "not": {
-                "required": ["paths", "paths-ignore"]
-              }
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
     "shell": {
       "$comment": "https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsshell",
       "description": "You can override the default shell settings in the runner's operating system using the shell keyword. You can use built-in shell keywords, or you can define a custom set of shell options.",
@@ -1347,46 +1300,83 @@
             },
             "pull_request": {
               "$comment": "https://help.github.com/en/github/automating-your-workflow-with-github-actions/events-that-trigger-workflows#pull-request-event-pull_request",
-              "$ref": "#/definitions/ref",
               "description": "Runs your workflow anytime the pull_request event occurs. More than one activity type triggers this event. For information about the REST API, see https://developer.github.com/v3/pulls.\nNote: Workflows do not run on private base repositories when you open a pull request from a forked repository.\nWhen you create a pull request from a forked repository to the base repository, GitHub sends the pull_request event to the base repository and no pull request events occur on the forked repository.\nWorkflows don't run on forked repositories by default. You must enable GitHub Actions in the Actions tab of the forked repository.\nThe permissions for the GITHUB_TOKEN in forked repositories is read-only. For more information about the GITHUB_TOKEN, see https://help.github.com/en/articles/virtual-environments-for-github-actions.",
-              "properties": {
-                "types": {
-                  "$ref": "#/definitions/types",
-                  "items": {
-                    "type": "string",
-                    "enum": [
-                      "assigned",
-                      "unassigned",
-                      "labeled",
-                      "unlabeled",
-                      "opened",
-                      "edited",
-                      "closed",
-                      "reopened",
-                      "synchronize",
-                      "converted_to_draft",
-                      "ready_for_review",
-                      "locked",
-                      "unlocked",
-                      "milestoned",
-                      "demilestoned",
-                      "review_requested",
-                      "review_request_removed",
-                      "auto_merge_enabled",
-                      "auto_merge_disabled",
-                      "enqueued",
-                      "dequeued"
-                    ]
-                  },
-                  "default": ["opened", "synchronize", "reopened"]
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "types": {
+                          "$ref": "#/definitions/types",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "assigned",
+                              "unassigned",
+                              "labeled",
+                              "unlabeled",
+                              "opened",
+                              "edited",
+                              "closed",
+                              "reopened",
+                              "synchronize",
+                              "converted_to_draft",
+                              "ready_for_review",
+                              "locked",
+                              "unlocked",
+                              "milestoned",
+                              "demilestoned",
+                              "review_requested",
+                              "review_request_removed",
+                              "auto_merge_enabled",
+                              "auto_merge_disabled",
+                              "enqueued",
+                              "dequeued"
+                            ]
+                          },
+                          "default": ["opened", "synchronize", "reopened"]
+                        },
+                        "branches": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "branches-ignore": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "tags": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "tags-ignore": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "paths": {
+                          "$ref": "#/definitions/path"
+                        },
+                        "paths-ignore": {
+                          "$ref": "#/definitions/path"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "not": {
+                        "required": ["branches", "branches-ignore"]
+                      }
+                    },
+                    {
+                      "not": {
+                        "required": ["tags", "tags-ignore"]
+                      }
+                    },
+                    {
+                      "not": {
+                        "required": ["paths", "paths-ignore"]
+                      }
+                    }
+                  ]
                 }
-              },
-              "patternProperties": {
-                "^(branche|tag|path)s(-ignore)?$": {
-                  "type": "array"
-                }
-              },
-              "additionalProperties": false
+              ]
             },
             "pull_request_review": {
               "$comment": "https://help.github.com/en/github/automating-your-workflow-with-github-actions/events-that-trigger-workflows#pull-request-review-event-pull_request_review",
@@ -1420,54 +1410,129 @@
             },
             "pull_request_target": {
               "$comment": "https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request_target",
-              "$ref": "#/definitions/ref",
               "description": "This event is similar to pull_request, except that it runs in the context of the base repository of the pull request, rather than in the merge commit. This means that you can more safely make your secrets available to the workflows triggered by the pull request, because only workflows defined in the commit on the base repository are run. For example, this event allows you to create workflows that label and comment on pull requests, based on the contents of the event payload.",
-              "properties": {
-                "types": {
-                  "$ref": "#/definitions/types",
-                  "items": {
-                    "type": "string",
-                    "enum": [
-                      "assigned",
-                      "unassigned",
-                      "labeled",
-                      "unlabeled",
-                      "opened",
-                      "edited",
-                      "closed",
-                      "reopened",
-                      "synchronize",
-                      "converted_to_draft",
-                      "ready_for_review",
-                      "locked",
-                      "unlocked",
-                      "review_requested",
-                      "review_request_removed",
-                      "auto_merge_enabled",
-                      "auto_merge_disabled"
-                    ]
-                  },
-                  "default": ["opened", "synchronize", "reopened"]
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "types": {
+                          "$ref": "#/definitions/types",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "assigned",
+                              "unassigned",
+                              "labeled",
+                              "unlabeled",
+                              "opened",
+                              "edited",
+                              "closed",
+                              "reopened",
+                              "synchronize",
+                              "converted_to_draft",
+                              "ready_for_review",
+                              "locked",
+                              "unlocked",
+                              "review_requested",
+                              "review_request_removed",
+                              "auto_merge_enabled",
+                              "auto_merge_disabled"
+                            ]
+                          },
+                          "default": ["opened", "synchronize", "reopened"]
+                        },
+                        "branches": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "branches-ignore": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "tags": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "tags-ignore": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "paths": {
+                          "$ref": "#/definitions/path"
+                        },
+                        "paths-ignore": {
+                          "$ref": "#/definitions/path"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "not": {
+                        "required": ["branches", "branches-ignore"]
+                      }
+                    },
+                    {
+                      "not": {
+                        "required": ["tags", "tags-ignore"]
+                      }
+                    },
+                    {
+                      "not": {
+                        "required": ["paths", "paths-ignore"]
+                      }
+                    }
+                  ]
                 }
-              },
-              "patternProperties": {
-                "^(branche|tag|path)s(-ignore)?$": {}
-              },
-              "additionalProperties": false
+              ]
             },
             "push": {
               "$comment": "https://help.github.com/en/github/automating-your-workflow-with-github-actions/events-that-trigger-workflows#push-event-push",
-              "$ref": "#/definitions/ref",
               "description": "Runs your workflow when someone pushes to a repository branch, which triggers the push event.\nNote: The webhook payload available to GitHub Actions does not include the added, removed, and modified attributes in the commit object. You can retrieve the full commit object using the REST API. For more information, see https://developer.github.com/v3/repos/commits/#get-a-single-commit.",
-              "patternProperties": {
-                "^(branche|tag|path)s(-ignore)?$": {
-                  "items": {
-                    "type": "string"
-                  },
-                  "type": "array"
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "branches": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "branches-ignore": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "tags": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "tags-ignore": {
+                          "$ref": "#/definitions/branch"
+                        },
+                        "paths": {
+                          "$ref": "#/definitions/path"
+                        },
+                        "paths-ignore": {
+                          "$ref": "#/definitions/path"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "not": {
+                        "required": ["branches", "branches-ignore"]
+                      }
+                    },
+                    {
+                      "not": {
+                        "required": ["tags", "tags-ignore"]
+                      }
+                    },
+                    {
+                      "not": {
+                        "required": ["paths", "paths-ignore"]
+                      }
+                    }
+                  ]
                 }
-              },
-              "additionalProperties": false
+              ]
             },
             "registry_package": {
               "$comment": "https://help.github.com/en/actions/reference/events-that-trigger-workflows#registry-package-event-registry_package",
