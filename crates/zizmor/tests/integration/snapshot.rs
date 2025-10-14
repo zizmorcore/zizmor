@@ -1100,8 +1100,5 @@ fn concurrency_limits() -> Result<()> {
     "
     );
 
-    // TODO: Check that cancel_true.yml doesn't raise any issues
-    // TODO: Check that cancel_expr.yml doesn't raise any issues
-
     Ok(())
 }
