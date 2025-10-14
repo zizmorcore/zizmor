@@ -13,7 +13,7 @@ pub(crate) struct ConcurrencyCancel;
 audit_meta!(
     ConcurrencyCancel,
     "concurrency-cancel",
-    "cancel running jobs when they are re-triggered"
+    "insufficient job-level concurrency limits"
 );
 
 impl Audit for ConcurrencyCancel {
