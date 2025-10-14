@@ -13,12 +13,21 @@ use crate::{
     registry::{FindingRegistry, input::InputKey, input::InputRegistry},
 };
 
+/// Result of applying fixes.
+#[derive(Debug)]
+pub struct FixResult {
+    /// Number of fixes that were successfully applied.
+    pub applied_count: usize,
+    /// Number of fixes that failed to apply.
+    pub failed_count: usize,
+}
+
 /// Apply all fixes associated with findings, filtered by the specified fix mode.
 pub fn apply_fixes(
     fix_mode: FixMode,
     results: &FindingRegistry,
     registry: &InputRegistry,
-) -> Result<()> {
+) -> Result<FixResult> {
     let mut fixes_by_input: HashMap<&InputKey, Vec<(&Fix, &Finding)>> = HashMap::new();
     let mut total_fixes = 0;
     for finding in results.fixable_findings() {
@@ -46,12 +55,16 @@ pub fn apply_fixes(
         } else {
             anstream::eprintln!("No fixes available to apply.");
         }
-        return Ok(());
+        return Ok(FixResult {
+            applied_count: 0,
+            failed_count: 0,
+        });
     }
 
     // Process each file
     let mut applied_fixes = Vec::new();
     let mut failed_fixes = Vec::new();
+    let mut total_applied = 0;
 
     for (input_key, fixes) in &fixes_by_input {
         let InputKey::Local(local) = input_key else {
@@ -72,6 +85,7 @@ pub fn apply_fixes(
                 Ok(new_document) => {
                     current_document = new_document;
                     file_applied_fixes.push((finding.ident, fix, finding));
+                    total_applied += 1;
                 }
                 Err(e) => {
                     // If the fix fails on modified content, it might be due to conflicts
@@ -101,7 +115,10 @@ pub fn apply_fixes(
         print_summary(&applied_fixes, &failed_fixes);
     }
 
-    Ok(())
+    Ok(FixResult {
+        applied_count: total_applied,
+        failed_count: failed_fixes.len(),
+    })
 }
 
 fn print_summary(
