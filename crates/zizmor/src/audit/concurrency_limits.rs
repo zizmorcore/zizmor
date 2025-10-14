@@ -50,8 +50,6 @@ impl Audit for ConcurrencyLimits {
                         );
                     }
                 };
-                // TODO: Also need to check group
-                println!("group: {group}");
             }
             Some(Concurrency::Bare(_)) => {
                 findings.push(
