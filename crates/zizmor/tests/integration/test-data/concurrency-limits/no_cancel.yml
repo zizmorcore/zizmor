@@ -5,7 +5,7 @@ permissions: {}
 concurrency: group
 
 jobs:
-  fypp-checks:
+  job:
     runs-on: ubuntu-latest
     steps:
     - name: 1-ok

@@ -7,7 +7,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  fypp-checks:
+  job:
     runs-on: ubuntu-latest
     steps:
     - name: 1-ok
