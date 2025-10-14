@@ -38,7 +38,7 @@ impl Audit for ConcurrencyLimits {
                             findings.push(
                                 Self::finding()
                                     .confidence(Confidence::High)
-                                    .severity(Severity::Medium)
+                                    .severity(Severity::Low)
                                     .add_location(
                                         workflow
                                             .location()
@@ -60,7 +60,7 @@ impl Audit for ConcurrencyLimits {
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
-                        .severity(Severity::Medium)
+                        .severity(Severity::Low)
                         .add_location(
                             workflow
                                 .location()
@@ -75,7 +75,7 @@ impl Audit for ConcurrencyLimits {
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
-                        .severity(Severity::Medium)
+                        .severity(Severity::Low)
                         .add_location(
                             workflow
                                 .location()
