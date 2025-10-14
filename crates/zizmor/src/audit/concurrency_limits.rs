@@ -29,7 +29,7 @@ impl Audit for ConcurrencyLimits {
         let mut findings = vec![];
         match &workflow.concurrency {
             Some(Concurrency::Rich {
-                group,
+                group: _,
                 cancel_in_progress,
             }) => {
                 if let BoE::Literal(cancel) = &cancel_in_progress {
