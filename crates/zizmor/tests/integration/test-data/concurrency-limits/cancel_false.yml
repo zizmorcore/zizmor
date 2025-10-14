@@ -3,11 +3,12 @@ on: push
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request_number || github.ref }}
   cancel-in-progress: false
 
 jobs:
   job:
+    name: some-job
     runs-on: ubuntu-latest
     steps:
     - name: 1-ok

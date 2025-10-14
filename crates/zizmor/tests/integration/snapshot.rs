@@ -1046,15 +1046,15 @@ fn concurrency_limits() -> Result<()> {
             .args(["--persona=pedantic"])
             .run()?,
         @r"
-    warning[concurrency-limits]: cancel running jobs when they are re-triggered
-      --> @@INPUT@@:1:1
-       |
-     1 | name: Workflow without concurrency
-       | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing concurrency setting
-       |
-       = note: audit confidence → High
+    help[concurrency-limits]: insufficient job-level concurrency limits
+     --> @@INPUT@@:1:1
+      |
+    1 | name: Workflow without concurrency
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing concurrency setting
+      |
+      = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 1 medium, 1 high
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
     "
     );
 
@@ -1066,17 +1066,18 @@ fn concurrency_limits() -> Result<()> {
             .args(["--persona=pedantic"])
             .run()?,
         @r"
-    warning[concurrency-limits]: cancel running jobs when they are re-triggered
-      --> @@INPUT@@:7:1
-       |
-     5 | / concurrency:
-     6 | |   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-     7 | |   cancel-in-progress: false
-     | |___________________________^ cancel-in-progress set to false
-     |
+    group: ${{ github.workflow }}-${{ github.event.pull_request_number || github.ref }}
+    help[concurrency-limits]: insufficient job-level concurrency limits
+     --> @@INPUT@@:5:1
+      |
+    5 | / concurrency:
+    6 | |   group: ${{ github.workflow }}-${{ github.event.pull_request_number || github.ref }}
+    7 | |   cancel-in-progress: false
+      | |___________________________^ cancel-in-progress set to false
+      |
       = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 1 medium, 1 high
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
     "
     );
 
@@ -1088,15 +1089,15 @@ fn concurrency_limits() -> Result<()> {
             .args(["--persona=pedantic"])
             .run()?,
         @r"
-    warning[concurrency-limits]: cancel running jobs when they are re-triggered
-      --> @@INPUT@@:7:1
-       |
-     5 | concurrency: group
-     | | ^^^^^^^^^^^^^^^^^^ concurrency is missing cancel-in-progress
-     |
+    help[concurrency-limits]: insufficient job-level concurrency limits
+     --> @@INPUT@@:5:1
+      |
+    5 | concurrency: group
+      | ^^^^^^^^^^^^^^^^^^ concurrency is missing cancel-in-progress
+      |
       = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 1 medium, 1 high
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
     "
     );
 
