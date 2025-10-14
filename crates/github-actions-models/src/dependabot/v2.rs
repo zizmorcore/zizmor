@@ -245,32 +245,59 @@ pub enum AllowDeny {
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum PackageEcosystem {
+    /// `bun`
     Bun,
+    /// `bundler`
     Bundler,
+    /// `cargo`
     Cargo,
+    /// `composer`
     Composer,
+    /// `conda`
     Conda,
+    /// `devcontainers`
     Devcontainers,
+    /// `docker`
     Docker,
+    /// `docker-compose`
     DockerCompose,
+    /// `dotnet-sdk`
     DotnetSdk,
+    /// `helm`
     Helm,
+    /// `elm`
     Elm,
+    /// `gitsubmodule`
     Gitsubmodule,
+    /// `github-actions`
     GithubActions,
+    /// `gomod`
     Gomod,
+    /// `gradle`
     Gradle,
+    /// `maven`
     Maven,
+    /// `mix`
     Mix,
+    /// `npm`
     Npm,
+    /// `nuget`
     Nuget,
+    /// `pip`
     Pip,
+    /// `pub`
     Pub,
+    /// `rust-toolchain`
     RustToolchain,
+    /// `swift`
     Swift,
+    /// `terraform`
     Terraform,
+    /// `uv`
     Uv,
+    /// `vcpkg`
     Vcpkg,
+    /// `yarn`
     Yarn,
 }
 
