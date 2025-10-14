@@ -3,7 +3,6 @@ source: crates/zizmor/tests/integration/snapshot.rs
 assertion_line: 76
 expression: "zizmor().input(input_under_test(\"artipacked.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
-group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 warning[artipacked]: credential persistence through GitHub Actions artifacts
   --> @@INPUT@@:22:9
    |

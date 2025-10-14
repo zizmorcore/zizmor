@@ -3,7 +3,6 @@ source: crates/zizmor/tests/integration/snapshot.rs
 assertion_line: 102
 expression: "zizmor().input(input_under_test(\"self-hosted.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
-group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 warning[self-hosted-runner]: runs on a self-hosted runner
   --> @@INPUT@@:17:5
    |

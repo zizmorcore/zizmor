@@ -1066,7 +1066,6 @@ fn concurrency_limits() -> Result<()> {
             .args(["--persona=pedantic"])
             .run()?,
         @r"
-    group: ${{ github.workflow }}-${{ github.event.pull_request_number || github.ref }}
     help[concurrency-limits]: insufficient job-level concurrency limits
      --> @@INPUT@@:5:1
       |

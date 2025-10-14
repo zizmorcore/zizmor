@@ -3,5 +3,4 @@ source: crates/zizmor/tests/integration/snapshot.rs
 assertion_line: 185
 expression: "zizmor().input(input_under_test(\"unpinned-uses/issue-433-repro.yml\")).args([\"--pedantic\"]).run()?"
 ---
-group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 No findings to report. Good job!

@@ -3,7 +3,6 @@ source: crates/zizmor/tests/integration/e2e/json_v1.rs
 assertion_line: 17
 expression: output
 ---
-group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 [
   {
     "ident": "template-injection",

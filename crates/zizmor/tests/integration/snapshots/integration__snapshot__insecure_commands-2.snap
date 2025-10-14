@@ -3,7 +3,6 @@ source: crates/zizmor/tests/integration/snapshot.rs
 assertion_line: 330
 expression: "zizmor().input(input_under_test(\"insecure-commands.yml\")).run()?"
 ---
-group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 error[insecure-commands]: execution of insecure workflow commands is enabled
   --> @@INPUT@@:15:5
    |

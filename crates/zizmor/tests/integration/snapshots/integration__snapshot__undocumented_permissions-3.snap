@@ -3,7 +3,6 @@ source: crates/zizmor/tests/integration/snapshot.rs
 assertion_line: 891
 expression: "zizmor().input(input_under_test(\"undocumented-permissions/documented.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
-group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 error[excessive-permissions]: overly broad permissions
  --> @@INPUT@@:8:3
   |
