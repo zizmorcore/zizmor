@@ -256,7 +256,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `#!yaml repos:` se
 
 ```yaml
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
-  rev: v1.15.1 # (1)!
+  rev: v1.15.2 # (1)!
   hooks:
   - id: zizmor
 ```
