@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse Dependabot configuration files
+  that specified a `package-ecosystem: devcontainers` update block (#1240)
+
 ## 1.15.0
 
 This release comes with support for auditing
