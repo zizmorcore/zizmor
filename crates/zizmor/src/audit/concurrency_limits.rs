@@ -1,7 +1,7 @@
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     config::Config,
-    finding::{Confidence, Finding, Severity},
+    finding::{Confidence, Finding, Persona, Severity},
     models::workflow::Workflow,
     state::AuditState,
 };
@@ -39,6 +39,7 @@ impl Audit for ConcurrencyLimits {
                                 Self::finding()
                                     .confidence(Confidence::High)
                                     .severity(Severity::Low)
+                                    .persona(Persona::Pedantic)
                                     .add_location(
                                         workflow
                                             .location()
@@ -61,6 +62,7 @@ impl Audit for ConcurrencyLimits {
                     Self::finding()
                         .confidence(Confidence::High)
                         .severity(Severity::Low)
+                        .persona(Persona::Pedantic)
                         .add_location(
                             workflow
                                 .location()
@@ -76,6 +78,7 @@ impl Audit for ConcurrencyLimits {
                     Self::finding()
                         .confidence(Confidence::High)
                         .severity(Severity::Low)
+                        .persona(Persona::Pedantic)
                         .add_location(
                             workflow
                                 .location()
