@@ -1,5 +1,7 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 109
 expression: "zizmor().input(input_under_test(\"self-hosted.yml\")).run()?"
 ---
+group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 No findings to report. Good job! (1 suppressed)

@@ -1,7 +1,9 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 929
 expression: "zizmor().input(input_under_test(\"undocumented-permissions/partially-documented.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
+group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 error[excessive-permissions]: overly broad permissions
  --> @@INPUT@@:7:3
   |
@@ -27,19 +29,19 @@ help[undocumented-permissions]: permissions without explanatory comments
   = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:18:7
+  --> @@INPUT@@:22:7
    |
-18 |       actions: write
+22 |       actions: write
    |       ^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:31:7
+  --> @@INPUT@@:35:7
    |
-31 |       contents: write
+35 |       contents: write
    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
-32 |       issues: read
+36 |       issues: read
    |       ^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High

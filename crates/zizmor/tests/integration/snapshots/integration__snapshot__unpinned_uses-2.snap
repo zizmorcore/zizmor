@@ -1,19 +1,21 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 172
 expression: "zizmor().input(input_under_test(\"unpinned-uses.yml\")).run()?"
 ---
+group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 warning[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:17:9
+  --> @@INPUT@@:21:9
    |
-17 |       - uses: docker://ubuntu
+21 |       - uses: docker://ubuntu
    |         ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
    |
    = note: audit confidence → High
 
 warning[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:23:9
+  --> @@INPUT@@:27:9
    |
-23 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
+27 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
    |
    = note: audit confidence → High

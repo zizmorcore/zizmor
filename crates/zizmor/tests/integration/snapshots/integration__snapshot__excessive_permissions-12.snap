@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 679
 expression: "zizmor().input(input_under_test(\"excessive-permissions/reusable-workflow-other-triggers.yml\")).run()?"
 ---
 warning[excessive-permissions]: overly broad permissions
@@ -48,4 +49,4 @@ warning[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → Medium
 
-3 findings: 0 informational, 0 low, 3 medium, 0 high
+4 findings (1 suppressed): 0 informational, 0 low, 3 medium, 0 high

@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 83
 expression: "zizmor().input(input_under_test(\"artipacked/issue-447-repro.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 warning[artipacked]: credential persistence through GitHub Actions artifacts
@@ -16,4 +17,12 @@ warning[artipacked]: credential persistence through GitHub Actions artifacts
    = note: audit confidence → Low
    = note: this finding has an auto-fix
 
-1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+help[concurrency-limits]: insufficient job-level concurrency limits
+ --> @@INPUT@@:3:1
+  |
+3 | name: ISSUE-447-REPRO
+  | ^^^^^^^^^^^^^^^^^^^^^ missing concurrency setting
+  |
+  = note: audit confidence → High
+
+2 findings (1 fixable): 0 informational, 1 low, 1 medium, 0 high

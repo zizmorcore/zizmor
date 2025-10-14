@@ -1,8 +1,9 @@
 ---
 source: crates/zizmor/tests/integration/e2e/json_v1.rs
+assertion_line: 17
 expression: output
-snapshot_kind: text
 ---
+group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
 [
   {
     "ident": "template-injection",
@@ -275,16 +276,16 @@ snapshot_kind: text
         "concrete": {
           "location": {
             "start_point": {
-              "row": 16,
+              "row": 20,
               "column": 8
             },
             "end_point": {
-              "row": 16,
+              "row": 20,
               "column": 29
             },
             "offset_span": {
-              "start": 279,
-              "end": 300
+              "start": 406,
+              "end": 427
             }
           },
           "feature": "uses: docker://ubuntu",
@@ -338,16 +339,16 @@ snapshot_kind: text
         "concrete": {
           "location": {
             "start_point": {
-              "row": 22,
+              "row": 26,
               "column": 8
             },
             "end_point": {
-              "row": 22,
+              "row": 26,
               "column": 58
             },
             "offset_span": {
-              "start": 404,
-              "end": 454
+              "start": 531,
+              "end": 581
             }
           },
           "feature": "uses: docker://ghcr.io/pypa/gh-action-pypi-publish",
