@@ -246,6 +246,41 @@ intended to publish build artifacts:
 * Set an action-specific input to disable cache restoration when appropriate,
   such as `lookup-only` in @Swatinem/rust-cache.
 
+## `concurrency-limits`
+
+| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow | [concurrency-limits/]   | v1.16.0       | ✅             | ✅                 | ❌  |
+
+Ensures that GitHub Actions workflows are configured to cancel running jobs when
+those jobs are re-triggered.
+
+If a job has been re-triggered then the branch and/or pull request has moved to
+a new state. As such, it's unlikely that the original run is required to
+continue. Configuring the cancellation of such jobs helps to reduce both the
+resource footprint of the workflow and also the effectiveness of any "resource
+waste" vectors.
+
+Other resources:
+
+* [Guidelines on green software practices for GitHub Actions CI workflows]
+
+### Remediation
+
+Include a `concurrency` setting in your workflow that sets the
+`cancel-in-progress` option either to `true` or to an expression that will be
+true in most cases. Specifying `false` would allow separate instances of the
+workflows to run concurrently, whereas `true` will imply that running jobs are
+cancelled as soon as the workflow is re-triggered.
+
+!!! example
+
+    ```yaml title="cancel_true.yml"
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    ```
+
 ## `dangerous-triggers`
 
 | Type     | Examples                  | Introduced in | Works offline  | Enabled by default | Configurable |
@@ -1952,3 +1987,4 @@ once it's configured:
 [branch filter]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#running-your-pull_request_target-workflow-based-on-the-head-or-base-branch-of-a-pull-request
 [Aqua: The Challenges of Uniquely Identifying Your Images]: https://www.aquasec.com/blog/docker-image-tags/
 [GitHub: Safeguard your containers with new container signing capability in GitHub Actions]: https://github.blog/security/supply-chain-security/safeguard-container-signing-capability-actions/
+[Guidelines on green software practices for GitHub Actions CI workflows]: https://github.com/Cambridge-ICCS/green-ci
