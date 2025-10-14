@@ -248,6 +248,7 @@ pub enum PackageEcosystem {
     Bundler,
     Cargo,
     Composer,
+    Devcontainers,
     Docker,
     Elm,
     Gitsubmodule,
