@@ -245,11 +245,16 @@ pub enum AllowDeny {
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum PackageEcosystem {
+    Bun,
     Bundler,
     Cargo,
     Composer,
+    Conda,
     Devcontainers,
     Docker,
+    DockerCompose,
+    DotnetSdk,
+    Helm,
     Elm,
     Gitsubmodule,
     GithubActions,
@@ -261,8 +266,12 @@ pub enum PackageEcosystem {
     Nuget,
     Pip,
     Pub,
+    RustToolchain,
     Swift,
     Terraform,
+    Uv,
+    Vcpkg,
+    Yarn,
 }
 
 /// Rebase strategies for Dependabot updates.
