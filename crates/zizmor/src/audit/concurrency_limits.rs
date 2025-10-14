@@ -34,8 +34,6 @@ impl Audit for ConcurrencyLimits {
             }) => {
                 match &cancel_in_progress {
                     BoE::Literal(cancel) => {
-                        // FIXME: It's saying false even when true
-                        println!("cancel-in-progress is set to {cancel}");
                         if !cancel {
                             findings.push(
                                 Self::finding()
