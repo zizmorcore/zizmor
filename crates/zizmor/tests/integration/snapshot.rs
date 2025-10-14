@@ -1043,6 +1043,7 @@ fn concurrency_limits() -> Result<()> {
             .input(input_under_test(
                 "concurrency-limits/missing.yml"
             ))
+            .args(["--persona=pedantic"])
             .run()?,
         @r"
     warning[concurrency-limits]: cancel running jobs when they are re-triggered
@@ -1062,6 +1063,7 @@ fn concurrency_limits() -> Result<()> {
             .input(input_under_test(
                 "concurrency-limits/cancel_false.yml"
             ))
+            .args(["--persona=pedantic"])
             .run()?,
         @r"
     warning[concurrency-limits]: cancel running jobs when they are re-triggered
@@ -1083,6 +1085,7 @@ fn concurrency_limits() -> Result<()> {
             .input(input_under_test(
                 "concurrency-limits/no_cancel.yml"
             ))
+            .args(["--persona=pedantic"])
             .run()?,
         @r"
     warning[concurrency-limits]: cancel running jobs when they are re-triggered
