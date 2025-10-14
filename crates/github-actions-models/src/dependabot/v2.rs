@@ -297,8 +297,6 @@ pub enum PackageEcosystem {
     Uv,
     /// `vcpkg`
     Vcpkg,
-    /// `yarn`
-    Yarn,
 }
 
 /// Rebase strategies for Dependabot updates.
