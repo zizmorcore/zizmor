@@ -32,27 +32,23 @@ impl Audit for ConcurrencyLimits {
                 group,
                 cancel_in_progress,
             }) => {
-                match &cancel_in_progress {
-                    BoE::Literal(cancel) => {
-                        if !cancel {
-                            findings.push(
-                                Self::finding()
-                                    .confidence(Confidence::High)
-                                    .severity(Severity::Low)
-                                    .persona(Persona::Pedantic)
-                                    .add_location(
-                                        workflow
-                                            .location()
-                                            .primary()
-                                            .with_keys(["concurrency".into()])
-                                            .annotated("cancel-in-progress set to false"),
-                                    )
-                                    .build(workflow)?,
-                            );
-                        };
+                if let BoE::Literal(cancel) = &cancel_in_progress {
+                    if !cancel {
+                        findings.push(
+                            Self::finding()
+                                .confidence(Confidence::High)
+                                .severity(Severity::Low)
+                                .persona(Persona::Pedantic)
+                                .add_location(
+                                    workflow
+                                        .location()
+                                        .primary()
+                                        .with_keys(["concurrency".into()])
+                                        .annotated("cancel-in-progress set to false"),
+                                )
+                                .build(workflow)?,
+                        );
                     }
-                    // TODO: Account for case of an expression, too
-                    BoE::Expr(_) => println!("TODO: expression case"),
                 };
                 // TODO: Also need to check group
                 println!("group: {group}");
