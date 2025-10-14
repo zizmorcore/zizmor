@@ -7,6 +7,8 @@
 use indexmap::{IndexMap, IndexSet};
 use serde::Deserialize;
 
+use crate::common::custom_error;
+
 /// A `dependabot.yml` configuration file.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
@@ -310,12 +312,48 @@ pub enum RebaseStrategy {
 
 /// Scheduling settings for Dependabot updates.
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", remote = "Self")]
 pub struct Schedule {
     pub interval: Interval,
     pub day: Option<Day>,
     pub time: Option<String>,
     pub timezone: Option<String>,
+    pub cronjob: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for Schedule {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let schedule = Self::deserialize(deserializer)?;
+
+        if schedule.interval == Interval::Cron && schedule.cronjob.is_none() {
+            return Err(custom_error::<D>(
+                "`schedule.cronjob` must be set when `schedule.interval` is `cron`",
+            ));
+        }
+
+        if schedule.interval != Interval::Cron && schedule.cronjob.is_some() {
+            return Err(custom_error::<D>(
+                "`schedule.cronjob` may only be set when `schedule.interval` is `cron`",
+            ));
+        }
+
+        if schedule.interval != Interval::Weekly && schedule.day.is_some() {
+            return Err(custom_error::<D>(
+                "`schedule.day` is only valid when `schedule.interval` is `weekly`",
+            ));
+        }
+
+        Ok(Self {
+            interval: schedule.interval,
+            day: schedule.day,
+            time: schedule.time,
+            timezone: schedule.timezone,
+            cronjob: schedule.cronjob,
+        })
+    }
 }
 
 /// Schedule intervals.
@@ -325,6 +363,10 @@ pub enum Interval {
     Daily,
     Weekly,
     Monthly,
+    Quarterly,
+    Semiannually,
+    Yearly,
+    Cron,
 }
 
 /// Days of the week.

@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.15.2
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse some Dependabot configuration
+  files due to missing support for some schedule formats (#1247)
+
 ## 1.15.1
 
 ### Bug Fixes 🐛
