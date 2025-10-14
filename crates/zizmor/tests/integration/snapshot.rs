@@ -1037,15 +1037,15 @@ fn dependabot_cooldown() -> Result<()> {
 }
 
 #[test]
-fn concurrency_cancel() -> Result<()> {
+fn concurrency_limits() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test(
-                "concurrency-cancel/missing.yml"
+                "concurrency-limits/missing.yml"
             ))
             .run()?,
         @r"
-    warning[concurrency-cancel]: cancel running jobs when they are re-triggered
+    warning[concurrency-limits]: cancel running jobs when they are re-triggered
       --> @@INPUT@@:1:1
        |
      1 | name: Workflow without concurrency
@@ -1060,11 +1060,11 @@ fn concurrency_cancel() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test(
-                "concurrency-cancel/cancel_false.yml"
+                "concurrency-limits/cancel_false.yml"
             ))
             .run()?,
         @r"
-    warning[concurrency-cancel]: cancel running jobs when they are re-triggered
+    warning[concurrency-limits]: cancel running jobs when they are re-triggered
       --> @@INPUT@@:7:1
        |
      5 | / concurrency:
@@ -1081,11 +1081,11 @@ fn concurrency_cancel() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test(
-                "concurrency-cancel/no_cancel.yml"
+                "concurrency-limits/no_cancel.yml"
             ))
             .run()?,
         @r"
-    warning[concurrency-cancel]: cancel running jobs when they are re-triggered
+    warning[concurrency-limits]: cancel running jobs when they are re-triggered
       --> @@INPUT@@:7:1
        |
      5 | concurrency: group

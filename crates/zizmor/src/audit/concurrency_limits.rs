@@ -8,15 +8,15 @@ use crate::{
 use anyhow::Result;
 use github_actions_models::{common::expr::BoE, workflow::Concurrency};
 
-pub(crate) struct ConcurrencyCancel;
+pub(crate) struct ConcurrencyLimits;
 
 audit_meta!(
-    ConcurrencyCancel,
-    "concurrency-cancel",
+    ConcurrencyLimits,
+    "concurrency-limits",
     "insufficient job-level concurrency limits"
 );
 
-impl Audit for ConcurrencyCancel {
+impl Audit for ConcurrencyLimits {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }

@@ -21,7 +21,7 @@ pub(crate) mod anonymous_definition;
 pub(crate) mod artipacked;
 pub(crate) mod bot_conditions;
 pub(crate) mod cache_poisoning;
-pub(crate) mod concurrency_cancel;
+pub(crate) mod concurrency_limits;
 pub(crate) mod dangerous_triggers;
 pub(crate) mod dependabot_cooldown;
 pub(crate) mod dependabot_execution;
