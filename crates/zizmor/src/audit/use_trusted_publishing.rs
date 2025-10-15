@@ -268,12 +268,9 @@ impl UseTrustedPublishing {
                         let ignore_flags = NON_TP_COMMAND_PATTERNS.get(idx).unwrap().1;
                         // Unwrap assumption: we can't match anything above
                         // that isn't shlex-able.
-                        let args = shlex::split(cap_cmd).unwrap();
+                        let mut args = shlex::Shlex::new(cap_cmd);
 
-                        if args
-                            .iter()
-                            .any(|arg| ignore_flags.iter().any(|ign| arg == ign))
-                        {
+                        if args.any(|arg| ignore_flags.iter().any(|ign| arg == *ign)) {
                             None
                         } else {
                             Some(Subfeature::new(cap_node.start_byte(), cap_cmd))
