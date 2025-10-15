@@ -393,18 +393,8 @@ annotations.
 
 ## Exit codes
 
-!!! note
-
-    Exit codes 11 and above are **not used** if `--no-exit-codes` or
-    `--format sarif` is passed.
-
-!!! warning "Removal"
-
-    Versions of zizmor prior to `v1.14.0` used exit code `10` to indicate
-    the highest finding having "unknown" severity. This exit code is
-    no longer used as of `v1.14.0`.
-
-`zizmor` uses various exit codes to summarize the results of a run:
+`zizmor` will exit with a variety of exit codes, depending on how
+you invoke it and what happens during the run. In general:
 
 | Code | Meaning |
 | ---- | ------- |
@@ -417,6 +407,36 @@ annotations.
 | 14   | One or more findings found; highest finding is "high" level. |
 
 All other exit codes are currently reserved.
+
+!!! warning "Removal"
+
+    Versions of zizmor prior to `v1.14.0` used exit code `10` to indicate
+    the highest finding having "unknown" severity. This exit code is
+    no longer used as of `v1.14.0`.
+
+Beyond this general table, the following modes of operation also
+change the exit code behavior:
+
+* If you run with `--no-exit-codes`, `zizmor` will **not** use exit codes 11
+  and above.
+* If you use `--format=sarif`, `zizmor` will **not** use exit codes 11 and
+  above.
+
+    !!! tip "Why?"
+
+        Because SARIF consumers generally don't expect SARIF producers
+        (like `zizmor`) to exit with a non-zero code *except* in the case
+        of an internal failure. SARIF consumers expect semantic results
+        to be communicated within the SARIF itself.
+
+* If you run with `--fix` *and* all findings are successfully auto-fixed,
+  `zizmor` will **not** use exit codes 11 and above.
+
+    !!! tip "Why?"
+
+        Because the higher exit codes indicate that action needs to be taken,
+        but a successful application of all fixes means that no action
+        is required.
 
 ## Using personas
 
