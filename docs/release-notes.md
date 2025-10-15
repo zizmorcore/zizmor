@@ -9,6 +9,14 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* When running in `--fix` mode and all fixes are successfully applied,
+  `zizmor` now has similar [exit code] behavior as the `--no-exit-codes`
+  and `--format=sarif` flags (#1242)
+
+    Many thanks to @cnaples79 for implementing this improvement!
+
 ## 1.15.2
 
 ### Bug Fixes 🐛
@@ -1161,3 +1169,5 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [ref-version-mismatch]: ./audits.md#ref-version-mismatch
 [dependabot-execution]: ./audits.md#dependabot-execution
 [dependabot-cooldown]: ./audits.md#dependabot-cooldown
+
+[exit code]: ./usage.md#exit-codes
