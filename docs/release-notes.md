@@ -17,6 +17,20 @@ of `zizmor`.
 
     Many thanks to @cnaples79 for implementing this improvement!
 
+## 1.15.2
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse some Dependabot configuration
+  files due to missing support for some schedule formats (#1247)
+
+## 1.15.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse Dependabot configuration files
+  due to missing support for some package ecosystems (#1240)
+
 ## 1.15.0
 
 This release comes with support for auditing
