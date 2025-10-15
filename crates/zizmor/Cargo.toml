@@ -30,6 +30,7 @@ tty-tests = []
 annotate-snippets.workspace = true
 anstream.workspace = true
 anyhow.workspace = true
+async-trait.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 clap = { workspace = true, features = ["derive", "env"] }
 clap-verbosity-flag = { workspace = true, features = ["tracing"] }
@@ -40,6 +41,7 @@ flate2.workspace = true
 fst.workspace = true
 github-actions-expressions.workspace = true
 github-actions-models.workspace = true
+http.workspace = true
 http-cache-reqwest.workspace = true
 human-panic.workspace = true
 ignore.workspace = true

@@ -8,7 +8,8 @@ use std::{fmt::Display, io::Read, ops::Deref, str::FromStr};
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
 use http_cache_reqwest::{
-    CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
+    CACacheManager, Cache, CacheManager, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
+    MokaManager, MokaCache,
 };
 use reqwest::{
     Response, StatusCode,
@@ -142,6 +143,68 @@ pub(crate) enum ClientError {
     FileTOCTOU { file: String, slug: String },
 }
 
+#[derive(Clone, Copy, Debug)]
+enum CacheType {
+    File,
+    Memory,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum CacheResult {
+    Miss,
+    Hit,
+}
+
+struct CacheLoggingMiddleware;
+
+#[async_trait::async_trait]
+impl reqwest_middleware::Middleware for CacheLoggingMiddleware {
+    async fn handle(
+        &self,
+        req: reqwest::Request,
+        extensions: &mut http::Extensions,
+        next: reqwest_middleware::Next<'_>,
+    ) -> reqwest_middleware::Result<Response> {
+        tracing::debug!("Request URL: {}", req.url());
+
+        let res = next.run(req, extensions).await;
+
+        let cache_type = extensions.get::<CacheType>().unwrap();
+        let cache_result = extensions.get::<CacheResult>().unwrap();
+        tracing::debug!("{:?} cache was {:?}", cache_type, cache_result);
+
+        res
+    }
+}
+
+struct ChainedCache<T: CacheManager>(Cache<T>, CacheType);
+
+#[async_trait::async_trait]
+impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
+    async fn handle(
+        &self,
+        req: reqwest::Request,
+        extensions: &mut http::Extensions,
+        next: reqwest_middleware::Next<'_>,
+    ) -> reqwest_middleware::Result<Response> {
+        extensions.insert(self.1);
+
+        let res = self.0.handle(req, extensions, next).await;
+
+        if let Ok(ref resp) = res
+            && let Some(cache) = resp.headers().get("x-cache")
+        {
+            let cache_result = match cache.to_str().unwrap() {
+                "HIT" => CacheResult::Hit,
+                _ => CacheResult::Miss,
+            };
+            extensions.get_or_insert(cache_result);
+        }
+
+        res
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
@@ -160,6 +223,18 @@ impl Client {
         headers.insert(AUTHORIZATION, token.to_header_value()?);
         headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
         headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
+
+        let http_cache_options = HttpCacheOptions {
+            cache_options: Some(CacheOptions {
+                // GitHub API requests made with an API token seem to
+                // always have `Cache-Control: private`, so we need to
+                // explicitly tell http-cache that our cache is not shared
+                // in order for things to cache correctly.
+                shared: false,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
 
         let http = ClientBuilder::new(
             reqwest::Client::builder()
@@ -190,24 +265,26 @@ impl Client {
                 .build()
                 .expect("couldn't build GitHub client?"),
         )
-        .with(Cache(HttpCache {
-            mode: CacheMode::Default,
-            manager: CACacheManager {
-                path: cache_dir.into(),
-                remove_opts: Default::default(),
-            },
-            options: HttpCacheOptions {
-                cache_options: Some(CacheOptions {
-                    // GitHub API requests made with an API token seem to
-                    // always have `Cache-Control: private`, so we need to
-                    // explicitly tell http-cache that our cache is not shared
-                    // in order for things to cache correctly.
-                    shared: false,
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
-        }))
+        .with(CacheLoggingMiddleware)
+        .with(ChainedCache(
+            Cache(HttpCache {
+                mode: CacheMode::Default,
+                manager: CACacheManager {
+                    path: cache_dir.into(),
+                    remove_opts: Default::default(),
+                },
+                options: http_cache_options.clone(),
+            }),
+            CacheType::File,
+        ))
+        .with(ChainedCache(
+            Cache(HttpCache {
+                mode: CacheMode::ForceCache,
+                manager: MokaManager::new(MokaCache::new(1000)),
+                options: http_cache_options,
+            }),
+            CacheType::Memory,
+        ))
         .build();
 
         Ok(Self {
