@@ -3814,6 +3814,7 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "serde_yaml",
+ "shlex",
  "subfeature",
  "tar",
  "terminal-link",

@@ -149,40 +149,46 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
 const BASH_COMMAND_QUERY: &str = "(command name: (_) argument: (_)+) @cmd";
 const PWSH_COMMAND_QUERY: &str = "(command command_name: (_) command_elements: (_)+) @cmd";
 
-const NON_TP_COMMAND_PATTERNS: &[&str] = &[
+// Patterns that match commands that publish to package registries.
+// Each member is a tuple of `(pattern, ignore-args)`, where `ignore-args` is a
+// list of arguments that, if present, indicate that the command isn't actually
+// publishing and can therefore be ignored for the purposes of this audit.
+//
+// TODO(ww): Do something better here.
+const NON_TP_COMMAND_PATTERNS: &[(&str, &[&str])] = &[
     // cargo ... publish ...
-    r"(?s)cargo\s+(.+\s+)?publish",
+    (r"(?s)cargo\s+(.+\s+)?publish", &["-n", "--dry-run"]),
     // uv ... publish ...
-    r"(?s)uv\s+(.+\s+)?publish",
+    (r"(?s)uv\s+(.+\s+)?publish", &["--dry-run"]),
     // hatch ... publish ...
-    r"(?s)hatch\s+(.+\s+)?publish",
+    (r"(?s)hatch\s+(.+\s+)?publish", &[]),
     // pdm ... publish ...
-    r"(?s)pdm\s+(.+\s+)?publish",
+    (r"(?s)pdm\s+(.+\s+)?publish", &[]),
     // twine ... upload ...
-    r"(?s)twine\s+(.+\s+)?upload",
+    (r"(?s)twine\s+(.+\s+)?upload", &[]),
     // gem ... push ...
-    r"(?s)gem\s+(.+\s+)?push",
+    (r"(?s)gem\s+(.+\s+)?push", &[]),
     // npm ... publish ...
-    r"(?s)npm\s+(.+\s+)?publish",
+    (r"(?s)npm\s+(.+\s+)?publish", &["--dry-run"]),
     // yarn ... npm publish ...
-    r"(?s)yarn\s+(.+\s+)?npm\s+publish",
+    (r"(?s)yarn\s+(.+\s+)?npm\s+publish", &["--dry-run"]),
     // pnpm ... publish ...
-    r"(?s)pnpm\s+(.+\s+)?publish",
+    (r"(?s)pnpm\s+(.+\s+)?publish", &["--dry-run"]),
     // yarn run publish / yarn publish (lerna/npm workspaces)
-    r"(?s)yarn\s+(?:run\s+)?publish",
+    (r"(?s)yarn\s+(?:run\s+)?publish", &["--dry-run"]),
     // npm run publish
-    r"(?s)npm\s+run\s+publish",
+    (r"(?s)npm\s+run\s+publish", &["--dry-run"]),
     // pnpm run publish
-    r"(?s)pnpm\s+run\s+publish",
+    (r"(?s)pnpm\s+run\s+publish", &["--dry-run"]),
 ];
 
 static NON_TP_COMMAND_PATTERN_SET: LazyLock<RegexSet> =
-    LazyLock::new(|| RegexSet::new(NON_TP_COMMAND_PATTERNS).unwrap());
+    LazyLock::new(|| RegexSet::new(NON_TP_COMMAND_PATTERNS.iter().map(|p| p.0)).unwrap());
 
 static NON_TP_COMMAND_PATTERN_REGEXES: LazyLock<Vec<regex::Regex>> = LazyLock::new(|| {
     NON_TP_COMMAND_PATTERNS
         .iter()
-        .map(|p| regex::Regex::new(p).unwrap())
+        .map(|p| regex::Regex::new(p.0).unwrap())
         .collect()
 });
 
@@ -255,8 +261,24 @@ impl UseTrustedPublishing {
                 let cap_cmd = cap_node.utf8_text(run.as_bytes()).unwrap();
 
                 NON_TP_COMMAND_PATTERN_SET
-                    .is_match(cap_cmd)
-                    .then(|| Subfeature::new(cap_node.start_byte(), cap_cmd))
+                    .matches(cap_cmd)
+                    .iter()
+                    .next()
+                    .and_then(|idx| {
+                        let ignore_flags = NON_TP_COMMAND_PATTERNS.get(idx).unwrap().1;
+                        // Unwrap assumption: we can't match anything above
+                        // that isn't shlex-able.
+                        let args = shlex::split(cap_cmd).unwrap();
+
+                        if args
+                            .iter()
+                            .any(|arg| ignore_flags.iter().any(|ign| arg == ign))
+                        {
+                            None
+                        } else {
+                            Some(Subfeature::new(cap_node.start_byte(), cap_cmd))
+                        }
+                    })
             })
             .cloned()
             .collect())

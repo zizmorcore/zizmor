@@ -307,12 +307,25 @@ fn use_trusted_publishing() -> Result<()> {
     );
 
     // No use-trusted-publishing findings expected here.
+    // See: https://github.com/zizmorcore/zizmor/issues/1191
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test(
                 "use-trusted-publishing/issue-1191-repro.yml"
             ))
-            .run()?
+            .run()?,
+        @"No findings to report. Good job! (2 suppressed)"
+    );
+
+    // No use-trusted-publishing findings expected here.
+    // See: https://github.com/zizmorcore/zizmor/issues/1251
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "use-trusted-publishing/issue-1251-repro.yml"
+            ))
+            .run()?,
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())

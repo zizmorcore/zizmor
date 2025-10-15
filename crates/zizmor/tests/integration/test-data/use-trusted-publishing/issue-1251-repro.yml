@@ -1,0 +1,15 @@
+# repro for https://github.com/zizmorcore/zizmor/issues/1251
+name: issue 1251 repro
+
+on:
+  workflow_call:
+
+jobs:
+  issue-1251-repro:
+    name: issue-1251-repro
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: not-vulnerable
+        run: |
+          cargo publish --dry-run --locked --no-default-features --features "${CRATE_FEATURES}"
