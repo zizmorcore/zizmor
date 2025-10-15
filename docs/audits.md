@@ -268,11 +268,21 @@ typically triggerable by the latter. This can lead to attacker controlled
 code execution or unexpected action runs with context controlled by a malicious
 fork.
 
+Many online resources suggest that `pull_request_target` and other
+dangerous triggers can be used securely by ensuring that the PR's code
+is not executed, but this is **not true**: an attacker can often find
+ways to execute code in the context of the target repository, even if
+the workflow doesn't explicitly run any code from the PR. Common vectors
+for this include argument injection (e.g. with `xargs`), environment injection
+(e.g. `LD_PRELOAD`), and local file inclusion (e.g. relinking files
+to the runner's credentials file or similar).
+
 Other resources:
 
 * [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]
 * [Keeping your GitHub Actions and workflows secure Part 4: New vulnerability patterns and mitigation strategies]
 * [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]
+* [Pwning the Entire Nix Ecosystem]
 
 ### Remediation
 
@@ -1952,3 +1962,4 @@ once it's configured:
 [branch filter]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#running-your-pull_request_target-workflow-based-on-the-head-or-base-branch-of-a-pull-request
 [Aqua: The Challenges of Uniquely Identifying Your Images]: https://www.aquasec.com/blog/docker-image-tags/
 [GitHub: Safeguard your containers with new container signing capability in GitHub Actions]: https://github.blog/security/supply-chain-security/safeguard-container-signing-capability-actions/
+[Pwning the Entire Nix Ecosystem]: https://ptrpa.ws/nixpkgs-actions-abuse
