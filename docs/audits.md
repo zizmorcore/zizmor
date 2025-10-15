@@ -248,9 +248,9 @@ intended to publish build artifacts:
 
 ## `concurrency-limits`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow | [concurrency-limits/]   | v1.16.0       | ✅             | ✅                 | ❌  |
+| Workflow | [concurrency-limits/]   | v1.16.0       | ✅             | ❌                 | ❌  |
 
 Ensures that GitHub Actions workflows are configured to cancel running jobs when
 those jobs are re-triggered.
@@ -275,7 +275,7 @@ cancelled as soon as the workflow is re-triggered.
 
 !!! example
 
-    ```yaml title="cancel_true.yml"
+    ```yaml title="cancel-true.yml"
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
