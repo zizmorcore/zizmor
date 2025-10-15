@@ -46,7 +46,7 @@ mod state;
 mod utils;
 
 #[cfg(all(
-    not(target_env = "msvc"),
+    not(target_family = "windows"),
     any(
         target_arch = "x86_64",
         target_arch = "aarch64",
