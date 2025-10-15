@@ -1061,7 +1061,7 @@ fn concurrency_limits() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test(
-                "concurrency-limits/cancel_false.yml"
+                "concurrency-limits/cancel-false.yml"
             ))
             .args(["--persona=pedantic"])
             .run()?,
@@ -1083,7 +1083,7 @@ fn concurrency_limits() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test(
-                "concurrency-limits/no_cancel.yml"
+                "concurrency-limits/no-cancel.yml"
             ))
             .args(["--persona=pedantic"])
             .run()?,

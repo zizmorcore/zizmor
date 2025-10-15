@@ -311,7 +311,7 @@ fn audit_unpinned_images() -> anyhow::Result<()> {
 
 #[test]
 fn concurrency_limits_cancel_true() -> anyhow::Result<()> {
-    let auditable = input_under_test("concurrency-limits/cancel_true.yml");
+    let auditable = input_under_test("concurrency-limits/cancel-true.yml");
 
     let cli_args = [&auditable];
 
@@ -326,7 +326,7 @@ fn concurrency_limits_cancel_true() -> anyhow::Result<()> {
 
 #[test]
 fn concurrency_limits_cancel_expr() -> anyhow::Result<()> {
-    let auditable = input_under_test("concurrency-limits/cancel_expr.yml");
+    let auditable = input_under_test("concurrency-limits/cancel-expr.yml");
 
     let cli_args = [&auditable];
 
