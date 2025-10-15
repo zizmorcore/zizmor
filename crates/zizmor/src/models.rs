@@ -14,6 +14,7 @@ pub(crate) mod coordinate;
 pub(crate) mod dependabot;
 pub(crate) mod inputs;
 pub(crate) mod uses;
+pub(crate) mod version;
 pub(crate) mod workflow;
 
 pub(crate) trait AsDocument<'a, 'doc> {

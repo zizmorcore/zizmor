@@ -19,6 +19,7 @@ use crate::{
     models::{
         StepCommon,
         uses::RepositoryUsesExt as _,
+        version::Version,
         workflow::{ReusableWorkflowCallJob, Workflow},
     },
     registry::input::InputKey,
@@ -122,28 +123,19 @@ impl ImpostorCommit {
         Ok(true)
     }
 
-    /// Get the latest tag for a repository, preferring semantic version tags
-    fn get_latest_tag(&self, uses: &RepositoryUses) -> Result<Option<String>> {
+    /// Return the highest semantically versioned tag in the repository.
+    fn get_highest_tag(&self, uses: &RepositoryUses) -> Result<Option<String>> {
         let tags = self.client.list_tags(&uses.owner, &uses.repo)?;
 
-        // Prefer semantic version tags (starting with 'v') over other tags
-        let semver_tags: Vec<_> = tags
+        // Filter tags down to those that can be parsed as semantic versions,
+        // get the highest one, and return its original string representation.
+        let highest_tag = tags
             .iter()
-            .filter(|tag| {
-                tag.name.starts_with('v')
-                    && tag.name.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
-            })
-            .collect();
+            .filter_map(|tag| Version::parse(&tag.name).ok())
+            .max()
+            .map(|vers| vers.raw().to_string());
 
-        let latest_tag = if !semver_tags.is_empty() {
-            // Use the first semver tag (GitHub returns tags in chronological order, newest first)
-            semver_tags.first().map(|tag| &tag.name)
-        } else {
-            // Fallback to the first tag if no semver tags are found
-            tags.first().map(|tag| &tag.name)
-        };
-
-        Ok(latest_tag.cloned())
+        Ok(highest_tag)
     }
 
     /// Create a fix for an impostor commit by replacing it with the latest tag
@@ -175,7 +167,7 @@ impl ImpostorCommit {
         route: yamlpath::Route<'doc>,
     ) -> Option<Fix<'doc>> {
         // Get the latest tag for this repository
-        let latest_tag = match self.get_latest_tag(uses) {
+        let latest_tag = match self.get_highest_tag(uses) {
             Ok(Some(tag)) => tag,
             Ok(None) => {
                 tracing::warn!(
