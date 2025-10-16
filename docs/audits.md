@@ -252,6 +252,8 @@ intended to publish build artifacts:
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow | [concurrency-limits/]   | v1.16.0       | ✅             | ❌                 | ❌  |
 
+[concurrency-limits/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/concurrency-limits/
+
 Detects insufficient concurrency limits in workflows.
 
 By default, GitHub Actions allows multiple instances of the same workflow to run
