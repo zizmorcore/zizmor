@@ -5,6 +5,7 @@
 import argparse
 import hashlib
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -30,6 +31,8 @@ _RESULTS.mkdir(exist_ok=True)
 
 _CACHE_DIR = Path(tempfile.gettempdir()) / "zizmor-benchmark-cache"
 _CACHE_DIR.mkdir(exist_ok=True)
+
+_GH_TOKEN = os.getenv("GH_TOKEN")
 
 
 class Log:
@@ -110,6 +113,7 @@ class Benchmark(TypedDict):
     source: str
     source_sha256: str
     stencil: str
+    online: bool | None
 
 
 Plan = list[str]
@@ -128,6 +132,10 @@ class Bench:
                 inputs = [str(_unzip(archive, self.benchmark["name"]))]
             case _:
                 LOG.error(f"Unknown source type: {self.benchmark['source_type']}")
+
+        if self.benchmark.get("online", False):
+            if not _GH_TOKEN:
+                LOG.error("Benchmark requires online access but GH_TOKEN is not set")
 
         stencil = self.benchmark["stencil"]
         command = stencil.replace("$ZIZMOR", str(_ZIZMOR)).replace(
@@ -180,6 +188,9 @@ def main() -> None:
     parser.add_argument(
         "--dry-run", action="store_true", help="Show plans without running them"
     )
+    parser.add_argument(
+        "--offline", action="store_true", help="Run only offline benchmarks"
+    )
 
     args = parser.parse_args()
 
@@ -208,6 +219,10 @@ def main() -> None:
 
     benchmarks: list[Benchmark] = json.loads(_BENCHMARKS.read_text(encoding="utf-8"))
     LOG.info(f"found {len(benchmarks)} benchmarks in {_BENCHMARKS.name}")
+
+    if args.offline:
+        benchmarks = [b for b in benchmarks if not b.get("online", False)]
+        LOG.info(f"filtered to {len(benchmarks)} offline benchmarks")
 
     benches = [Bench(benchmark) for benchmark in benchmarks]
     plans = []
