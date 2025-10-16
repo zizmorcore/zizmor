@@ -252,14 +252,13 @@ intended to publish build artifacts:
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow | [concurrency-limits/]   | v1.16.0       | ✅             | ❌                 | ❌  |
 
-Ensures that GitHub Actions workflows are configured to cancel running jobs when
-those jobs are re-triggered.
+Detects insufficient concurrency limits in workflows.
 
-If a job has been re-triggered then the branch and/or pull request has moved to
-a new state. As such, it's unlikely that the original run is required to
-continue. Configuring the cancellation of such jobs helps to reduce both the
-resource footprint of the workflow and also the effectiveness of any "resource
-waste" vectors.
+By default, GitHub Actions allows multiple instances of the same workflow to run
+concurrently, even when the new runs fully supersede the old. This can be a
+resource waste vector for attackers, particularly on billed runners. Separately,
+it can be a source of subtle race conditions when attempting to locate artifacts
+by workflow and job identifiers, rather than run IDs.
 
 Other resources:
 
