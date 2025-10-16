@@ -115,11 +115,6 @@ impl ImpostorCommit {
 
         // If we've made it here, the commit isn't present in any commit or tag's history,
         // strongly suggesting that it's an impostor.
-        tracing::warn!(
-            "strong impostor candidate: {head_ref} for {org}/{repo}",
-            org = uses.owner,
-            repo = uses.repo
-        );
         Ok(true)
     }
 
