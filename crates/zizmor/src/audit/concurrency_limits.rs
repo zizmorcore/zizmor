@@ -32,23 +32,23 @@ impl Audit for ConcurrencyLimits {
                 group: _,
                 cancel_in_progress,
             }) => {
-                if let BoE::Literal(cancel) = &cancel_in_progress {
-                    if !cancel {
-                        findings.push(
-                            Self::finding()
-                                .confidence(Confidence::High)
-                                .severity(Severity::Low)
-                                .persona(Persona::Pedantic)
-                                .add_location(
-                                    workflow
-                                        .location()
-                                        .primary()
-                                        .with_keys(["concurrency".into()])
-                                        .annotated("cancel-in-progress set to false"),
-                                )
-                                .build(workflow)?,
-                        );
-                    }
+                if let BoE::Literal(cancel) = &cancel_in_progress
+                    && !cancel
+                {
+                    findings.push(
+                        Self::finding()
+                            .confidence(Confidence::High)
+                            .severity(Severity::Low)
+                            .persona(Persona::Pedantic)
+                            .add_location(
+                                workflow
+                                    .location()
+                                    .primary()
+                                    .with_keys(["concurrency".into()])
+                                    .annotated("cancel-in-progress set to false"),
+                            )
+                            .build(workflow)?,
+                    );
                 };
             }
             Some(Concurrency::Bare(_)) => {
