@@ -49,4 +49,4 @@ pinact:
 
 .PHONY: bench
 bench:
-	uv run bench/benchmark.py
+	uv run bench/benchmark.py --offline

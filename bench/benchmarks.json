@@ -12,5 +12,13 @@
         "source": "https://github.com/python/cpython/archive/48f88310044c6ef877f3b0761cf7afece2f8fb3a.zip",
         "source_sha256": "a52a67f1dd9cfa67c7d1305d5b9639629abe247b2c32f01b77f790ddf8b49503",
         "stencil": "$ZIZMOR --offline --format=plain --no-exit-codes --no-config $INPUTS"
+    },
+    {
+        "name": "gha-hazmat-e4094ce-online",
+        "source_type": "archive-url",
+        "source": "https://github.com/woodruffw/gha-hazmat/archive/e4094ce.zip",
+        "source_sha256": "ef038ba72dca71ba5913313890feb65b650363bd5640cc33cb5994af6189d311",
+        "stencil": "$ZIZMOR --format=plain --no-exit-codes --no-config $INPUTS",
+        "online": true
     }
 ]

@@ -179,14 +179,22 @@ Benchmarks are stored in the top-level `bench/` directory, and can be
 run locally with:
 
 ```bash
-# run all benchmarks
+# run all offline benchmarks
 make bench
 ```
 
-We currently run benchmarks in the CI and report their results
+We currently run offline benchmarks in the CI and report their results
 to [Bencher](https://bencher.dev/). See
 [our project page](https://bencher.dev/console/projects/zizmor/plots)
 on Bencher for results and trends.
+
+There are also online benchmarks, but these don't get run automatically.
+To run them, you can pass `GH_TOKEN` to the `bench/benchmark.py` script
+directly:
+
+```bash
+GH_TOKEN=$(gh auth token) uv run bench/benchmark.py
+```
 
 ### Adding new benchmarks
 
