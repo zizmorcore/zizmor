@@ -44,13 +44,13 @@ There are three input sources that `zizmor` knows about:
 sources can be mixed and matched:
 
 ```bash
-# audit a single local workflow, an entire local repository, and
+# audit a single local workflow, an entire local directory, and
 # a remote repository all in the same run
 zizmor ../example.yml ../other-repo/ example/example
 ```
 
-When auditing local and/or remote repositories, `zizmor` will collect
-all known input kinds by default. To configure collection behavior,
+When auditing local directories and/or remote repositories, `zizmor` will
+collect all known input kinds by default. To configure collection behavior,
 you can use the `--collect=...` option.
 
 ```bash
@@ -61,14 +61,26 @@ zizmor --collect=all example/example
 zizmor --collect=default example/example
 
 # collect only workflows
-zizmor --collect=workflows-only example/example
+zizmor --collect=workflows example/example
 
 # collect only actions
-zizmor --collect=actions-only example/example
+zizmor --collect=actions example/example
 
 # collect only Dependabot configs
-zizmor --collect=dependabot-only example/example
+zizmor --collect=dependabot example/example
+
+# collect only workflows and actions (not Dependabot configs)
+zizmor --collect=workflows,actions example/example
 ```
+
+!!! warning "Deprecation"
+
+  `--collect=workflows-only` and `--collect=actions-only` are
+  deprecated aliases for `--collect=workflows` and
+  `--collect=actions`, respectively, as of `v1.15.0`.
+
+  Users should switch to the non-deprecated forms, as the deprecated
+  forms will be removed in a future release.
 
 !!! tip
 
@@ -79,7 +91,7 @@ zizmor --collect=dependabot-only example/example
 !!! tip
 
     `--collect=...` only controls input collection from repository input
-    sources. In other words, `zizmor --collect=actions-only workflow.yml`
+    sources. In other words, `zizmor --collect=actions workflow.yml`
     *will* audit `workflow.yml`, since it was passed explicitly and not
     collected indirectly.
 
@@ -381,10 +393,20 @@ annotations.
 
 ## Exit codes
 
-!!! note
+`zizmor` will exit with a variety of exit codes, depending on how
+you invoke it and what happens during the run. In general:
 
-    Exit codes 11 and above are **not used** if `--no-exit-codes` or
-    `--format sarif` is passed.
+| Code | Meaning |
+| ---- | ------- |
+| 0    | Successful audit; no findings to report (or SARIF mode enabled). |
+| 1    | Error during audit; consult output. |
+| 2    | Argument parsing failure; consult output. |
+| 11   | One or more findings found; highest finding is "informational" level. |
+| 12   | One or more findings found; highest finding is "low" level. |
+| 13   | One or more findings found; highest finding is "medium" level. |
+| 14   | One or more findings found; highest finding is "high" level. |
+
+All other exit codes are currently reserved.
 
 !!! warning "Removal"
 
@@ -392,18 +414,29 @@ annotations.
     the highest finding having "unknown" severity. This exit code is
     no longer used as of `v1.14.0`.
 
-`zizmor` uses various exit codes to summarize the results of a run:
+Beyond this general table, the following modes of operation also
+change the exit code behavior:
 
-| Code | Meaning |
-| ---- | ------- |
-| 0    | Successful audit; no findings to report (or SARIF mode enabled). |
-| 1    | Error during audit; consult output. |
-| 11   | One or more findings found; highest finding is "informational" level. |
-| 12   | One or more findings found; highest finding is "low" level. |
-| 13   | One or more findings found; highest finding is "medium" level. |
-| 14   | One or more findings found; highest finding is "high" level. |
+* If you run with `--no-exit-codes`, `zizmor` will **not** use exit codes 11
+  and above.
+* If you use `--format=sarif`, `zizmor` will **not** use exit codes 11 and
+  above.
 
-All other exit codes are currently reserved.
+    !!! tip "Why?"
+
+        Because SARIF consumers generally don't expect SARIF producers
+        (like `zizmor`) to exit with a non-zero code *except* in the case
+        of an internal failure. SARIF consumers expect semantic results
+        to be communicated within the SARIF itself.
+
+* If you run with `--fix` *and* all findings are successfully auto-fixed,
+  `zizmor` will **not** use exit codes 11 and above.
+
+    !!! tip "Why?"
+
+        Because the higher exit codes indicate that action needs to be taken,
+        but a successful application of all fixes means that no action
+        is required.
 
 ## Using personas
 
@@ -495,21 +528,12 @@ sensitive `zizmor`'s analyses are:
     1 finding: 0 informational, 0 low, 1 medium, 0 high
     ```
 
-## Auto-fixing results *&#8203;*{.chip .chip-experimental} { #auto-fixing-results }
-
-!!! warning
-
-    `zizmor`'s auto-fix mode is currently **experimental** and subject to
-    breaking changes.
-
-    You **will** encounter bugs while experimenting with it;
-    please [file them]!
-
-    [file them]: https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml
+## Auto-fixing results { #auto-fixing-results }
 
 !!! tip
 
-    `--fix=[MODE]` is available in `v1.10.0` and later.
+    `--fix=[MODE]` is available in `v1.10.0` and later, and is
+    considered stable as of `v1.15.0`.
 
 Starting with `v1.10.0`, `zizmor` can automatically fix a subset of its findings.
 

@@ -9,6 +9,30 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* When running in `--fix` mode and all fixes are successfully applied,
+  `zizmor` now has similar [exit code] behavior as the `--no-exit-codes`
+  and `--format=sarif` flags (#1242)
+
+    Many thanks to @cnaples79 for implementing this improvement!
+
+## 1.15.2
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse some Dependabot configuration
+  files due to missing support for some schedule formats (#1247)
+
+## 1.15.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse Dependabot configuration files
+  due to missing support for some package ecosystems (#1240)
+
+## 1.15.0
+
 This release comes with support for auditing
 [Dependabot](https://docs.github.com/en/code-security/dependabot) configuration
 files! Like with composite action definition auditing (introduced in
@@ -51,14 +75,27 @@ To complement this new functionality, this release comes with two new audits:
 * `zizmor` is now more resilient to sporadic request failures when performing
   GitHub API requests (#1219)
 
-* `--collect=dependabot-only` is now supported as a collection option,
+* `--collect=dependabot` is now supported as a collection option,
   allowing users to audit only Dependabot configuration files (#1215)
+
+* The `--fix` mode (introduced with v1.10.0) is now considered
+  **stable** and no longer experimental (#1232)
 
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would fail instead of analyzing single-file
   inputs that lacked an explicit parent path component, e.g.
   `zizmor foo.yml` instead of `zizmor ./foo.yml` (#1212)
+
+### Deprecations ⚠️
+
+* The `workflows-only` and `actions-only` values for `--collect` are now
+  deprecated. These values have been replaced with `workflows` and
+  `actions`, respectively, which have the same behavior but
+  can be composed together with other collection modes. The deprecated
+  modes will be removed in a future release (#1228)
+
+    Until removal, using these values will emit a warning.
 
 ## 1.14.2
 
@@ -1132,3 +1169,5 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [ref-version-mismatch]: ./audits.md#ref-version-mismatch
 [dependabot-execution]: ./audits.md#dependabot-execution
 [dependabot-cooldown]: ./audits.md#dependabot-cooldown
+
+[exit code]: ./usage.md#exit-codes

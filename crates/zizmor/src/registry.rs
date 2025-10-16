@@ -200,6 +200,30 @@ impl<'a> FindingRegistry<'a> {
         })
     }
 
+    /// Checks if all findings have at least one fix matching the given fix mode.
+    ///
+    /// Returns true if every finding has at least one applicable fix based on the mode,
+    /// meaning no manual intervention would be required if all fixes are applied successfully.
+    pub(crate) fn all_findings_have_applicable_fixes(&self, fix_mode: crate::FixMode) -> bool {
+        use crate::finding::FixDisposition;
+
+        if self.findings.is_empty() {
+            return true;
+        }
+
+        self.findings.iter().all(|finding| {
+            finding.fixes.iter().any(|fix| {
+                let disposition_matches = match fix_mode {
+                    crate::FixMode::Safe => matches!(fix.disposition, FixDisposition::Safe),
+                    crate::FixMode::UnsafeOnly => matches!(fix.disposition, FixDisposition::Unsafe),
+                    crate::FixMode::All => true,
+                };
+
+                disposition_matches && matches!(fix.key, InputKey::Local(_))
+            })
+        })
+    }
+
     /// All ignored findings.
     pub(crate) fn ignored(&self) -> &[Finding<'a>] {
         &self.ignored
