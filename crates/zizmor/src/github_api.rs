@@ -404,6 +404,7 @@ impl Client {
 
                 // Tags may point to a commit or an annotation.
                 // If we have an annotation, a tag suffixed with `^{}` holds the commit.
+                // See: https://www.kernel.org/pub/software/scm/git/docs/gitrevisions.html
                 let annotated_tags: HashSet<_> = tags
                     .iter()
                     .filter_map(|tag| tag.name.strip_suffix("^{}").map(|n| n.to_string()))
