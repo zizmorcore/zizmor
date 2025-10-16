@@ -56,6 +56,7 @@ serde = { workspace = true, features = ["derive"] }
 serde-sarif.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
+shlex.workspace = true
 subfeature.workspace = true
 tar.workspace = true
 terminal-link.workspace = true
