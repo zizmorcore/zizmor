@@ -14,10 +14,10 @@
         "stencil": "$ZIZMOR --offline --format=plain --no-exit-codes --no-config $INPUTS"
     },
     {
-        "name": "gha-hazmat-e4094ce-online",
+        "name": "gha-hazmat-da3c3cd-online",
         "source_type": "archive-url",
-        "source": "https://github.com/woodruffw/gha-hazmat/archive/e4094ce.zip",
-        "source_sha256": "ef038ba72dca71ba5913313890feb65b650363bd5640cc33cb5994af6189d311",
+        "source": "https://github.com/woodruffw/gha-hazmat/archive/da3c3cd.zip",
+        "source_sha256": "f0aa224c5203218ad26e9f104d8dc3eaf8b322c97056add04d79f4a0d53c8f1f",
         "stencil": "$ZIZMOR --format=plain --no-exit-codes --no-config $INPUTS",
         "online": true
     }
