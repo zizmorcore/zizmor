@@ -867,6 +867,17 @@ fn ref_version_mismatch() -> Result<()> {
             .run()?
     );
 
+    // Tags that point to other tags are handled correctly.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .input(input_under_test(
+                "ref-version-mismatch/nested-annotated-tags.yml"
+            ))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
     Ok(())
 }
 
