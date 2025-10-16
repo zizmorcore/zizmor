@@ -189,6 +189,7 @@ numpy/numpy#27931
 numpy/numpy.org#797
 onnx/onnx#6661
 onnx/onnx#6662
+onnx/onnx#7363
 openbao/openbao#924
 open-edge-platform/geti#162
 open-edge-platform/geti-sdk#603
