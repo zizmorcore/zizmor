@@ -16,6 +16,14 @@ of `zizmor`.
 
     Many thanks to @jwallwork23 for proposing and implementing this audit!
 
+### Performance Improvements 🚄
+
+* `zizmor`'s online audits are now significantly (40% to 90%) faster on
+  common workloads, thanks to a combination of caching improvements and
+  conversion of GitHub API requests into Git remote lookups (#1257)
+
+    Many thanks to @Bo98 for implementing these improvements!
+
 ### Enhancements 🌱
 
 * When running in `--fix` mode and all fixes are successfully applied,
