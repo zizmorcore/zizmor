@@ -133,20 +133,37 @@ pub enum Directories {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case", remote = "Self")]
 pub struct Update {
+    /// Dependency allow rules for this update directive.
     #[serde(default)]
     pub allow: Vec<Allow>,
+
+    /// People to assign to this update's pull requests.
     #[serde(default)]
     pub assignees: IndexSet<String>,
+
+    /// Commit message settings for this update's pull requests.
     pub commit_message: Option<CommitMessage>,
+
+    /// Cooldown settings for this update directive.
     pub cooldown: Option<Cooldown>,
+
+    /// The directory or directories in which to look for manifests
+    /// and dependencies.
     #[serde(flatten)]
     pub directories: Directories,
+
+    /// Group settings for batched updates.
     #[serde(default)]
     pub groups: IndexMap<String, Group>,
+
+    /// Dependency ignore settings for this update directive.
     #[serde(default)]
     pub ignore: Vec<Ignore>,
+
+    /// Whether to allow insecure external code execution during updates.
     #[serde(default)]
     pub insecure_external_code_execution: AllowDeny,
+
     /// Labels to apply to this update group's pull requests.
     ///
     /// The default label is `dependencies`.
@@ -159,8 +176,11 @@ pub struct Update {
     /// The default maximum is 5.
     #[serde(default = "default_open_pull_requests_limit")]
     pub open_pull_requests_limit: u64,
+
+    /// The packaging ecosystem to update.
     pub package_ecosystem: PackageEcosystem,
-    // TODO: pull-request-branch-name
+
+    /// The strategy to use when rebasing pull requests.
     #[serde(default)]
     pub rebase_strategy: RebaseStrategy,
     #[serde(default, deserialize_with = "crate::common::scalar_or_vector")]
@@ -173,8 +193,26 @@ pub struct Update {
     #[serde(default)]
     pub vendor: bool,
     pub versioning_strategy: Option<VersioningStrategy>,
+
+    /// If assign, this update directive is assigned to the
+    /// named multi-ecosystem group.
+    ///
+    /// See: <https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#multi-ecosystem-group>
     pub multi_ecosystem_group: Option<String>,
+
+    /// Required if `multi-ecosystem-group` is set.
+    /// A list of glob patterns that determine which dependencies
+    /// are assigned to this group.
+    ///
+    /// See: <https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-multi-ecosystem-updates#2-assign-ecosystems-to-groups-with-patterns>
     pub patterns: Option<IndexSet<String>>,
+
+    /// Paths that Dependabot will ignore when scanning for manifests
+    /// and dependencies.
+    ///
+    /// See: <https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#exclude-paths->
+    #[serde(default)]
+    pub exclude_paths: Option<IndexSet<String>>,
 }
 
 impl<'de> Deserialize<'de> for Update {
