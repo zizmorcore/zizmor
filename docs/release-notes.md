@@ -18,7 +18,7 @@ of `zizmor`.
 
 ### Performance Improvements 🚄
 
-* `zizmor`'s online audits are now significantly (40% to 90%) faster on
+* `zizmor`'s online mode is now significantly (40% to 90%) faster on
   common workloads, thanks to a combination of caching improvements and
   conversion of GitHub API requests into Git remote lookups (#1257)
 
