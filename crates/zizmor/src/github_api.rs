@@ -1,7 +1,7 @@
-//! A very minimal GitHub API client.
+//! GitHub API client and related types.
 //!
-//! Build on synchronous reqwest to avoid octocrab's need to taint
-//! the whole codebase with async.
+//! The [`Client`] type uses a mixture of GitHub's REST API and
+//! direct Git access, depending on the operation being performed.
 
 use std::{collections::HashSet, fmt::Display, io::Read, ops::Deref, str::FromStr};
 
