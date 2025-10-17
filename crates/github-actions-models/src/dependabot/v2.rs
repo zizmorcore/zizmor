@@ -232,7 +232,7 @@ impl<'de> Deserialize<'de> for Update {
         // If an update uses `multi-ecosystem-group`, it must
         // not specify its own `milestone`, `target-branch`, `commit-message`,
         // or `pull-request-branch-name`.
-        if let Some(_) = update.multi_ecosystem_group {
+        if update.multi_ecosystem_group.is_some() {
             if update.milestone.is_some() {
                 return Err(custom_error::<D>(
                     "`milestone` may not be set when `multi-ecosystem-group` is set",
