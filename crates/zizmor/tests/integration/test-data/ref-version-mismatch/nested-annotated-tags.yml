@@ -1,0 +1,27 @@
+# ensures that we don't flag nested annotated tags as version mismatches,
+# even when deeply nested (more than one hop).
+#
+# in this particular case, we have up to three hops to get to
+# the commit object:
+# v1.0 -> v1 -> v1.0.0 -> 3fdd4fca8fc76b254cefefca92381c41b28d1f0d
+
+name: nested-annotated-tags
+
+on: [push]
+
+permissions: {}
+
+jobs:
+  nested-annotated-tags:
+    name: nested-annotated-tags
+    runs-on: ubuntu-latest
+    steps:
+      # OK: v1.0.0 is an annotated tag that points to
+      # commit 3fdd4fca8fc76b254cefefca92381c41b28d1f0d
+      - uses: woodruffw-experiments/zizmor-recursive-tags@3fdd4fca8fc76b254cefefca92381c41b28d1f0d # v1.0.0
+
+      # OK: v1 is an annotated tag that points to v1.0.0
+      - uses: woodruffw-experiments/zizmor-recursive-tags@3fdd4fca8fc76b254cefefca92381c41b28d1f0d # v1
+
+      # OK: v1.0 is an annotated tag that points to v1
+      - uses: woodruffw-experiments/zizmor-recursive-tags@3fdd4fca8fc76b254cefefca92381c41b28d1f0d # v1.0

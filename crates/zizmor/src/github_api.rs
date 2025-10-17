@@ -1,14 +1,16 @@
-//! A very minimal GitHub API client.
+//! GitHub API client and related types.
 //!
-//! Build on synchronous reqwest to avoid octocrab's need to taint
-//! the whole codebase with async.
+//! The [`Client`] type uses a mixture of GitHub's REST API and
+//! direct Git access, depending on the operation being performed.
 
-use std::{fmt::Display, io::Read, ops::Deref, str::FromStr};
+use std::{collections::HashSet, fmt::Display, io::Read, ops::Deref, str::FromStr};
 
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
+use git2::{Cred, Remote, RemoteCallbacks};
 use http_cache_reqwest::{
-    CACacheManager, Cache, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
+    CACacheManager, Cache, CacheManager, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
+    MokaCache, MokaManager,
 };
 use reqwest::{
     Response, StatusCode,
@@ -16,7 +18,7 @@ use reqwest::{
     retry,
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use serde::{Deserialize, de::DeserializeOwned};
+use serde::Deserialize;
 use tar::Archive;
 use thiserror::Error;
 use tracing::instrument;
@@ -103,6 +105,10 @@ impl GitHubToken {
         Ok(Self(token.to_owned()))
     }
 
+    fn to_cred(&self) -> Result<Cred, git2::Error> {
+        Cred::userpass_plaintext("x-access-token", &self.0)
+    }
+
     fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
         HeaderValue::from_str(&format!("Bearer {}", self.0))
     }
@@ -120,6 +126,9 @@ pub(crate) enum ClientError {
     /// We couldn't turn the user's token into a valid header value.
     #[error("invalid token header")]
     InvalidTokenHeader(#[from] InvalidHeaderValue),
+    /// An error originating from the libgit client
+    #[error("request error while accessing Git")]
+    Git(#[from] git2::Error),
     /// We couldn't list branches because of an underlying error.
     #[error("couldn't list branches for {owner}/{repo}")]
     ListBranches {
@@ -142,11 +151,81 @@ pub(crate) enum ClientError {
     FileTOCTOU { file: String, slug: String },
 }
 
+#[derive(Clone, Copy, Debug)]
+enum CacheType {
+    File,
+    Memory,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum CacheResult {
+    Miss,
+    Hit,
+}
+
+struct CacheLoggingMiddleware;
+
+#[async_trait::async_trait]
+impl reqwest_middleware::Middleware for CacheLoggingMiddleware {
+    async fn handle(
+        &self,
+        req: reqwest::Request,
+        extensions: &mut http::Extensions,
+        next: reqwest_middleware::Next<'_>,
+    ) -> reqwest_middleware::Result<Response> {
+        tracing::debug!("Request URL: {}", req.url());
+
+        let res = next.run(req, extensions).await;
+
+        let cache_type = extensions.get::<CacheType>().unwrap();
+        let cache_result = extensions.get::<CacheResult>().unwrap();
+        tracing::debug!("{:?} cache was {:?}", cache_type, cache_result);
+
+        res
+    }
+}
+
+struct ChainedCache<T: CacheManager>(Cache<T>, CacheType);
+
+#[async_trait::async_trait]
+impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
+    async fn handle(
+        &self,
+        req: reqwest::Request,
+        extensions: &mut http::Extensions,
+        next: reqwest_middleware::Next<'_>,
+    ) -> reqwest_middleware::Result<Response> {
+        extensions.insert(self.1);
+
+        let res = self.0.handle(req, extensions, next).await;
+
+        if let Ok(ref resp) = res
+            && let Some(cache) = resp.headers().get("x-cache")
+        {
+            let cache_result = match cache.to_str().unwrap() {
+                "HIT" => CacheResult::Hit,
+                _ => CacheResult::Miss,
+            };
+            extensions.get_or_insert(cache_result);
+        }
+
+        res
+    }
+}
+
+#[derive(Clone)]
+struct RemoteHead {
+    name: String,
+    oid: git2::Oid,
+}
+
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
     _host: GitHubHost,
     http: ClientWithMiddleware,
+    token: GitHubToken,
+    ref_cache: MokaCache<String, Vec<RemoteHead>>,
 }
 
 impl Client {
@@ -160,6 +239,18 @@ impl Client {
         headers.insert(AUTHORIZATION, token.to_header_value()?);
         headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
         headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
+
+        let http_cache_options = HttpCacheOptions {
+            cache_options: Some(CacheOptions {
+                // GitHub API requests made with an API token seem to
+                // always have `Cache-Control: private`, so we need to
+                // explicitly tell http-cache that our cache is not shared
+                // in order for things to cache correctly.
+                shared: false,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
 
         let http = ClientBuilder::new(
             reqwest::Client::builder()
@@ -190,89 +281,94 @@ impl Client {
                 .build()
                 .expect("couldn't build GitHub client?"),
         )
-        .with(Cache(HttpCache {
-            mode: CacheMode::Default,
-            manager: CACacheManager {
-                path: cache_dir.into(),
-                remove_opts: Default::default(),
-            },
-            options: HttpCacheOptions {
-                cache_options: Some(CacheOptions {
-                    // GitHub API requests made with an API token seem to
-                    // always have `Cache-Control: private`, so we need to
-                    // explicitly tell http-cache that our cache is not shared
-                    // in order for things to cache correctly.
-                    shared: false,
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
-        }))
+        .with(CacheLoggingMiddleware)
+        .with(ChainedCache(
+            Cache(HttpCache {
+                mode: CacheMode::Default,
+                manager: CACacheManager {
+                    path: cache_dir.into(),
+                    remove_opts: Default::default(),
+                },
+                options: http_cache_options.clone(),
+            }),
+            CacheType::File,
+        ))
+        .with(ChainedCache(
+            Cache(HttpCache {
+                mode: CacheMode::ForceCache,
+                manager: MokaManager::new(MokaCache::new(1000)),
+                options: http_cache_options,
+            }),
+            CacheType::Memory,
+        ))
         .build();
 
         Ok(Self {
             api_base: host.to_api_url(),
             _host: host.clone(),
             http,
+            token: token.clone(),
+            ref_cache: MokaCache::new(100),
         })
     }
 
-    async fn paginate<T: DeserializeOwned>(
-        &self,
-        endpoint: &str,
-    ) -> reqwest_middleware::Result<Vec<T>> {
-        let mut dest = vec![];
-        let url = format!("{api_base}/{endpoint}", api_base = self.api_base);
+    async fn list_refs(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, git2::Error> {
+        let url = format!("https://github.com/{owner}/{repo}.git");
+        let key = url.clone();
 
-        // If we were nice, we would parse GitHub's `links` header and extract
-        // the remaining number of pages. But this is annoying, and we are
-        // not nice, so we simply request pages until GitHub bails on us
-        // and returns empty results.
-        let mut pageno = 0;
-        loop {
-            let resp = self
-                .http
-                .get(&url)
-                .query(&[("page", pageno), ("per_page", 100)])
-                .send()
-                .await?
-                .error_for_status()?;
-
-            let page = resp.json::<Vec<T>>().await?;
-            if page.is_empty() {
-                break;
-            }
-
-            dest.extend(page);
-            pageno += 1;
+        if let Some(cached_entry) = self.ref_cache.get(&key).await {
+            return Ok(cached_entry);
         }
 
-        Ok(dest)
+        tracing::debug!("Fetching refs for {url}");
+
+        let token = self.token.clone();
+        let remote_refs: Vec<_> = tokio::task::spawn_blocking(move || {
+            let mut remote = Remote::create_detached(url)?;
+
+            let mut callbacks = RemoteCallbacks::new();
+            callbacks.credentials(|_url, _username_from_url, _allowed_types| token.to_cred());
+
+            let connection = remote.connect_auth(git2::Direction::Fetch, Some(callbacks), None)?;
+
+            Ok::<Vec<RemoteHead>, git2::Error>(
+                connection
+                    .list()?
+                    .iter()
+                    .map(|head| RemoteHead {
+                        name: head.name().to_string(),
+                        oid: head.oid(),
+                    })
+                    .collect(),
+            )
+        })
+        .await
+        .unwrap()?;
+
+        self.ref_cache.insert(key, remote_refs.clone()).await;
+
+        Ok(remote_refs)
     }
 
-    /// Maps the response to a `Result<bool>`, depending on whether
-    /// the response's status indicates 200 or 404.
-    ///
-    /// The error variants communicate all other status codes,
-    /// with additional context where helpful.
-    fn resp_present(resp: Response) -> Result<bool, ClientError> {
-        match resp.status() {
-            StatusCode::OK => Ok(true),
-            StatusCode::NOT_FOUND => Ok(false),
-            StatusCode::FORBIDDEN => Err(resp.error_for_status().unwrap_err().into()),
-            _ => Err(resp.error_for_status().unwrap_err().into()),
-        }
-    }
-
-    #[instrument(skip(self))]
-    #[tokio::main]
-    pub(crate) async fn list_branches(
+    async fn list_branches_internal(
         &self,
         owner: &str,
         repo: &str,
     ) -> Result<Vec<Branch>, ClientError> {
-        self.paginate(&format!("repos/{owner}/{repo}/branches"))
+        self.list_refs(owner, repo)
             .await
+            .map(|v| {
+                v.iter()
+                    .filter_map(|r| {
+                        r.name.strip_prefix("refs/heads/").map(|name| Branch {
+                            name: name.to_string(),
+                            commit: Commit {
+                                sha: r.oid.to_string(),
+                            },
+                        })
+                    })
+                    .collect()
+            })
             .map_err(|e| ClientError::ListBranches {
                 source: ClientError::from(e).into(),
                 owner: owner.to_string(),
@@ -282,14 +378,59 @@ impl Client {
 
     #[instrument(skip(self))]
     #[tokio::main]
-    pub(crate) async fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>, ClientError> {
-        self.paginate(&format!("repos/{owner}/{repo}/tags"))
+    pub(crate) async fn list_branches(
+        &self,
+        owner: &str,
+        repo: &str,
+    ) -> Result<Vec<Branch>, ClientError> {
+        self.list_branches_internal(owner, repo).await
+    }
+
+    async fn list_tags_internal(&self, owner: &str, repo: &str) -> Result<Vec<Tag>, ClientError> {
+        self.list_refs(owner, repo)
             .await
+            .map(|v| {
+                let mut tags: Vec<_> = v
+                    .iter()
+                    .filter_map(|r| {
+                        r.name.strip_prefix("refs/tags/").map(|name| Tag {
+                            name: name.to_string(),
+                            commit: Commit {
+                                sha: r.oid.to_string(),
+                            },
+                        })
+                    })
+                    .collect();
+
+                // Tags may point to a commit or an annotation.
+                // If we have an annotation, a tag suffixed with `^{}` holds the commit.
+                // See: https://www.kernel.org/pub/software/scm/git/docs/gitrevisions.html
+                let annotated_tags: HashSet<_> = tags
+                    .iter()
+                    .filter_map(|tag| tag.name.strip_suffix("^{}").map(|n| n.to_string()))
+                    .collect();
+                tags.retain_mut(|tag| {
+                    if let Some(stripped_name) = tag.name.strip_suffix("^{}") {
+                        tag.name = stripped_name.to_string();
+                        true
+                    } else {
+                        !annotated_tags.contains(&tag.name)
+                    }
+                });
+
+                tags
+            })
             .map_err(|e| ClientError::ListTags {
                 source: ClientError::from(e).into(),
                 owner: owner.to_string(),
                 repo: repo.to_string(),
             })
+    }
+
+    #[instrument(skip(self))]
+    #[tokio::main]
+    pub(crate) async fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>, ClientError> {
+        self.list_tags_internal(owner, repo).await
     }
 
     #[instrument(skip(self))]
@@ -300,13 +441,11 @@ impl Client {
         repo: &str,
         branch: &str,
     ) -> Result<bool, ClientError> {
-        let url = format!(
-            "{api_base}/repos/{owner}/{repo}/git/ref/heads/{branch}",
-            api_base = self.api_base
-        );
-
-        let resp = self.http.get(&url).send().await?;
-        Client::resp_present(resp)
+        Ok(self
+            .list_branches_internal(owner, repo)
+            .await?
+            .iter()
+            .any(|branch_ref| branch_ref.name == branch))
     }
 
     #[instrument(skip(self))]
@@ -317,13 +456,11 @@ impl Client {
         repo: &str,
         tag: &str,
     ) -> Result<bool, ClientError> {
-        let url = format!(
-            "{api_base}/repos/{owner}/{repo}/git/ref/tags/{tag}",
-            api_base = self.api_base
-        );
-
-        let resp = self.http.get(&url).send().await?;
-        Client::resp_present(resp)
+        Ok(self
+            .list_tags_internal(owner, repo)
+            .await?
+            .iter()
+            .any(|tag_ref| tag_ref.name == tag))
     }
 
     #[instrument(skip(self))]
@@ -334,36 +471,21 @@ impl Client {
         repo: &str,
         git_ref: &str,
     ) -> Result<Option<String>, ClientError> {
-        let base_url = format!(
-            "{api_base}/repos/{owner}/{repo}/commits",
-            api_base = self.api_base,
-        );
+        let branches = self.list_branches_internal(owner, repo).await?;
+        let tags = self.list_tags_internal(owner, repo).await?;
+
+        tracing::debug!("Finding commit for reference {git_ref}");
 
         // GitHub Actions resolves branches before tags.
-        for ref_type in &["heads", "tags"] {
-            let url = format!("{base_url}/refs/{ref_type}/{git_ref}");
+        for branch in branches {
+            if branch.name == git_ref {
+                return Ok(Some(branch.commit.sha));
+            }
+        }
 
-            let resp = self.http.get(&url).send().await?;
-            match resp.status() {
-                StatusCode::OK => {
-                    let commit = resp.json::<Commit>().await?;
-                    return Ok(Some(commit.sha));
-                }
-                // HACK(ww): GitHub's API documents 404 for a missing ref,
-                // but actually returns 422. We handle both cases here
-                // just in case GitHub decides to fix this in the future.
-                //
-                // In principle we're over-capturing errors here, but in
-                // practice we shouldn't see any causes of 422 other than
-                // a missing ref. The alternative would be to poke into the
-                // 422's JSON response and try to suss out whether it's
-                // actually a missing ref or something else, but that would
-                // be brittle without a commitment from GitHub to maintain
-                // a specific error string.
-                //
-                // See: <https://github.com/zizmorcore/zizmor/pull/972/files#r2167674833>
-                StatusCode::NOT_FOUND | StatusCode::UNPROCESSABLE_ENTITY => continue,
-                _ => return Err(resp.error_for_status().unwrap_err().into()),
+        for tag in tags {
+            if tag.name == git_ref {
+                return Ok(Some(tag.commit.sha));
             }
         }
 
@@ -653,7 +775,7 @@ impl Client {
 /// This model is intentionally incomplete.
 ///
 /// See <https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28>.
-#[derive(Deserialize, Clone)]
+#[derive(Clone)]
 pub(crate) struct Branch {
     pub(crate) name: String,
     pub(crate) commit: Commit,
@@ -662,7 +784,7 @@ pub(crate) struct Branch {
 /// A single tag, as returned by GitHub's tags endpoints.
 ///
 /// This model is intentionally incomplete.
-#[derive(Deserialize, Clone)]
+#[derive(Clone)]
 pub(crate) struct Tag {
     pub(crate) name: String,
     pub(crate) commit: Commit,
@@ -671,7 +793,7 @@ pub(crate) struct Tag {
 /// A single commit, as returned by GitHub's commits endpoints.
 ///
 /// This model is intentionally incomplete.
-#[derive(Deserialize, Clone)]
+#[derive(Clone)]
 pub(crate) struct Commit {
     pub(crate) sha: String,
 }

@@ -5,7 +5,8 @@ on: [push]
 permissions: {}
 
 jobs:
-  test:
+  ref-version-mismatch:
+    name: ref-version-mismatch
     runs-on: ubuntu-latest
     steps:
       # No finding, comment matches
