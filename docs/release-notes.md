@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [concurrency-limits] detects insufficient concurrency limits
+  in workflows (#1227)
+
+    Many thanks to @jwallwork23 for proposing and implementing this audit!
+
 ### Enhancements 🌱
 
 * When running in `--fix` mode and all fixes are successfully applied,
@@ -1169,5 +1176,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [ref-version-mismatch]: ./audits.md#ref-version-mismatch
 [dependabot-execution]: ./audits.md#dependabot-execution
 [dependabot-cooldown]: ./audits.md#dependabot-cooldown
+[concurrency-limits]: ./audits.md#concurrency-limits
 
 [exit code]: ./usage.md#exit-codes

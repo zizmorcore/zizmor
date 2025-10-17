@@ -1035,3 +1035,75 @@ fn dependabot_cooldown() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn concurrency_limits() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/missing.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r"
+    help[concurrency-limits]: insufficient job-level concurrency limits
+      --> @@INPUT@@:1:1
+       |
+     1 | / name: Workflow without concurrency
+     2 | | on: push
+     3 | | permissions: {}
+    ...  |
+    10 | |     - name: 1-ok
+    11 | |       run: echo ok
+       | |___________________^ missing concurrency setting
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/cancel-false.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r"
+    help[concurrency-limits]: insufficient job-level concurrency limits
+     --> @@INPUT@@:5:1
+      |
+    5 | / concurrency:
+    6 | |   group: ${{ github.workflow }}-${{ github.event.pull_request_number || github.ref }}
+    7 | |   cancel-in-progress: false
+      | |___________________________^ cancel-in-progress set to false
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/no-cancel.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r"
+    help[concurrency-limits]: insufficient job-level concurrency limits
+     --> @@INPUT@@:5:1
+      |
+    5 | concurrency: group
+      | ^^^^^^^^^^^^^^^^^^ concurrency is missing cancel-in-progress
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}

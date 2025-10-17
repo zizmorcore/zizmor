@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 192
 expression: "zizmor().input(input_under_test(\"unpinned-uses/issue-659-repro.yml\")).args([\"--pedantic\"]).run()?"
 ---
 warning[excessive-permissions]: overly broad permissions
@@ -10,22 +11,22 @@ warning[excessive-permissions]: overly broad permissions
  4 | | on:
  5 | |   workflow_dispatch:
 ...  |
-19 | |         with:
-20 | |           node-version: ${{ env.NODE_VERSION }}
+23 | |         with:
+24 | |           node-version: ${{ env.NODE_VERSION }}
    | |________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
 warning[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:8:3
+  --> @@INPUT@@:12:3
    |
- 8 | /   test-itg:
- 9 | |     name: test-itg
-10 | |     runs-on: ${{ matrix.os }}
-11 | |     strategy:
+12 | /   test-itg:
+13 | |     name: test-itg
+14 | |     runs-on: ${{ matrix.os }}
+15 | |     strategy:
 ...  |
-19 | |         with:
-20 | |           node-version: ${{ env.NODE_VERSION }}
+23 | |         with:
+24 | |           node-version: ${{ env.NODE_VERSION }}
    | |                                                ^
    | |                                                |
    | |________________________________________________this job

@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 606
 expression: "zizmor().input(input_under_test(\"excessive-permissions/workflow-default-perms.yml\")).args([\"--pedantic\"]).run()?"
 ---
 warning[excessive-permissions]: overly broad permissions
@@ -9,22 +10,22 @@ warning[excessive-permissions]: overly broad permissions
  6 | |
  7 | | name: workflow-default-perms
 ...  |
-15 | |         with:
-16 | |           persist-credentials: false
+19 | |         with:
+20 | |           persist-credentials: false
    | |_____________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
 warning[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:10:3
+  --> @@INPUT@@:14:3
    |
-10 | /   single:
-11 | |     name: single
-12 | |     runs-on: ubuntu-latest
-13 | |     steps:
-14 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-15 | |         with:
-16 | |           persist-credentials: false
+14 | /   single:
+15 | |     name: single
+16 | |     runs-on: ubuntu-latest
+17 | |     steps:
+18 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+19 | |         with:
+20 | |           persist-credentials: false
    | |                                     ^
    | |                                     |
    | |_____________________________________this job

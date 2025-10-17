@@ -1,5 +1,6 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 631
 expression: "zizmor().input(input_under_test(\"excessive-permissions/workflow-empty-perms.yml\")).run()?"
 ---
-No findings to report. Good job!
+No findings to report. Good job! (1 suppressed)
