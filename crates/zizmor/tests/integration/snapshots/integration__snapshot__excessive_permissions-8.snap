@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 647
 expression: "zizmor().input(input_under_test(\"excessive-permissions/workflow-write-explicit.yml\")).run()?"
 ---
 error[excessive-permissions]: overly broad permissions
@@ -26,4 +27,4 @@ warning[excessive-permissions]: overly broad permissions
   |
   = note: audit confidence → High
 
-5 findings (2 suppressed): 0 informational, 0 low, 1 medium, 2 high
+6 findings (3 suppressed): 0 informational, 0 low, 1 medium, 2 high

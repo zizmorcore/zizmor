@@ -246,6 +246,42 @@ intended to publish build artifacts:
 * Set an action-specific input to disable cache restoration when appropriate,
   such as `lookup-only` in @Swatinem/rust-cache.
 
+## `concurrency-limits`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow | [concurrency-limits/]   | v1.16.0       | ✅             | ❌                 | ❌  |
+
+[concurrency-limits/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/concurrency-limits/
+
+Detects insufficient concurrency limits in workflows.
+
+By default, GitHub Actions allows multiple instances of the same workflow to run
+concurrently, even when the new runs fully supersede the old. This can be a
+resource waste vector for attackers, particularly on billed runners. Separately,
+it can be a source of subtle race conditions when attempting to locate artifacts
+by workflow and job identifiers, rather than run IDs.
+
+Other resources:
+
+* [Guidelines on green software practices for GitHub Actions CI workflows]
+
+### Remediation
+
+Include a `concurrency` setting in your workflow that sets the
+`cancel-in-progress` option either to `true` or to an expression that will be
+true in most cases. Specifying `false` would allow separate instances of the
+workflows to run concurrently, whereas `true` will imply that running jobs are
+cancelled as soon as the workflow is re-triggered.
+
+!!! example
+
+    ```yaml title="cancel-true.yml"
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    ```
+
 ## `dangerous-triggers`
 
 | Type     | Examples                  | Introduced in | Works offline  | Auto-fixes available | Configurable |
@@ -1963,3 +1999,4 @@ once it's configured:
 [Aqua: The Challenges of Uniquely Identifying Your Images]: https://www.aquasec.com/blog/docker-image-tags/
 [GitHub: Safeguard your containers with new container signing capability in GitHub Actions]: https://github.blog/security/supply-chain-security/safeguard-container-signing-capability-actions/
 [Pwning the Entire Nix Ecosystem]: https://ptrpa.ws/nixpkgs-actions-abuse
+[Guidelines on green software practices for GitHub Actions CI workflows]: https://github.com/Cambridge-ICCS/green-ci

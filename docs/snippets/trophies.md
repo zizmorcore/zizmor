@@ -861,6 +861,7 @@
     ??? example "Examples"
         - onnx/onnx#6661
         - onnx/onnx#6662
+        - onnx/onnx#7363
 
 
 -   ![](https://github.com/open-edge-platform.png?size=40){ width="40" loading=lazy align=left } open-edge-platform

@@ -4,4 +4,4 @@ expression: "zizmor().input(input_under_test(\"config-scenarios/disablement\")).
 ---
 🌈 zizmor v@@VERSION@@
 DEBUG audit{input=Workflow(file://@@INPUT@@/.github/workflows/hackme.yml)}: zizmor::audit: skipping: template-injection is disabled in config for group Group("@@INPUT@@")
-No findings to report. Good job!
+No findings to report. Good job! (1 suppressed)

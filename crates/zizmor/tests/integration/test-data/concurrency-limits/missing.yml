@@ -1,0 +1,11 @@
+name: Workflow without concurrency
+on: push
+permissions: {}
+
+jobs:
+  job:
+    name: some-job
+    runs-on: ubuntu-latest
+    steps:
+    - name: 1-ok
+      run: echo ok

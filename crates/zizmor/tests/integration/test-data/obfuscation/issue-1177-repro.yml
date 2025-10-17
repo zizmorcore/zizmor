@@ -5,6 +5,10 @@ on: [push, pull_request]
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   issue-1177-repro:
     # we should not flag this as an obfuscation finding, since it's

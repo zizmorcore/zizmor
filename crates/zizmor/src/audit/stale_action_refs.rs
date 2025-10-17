@@ -1,4 +1,4 @@
-//! Detects actions pinned by commit hash, which doesn't point to a Git tag.
+//! Detects actions pinned by commit hash, which don't point to a Git tag.
 
 use anyhow::{Result, anyhow};
 use github_actions_models::common::{RepositoryUses, Uses};
