@@ -59,7 +59,7 @@ fn test_contents() {
     let pip = &dependabot.updates[0];
     assert_eq!(pip.package_ecosystem, PackageEcosystem::Pip);
     assert_eq!(pip.directories, Directories::Directory("/".into()));
-    assert_eq!(pip.schedule.interval, Interval::Daily);
+    assert_eq!(pip.schedule.as_ref().unwrap().interval, Interval::Daily);
     assert_eq!(pip.open_pull_requests_limit, 5); // default
 
     let github_actions = &dependabot.updates[1];
@@ -129,6 +129,6 @@ fn test_schedule_weekly_accepts_day() {
     let dependabot = load_dependabot("weekly-with-day.yml");
     assert_eq!(dependabot.updates.len(), 1);
     let schedule = &dependabot.updates[0].schedule;
-    assert_eq!(schedule.interval, Interval::Weekly);
-    assert_eq!(schedule.day, Some(Day::Friday));
+    assert_eq!(schedule.as_ref().unwrap().interval, Interval::Weekly);
+    assert_eq!(schedule.as_ref().unwrap().day, Some(Day::Friday));
 }

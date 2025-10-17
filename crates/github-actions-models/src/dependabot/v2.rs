@@ -18,8 +18,25 @@ pub struct Dependabot {
     #[serde(default)]
     pub enable_beta_ecosystems: bool,
     #[serde(default)]
+    pub multi_ecosystem_groups: IndexMap<String, MultiEcosystemGroup>,
+    #[serde(default)]
     pub registries: IndexMap<String, Registry>,
     pub updates: Vec<Update>,
+}
+
+/// A multi-ecosystem update group.
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub struct MultiEcosystemGroup {
+    pub schedule: Schedule,
+    #[serde(default = "default_labels")]
+    pub labels: IndexSet<String>,
+    pub milestone: Option<u64>,
+    #[serde(default)]
+    pub assignees: IndexSet<String>,
+    pub target_branch: Option<String>,
+    pub commit_message: Option<CommitMessage>,
+    pub pull_request_branch_name: Option<PullRequestBranchName>,
 }
 
 /// Different registries known to Dependabot.
@@ -114,7 +131,7 @@ pub enum Directories {
 
 /// A single `update` directive.
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", remote = "Self")]
 pub struct Update {
     #[serde(default)]
     pub allow: Vec<Allow>,
@@ -150,11 +167,58 @@ pub struct Update {
     pub registries: Vec<String>,
     #[serde(default)]
     pub reviewers: IndexSet<String>,
-    pub schedule: Schedule,
+    pub schedule: Option<Schedule>,
     pub target_branch: Option<String>,
+    pub pull_request_branch_name: Option<PullRequestBranchName>,
     #[serde(default)]
     pub vendor: bool,
     pub versioning_strategy: Option<VersioningStrategy>,
+    pub multi_ecosystem_group: Option<String>,
+    pub patterns: Option<IndexSet<String>>,
+}
+
+impl<'de> Deserialize<'de> for Update {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let update = Self::deserialize(deserializer)?;
+
+        // https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-multi-ecosystem-updates#2-assign-ecosystems-to-groups-with-patterns
+        if update.multi_ecosystem_group.is_some() && update.patterns.is_none() {
+            return Err(custom_error::<D>(
+                "`patterns` must be set when `multi-ecosystem-group` is set",
+            ));
+        }
+
+        // If an update uses `multi-ecosystem-group`, it must
+        // not specify its own `milestone`, `target-branch`, `commit-message`,
+        // or `pull-request-branch-name`.
+        if let Some(_) = update.multi_ecosystem_group {
+            if update.milestone.is_some() {
+                return Err(custom_error::<D>(
+                    "`milestone` may not be set when `multi-ecosystem-group` is set",
+                ));
+            }
+            if update.target_branch.is_some() {
+                return Err(custom_error::<D>(
+                    "`target-branch` may not be set when `multi-ecosystem-group` is set",
+                ));
+            }
+            if update.commit_message.is_some() {
+                return Err(custom_error::<D>(
+                    "`commit-message` may not be set when `multi-ecosystem-group` is set",
+                ));
+            }
+            if update.pull_request_branch_name.is_some() {
+                return Err(custom_error::<D>(
+                    "`pull-request-branch-name` may not be set when `multi-ecosystem-group` is set",
+                ));
+            }
+        }
+
+        Ok(update)
+    }
 }
 
 #[inline]
@@ -346,13 +410,7 @@ impl<'de> Deserialize<'de> for Schedule {
             ));
         }
 
-        Ok(Self {
-            interval: schedule.interval,
-            day: schedule.day,
-            time: schedule.time,
-            timezone: schedule.timezone,
-            cronjob: schedule.cronjob,
-        })
+        Ok(schedule)
     }
 }
 
@@ -380,6 +438,13 @@ pub enum Day {
     Friday,
     Saturday,
     Sunday,
+}
+
+/// Pull request branch name settings.
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub struct PullRequestBranchName {
+    pub separator: Option<String>,
 }
 
 /// Versioning strategies.
