@@ -2,6 +2,10 @@ on: pull_request
 
 name: issue-839-repro
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.base_ref == main }}
+
 permissions: {}
 
 jobs:

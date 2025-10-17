@@ -1,32 +1,23 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
-assertion_line: 343
 expression: "zizmor().input(input_under_test(\"insecure-commands/issue-839-repro.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 error[insecure-commands]: execution of insecure workflow commands is enabled
-  --> @@INPUT@@:11:5
+  --> @@INPUT@@:15:5
    |
-11 | /     env:
-12 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+15 | /     env:
+16 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
    | |_____________________________________________^ insecure commands enabled here
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
 error[insecure-commands]: execution of insecure workflow commands is enabled
-  --> @@INPUT@@:26:9
+  --> @@INPUT@@:30:9
    |
-26 |         env: ${{ matrix.env }}
+30 |         env: ${{ matrix.env }}
    |         ^^^^^^^^^^^^^^^^^^^^^^ non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS
    |
    = note: audit confidence → Low
 
-help[concurrency-limits]: insufficient job-level concurrency limits
- --> @@INPUT@@:3:1
-  |
-3 | name: issue-839-repro
-  | ^^^^^^^^^^^^^^^^^^^^^ missing concurrency setting
-  |
-  = note: audit confidence → High
-
-3 findings (1 fixable): 0 informational, 1 low, 0 medium, 2 high
+2 findings (1 fixable): 0 informational, 0 low, 0 medium, 2 high

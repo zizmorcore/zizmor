@@ -1,23 +1,14 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
-assertion_line: 118
 expression: "zizmor().input(input_under_test(\"self-hosted/self-hosted-runner-group.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 warning[self-hosted-runner]: runs on a self-hosted runner
-  --> @@INPUT@@:11:5
+  --> @@INPUT@@:15:5
    |
-11 | /     runs-on:
-12 | |       group: ubuntu-runners
+15 | /     runs-on:
+16 | |       group: ubuntu-runners
    | |___________________________^ runner group implies self-hosted runner
    |
    = note: audit confidence → Low
 
-help[concurrency-limits]: insufficient job-level concurrency limits
- --> @@INPUT@@:4:1
-  |
-4 | name: self-hosted-runner-group
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing concurrency setting
-  |
-  = note: audit confidence → High
-
-2 findings: 0 informational, 1 low, 1 medium, 0 high
+1 finding: 0 informational, 0 low, 1 medium, 0 high

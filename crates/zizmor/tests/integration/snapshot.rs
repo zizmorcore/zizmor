@@ -1047,12 +1047,17 @@ fn concurrency_limits() -> Result<()> {
             .run()?,
         @r"
     help[concurrency-limits]: insufficient job-level concurrency limits
-     --> @@INPUT@@:1:1
-      |
-    1 | name: Workflow without concurrency
-      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing concurrency setting
-      |
-      = note: audit confidence → High
+      --> @@INPUT@@:1:1
+       |
+     1 | / name: Workflow without concurrency
+     2 | | on: push
+     3 | | permissions: {}
+    ...  |
+    10 | |     - name: 1-ok
+    11 | |       run: echo ok
+       | |___________________^ missing concurrency setting
+       |
+       = note: audit confidence → High
 
     1 finding: 0 informational, 1 low, 0 medium, 0 high
     "

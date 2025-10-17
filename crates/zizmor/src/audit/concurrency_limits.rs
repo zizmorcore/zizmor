@@ -77,7 +77,6 @@ impl Audit for ConcurrencyLimits {
                             workflow
                                 .location()
                                 .primary()
-                                .with_keys(["name".into()])
                                 .annotated("missing concurrency setting"),
                         )
                         .build(workflow)?,
