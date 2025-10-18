@@ -6,4 +6,4 @@ expression: "zizmor().input(input_under_test(\"config-scenarios/config-in-root/.
 DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
 DEBUG zizmor::config: attempting config discovery in `@@INPUT@@`
 DEBUG zizmor::config: found config candidate at `@@TEST_PREFIX@@/config-scenarios/config-in-root/zizmor.yml`
-No findings to report. Good job! (1 ignored, 1 suppressed)
+No findings to report. Good job! (1 ignored, 2 suppressed)

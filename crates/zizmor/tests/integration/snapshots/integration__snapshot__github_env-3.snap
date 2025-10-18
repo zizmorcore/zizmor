@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 704
 expression: "zizmor().input(input_under_test(\"github-env/issue-397-repro.yml\")).run()?"
 ---
 error[github-env]: dangerous use of environment file
@@ -12,4 +13,4 @@ error[github-env]: dangerous use of environment file
    |
    = note: audit confidence → Low
 
-2 findings (1 ignored): 0 informational, 0 low, 0 medium, 1 high
+3 findings (1 ignored, 1 suppressed): 0 informational, 0 low, 0 medium, 1 high

@@ -7,6 +7,10 @@ permissions:
   contents: read  # Needed to fetch code
   packages: write # Needed to publish packages
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-job-1:
     name: Test Job 1

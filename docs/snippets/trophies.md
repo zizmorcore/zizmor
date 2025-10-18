@@ -607,6 +607,14 @@
         - Instagram/LibCST#1262
 
 
+-   ![](https://github.com/ispc.png?size=40){ width="40" loading=lazy align=left } ispc
+
+    ---
+
+    ??? example "Examples"
+        - ispc/ispc#3589
+
+
 -   ![](https://github.com/jj-vcs.png?size=40){ width="40" loading=lazy align=left } jj-vcs
 
     ---
@@ -853,6 +861,7 @@
     ??? example "Examples"
         - onnx/onnx#6661
         - onnx/onnx#6662
+        - onnx/onnx#7363
 
 
 -   ![](https://github.com/open-edge-platform.png?size=40){ width="40" loading=lazy align=left } open-edge-platform

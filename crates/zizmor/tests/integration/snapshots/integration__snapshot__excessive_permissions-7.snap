@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 639
 expression: "zizmor().input(input_under_test(\"excessive-permissions/jobs-broaden-permissions.yml\")).run()?"
 ---
 warning[excessive-permissions]: overly broad permissions
@@ -32,4 +33,4 @@ error[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → High
 
-2 findings: 0 informational, 0 low, 1 medium, 1 high
+3 findings (1 suppressed): 0 informational, 0 low, 1 medium, 1 high

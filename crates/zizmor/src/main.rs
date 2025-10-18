@@ -46,7 +46,7 @@ mod state;
 mod utils;
 
 #[cfg(all(
-    not(target_env = "msvc"),
+    not(target_family = "windows"),
     any(
         target_arch = "x86_64",
         target_arch = "aarch64",
@@ -769,11 +769,23 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
         }
     };
 
-    if let Some(fix_mode) = app.fix {
-        output::fix::apply_fixes(fix_mode, &results, &registry).map_err(Error::Fix)?;
-    }
+    let all_fixed = if let Some(fix_mode) = app.fix {
+        let fix_result =
+            output::fix::apply_fixes(fix_mode, &results, &registry).map_err(Error::Fix)?;
+
+        // If all findings have applicable fixes and all were successfully applied,
+        // we should exit with success.
+        results.all_findings_have_applicable_fixes(fix_mode)
+            && fix_result.failed_count == 0
+            && fix_result.applied_count > 0
+    } else {
+        false
+    };
 
     if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
+        Ok(ExitCode::SUCCESS)
+    } else if all_fixed {
+        // All findings were auto-fixed, no manual intervention needed
         Ok(ExitCode::SUCCESS)
     } else {
         Ok(results.exit_code())

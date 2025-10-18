@@ -9,6 +9,45 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [concurrency-limits] detects insufficient concurrency limits
+  in workflows (#1227)
+
+    Many thanks to @jwallwork23 for proposing and implementing this audit!
+
+### Performance Improvements 🚄
+
+* `zizmor`'s online mode is now significantly (40% to 90%) faster on
+  common workloads, thanks to a combination of caching improvements and
+  conversion of GitHub API requests into Git remote lookups (#1257)
+
+    Many thanks to @Bo98 for implementing these improvements!
+
+### Enhancements 🌱
+
+* When running in `--fix` mode and all fixes are successfully applied,
+  `zizmor` now has similar [exit code] behavior as the `--no-exit-codes`
+  and `--format=sarif` flags (#1242)
+
+    Many thanks to @cnaples79 for implementing this improvement!
+
+## 1.15.2
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse some Dependabot configuration
+  files due to missing support for some schedule formats (#1247)
+
+## 1.15.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse Dependabot configuration files
+  due to missing support for some package ecosystems (#1240)
+
+## 1.15.0
+
 This release comes with support for auditing
 [Dependabot](https://docs.github.com/en/code-security/dependabot) configuration
 files! Like with composite action definition auditing (introduced in
@@ -53,6 +92,9 @@ To complement this new functionality, this release comes with two new audits:
 
 * `--collect=dependabot` is now supported as a collection option,
   allowing users to audit only Dependabot configuration files (#1215)
+
+* The `--fix` mode (introduced with v1.10.0) is now considered
+  **stable** and no longer experimental (#1232)
 
 ### Bug Fixes 🐛
 
@@ -1142,3 +1184,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [ref-version-mismatch]: ./audits.md#ref-version-mismatch
 [dependabot-execution]: ./audits.md#dependabot-execution
 [dependabot-cooldown]: ./audits.md#dependabot-cooldown
+[concurrency-limits]: ./audits.md#concurrency-limits
+
+[exit code]: ./usage.md#exit-codes

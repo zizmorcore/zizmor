@@ -79,7 +79,7 @@ pub struct RunDefaults {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "kebab-case", untagged)]
+#[serde(rename_all_fields = "kebab-case", untagged)]
 pub enum Concurrency {
     Bare(String),
     Rich {
@@ -109,7 +109,10 @@ impl Job {
 
 #[cfg(test)]
 mod tests {
-    use crate::workflow::event::{OptionalBody, WorkflowCall, WorkflowDispatch};
+    use crate::{
+        common::expr::BoE,
+        workflow::event::{OptionalBody, WorkflowCall, WorkflowDispatch},
+    };
 
     use super::{Concurrency, Trigger};
 
@@ -125,7 +128,7 @@ mod tests {
             concurrency,
             Concurrency::Rich {
                 group: _,
-                cancel_in_progress: _
+                cancel_in_progress: BoE::Literal(true)
             }
         ));
     }

@@ -1,11 +1,12 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 67
 expression: "zizmor().input(input_under_test(\"artipacked.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
 warning[artipacked]: credential persistence through GitHub Actions artifacts
-  --> @@INPUT@@:18:9
+  --> @@INPUT@@:22:9
    |
-18 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+22 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
    |
    = note: audit confidence → Low

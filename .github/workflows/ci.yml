@@ -8,6 +8,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint
@@ -29,30 +33,30 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      with:
-        persist-credentials: false
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
 
-    - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
 
-    - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
 
-    - name: Test dependencies
-      run: |
-        # Don't waste time on man-db updates
-        sudo apt-get remove --purge man-db
-        # Needed for tty-tests
-        sudo apt install -y expect
+      - name: Test dependencies
+        run: |
+          # Don't waste time on man-db updates
+          sudo apt-get remove --purge man-db
+          # Needed for tty-tests
+          sudo apt install -y expect
 
-    - name: Test
-      run: cargo test --features online-tests,tty-tests
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test
+        run: cargo test --features online-tests,tty-tests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Test snippets
-      run: |
-        make snippets
-        git diff --exit-code
+      - name: Test snippets
+        run: |
+          make snippets
+          git diff --exit-code
 
   test-site:
     name: Test site build

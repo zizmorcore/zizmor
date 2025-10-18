@@ -5,6 +5,10 @@ on: push
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.base_ref == main }}
+
 jobs:
   issue-447-repro:
     name: issue-447-repro

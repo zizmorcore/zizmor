@@ -15,4 +15,4 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-onlin
  INFO audit: zizmor: 🌈 completed .github/workflows/hello.yml
  INFO audit: zizmor: 🌈 completed arbitrary/subdir/.github/workflows/hello.yml
  INFO audit: zizmor: 🌈 completed arbitrary/subdir/custom-action/action.yml
-No findings to report. Good job! (2 suppressed)
+No findings to report. Good job! (4 suppressed)
