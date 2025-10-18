@@ -321,13 +321,36 @@ updates:
             DependabotCooldown,
             "test_fix_multiple_updates.yml",
             dependabot_content,
-            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
-                insta::assert_snapshot!(findings.len(), @"2");
+            |dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                assert_eq!(findings.len(), 2, "Expected 2 findings");
 
-                // Verify both findings have fixes
+                // Apply all fixes and snapshot the result
+                let mut document = dependabot.as_document().clone();
                 for finding in &findings {
                     assert!(!finding.fixes.is_empty(), "Expected fixes but got none");
+                    for fix in &finding.fixes {
+                        document = fix.apply(&document).unwrap();
+                    }
                 }
+
+                insta::assert_snapshot!(document.source(), @r"
+                version: 2
+
+                updates:
+                  - package-ecosystem: pip
+                    directory: /
+                    schedule:
+                      interval: daily
+                    cooldown:
+                      default-days: 7
+
+                  - package-ecosystem: npm
+                    directory: /
+                    cooldown:
+                      default-days: 7
+                    schedule:
+                      interval: weekly
+                ");
             }
         );
     }
@@ -350,8 +373,21 @@ updates:
             DependabotCooldown,
             "test_no_fix_needed.yml",
             dependabot_content,
-            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
-                insta::assert_snapshot!(findings.len(), @"0");
+            |dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                assert_eq!(findings.len(), 0, "Expected no findings");
+
+                // Verify the document remains unchanged
+                insta::assert_snapshot!(dependabot.as_document().source(), @r"
+                version: 2
+
+                updates:
+                  - package-ecosystem: pip
+                    directory: /
+                    cooldown:
+                      default-days: 7
+                    schedule:
+                      interval: daily
+                ");
             }
         );
     }
