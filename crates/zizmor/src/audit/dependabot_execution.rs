@@ -151,8 +151,20 @@ updates:
             DependabotExecution,
             "test_no_fix_needed_for_deny.yml",
             dependabot_content,
-            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
-                insta::assert_snapshot!(findings.len(), @"0");
+            |dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                assert_eq!(findings.len(), 0, "Expected no findings");
+
+                // Verify the document remains unchanged
+                insta::assert_snapshot!(dependabot.as_document().source(), @r"
+                version: 2
+
+                updates:
+                  - package-ecosystem: pip
+                    directory: /
+                    schedule:
+                      interval: daily
+                    insecure-external-code-execution: deny
+                ");
             }
         );
     }
@@ -173,8 +185,19 @@ updates:
             DependabotExecution,
             "test_no_fix_needed_when_omitted.yml",
             dependabot_content,
-            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
-                insta::assert_snapshot!(findings.len(), @"0");
+            |dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                assert_eq!(findings.len(), 0, "Expected no findings");
+
+                // Verify the document remains unchanged
+                insta::assert_snapshot!(dependabot.as_document().source(), @r"
+                version: 2
+
+                updates:
+                  - package-ecosystem: pip
+                    directory: /
+                    schedule:
+                      interval: daily
+                ");
             }
         );
     }
