@@ -20,7 +20,7 @@ impl DependabotExecution {
         Fix {
             title: "set insecure-external-code-execution to deny".to_string(),
             key: update.location().key,
-            disposition: FixDisposition::Safe,
+            disposition: FixDisposition::Unsafe,
             patches: vec![Patch {
                 route: update
                     .location()
