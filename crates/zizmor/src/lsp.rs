@@ -67,6 +67,11 @@ impl LanguageServer for Backend {
                 scheme: None,
                 pattern: Some("**/action.{yml,yaml}".into()),
             },
+            lsp_types::DocumentFilter {
+                language: Some("yaml".into()),
+                scheme: None,
+                pattern: Some("**/.github/dependabot.{yml,yaml}".into()),
+            },
         ];
 
         // Register our capabilities with the client.
