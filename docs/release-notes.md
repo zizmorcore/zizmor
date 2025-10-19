@@ -32,6 +32,16 @@ of `zizmor`.
 
     Many thanks to @cnaples79 for implementing this improvement!
 
+* The [dependabot-cooldown] audit now supports auto-fixes for many findings
+  (#1229)
+
+    Many thanks to @mostafa for implementing this improvement!
+
+* The [dependabot-execution] audit now supports auto-fixes for many findings
+  (#1229)
+
+    Many thanks to @mostafa for implementing this improvement!
+
 ## 1.15.2
 
 ### Bug Fixes 🐛
