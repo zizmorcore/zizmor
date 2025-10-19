@@ -9,6 +9,7 @@ on:
       - "subfeature/v*"
       - "yamlpath/v*"
       - "yamlpatch/v*"
+      - "tree-sitter-iter/v*"
   workflow_dispatch:
     inputs:
       package-name:
