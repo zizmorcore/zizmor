@@ -371,6 +371,8 @@ pub struct Document {
     flow_pair_id: u16,
     block_sequence_item_id: u16,
     comment_id: u16,
+    anchor_id: u16,
+    alias_id: u16,
 }
 
 impl Document {
@@ -396,9 +398,6 @@ impl Document {
             tree,
         };
 
-        // let anchor_id = language.id_for_node_kind("anchor", true);
-        // let alias_id = language.id_for_node_kind("alias", true);
-
         Ok(Self {
             tree: Tree::build(source_tree)?,
             line_index,
@@ -413,6 +412,8 @@ impl Document {
             flow_pair_id: language.id_for_node_kind("flow_pair", true),
             block_sequence_item_id: language.id_for_node_kind("block_sequence_item", true),
             comment_id: language.id_for_node_kind("comment", true),
+            anchor_id: language.id_for_node_kind("anchor", true),
+            alias_id: language.id_for_node_kind("alias", true),
         })
     }
 
@@ -666,6 +667,27 @@ impl Document {
             }
         }
 
+        // Our focus node might be an alias, in which case we need to
+        // do one last leap to get our "real" final focus node.
+        // TODO(ww): What about nested aliases?
+        focus_node = match focus_node.child(0) {
+            Some(child) if child.kind_id() == self.alias_id => {
+                let alias_name = child.utf8_text(self.source().as_bytes()).unwrap();
+                let anchor_map = self.tree.borrow_dependent();
+                *anchor_map
+                    .get(&alias_name[1..])
+                    .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?
+            }
+            _ => focus_node,
+        };
+
+        eprintln!(
+            "Final focus node before cleanup: {kind}: {source}, {child}",
+            kind = focus_node.kind(),
+            source = focus_node.utf8_text(self.source().as_bytes()).unwrap(),
+            child = focus_node.child(0).unwrap().kind()
+        );
+
         focus_node = match mode {
             QueryMode::Pretty => {
                 // If we're in "pretty" mode, we want to return the
@@ -738,11 +760,70 @@ impl Document {
         Ok(focus_node)
     }
 
-    fn descend<'b>(&self, node: &Node<'b>, component: &Component) -> Result<Node<'b>, QueryError> {
+    fn descend<'b>(
+        &'b self,
+        node: &Node<'b>,
+        component: &Component,
+    ) -> Result<Node<'b>, QueryError> {
         // The cursor is assumed to start on a block_node or flow_node,
-        // which has a single child containing the inner scalar/vector
+        // which has a child containing the inner scalar/vector/alias
         // type we're descending through.
-        let child = node.child(0).unwrap();
+        //
+        // To get to that child, we might have to skip over any
+        // anchor nodes that we're not actually aliasing through
+        // in this descent step.
+        //
+        // For example, for a YAML snippet like:
+        //
+        // ```yaml
+        // foo: &foo
+        //   bar: baz
+        // ```
+        //
+        // ...the relevant part of the CST looks roughly like:
+        //
+        // ```
+        // block_node         <- `node` points here
+        // |--- anchor        <- we need to skip this
+        // |--- block_mapping <- we want `child` to point here
+        // ```
+        let mut child = {
+            let mut cursor = node.walk();
+            node.named_children(&mut cursor)
+                .find(|n| n.kind_id() != self.anchor_id)
+                .ok_or_else(|| {
+                    QueryError::Other(format!(
+                        "node of kind {} has no non-anchor child",
+                        node.kind()
+                    ))
+                })?
+        };
+
+        // We might be on an alias node, in which case we need to
+        // jump to the alias's node via the anchor map.
+        if child.kind_id() == self.alias_id {
+            let alias_name = node.utf8_text(self.source().as_bytes()).unwrap();
+            let anchor_map = self.tree.borrow_dependent();
+            let aliased_node = anchor_map
+                .get(&alias_name[1..])
+                .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?;
+
+            // The `aliased_node` is our `block_node` or `flow_node`, so
+            // we need to once again get its inner child. This is slightly
+            // less trivial than before, since the first child is the
+            // `anchor` node that brought us here. There might also be
+            // interceding comments, so we need to get the first non-anchor,
+            // non-comment child.
+            let mut cursor = aliased_node.walk();
+            child = aliased_node
+                .named_children(&mut cursor)
+                .find(|n| n.kind_id() != self.comment_id && n.kind_id() != self.anchor_id)
+                .ok_or_else(|| {
+                    QueryError::Other(format!(
+                        "aliased node {alias_name} has no child content node",
+                    ))
+                })?;
+        }
 
         // We expect the child to be a sequence or mapping of either
         // flow or block type.
