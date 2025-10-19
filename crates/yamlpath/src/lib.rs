@@ -324,7 +324,7 @@ impl Tree {
 
                 // NOTE(ww): We could poke into the `anchor_name` child
                 // instead of slicing, but this is simpler.
-                anchor_map.insert(&anchor_name[1..], anchor);
+                anchor_map.insert(&anchor_name[1..], anchor.parent().unwrap());
             }
 
             Ok(anchor_map)
