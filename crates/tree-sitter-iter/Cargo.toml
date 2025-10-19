@@ -1,0 +1,18 @@
+[package]
+name = "tree-sitter-iter"
+version = "0.0.1"
+authors.workspace = true
+readme.workspace = true
+homepage.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tree-sitter.workspace = true
+
+[dev-dependencies]
+tree-sitter-yaml = { workspace = true }
+
+[lints]
+workspace = true

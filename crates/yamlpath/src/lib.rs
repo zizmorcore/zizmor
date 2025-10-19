@@ -13,10 +13,13 @@
 #![allow(clippy::redundant_field_names)]
 #![forbid(unsafe_code)]
 
+use std::{collections::HashMap, ops::Deref};
+
 use line_index::LineIndex;
 use serde::Serialize;
 use thiserror::Error;
-use tree_sitter::{Language, Node, Parser, Tree};
+use tree_sitter::{Language, Node, Parser};
+use tree_sitter_iter::TreeSitterIter;
 
 /// Possible errors when performing YAML path routes.
 #[derive(Error, Debug)]
@@ -49,6 +52,11 @@ pub enum QueryError {
     /// the given field name.
     #[error("syntax node `{0}` is missing child field `{1}`")]
     MissingChildField(String, &'static str),
+    /// The input contains a duplicate YAML anchor.
+    /// This is valid YAML, but we intentionally forbid it for now
+    /// for simplicity's sake.
+    #[error("input contains duplicate YAML anchor: `{0}`")]
+    DuplicateAnchor(String),
     /// Any other route error that doesn't fit cleanly above.
     #[error("route error: {0}")]
     Other(String),
@@ -272,10 +280,80 @@ enum QueryMode {
     Exact,
 }
 
+/// A holder type so that we can associate both source and node references
+/// with the same lifetime for [`self_cell`].
+#[derive(Clone)]
+struct SourceTree {
+    source: String,
+    tree: tree_sitter::Tree,
+}
+
+impl Deref for SourceTree {
+    type Target = tree_sitter::Tree;
+
+    fn deref(&self) -> &Self::Target {
+        &self.tree
+    }
+}
+
+type AnchorMap<'tree> = HashMap<&'tree str, Node<'tree>>;
+
+self_cell::self_cell!(
+    /// A wrapper for a [`SourceTree`] that also contains a computed
+    /// anchor map.
+    struct Tree {
+        owner: SourceTree,
+
+        #[covariant]
+        dependent: AnchorMap,
+    }
+);
+
+impl Tree {
+    fn build(inner: SourceTree) -> Result<Self, QueryError> {
+        Tree::try_new(SourceTree::clone(&inner), |tree| {
+            let mut anchor_map = HashMap::new();
+
+            for anchor in TreeSitterIter::new(tree).filter(|n| n.kind() == "anchor") {
+                let anchor_name = anchor.utf8_text(tree.source.as_bytes()).unwrap();
+
+                // Only insert if the anchor name is unique.
+                if anchor_map.contains_key(&anchor_name[1..]) {
+                    return Err(QueryError::DuplicateAnchor(anchor_name[1..].to_string()));
+                }
+
+                // NOTE(ww): We could poke into the `anchor_name` child
+                // instead of slicing, but this is simpler.
+                anchor_map.insert(&anchor_name[1..], anchor);
+            }
+
+            Ok(anchor_map)
+        })
+    }
+}
+
+impl Clone for Tree {
+    fn clone(&self) -> Self {
+        // Cloning is mildly annoying: we can clone the tree itself,
+        // but we need to reconstruct the anchor map from scratch since
+        // it borrows from the tree.
+        // TODO: Can we do better here?
+        // Unwrap safety: we're cloning from an existing valid owner.
+        Self::build(self.borrow_owner().clone()).unwrap()
+    }
+}
+
+impl Deref for Tree {
+    type Target = tree_sitter::Tree;
+
+    fn deref(&self) -> &Self::Target {
+        &self.borrow_owner().tree
+    }
+}
+
 /// Represents a queryable YAML document.
 #[derive(Clone)]
 pub struct Document {
-    source: String,
     tree: Tree,
     line_index: LineIndex,
     document_id: u16,
@@ -313,9 +391,16 @@ impl Document {
 
         let line_index = LineIndex::new(&source);
 
-        Ok(Self {
-            source,
+        let source_tree = SourceTree {
+            source: source,
             tree,
+        };
+
+        // let anchor_id = language.id_for_node_kind("anchor", true);
+        // let alias_id = language.id_for_node_kind("alias", true);
+
+        Ok(Self {
+            tree: Tree::build(source_tree)?,
             line_index,
             document_id: language.id_for_node_kind("document", true),
             block_node_id: language.id_for_node_kind("block_node", true),
@@ -340,7 +425,7 @@ impl Document {
     /// Return a view of the original YAML source that this document was
     /// loaded from.
     pub fn source(&self) -> &str {
-        &self.source
+        &self.tree.borrow_owner().source
     }
 
     /// Returns a [`Feature`] for the topmost semantic object in this document.
@@ -443,7 +528,7 @@ impl Document {
     ///
     /// Panics if the feature's span is invalid.
     pub fn extract(&self, feature: &Feature) -> &str {
-        &self.source[feature.location.byte_span.0..feature.location.byte_span.1]
+        &self.source()[feature.location.byte_span.0..feature.location.byte_span.1]
     }
 
     /// Returns a string slice of the original document corresponding to the given
@@ -458,11 +543,11 @@ impl Document {
     /// Panics if the feature's span is invalid.
     pub fn extract_with_leading_whitespace<'a>(&'a self, feature: &Feature) -> &'a str {
         let mut start_idx = feature.location.byte_span.0;
-        let pre_slice = &self.source[0..start_idx];
+        let pre_slice = &self.source()[0..start_idx];
         if let Some(last_newline) = pre_slice.rfind('\n') {
             // If everything between the last newline and the start_index
             // is ASCII spaces, then we include it.
-            if self.source[last_newline + 1..start_idx]
+            if self.source()[last_newline + 1..start_idx]
                 .bytes()
                 .all(|b| b == b' ')
             {
@@ -470,7 +555,7 @@ impl Document {
             }
         }
 
-        &self.source[start_idx..feature.location.byte_span.1]
+        &self.source()[start_idx..feature.location.byte_span.1]
     }
 
     /// Given a [`Feature`], return all comments that span the same range
@@ -697,7 +782,7 @@ impl Document {
             // NOTE: text unwraps are infallible, since our document is UTF-8.
             let key_value = match key.named_child(0) {
                 Some(scalar) => {
-                    let key_value = scalar.utf8_text(self.source.as_bytes()).unwrap();
+                    let key_value = scalar.utf8_text(self.source().as_bytes()).unwrap();
 
                     match scalar.kind() {
                         "single_quote_scalar" | "double_quote_scalar" => {
@@ -709,7 +794,7 @@ impl Document {
                         _ => key_value,
                     }
                 }
-                None => key.utf8_text(self.source.as_bytes()).unwrap(),
+                None => key.utf8_text(self.source().as_bytes()).unwrap(),
             };
 
             if key_value == expected {
@@ -768,7 +853,7 @@ impl Document {
 mod tests {
     use std::vec;
 
-    use crate::{Component, Document, FeatureKind, Route};
+    use crate::{Component, Document, FeatureKind, QueryError, Route};
 
     #[test]
     fn test_query_parent() {
@@ -1067,5 +1152,32 @@ nested:
             let feature = doc.query_exact(&route).unwrap().unwrap();
             assert_eq!(feature.kind(), *expected_kind);
         }
+    }
+
+    #[test]
+    fn test_reject_duplicate_anchors() {
+        let anchors = r#"
+foo: &dup-anchor bar
+baz: &dup-anchor quux
+        "#;
+
+        let result = Document::new(anchors);
+        assert!(matches!(result, Err(QueryError::DuplicateAnchor(_))));
+    }
+
+    #[test]
+    fn test_anchor_map() {
+        let anchors = r#"
+foo: &foo-anchor
+  bar: &bar-anchor
+    baz: quux
+        "#;
+
+        let doc = Document::new(anchors).unwrap();
+        let anchor_map = doc.tree.borrow_dependent();
+
+        assert_eq!(anchor_map.len(), 2);
+        assert!(anchor_map.contains_key("foo-anchor"));
+        assert!(anchor_map.contains_key("bar-anchor"));
     }
 }
