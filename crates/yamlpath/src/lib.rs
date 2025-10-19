@@ -626,6 +626,11 @@ impl Document {
         )
     }
 
+    /// Returns whether this document contains any YAML anchors.
+    pub fn has_anchors(&self) -> bool {
+        !self.tree.borrow_dependent().is_empty()
+    }
+
     /// Returns the topmost semantic object in the YAML document,
     /// i.e. the node corresponding to the first block or flow feature.
     fn top_object(&self) -> Result<Node<'_>, QueryError> {
