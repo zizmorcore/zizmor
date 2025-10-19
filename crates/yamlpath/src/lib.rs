@@ -681,13 +681,6 @@ impl Document {
             _ => focus_node,
         };
 
-        eprintln!(
-            "Final focus node before cleanup: {kind}: {source}, {child}",
-            kind = focus_node.kind(),
-            source = focus_node.utf8_text(self.source().as_bytes()).unwrap(),
-            child = focus_node.child(0).unwrap().kind()
-        );
-
         focus_node = match mode {
             QueryMode::Pretty => {
                 // If we're in "pretty" mode, we want to return the
