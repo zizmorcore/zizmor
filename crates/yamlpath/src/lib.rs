@@ -315,16 +315,33 @@ impl Tree {
             let mut anchor_map = HashMap::new();
 
             for anchor in TreeIter::new(tree).filter(|n| n.kind() == "anchor") {
-                let anchor_name = anchor.utf8_text(tree.source.as_bytes()).unwrap();
+                // NOTE(ww): We could poke into the `anchor_name` child
+                // instead of slicing, but this is simpler.
+                let anchor_name = &anchor.utf8_text(tree.source.as_bytes()).unwrap()[1..];
 
                 // Only insert if the anchor name is unique.
-                if anchor_map.contains_key(&anchor_name[1..]) {
+                if anchor_map.contains_key(anchor_name) {
                     return Err(QueryError::DuplicateAnchor(anchor_name[1..].to_string()));
                 }
 
-                // NOTE(ww): We could poke into the `anchor_name` child
-                // instead of slicing, but this is simpler.
-                anchor_map.insert(&anchor_name[1..], anchor.parent().unwrap());
+                // NOTE(ww): We insert the anchor's next non-comment
+                // sibling as the anchor's target. This makes things
+                // a bit simpler when descending later, plus it produces
+                // more useful spans, since neither the anchor node
+                // nor its parent are useful in the aliased context.
+                let parent = anchor.parent().ok_or_else(|| {
+                    QueryError::UnexpectedNode("anchor node has no parent".into())
+                })?;
+
+                let mut cursor = parent.walk();
+                let sibling = parent
+                    .named_children(&mut cursor)
+                    .find(|child| child.kind() != "anchor" && child.kind() != "comment")
+                    .ok_or_else(|| {
+                        QueryError::UnexpectedNode("anchor has no non-comment sibling".into())
+                    })?;
+
+                anchor_map.insert(anchor_name, sibling);
             }
 
             Ok(anchor_map)
@@ -793,29 +810,14 @@ impl Document {
         };
 
         // We might be on an alias node, in which case we need to
-        // jump to the alias's node via the anchor map.
+        // jump to the alias's target via the anchor map.
         if child.kind_id() == self.alias_id {
             let alias_name = node.utf8_text(self.source().as_bytes()).unwrap();
             let anchor_map = self.tree.borrow_dependent();
-            let aliased_node = anchor_map
+
+            child = *anchor_map
                 .get(&alias_name[1..])
                 .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?;
-
-            // The `aliased_node` is our `block_node` or `flow_node`, so
-            // we need to once again get its inner child. This is slightly
-            // less trivial than before, since the first child is the
-            // `anchor` node that brought us here. There might also be
-            // interceding comments, so we need to get the first non-anchor,
-            // non-comment child.
-            let mut cursor = aliased_node.walk();
-            child = aliased_node
-                .named_children(&mut cursor)
-                .find(|n| n.kind_id() != self.comment_id && n.kind_id() != self.anchor_id)
-                .ok_or_else(|| {
-                    QueryError::Other(format!(
-                        "aliased node {alias_name} has no child content node",
-                    ))
-                })?;
         }
 
         // We expect the child to be a sequence or mapping of either
@@ -1256,7 +1258,7 @@ foo: &foo-anchor
         let anchor_map = doc.tree.borrow_dependent();
 
         assert_eq!(anchor_map.len(), 2);
-        assert_eq!(anchor_map["foo-anchor"].kind(), "block_node");
-        assert_eq!(anchor_map["bar-anchor"].kind(), "block_node");
+        assert_eq!(anchor_map["foo-anchor"].kind(), "block_mapping");
+        assert_eq!(anchor_map["bar-anchor"].kind(), "block_mapping");
     }
 }
