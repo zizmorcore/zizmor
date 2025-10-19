@@ -3173,7 +3173,7 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-iter"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "tree-sitter",
  "tree-sitter-yaml",
