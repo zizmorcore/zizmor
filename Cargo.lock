@@ -2368,6 +2368,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "self_cell"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f7d95a54511e0c7be3f51e8867aa8cf35148d7b9445d44de2f943e2b206e749"
+
+[[package]]
 name = "semver"
 version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3166,6 +3172,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-iter"
+version = "0.0.2"
+dependencies = [
+ "tree-sitter",
+ "tree-sitter-yaml",
+]
+
+[[package]]
 name = "tree-sitter-language"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3857,10 +3871,12 @@ name = "yamlpath"
 version = "0.25.0"
 dependencies = [
  "line-index",
+ "self_cell",
  "serde",
  "serde_yaml",
  "thiserror 2.0.17",
  "tree-sitter",
+ "tree-sitter-iter",
  "tree-sitter-yaml",
 ]
 
