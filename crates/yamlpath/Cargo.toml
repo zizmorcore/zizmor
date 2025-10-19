@@ -1,6 +1,6 @@
 [package]
 name = "yamlpath"
-version = "0.25.0"
+version = "0.26.0"
 description = "Format-preserving YAML feature extraction"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/yamlpath"
 readme = "README.md"
