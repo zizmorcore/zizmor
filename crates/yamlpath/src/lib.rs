@@ -19,7 +19,7 @@ use line_index::LineIndex;
 use serde::Serialize;
 use thiserror::Error;
 use tree_sitter::{Language, Node, Parser};
-use tree_sitter_iter::TreeSitterIter;
+use tree_sitter_iter::TreeIter;
 
 /// Possible errors when performing YAML path routes.
 #[derive(Error, Debug)]
@@ -314,7 +314,7 @@ impl Tree {
         Tree::try_new(SourceTree::clone(&inner), |tree| {
             let mut anchor_map = HashMap::new();
 
-            for anchor in TreeSitterIter::new(tree).filter(|n| n.kind() == "anchor") {
+            for anchor in TreeIter::new(tree).filter(|n| n.kind() == "anchor") {
                 let anchor_name = anchor.utf8_text(tree.source.as_bytes()).unwrap();
 
                 // Only insert if the anchor name is unique.

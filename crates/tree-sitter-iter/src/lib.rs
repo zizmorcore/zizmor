@@ -7,12 +7,12 @@
 
 use tree_sitter::{Node, Tree, TreeCursor};
 
-/// An pre-order iterator over the nodes of a tree-sitter syntax tree.
-pub struct TreeSitterIter<'tree> {
+/// A pre-order iterator over the nodes of a tree-sitter syntax tree.
+pub struct TreeIter<'tree> {
     cursor: Option<TreeCursor<'tree>>,
 }
 
-impl<'tree> TreeSitterIter<'tree> {
+impl<'tree> TreeIter<'tree> {
     /// Creates a new `TreeSitterIter` for the given syntax tree.
     pub fn new(tree: &'tree Tree) -> Self {
         Self {
@@ -21,7 +21,7 @@ impl<'tree> TreeSitterIter<'tree> {
     }
 }
 
-impl<'tree> Iterator for TreeSitterIter<'tree> {
+impl<'tree> Iterator for TreeIter<'tree> {
     type Item = Node<'tree>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -93,7 +93,7 @@ jobs:
             let tree = parser.parse(src, None).expect("Failed to parse source");
 
             let node_count = tree.root_node().descendant_count();
-            let iter_count = super::TreeSitterIter::new(&tree).count();
+            let iter_count = super::TreeIter::new(&tree).count();
 
             assert_eq!(node_count, *expected_count);
             assert_eq!(node_count, iter_count);
