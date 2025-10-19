@@ -377,7 +377,7 @@ Some general pointers:
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Dependabot  | [dependabot-cooldown/]       | v1.15.0       | ✅             | ❌                 | ❌  |
+| Dependabot  | [dependabot-cooldown/]       | v1.15.0       | ✅             | ✅                 | ❌  |
 
 [dependabot-cooldown/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-cooldown/
 
@@ -443,7 +443,7 @@ enforces the following minimums:
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Dependabot  | [dependabot-execution/]       | v1.15.0       | ✅             | ❌                | ❌  |
+| Dependabot  | [dependabot-execution/]       | v1.15.0       | ✅             | ✅                | ❌  |
 
 [dependabot-execution/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-execution/
 
