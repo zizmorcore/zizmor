@@ -1177,7 +1177,7 @@ foo: &foo-anchor
         let anchor_map = doc.tree.borrow_dependent();
 
         assert_eq!(anchor_map.len(), 2);
-        assert!(anchor_map.contains_key("foo-anchor"));
-        assert!(anchor_map.contains_key("bar-anchor"));
+        assert_eq!(anchor_map["foo-anchor"].kind(), "block_node");
+        assert_eq!(anchor_map["bar-anchor"].kind(), "block_node");
     }
 }
