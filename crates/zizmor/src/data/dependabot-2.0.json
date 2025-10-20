@@ -1077,6 +1077,7 @@
                 "git",
                 "hex-organization",
                 "hex-repository",
+                "helm-registry",
                 "maven-repository",
                 "npm-registry",
                 "nuget-feed",
