@@ -16,3 +16,7 @@ queries:
   - query: [jobs, job2, env, DATABASE_URL]
     mode: exact
     expected: "${{ secrets.DATABASE_URL }}"
+
+  - query: [jobs, job2, env, DATABASE_URL]
+    mode: key-only
+    expected: "        DATABASE_URL"

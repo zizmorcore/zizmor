@@ -390,6 +390,7 @@ pub struct Document {
     comment_id: u16,
     anchor_id: u16,
     alias_id: u16,
+    block_scalar_id: u16,
 }
 
 impl Document {
@@ -431,6 +432,7 @@ impl Document {
             comment_id: language.id_for_node_kind("comment", true),
             anchor_id: language.id_for_node_kind("anchor", true),
             alias_id: language.id_for_node_kind("alias", true),
+            block_scalar_id: language.id_for_node_kind("block_scalar", true),
         })
     }
 
@@ -721,13 +723,20 @@ impl Document {
                 // the parent block/flow pair node that contains the key,
                 // and isolate on the key child instead.
 
-                // If we're already on block/flow pair, then we're already
-                // the key's parent.
                 let parent_node = if focus_node.kind_id() == self.block_mapping_pair_id
                     || focus_node.kind_id() == self.flow_pair_id
                 {
+                    // If we're already on block/flow pair, then we're already
+                    // the key's parent.
                     focus_node
+                } else if focus_node.kind_id() == self.block_scalar_id {
+                    // We might be on the internal `block_scalar` node, if
+                    // we got here via an alias. We need to go up two levels
+                    // to get to the mapping pair.
+                    focus_node.parent().unwrap().parent().unwrap()
                 } else {
+                    // Otherwise, we expect to be on the `block_node`
+                    // or `flow_node`, so we go up one level.
                     focus_node.parent().unwrap()
                 };
 

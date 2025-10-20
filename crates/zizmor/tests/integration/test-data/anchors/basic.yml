@@ -1,0 +1,15 @@
+name: basic
+
+on: [pull_request]
+
+permissions: {}
+
+jobs:
+  basic:
+    name: basic
+    runs-on: ubuntu-latest
+    steps:
+      - run: &run |
+          "doing a thing: ${{ github.event.issue.title }}"
+
+      - run: *run
