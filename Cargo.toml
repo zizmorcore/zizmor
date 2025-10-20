@@ -29,7 +29,7 @@ pretty_assertions = "1.4.1"
 annotate-snippets = "0.12.4"
 anstream = "0.6.21"
 assert_cmd = "2.0.17"
-async-trait = "0.1.88"
+async-trait = "0.1.89"
 camino = "1.2.1"
 clap = "4.5.48"
 clap-verbosity-flag = { version = "3.0.4", default-features = false }
@@ -47,11 +47,11 @@ ignore = "0.4.23"
 indexmap = { version = "2.11.4", features = ["serde"] }
 indicatif = "0.18"
 insta = "1.43.2"
-jsonschema = "0.30.0"
+jsonschema = "0.33.0"
 line-index = "0.1.2"
 memchr = "2.7.6"
 owo-colors = "4.2.3"
-regex = "1.11.3"
+regex = "1.12.1"
 reqwest = { version = "0.12.23", default-features = false }
 reqwest-middleware = "0.4.2"
 self_cell = "1"
@@ -70,12 +70,12 @@ tracing = "0.1.41"
 tracing-indicatif = "0.3.13"
 tracing-subscriber = "0.3.20"
 tree-sitter = "0.25.10"
-tree-sitter-bash = "0.23.3"
+tree-sitter-bash = "0.25.0"
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "0.0.2" }
 tree-sitter-powershell = "0.25.9"
 yamlpath = { path = "crates/yamlpath", version = "0.26.0" }
 yamlpatch = { path = "crates/yamlpatch", version = "0.3.0" }
-tree-sitter-yaml = "0.7.1"
+tree-sitter-yaml = "0.7.2"
 tikv-jemallocator = "0.6"
 
 [workspace.lints.clippy]
