@@ -892,33 +892,67 @@ impl Document {
         Err(QueryError::ExhaustedMapping(expected.into()))
     }
 
-    fn descend_sequence<'b>(&self, node: &Node<'b>, idx: usize) -> Result<Node<'b>, QueryError> {
+    /// Given a `block_sequence` or `flow_sequence` node, return
+    /// a full list of child nodes after expanding any aliases present.
+    ///
+    /// The returned child nodes are the inner
+    /// `block_node`/`flow_node`/`flow_pair` nodes for each sequence item.
+    fn flatten_sequence<'b>(&'b self, node: &Node<'b>) -> Result<Vec<Node<'b>>, QueryError> {
+        let mut children = vec![];
+
         let mut cur = node.walk();
-        // TODO: Optimize; we shouldn't collect the entire child set just to extract one.
-        let children = node
-            .named_children(&mut cur)
-            .filter(|n| {
-                n.kind_id() == self.block_sequence_item_id
-                    || n.kind_id() == self.flow_node_id
-                    || n.kind_id() == self.flow_pair_id
-            })
-            .collect::<Vec<_>>();
+        for child in node.named_children(&mut cur).filter(|child| {
+            child.kind_id() == self.block_sequence_item_id
+                || child.kind_id() == self.flow_node_id
+                || child.kind_id() == self.flow_pair_id
+        }) {
+            let mut child = child;
+
+            // If we have a `block_sequence_item`, we need to get its
+            // inner `block_node`/`flow_node`, which might be interceded
+            // by comments.
+            if child.kind_id() == self.block_sequence_item_id {
+                let mut cur = child.walk();
+                child = child
+                    .named_children(&mut cur)
+                    .find(|c| c.kind_id() == self.block_node_id || c.kind_id() == self.flow_node_id)
+                    .ok_or_else(|| {
+                        QueryError::MissingChild(child.kind().into(), "block_sequence_item".into())
+                    })?;
+            }
+
+            // `child` is now a `block_node`, a `flow_node`, or `flow_pair`:
+            //
+            // `block_node` looks like `- a: b`
+            // `flow_node` looks like `- a`
+            // `flow_pair` looks like `[a: b]`
+            //
+            // From here, we need to peek inside each and see if it's
+            // an alias. If it is, we expand the alias; otherwise, we
+            // just keep the child as-is.
+            if child.named_child(0).unwrap().kind() == "alias" {
+                let alias_name = &child.utf8_text(self.source().as_bytes()).unwrap()[1..];
+                let anchor_map = self.tree.borrow_dependent();
+                let aliased_node = anchor_map
+                    .get(alias_name)
+                    .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?;
+
+                children.extend(self.flatten_sequence(aliased_node)?);
+            } else {
+                children.push(child);
+            }
+        }
+
+        Ok(children)
+    }
+
+    fn descend_sequence<'b>(&'b self, node: &Node<'b>, idx: usize) -> Result<Node<'b>, QueryError> {
+        let children = self.flatten_sequence(node)?;
         let Some(child) = children.get(idx) else {
             return Err(QueryError::ExhaustedList(idx, children.len()));
         };
 
-        // If we're in a block_sequence, there's an intervening `block_sequence_item`
-        // getting in the way of our `block_node`/`flow_node`.
-        if child.kind_id() == self.block_sequence_item_id {
-            // NOTE: We can't just get the first named child here, since there might
-            // be interceding comments.
-            return child
-                .named_children(&mut cur)
-                .find(|c| c.kind_id() == self.block_node_id || c.kind_id() == self.flow_node_id)
-                .ok_or_else(|| {
-                    QueryError::MissingChild(child.kind().into(), "block_sequence_item".into())
-                });
-        } else if child.kind_id() == self.flow_pair_id {
+        if child.kind_id() == self.flow_pair_id {
             // Similarly, if our index happens to be a `flow_pair`, we need to
             // get the `value` child to get the next `flow_node`.
             // The `value` might not be present (e.g. `{foo: }`), in which case
