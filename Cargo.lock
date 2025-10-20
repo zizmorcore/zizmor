@@ -151,9 +151,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.88"
+version = "0.1.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
+checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -657,9 +657,9 @@ dependencies = [
 
 [[package]]
 name = "fancy-regex"
-version = "0.14.0"
+version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e24cb5a94bcae1e5408b0effca5cd7172ea3c5755049c5f3af4cd283a165298"
+checksum = "998b056554fbe42e03ae0e152895cd1a7e1002aec800fdc6635d20270260c46f"
 dependencies = [
  "bit-set",
  "regex-automata",
@@ -1421,9 +1421,9 @@ dependencies = [
 
 [[package]]
 name = "jsonschema"
-version = "0.30.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1b46a0365a611fbf1d2143104dcf910aada96fafd295bab16c60b802bf6fa1d"
+checksum = "d46662859bc5f60a145b75f4632fbadc84e829e45df6c5de74cfc8e05acb96b5"
 dependencies = [
  "ahash",
  "base64 0.22.1",
@@ -2123,9 +2123,9 @@ dependencies = [
 
 [[package]]
 name = "referencing"
-version = "0.30.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8eff4fa778b5c2a57e85c5f2fe3a709c52f0e60d23146e2151cbef5893f420e"
+checksum = "9e9c261f7ce75418b3beadfb3f0eb1299fe8eb9640deba45ffa2cb783098697d"
 dependencies = [
  "ahash",
  "fluent-uri 0.3.2",
@@ -2149,9 +2149,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.11.3"
+version = "1.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b5288124840bee7b386bc413c487869b360b2b4ec421ea56425128692f2a82c"
+checksum = "843bc0191f75f3e22651ae5f1e72939ab2f72a4bc30fa80a066bd66edefc24d4"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -2161,9 +2161,9 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.4.11"
+version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "833eb9ce86d40ef33cb1306d8accf7bc8ec2bfea4355cbdebb3df68b40925cad"
+checksum = "5276caf25ac86c8d810222b3dbb938e512c55c6831a10f3e6ed1c93b84041f1c"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -3163,9 +3163,9 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-bash"
-version = "0.23.3"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "329a4d48623ac337d42b1df84e81a1c9dbb2946907c102ca72db158c1964a52e"
+checksum = "871b0606e667e98a1237ebdc1b0d7056e0aebfdc3141d12b399865d4cb6ed8a6"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -3197,9 +3197,9 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-yaml"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d5893f2a05e57c86a2338aa3aed167a1e5c68b8fdff3bf4a460941f2d8fc944"
+checksum = "53c223db85f05e34794f065454843b0668ebc15d240ada63e2b5939f43ce7c97"
 dependencies = [
  "cc",
  "tree-sitter-language",
