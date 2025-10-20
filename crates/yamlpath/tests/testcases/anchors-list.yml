@@ -1,0 +1,24 @@
+testcase:
+  defaults: &defaults
+    - a
+    - b
+    - c
+
+  merge-before:
+    - *defaults
+    - d
+    - e
+
+  merge-after:
+    - d
+    - e
+    - *defaults
+
+queries:
+  - query: [merge-before, 0]
+    mode: exact
+    expected: "    - a"
+
+  - query: [merge-after, 2]
+    mode: exact
+    expected: "    - a"
