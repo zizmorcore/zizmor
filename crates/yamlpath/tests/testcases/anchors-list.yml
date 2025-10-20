@@ -18,6 +18,18 @@ testcase:
     - *defaults
     - *defaults
 
+  nested-inner: &inner
+    - a
+    - b
+
+  nested-outer: &outer
+    - *inner
+    - c
+
+  nested-top:
+    - *outer
+    - d
+
 queries:
   - query: [merge-before, 0]
     mode: exact
@@ -28,5 +40,17 @@ queries:
     expected: "a"
 
   - query: [merge-multi, 5]
+    mode: exact
+    expected: "c"
+
+  - query: [nested-top, 0]
+    mode: exact
+    expected: "a"
+
+  - query: [nested-top, 1]
+    mode: exact
+    expected: "b"
+
+  - query: [nested-top, 2]
     mode: exact
     expected: "c"
