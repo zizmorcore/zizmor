@@ -805,7 +805,7 @@ However, like all tools, `zizmor` is **not a panacea**, and has
 fundamental limitations that must be kept in mind. This page
 documents some of those limitations.
 
-### `zizmor` is a _static_ analysis tool
+### `zizmor` is a _static_ analysis tool { #static-analysis }
 
 `zizmor` is a _static_ analysis tool. It never executes any code, nor does it
 have access to any runtime state.
@@ -849,7 +849,7 @@ the [template-injection](./audits.md#template-injection) audit will flag
 `${{ matrix.something }}` as a potential code injection risk, since it
 can't infer anything about what `matrix.something` might expand to.
 
-### `zizmor` audits workflow and action _definitions_ only
+### `zizmor` audits workflow and action _definitions_ only { #definitions-only }
 
 `zizmor` audits workflow and action _definitions_ only. That means the
 contents of `foo.yml` (for your workflow definitions) or `action.yml` (for your
@@ -881,3 +881,36 @@ More generally, `zizmor` cannot analyze files indirectly referenced within
 workflow/action definitions, as they may not actually exist until runtime.
 For example, `some-script.sh` above may have been generated or downloaded
 outside of any repository-tracked state.
+
+### YAML anchors stymie analysis { #yaml-anchors }
+
+!!! tip "TL;DR"
+
+    `zizmor`'s support for YAML anchors is provided on a **best effort**
+    basis. Users of `zizmor` are **strongly encouraged** to avoid anchors
+    if they care about accurate static analysis results.
+
+`zizmor` tries very hard to present *useful* source spans in its audit
+results.
+
+To do this, `zizmor` needs to know a lot of about the inner workings
+of the YAML serialization format that GitHub Actions workflows, action
+definitions, and Dependabot files are expressed in.
+
+YAML is a complicated serialization format, but GitHub *mostly* uses
+a tractable subset of it. One conspicuous exception to this is
+[YAML anchors](https://yaml.org/spec/1.2.2/#3222-anchors-and-aliases),
+which GitHub has
+[decided to support](https://github.blog/changelog/2025-09-18-actions-yaml-anchors-and-non-public-workflow-templates/)
+in workflow and action definitions as of September 2025.
+
+Anchors make `zizmor`'s analysis job *much* harder, as they introduce a
+layer of (arbitrarily deep) indirection and misalignment between the
+deserialized object model (which is what `zizmor` analyzes) and the source
+representation (which `zizmor` spans back to).
+
+As a result, `zizmor`'s support for YAML anchors is **best effort only**.
+Users are **strongly encouraged** to avoid anchors in their workflows
+and actions. Bug reports for issues in inputs containing anchors are
+appreciated, but will be given a lower priority relative to bugs that
+aren't observed with YAML anchors.

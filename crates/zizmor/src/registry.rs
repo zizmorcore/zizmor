@@ -39,7 +39,7 @@ impl AuditRegistry {
                 match base::new(&audit_state) {
                     Ok(audit) => registry.register_audit(base::ident(), Box::new(audit)),
                     Err(AuditLoadError::Skip(e)) => {
-                        tracing::info!("skipping {audit}: {e}", audit = base::ident())
+                        tracing::debug!("skipping {audit}: {e}", audit = base::ident())
                     }
                     Err(AuditLoadError::Fail(e)) => {
                         return Err(anyhow::anyhow!(tips(
