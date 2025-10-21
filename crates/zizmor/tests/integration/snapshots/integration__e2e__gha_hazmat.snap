@@ -4,11 +4,6 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-onlin
 ---
 🌈 zizmor v@@VERSION@@
  INFO collect_inputs: zizmor::registry::input: collected 22 inputs from woodruffw/gha-hazmat
- INFO zizmor::registry: skipping impostor-commit: offline audits only requested
- INFO zizmor::registry: skipping ref-confusion: offline audits only requested
- INFO zizmor::registry: skipping known-vulnerable-actions: offline audits only requested
- INFO zizmor::registry: skipping stale-action-refs: offline audits only requested
- INFO zizmor::registry: skipping ref-version-mismatch: offline audits only requested
  INFO audit: zizmor: 🌈 completed .github/workflows/artipacked.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/bot-conditions.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/cache-poisoning.yml
