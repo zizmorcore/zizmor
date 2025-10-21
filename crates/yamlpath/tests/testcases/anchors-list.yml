@@ -1,0 +1,70 @@
+testcase:
+  defaults: &defaults
+    - a
+    - b
+    - c
+
+  merge-before:
+    - *defaults
+    - d
+    - e
+
+  merge-after:
+    - d
+    - e
+    - *defaults
+
+  merge-multi:
+    - *defaults
+    - *defaults
+
+  nested-inner: &inner
+    - a
+    - b
+
+  nested-outer: &outer
+    - *inner
+    - c
+
+  nested-top:
+    - *outer
+    - d
+
+  nested-top-flow: [*outer, d]
+
+queries:
+  - query: [merge-before, 0]
+    mode: exact
+    expected: "a"
+
+  - query: [merge-after, 2]
+    mode: exact
+    expected: "a"
+
+  - query: [merge-multi, 5]
+    mode: exact
+    expected: "c"
+
+  - query: [nested-top, 0]
+    mode: exact
+    expected: "a"
+
+  - query: [nested-top, 1]
+    mode: exact
+    expected: "b"
+
+  - query: [nested-top, 2]
+    mode: exact
+    expected: "c"
+
+  - query: [nested-top-flow, 0]
+    mode: exact
+    expected: "a"
+
+  - query: [nested-top-flow, 1]
+    mode: exact
+    expected: "b"
+
+  - query: [nested-top-flow, 2]
+    mode: exact
+    expected: "c"

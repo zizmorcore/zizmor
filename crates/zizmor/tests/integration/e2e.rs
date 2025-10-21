@@ -4,6 +4,7 @@ use anyhow::Result;
 
 use crate::common::{OutputMode, input_under_test, zizmor};
 
+mod anchors;
 mod collect;
 mod json_v1;
 

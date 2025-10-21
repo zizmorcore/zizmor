@@ -1,0 +1,22 @@
+testcase:
+  jobs:
+    job1:
+      env: &env_vars # Define the anchor on first use
+        NODE_ENV: production
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      steps:
+        - run: echo "Using production settings"
+
+    job2:
+      env: *env_vars # Reuse the environment variables
+      steps:
+        - run: echo "Same environment variables here"
+
+queries:
+  - query: [jobs, job2, env, DATABASE_URL]
+    mode: exact
+    expected: "${{ secrets.DATABASE_URL }}"
+
+  - query: [jobs, job2, env, DATABASE_URL]
+    mode: key-only
+    expected: "        DATABASE_URL"

@@ -30,7 +30,9 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 use crate::{
     config::{Config, ConfigError, ConfigErrorInner},
     github_api::Client,
+    models::AsDocument,
     registry::input::CollectionError,
+    utils::once::warn_once,
 };
 
 mod audit;
@@ -732,6 +734,14 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
 
         for (input_key, input) in registry.iter_inputs() {
             Span::current().pb_set_message(input.key().filename());
+
+            if input.as_document().has_anchors() {
+                warn_once!(
+                    "one or more inputs contains YAML anchors; you may encounter crashes or unpredictable behavior"
+                );
+                warn_once!("for more information, see: https://docs.zizmor.sh/usage/#yaml-anchors");
+            }
+
             let config = registry.get_config(input_key.group());
             for (ident, audit) in audit_registry.iter_audits() {
                 tracing::debug!("running {ident} on {input}", input = input.key());

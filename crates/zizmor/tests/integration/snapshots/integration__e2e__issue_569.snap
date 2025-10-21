@@ -3,11 +3,6 @@ source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\",\n\"--collect=workflows\"]).input(\"python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6\").run()?"
 ---
 🌈 zizmor v@@VERSION@@
- INFO zizmor::registry: skipping impostor-commit: offline audits only requested
- INFO zizmor::registry: skipping ref-confusion: offline audits only requested
- INFO zizmor::registry: skipping known-vulnerable-actions: offline audits only requested
- INFO zizmor::registry: skipping stale-action-refs: offline audits only requested
- INFO zizmor::registry: skipping ref-version-mismatch: offline audits only requested
  INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/documentation-links.yml

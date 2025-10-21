@@ -641,6 +641,26 @@ impl SpannedQuery {
     }
 }
 
+pub(crate) mod once {
+    macro_rules! once {
+        ($expression:expr) => {{
+            static ONCE: std::sync::Once = std::sync::Once::new();
+            ONCE.call_once(|| {
+                $expression;
+            });
+        }};
+    }
+
+    macro_rules! warn_once {
+        ($($arg:tt)+) => ({
+            crate::utils::once::once!(tracing::warn!($($arg)+))
+        });
+    }
+
+    pub(crate) use once;
+    pub(crate) use warn_once;
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
