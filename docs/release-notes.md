@@ -42,6 +42,9 @@ of `zizmor`.
 
     Many thanks to @mostafa for implementing this improvement!
 
+* `zizmor` now has **limited, experimental** support for handling
+  inputs that contain YAML anchors (#1266)
+
 ## 1.15.2
 
 ### Bug Fixes 🐛
