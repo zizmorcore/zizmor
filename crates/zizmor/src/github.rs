@@ -338,6 +338,8 @@ impl Client {
 
         // Build our `ls-refs` request.
         // This effectively mimics what `git ls-remote` does under the hood.
+        // We additionally use the ref-prefix arguments to (hopefully) limit
+        // the server's response to only branches and tags.
         let mut req = vec![];
         pktline::Packet::data("command=ls-refs\n".as_bytes())
             .unwrap()
@@ -345,6 +347,14 @@ impl Client {
             .unwrap();
         pktline::Packet::Delim.encode(&mut req).unwrap();
         pktline::Packet::data("peel\n".as_bytes())
+            .unwrap()
+            .encode(&mut req)
+            .unwrap();
+        pktline::Packet::data("ref-prefix refs/heads/\n".as_bytes())
+            .unwrap()
+            .encode(&mut req)
+            .unwrap();
+        pktline::Packet::data("ref-prefix refs/tags/\n".as_bytes())
             .unwrap()
             .encode(&mut req)
             .unwrap();
