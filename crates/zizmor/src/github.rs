@@ -235,14 +235,12 @@ impl Client {
         cache_dir: &Utf8Path,
     ) -> Result<Self, ClientError> {
         // Base HTTP client for non-API requests, e.g. direct Git access.
-        let base_client = Self::default_middleware(
-            cache_dir,
-            reqwest::Client::builder()
-                .user_agent("zizmor")
-                .build()
-                // TODO: Add retries here too?
-                .expect("couldn't build base HTTP client"),
-        );
+        // This client currently has no middleware.
+        let base_client = reqwest::Client::builder()
+            .user_agent("zizmor")
+            .build()
+            // TODO: Add retries here too?
+            .expect("couldn't build base HTTP client");
 
         // GitHub REST API client.
         let mut api_client_headers = HeaderMap::new();
@@ -286,7 +284,7 @@ impl Client {
             api_base: host.to_api_url(),
             _host: host.clone(),
             token: token.clone(),
-            base_client,
+            base_client: base_client.into(),
             api_client,
             ref_cache: MokaCache::new(100),
         })
