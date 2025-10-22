@@ -51,13 +51,13 @@ pub(crate) enum PktLineError {
 }
 
 /// Valid packets
-pub(crate) enum Packet {
-    Data(Vec<u8>),
+pub(crate) enum Packet<'a> {
+    Data(&'a [u8]),
     Flush,
     Delim,
 }
 
-impl Packet {
+impl<'a> Packet<'a> {
     pub(crate) fn encode(&self) -> Result<Vec<u8>, PktLineError> {
         match self {
             Packet::Data(data) => {
@@ -74,7 +74,7 @@ impl Packet {
         }
     }
 
-    pub(crate) fn decode(packet: &[u8]) -> Result<Self, PktLineError> {
+    pub(crate) fn decode(packet: &'a [u8]) -> Result<Self, PktLineError> {
         if packet.len() < LENGTH_PREFIX_LEN {
             return Err(PktLineError::FrameTooShort {
                 actual: packet.len(),
@@ -111,7 +111,7 @@ impl Packet {
                         actual: data.len(),
                     })
                 } else {
-                    Ok(Packet::Data(data[..data_len].to_vec()))
+                    Ok(Packet::Data(&data[..data_len]))
                 }
             }
         }
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn test_data_packet() {
         let data = b"hello, world!".to_vec();
-        let pkt = Packet::Data(data.clone());
+        let pkt = Packet::Data(&data);
         let encoded = pkt.encode().unwrap();
         assert_eq!(encoded, b"0011hello, world!");
 
