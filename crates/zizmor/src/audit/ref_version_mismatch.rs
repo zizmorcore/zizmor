@@ -13,12 +13,12 @@ use crate::{
         Confidence, Finding, Fix, Severity,
         location::{Comment, Feature, Location, Routable},
     },
-    github_api,
+    github,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt, workflow::Step},
 };
 
 pub(crate) struct RefVersionMismatch {
-    client: github_api::Client,
+    client: github::Client,
 }
 
 audit_meta!(
@@ -246,9 +246,9 @@ jobs:
         let state = crate::state::AuditState::new(
             false,
             Some(
-                github_api::Client::new(
-                    &github_api::GitHubHost::default(),
-                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),
@@ -318,9 +318,9 @@ jobs:
         let state = crate::state::AuditState::new(
             false,
             Some(
-                github_api::Client::new(
-                    &github_api::GitHubHost::default(),
-                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),

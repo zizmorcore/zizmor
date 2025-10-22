@@ -13,7 +13,7 @@ use crate::{
     App, CollectionOptions,
     audit::{AuditCore, forbidden_uses::ForbiddenUses, unpinned_uses::UnpinnedUses},
     finding::Finding,
-    github_api::{Client, ClientError},
+    github::{Client, ClientError},
     models::uses::RepositoryUsesPattern,
     registry::input::RepoSlug,
 };

@@ -12,14 +12,14 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     config::Config,
     finding::{Confidence, Finding, Fix, Severity, location::Routable as _},
-    github_api,
+    github,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
     state::AuditState,
 };
 use yamlpatch::{Op, Patch};
 
 pub(crate) struct KnownVulnerableActions {
-    client: github_api::Client,
+    client: github::Client,
 }
 
 audit_meta!(
@@ -303,9 +303,9 @@ mod tests {
         let state = crate::state::AuditState::new(
             false,
             Some(
-                github_api::Client::new(
-                    &github_api::GitHubHost::default(),
-                    &github_api::GitHubToken::new("fake").unwrap(),
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new("fake").unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),
@@ -748,9 +748,9 @@ jobs:
         let state = crate::state::AuditState::new(
             false,
             Some(
-                github_api::Client::new(
-                    &github_api::GitHubHost::default(),
-                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),
@@ -803,9 +803,9 @@ jobs:
         let state = crate::state::AuditState::new(
             false,
             Some(
-                github_api::Client::new(
-                    &github_api::GitHubHost::default(),
-                    &github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),

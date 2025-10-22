@@ -29,6 +29,8 @@ use crate::{
     utils::PipeSelf,
 };
 
+mod pktline;
+
 /// Represents different types of GitHub hosts.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum GitHubHost {
@@ -310,6 +312,22 @@ impl Client {
             token: token.clone(),
             ref_cache: MokaCache::new(100),
         })
+    }
+
+    async fn list_refs_(&self, owner: &str, repo: &str) -> Result<(), ClientError> {
+        let url = format!("https:github.com/{owner}/{repo}.git/git-upload-pack");
+
+        let resp = self
+            .http
+            .get(url)
+            .header("Git-Protocol", "version=2")
+            // .body(body)
+            .send()
+            .await?;
+
+        let content = resp.bytes().await?.as_ref();
+
+        todo!()
     }
 
     async fn list_refs(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, git2::Error> {
@@ -838,7 +856,7 @@ pub(crate) struct File {
 
 #[cfg(test)]
 mod tests {
-    use crate::github_api::{GitHubHost, GitHubToken};
+    use crate::github::{GitHubHost, GitHubToken};
 
     #[test]
     fn test_github_host() {

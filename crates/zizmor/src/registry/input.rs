@@ -14,7 +14,7 @@ use crate::{
     CollectionOptions,
     audit::AuditInput,
     config::{Config, ConfigError},
-    github_api::{Client, ClientError},
+    github::{Client, ClientError},
     models::{action::Action, dependabot::Dependabot, workflow::Workflow},
 };
 

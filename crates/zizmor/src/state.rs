@@ -1,6 +1,6 @@
 //! zizmor's runtime state, including application-level caching.
 
-use crate::github_api::Client;
+use crate::github::Client;
 
 pub(crate) struct AuditState {
     /// Whether online audits should be skipped.

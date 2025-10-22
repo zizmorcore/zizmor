@@ -15,7 +15,7 @@ use crate::finding::location::Locatable as _;
 use crate::models::{StepCommon, action::CompositeStep};
 use crate::{
     finding::{Confidence, Severity},
-    github_api,
+    github,
     models::uses::RepositoryUsesExt as _,
     state::AuditState,
 };
@@ -24,7 +24,7 @@ const REF_CONFUSION_ANNOTATION: &str =
     "uses a ref that's provided by both the branch and tag namespaces";
 
 pub(crate) struct RefConfusion {
-    client: github_api::Client,
+    client: github::Client,
 }
 
 audit_meta!(
