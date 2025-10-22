@@ -4,7 +4,10 @@
 //! over Git's "smart" HTTP protocol, e.g. for efficiently listing remote
 //! refs without cloning or using GitHub's REST API endpoints.
 //!
-//! More precisely, this module only implements the "v2" Git protocol.
+//! Modules like [`lineref`](crate::github::lineref) build on top of this
+//! to provide higher-level handling of specific responses.
+//!
+//! More precisely, this module only implements (a subset of) the "v2" Git protocol.
 //!
 //! See: https://git-scm.com/docs/pack-protocol
 //! See: https://git-scm.com/docs/protocol-common
@@ -38,7 +41,7 @@ pub(crate) enum PktLineError {
     /// This means we received a control code that we don't recognize,
     /// i.e. something other than flush (`0000`) or delim (`0001`).
     #[error("invalid packet line: unexpected control code {control:04x}")]
-    BadPacket { control: usize },
+    BadControl { control: usize },
     /// Empty packet line.
     /// This means we received a `0004` packet line, which the server should not send.
     #[error("invalid packet line: empty")]
@@ -47,26 +50,67 @@ pub(crate) enum PktLineError {
     /// This means the data to be encoded/decoded exceeds the maximum allowed length.
     #[error("packet line data is too long: maximum is {MAX_DATA_LEN} bytes, got {actual} bytes")]
     DataTooLong { actual: usize },
+    /// In-band error.
+    /// This happens when the server sends an us an `ERR` packet line,
+    /// including a malformed one.
+    #[error("in-band error: {message}")]
+    InBandError { message: String },
+    /// Unexpected control code.
+    /// This means we received a control code that we didn't contextually expect.
+    #[error("unexpected control code: {control}")]
+    UnexpectedControl { control: usize },
+}
+
+/// Represents the data portion of a pkt-line data packet.
+///
+/// Invariant: the length of the data is at most [`MAX_DATA_LEN`].
+#[derive(Copy, Clone)]
+pub(crate) struct Data<'a> {
+    inner: &'a [u8],
+}
+
+impl<'a> Data<'a> {
+    pub(crate) fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    pub(crate) fn as_ref(&self) -> &'a [u8] {
+        self.inner
+    }
+}
+
+impl<'a> TryFrom<&'a [u8]> for Data<'a> {
+    type Error = PktLineError;
+
+    fn try_from(value: &'a [u8]) -> Result<Self, Self::Error> {
+        if value.len() > MAX_DATA_LEN {
+            Err(PktLineError::DataTooLong {
+                actual: value.len(),
+            })
+        } else {
+            Ok(Data { inner: value })
+        }
+    }
 }
 
 /// Valid packets
 pub(crate) enum Packet<'a> {
-    Data(&'a [u8]),
+    Data(Data<'a>),
     Flush,
     Delim,
 }
 
 impl<'a> Packet<'a> {
+    pub(crate) fn data(data: &'a [u8]) -> Result<Self, PktLineError> {
+        Data::try_from(data).map(Self::Data)
+    }
+
     pub(crate) fn encode(&self, dest: &mut Vec<u8>) -> Result<(), PktLineError> {
         match self {
             Packet::Data(data) => {
-                if data.len() > MAX_DATA_LEN {
-                    return Err(PktLineError::DataTooLong { actual: data.len() });
-                }
-
                 let len = data.len() + 4;
                 dest.extend_from_slice(&format!("{:04x}", len).into_bytes());
-                dest.extend_from_slice(data);
+                dest.extend_from_slice(data.as_ref());
                 Ok(())
             }
             Packet::Flush => Ok(dest.extend_from_slice(b"0000")),
@@ -74,6 +118,9 @@ impl<'a> Packet<'a> {
         }
     }
 
+    /// Decode a single pkt-line packet from the start of the given byte slice.
+    ///
+    /// Returns the decoded packet, or an error if decoding failed.
     pub(crate) fn decode(packet: &'a [u8]) -> Result<Self, PktLineError> {
         if packet.len() < LENGTH_PREFIX_LEN {
             return Err(PktLineError::FrameTooShort {
@@ -99,7 +146,7 @@ impl<'a> Packet<'a> {
         match length {
             0 => Ok(Packet::Flush),
             1 => Ok(Packet::Delim),
-            2 | 3 => Err(PktLineError::BadPacket { control: length }),
+            2 | 3 => Err(PktLineError::BadControl { control: length }),
             4 => Err(PktLineError::Empty),
             _ => {
                 let data_len = length - LENGTH_PREFIX_LEN;
@@ -111,7 +158,14 @@ impl<'a> Packet<'a> {
                         actual: data.len(),
                     })
                 } else {
-                    Ok(Packet::Data(&data[..data_len]))
+                    let data = Data::try_from(&data[..data_len])?;
+
+                    if data.as_ref().starts_with(b"ERR ") {
+                        let message = String::from_utf8_lossy(&data.as_ref()[4..]).to_string();
+                        Err(PktLineError::InBandError { message })
+                    } else {
+                        Ok(Packet::Data(data))
+                    }
                 }
             }
         }
@@ -126,6 +180,10 @@ impl<'a> Packet<'a> {
     }
 }
 
+/// An iterator over pkt-line packets in a byte slice.
+/// This will yield packets until the end of the slice is reached.
+/// The user is responsible for assigning meaning to the sequence of packets,
+/// including flush and delim packets.
 pub(crate) struct PacketIterator<'a> {
     data: &'a [u8],
     position: usize,
@@ -160,7 +218,16 @@ impl<'a> Iterator for PacketIterator<'a> {
 mod tests {
     use core::panic;
 
-    use super::Packet;
+    use crate::github::pktline::{Data, MAX_DATA_LEN, Packet};
+
+    #[test]
+    fn test_data_size_invariant() {
+        let data = vec![0u8; MAX_DATA_LEN + 1];
+        let Err(err) = Data::try_from(data.as_slice()) else {
+            panic!("expected error for data exceeding max length");
+        };
+        assert!(matches!(err, super::PktLineError::DataTooLong { .. }));
+    }
 
     #[test]
     fn test_flush_packet() {
@@ -187,15 +254,29 @@ mod tests {
     #[test]
     fn test_data_packet() {
         let mut encoded = vec![];
-        let data = b"hello, world!".to_vec();
-        let pkt = Packet::Data(&data);
+        let data = Data::try_from(b"hello, world!".as_slice()).unwrap();
+        let pkt = Packet::Data(data);
         pkt.encode(&mut encoded).unwrap();
         assert_eq!(encoded, b"0011hello, world!");
 
         let Packet::Data(decoded) = Packet::decode(&encoded).unwrap() else {
             panic!("expected data packet");
         };
-        assert_eq!(decoded, data);
+        assert_eq!(decoded.as_ref(), data.as_ref());
+    }
+
+    #[test]
+    fn test_error_packet() {
+        let mut encoded = vec![];
+        let error_message = Data::try_from(b"ERR something went wrong".as_slice()).unwrap();
+        let pkt = Packet::Data(error_message);
+        pkt.encode(&mut encoded).unwrap();
+        assert_eq!(encoded, b"001cERR something went wrong");
+
+        let Err(err) = Packet::decode(&encoded) else {
+            panic!("expected error packet");
+        };
+        assert!(matches!(err, super::PktLineError::InBandError { .. }));
     }
 
     #[test]
@@ -226,7 +307,7 @@ mod tests {
             let Err(err) = Packet::decode(*case) else {
                 panic!("expected error for case: {:?}", case);
             };
-            assert!(matches!(err, super::PktLineError::BadPacket { .. }));
+            assert!(matches!(err, super::PktLineError::BadControl { .. }));
         }
 
         // Too long (length field exceeds max).

@@ -7,14 +7,13 @@ use std::{collections::HashSet, fmt::Display, io::Read, ops::Deref, str::FromStr
 
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
-use git2::{Cred, Remote, RemoteCallbacks};
 use http_cache_reqwest::{
     CACacheManager, Cache, CacheManager, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
     MokaCache, MokaManager,
 };
 use reqwest::{
     Response, StatusCode,
-    header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, InvalidHeaderValue, USER_AGENT},
+    header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, InvalidHeaderValue},
     retry,
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -29,6 +28,7 @@ use crate::{
     utils::PipeSelf,
 };
 
+mod lineref;
 mod pktline;
 
 /// Represents different types of GitHub hosts.
@@ -107,10 +107,6 @@ impl GitHubToken {
         Ok(Self(token.to_owned()))
     }
 
-    fn to_cred(&self) -> Result<Cred, git2::Error> {
-        Cred::userpass_plaintext("x-access-token", &self.0)
-    }
-
     fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
         HeaderValue::from_str(&format!("Bearer {}", self.0))
     }
@@ -128,9 +124,10 @@ pub(crate) enum ClientError {
     /// We couldn't turn the user's token into a valid header value.
     #[error("invalid token header")]
     InvalidTokenHeader(#[from] InvalidHeaderValue),
-    /// An error originating from our direct access to the Git repository.
-    #[error("error while accessing Git repository")]
-    Git(#[from] pktline::PktLineError),
+    /// An error originating from listing refs through direct
+    /// Git access.
+    #[error("error while listing Git references")]
+    ListRefs(#[from] lineref::LineRefError),
     /// We couldn't list branches because of an underlying error.
     #[error("couldn't list branches for {owner}/{repo}")]
     ListBranches {
@@ -218,15 +215,16 @@ impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
 #[derive(Clone)]
 struct RemoteHead {
     name: String,
-    oid: git2::Oid,
+    oid: String,
 }
 
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
     _host: GitHubHost,
-    http: ClientWithMiddleware,
     token: GitHubToken,
+    base_client: ClientWithMiddleware,
+    api_client: ClientWithMiddleware,
     ref_cache: MokaCache<String, Vec<RemoteHead>>,
 }
 
@@ -236,27 +234,27 @@ impl Client {
         token: &GitHubToken,
         cache_dir: &Utf8Path,
     ) -> Result<Self, ClientError> {
-        let mut headers = HeaderMap::new();
-        headers.insert(USER_AGENT, "zizmor".parse().unwrap());
-        headers.insert(AUTHORIZATION, token.to_header_value()?);
-        headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
-        headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
-
-        let http_cache_options = HttpCacheOptions {
-            cache_options: Some(CacheOptions {
-                // GitHub API requests made with an API token seem to
-                // always have `Cache-Control: private`, so we need to
-                // explicitly tell http-cache that our cache is not shared
-                // in order for things to cache correctly.
-                shared: false,
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        let http = ClientBuilder::new(
+        // Base HTTP client for non-API requests, e.g. direct Git access.
+        let base_client = Self::default_middleware(
+            cache_dir,
             reqwest::Client::builder()
-                .default_headers(headers)
+                .user_agent("zizmor")
+                .build()
+                // TODO: Add retries here too?
+                .expect("couldn't build base HTTP client"),
+        );
+
+        // GitHub REST API client.
+        let mut api_client_headers = HeaderMap::new();
+        api_client_headers.insert(AUTHORIZATION, token.to_header_value()?);
+        api_client_headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
+        api_client_headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
+
+        let api_client = Self::default_middleware(
+            cache_dir,
+            reqwest::Client::builder()
+                .user_agent("zizmor")
+                .default_headers(api_client_headers)
                 .retry(
                     retry::for_host(host.to_api_host())
                         .max_retries_per_request(3)
@@ -281,115 +279,105 @@ impl Client {
                         }),
                 )
                 .build()
-                .expect("couldn't build GitHub client?"),
-        )
-        .with(CacheLoggingMiddleware)
-        .with(ChainedCache(
-            Cache(HttpCache {
-                mode: CacheMode::Default,
-                manager: CACacheManager {
-                    path: cache_dir.into(),
-                    remove_opts: Default::default(),
-                },
-                options: http_cache_options.clone(),
-            }),
-            CacheType::File,
-        ))
-        .with(ChainedCache(
-            Cache(HttpCache {
-                mode: CacheMode::ForceCache,
-                manager: MokaManager::new(MokaCache::new(1000)),
-                options: http_cache_options,
-            }),
-            CacheType::Memory,
-        ))
-        .build();
+                .expect("couldn't build GitHub client"),
+        );
 
         Ok(Self {
             api_base: host.to_api_url(),
             _host: host.clone(),
-            http,
             token: token.clone(),
+            base_client,
+            api_client,
             ref_cache: MokaCache::new(100),
         })
     }
 
-    async fn list_refs_(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, ClientError> {
-        let url = format!("https:github.com/{owner}/{repo}.git/git-upload-pack");
+    fn default_middleware(cache_dir: &Utf8Path, client: reqwest::Client) -> ClientWithMiddleware {
+        let http_cache_options = HttpCacheOptions {
+            cache_options: Some(CacheOptions {
+                // GitHub API requests made with an API token seem to
+                // always have `Cache-Control: private`, so we need to
+                // explicitly tell http-cache that our cache is not shared
+                // in order for things to cache correctly.
+                shared: false,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
 
+        ClientBuilder::new(client)
+            .with(CacheLoggingMiddleware)
+            .with(ChainedCache(
+                Cache(HttpCache {
+                    mode: CacheMode::Default,
+                    manager: CACacheManager {
+                        path: cache_dir.into(),
+                        remove_opts: Default::default(),
+                    },
+                    options: http_cache_options.clone(),
+                }),
+                CacheType::File,
+            ))
+            .with(ChainedCache(
+                Cache(HttpCache {
+                    mode: CacheMode::ForceCache,
+                    manager: MokaManager::new(MokaCache::new(1000)),
+                    options: http_cache_options,
+                }),
+                CacheType::Memory,
+            ))
+            .build()
+    }
+
+    async fn list_refs(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, ClientError> {
+        let url = format!("https://github.com/{owner}/{repo}.git/git-upload-pack");
+
+        if let Some(cached_entry) = self.ref_cache.get(&url).await {
+            return Ok(cached_entry);
+        }
+
+        // Build our `ls-refs` request.
+        // This effectively mimics what `git ls-remote` does under the hood.
         let mut req = vec![];
-        pktline::Packet::Data("command=list-refs\n".as_bytes())
+        pktline::Packet::data("command=ls-refs\n".as_bytes())
+            .unwrap()
+            .encode(&mut req)
+            .unwrap();
+        pktline::Packet::Delim.encode(&mut req).unwrap();
+        pktline::Packet::data("peel\n".as_bytes())
+            .unwrap()
             .encode(&mut req)
             .unwrap();
         pktline::Packet::Flush.encode(&mut req).unwrap();
 
-        // TODO: Need to plumb credential here.
         let resp = self
-            .http
-            .get(url)
+            .base_client
+            .post(&url)
             .header("Git-Protocol", "version=2")
             .body(req)
+            .basic_auth("x-access-token", Some(&self.token.0))
             .send()
             .await?
             .error_for_status()?;
 
-        if resp.headers().get("content-type")
-            != Some(&HeaderValue::from_static(
-                "application/x-git-upload-pack-result",
-            ))
-        {
-            todo!()
-        }
-
         let mut remote_refs = vec![];
         let content = resp.bytes().await?;
-        for packet in pktline::PacketIterator::new(content.as_ref()) {
-            let packet = packet?;
 
-            match packet {
-                pktline::Packet::Data(items) => todo!(),
-                pktline::Packet::Flush => break,
-                pktline::Packet::Delim => todo!(),
-            }
+        for line_ref in lineref::LineRefIterator::new(content.as_ref()) {
+            let line_ref = line_ref?;
+
+            // We prefer the peeled object ID if present, since that
+            // gives us the commit ID for annotated tags.
+            remote_refs.push(RemoteHead {
+                name: line_ref.ref_name.to_string(),
+                oid: line_ref
+                    .peeled_obj_id
+                    .unwrap_or(line_ref.obj_id)
+                    .to_string(),
+            });
         }
 
-        Ok(remote_refs)
-    }
-
-    async fn list_refs(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, git2::Error> {
-        let url = format!("https://github.com/{owner}/{repo}.git");
-        let key = url.clone();
-
-        if let Some(cached_entry) = self.ref_cache.get(&key).await {
-            return Ok(cached_entry);
-        }
-
-        tracing::debug!("Fetching refs for {url}");
-
-        let token = self.token.clone();
-        let remote_refs: Vec<_> = tokio::task::spawn_blocking(move || {
-            let mut remote = Remote::create_detached(url)?;
-
-            let mut callbacks = RemoteCallbacks::new();
-            callbacks.credentials(|_url, _username_from_url, _allowed_types| token.to_cred());
-
-            let connection = remote.connect_auth(git2::Direction::Fetch, Some(callbacks), None)?;
-
-            Ok::<Vec<RemoteHead>, git2::Error>(
-                connection
-                    .list()?
-                    .iter()
-                    .map(|head| RemoteHead {
-                        name: head.name().to_string(),
-                        oid: head.oid(),
-                    })
-                    .collect(),
-            )
-        })
-        .await
-        .unwrap()?;
-
-        self.ref_cache.insert(key, remote_refs.clone()).await;
+        self.ref_cache.insert(url, remote_refs.clone()).await;
 
         Ok(remote_refs)
     }
@@ -399,7 +387,7 @@ impl Client {
         owner: &str,
         repo: &str,
     ) -> Result<Vec<Branch>, ClientError> {
-        self.list_refs_(owner, repo)
+        self.list_refs(owner, repo)
             .await
             .map(|v| {
                 v.iter()
@@ -431,7 +419,7 @@ impl Client {
     }
 
     async fn list_tags_internal(&self, owner: &str, repo: &str) -> Result<Vec<Tag>, ClientError> {
-        self.list_refs_(owner, repo)
+        self.list_refs(owner, repo)
             .await
             .map(|v| {
                 let mut tags: Vec<_> = v
@@ -573,7 +561,7 @@ impl Client {
             api_base = self.api_base
         );
 
-        let resp = self.http.get(url).send().await?;
+        let resp = self.api_client.get(url).send().await?;
 
         match resp.status() {
             StatusCode::OK => {
@@ -596,7 +584,7 @@ impl Client {
         // TODO: Paginate this as well.
         let url = format!("{api_base}/advisories", api_base = self.api_base);
 
-        self.http
+        self.api_client
             .get(url)
             .query(&[
                 ("ecosystem", "actions"),
@@ -640,7 +628,7 @@ impl Client {
         );
 
         let resp = self
-            .http
+            .api_client
             .get(&url)
             .header(ACCEPT, "application/vnd.github.raw+json")
             .pipe(|req| match slug.git_ref.as_ref() {
@@ -689,7 +677,7 @@ impl Client {
             api_base = self.api_base
         );
         let resp: Vec<File> = self
-            .http
+            .api_client
             .get(&url)
             .pipe(|req| match git_ref {
                 Some(g) => req.query(&[("ref", g)]),
@@ -752,7 +740,7 @@ impl Client {
         // streaming asynchronously into the decompression,
         // probably with the async-compression crate.
         let resp = self
-            .http
+            .api_client
             .get(&url)
             .send()
             .await
