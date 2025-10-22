@@ -113,8 +113,14 @@ impl<'a> Packet<'a> {
                 dest.extend_from_slice(data.as_ref());
                 Ok(())
             }
-            Packet::Flush => Ok(dest.extend_from_slice(b"0000")),
-            Packet::Delim => Ok(dest.extend_from_slice(b"0001")),
+            Packet::Flush => {
+                dest.extend_from_slice(b"0000");
+                Ok(())
+            }
+            Packet::Delim => {
+                dest.extend_from_slice(b"0001");
+                Ok(())
+            }
         }
     }
 

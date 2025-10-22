@@ -402,7 +402,7 @@ impl Client {
                     .collect()
             })
             .map_err(|e| ClientError::ListBranches {
-                source: ClientError::from(e).into(),
+                source: e.into(),
                 owner: owner.to_string(),
                 repo: repo.to_string(),
             })
@@ -453,7 +453,7 @@ impl Client {
                 tags
             })
             .map_err(|e| ClientError::ListTags {
-                source: ClientError::from(e).into(),
+                source: e.into(),
                 owner: owner.to_string(),
                 repo: repo.to_string(),
             })
