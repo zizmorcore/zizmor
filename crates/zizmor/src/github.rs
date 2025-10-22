@@ -128,9 +128,9 @@ pub(crate) enum ClientError {
     /// We couldn't turn the user's token into a valid header value.
     #[error("invalid token header")]
     InvalidTokenHeader(#[from] InvalidHeaderValue),
-    /// An error originating from the libgit client
-    #[error("request error while accessing Git")]
-    Git(#[from] git2::Error),
+    /// An error originating from our direct access to the Git repository.
+    #[error("error while accessing Git repository")]
+    Git(#[from] pktline::PktLineError),
     /// We couldn't list branches because of an underlying error.
     #[error("couldn't list branches for {owner}/{repo}")]
     ListBranches {
@@ -314,20 +314,46 @@ impl Client {
         })
     }
 
-    async fn list_refs_(&self, owner: &str, repo: &str) -> Result<(), ClientError> {
+    async fn list_refs_(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, ClientError> {
         let url = format!("https:github.com/{owner}/{repo}.git/git-upload-pack");
 
+        let mut req = vec![];
+        pktline::Packet::Data("command=list-refs\n".as_bytes())
+            .encode(&mut req)
+            .unwrap();
+        pktline::Packet::Flush.encode(&mut req).unwrap();
+
+        // TODO: Need to plumb credential here.
         let resp = self
             .http
             .get(url)
             .header("Git-Protocol", "version=2")
-            // .body(body)
+            .body(req)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
-        let content = resp.bytes().await?.as_ref();
+        if resp.headers().get("content-type")
+            != Some(&HeaderValue::from_static(
+                "application/x-git-upload-pack-result",
+            ))
+        {
+            todo!()
+        }
 
-        todo!()
+        let mut remote_refs = vec![];
+        let content = resp.bytes().await?;
+        for packet in pktline::PacketIterator::new(content.as_ref()) {
+            let packet = packet?;
+
+            match packet {
+                pktline::Packet::Data(items) => todo!(),
+                pktline::Packet::Flush => break,
+                pktline::Packet::Delim => todo!(),
+            }
+        }
+
+        Ok(remote_refs)
     }
 
     async fn list_refs(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, git2::Error> {
@@ -373,7 +399,7 @@ impl Client {
         owner: &str,
         repo: &str,
     ) -> Result<Vec<Branch>, ClientError> {
-        self.list_refs(owner, repo)
+        self.list_refs_(owner, repo)
             .await
             .map(|v| {
                 v.iter()
@@ -405,7 +431,7 @@ impl Client {
     }
 
     async fn list_tags_internal(&self, owner: &str, repo: &str) -> Result<Vec<Tag>, ClientError> {
-        self.list_refs(owner, repo)
+        self.list_refs_(owner, repo)
             .await
             .map(|v| {
                 let mut tags: Vec<_> = v

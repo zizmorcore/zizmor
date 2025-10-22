@@ -14,7 +14,6 @@ use thiserror::Error;
 
 const LENGTH_PREFIX_LEN: usize = 4;
 const MAX_DATA_LEN: usize = 65516;
-const MAX_PKTLINE_LEN: usize = MAX_DATA_LEN + LENGTH_PREFIX_LEN;
 
 /// Errors that can occur while encoding or decoding pkt-lines.
 #[derive(Debug, Error)]
@@ -58,19 +57,20 @@ pub(crate) enum Packet<'a> {
 }
 
 impl<'a> Packet<'a> {
-    pub(crate) fn encode(&self) -> Result<Vec<u8>, PktLineError> {
+    pub(crate) fn encode(&self, dest: &mut Vec<u8>) -> Result<(), PktLineError> {
         match self {
             Packet::Data(data) => {
-                let len = data.len() + 4;
-                let mut pkt = format!("{:04x}", len).into_bytes();
-                if pkt.len() != 4 {
+                if data.len() > MAX_DATA_LEN {
                     return Err(PktLineError::DataTooLong { actual: data.len() });
                 }
-                pkt.extend_from_slice(data);
-                Ok(pkt)
+
+                let len = data.len() + 4;
+                dest.extend_from_slice(&format!("{:04x}", len).into_bytes());
+                dest.extend_from_slice(data);
+                Ok(())
             }
-            Packet::Flush => Ok(b"0000".to_vec()),
-            Packet::Delim => Ok(b"0001".to_vec()),
+            Packet::Flush => Ok(dest.extend_from_slice(b"0000")),
+            Packet::Delim => Ok(dest.extend_from_slice(b"0001")),
         }
     }
 
@@ -126,6 +126,36 @@ impl<'a> Packet<'a> {
     }
 }
 
+pub(crate) struct PacketIterator<'a> {
+    data: &'a [u8],
+    position: usize,
+}
+
+impl<'a> PacketIterator<'a> {
+    pub(crate) fn new(data: &'a [u8]) -> Self {
+        Self { data, position: 0 }
+    }
+}
+
+impl<'a> Iterator for PacketIterator<'a> {
+    type Item = Result<Packet<'a>, PktLineError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.position >= self.data.len() {
+            return None;
+        }
+
+        let remaining = &self.data[self.position..];
+        match Packet::decode(remaining) {
+            Ok(pkt) => {
+                self.position += pkt.length();
+                Some(Ok(pkt))
+            }
+            Err(err) => Some(Err(err)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use core::panic;
@@ -134,8 +164,9 @@ mod tests {
 
     #[test]
     fn test_flush_packet() {
+        let mut encoded = vec![];
         let pkt = Packet::Flush;
-        let encoded = pkt.encode().unwrap();
+        pkt.encode(&mut encoded).unwrap();
         assert_eq!(encoded, b"0000");
 
         let decoded = Packet::decode(&encoded).unwrap();
@@ -144,8 +175,9 @@ mod tests {
 
     #[test]
     fn test_delim_packet() {
+        let mut encoded = vec![];
         let pkt = Packet::Delim;
-        let encoded = pkt.encode().unwrap();
+        pkt.encode(&mut encoded).unwrap();
         assert_eq!(encoded, b"0001");
 
         let decoded = Packet::decode(&encoded).unwrap();
@@ -154,9 +186,10 @@ mod tests {
 
     #[test]
     fn test_data_packet() {
+        let mut encoded = vec![];
         let data = b"hello, world!".to_vec();
         let pkt = Packet::Data(&data);
-        let encoded = pkt.encode().unwrap();
+        pkt.encode(&mut encoded).unwrap();
         assert_eq!(encoded, b"0011hello, world!");
 
         let Packet::Data(decoded) = Packet::decode(&encoded).unwrap() else {
