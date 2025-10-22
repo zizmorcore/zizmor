@@ -128,6 +128,14 @@
         - bitcoindevkit/bdk#1813
 
 
+-   ![](https://github.com/bitwarden.png?size=40){ width="40" loading=lazy align=left } bitwarden
+
+    ---
+
+    ??? example "Examples"
+        - bitwarden/server#6409
+
+
 -   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear
 
     ---
