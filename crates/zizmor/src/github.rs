@@ -3,7 +3,7 @@
 //! The [`Client`] type uses a mixture of GitHub's REST API and
 //! direct Git access, depending on the operation being performed.
 
-use std::{collections::HashSet, fmt::Display, io::Read, ops::Deref, str::FromStr};
+use std::{collections::HashSet, fmt::Display, io::Read, ops::Deref, str::FromStr, sync::Arc};
 
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
@@ -148,6 +148,9 @@ pub(crate) enum ClientError {
     /// between listing and fetching it.
     #[error("couldn't fetch file {file} from {slug}: is the branch/tag being modified?")]
     FileTOCTOU { file: String, slug: String },
+    /// Any of the errors above, wrapped from concurrent contexts.
+    #[error(transparent)]
+    Inner(#[from] Arc<ClientError>),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -330,64 +333,69 @@ impl Client {
     async fn list_refs(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, ClientError> {
         let url = format!("https://github.com/{owner}/{repo}.git/git-upload-pack");
 
-        if let Some(cached_entry) = self.ref_cache.get(&url).await {
-            return Ok(cached_entry);
+        let entry = self
+            .ref_cache
+            .entry(url.clone())
+            .or_try_insert_with(async {
+                // Build our `ls-refs` request.
+                // This effectively mimics what `git ls-remote` does under the hood.
+                // We additionally use the ref-prefix arguments to (hopefully) limit
+                // the server's response to only branches and tags.
+                let mut req = vec![];
+                pktline::Packet::data("command=ls-refs\n".as_bytes())
+                    .unwrap()
+                    .encode(&mut req)
+                    .unwrap();
+                pktline::Packet::Delim.encode(&mut req).unwrap();
+                pktline::Packet::data("peel\n".as_bytes())
+                    .unwrap()
+                    .encode(&mut req)
+                    .unwrap();
+                pktline::Packet::data("ref-prefix refs/heads/\n".as_bytes())
+                    .unwrap()
+                    .encode(&mut req)
+                    .unwrap();
+                pktline::Packet::data("ref-prefix refs/tags/\n".as_bytes())
+                    .unwrap()
+                    .encode(&mut req)
+                    .unwrap();
+                pktline::Packet::Flush.encode(&mut req).unwrap();
+
+                let resp = self
+                    .base_client
+                    .post(&url)
+                    .header("Git-Protocol", "version=2")
+                    .body(req)
+                    .basic_auth("x-access-token", Some(&self.token.0))
+                    .send()
+                    .await?
+                    .error_for_status()?;
+
+                let mut remote_refs = vec![];
+                let content = resp.bytes().await?;
+
+                for line_ref in lineref::LineRefIterator::new(content.as_ref()) {
+                    let line_ref = line_ref?;
+
+                    // We prefer the peeled object ID if present, since that
+                    // gives us the commit ID for annotated tags.
+                    remote_refs.push(RemoteHead {
+                        name: line_ref.ref_name.to_string(),
+                        oid: line_ref
+                            .peeled_obj_id
+                            .unwrap_or(line_ref.obj_id)
+                            .to_string(),
+                    });
+                }
+
+                Ok::<Vec<_>, ClientError>(remote_refs)
+            })
+            .await;
+
+        match entry {
+            Ok(heads) => Ok(heads.into_value()),
+            Err(e) => Err(e.into()),
         }
-
-        // Build our `ls-refs` request.
-        // This effectively mimics what `git ls-remote` does under the hood.
-        // We additionally use the ref-prefix arguments to (hopefully) limit
-        // the server's response to only branches and tags.
-        let mut req = vec![];
-        pktline::Packet::data("command=ls-refs\n".as_bytes())
-            .unwrap()
-            .encode(&mut req)
-            .unwrap();
-        pktline::Packet::Delim.encode(&mut req).unwrap();
-        pktline::Packet::data("peel\n".as_bytes())
-            .unwrap()
-            .encode(&mut req)
-            .unwrap();
-        pktline::Packet::data("ref-prefix refs/heads/\n".as_bytes())
-            .unwrap()
-            .encode(&mut req)
-            .unwrap();
-        pktline::Packet::data("ref-prefix refs/tags/\n".as_bytes())
-            .unwrap()
-            .encode(&mut req)
-            .unwrap();
-        pktline::Packet::Flush.encode(&mut req).unwrap();
-
-        let resp = self
-            .base_client
-            .post(&url)
-            .header("Git-Protocol", "version=2")
-            .body(req)
-            .basic_auth("x-access-token", Some(&self.token.0))
-            .send()
-            .await?
-            .error_for_status()?;
-
-        let mut remote_refs = vec![];
-        let content = resp.bytes().await?;
-
-        for line_ref in lineref::LineRefIterator::new(content.as_ref()) {
-            let line_ref = line_ref?;
-
-            // We prefer the peeled object ID if present, since that
-            // gives us the commit ID for annotated tags.
-            remote_refs.push(RemoteHead {
-                name: line_ref.ref_name.to_string(),
-                oid: line_ref
-                    .peeled_obj_id
-                    .unwrap_or(line_ref.obj_id)
-                    .to_string(),
-            });
-        }
-
-        self.ref_cache.insert(url, remote_refs.clone()).await;
-
-        Ok(remote_refs)
     }
 
     async fn list_branches_internal(
