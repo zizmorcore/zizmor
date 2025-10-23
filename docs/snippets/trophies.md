@@ -128,6 +128,14 @@
         - bitcoindevkit/bdk#1813
 
 
+-   ![](https://github.com/bitwarden.png?size=40){ width="40" loading=lazy align=left } bitwarden
+
+    ---
+
+    ??? example "Examples"
+        - bitwarden/server#6409
+
+
 -   ![](https://github.com/blakeblackshear.png?size=40){ width="40" loading=lazy align=left } blakeblackshear
 
     ---
@@ -613,6 +621,14 @@
 
     ??? example "Examples"
         - ispc/ispc#3589
+
+
+-   ![](https://github.com/j178.png?size=40){ width="40" loading=lazy align=left } j178
+
+    ---
+
+    ??? example "Examples"
+        - j178/prek#947
 
 
 -   ![](https://github.com/jj-vcs.png?size=40){ width="40" loading=lazy align=left } jj-vcs
