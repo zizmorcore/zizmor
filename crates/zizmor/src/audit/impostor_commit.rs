@@ -15,7 +15,7 @@ use crate::{
         Confidence, Finding, Fix, FixDisposition, Severity,
         location::{Locatable as _, Routable},
     },
-    github_api::{self, ComparisonStatus},
+    github::{self, ComparisonStatus},
     models::{
         StepCommon,
         uses::RepositoryUsesExt as _,
@@ -31,7 +31,7 @@ use yamlpatch::{Op, Patch};
 pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
 
 pub(crate) struct ImpostorCommit {
-    pub(crate) client: github_api::Client,
+    pub(crate) client: github::Client,
 }
 
 audit_meta!(
@@ -335,10 +335,9 @@ jobs:
         let state = crate::state::AuditState {
             no_online_audits: false,
             gh_client: Some(
-                crate::github_api::Client::new(
-                    &crate::github_api::GitHubHost::Standard("github.com".to_string()),
-                    &crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
-                        .unwrap(),
+                crate::github::Client::new(
+                    &crate::github::GitHubHost::Standard("github.com".to_string()),
+                    &crate::github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),
@@ -395,10 +394,9 @@ jobs:
         let state = crate::state::AuditState {
             no_online_audits: false,
             gh_client: Some(
-                crate::github_api::Client::new(
-                    &crate::github_api::GitHubHost::Standard("github.com".to_string()),
-                    &crate::github_api::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap())
-                        .unwrap(),
+                crate::github::Client::new(
+                    &crate::github::GitHubHost::Standard("github.com".to_string()),
+                    &crate::github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
                     "/tmp".into(),
                 )
                 .unwrap(),

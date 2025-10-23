@@ -15,7 +15,7 @@ use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
-use github_api::{GitHubHost, GitHubToken};
+use github::{GitHubHost, GitHubToken};
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
 use registry::input::{InputKey, InputRegistry};
@@ -29,7 +29,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 
 use crate::{
     config::{Config, ConfigError, ConfigErrorInner},
-    github_api::Client,
+    github::Client,
     models::AsDocument,
     registry::input::CollectionError,
     utils::once::warn_once,
@@ -38,7 +38,7 @@ use crate::{
 mod audit;
 mod config;
 mod finding;
-mod github_api;
+mod github;
 #[cfg(feature = "lsp")]
 mod lsp;
 mod models;
@@ -556,7 +556,7 @@ enum Error {
     Lsp(#[from] lsp::Error),
     /// An error from the GitHub API client.
     #[error(transparent)]
-    Client(#[from] github_api::ClientError),
+    Client(#[from] github::ClientError),
     /// An error while loading audit rules.
     #[error("failed to load audit rules")]
     AuditLoad(#[source] anyhow::Error),

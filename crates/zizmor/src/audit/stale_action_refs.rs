@@ -8,13 +8,13 @@ use crate::{
     Persona,
     config::Config,
     finding::{Confidence, Finding, Severity},
-    github_api,
+    github,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
     state::AuditState,
 };
 
 pub(crate) struct StaleActionRefs {
-    client: github_api::Client,
+    client: github::Client,
 }
 
 audit_meta!(
