@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.16.0
+
 ### New Features 🌈
 
 * **New audit**: [concurrency-limits] detects insufficient concurrency limits
