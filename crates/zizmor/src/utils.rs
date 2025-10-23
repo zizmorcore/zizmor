@@ -18,6 +18,8 @@ use std::{fmt::Write, sync::LazyLock};
 
 use crate::{audit::AuditInput, models::AsDocument, registry::input::CollectionError};
 
+pub(crate) static ZIZMOR_AGENT: &str = concat!("zizmor/", env!("CARGO_PKG_VERSION"));
+
 pub(crate) static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
     validator_for(&serde_json::from_str(include_str!("./data/github-workflow.json")).unwrap())
         .unwrap()

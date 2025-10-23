@@ -25,7 +25,7 @@ use tracing::instrument;
 use crate::{
     CollectionOptions,
     registry::input::{CollectionError, InputGroup, InputKey, InputKind, RepoSlug},
-    utils::PipeSelf,
+    utils::{PipeSelf, ZIZMOR_AGENT},
 };
 
 mod lineref;
@@ -240,7 +240,7 @@ impl Client {
         // Base HTTP client for non-API requests, e.g. direct Git access.
         // This client currently has no middleware.
         let base_client = reqwest::Client::builder()
-            .user_agent("zizmor")
+            .user_agent(ZIZMOR_AGENT)
             .build()
             // TODO: Add retries here too?
             .expect("couldn't build base HTTP client");
@@ -254,7 +254,7 @@ impl Client {
         let api_client = Self::default_middleware(
             cache_dir,
             reqwest::Client::builder()
-                .user_agent("zizmor")
+                .user_agent(ZIZMOR_AGENT)
                 .default_headers(api_client_headers)
                 .retry(
                     retry::for_host(host.to_api_host())
@@ -343,6 +343,10 @@ impl Client {
                 // the server's response to only branches and tags.
                 let mut req = vec![];
                 pktline::Packet::data("command=ls-refs\n".as_bytes())
+                    .unwrap()
+                    .encode(&mut req)
+                    .unwrap();
+                pktline::Packet::data(format!("agent={}\n", ZIZMOR_AGENT).as_bytes())
                     .unwrap()
                     .encode(&mut req)
                     .unwrap();
