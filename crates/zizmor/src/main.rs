@@ -849,55 +849,57 @@ fn main() -> ExitCode {
 
                     Some(report)
                 }
-                Error::Collection(err @ CollectionError::InvalidInput(..)) => {
-                    let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
-                        .element(Level::HELP.message(format!(
-                            "valid inputs are files, directories, or GitHub {slug} slugs",
-                            slug = "user/repo[@ref]".green()
-                        )))
-                        .element(Level::HELP.message(format!(
-                            "examples: {ex1}, {ex2}, {ex3}, or {ex4}",
-                            ex1 = "path/to/workflow.yml".green(),
-                            ex2 = ".github/".green(),
-                            ex3 = "example/example".green(),
-                            ex4 = "example/example@v1.2.3".green()
-                        )));
+                Error::Collection(err) => match err.inner() {
+                    CollectionError::DuplicateInput(..) => {
+                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                            .element(Level::HELP.message(format!(
+                                "valid inputs are files, directories, or GitHub {slug} slugs",
+                                slug = "user/repo[@ref]".green()
+                            )))
+                            .element(Level::HELP.message(format!(
+                                "examples: {ex1}, {ex2}, {ex3}, or {ex4}",
+                                ex1 = "path/to/workflow.yml".green(),
+                                ex2 = ".github/".green(),
+                                ex3 = "example/example".green(),
+                                ex4 = "example/example@v1.2.3".green()
+                            )));
 
-                    let renderer = Renderer::styled();
-                    let report = renderer.render(&[group]);
+                        let renderer = Renderer::styled();
+                        let report = renderer.render(&[group]);
 
-                    Some(report)
-                }
-                Error::Collection(err @ CollectionError::NoGitHubClient(_)) => {
-                    let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
-
-                    if app.offline {
-                        group = group
-                            .elements([Level::HELP
-                                .message("remove --offline to audit remote repositories")]);
-                    } else if app.gh_token.is_none() {
-                        group = group
-                            .elements([Level::HELP
-                                .message("set a GitHub token with --gh-token or GH_TOKEN")]);
+                        Some(report)
                     }
+                    CollectionError::NoGitHubClient(..) => {
+                        let mut group =
+                            Group::with_title(Level::ERROR.primary_title(err.to_string()));
 
-                    let renderer = Renderer::styled();
-                    let report = renderer.render(&[group]);
+                        if app.offline {
+                            group = group.elements([Level::HELP
+                                .message("remove --offline to audit remote repositories")]);
+                        } else if app.gh_token.is_none() {
+                            group = group.elements([Level::HELP
+                                .message("set a GitHub token with --gh-token or GH_TOKEN")]);
+                        }
 
-                    Some(report)
-                }
-                Error::Collection(err @ CollectionError::Yamlpath(_)) => {
-                    let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
-                        Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
-                        Level::HELP.message(
-                            "https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml",
-                        ),
-                    ]);
-                    let renderer = Renderer::styled();
-                    let report = renderer.render(&[group]);
+                        let renderer = Renderer::styled();
+                        let report = renderer.render(&[group]);
 
-                    Some(report)
-                }
+                        Some(report)
+                    }
+                    CollectionError::Yamlpath(..) => {
+                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
+                            Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
+                            Level::HELP.message(
+                                "https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml",
+                            ),
+                        ]);
+                        let renderer = Renderer::styled();
+                        let report = renderer.render(&[group]);
+
+                        Some(report)
+                    }
+                    _ => None,
+                },
                 _ => None,
             };
 

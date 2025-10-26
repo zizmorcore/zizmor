@@ -93,6 +93,19 @@ pub(crate) enum CollectionError {
     NoInputs,
 }
 
+impl CollectionError {
+    /// Returns the "innermost" variant of this [`CollectionError`].
+    ///
+    /// In practice this is always `&self` *unless* this is an
+    /// `Inner` variant, in which case it recurses into the inner error.
+    pub(crate) fn inner(&self) -> &Self {
+        match self {
+            CollectionError::Inner(inner, _, _) => inner.inner(),
+            _ => self,
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) enum InputKind {
     /// A workflow file.
