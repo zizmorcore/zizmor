@@ -9,6 +9,7 @@ name = "zizmor"
 dynamic = ["version", "readme"]
 # Arbitrarily set to the oldest non-EOL Python.
 requires-python = ">=3.9"
+license = "MIT"
 
 [tool.maturin]
 bindings = "bin"
