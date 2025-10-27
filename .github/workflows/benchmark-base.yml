@@ -32,7 +32,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Bencher
-        uses: bencherdev/bencher@d84683bed6747f23f9903a02cd2a70502cee0b8d # v0.5.5
+        uses: bencherdev/bencher@1d1c45692712dff7540147474ebd116f36b2f0e3 # v0.5.6
 
       - name: Installer hyperfine
         run: |
