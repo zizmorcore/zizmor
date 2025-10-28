@@ -850,6 +850,7 @@
 
     ??? example "Examples"
         - NixOS/infra#613
+        - NixOS/nixpkgs#396451
 
 
 -   ![](https://github.com/NLnetLabs.png?size=40){ width="40" loading=lazy align=left } NLnetLabs

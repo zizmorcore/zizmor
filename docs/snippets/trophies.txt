@@ -185,6 +185,7 @@ NetApp/harvest#3247
 nextcloud/user_saml#947
 nextcloud/.github#477
 NixOS/infra#613
+NixOS/nixpkgs#396451
 NLnetLabs/nsd#413
 NLnetLabs/unbound#1204
 numpy/numpy#27931
