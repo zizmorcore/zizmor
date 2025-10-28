@@ -615,6 +615,14 @@
         - Instagram/LibCST#1262
 
 
+-   ![](https://github.com/intel.png?size=40){ width="40" loading=lazy align=left } intel
+
+    ---
+
+    ??? example "Examples"
+        - intel/llvm#20437
+
+
 -   ![](https://github.com/ispc.png?size=40){ width="40" loading=lazy align=left } ispc
 
     ---
