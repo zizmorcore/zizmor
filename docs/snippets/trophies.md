@@ -1228,6 +1228,15 @@
         - rustls/webpki#299
 
 
+-   ![](https://github.com/rustsec.png?size=40){ width="40" loading=lazy align=left } rustsec
+
+    ---
+
+    ??? example "Examples"
+        - rustsec/advisory-db#2444
+        - rustsec/rustsec#1449
+
+
 -   ![](https://github.com/Saghen.png?size=40){ width="40" loading=lazy align=left } Saghen
 
     ---
