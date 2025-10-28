@@ -148,6 +148,9 @@ pub(crate) enum ClientError {
     /// between listing and fetching it.
     #[error("couldn't fetch file {file} from {slug}: is the branch/tag being modified?")]
     FileTOCTOU { file: String, slug: String },
+    /// An accessed repository is missing or private.
+    #[error("can't access {owner}/{repo}: missing or you have no access")]
+    RepoMissingOrPrivate { owner: String, repo: String },
     /// Any of the errors above, wrapped from concurrent contexts.
     #[error(transparent)]
     Inner(#[from] Arc<ClientError>),
@@ -372,8 +375,20 @@ impl Client {
                     .body(req)
                     .basic_auth("x-access-token", Some(&self.token.0))
                     .send()
-                    .await?
-                    .error_for_status()?;
+                    .await?;
+
+                let resp = match resp.status() {
+                    StatusCode::OK => Ok(resp),
+                    // NOTE: Versions of zizmor prior to 1.16.0 would silently
+                    // skip private or missing repositories, as branch/tag lookups
+                    // were done as a binary present/absent check. This caused
+                    // false negatives.
+                    StatusCode::NOT_FOUND => Err(ClientError::RepoMissingOrPrivate {
+                        owner: owner.to_string(),
+                        repo: repo.to_string(),
+                    }),
+                    _ => Err(resp.error_for_status().unwrap_err().into()),
+                }?;
 
                 let mut remote_refs = vec![];
                 let content = resp.bytes().await?;

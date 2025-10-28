@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* `zizmor` now produces a more useful error message when asked to indirectly
+  access a nonexistent or private repository via a `uses:` clause (without
+  a sufficiently privileged GitHub token) (#1293)
+
 ## 1.16.0
 
 ### New Features 🌈

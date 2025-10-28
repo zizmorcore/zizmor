@@ -75,7 +75,7 @@ fn menagerie() -> Result<()> {
             .output(OutputMode::Both)
             .args(["--collect=all"])
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
     );
 
     Ok(())
@@ -363,6 +363,34 @@ fn issue_1207() -> Result<()> {
             // `./` or other path component.
             .input("action.yaml")
             .run()?
+    );
+
+    Ok(())
+}
+
+/// Regression test for #1286.
+///
+/// Ensures that we produce a useful error when a user's input references
+/// a private (or missing) repository.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_1286() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .output(OutputMode::Both)
+            .offline(false)
+            .input(input_under_test("issue-1286.yml"))
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    ref-confusion failed on file://@@INPUT@@
+
+    Caused by:
+        0: couldn't list branches for woodruffw-experiments/this-does-not-exist
+        1: can't access woodruffw-experiments/this-does-not-exist: missing or you have no access
+    ",
     );
 
     Ok(())
