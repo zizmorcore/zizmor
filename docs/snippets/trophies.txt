@@ -136,6 +136,7 @@ immich-app/immich#17651
 indygreg/apple-platform-rs@5bded60cbfc2b81e1bedd745ab41417e5c3a76ea
 indygreg/cryptography-rs@d0ae52a8040c7be8fd2024a5e2dc1cc1705c3469
 indygreg/python-zstandard@d0bf56011d85faf1c76da38f63d174b275c2cdeb
+intel/llvm#20437
 Instagram/LibCST#1262
 ispc/ispc#3589
 jj-vcs/jj#5076
