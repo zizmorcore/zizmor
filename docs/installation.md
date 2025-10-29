@@ -8,7 +8,7 @@ description: Installation instructions for zizmor.
 
 `zizmor` is available within several packaging ecosystems.
 
-=== ":simple-homebrew: Homebrew"
+=== ":simple-homebrew: Homebrew" { #homebrew }
 
     ![Homebrew Formula Version](https://img.shields.io/homebrew/v/zizmor)
 
@@ -18,7 +18,7 @@ description: Installation instructions for zizmor.
     brew install zizmor
     ```
 
-=== ":simple-pypi: PyPI"
+=== ":simple-pypi: PyPI" { #pypi }
 
     ![PyPI - Version](https://img.shields.io/pypi/v/zizmor)
 
@@ -45,7 +45,7 @@ description: Installation instructions for zizmor.
     uvx zizmor --help
     ```
 
-=== ":simple-rust: crates.io"
+=== ":simple-rust: crates.io" { #cratesio }
 
     ![Crates.io Version](https://img.shields.io/crates/v/zizmor)
 
@@ -61,7 +61,7 @@ description: Installation instructions for zizmor.
     cargo install --locked zizmor
     ```
 
-=== ":simple-docker: Docker"
+=== ":simple-docker: Docker" { #docker }
 
     An official `zizmor` image is available from the [GitHub Container Registry](https://ghcr.io/zizmorcore/zizmor):
 
@@ -69,7 +69,7 @@ description: Installation instructions for zizmor.
     docker pull ghcr.io/zizmorcore/zizmor:latest
     ```
 
-=== ":simple-anaconda: Conda"
+=== ":simple-anaconda: Conda" { #conda }
 
     [![Anaconda-Server Badge](https://anaconda.org/conda-forge/zizmor/badges/version.svg)](https://anaconda.org/conda-forge/zizmor)
     [![Anaconda-Server Badge](https://anaconda.org/conda-forge/zizmor/badges/latest_release_date.svg)](https://anaconda.org/conda-forge/zizmor)
@@ -89,7 +89,7 @@ description: Installation instructions for zizmor.
     for additional information.
 
 
-=== ":material-nix: Nix"
+=== ":material-nix: Nix" { #nix }
 
     [![nixpkgs unstable package](https://repology.org/badge/version-for-repo/nix_unstable/zizmor.svg)](https://repology.org/project/zizmor/versions)
 
@@ -105,7 +105,7 @@ description: Installation instructions for zizmor.
     nix profile install nixpkgs#zizmor
     ```
 
-=== ":simple-archlinux: Arch Linux"
+=== ":simple-archlinux: Arch Linux" { #archlinux }
 
     [![Arch Linux package](https://repology.org/badge/version-for-repo/arch/zizmor.svg)](https://repology.org/project/zizmor/versions)
 
@@ -118,7 +118,7 @@ description: Installation instructions for zizmor.
     pacman -S zizmor
     ```
 
-=== "Chimera Linux"
+=== "Chimera Linux" { #chimeralinux }
 
     [![Chimera Linux package](https://repology.org/badge/version-for-repo/chimera/zizmor.svg)](https://repology.org/project/zizmor/versions)
 
@@ -135,7 +135,7 @@ description: Installation instructions for zizmor.
     apk add zizmor
     ```
 
-=== ":simple-alpinelinux: Alpine Linux"
+=== ":simple-alpinelinux: Alpine Linux" { #alpinelinux }
 
     [![Alpine Linux package](https://repology.org/badge/version-for-repo/alpine_edge/zizmor.svg)](https://repology.org/project/zizmor/versions)
 
@@ -147,7 +147,7 @@ description: Installation instructions for zizmor.
     apk add zizmor
     ```
 
-=== "Other ecosystems"
+=== "Other ecosystems" { #other-ecosystems }
 
     !!! info
 

@@ -36,7 +36,7 @@ many common security issues in typical GitHub Actions CI/CD setups.
 
     [:octicons-arrow-right-24: Usage recipes](./usage.md)
 
--   :material-robot-love:{.lg .middle} Integration
+-   :material-robot-love:{.lg .middle} Integrations
 
     ---
 
