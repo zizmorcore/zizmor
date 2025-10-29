@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.16.1
+
 ### Enhancements 🌱
 
 * `zizmor` now produces a more useful error message when asked to indirectly
