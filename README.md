@@ -87,11 +87,6 @@ Shipfox
 <tbody>
 <tr>
 <td align="center" valign="top">
-<a href="http://tenki.cloud/">
-Tenki Cloud
-</a>
-</td>
-<td align="center" valign="top">
 <a href="https://github.com/ariccio">
 Alexander Riccio
 </a>
