@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* The [concurrency-limits] audit no longer flags explicit user concurrency
+  overrides, e.g. `cancel-in-progress: false` (#1302)
+
 ## 1.16.1
 
 ### Enhancements 🌱
