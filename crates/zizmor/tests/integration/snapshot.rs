@@ -1078,6 +1078,7 @@ fn concurrency_limits() -> Result<()> {
     "
     );
 
+    // Note: per #1302, we intentionally don't produce findings here.
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test(
@@ -1085,19 +1086,7 @@ fn concurrency_limits() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
-    help[concurrency-limits]: insufficient job-level concurrency limits
-     --> @@INPUT@@:5:1
-      |
-    5 | / concurrency:
-    6 | |   group: ${{ github.workflow }}-${{ github.event.pull_request_number || github.ref }}
-    7 | |   cancel-in-progress: false
-      | |___________________________^ cancel-in-progress set to false
-      |
-      = note: audit confidence → High
-
-    1 finding: 0 informational, 1 low, 0 medium, 0 high
-    "
+        @"No findings to report. Good job!"
     );
 
     insta::assert_snapshot!(
