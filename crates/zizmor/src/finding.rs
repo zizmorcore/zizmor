@@ -155,7 +155,7 @@ impl Finding<'_> {
         self.locations
             .iter()
             .find(|l| l.symbolic.is_primary())
-            .unwrap()
+            .expect("internal error: finding has no primary location")
     }
 
     /// Return the input group for this finding's primary location.

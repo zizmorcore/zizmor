@@ -1,11 +1,10 @@
 //! Symbolic and concrete locations.
 
-use std::{ops::Range, sync::LazyLock};
+use std::ops::Range;
 
-use crate::models::AsDocument;
 use crate::registry::input::InputKey;
+use crate::{models::AsDocument, utils::once::static_regex};
 use line_index::{LineCol, TextSize};
-use regex::Regex;
 use serde::Serialize;
 use subfeature::Subfeature;
 use terminal_link::Link;
@@ -295,10 +294,9 @@ impl From<&yamlpath::Location> for ConcreteLocation {
     }
 }
 
-static ANY_COMMENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"#.*$").unwrap());
+static_regex!(ANY_COMMENT, r"#.*$");
 
-static IGNORE_EXPR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"# zizmor: ignore\[(.+)\](?:\s+.*)?$").unwrap());
+static_regex!(IGNORE_EXPR, r"# zizmor: ignore\[(.+)\](?:\s+.*)?$");
 
 /// Represents a single source comment.
 #[derive(Debug, Serialize)]
@@ -318,7 +316,7 @@ impl Comment<'_> {
         };
 
         caps.get(1)
-            .unwrap()
+            .expect("internal error: missing required capture group")
             .as_str()
             .split(",")
             .any(|r| r.trim() == rule_id)
@@ -351,7 +349,10 @@ impl<'doc> Feature<'doc> {
     ) -> Self {
         let contents = input.as_document().source();
 
-        let span = subfeature.locate_within(contents).unwrap().as_range();
+        let span = subfeature
+            .locate_within(contents)
+            .expect("subfeature does not occur within feature")
+            .as_range();
 
         Self::from_span(&span, input)
     }

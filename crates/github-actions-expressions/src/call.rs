@@ -67,6 +67,7 @@ impl<'src> Call<'src> {
             let rbrace = template[index..].find('}').map(|pos| index + pos);
 
             // Left brace
+            #[allow(clippy::unwrap_used)]
             if let Some(lbrace_pos) = lbrace
                 && (rbrace.is_none() || rbrace.unwrap() > lbrace_pos)
             {
@@ -105,6 +106,7 @@ impl<'src> Call<'src> {
 
             // Right brace
             if let Some(rbrace_pos) = rbrace {
+                #[allow(clippy::unwrap_used)]
                 if lbrace.is_none() || lbrace.unwrap() > rbrace_pos {
                     // Escaped right brace
                     if template.as_bytes().get(rbrace_pos + 1) == Some(&b'}') {

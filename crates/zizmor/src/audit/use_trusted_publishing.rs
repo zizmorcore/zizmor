@@ -32,6 +32,7 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
 const KNOWN_NPMJS_TP_INDICES: &[&str] =
     &["https://registry.npmjs.org", "https://registry.npmjs.org/"];
 
+#[allow(clippy::unwrap_used)]
 static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str])>> =
     LazyLock::new(|| {
         vec![
@@ -176,13 +177,18 @@ const NON_TP_COMMAND_PATTERNS: &[&str] = &[
     r"(?s)pnpm\s+run\s+publish",
 ];
 
-static NON_TP_COMMAND_PATTERN_SET: LazyLock<RegexSet> =
-    LazyLock::new(|| RegexSet::new(NON_TP_COMMAND_PATTERNS).unwrap());
+static NON_TP_COMMAND_PATTERN_SET: LazyLock<RegexSet> = LazyLock::new(|| {
+    RegexSet::new(NON_TP_COMMAND_PATTERNS)
+        .expect("internal error: failed to compile NON_TP_COMMAND_PATTERN_SET")
+});
 
 static NON_TP_COMMAND_PATTERN_REGEXES: LazyLock<Vec<regex::Regex>> = LazyLock::new(|| {
     NON_TP_COMMAND_PATTERNS
         .iter()
-        .map(|p| regex::Regex::new(p).unwrap())
+        .map(|p| {
+            regex::Regex::new(p)
+                .expect("internal error: failed to compile NON_TP_COMMAND_PATTERN_REGEXES")
+        })
         .collect()
 });
 
@@ -252,7 +258,9 @@ impl UseTrustedPublishing {
             .captures(&self.bash_command_query, tree.root_node(), run.as_bytes())
             .filter_map(|(mat, cap_idx)| {
                 let cap_node = mat.captures[*cap_idx].node;
-                let cap_cmd = cap_node.utf8_text(run.as_bytes()).unwrap();
+                let cap_cmd = cap_node
+                    .utf8_text(run.as_bytes())
+                    .expect("impossible: capture should be UTF-8 by construction");
 
                 NON_TP_COMMAND_PATTERN_SET
                     .is_match(cap_cmd)
@@ -278,7 +286,9 @@ impl UseTrustedPublishing {
             .captures(&self.pwsh_command_query, tree.root_node(), run.as_bytes())
             .filter_map(|(mat, cap_idx)| {
                 let cap_node = mat.captures[*cap_idx].node;
-                let cap_cmd = cap_node.utf8_text(run.as_bytes()).unwrap();
+                let cap_cmd = cap_node
+                    .utf8_text(run.as_bytes())
+                    .expect("impossible: capture should be UTF-8 by construction");
 
                 NON_TP_COMMAND_PATTERN_SET
                     .is_match(cap_cmd)
@@ -295,7 +305,11 @@ impl UseTrustedPublishing {
         Ok(NON_TP_COMMAND_PATTERN_SET
             .matches(run)
             .into_iter()
-            .map(|idx| NON_TP_COMMAND_PATTERN_REGEXES[idx].find(run).unwrap())
+            .map(|idx| {
+                NON_TP_COMMAND_PATTERN_REGEXES[idx].find(run).expect(
+                    "internal error: 1-1 correspondence between RegexSet and regexes violated",
+                )
+            })
             .map(|mat| Subfeature::new(mat.start(), mat.as_str()))
             .collect())
     }

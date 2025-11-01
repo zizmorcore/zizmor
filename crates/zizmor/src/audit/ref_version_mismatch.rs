@@ -27,6 +27,7 @@ audit_meta!(
     "detects commit SHAs that don't match their version comment tags"
 );
 
+#[allow(clippy::unwrap_used)]
 static VERSION_COMMENT_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
         // Matches "# tag=v2.8.0" or "# tag=v1.2.3"
@@ -239,8 +240,7 @@ jobs:
             "fakegroup".into(),
             "test_version_mismatch.yml",
             None::<&str>,
-        )
-        .unwrap();
+        );
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(
@@ -311,8 +311,7 @@ jobs:
             "fakegroup".into(),
             "test_different_formats.yml",
             None::<&str>,
-        )
-        .unwrap();
+        );
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(

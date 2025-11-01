@@ -323,7 +323,7 @@ mod tests {
 
     /// Helper function to apply a fix and return the result for snapshot testing
     fn apply_fix_for_snapshot(workflow_content: &str, _audit_name: &str) -> String {
-        let key = InputKey::local("dummy".into(), "test.yml", None::<&str>).unwrap();
+        let key = InputKey::local("dummy".into(), "test.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let audit_state = AuditState {
             no_online_audits: false,

@@ -1,17 +1,18 @@
 //! Extension traits for the `Uses` APIs.
 
-use std::{str::FromStr, sync::LazyLock};
+use std::str::FromStr;
 
 use github_actions_models::common::{RepositoryUses, Uses};
-use regex::Regex;
 use serde::Deserialize;
 
-/// Matches all variants of [`RepositoryUsesPattern`] except `*`.
-///
-/// TODO: Replace this with a real parser; this is ridiculous.
-static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
+use crate::utils::once::static_regex;
+
+// Matches all variants of [`RepositoryUsesPattern`] except `*`.
+//
+// TODO: Replace this with a real parser; this is ridiculous.
+static_regex!(
+    REPOSITORY_USES_PATTERN,
+    r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
         ^                           # start of line
         ([\w-]+)                    # (1) owner
         /                           # /
@@ -29,10 +30,8 @@ static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
           ([[[:graph:]]&&[^\*]]+)   # (4) git ref (any non-space, non-* characters)
         )?                          # end of non-capturing group for optional git ref
         $                           # end of line
-        "#,
-    )
-    .unwrap()
-});
+        "#
+);
 
 /// Represents a pattern for matching repository `uses` references.
 /// These patterns are ordered by specificity; more specific patterns

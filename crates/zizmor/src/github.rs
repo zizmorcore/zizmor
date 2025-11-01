@@ -124,6 +124,9 @@ pub(crate) enum ClientError {
     /// We couldn't turn the user's token into a valid header value.
     #[error("invalid token header")]
     InvalidTokenHeader(#[from] InvalidHeaderValue),
+    /// An error originating from encoding or decoding Git pkt-lines.
+    #[error("error while processing Git pkt-lines")]
+    PktLint(#[from] pktline::PktLineError),
     /// An error originating from listing refs through direct
     /// Git access.
     #[error("error while listing Git references")]
@@ -182,8 +185,12 @@ impl reqwest_middleware::Middleware for CacheLoggingMiddleware {
 
         let res = next.run(req, extensions).await;
 
-        let cache_type = extensions.get::<CacheType>().unwrap();
-        let cache_result = extensions.get::<CacheResult>().unwrap();
+        let cache_type = extensions
+            .get::<CacheType>()
+            .expect("internal error: expected CacheType");
+        let cache_result = extensions
+            .get::<CacheResult>()
+            .expect("internal error: expected CacheResult");
         tracing::debug!("{:?} cache was {:?}", cache_type, cache_result);
 
         res
@@ -207,7 +214,10 @@ impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
         if let Ok(ref resp) = res
             && let Some(cache) = resp.headers().get("x-cache")
         {
-            let cache_result = match cache.to_str().unwrap() {
+            let cache_result = match cache
+                .to_str()
+                .expect("invalid x-cache header (not a string)")
+            {
                 "HIT" => CacheResult::Hit,
                 _ => CacheResult::Miss,
             };
@@ -251,8 +261,8 @@ impl Client {
         // GitHub REST API client.
         let mut api_client_headers = HeaderMap::new();
         api_client_headers.insert(AUTHORIZATION, token.to_header_value()?);
-        api_client_headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
-        api_client_headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
+        api_client_headers.insert("X-GitHub-Api-Version", "2022-11-28".parse()?);
+        api_client_headers.insert(ACCEPT, "application/vnd.github+json".parse()?);
 
         let api_client = Self::default_middleware(
             cache_dir,
@@ -345,28 +355,14 @@ impl Client {
                 // We additionally use the ref-prefix arguments to (hopefully) limit
                 // the server's response to only branches and tags.
                 let mut req = vec![];
-                pktline::Packet::data("command=ls-refs\n".as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::data(format!("agent={}\n", ZIZMOR_AGENT).as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::Delim.encode(&mut req).unwrap();
-                pktline::Packet::data("peel\n".as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::data("ref-prefix refs/heads/\n".as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::data("ref-prefix refs/tags/\n".as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::Flush.encode(&mut req).unwrap();
+                pktline::Packet::data("command=ls-refs\n".as_bytes())?.encode(&mut req)?;
+                pktline::Packet::data(format!("agent={}\n", ZIZMOR_AGENT).as_bytes())?
+                    .encode(&mut req)?;
+                pktline::Packet::Delim.encode(&mut req)?;
+                pktline::Packet::data("peel\n".as_bytes())?.encode(&mut req)?;
+                pktline::Packet::data("ref-prefix refs/heads/\n".as_bytes())?.encode(&mut req)?;
+                pktline::Packet::data("ref-prefix refs/tags/\n".as_bytes())?.encode(&mut req)?;
+                pktline::Packet::Flush.encode(&mut req)?;
 
                 let resp = self
                     .base_client
@@ -377,17 +373,19 @@ impl Client {
                     .send()
                     .await?;
 
-                let resp = match resp.status() {
-                    StatusCode::OK => Ok(resp),
+                let resp = match resp.error_for_status() {
+                    Ok(resp) => Ok(resp),
                     // NOTE: Versions of zizmor prior to 1.16.0 would silently
                     // skip private or missing repositories, as branch/tag lookups
                     // were done as a binary present/absent check. This caused
                     // false negatives.
-                    StatusCode::NOT_FOUND => Err(ClientError::RepoMissingOrPrivate {
-                        owner: owner.to_string(),
-                        repo: repo.to_string(),
-                    }),
-                    _ => Err(resp.error_for_status().unwrap_err().into()),
+                    Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
+                        Err(ClientError::RepoMissingOrPrivate {
+                            owner: owner.to_string(),
+                            repo: repo.to_string(),
+                        })
+                    }
+                    Err(e) => Err(e.into()),
                 }?;
 
                 let mut remote_refs = vec![];
@@ -598,14 +596,14 @@ impl Client {
 
         let resp = self.api_client.get(url).send().await?;
 
-        match resp.status() {
-            StatusCode::OK => {
-                Ok::<_, reqwest::Error>(Some(resp.json::<Comparison>().await?.status))
+        match resp.error_for_status() {
+            Ok(resp) => {
+                let comparison: Comparison = resp.json().await?;
+                Ok(Some(comparison.status))
             }
-            StatusCode::NOT_FOUND => Ok(None),
-            _ => Err(resp.error_for_status().unwrap_err()),
+            Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => Ok(None),
+            Err(e) => Err(e.into()),
         }
-        .map_err(Into::into)
     }
 
     #[instrument(skip(self))]
@@ -673,14 +671,14 @@ impl Client {
             .send()
             .await?;
 
-        match resp.status() {
-            StatusCode::OK => {
+        match resp.error_for_status() {
+            Ok(resp) => {
                 let contents = resp.text().await?;
 
                 Ok(Some(contents))
             }
-            StatusCode::NOT_FOUND => Ok(None),
-            _ => Err(resp.error_for_status().unwrap_err().into()),
+            Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => Ok(None),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -742,7 +740,7 @@ impl Client {
                 .into());
             };
 
-            let key = InputKey::remote(slug, file.path)?;
+            let key = InputKey::remote(slug, file.path);
             group.register(InputKind::Workflow, contents, key, options.strict)?;
         }
 
@@ -813,12 +811,12 @@ impl Client {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug, file_path.to_string());
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Workflow, contents, key, options.strict)?;
             } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug, file_path.to_string());
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
@@ -826,7 +824,7 @@ impl Client {
                 file_path.file_name(),
                 Some("dependabot.yml" | "dependabot.yaml")
             ) {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug, file_path.to_string());
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Dependabot, contents, key, options.strict)?;

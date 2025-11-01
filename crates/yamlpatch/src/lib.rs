@@ -582,7 +582,10 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
 fn line_span(doc: &yamlpath::Document, pos: usize) -> core::ops::Range<usize> {
     let pos = TextSize::new(pos as u32);
     let LineCol { line, .. } = doc.line_index().line_col(pos);
-    doc.line_index().line(line).unwrap().into()
+    doc.line_index()
+        .line(line)
+        .expect("impossible: line index gave us an invalid line")
+        .into()
 }
 
 /// Extract the number of leading spaces need to align a block item with
@@ -895,7 +898,7 @@ fn apply_value_replacement(
                         .join("\n");
 
                     // Find the position of | in the original content and include it
-                    let pipe_pos = value_part.find('|').unwrap();
+                    let pipe_pos = value_part.find('|').expect("impossible");
                     let key_with_pipe = &current_content_with_ws
                         [..colon_pos + 1 + value_part[..pipe_pos].len() + 1];
                     return Ok(format!(

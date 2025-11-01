@@ -321,6 +321,7 @@ impl<'src> Expr<'src> {
     }
 
     /// Parses the given string into an expression.
+    #[allow(clippy::unwrap_used)]
     pub fn parse(expr: &'src str) -> Result<SpannedExpr<'src>> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?

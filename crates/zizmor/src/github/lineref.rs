@@ -5,21 +5,18 @@
 //! directly from a Git server's reference list advertisement
 //! (over the "smart" HTTP protocol + Git v2 protocol).
 
-use std::sync::LazyLock;
-
-use regex::Regex;
 use thiserror::Error;
 
-use crate::github::pktline;
+use crate::{github::pktline, utils::once::static_regex};
 
-/// A regex pattern for parsing Git line refs.
-///
-/// This only matches the subset of line refs that we expect to see
-/// in practice: those with an object ID, a ref name, and optionally
-/// a peeled object ID.
-static LINE_REF_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r#"(?x)                    # verbose mode
+// A regex pattern for parsing Git line refs.
+//
+// This only matches the subset of line refs that we expect to see
+// in practice: those with an object ID, a ref name, and optionally
+// a peeled object ID.
+static_regex!(
+    LINE_REF_PATTERN,
+    r#"(?x)                    # verbose mode
         ^                          # start of string
         (?P<obj_id>[0-9a-f]{40} )  # object ID
         (?-x: )                    # single space (temporarily disable verbose)
@@ -32,10 +29,8 @@ static LINE_REF_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
           )
         )?                         # end optional peeled group
         $                          # end of string
-        "#,
-    )
-    .unwrap()
-});
+        "#
+);
 
 #[derive(Debug, Error)]
 pub(crate) enum LineRefError {
@@ -101,8 +96,14 @@ impl<'a> LineRef<'a> {
             })?;
 
         Ok(Self {
-            obj_id: captures.name("obj_id").unwrap().as_str(),
-            ref_name: captures.name("ref_name").unwrap().as_str(),
+            obj_id: captures
+                .name("obj_id")
+                .expect("internal error: mandatory capture missing from lineref pattern")
+                .as_str(),
+            ref_name: captures
+                .name("ref_name")
+                .expect("internal error: mandatory capture missing from lineref pattern")
+                .as_str(),
             peeled_obj_id: captures.name("peeled_obj_id").map(|m| m.as_str()),
         })
     }

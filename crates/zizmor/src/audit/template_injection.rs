@@ -50,6 +50,7 @@ audit_meta!(
     "code injection via template expansion"
 );
 
+#[allow(clippy::unwrap_used)]
 static ACTION_INJECTION_SINKS: LazyLock<Vec<(RepositoryUsesPattern, Vec<&str>)>> =
     LazyLock::new(|| {
         let mut sinks: Vec<(RepositoryUsesPattern, Vec<&str>)> = serde_json::from_slice(
@@ -639,7 +640,7 @@ mod tests {
     /// Macro for testing workflow audits with common boilerplate
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>);
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();

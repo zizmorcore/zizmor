@@ -329,7 +329,7 @@ jobs:
       - uses: actions/hello-world-javascript-action@692973e3d937129bcbf40652eb9f2f61becf3332  # This is a commit from actions/checkout, not hello-world
 "#;
 
-        let key = InputKey::local("dummy".into(), "test.yml", None::<&str>).unwrap();
+        let key = InputKey::local("dummy".into(), "test.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState {
@@ -388,7 +388,7 @@ jobs:
       - uses: actions/checkout@v4
 "#;
 
-        let key = InputKey::local("dummy".into(), "test.yml", None::<&str>).unwrap();
+        let key = InputKey::local("dummy".into(), "test.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState {

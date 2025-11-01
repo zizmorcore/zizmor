@@ -20,6 +20,7 @@ use super::AuditLoadError;
 /// The list of know cache-aware actions
 /// In the future we can easily retrieve this list from the static API,
 /// since it should be easily serializable
+#[allow(clippy::unwrap_used)]
 static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(|| {
     vec![
         // https://github.com/actions/cache/blob/main/action.yml
@@ -203,6 +204,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
 
 /// A list of well-know publisher actions
 /// In the future we can retrieve this list from the static API
+#[allow(clippy::unwrap_used)]
 static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(|| {
     vec![
         // Public packages and/or binary distribution channels
@@ -495,7 +497,7 @@ mod tests {
     /// 4. Executes the provided test closure with the findings
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>);
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();

@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use std::fs::{self, File};
 use std::path::Path;
 use std::{env, io};
