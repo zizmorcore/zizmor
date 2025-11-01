@@ -178,7 +178,11 @@ impl GitHubEnv {
 
         matches.for_each(|mat| {
             let cmd = {
-                let cap = mat.captures.iter().find(|cap| cap.index == cmd).unwrap();
+                let cap = mat
+                    .captures
+                    .iter()
+                    .find(|cap| cap.index == cmd)
+                    .expect("internal error: expected capture for cmd");
                 cap.node
                     .utf8_text(script_body.as_bytes())
                     .expect("impossible: capture should be UTF-8 by construction")
@@ -193,14 +197,14 @@ impl GitHubEnv {
                     .captures
                     .iter()
                     .find(|cap| cap.index == self.bash_redirect_query.span_idx)
-                    .unwrap();
+                    .expect("internal error: expected capture for span");
 
                 let destination = {
                     let cap = mat
                         .captures
                         .iter()
                         .find(|cap| cap.index == self.bash_redirect_query.destination_idx)
-                        .unwrap();
+                        .expect("internal error: expected capture for destination");
                     cap.node
                         .utf8_text(script_body.as_bytes())
                         .expect("impossible: capture should be UTF-8 by construction")
@@ -222,14 +226,14 @@ impl GitHubEnv {
                     .captures
                     .iter()
                     .find(|cap| cap.index == query.span_idx)
-                    .unwrap();
+                    .expect("internal error: expected capture for span");
 
                 let destination = {
                     let cap = mat
                         .captures
                         .iter()
                         .find(|cap| cap.index == query.destination_idx)
-                        .unwrap();
+                        .expect("internal error: expected capture for destination");
                     cap.node
                         .utf8_text(script_body.as_bytes())
                         .expect("impossible: capture should be UTF-8 by construction")

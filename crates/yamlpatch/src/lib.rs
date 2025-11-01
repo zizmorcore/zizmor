@@ -582,7 +582,10 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
 fn line_span(doc: &yamlpath::Document, pos: usize) -> core::ops::Range<usize> {
     let pos = TextSize::new(pos as u32);
     let LineCol { line, .. } = doc.line_index().line_col(pos);
-    doc.line_index().line(line).unwrap().into()
+    doc.line_index()
+        .line(line)
+        .expect("impossible: line index gave us an invalid line")
+        .into()
 }
 
 /// Extract the number of leading spaces need to align a block item with
