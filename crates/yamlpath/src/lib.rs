@@ -232,7 +232,10 @@ impl Feature<'_> {
         // `block_node` or `flow_node`, which is a container
         // for the real kind of node we're interested in.
         let node = match self._node.kind() {
-            "block_node" | "flow_node" => self._node.child(0).unwrap(),
+            "block_node" | "flow_node" => self
+                ._node
+                .child(0)
+                .expect("internal error: expected child of block_node/flow_node"),
             _ => self._node,
         };
 
@@ -317,7 +320,9 @@ impl Tree {
             for anchor in TreeIter::new(tree).filter(|n| n.kind() == "anchor") {
                 // NOTE(ww): We could poke into the `anchor_name` child
                 // instead of slicing, but this is simpler.
-                let anchor_name = &anchor.utf8_text(tree.source.as_bytes()).unwrap()[1..];
+                let anchor_name = &anchor
+                    .utf8_text(tree.source.as_bytes())
+                    .expect("impossible: anchor name should be UTF-8 by construction")[1..];
 
                 // Only insert if the anchor name is unique.
                 if anchor_map.contains_key(anchor_name) {
@@ -356,7 +361,8 @@ impl Clone for Tree {
         // it borrows from the tree.
         // TODO: Can we do better here?
         // Unwrap safety: we're cloning from an existing valid owner.
-        Self::build(self.borrow_owner().clone()).unwrap()
+        Self::build(self.borrow_owner().clone())
+            .expect("impossible: cloning a Tree preserves invariants")
     }
 }
 
@@ -403,7 +409,9 @@ impl Document {
         parser.set_language(&language)?;
 
         // NOTE: Infallible, assuming `language` is correctly constructed above.
-        let tree = parser.parse(&source, None).unwrap();
+        let tree = parser
+            .parse(&source, None)
+            .expect("impossible: tree-sitter parsing should never fail");
 
         if tree.root_node().has_error() {
             return Err(QueryError::InvalidInput);
@@ -691,7 +699,9 @@ impl Document {
         // TODO(ww): What about nested aliases?
         focus_node = match focus_node.child(0) {
             Some(child) if child.kind_id() == self.alias_id => {
-                let alias_name = child.utf8_text(self.source().as_bytes()).unwrap();
+                let alias_name = child
+                    .utf8_text(self.source().as_bytes())
+                    .expect("impossible: alias name should be UTF-8 by construction");
                 let anchor_map = self.tree.borrow_dependent();
                 *anchor_map
                     .get(&alias_name[1..])
@@ -713,7 +723,7 @@ impl Document {
                     && focus_node.kind_id() != self.block_mapping_pair_id
                     && focus_node.kind_id() != self.flow_pair_id
                 {
-                    focus_node.parent().unwrap()
+                    focus_node.parent().expect("missing parent of focus node")
                 } else {
                     focus_node
                 }
@@ -733,11 +743,15 @@ impl Document {
                     // We might be on the internal `block_scalar` node, if
                     // we got here via an alias. We need to go up two levels
                     // to get to the mapping pair.
-                    focus_node.parent().unwrap().parent().unwrap()
+                    focus_node
+                        .parent()
+                        .expect("missing parent of focus node")
+                        .parent()
+                        .expect("missing grandparent of focus node")
                 } else {
                     // Otherwise, we expect to be on the `block_node`
                     // or `flow_node`, so we go up one level.
-                    focus_node.parent().unwrap()
+                    focus_node.parent().expect("missing parent of focus node")
                 };
 
                 if parent_node.kind_id() == self.flow_mapping_id {
@@ -773,7 +787,7 @@ impl Document {
             && matches!(route.route.last(), Some(Component::Key(_)))
             && focus_node.kind_id() != self.block_mapping_pair_id
         {
-            focus_node = focus_node.parent().unwrap()
+            focus_node = focus_node.parent().expect("missing parent of focus node")
         }
 
         Ok(focus_node)
@@ -821,7 +835,9 @@ impl Document {
         // We might be on an alias node, in which case we need to
         // jump to the alias's target via the anchor map.
         if child.kind_id() == self.alias_id {
-            let alias_name = node.utf8_text(self.source().as_bytes()).unwrap();
+            let alias_name = node
+                .utf8_text(self.source().as_bytes())
+                .expect("impossible: alias name should be UTF-8 by construction");
             let anchor_map = self.tree.borrow_dependent();
 
             child = *anchor_map
@@ -872,7 +888,9 @@ impl Document {
             // NOTE: text unwraps are infallible, since our document is UTF-8.
             let key_value = match key.named_child(0) {
                 Some(scalar) => {
-                    let key_value = scalar.utf8_text(self.source().as_bytes()).unwrap();
+                    let key_value = scalar
+                        .utf8_text(self.source().as_bytes())
+                        .expect("impossible: value for key should be UTF-8 by construction");
 
                     match scalar.kind() {
                         "single_quote_scalar" | "double_quote_scalar" => {
@@ -884,7 +902,9 @@ impl Document {
                         _ => key_value,
                     }
                 }
-                None => key.utf8_text(self.source().as_bytes()).unwrap(),
+                None => key
+                    .utf8_text(self.source().as_bytes())
+                    .expect("impossible: key should be UTF-8 by construction"),
             };
 
             if key_value == expected {
@@ -939,8 +959,10 @@ impl Document {
             // From here, we need to peek inside each and see if it's
             // an alias. If it is, we expand the alias; otherwise, we
             // just keep the child as-is.
-            if child.named_child(0).unwrap().kind() == "alias" {
-                let alias_name = &child.utf8_text(self.source().as_bytes()).unwrap()[1..];
+            if child.named_child(0).map(|c| c.kind()) == Some("alias") {
+                let alias_name = &child
+                    .utf8_text(self.source().as_bytes())
+                    .expect("impossible: alias name should be UTF-8 by construction")[1..];
                 let anchor_map = self.tree.borrow_dependent();
                 let aliased_node = anchor_map
                     .get(alias_name)

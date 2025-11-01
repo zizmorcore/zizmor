@@ -73,7 +73,10 @@ impl<'a> Fragment<'a> {
                 LazyLock::new(|| regex::Regex::new(r"\s+").unwrap());
             let regex = WHITESPACE.replace_all(&escaped, "\\s+");
 
-            Fragment::Regex(regex::bytes::Regex::new(&regex).unwrap())
+            Fragment::Regex(
+                regex::bytes::Regex::new(&regex)
+                    .expect("internal error: failed to compile fragment regex"),
+            )
         }
     }
 }
