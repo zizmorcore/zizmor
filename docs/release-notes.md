@@ -13,6 +13,9 @@ of `zizmor`.
 
 * The [concurrency-limits] audit no longer flags explicit user concurrency
   overrides, e.g. `cancel-in-progress: false` (#1302)
+* zizmor now detects CI environments and specializes its panic handling
+  accordingly, improving the quality of panic reports when running
+  in CI (#1307)
 
 ## 1.16.1
 
