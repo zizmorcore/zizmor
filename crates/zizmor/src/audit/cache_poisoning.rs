@@ -20,6 +20,7 @@ use super::AuditLoadError;
 /// The list of know cache-aware actions
 /// In the future we can easily retrieve this list from the static API,
 /// since it should be easily serializable
+#[allow(clippy::unwrap_used)]
 static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(|| {
     vec![
         // https://github.com/actions/cache/blob/main/action.yml
@@ -203,6 +204,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
 
 /// A list of well-know publisher actions
 /// In the future we can retrieve this list from the static API
+#[allow(clippy::unwrap_used)]
 static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(|| {
     vec![
         // Public packages and/or binary distribution channels

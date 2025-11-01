@@ -24,6 +24,7 @@ pub(crate) struct BotConditions;
 
 audit_meta!(BotConditions, "bot-conditions", "spoofable bot actor check");
 
+#[allow(clippy::unwrap_used)]
 static SPOOFABLE_ACTOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
     vec![
         ContextPattern::try_new("github.actor").unwrap(),
@@ -32,6 +33,7 @@ static SPOOFABLE_ACTOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::
     ]
 });
 
+#[allow(clippy::unwrap_used)]
 static SPOOFABLE_ACTOR_ID_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
     vec![
         ContextPattern::try_new("github.actor_id").unwrap(),

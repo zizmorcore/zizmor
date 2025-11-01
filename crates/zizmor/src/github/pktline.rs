@@ -137,15 +137,20 @@ impl<'a> Packet<'a> {
         // Split the length and data apart.
         // We expect exactly 4 hex digits for the length prefix.
         let (length_bytes, data) = packet.split_at(4);
-        let Ok(length_str) = str::from_utf8(length_bytes) else {
+
+        let length_bytes: [u8; 4] = length_bytes
+            .try_into()
+            .expect("impossible: length_bytes is 4 bytes");
+
+        let Ok(length_str) = str::from_utf8(&length_bytes) else {
             return Err(PktLineError::BadLength {
-                length: length_bytes.try_into().unwrap(),
+                length: length_bytes,
             });
         };
 
         let Ok(length) = usize::from_str_radix(length_str, 16) else {
             return Err(PktLineError::BadLength {
-                length: length_bytes.try_into().unwrap(),
+                length: length_bytes,
             });
         };
 

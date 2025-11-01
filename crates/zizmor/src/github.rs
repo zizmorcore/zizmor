@@ -124,6 +124,9 @@ pub(crate) enum ClientError {
     /// We couldn't turn the user's token into a valid header value.
     #[error("invalid token header")]
     InvalidTokenHeader(#[from] InvalidHeaderValue),
+    /// An error originating from encoding or decoding Git pkt-lines.
+    #[error("error while processing Git pkt-lines")]
+    PktLint(#[from] pktline::PktLineError),
     /// An error originating from listing refs through direct
     /// Git access.
     #[error("error while listing Git references")]
@@ -182,8 +185,12 @@ impl reqwest_middleware::Middleware for CacheLoggingMiddleware {
 
         let res = next.run(req, extensions).await;
 
-        let cache_type = extensions.get::<CacheType>().unwrap();
-        let cache_result = extensions.get::<CacheResult>().unwrap();
+        let cache_type = extensions
+            .get::<CacheType>()
+            .expect("internal error: expected CacheType");
+        let cache_result = extensions
+            .get::<CacheResult>()
+            .expect("internal error: expected CacheResult");
         tracing::debug!("{:?} cache was {:?}", cache_type, cache_result);
 
         res
@@ -207,7 +214,10 @@ impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
         if let Ok(ref resp) = res
             && let Some(cache) = resp.headers().get("x-cache")
         {
-            let cache_result = match cache.to_str().unwrap() {
+            let cache_result = match cache
+                .to_str()
+                .expect("invalid x-cache header (not a string)")
+            {
                 "HIT" => CacheResult::Hit,
                 _ => CacheResult::Miss,
             };
@@ -251,8 +261,8 @@ impl Client {
         // GitHub REST API client.
         let mut api_client_headers = HeaderMap::new();
         api_client_headers.insert(AUTHORIZATION, token.to_header_value()?);
-        api_client_headers.insert("X-GitHub-Api-Version", "2022-11-28".parse().unwrap());
-        api_client_headers.insert(ACCEPT, "application/vnd.github+json".parse().unwrap());
+        api_client_headers.insert("X-GitHub-Api-Version", "2022-11-28".parse()?);
+        api_client_headers.insert(ACCEPT, "application/vnd.github+json".parse()?);
 
         let api_client = Self::default_middleware(
             cache_dir,
@@ -345,28 +355,14 @@ impl Client {
                 // We additionally use the ref-prefix arguments to (hopefully) limit
                 // the server's response to only branches and tags.
                 let mut req = vec![];
-                pktline::Packet::data("command=ls-refs\n".as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::data(format!("agent={}\n", ZIZMOR_AGENT).as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::Delim.encode(&mut req).unwrap();
-                pktline::Packet::data("peel\n".as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::data("ref-prefix refs/heads/\n".as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::data("ref-prefix refs/tags/\n".as_bytes())
-                    .unwrap()
-                    .encode(&mut req)
-                    .unwrap();
-                pktline::Packet::Flush.encode(&mut req).unwrap();
+                pktline::Packet::data("command=ls-refs\n".as_bytes())?.encode(&mut req)?;
+                pktline::Packet::data(format!("agent={}\n", ZIZMOR_AGENT).as_bytes())?
+                    .encode(&mut req)?;
+                pktline::Packet::Delim.encode(&mut req)?;
+                pktline::Packet::data("peel\n".as_bytes())?.encode(&mut req)?;
+                pktline::Packet::data("ref-prefix refs/heads/\n".as_bytes())?.encode(&mut req)?;
+                pktline::Packet::data("ref-prefix refs/tags/\n".as_bytes())?.encode(&mut req)?;
+                pktline::Packet::Flush.encode(&mut req)?;
 
                 let resp = self
                     .base_client

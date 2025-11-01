@@ -1,10 +1,8 @@
 use std::ops::{Deref, Range};
-use std::sync::LazyLock;
 
 use anyhow::{Context, Result};
 use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
-use regex::Regex;
 use tree_sitter::{
     Language, Parser, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
 };
@@ -16,10 +14,12 @@ use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{workflow::JobExt as _, workflow::Step};
 use crate::state::AuditState;
 use crate::utils;
+use crate::utils::once::static_regex;
 
-static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?mi)^.+\s*>>?\s*"?%(?<destination>GITHUB_ENV|GITHUB_PATH)%"?.*$"#).unwrap()
-});
+static_regex!(
+    GITHUB_ENV_WRITE_CMD,
+    r#"(?mi)^.+\s*>>?\s*"?%(?<destination>GITHUB_ENV|GITHUB_PATH)%"?.*$"#
+);
 
 pub(crate) struct GitHubEnv {
     bash: Language,
@@ -168,18 +168,20 @@ impl GitHubEnv {
         let cmd = self
             .bash_redirect_query
             .capture_index_for_name("cmd")
-            .unwrap();
+            .expect("internal error: missing capture index for 'cmd'");
         let args = self
             .bash_redirect_query
             .capture_index_for_name("args")
-            .unwrap();
+            .expect("internal error: missing capture index for 'args'");
 
         let mut matching_spans = vec![];
 
         matches.for_each(|mat| {
             let cmd = {
                 let cap = mat.captures.iter().find(|cap| cap.index == cmd).unwrap();
-                cap.node.utf8_text(script_body.as_bytes()).unwrap()
+                cap.node
+                    .utf8_text(script_body.as_bytes())
+                    .expect("impossible: capture should be UTF-8 by construction")
             };
 
             let args = mat.captures.iter().filter(|cap| cap.index == args);
@@ -199,7 +201,9 @@ impl GitHubEnv {
                         .iter()
                         .find(|cap| cap.index == self.bash_redirect_query.destination_idx)
                         .unwrap();
-                    cap.node.utf8_text(script_body.as_bytes()).unwrap()
+                    cap.node
+                        .utf8_text(script_body.as_bytes())
+                        .expect("impossible: capture should be UTF-8 by construction")
                 };
                 matching_spans.push((destination, span.node.byte_range()));
             }
@@ -226,7 +230,9 @@ impl GitHubEnv {
                         .iter()
                         .find(|cap| cap.index == query.destination_idx)
                         .unwrap();
-                    cap.node.utf8_text(script_body.as_bytes()).unwrap()
+                    cap.node
+                        .utf8_text(script_body.as_bytes())
+                        .expect("impossible: capture should be UTF-8 by construction")
                 };
 
                 matching_spans.push((destination, span.node.byte_range()));
@@ -240,10 +246,11 @@ impl GitHubEnv {
         GITHUB_ENV_WRITE_CMD
             .captures_iter(script_body)
             .map(|c| {
-                let name = c.name("destination").unwrap().as_str();
-                let span = c.name("destination").unwrap().range();
+                let dest = c
+                    .name("destination")
+                    .expect("internal error: capture with missing destination");
 
-                (name, span)
+                (dest.as_str(), dest.range())
             })
             .collect()
     }
@@ -272,15 +279,17 @@ impl GitHubEnv {
                     .captures
                     .iter()
                     .find(|cap| cap.index == query.span_idx)
-                    .unwrap();
+                    .expect("internal error: no matching capture");
 
                 let destination = {
                     let cap = mat
                         .captures
                         .iter()
                         .find(|cap| cap.index == query.destination_idx)
-                        .unwrap();
-                    cap.node.utf8_text(script_body.as_bytes()).unwrap()
+                        .expect("internal error: no matching capture");
+                    cap.node
+                        .utf8_text(script_body.as_bytes())
+                        .expect("impossible: capture should be UTF-8 by construction")
                 };
 
                 matching_spans.push((destination, span.node.byte_range()));

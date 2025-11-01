@@ -5,13 +5,11 @@
 //! [semantic versioning](https://semver.org/), as GitHub Actions
 //! has no structured versioning scheme.
 
-use std::sync::LazyLock;
+use crate::utils::once::static_regex;
 
-use regex::Regex;
-
-static VERSION_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r#"(?x)            # verbose mode
+static_regex!(
+    VERSION_PATTERN,
+    r#"(?x)            # verbose mode
         ^                  # start of string
         v?                 # optional 'v' prefix
         (?<major>\d+)      # major version number
@@ -24,10 +22,8 @@ static VERSION_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
           (?<patch>\d+)    # patch version number
         )?                 # end of non-capturing group, optional
         $                  # end of string
-        "#,
-    )
-    .expect("internal error: failed to compile version regex")
-});
+    "#
+);
 
 #[derive(Eq)]
 pub(crate) struct Version<'a> {

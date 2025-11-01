@@ -503,7 +503,7 @@ pub(crate) fn extract_fenced_expression(
 
     end.map(|end| {
         (
-            ExtractedExpr::from_fenced(&view[start..=end]).unwrap(),
+            ExtractedExpr::from_fenced(&view[start..=end]).expect("impossible"),
             start + offset..end + offset + 1,
         )
     })
@@ -673,7 +673,19 @@ pub(crate) mod once {
         });
     }
 
+    macro_rules! static_regex {
+        ($ident:ident, $pattern:literal) => {
+            static $ident: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+                regex::Regex::new($pattern).expect(concat!(
+                    "internal error: invalid regex pattern for ",
+                    stringify!($ident)
+                ))
+            });
+        };
+    }
+
     pub(crate) use once;
+    pub(crate) use static_regex;
     pub(crate) use warn_once;
 }
 

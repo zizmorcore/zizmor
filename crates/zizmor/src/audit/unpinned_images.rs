@@ -56,7 +56,9 @@ impl Audit for UnpinnedImages {
 
         if let Some(Container::Container { image, .. }) = &job.container {
             image_refs_with_locations.push((
-                image.parse().unwrap(),
+                image
+                    .parse()
+                    .expect("failed to parse job container image as DockerUses"),
                 job.location()
                     .primary()
                     .with_keys(["container".into(), "image".into()]),
@@ -66,7 +68,9 @@ impl Audit for UnpinnedImages {
         for (service, config) in job.services.iter() {
             if let Container::Container { image, .. } = &config {
                 image_refs_with_locations.push((
-                    image.parse().unwrap(),
+                    image
+                        .parse()
+                        .expect("failed to parse service container image as DockerUses"),
                     job.location().primary().with_keys([
                         "services".into(),
                         service.as_str().into(),

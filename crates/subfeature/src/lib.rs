@@ -68,6 +68,7 @@ impl<'a> Fragment<'a> {
             // string literals.
             let escaped = regex::escape(fragment);
 
+            #[allow(clippy::unwrap_used)]
             static WHITESPACE: LazyLock<regex::Regex> =
                 LazyLock::new(|| regex::Regex::new(r"\s+").unwrap());
             let regex = WHITESPACE.replace_all(&escaped, "\\s+");

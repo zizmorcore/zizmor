@@ -50,6 +50,7 @@ audit_meta!(
     "code injection via template expansion"
 );
 
+#[allow(clippy::unwrap_used)]
 static ACTION_INJECTION_SINKS: LazyLock<Vec<(RepositoryUsesPattern, Vec<&str>)>> =
     LazyLock::new(|| {
         let mut sinks: Vec<(RepositoryUsesPattern, Vec<&str>)> = serde_json::from_slice(
