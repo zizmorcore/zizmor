@@ -804,7 +804,25 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
 }
 
 fn main() -> ExitCode {
-    human_panic::setup_panic!();
+    // NOTE: We only use human-panic on non-CI environments.
+    // This is because human-panic's output gets sent to a temporary file,
+    // which is then typically inaccessible from an already failed
+    // CI job. In those cases, it's better to dump directly to stderr,
+    // since that'll typically be captured by console logging.
+    if std::env::var_os("CI").is_some() {
+        std::panic::set_hook(Box::new(|info| {
+            let trace = std::backtrace::Backtrace::force_capture();
+            eprintln!("FATAL: zizmor crashed. This is a bug that should be reported.");
+            eprintln!(
+                "Please report to: {repo}",
+                repo = env!("CARGO_PKG_REPOSITORY")
+            );
+            eprintln!("Panic information:\n{}", info);
+            eprintln!("Backtrace:\n{}", trace);
+        }));
+    } else {
+        human_panic::setup_panic!();
+    }
 
     let mut app = App::parse();
 
