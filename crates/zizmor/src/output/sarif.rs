@@ -134,7 +134,8 @@ fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec
                         PropertyBag::builder()
                             .additional_properties([(
                                 "symbolic".into(),
-                                serde_json::value::to_value(location.symbolic.clone()).unwrap(),
+                                serde_json::value::to_value(location.symbolic.clone())
+                                    .expect("failed to serialize symbolic location"),
                             )])
                             .build(),
                     )

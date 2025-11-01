@@ -329,7 +329,7 @@ jobs:
         run: echo "hello"
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "test_checkout.yml", None::<&str>).unwrap();
+        let key = InputKey::local("fakegroup".into(), "test_checkout.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let job = workflow.jobs().next().unwrap();
         let steps: Vec<_> = match job {
@@ -381,7 +381,7 @@ jobs:
         run: npm install
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "test_setup_node.yml", None::<&str>).unwrap();
+        let key = InputKey::local("fakegroup".into(), "test_setup_node.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let job = workflow.jobs().next().unwrap();
         let steps: Vec<_> = match job {
@@ -435,8 +435,7 @@ jobs:
         run: echo "test"
 "#;
 
-        let key =
-            InputKey::local("fakegroup".into(), "test_third_party.yml", None::<&str>).unwrap();
+        let key = InputKey::local("fakegroup".into(), "test_third_party.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let job = workflow.jobs().next().unwrap();
         let steps: Vec<_> = match job {
@@ -497,7 +496,7 @@ jobs:
         run: npm install
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "test_multiple.yml", None::<&str>).unwrap();
+        let key = InputKey::local("fakegroup".into(), "test_multiple.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let job = workflow.jobs().next().unwrap();
         let steps: Vec<_> = match job {
@@ -583,7 +582,7 @@ jobs:
           param: value
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "test_subpath.yml", None::<&str>).unwrap();
+        let key = InputKey::local("fakegroup".into(), "test_subpath.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let job = workflow.jobs().next().unwrap();
         let steps: Vec<_> = match job {
@@ -632,8 +631,7 @@ jobs:
         uses: actions/checkout@v2
 "#;
 
-        let key =
-            InputKey::local("fakegroup".into(), "test_first_patched.yml", None::<&str>).unwrap();
+        let key = InputKey::local("fakegroup".into(), "test_first_patched.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let job = workflow.jobs().next().unwrap();
         let steps: Vec<_> = match job {
@@ -683,7 +681,7 @@ jobs:
         uses: actions/checkout@v2 # this comment stays
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "test_non_commit.yml", None::<&str>).unwrap();
+        let key = InputKey::local("fakegroup".into(), "test_non_commit.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let job = workflow.jobs().next().unwrap();
         let steps: Vec<_> = match job {
@@ -742,7 +740,7 @@ jobs:
         uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4  # v4.0.0
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>).unwrap();
+        let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(
@@ -797,7 +795,7 @@ jobs:
       - name: Commit pinned action
         uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4
 "#;
-        let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>).unwrap();
+        let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(

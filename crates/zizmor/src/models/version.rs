@@ -26,7 +26,7 @@ static VERSION_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         $                  # end of string
         "#,
     )
-    .unwrap()
+    .expect("internal error: failed to compile version regex")
 });
 
 #[derive(Eq)]
@@ -57,7 +57,7 @@ impl<'a> Version<'a> {
         // given a valid major number that's too big to fit in a u64.
         let major = captures
             .name("major")
-            .unwrap()
+            .expect("impossible: missing required 'major' capture")
             .as_str()
             .parse()
             .or_else(|e| anyhow::bail!("invalid major version in {s}: {e}"))?;

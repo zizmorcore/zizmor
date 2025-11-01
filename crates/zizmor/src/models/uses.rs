@@ -31,7 +31,7 @@ static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         $                           # end of line
         "#,
     )
-    .unwrap()
+    .expect("internal error: failed to compile repository uses pattern regex")
 });
 
 /// Represents a pattern for matching repository `uses` references.

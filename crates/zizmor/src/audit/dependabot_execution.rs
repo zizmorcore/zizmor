@@ -84,7 +84,7 @@ mod tests {
     /// Macro for testing dependabot audits with common boilerplate
     macro_rules! test_dependabot_audit {
         ($audit_type:ty, $filename:expr, $dependabot_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>);
             let dependabot = Dependabot::from_string($dependabot_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();

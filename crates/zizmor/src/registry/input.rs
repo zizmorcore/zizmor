@@ -80,10 +80,6 @@ pub(crate) enum CollectionError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// The input's name is missing.
-    #[error("invalid input: no filename component")]
-    MissingName,
-
     /// The input path isn't valid UTF-8.
     #[error("invalid path (not UTF-8): {1:?}")]
     InvalidPath(#[source] camino::FromPathError, PathBuf),
@@ -225,33 +221,20 @@ impl std::fmt::Display for InputKey {
 }
 
 impl InputKey {
-    pub(crate) fn local<P: AsRef<Utf8Path>>(
-        group: Group,
-        path: P,
-        prefix: Option<P>,
-    ) -> Result<Self, CollectionError> {
-        // All keys must have a filename component.
-        if path.as_ref().file_name().is_none() {
-            return Err(CollectionError::MissingName);
-        }
-
-        Ok(Self::Local(LocalKey {
+    pub(crate) fn local<P: AsRef<Utf8Path>>(group: Group, path: P, prefix: Option<P>) -> Self {
+        Self::Local(LocalKey {
             group,
             prefix: prefix.map(|p| p.as_ref().to_path_buf()),
             given_path: path.as_ref().to_path_buf(),
-        }))
+        })
     }
 
-    pub(crate) fn remote(slug: &RepoSlug, path: String) -> Result<Self, CollectionError> {
-        if Utf8Path::new(&path).file_name().is_none() {
-            return Err(CollectionError::MissingName);
-        }
-
-        Ok(Self::Remote(RemoteKey {
+    pub(crate) fn remote(slug: &RepoSlug, path: String) -> Self {
+        Self::Remote(RemoteKey {
             group: slug.into(),
             slug: slug.clone(),
             path: path.into(),
-        }))
+        })
     }
 
     /// Returns a path for this [`InputKey`] that's suitable for SARIF
@@ -296,8 +279,14 @@ impl InputKey {
         // NOTE: Safe unwraps, since the presence of a filename component
         // is a construction invariant of all `InputKey` variants.
         match self {
-            InputKey::Local(local) => local.given_path.file_name().unwrap(),
-            InputKey::Remote(remote) => remote.path.file_name().unwrap(),
+            InputKey::Local(local) => local
+                .given_path
+                .file_name()
+                .expect("expected input key to have a filename component"),
+            InputKey::Remote(remote) => remote
+                .path
+                .file_name()
+                .expect("expected input key to have a filename component"),
         }
     }
 
@@ -395,18 +384,15 @@ impl InputGroup {
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
             (Some("dependabot"), Some("yml" | "yaml")) => (
-                // NOTE: Safe unwrap because we just checked the filename.
-                InputKey::local(Group(path.as_str().into()), path, None).unwrap(),
+                InputKey::local(Group(path.as_str().into()), path, None),
                 InputKind::Dependabot,
             ),
             (Some("action"), Some("yml" | "yaml")) => (
-                // NOTE: Safe unwrap because we just checked the filename.
-                InputKey::local(Group(path.as_str().into()), path, None).unwrap(),
+                InputKey::local(Group(path.as_str().into()), path, None),
                 InputKind::Action,
             ),
             (Some(_), Some("yml" | "yaml")) => (
-                // NOTE: Safe unwrap because we just checked the filename.
-                InputKey::local(Group(path.as_str().into()), path, None).unwrap(),
+                InputKey::local(Group(path.as_str().into()), path, None),
                 InputKind::Workflow,
             ),
             _ => return Err(CollectionError::InvalidExtension),
@@ -463,8 +449,7 @@ impl InputGroup {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                // NOTE: Safe unwrap because we just checked the filename.
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path));
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
                     CollectionError::Inner(
                         CollectionError::Io(e).into(),
@@ -479,8 +464,7 @@ impl InputGroup {
                 && entry.is_file()
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
-                // NOTE: Safe unwrap because we just checked the filename.
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path));
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
                     CollectionError::Inner(
                         CollectionError::Io(e).into(),
@@ -498,8 +482,7 @@ impl InputGroup {
                     Some("dependabot.yml" | "dependabot.yaml")
                 )
             {
-                // NOTE: Safe unwrap because we just checked the filename.
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path)).unwrap();
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path));
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
                     CollectionError::Inner(
                         CollectionError::Io(e).into(),
@@ -635,12 +618,12 @@ mod tests {
 
     #[test]
     fn test_input_key_display() {
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None);
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
         let slug = RepoSlug::from_str("foo/bar").unwrap();
-        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
+        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into());
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/HEAD/.github/workflows/baz.yml"
@@ -648,7 +631,7 @@ mod tests {
 
         // With a git ref
         let slug = RepoSlug::from_str("foo/bar@v1").unwrap();
-        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into()).unwrap();
+        let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into());
         assert_eq!(
             remote.to_string(),
             "https://github.com/foo/bar/blob/v1/.github/workflows/baz.yml"
@@ -657,22 +640,20 @@ mod tests {
 
     #[test]
     fn test_input_key_local_presentation_path() {
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None);
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo")).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"));
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local =
-            InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/"));
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
-        )
-        .unwrap();
+        );
         assert_eq!(
             local.presentation_path(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml"
@@ -681,26 +662,23 @@ mod tests {
 
     #[test]
     fn test_input_key_local_sarif_path() {
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None);
         assert_eq!(local.sarif_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo")).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"));
         assert_eq!(local.sarif_path(), "bar/baz.yml");
 
-        let local =
-            InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/")).unwrap();
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/"));
         assert_eq!(local.sarif_path(), "baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
-        )
-        .unwrap();
+        );
         assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
 
-        let local =
-            InputKey::local("fakegroup".into(), "./.github/workflows/baz.yml", Some(".")).unwrap();
+        let local = InputKey::local("fakegroup".into(), "./.github/workflows/baz.yml", Some("."));
         assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
     }
 }

@@ -239,8 +239,7 @@ jobs:
             "fakegroup".into(),
             "test_version_mismatch.yml",
             None::<&str>,
-        )
-        .unwrap();
+        );
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(
@@ -311,8 +310,7 @@ jobs:
             "fakegroup".into(),
             "test_different_formats.yml",
             None::<&str>,
-        )
-        .unwrap();
+        );
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(

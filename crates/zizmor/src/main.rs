@@ -727,7 +727,8 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
         let span = info_span!("audit");
         span.pb_set_length((registry.len() * audit_registry.len()) as u64);
         span.pb_set_style(
-            &ProgressStyle::with_template("[{elapsed_precise}] {bar:!30.cyan/blue} {msg}").unwrap(),
+            &ProgressStyle::with_template("[{elapsed_precise}] {bar:!30.cyan/blue} {msg}")
+                .expect("couldn't set progress bar style"),
         );
 
         let _guard = span.enter();

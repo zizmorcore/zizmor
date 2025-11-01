@@ -87,7 +87,7 @@ impl LanguageServer for Backend {
                         serde_json::to_value(lsp_types::TextDocumentRegistrationOptions {
                             document_selector: Some(selectors.clone()),
                         })
-                        .unwrap(),
+                        .expect("failed to serialize LSP document registration options"),
                     ),
                 },
                 lsp_types::Registration {
@@ -98,7 +98,7 @@ impl LanguageServer for Backend {
                             document_selector: Some(selectors.clone()),
                             sync_kind: TextDocumentSyncKind::FULL,
                         })
-                        .unwrap(),
+                        .expect("failed to serialize LSP document registration options"),
                     ),
                 },
                 lsp_types::Registration {
@@ -112,7 +112,7 @@ impl LanguageServer for Backend {
                                     document_selector: Some(selectors.clone()),
                                 },
                         })
-                        .unwrap(),
+                        .expect("failed to serialize LSP document registration options"),
                     ),
                 },
                 lsp_types::Registration {
@@ -122,7 +122,7 @@ impl LanguageServer for Backend {
                         serde_json::to_value(lsp_types::TextDocumentRegistrationOptions {
                             document_selector: Some(selectors),
                         })
-                        .unwrap(),
+                        .expect("failed to serialize LSP document registration options"),
                     ),
                 },
             ])
@@ -184,12 +184,12 @@ impl Backend {
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
             AuditInput::from(Action::from_string(
                 params.text,
-                InputKey::local("lsp".into(), path, None)?,
+                InputKey::local("lsp".into(), path, None),
             )?)
         } else if matches!(path.extension(), Some("yml" | "yaml")) {
             AuditInput::from(Workflow::from_string(
                 params.text,
-                InputKey::local("lsp".into(), path, None)?,
+                InputKey::local("lsp".into(), path, None),
             )?)
         } else {
             anyhow::bail!("asked to audit unexpected file: {path}");

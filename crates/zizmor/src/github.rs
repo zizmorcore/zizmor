@@ -377,17 +377,19 @@ impl Client {
                     .send()
                     .await?;
 
-                let resp = match resp.status() {
-                    StatusCode::OK => Ok(resp),
+                let resp = match resp.error_for_status() {
+                    Ok(resp) => Ok(resp),
                     // NOTE: Versions of zizmor prior to 1.16.0 would silently
                     // skip private or missing repositories, as branch/tag lookups
                     // were done as a binary present/absent check. This caused
                     // false negatives.
-                    StatusCode::NOT_FOUND => Err(ClientError::RepoMissingOrPrivate {
-                        owner: owner.to_string(),
-                        repo: repo.to_string(),
-                    }),
-                    _ => Err(resp.error_for_status().unwrap_err().into()),
+                    Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
+                        Err(ClientError::RepoMissingOrPrivate {
+                            owner: owner.to_string(),
+                            repo: repo.to_string(),
+                        })
+                    }
+                    Err(e) => Err(e.into()),
                 }?;
 
                 let mut remote_refs = vec![];
@@ -598,14 +600,14 @@ impl Client {
 
         let resp = self.api_client.get(url).send().await?;
 
-        match resp.status() {
-            StatusCode::OK => {
-                Ok::<_, reqwest::Error>(Some(resp.json::<Comparison>().await?.status))
+        match resp.error_for_status() {
+            Ok(resp) => {
+                let comparison: Comparison = resp.json().await?;
+                Ok(Some(comparison.status))
             }
-            StatusCode::NOT_FOUND => Ok(None),
-            _ => Err(resp.error_for_status().unwrap_err()),
+            Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => Ok(None),
+            Err(e) => Err(e.into()),
         }
-        .map_err(Into::into)
     }
 
     #[instrument(skip(self))]
@@ -673,14 +675,14 @@ impl Client {
             .send()
             .await?;
 
-        match resp.status() {
-            StatusCode::OK => {
+        match resp.error_for_status() {
+            Ok(resp) => {
                 let contents = resp.text().await?;
 
                 Ok(Some(contents))
             }
-            StatusCode::NOT_FOUND => Ok(None),
-            _ => Err(resp.error_for_status().unwrap_err().into()),
+            Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => Ok(None),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -742,7 +744,7 @@ impl Client {
                 .into());
             };
 
-            let key = InputKey::remote(slug, file.path)?;
+            let key = InputKey::remote(slug, file.path);
             group.register(InputKind::Workflow, contents, key, options.strict)?;
         }
 
@@ -813,12 +815,12 @@ impl Client {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug, file_path.to_string());
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Workflow, contents, key, options.strict)?;
             } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug, file_path.to_string());
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
@@ -826,7 +828,7 @@ impl Client {
                 file_path.file_name(),
                 Some("dependabot.yml" | "dependabot.yaml")
             ) {
-                let key = InputKey::remote(slug, file_path.to_string())?;
+                let key = InputKey::remote(slug, file_path.to_string());
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Dependabot, contents, key, options.strict)?;

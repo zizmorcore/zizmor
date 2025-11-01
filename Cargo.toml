@@ -85,6 +85,7 @@ use_debug = "warn"
 needless_lifetimes = "warn"
 print_stderr = "warn"
 print_stdout = "warn"
+unwrap_used = "warn"
 
 [profile.dev.package]
 insta.opt-level = 3
