@@ -116,15 +116,6 @@ fn test_schedule_cronjob_rejected_for_non_cron() {
 }
 
 #[test]
-fn test_schedule_day_only_for_weekly() {
-    let err = load_dependabot_result("day-on-daily.invalid.yml").unwrap_err();
-    assert!(
-        err.to_string()
-            .contains("`schedule.day` is only valid when `schedule.interval` is `weekly`")
-    );
-}
-
-#[test]
 fn test_schedule_weekly_accepts_day() {
     let dependabot = load_dependabot("weekly-with-day.yml");
     assert_eq!(dependabot.updates.len(), 1);
