@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.16.2
+
 ### Enhancements 🌱
 
 * The [concurrency-limits] audit no longer flags explicit user concurrency
