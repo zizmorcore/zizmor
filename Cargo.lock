@@ -890,7 +890,7 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
 name = "github-actions-expressions"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "anyhow",
  "itertools",
@@ -2600,7 +2600,7 @@ dependencies = [
 
 [[package]]
 name = "subfeature"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "memchr",
  "regex",
@@ -3739,7 +3739,7 @@ checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
 
 [[package]]
 name = "yamlpatch"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "indexmap",
  "insta",
@@ -3755,7 +3755,7 @@ dependencies = [
 
 [[package]]
 name = "yamlpath"
-version = "0.27.0"
+version = "0.28.0"
 dependencies = [
  "line-index",
  "self_cell",
