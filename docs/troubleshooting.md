@@ -113,3 +113,36 @@ If you run into this issue, you have two options:
 
         You should always reduce the risk of token leakage by granting
         **only the minimum** necessary permissions.
+
+### Failures on inputs containing YAML anchors
+
+If your inputs contain YAML anchors, `zizmor` may fail to analyze them
+correctly. Failures caused by anchors are typically opaque compared
+to other errors. For example, you might see something like this:
+
+```
+fatal: no audit was performed
+ref-version-mismatch failed on file://test.yml
+
+Caused by:
+    mapping has no key `uses`
+```
+
+Additionally, you'll see this warning in `zizmor`'s warning-level logs:
+
+```
+WARN audit: zizmor: one or more inputs contains YAML anchors; you may encounter crashes or unpredictable behavior
+WARN audit: zizmor: for more information, see: https://docs.zizmor.sh/usage/#yaml-anchors
+```
+
+See [Usage - Limitations - YAML anchors stymie analysis](./usage.md#yaml-anchors)
+for additional information about this problem and why it occurs.
+
+If you run into this issue, the single simplest thing to do is to
+**avoid YAML anchors** in your inputs. If your inputs already contain
+YAML anchors, you can use a tool like @mikefarah/yq to unroll them:
+
+```bash
+# NOTE: `-i` edits the file in place
+yq -i 'explode(.)' your-input.yml
+```
