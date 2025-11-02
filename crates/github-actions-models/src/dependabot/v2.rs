@@ -445,6 +445,7 @@ impl<'de> Deserialize<'de> for Schedule {
         // NOTE(ww): `day` only makes sense with `interval: weekly`, but
         // Dependabot appears to silently ignore it otherwise. Consequently,
         // we don't check that for now.
+        // See https://github.com/zizmorcore/zizmor/issues/1305.
 
         Ok(schedule)
     }
