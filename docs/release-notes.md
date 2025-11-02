@@ -17,6 +17,12 @@ of `zizmor`.
   accordingly, improving the quality of panic reports when running
   in CI (#1307)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would reject some Dependabot configuration
+  files with logically unsound schedules (but that are accepted by GitHub
+  regardless) (#1308)
+
 ## 1.16.1
 
 ### Enhancements 🌱

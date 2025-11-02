@@ -1,0 +1,13 @@
+# https://github.com/zizmorcore/zizmor/issues/1305
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      day: sunday
+    commit-message:
+      prefix: ci
+    labels:
+      - dependencies

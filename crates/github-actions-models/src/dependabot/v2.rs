@@ -442,11 +442,10 @@ impl<'de> Deserialize<'de> for Schedule {
             ));
         }
 
-        if schedule.interval != Interval::Weekly && schedule.day.is_some() {
-            return Err(custom_error::<D>(
-                "`schedule.day` is only valid when `schedule.interval` is `weekly`",
-            ));
-        }
+        // NOTE(ww): `day` only makes sense with `interval: weekly`, but
+        // Dependabot appears to silently ignore it otherwise. Consequently,
+        // we don't check that for now.
+        // See https://github.com/zizmorcore/zizmor/issues/1305.
 
         Ok(schedule)
     }
