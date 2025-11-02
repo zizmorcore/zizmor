@@ -914,3 +914,9 @@ Users are **strongly encouraged** to avoid anchors in their workflows
 and actions. Bug reports for issues in inputs containing anchors are
 appreciated, but will be given a lower priority relative to bugs that
 aren't observed with YAML anchors.
+
+If you're having issues with inputs containing anchors, see
+[Troubleshooting - Failures on inputs containing YAML anchors]
+for some suggested workarounds.
+
+[Troubleshooting - Failures on inputs containing YAML anchors]: ./troubleshooting.md#failures-on-inputs-containing-yaml-anchors
