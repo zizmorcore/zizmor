@@ -15,7 +15,6 @@ use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
-use futures::stream::{FuturesOrdered, StreamExt};
 use github::{GitHubHost, GitHubToken};
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
@@ -746,26 +745,20 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
                 warn_once!("for more information, see: https://docs.zizmor.sh/usage/#yaml-anchors");
             }
 
-            let mut completion_stream = FuturesOrdered::new();
             let config = registry.get_config(input_key.group());
             for (ident, audit) in audit_registry.iter_audits() {
-                tracing::debug!("scheduling {ident} on {input}", input = input.key());
+                tracing::debug!("running {ident} on {input}", input = input.key());
 
-                completion_stream.push_back(audit.audit(ident, input, config));
-            }
-
-            while let Some(findings) = completion_stream.next().await {
-                let findings = findings.map_err(|err| Error::Audit {
-                    source: err,
-                    ident: "unknown",
-                    input: input.key().to_string(),
-                })?;
-
-                results.extend(findings);
+                results.extend(audit.audit(ident, input, config).await.map_err(|err| {
+                    Error::Audit {
+                        source: err,
+                        ident,
+                        input: input.key().to_string(),
+                    }
+                })?);
 
                 Span::current().pb_inc(1);
             }
-
             tracing::info!(
                 "🌈 completed {input}",
                 input = input.key().presentation_path()

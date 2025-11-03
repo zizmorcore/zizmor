@@ -3895,7 +3895,6 @@ dependencies = [
  "etcetera",
  "flate2",
  "fst",
- "futures",
  "github-actions-expressions",
  "github-actions-models",
  "http",
