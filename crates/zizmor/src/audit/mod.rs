@@ -317,7 +317,7 @@ pub(crate) trait Audit: AuditCore {
     #[instrument(skip(self, ident, config))]
     async fn audit<'doc>(
         &self,
-        ident: &str,
+        ident: &'static str,
         input: &'doc AuditInput,
         config: &Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
