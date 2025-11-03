@@ -144,12 +144,15 @@ impl Zizmor {
             self.cmd.arg("--config").arg(config);
         }
 
-        // NOTE(ww): We explicitly disable progress bars in test runs
-        // because of a tracing-indicatif bug that surfaces when we have
-        // multiple spans and no terminal. We don't actually present the progress
-        // bars in test snapshots anyways, so this is fine.
-        // See: https://github.com/emersonford/tracing-indicatif/issues/24
-        self.cmd.arg("--no-progress");
+        if !self.unbuffer {
+            // NOTE(ww): We explicitly disable progress bars in test runs
+            // because of a tracing-indicatif bug that surfaces when we have
+            // multiple spans and no terminal.
+            // We only hit this when not using `unbuffer`, because `unbuffer`
+            // simulates a TTY.
+            // See: https://github.com/emersonford/tracing-indicatif/issues/24
+            self.cmd.arg("--no-progress");
+        }
 
         for input in &self.inputs {
             self.cmd.arg(input);
