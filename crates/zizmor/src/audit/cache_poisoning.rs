@@ -448,6 +448,7 @@ impl CachePoisoning {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for CachePoisoning {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -456,7 +457,7 @@ impl Audit for CachePoisoning {
         Ok(Self)
     }
 
-    fn audit_normal_job<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
         job: &NormalJob<'doc>,
         _config: &Config,
@@ -501,7 +502,10 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(findings)
         }};
@@ -525,8 +529,8 @@ mod tests {
         fixed_document.source().to_string()
     }
 
-    #[test]
-    fn test_cache_disable_fix_opt_out_boolean() {
+    #[tokio::test]
+    async fn test_cache_disable_fix_opt_out_boolean() {
         let workflow_content = r#"
 name: Test Workflow
 on: release
@@ -571,8 +575,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_cache_disable_fix_opt_in_boolean() {
+    #[tokio::test]
+    async fn test_cache_disable_fix_opt_in_boolean() {
         let workflow_content = r#"
 name: Test Workflow
 on: release
@@ -612,8 +616,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_cache_disable_fix_opt_in_string() {
+    #[tokio::test]
+    async fn test_cache_disable_fix_opt_in_string() {
         let workflow_content = r#"
 name: Test Workflow
 on: release
@@ -643,8 +647,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_cache_disable_fix_non_configurable() {
+    #[tokio::test]
+    async fn test_cache_disable_fix_non_configurable() {
         let workflow_content = r#"
 name: Test Workflow
 on: release

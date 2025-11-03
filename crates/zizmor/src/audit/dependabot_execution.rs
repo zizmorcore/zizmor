@@ -32,6 +32,7 @@ impl DependabotExecution {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for DependabotExecution {
     fn new(_state: &crate::state::AuditState) -> Result<Self, super::AuditLoadError>
     where
@@ -40,7 +41,7 @@ impl Audit for DependabotExecution {
         Ok(Self)
     }
 
-    fn audit_dependabot<'doc>(
+    async fn audit_dependabot<'doc>(
         &self,
         dependabot: &'doc crate::models::dependabot::Dependabot,
         _config: &crate::config::Config,
@@ -90,14 +91,15 @@ mod tests {
             let audit = <$audit_type>::new(&audit_state).unwrap();
             let findings = audit
                 .audit_dependabot(&dependabot, &Config::default())
+                .await
                 .unwrap();
 
             $test_fn(&dependabot, findings)
         }};
     }
 
-    #[test]
-    fn test_fix_allow_to_deny() {
+    #[tokio::test]
+    async fn test_fix_allow_to_deny() {
         let dependabot_content = r#"
 version: 2
 
@@ -134,8 +136,8 @@ updates:
         );
     }
 
-    #[test]
-    fn test_no_fix_needed_for_deny() {
+    #[tokio::test]
+    async fn test_no_fix_needed_for_deny() {
         let dependabot_content = r#"
 version: 2
 
@@ -169,8 +171,8 @@ updates:
         );
     }
 
-    #[test]
-    fn test_no_fix_needed_when_omitted() {
+    #[tokio::test]
+    async fn test_no_fix_needed_when_omitted() {
         let dependabot_content = r#"
 version: 2
 
@@ -202,8 +204,8 @@ updates:
         );
     }
 
-    #[test]
-    fn test_fix_multiple_updates() {
+    #[tokio::test]
+    async fn test_fix_multiple_updates() {
         let dependabot_content = r#"
 version: 2
 

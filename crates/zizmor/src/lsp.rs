@@ -204,11 +204,11 @@ impl Backend {
 
         for (input_key, input) in input_registry.iter_inputs() {
             for (ident, audit) in self.audit_registry.iter_audits() {
-                registry.extend(audit.audit(
-                    ident,
-                    input,
-                    input_registry.get_config(input_key.group()),
-                )?);
+                registry.extend(
+                    audit
+                        .audit(ident, input, input_registry.get_config(input_key.group()))
+                        .await?,
+                );
             }
         }
 

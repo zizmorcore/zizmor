@@ -34,6 +34,7 @@ audit_meta!(
     "unsound contains condition"
 );
 
+#[async_trait::async_trait]
 impl Audit for UnsoundContains {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -42,7 +43,7 @@ impl Audit for UnsoundContains {
         Ok(Self)
     }
 
-    fn audit_normal_job<'w>(
+    async fn audit_normal_job<'w>(
         &self,
         job: &super::NormalJob<'w>,
         _config: &crate::config::Config,

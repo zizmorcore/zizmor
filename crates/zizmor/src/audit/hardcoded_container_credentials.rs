@@ -17,6 +17,7 @@ audit_meta!(
     "hardcoded credential in GitHub Actions container configurations"
 );
 
+#[async_trait::async_trait]
 impl Audit for HardcodedContainerCredentials {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -25,7 +26,7 @@ impl Audit for HardcodedContainerCredentials {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,

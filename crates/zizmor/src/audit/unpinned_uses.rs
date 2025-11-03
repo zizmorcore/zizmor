@@ -117,6 +117,7 @@ impl UnpinnedUses {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for UnpinnedUses {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -125,7 +126,7 @@ impl Audit for UnpinnedUses {
         Ok(Self)
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
         config: &Config,
@@ -133,7 +134,7 @@ impl Audit for UnpinnedUses {
         self.process_step(step, config)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
         config: &Config,

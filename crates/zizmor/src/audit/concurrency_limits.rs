@@ -16,12 +16,13 @@ audit_meta!(
     "insufficient job-level concurrency limits"
 );
 
+#[async_trait::async_trait]
 impl Audit for ConcurrencyLimits {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
         _config: &Config,

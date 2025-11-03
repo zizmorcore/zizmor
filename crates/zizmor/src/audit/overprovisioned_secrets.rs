@@ -20,6 +20,7 @@ audit_meta!(
     "excessively provisioned secrets"
 );
 
+#[async_trait::async_trait]
 impl Audit for OverprovisionedSecrets {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -28,7 +29,7 @@ impl Audit for OverprovisionedSecrets {
         Ok(Self)
     }
 
-    fn audit_raw<'doc>(
+    async fn audit_raw<'doc>(
         &self,
         input: &'doc AuditInput,
         _config: &crate::config::Config,

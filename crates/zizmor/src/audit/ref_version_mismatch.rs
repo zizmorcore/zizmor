@@ -152,6 +152,7 @@ impl RefVersionMismatch {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for RefVersionMismatch {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError> {
         if state.no_online_audits {
@@ -167,7 +168,7 @@ impl Audit for RefVersionMismatch {
             .map(|client| Self { client })
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
         _config: &Config,
@@ -175,7 +176,7 @@ impl Audit for RefVersionMismatch {
         self.audit_step_common(step)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
         _config: &Config,
@@ -216,8 +217,8 @@ mod tests {
     }
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_fix_version_comment_mismatch() {
+    #[tokio::test]
+    async fn test_fix_version_comment_mismatch() {
         use crate::config::Config;
         use crate::{
             models::{AsDocument, workflow::Workflow},
@@ -260,6 +261,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
             .unwrap();
 
         // We expect at least one finding if there's a version mismatch
@@ -283,8 +285,8 @@ jobs:
     }
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_fix_version_comment_different_formats() {
+    #[tokio::test]
+    async fn test_fix_version_comment_different_formats() {
         use crate::config::Config;
         use crate::{
             models::{AsDocument, workflow::Workflow},
@@ -331,6 +333,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
             .unwrap();
 
         assert!(!findings.is_empty(), "Expected to find version mismatch");

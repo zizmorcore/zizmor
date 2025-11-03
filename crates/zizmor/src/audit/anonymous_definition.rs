@@ -18,12 +18,13 @@ audit_meta!(
     "workflow or action definition without a name"
 );
 
+#[async_trait::async_trait]
 impl Audit for AnonymousDefinition {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,

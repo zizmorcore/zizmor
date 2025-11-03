@@ -57,6 +57,7 @@ const BOT_ACTOR_IDS: &[&str] = &[
     "29139614", // renovate[bot]
 ];
 
+#[async_trait::async_trait]
 impl Audit for BotConditions {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -65,7 +66,7 @@ impl Audit for BotConditions {
         Ok(Self)
     }
 
-    fn audit_normal_job<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
         _config: &crate::config::Config,
@@ -423,7 +424,10 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(&workflow, findings)
         }};
@@ -498,8 +502,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_replace_actor_fix() {
+    #[tokio::test]
+    async fn test_replace_actor_fix() {
         let workflow_content = r#"
 name: Test Workflow
 on:
@@ -550,8 +554,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_all_fixes_together() {
+    #[tokio::test]
+    async fn test_all_fixes_together() {
         let workflow_content = r#"
 name: Test Workflow
 on:
@@ -600,8 +604,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_event_specific_contexts() {
+    #[tokio::test]
+    async fn test_event_specific_contexts() {
         // Test issue_comment event
         let issue_comment_workflow = r#"
 name: Test Issue Comment
@@ -847,8 +851,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_fix_with_complex_conditions() {
+    #[tokio::test]
+    async fn test_fix_with_complex_conditions() {
         let workflow_content = r#"
 name: Test Workflow
 on:

@@ -329,6 +329,7 @@ impl UseTrustedPublishing {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for UseTrustedPublishing {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         let bash: Language = tree_sitter_bash::LANGUAGE.into();
@@ -344,7 +345,7 @@ impl Audit for UseTrustedPublishing {
         })
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &crate::models::workflow::Step<'doc>,
         _config: &crate::config::Config,
@@ -405,7 +406,7 @@ impl Audit for UseTrustedPublishing {
         Ok(findings)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &crate::models::action::CompositeStep<'doc>,
         _config: &crate::config::Config,

@@ -26,6 +26,7 @@ audit_meta!(
     "runs on a self-hosted runner"
 );
 
+#[async_trait::async_trait]
 impl Audit for SelfHostedRunner {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -34,7 +35,7 @@ impl Audit for SelfHostedRunner {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,

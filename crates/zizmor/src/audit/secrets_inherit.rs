@@ -14,6 +14,7 @@ audit_meta!(
     "secrets unconditionally inherited by called workflow"
 );
 
+#[async_trait::async_trait]
 impl Audit for SecretsInherit {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -22,7 +23,7 @@ impl Audit for SecretsInherit {
         Ok(Self)
     }
 
-    fn audit_reusable_job<'doc>(
+    async fn audit_reusable_job<'doc>(
         &self,
         job: &super::ReusableWorkflowCallJob<'doc>,
         _config: &crate::config::Config,

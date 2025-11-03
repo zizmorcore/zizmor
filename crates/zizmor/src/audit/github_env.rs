@@ -329,6 +329,7 @@ impl GitHubEnv {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for GitHubEnv {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -358,7 +359,7 @@ impl Audit for GitHubEnv {
         })
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
         _config: &Config,
@@ -410,7 +411,7 @@ impl Audit for GitHubEnv {
         Ok(findings)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
         _config: &Config,

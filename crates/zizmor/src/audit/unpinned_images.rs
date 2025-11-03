@@ -41,12 +41,13 @@ audit_meta!(
     "unpinned image references"
 );
 
+#[async_trait::async_trait]
 impl Audit for UnpinnedImages {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
-    fn audit_normal_job<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
         _config: &crate::config::Config,

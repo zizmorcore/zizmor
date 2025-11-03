@@ -202,6 +202,7 @@ impl ImpostorCommit {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for ImpostorCommit {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError> {
         if state.no_online_audits {
@@ -217,7 +218,7 @@ impl Audit for ImpostorCommit {
             .map(|client| ImpostorCommit { client })
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
         _config: &Config,
@@ -276,7 +277,7 @@ impl Audit for ImpostorCommit {
         Ok(findings)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &super::CompositeStep<'a>,
         _config: &Config,
@@ -307,8 +308,8 @@ impl Audit for ImpostorCommit {
 mod tests {
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_impostor_commit_fix_snapshot() {
+    #[tokio::test]
+    async fn test_impostor_commit_fix_snapshot() {
         use insta::assert_snapshot;
 
         use crate::models::AsDocument as _;
@@ -348,6 +349,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit("impostor-commit", &input, &Config::default())
+            .await
             .unwrap();
 
         // If we detect an impostor commit, there should be a fix available
@@ -372,8 +374,8 @@ jobs:
     }
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_no_impostor_with_valid_tag() {
+    #[tokio::test]
+    async fn test_no_impostor_with_valid_tag() {
         use super::*;
         use crate::{models::workflow::Workflow, registry::input::InputKey};
 
@@ -407,6 +409,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit("impostor-commit", &input, &Config::default())
+            .await
             .unwrap();
 
         // With a valid tag, we should not find any impostor commits

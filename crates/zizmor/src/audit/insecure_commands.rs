@@ -117,6 +117,7 @@ impl InsecureCommands {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for InsecureCommands {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -125,7 +126,7 @@ impl Audit for InsecureCommands {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
         _config: &Config,
@@ -163,7 +164,7 @@ impl Audit for InsecureCommands {
         Ok(results)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
         _config: &Config,
@@ -206,14 +207,17 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(&workflow, findings)
         }};
     }
 
-    #[test]
-    fn test_insecure_commands_fix_generation() {
+    #[tokio::test]
+    async fn test_insecure_commands_fix_generation() {
         let workflow_content = r#"
 on: push
 
@@ -250,8 +254,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_fix_removes_insecure_commands_preserves_others() {
+    #[tokio::test]
+    async fn test_fix_removes_insecure_commands_preserves_others() {
         let workflow_content = r#"
 on: push
 
@@ -305,8 +309,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_workflow_level_insecure_commands_fix() {
+    #[tokio::test]
+    async fn test_workflow_level_insecure_commands_fix() {
         let workflow_content = r#"
 on: push
 
@@ -359,8 +363,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_step_level_insecure_commands_fix() {
+    #[tokio::test]
+    async fn test_step_level_insecure_commands_fix() {
         let workflow_content = r#"
 on: push
 
@@ -413,8 +417,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_string_value_insecure_commands_fix() {
+    #[tokio::test]
+    async fn test_string_value_insecure_commands_fix() {
         let workflow_content = r#"
 on: push
 

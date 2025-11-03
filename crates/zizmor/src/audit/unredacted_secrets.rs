@@ -18,6 +18,7 @@ audit_meta!(
     "leaked secret values"
 );
 
+#[async_trait::async_trait]
 impl Audit for UnredactedSecrets {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -26,7 +27,7 @@ impl Audit for UnredactedSecrets {
         Ok(Self)
     }
 
-    fn audit_raw<'doc>(
+    async fn audit_raw<'doc>(
         &self,
         input: &'doc super::AuditInput,
         _config: &crate::config::Config,

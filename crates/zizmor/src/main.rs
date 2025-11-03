@@ -575,7 +575,7 @@ enum Error {
     Fix(#[source] anyhow::Error),
 }
 
-fn run(app: &mut App) -> Result<ExitCode, Error> {
+async fn run(app: &mut App) -> Result<ExitCode, Error> {
     #[cfg(feature = "lsp")]
     if app.lsp.lsp {
         lsp::run()?;
@@ -747,15 +747,13 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
             for (ident, audit) in audit_registry.iter_audits() {
                 tracing::debug!("running {ident} on {input}", input = input.key());
 
-                results.extend(
-                    audit
-                        .audit(ident, input, config)
-                        .map_err(|err| Error::Audit {
-                            source: err,
-                            ident,
-                            input: input.key().to_string(),
-                        })?,
-                );
+                results.extend(audit.audit(ident, input, config).await.map_err(|err| {
+                    Error::Audit {
+                        source: err,
+                        ident,
+                        input: input.key().to_string(),
+                    }
+                })?);
 
                 Span::current().pb_inc(1);
             }
@@ -803,7 +801,8 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
     }
 }
 
-fn main() -> ExitCode {
+#[tokio::main]
+async fn main() -> ExitCode {
     // NOTE: We only use human-panic on non-CI environments.
     // This is because human-panic's output gets sent to a temporary file,
     // which is then typically inaccessible from an already failed
@@ -828,7 +827,7 @@ fn main() -> ExitCode {
 
     // This is a little silly, but returning an ExitCode like this ensures
     // we always exit cleanly, rather than performing a hard process exit.
-    match run(&mut app) {
+    match run(&mut app).await {
         Ok(exit) => exit,
         Err(err) => {
             eprintln!(

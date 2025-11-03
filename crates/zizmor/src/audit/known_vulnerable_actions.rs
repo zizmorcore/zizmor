@@ -257,6 +257,7 @@ impl KnownVulnerableActions {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for KnownVulnerableActions {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -275,11 +276,15 @@ impl Audit for KnownVulnerableActions {
             .map(|client| KnownVulnerableActions { client })
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>, _config: &Config) -> Result<Vec<Finding<'doc>>> {
+    async fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>> {
         self.process_step(step)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
         _config: &Config,
@@ -725,8 +730,8 @@ jobs:
     }
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_fix_commit_pin() {
+    #[tokio::test]
+    async fn test_fix_commit_pin() {
         // Test with real GitHub API - requires GH_TOKEN environment variable
         let workflow_content = r#"
 name: Test Commit Hash Pinning Real API
@@ -760,6 +765,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit(KnownVulnerableActions::ident(), &input, &Config::default())
+            .await
             .unwrap();
         assert_eq!(findings.len(), 1);
 
@@ -780,8 +786,8 @@ jobs:
     // TODO: test_fix_commit_pin_subpath
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_fix_commit_pin_no_comment() {
+    #[tokio::test]
+    async fn test_fix_commit_pin_no_comment() {
         // Ensure that we don't rewrite a version comment
         // if the `uses:` clause doesn't already have one.
         let workflow_content = r#"
@@ -815,6 +821,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit(KnownVulnerableActions::ident(), &input, &Config::default())
+            .await
             .unwrap();
         assert_eq!(findings.len(), 1);
 

@@ -600,6 +600,7 @@ impl TemplateInjection {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for TemplateInjection {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -608,7 +609,7 @@ impl Audit for TemplateInjection {
         Ok(Self)
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
         _config: &Config,
@@ -616,7 +617,7 @@ impl Audit for TemplateInjection {
         self.process_step(step)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
         _config: &Config,
@@ -644,7 +645,10 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(&workflow, findings)
         }};
@@ -667,8 +671,8 @@ mod tests {
         fix.apply(document).unwrap()
     }
 
-    #[test]
-    fn test_template_injection_fix_github_ref_name() {
+    #[tokio::test]
+    async fn test_template_injection_fix_github_ref_name() {
         let workflow_content = r#"
 name: Test Template Injection
 on: push
@@ -716,8 +720,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_github_actor() {
+    #[tokio::test]
+    async fn test_template_injection_fix_github_actor() {
         let workflow_content = r#"
 name: Test Template Injection
 on: push
@@ -769,8 +773,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_with_existing_env() {
+    #[tokio::test]
+    async fn test_template_injection_fix_with_existing_env() {
         let workflow_content = r#"
 name: Test Template Injection
 on: push
@@ -823,8 +827,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_no_fix_for_action_sinks() {
+    #[tokio::test]
+    async fn test_template_injection_no_fix_for_action_sinks() {
         let workflow_content = r#"
 name: Test Template Injection - Actions
 on: push
@@ -858,8 +862,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_multiple_expressions() {
+    #[tokio::test]
+    async fn test_template_injection_fix_multiple_expressions() {
         let workflow_content = r#"
 name: Test Multiple Template Injections
 on: push
@@ -934,8 +938,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_duplicate_expressions() {
+    #[tokio::test]
+    async fn test_template_injection_fix_duplicate_expressions() {
         let workflow_content = r#"
         name: Test Duplicate Template Injections
         on: push
@@ -997,8 +1001,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_equivalent_expressions() {
+    #[tokio::test]
+    async fn test_template_injection_fix_equivalent_expressions() {
         let workflow_content = r#"
         name: Test Duplicate Template Injections
         on: push
@@ -1058,8 +1062,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_no_env_overcorrection() {
+    #[tokio::test]
+    async fn test_template_injection_fix_no_env_overcorrection() {
         // Testcase for #1052.
         let workflow_content = r#"
 name: Test Duplicate Template Injections
@@ -1189,8 +1193,8 @@ jobs:
         }
     }
 
-    #[test]
-    fn test_template_injection_fix_bash_shell() {
+    #[tokio::test]
+    async fn test_template_injection_fix_bash_shell() {
         let workflow_content = r#"
 name: Test Template Injection - Bash
 on: push
@@ -1235,8 +1239,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_bash_shell_full_path() {
+    #[tokio::test]
+    async fn test_template_injection_fix_bash_shell_full_path() {
         let workflow_content = r#"
 name: Test Template Injection - Bash
 on: push
@@ -1281,8 +1285,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_cmd_shell() {
+    #[tokio::test]
+    async fn test_template_injection_fix_cmd_shell() {
         let workflow_content = r#"
 name: Test Template Injection - CMD
 on: push
@@ -1327,8 +1331,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_pwsh_shell() {
+    #[tokio::test]
+    async fn test_template_injection_fix_pwsh_shell() {
         let workflow_content = r#"
 name: Test Template Injection - PowerShell
 on: push
@@ -1373,8 +1377,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_default_shell_ubuntu() {
+    #[tokio::test]
+    async fn test_template_injection_fix_default_shell_ubuntu() {
         let workflow_content = r#"
 name: Test Template Injection - Default Shell Ubuntu
 on: push
@@ -1418,8 +1422,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_default_shell_windows() {
+    #[tokio::test]
+    async fn test_template_injection_fix_default_shell_windows() {
         let workflow_content = r#"
 name: Test Template Injection - Default Shell Windows
 on: push
@@ -1463,8 +1467,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_cmd_shell_with_custom_env() {
+    #[tokio::test]
+    async fn test_template_injection_fix_cmd_shell_with_custom_env() {
         let workflow_content = r#"
 name: Test Template Injection - CMD with Custom Env
 on: push
@@ -1511,8 +1515,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_no_fix_unknown_shell() {
+    #[tokio::test]
+    async fn test_template_injection_no_fix_unknown_shell() {
         let workflow_content = r#"
 name: Test Template Injection - Unknown Shell
 on: push

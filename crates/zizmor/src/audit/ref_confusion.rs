@@ -48,6 +48,7 @@ impl RefConfusion {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for RefConfusion {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -66,7 +67,7 @@ impl Audit for RefConfusion {
             .map(|client| RefConfusion { client })
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,
@@ -123,7 +124,7 @@ impl Audit for RefConfusion {
         Ok(findings)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
         _config: &crate::config::Config,

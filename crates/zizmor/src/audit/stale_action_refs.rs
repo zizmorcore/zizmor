@@ -57,6 +57,7 @@ impl StaleActionRefs {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for StaleActionRefs {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -75,11 +76,11 @@ impl Audit for StaleActionRefs {
             .map(|client| StaleActionRefs { client })
     }
 
-    fn audit_step<'w>(&self, step: &Step<'w>, _config: &Config) -> Result<Vec<Finding<'w>>> {
+    async fn audit_step<'w>(&self, step: &Step<'w>, _config: &Config) -> Result<Vec<Finding<'w>>> {
         self.process_step(step)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
         _config: &Config,

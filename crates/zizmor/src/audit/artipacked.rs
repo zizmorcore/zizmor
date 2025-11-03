@@ -161,12 +161,13 @@ impl Artipacked {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for Artipacked {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
-    fn audit_action<'doc>(
+    async fn audit_action<'doc>(
         &self,
         action: &'doc crate::models::action::Action,
         _config: &crate::config::Config,
@@ -178,7 +179,7 @@ impl Audit for Artipacked {
         self.process_steps(steps)
     }
 
-    fn audit_normal_job<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
         _config: &crate::config::Config,
@@ -212,7 +213,10 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(&workflow, findings)
         }};
@@ -251,8 +255,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_fix_merges_into_existing_with_block() {
+    #[tokio::test]
+    async fn test_fix_merges_into_existing_with_block() {
         let workflow_content = r#"
 name: Test Workflow
 on: push
@@ -301,8 +305,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_fix_creates_with_block_when_missing() {
+    #[tokio::test]
+    async fn test_fix_creates_with_block_when_missing() {
         let workflow_content = r#"
 name: Test Workflow
 on: push

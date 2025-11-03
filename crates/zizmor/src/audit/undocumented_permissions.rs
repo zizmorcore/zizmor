@@ -16,6 +16,7 @@ audit_meta!(
 
 pub(crate) struct UndocumentedPermissions;
 
+#[async_trait::async_trait]
 impl Audit for UndocumentedPermissions {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -24,7 +25,7 @@ impl Audit for UndocumentedPermissions {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,
