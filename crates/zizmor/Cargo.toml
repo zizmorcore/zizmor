@@ -39,6 +39,7 @@ clap_complete_nushell.workspace = true
 etcetera.workspace = true
 flate2.workspace = true
 fst.workspace = true
+futures.workspace = true
 github-actions-expressions.workspace = true
 github-actions-models.workspace = true
 http.workspace = true
