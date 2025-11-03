@@ -1,7 +1,7 @@
 use github_actions_models::common;
 
 use crate::{
-    audit::{Audit, audit_meta},
+    audit::{Audit, AuditError, audit_meta},
     finding::{
         Confidence, Fix, FixDisposition, Severity,
         location::{Locatable as _, SymbolicLocation},
@@ -112,7 +112,7 @@ impl UnsoundCondition {
         &self,
         doc: &'a impl AsDocument<'a, 'doc>,
         conditions: impl Iterator<Item = (&'doc common::If, SymbolicLocation<'doc>)>,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         for (cond, loc) in conditions {
             if self.is_unsound_fenced_expansion(cond) {
@@ -157,7 +157,7 @@ impl Audit for UnsoundCondition {
         &self,
         job: &crate::models::workflow::NormalJob<'doc>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         self.process_conditions(job.parent(), job.conditions())
     }
 
@@ -165,7 +165,7 @@ impl Audit for UnsoundCondition {
         &self,
         job: &crate::models::workflow::ReusableWorkflowCallJob<'doc>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let conds = job.r#if.iter().map(|cond| (cond, job.location()));
         self.process_conditions(job.parent(), conds)
     }
@@ -174,7 +174,7 @@ impl Audit for UnsoundCondition {
         &self,
         action: &'doc crate::models::action::Action,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         self.process_conditions(action, action.conditions())
     }
 }

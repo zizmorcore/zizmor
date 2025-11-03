@@ -13,6 +13,7 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
+    audit::AuditError,
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
     models::workflow::{JobExt, Workflow},
     utils::{self, ExtractedExpr},
@@ -70,7 +71,7 @@ impl Audit for BotConditions {
         &self,
         job: &super::NormalJob<'doc>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         // Track conditions with explicit categorization

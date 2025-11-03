@@ -5,11 +5,12 @@
 //!
 //! See: <https://docs.github.com/en/rest/security-advisories/global-advisories?apiVersion=2022-11-28>
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
+    audit::AuditError,
     config::Config,
     finding::{Confidence, Finding, Fix, Severity, location::Routable as _},
     github,
@@ -32,7 +33,7 @@ impl KnownVulnerableActions {
     async fn action_known_vulnerabilities(
         &self,
         uses: &RepositoryUses,
-    ) -> Result<Vec<(Severity, String, Option<String>)>> {
+    ) -> Result<Vec<(Severity, String, Option<String>)>, AuditError> {
         let version = match &uses.git_ref {
             // If `uses` is pinned to a symbolic ref, we need to perform
             // feats of heroism to figure out what's going on.
@@ -54,7 +55,8 @@ impl KnownVulnerableActions {
                 let Some(commit_ref) = self
                     .client
                     .commit_for_ref(&uses.owner, &uses.repo, version)
-                    .await?
+                    .await
+                    .map_err(Self::err)?
                 else {
                     // No `ref -> commit` means that the action's version
                     // is probably just outright invalid.
@@ -64,7 +66,8 @@ impl KnownVulnerableActions {
                 match self
                     .client
                     .longest_tag_for_commit(&uses.owner, &uses.repo, &commit_ref)
-                    .await?
+                    .await
+                    .map_err(Self::err)?
                 {
                     Some(tag) => tag.name,
                     // Somehow we've round-tripped through a commit and ended
@@ -82,7 +85,8 @@ impl KnownVulnerableActions {
                 match self
                     .client
                     .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
-                    .await?
+                    .await
+                    .map_err(Self::err)?
                 {
                     Some(tag) => tag.name,
                     // No corresponding tag means the user is maybe doing something
@@ -97,7 +101,8 @@ impl KnownVulnerableActions {
         let vulns = self
             .client
             .gha_advisories(&uses.owner, &uses.repo, &version)
-            .await?;
+            .await
+            .map_err(Self::err)?;
 
         let mut results = vec![];
 
@@ -129,7 +134,7 @@ impl KnownVulnerableActions {
         uses: &RepositoryUses,
         target_version: String,
         step: &impl StepCommon<'doc>,
-    ) -> Result<Fix<'doc>> {
+    ) -> Result<Fix<'doc>, AuditError> {
         let mut uses_slug = format!("{}/{}", uses.owner, uses.repo);
         if let Some(subpath) = &uses.subpath {
             uses_slug.push_str(&format!("/{subpath}"));
@@ -164,15 +169,16 @@ impl KnownVulnerableActions {
                     Err(_) => self
                         .client
                         .commit_for_ref(&uses.owner, &uses.repo, &bare_version)
-                        .await?
+                        .await
+                        .map_err(Self::err)?
                         .map(|commit| (&bare_version, commit)),
                 }
                 .ok_or_else(|| {
-                    anyhow!(
+                    Self::err(anyhow!(
                         "Cannot resolve version {bare_version} to commit hash for {}/{}",
                         uses.owner,
                         uses.repo
-                    )
+                    ))
                 })?;
 
                 let new_uses_value = format!("{uses_slug}@{target_commit}");
@@ -222,7 +228,10 @@ impl KnownVulnerableActions {
         }
     }
 
-    async fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
+    async fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
@@ -259,7 +268,7 @@ impl KnownVulnerableActions {
                 finding_builder = finding_builder.fix(fix);
             }
 
-            findings.push(finding_builder.build(step)?);
+            findings.push(finding_builder.build(step).map_err(Self::err)?);
         }
 
         Ok(findings)
@@ -289,7 +298,7 @@ impl Audit for KnownVulnerableActions {
         &self,
         step: &Step<'doc>,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step).await
     }
 
@@ -297,7 +306,7 @@ impl Audit for KnownVulnerableActions {
         &self,
         step: &CompositeStep<'doc>,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step).await
     }
 }

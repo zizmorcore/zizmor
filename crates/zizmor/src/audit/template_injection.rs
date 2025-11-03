@@ -27,6 +27,7 @@ use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
+    audit::AuditError,
     config::Config,
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
@@ -563,7 +564,7 @@ impl TemplateInjection {
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for (script, script_loc, related_locs) in Self::scripts_with_location(step) {
@@ -613,7 +614,7 @@ impl Audit for TemplateInjection {
         &self,
         step: &Step<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }
 
@@ -621,7 +622,7 @@ impl Audit for TemplateInjection {
         &self,
         step: &CompositeStep<'a>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step)
     }
 }

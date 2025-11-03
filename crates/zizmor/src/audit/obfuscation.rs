@@ -4,6 +4,7 @@ use yamlpatch::{Op, Patch};
 
 use crate::{
     Confidence, Severity,
+    audit::AuditError,
     config::Config,
     finding::{
         Finding, Fix, FixDisposition, Persona,
@@ -186,7 +187,7 @@ impl Obfuscation {
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         if let Some(Uses::Repository(uses)) = step.uses() {
@@ -211,7 +212,7 @@ impl Obfuscation {
                     finding_builder = finding_builder.fix(fix);
                 }
 
-                findings.push(finding_builder.build(step)?);
+                findings.push(finding_builder.build(step).map_err(Self::err)?);
             }
         }
 
@@ -232,7 +233,7 @@ impl Audit for Obfuscation {
         &self,
         input: &'doc AuditInput,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for (expr, expr_span) in parse_fenced_expressions_from_input(input) {
@@ -290,7 +291,7 @@ impl Audit for Obfuscation {
                     }
                 }
 
-                findings.push(finding_builder.build(input)?);
+                findings.push(finding_builder.build(input).map_err(Self::err)?);
             }
         }
 
@@ -301,7 +302,7 @@ impl Audit for Obfuscation {
         &self,
         step: &Step<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }
 
@@ -309,7 +310,7 @@ impl Audit for Obfuscation {
         &self,
         step: &CompositeStep<'a>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step)
     }
 }

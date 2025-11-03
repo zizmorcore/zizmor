@@ -565,8 +565,8 @@ enum Error {
     /// An error while running an audit.
     #[error("{ident} failed on {input}")]
     Audit {
-        source: anyhow::Error,
         ident: &'static str,
+        source: anyhow::Error,
         input: String,
     },
     /// An error while rendering output.
@@ -756,8 +756,8 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
             while let Some(findings) = completion_stream.next().await {
                 let findings = findings.map_err(|err| Error::Audit {
-                    source: err,
-                    ident: "unknown",
+                    ident: err.ident(),
+                    source: err.into(),
                     input: input.key().to_string(),
                 })?;
 

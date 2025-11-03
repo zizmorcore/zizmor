@@ -1,6 +1,7 @@
 pub(crate) struct AnonymousDefinition;
 
 use crate::{
+    audit::AuditError,
     finding::{Confidence, Persona, Severity, location::Locatable as _},
     state::AuditState,
 };
@@ -28,7 +29,7 @@ impl Audit for AnonymousDefinition {
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         if workflow.name.is_none() {

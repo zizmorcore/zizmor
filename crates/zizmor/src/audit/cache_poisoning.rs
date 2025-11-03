@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 
-use crate::audit::{Audit, audit_meta};
+use crate::audit::{Audit, AuditError, audit_meta};
 use crate::config::Config;
 use crate::finding::location::{Locatable as _, Routable};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
@@ -461,7 +461,7 @@ impl Audit for CachePoisoning {
         &self,
         job: &NormalJob<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         let steps = job.steps();
         let trigger = &job.parent().on;

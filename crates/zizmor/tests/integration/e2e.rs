@@ -388,8 +388,9 @@ fn issue_1286() -> Result<()> {
     ref-confusion failed on file://@@INPUT@@
 
     Caused by:
-        0: couldn't list branches for woodruffw-experiments/this-does-not-exist
-        1: can't access woodruffw-experiments/this-does-not-exist: missing or you have no access
+        0: error in ref-confusion
+        1: couldn't list branches for woodruffw-experiments/this-does-not-exist
+        2: can't access woodruffw-experiments/this-does-not-exist: missing or you have no access
     ",
     );
 

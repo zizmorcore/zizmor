@@ -3,6 +3,7 @@ use std::ops::Deref;
 use github_actions_expressions::{Expr, SpannedExpr, call::Call};
 
 use crate::{
+    audit::AuditError,
     finding::{
         Confidence, Severity,
         location::{Feature, Location},
@@ -33,7 +34,7 @@ impl Audit for OverprovisionedSecrets {
         &self,
         input: &'doc AuditInput,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for (expr, span) in parse_fenced_expressions_from_input(input) {
@@ -54,7 +55,8 @@ impl Audit for OverprovisionedSecrets {
                                 .primary(),
                             Feature::from_span(&span, input),
                         ))
-                        .build(input)?,
+                        .build(input)
+                        .map_err(Self::err)?,
                 );
             }
         }

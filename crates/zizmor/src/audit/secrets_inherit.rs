@@ -2,6 +2,7 @@ use github_actions_models::workflow::job::Secrets;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
+    audit::AuditError,
     finding::{Confidence, location::Locatable as _},
     models::workflow::JobExt as _,
 };
@@ -27,7 +28,7 @@ impl Audit for SecretsInherit {
         &self,
         job: &super::ReusableWorkflowCallJob<'doc>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         if matches!(job.secrets, Some(Secrets::Inherit)) {

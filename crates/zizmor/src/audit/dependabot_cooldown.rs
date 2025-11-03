@@ -1,5 +1,5 @@
 use crate::{
-    audit::{Audit, audit_meta},
+    audit::{Audit, AuditError, audit_meta},
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
 };
 use yamlpatch::{Op, Patch};
@@ -86,7 +86,7 @@ impl Audit for DependabotCooldown {
         &self,
         dependabot: &'doc crate::models::dependabot::Dependabot,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for update in dependabot.updates() {

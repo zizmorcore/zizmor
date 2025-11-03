@@ -1,6 +1,5 @@
-use anyhow::Result;
-
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::audit::AuditError;
 use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::workflow::Workflow;
@@ -24,7 +23,7 @@ impl Audit for DangerousTriggers {
         &self,
         workflow: &'doc Workflow,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         if workflow.has_pull_request_target() {
             findings.push(

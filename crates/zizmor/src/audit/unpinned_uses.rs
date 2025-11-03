@@ -1,6 +1,7 @@
 use github_actions_models::common::Uses;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use crate::audit::AuditError;
 use crate::config::{Config, UsesPolicy};
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::uses::RepositoryUsesPattern;
@@ -90,7 +91,7 @@ impl UnpinnedUses {
         &self,
         step: &impl StepCommon<'doc>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let Some(uses) = step.uses() else {
@@ -130,7 +131,7 @@ impl Audit for UnpinnedUses {
         &self,
         step: &Step<'doc>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step, config)
     }
 
@@ -138,7 +139,7 @@ impl Audit for UnpinnedUses {
         &self,
         step: &CompositeStep<'a>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step, config)
     }
 }

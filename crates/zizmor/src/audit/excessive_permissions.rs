@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::LazyLock};
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
+use crate::audit::AuditError;
 use crate::finding::location::Locatable as _;
 use crate::{
     AuditState,
@@ -52,7 +53,7 @@ impl Audit for ExcessivePermissions {
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let all_jobs_have_permissions = workflow

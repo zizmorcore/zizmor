@@ -5,11 +5,12 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
+    audit::AuditError,
     config::Config,
     finding::{
         Confidence, Finding, Fix, FixDisposition, Severity,
@@ -46,12 +47,13 @@ impl ImpostorCommit {
         uses: &RepositoryUses,
         base_ref: &str,
         head_ref: &str,
-    ) -> Result<bool> {
+    ) -> Result<bool, AuditError> {
         Ok(
             match self
                 .client
                 .compare_commits(&uses.owner, &uses.repo, base_ref, head_ref)
-                .await?
+                .await
+                .map_err(Self::err)?
             {
                 // A base ref "contains" a commit if the base is either identical
                 // to the head ("identical") or the target is behind the base ("behind").
@@ -68,7 +70,7 @@ impl ImpostorCommit {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    async fn impostor(&self, uses: &RepositoryUses) -> Result<bool> {
+    async fn impostor(&self, uses: &RepositoryUses) -> Result<bool, AuditError> {
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
         let Some(head_ref) = uses.commit_ref() else {
             return Ok(false);
@@ -78,7 +80,11 @@ impl ImpostorCommit {
         // the branch or tag's history, so check those first.
         // Check tags before branches, since in practice version tags
         // are more commonly pinned.
-        let tags = self.client.list_tags(&uses.owner, &uses.repo).await?;
+        let tags = self
+            .client
+            .list_tags(&uses.owner, &uses.repo)
+            .await
+            .map_err(Self::err)?;
 
         for tag in &tags {
             if tag.commit.sha == head_ref {
@@ -86,7 +92,11 @@ impl ImpostorCommit {
             }
         }
 
-        let branches = self.client.list_branches(&uses.owner, &uses.repo).await?;
+        let branches = self
+            .client
+            .list_branches(&uses.owner, &uses.repo)
+            .await
+            .map_err(Self::err)?;
 
         for branch in &branches {
             if branch.commit.sha == head_ref {
@@ -118,8 +128,12 @@ impl ImpostorCommit {
     }
 
     /// Return the highest semantically versioned tag in the repository.
-    async fn get_highest_tag(&self, uses: &RepositoryUses) -> Result<Option<String>> {
-        let tags = self.client.list_tags(&uses.owner, &uses.repo).await?;
+    async fn get_highest_tag(&self, uses: &RepositoryUses) -> Result<Option<String>, AuditError> {
+        let tags = self
+            .client
+            .list_tags(&uses.owner, &uses.repo)
+            .await
+            .map_err(Self::err)?;
 
         // Filter tags down to those that can be parsed as semantic versions,
         // get the highest one, and return its original string representation.
@@ -227,7 +241,7 @@ impl Audit for ImpostorCommit {
         &self,
         workflow: &'doc Workflow,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
@@ -250,7 +264,7 @@ impl Audit for ImpostorCommit {
                                 finding_builder = finding_builder.fix(fix);
                             }
 
-                            findings.push(finding_builder.build(workflow)?);
+                            findings.push(finding_builder.build(workflow).map_err(Self::err)?);
                         }
                     }
                 }
@@ -273,7 +287,7 @@ impl Audit for ImpostorCommit {
                             finding_builder = finding_builder.fix(fix);
                         }
 
-                        findings.push(finding_builder.build(workflow)?);
+                        findings.push(finding_builder.build(workflow).map_err(Self::err)?);
                     }
                 }
             }
@@ -286,7 +300,7 @@ impl Audit for ImpostorCommit {
         &self,
         step: &super::CompositeStep<'a>,
         _config: &Config,
-    ) -> Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         let mut findings = vec![];
         let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(findings);
@@ -302,7 +316,7 @@ impl Audit for ImpostorCommit {
                 finding_builder = finding_builder.fix(fix);
             }
 
-            findings.push(finding_builder.build(step.action())?);
+            findings.push(finding_builder.build(step.action()).map_err(Self::err)?);
         }
 
         Ok(findings)

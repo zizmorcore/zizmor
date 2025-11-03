@@ -1,11 +1,12 @@
 //! Detects actions pinned by commit hash, which don't point to a Git tag.
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     Persona,
+    audit::AuditError,
     config::Config,
     finding::{Confidence, Finding, Severity},
     github,
@@ -24,19 +25,22 @@ audit_meta!(
 );
 
 impl StaleActionRefs {
-    async fn is_stale_action_ref(&self, uses: &RepositoryUses) -> Result<bool> {
+    async fn is_stale_action_ref(&self, uses: &RepositoryUses) -> Result<bool, AuditError> {
         let tag = match &uses.commit_ref() {
-            Some(commit_ref) => {
-                self.client
-                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
-                    .await?
-            }
+            Some(commit_ref) => self
+                .client
+                .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
+                .await
+                .map_err(Self::err)?,
             None => return Ok(false),
         };
         Ok(tag.is_none())
     }
 
-    async fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
+    async fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
@@ -77,7 +81,11 @@ impl Audit for StaleActionRefs {
             .map(|client| StaleActionRefs { client })
     }
 
-    async fn audit_step<'w>(&self, step: &Step<'w>, _config: &Config) -> Result<Vec<Finding<'w>>> {
+    async fn audit_step<'w>(
+        &self,
+        step: &Step<'w>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'w>>, AuditError> {
         self.process_step(step).await
     }
 
@@ -85,7 +93,7 @@ impl Audit for StaleActionRefs {
         &self,
         step: &CompositeStep<'a>,
         _config: &Config,
-    ) -> Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step).await
     }
 }

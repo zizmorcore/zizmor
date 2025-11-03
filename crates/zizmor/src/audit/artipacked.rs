@@ -1,9 +1,9 @@
-use anyhow::Result;
 use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
 use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
+    audit::AuditError,
     finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
     models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _},
     state::AuditState,
@@ -23,7 +23,7 @@ impl Artipacked {
     fn process_steps<'doc>(
         &self,
         steps: impl Iterator<Item = impl StepCommon<'doc>>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         // First, collect all vulnerable checkouts and upload steps independently.
@@ -171,7 +171,7 @@ impl Audit for Artipacked {
         &self,
         action: &'doc crate::models::action::Action,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let Some(steps) = action.steps() else {
             return Ok(vec![]);
         };
@@ -183,7 +183,7 @@ impl Audit for Artipacked {
         &self,
         job: &super::NormalJob<'doc>,
         _config: &crate::config::Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_steps(job.steps())
     }
 }

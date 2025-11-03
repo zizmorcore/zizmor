@@ -133,6 +133,16 @@ pub(crate) trait AuditCore {
     {
         FindingBuilder::new(Self::ident(), Self::desc(), Self::url())
     }
+
+    fn err(error: impl Into<anyhow::Error>) -> AuditError
+    where
+        Self: Sized,
+    {
+        AuditError {
+            ident: Self::ident(),
+            source: error.into(),
+        }
+    }
 }
 
 /// A convenience macro for implementing [`AuditCore`] on a type.
@@ -181,6 +191,27 @@ pub(crate) enum AuditLoadError {
     Fail(anyhow::Error),
 }
 
+#[derive(Error, Debug)]
+#[error("error in {ident}")]
+pub(crate) struct AuditError {
+    ident: &'static str,
+    #[source]
+    source: anyhow::Error,
+}
+
+impl AuditError {
+    pub(crate) fn new(ident: &'static str, error: impl Into<anyhow::Error>) -> Self {
+        Self {
+            ident,
+            source: error.into(),
+        }
+    }
+
+    pub(crate) fn ident(&self) -> &'static str {
+        self.ident
+    }
+}
+
 /// Auditing trait.
 ///
 /// Implementors of this trait can choose the level of specificity/context
@@ -217,7 +248,7 @@ pub(crate) trait Audit: AuditCore {
         &self,
         _step: &Step<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
@@ -225,7 +256,7 @@ pub(crate) trait Audit: AuditCore {
         &self,
         job: &NormalJob<'doc>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
         for step in job.steps() {
             results.extend(self.audit_step(&step, config).await?);
@@ -237,7 +268,7 @@ pub(crate) trait Audit: AuditCore {
         &self,
         _job: &ReusableWorkflowCallJob<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
@@ -245,7 +276,7 @@ pub(crate) trait Audit: AuditCore {
         &self,
         workflow: &'doc Workflow,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
@@ -266,7 +297,7 @@ pub(crate) trait Audit: AuditCore {
         &self,
         _step: &CompositeStep<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
@@ -274,7 +305,7 @@ pub(crate) trait Audit: AuditCore {
         &self,
         action: &'doc Action,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         if let Some(steps) = action.steps() {
@@ -290,7 +321,7 @@ pub(crate) trait Audit: AuditCore {
         &self,
         _dependabot: &'doc Dependabot,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
@@ -298,7 +329,7 @@ pub(crate) trait Audit: AuditCore {
         &self,
         _input: &'doc AuditInput,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
@@ -320,7 +351,7 @@ pub(crate) trait Audit: AuditCore {
         ident: &'static str,
         input: &'doc AuditInput,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         if config.disables(ident) {
             tracing::debug!(
                 "skipping: {ident} is disabled in config for group {group:?}",

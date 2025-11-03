@@ -1,6 +1,5 @@
 use std::ops::Deref;
 
-use anyhow::Result;
 use github_actions_models::action;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
@@ -8,7 +7,7 @@ use github_actions_models::workflow::job::StepBody;
 use yamlpatch::{Op, Patch};
 
 use super::{AuditLoadError, Job, audit_meta};
-use crate::audit::Audit;
+use crate::audit::{Audit, AuditError};
 use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{
@@ -45,7 +44,7 @@ impl InsecureCommands {
         &self,
         doc: &'a impl AsDocument<'a, 'doc>,
         location: SymbolicLocation<'doc>,
-    ) -> Result<Finding<'doc>> {
+    ) -> Result<Finding<'doc>, AuditError> {
         Self::finding()
             .confidence(Confidence::Low)
             .severity(Severity::High)
@@ -56,13 +55,14 @@ impl InsecureCommands {
                 ),
             )
             .build(doc)
+            .map_err(Self::err)
     }
 
     fn insecure_commands_allowed<'s, 'doc>(
         &self,
         doc: &'s impl AsDocument<'s, 'doc>,
         location: SymbolicLocation<'doc>,
-    ) -> Result<Finding<'doc>> {
+    ) -> Result<Finding<'doc>, AuditError> {
         let fix = self.create_fix(location.clone());
 
         Self::finding()
@@ -76,6 +76,7 @@ impl InsecureCommands {
             )
             .fix(fix)
             .build(doc)
+            .map_err(Self::err)
     }
 
     fn has_insecure_commands_enabled(&self, env: &Env) -> bool {
@@ -89,7 +90,7 @@ impl InsecureCommands {
         &self,
         workflow: &'doc Workflow,
         steps: Steps<'doc>,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         steps
             .into_iter()
             .filter_map(|step| {
@@ -130,7 +131,7 @@ impl Audit for InsecureCommands {
         &self,
         workflow: &'doc Workflow,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         match &workflow.env {
@@ -168,7 +169,7 @@ impl Audit for InsecureCommands {
         &self,
         step: &super::CompositeStep<'doc>,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let action::StepBody::Run { .. } = &step.body else {

@@ -1,11 +1,11 @@
 //! Models and APIs for handling findings and their locations.
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 use self::location::{Location, SymbolicLocation};
-use crate::{InputKey, models::AsDocument, registry::input::Group};
+use crate::{InputKey, audit::AuditError, models::AsDocument, registry::input::Group};
 use yamlpatch::{self, Patch};
 
 pub(crate) mod location;
@@ -227,18 +227,20 @@ impl<'doc> FindingBuilder<'doc> {
     pub(crate) fn build<'a>(
         self,
         document: &'a impl AsDocument<'a, 'doc>,
-    ) -> Result<Finding<'doc>> {
+    ) -> Result<Finding<'doc>, AuditError> {
         let mut locations = self
             .locations
             .iter()
             .map(|l| l.clone().concretize(document.as_document()))
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<anyhow::Result<Vec<_>>>()
+            .map_err(|e| AuditError::new(self.ident, e))?;
 
         locations.extend(self.raw_locations);
 
         if !locations.iter().any(|l| l.symbolic.is_primary()) {
-            return Err(anyhow!(
-                "API misuse: at least one location must be marked with primary()"
+            return Err(AuditError::new(
+                self.ident,
+                anyhow!("API misuse: at least one location must be marked with primary()"),
             ));
         }
 

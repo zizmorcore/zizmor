@@ -7,6 +7,7 @@ use tree_sitter::Language;
 use tree_sitter::StreamingIterator as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::audit::AuditError;
 use crate::finding::location::Locatable;
 use crate::{
     finding::{Confidence, Finding, Severity},
@@ -210,7 +211,7 @@ impl UseTrustedPublishing {
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for (coordinate, keys) in KNOWN_TRUSTED_PUBLISHING_ACTIONS.iter() {
@@ -245,14 +246,15 @@ impl UseTrustedPublishing {
     fn bash_trusted_publishing_command_candidates<'doc>(
         &self,
         run: &'doc str,
-    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         let mut parser = tree_sitter::Parser::new();
-        parser.set_language(&self.bash)?;
+        parser.set_language(&self.bash).map_err(Self::err)?;
 
         let mut cursor = tree_sitter::QueryCursor::new();
         let tree = parser
             .parse(run, None)
-            .context("failed to parse `run:` body as bash")?;
+            .context("failed to parse `run:` body as bash")
+            .map_err(Self::err)?;
 
         Ok(cursor
             .captures(&self.bash_command_query, tree.root_node(), run.as_bytes())
@@ -273,14 +275,15 @@ impl UseTrustedPublishing {
     fn pwsh_trusted_publishing_command_candidates<'doc>(
         &self,
         run: &'doc str,
-    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         let mut parser = tree_sitter::Parser::new();
-        parser.set_language(&self.pwsh)?;
+        parser.set_language(&self.pwsh).map_err(Self::err)?;
 
         let mut cursor = tree_sitter::QueryCursor::new();
         let tree = parser
             .parse(run, None)
-            .context("failed to parse `run:` body as pwsh")?;
+            .context("failed to parse `run:` body as pwsh")
+            .map_err(Self::err)?;
 
         Ok(cursor
             .captures(&self.pwsh_command_query, tree.root_node(), run.as_bytes())
@@ -301,7 +304,7 @@ impl UseTrustedPublishing {
     fn raw_trusted_publishing_command_candidates<'doc>(
         &self,
         run: &'doc str,
-    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         Ok(NON_TP_COMMAND_PATTERN_SET
             .matches(run)
             .into_iter()
@@ -318,7 +321,7 @@ impl UseTrustedPublishing {
         &self,
         run: &'doc str,
         shell: &str,
-    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         let normalized = utils::normalize_shell(shell);
 
         match normalized {
@@ -349,7 +352,7 @@ impl Audit for UseTrustedPublishing {
         &self,
         step: &crate::models::workflow::Step<'doc>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = self.process_step(step)?;
 
         // In addition to the shared action matching above, we can
@@ -410,7 +413,7 @@ impl Audit for UseTrustedPublishing {
         &self,
         step: &crate::models::action::CompositeStep<'doc>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }
 }

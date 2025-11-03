@@ -1,6 +1,7 @@
 use github_actions_models::common::Uses;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use crate::audit::AuditError;
 use crate::config::{Config, ForbiddenUsesConfig};
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
@@ -36,7 +37,7 @@ impl ForbiddenUses {
         &self,
         step: &impl StepCommon<'doc>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let Some(config) = config.forbidden_uses_config.as_ref() else {
@@ -81,7 +82,7 @@ impl Audit for ForbiddenUses {
         &self,
         step: &Step<'doc>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step, config)
     }
 
@@ -89,7 +90,7 @@ impl Audit for ForbiddenUses {
         &self,
         step: &CompositeStep<'a>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step, config)
     }
 }
