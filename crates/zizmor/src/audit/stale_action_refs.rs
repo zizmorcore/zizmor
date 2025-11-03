@@ -24,25 +24,26 @@ audit_meta!(
 );
 
 impl StaleActionRefs {
-    fn is_stale_action_ref(&self, uses: &RepositoryUses) -> Result<bool> {
+    async fn is_stale_action_ref(&self, uses: &RepositoryUses) -> Result<bool> {
         let tag = match &uses.commit_ref() {
             Some(commit_ref) => {
                 self.client
-                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)?
+                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
+                    .await?
             }
             None => return Ok(false),
         };
         Ok(tag.is_none())
     }
 
-    fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
+    async fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(findings);
         };
 
-        if self.is_stale_action_ref(uses)? {
+        if self.is_stale_action_ref(uses).await? {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::High)
@@ -77,7 +78,7 @@ impl Audit for StaleActionRefs {
     }
 
     async fn audit_step<'w>(&self, step: &Step<'w>, _config: &Config) -> Result<Vec<Finding<'w>>> {
-        self.process_step(step)
+        self.process_step(step).await
     }
 
     async fn audit_composite_step<'a>(
@@ -85,6 +86,6 @@ impl Audit for StaleActionRefs {
         step: &CompositeStep<'a>,
         _config: &Config,
     ) -> Result<Vec<Finding<'a>>> {
-        self.process_step(step)
+        self.process_step(step).await
     }
 }

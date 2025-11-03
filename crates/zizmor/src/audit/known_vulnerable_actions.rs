@@ -29,7 +29,7 @@ audit_meta!(
 );
 
 impl KnownVulnerableActions {
-    fn action_known_vulnerabilities(
+    async fn action_known_vulnerabilities(
         &self,
         uses: &RepositoryUses,
     ) -> Result<Vec<(Severity, String, Option<String>)>> {
@@ -51,9 +51,10 @@ impl KnownVulnerableActions {
             // To handle all of the above, we convert the ref into a commit
             // and then find the longest tag for that commit.
             version if !uses.ref_is_commit() => {
-                let Some(commit_ref) =
-                    self.client
-                        .commit_for_ref(&uses.owner, &uses.repo, version)?
+                let Some(commit_ref) = self
+                    .client
+                    .commit_for_ref(&uses.owner, &uses.repo, version)
+                    .await?
                 else {
                     // No `ref -> commit` means that the action's version
                     // is probably just outright invalid.
@@ -62,7 +63,8 @@ impl KnownVulnerableActions {
 
                 match self
                     .client
-                    .longest_tag_for_commit(&uses.owner, &uses.repo, &commit_ref)?
+                    .longest_tag_for_commit(&uses.owner, &uses.repo, &commit_ref)
+                    .await?
                 {
                     Some(tag) => tag.name,
                     // Somehow we've round-tripped through a commit and ended
@@ -79,7 +81,8 @@ impl KnownVulnerableActions {
             commit_ref => {
                 match self
                     .client
-                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)?
+                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
+                    .await?
                 {
                     Some(tag) => tag.name,
                     // No corresponding tag means the user is maybe doing something
@@ -93,7 +96,8 @@ impl KnownVulnerableActions {
 
         let vulns = self
             .client
-            .gha_advisories(&uses.owner, &uses.repo, &version)?;
+            .gha_advisories(&uses.owner, &uses.repo, &version)
+            .await?;
 
         let mut results = vec![];
 
@@ -120,7 +124,7 @@ impl KnownVulnerableActions {
     }
 
     /// Create a fix to upgrade to a specific non-vulnerable version
-    fn create_upgrade_fix<'doc>(
+    async fn create_upgrade_fix<'doc>(
         &self,
         uses: &RepositoryUses,
         target_version: String,
@@ -150,22 +154,26 @@ impl KnownVulnerableActions {
                 // convention or not, so we have to try both.
                 // We try the prefixed version first, since we expect it
                 // to be more common.
-                let (target_ref, target_commit) = self
+
+                let (target_ref, target_commit) = match self
                     .client
                     .commit_for_ref(&uses.owner, &uses.repo, &prefixed_version)
-                    .map(|commit| commit.map(|commit| (&prefixed_version, commit)))
-                    .or_else(|_| {
-                        self.client
-                            .commit_for_ref(&uses.owner, &uses.repo, &bare_version)
-                            .map(|commit| commit.map(|commit| (&bare_version, commit)))
-                    })?
-                    .ok_or_else(|| {
-                        anyhow!(
-                            "Cannot resolve version {bare_version} to commit hash for {}/{}",
-                            uses.owner,
-                            uses.repo
-                        )
-                    })?;
+                    .await
+                {
+                    Ok(commit) => commit.map(|commit| (&prefixed_version, commit)),
+                    Err(_) => self
+                        .client
+                        .commit_for_ref(&uses.owner, &uses.repo, &bare_version)
+                        .await?
+                        .map(|commit| (&bare_version, commit)),
+                }
+                .ok_or_else(|| {
+                    anyhow!(
+                        "Cannot resolve version {bare_version} to commit hash for {}/{}",
+                        uses.owner,
+                        uses.repo
+                    )
+                })?;
 
                 let new_uses_value = format!("{uses_slug}@{target_commit}");
 
@@ -214,14 +222,15 @@ impl KnownVulnerableActions {
         }
     }
 
-    fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
+    async fn process_step<'doc>(&self, step: &impl StepCommon<'doc>) -> Result<Vec<Finding<'doc>>> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(findings);
         };
 
-        for (severity, id, first_patched_version) in self.action_known_vulnerabilities(uses)? {
+        for (severity, id, first_patched_version) in self.action_known_vulnerabilities(uses).await?
+        {
             let mut finding_builder = Self::finding()
                 .confidence(Confidence::High)
                 .severity(severity)
@@ -243,10 +252,10 @@ impl KnownVulnerableActions {
             // and only apply the highest one. This would be moderately annoying
             // to do, since we'd have to decide which finding to attach that
             // fix to.
-            if let Some(fix) = first_patched_version
-                .map(|patched_version| self.create_upgrade_fix(uses, patched_version, step))
-                .transpose()?
-            {
+            if let Some(first_patched_version) = first_patched_version {
+                let fix = self
+                    .create_upgrade_fix(uses, first_patched_version, step)
+                    .await?;
                 finding_builder = finding_builder.fix(fix);
             }
 
@@ -281,7 +290,7 @@ impl Audit for KnownVulnerableActions {
         step: &Step<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>> {
-        self.process_step(step)
+        self.process_step(step).await
     }
 
     async fn audit_composite_step<'doc>(
@@ -289,7 +298,7 @@ impl Audit for KnownVulnerableActions {
         step: &CompositeStep<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>> {
-        self.process_step(step)
+        self.process_step(step).await
     }
 }
 
@@ -319,8 +328,8 @@ mod tests {
         KnownVulnerableActions::new(&state).unwrap()
     }
 
-    #[test]
-    fn test_fix_upgrade_actions_checkout() {
+    #[tokio::test]
+    async fn test_fix_upgrade_actions_checkout() {
         let workflow_content = r#"
 name: Test Vulnerable Actions
 on: push
@@ -352,7 +361,10 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v4".into(), step).unwrap();
+        let fix = audit
+            .create_upgrade_fix(&uses, "v4".into(), step)
+            .await
+            .unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r#"
@@ -369,8 +381,8 @@ jobs:
         "#);
     }
 
-    #[test]
-    fn test_fix_upgrade_actions_setup_node() {
+    #[tokio::test]
+    async fn test_fix_upgrade_actions_setup_node() {
         let workflow_content = r#"
 name: Test Node Setup
 on: push
@@ -404,7 +416,10 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v4".into(), step).unwrap();
+        let fix = audit
+            .create_upgrade_fix(&uses, "v4".into(), step)
+            .await
+            .unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r#"
@@ -423,8 +438,8 @@ jobs:
         "#);
     }
 
-    #[test]
-    fn test_fix_upgrade_third_party_action() {
+    #[tokio::test]
+    async fn test_fix_upgrade_third_party_action() {
         let workflow_content = r#"
 name: Test Third Party Action
 on: push
@@ -458,7 +473,10 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v4".into(), step).unwrap();
+        let fix = audit
+            .create_upgrade_fix(&uses, "v4".into(), step)
+            .await
+            .unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r#"
@@ -477,8 +495,8 @@ jobs:
         "#);
     }
 
-    #[test]
-    fn test_fix_upgrade_multiple_vulnerable_actions() {
+    #[tokio::test]
+    async fn test_fix_upgrade_multiple_vulnerable_actions() {
         let workflow_content = r#"
 name: Test Multiple Vulnerable Actions
 on: push
@@ -522,6 +540,7 @@ jobs:
         };
         let fix_checkout = audit
             .create_upgrade_fix(&uses_checkout, "v4".into(), &steps[0])
+            .await
             .unwrap();
         current_document = fix_checkout.apply(&current_document).unwrap();
 
@@ -534,6 +553,7 @@ jobs:
         };
         let fix_node = audit
             .create_upgrade_fix(&uses_node, "v4".into(), &steps[1])
+            .await
             .unwrap();
         current_document = fix_node.apply(&current_document).unwrap();
 
@@ -546,6 +566,7 @@ jobs:
         };
         let fix_cache = audit
             .create_upgrade_fix(&uses_cache, "v4".into(), &steps[2])
+            .await
             .unwrap();
         current_document = fix_cache.apply(&current_document).unwrap();
 
@@ -572,8 +593,8 @@ jobs:
         "#);
     }
 
-    #[test]
-    fn test_fix_upgrade_action_with_subpath() {
+    #[tokio::test]
+    async fn test_fix_upgrade_action_with_subpath() {
         let workflow_content = r#"
 name: Test Action with Subpath
 on: push
@@ -605,7 +626,10 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v2".into(), step).unwrap();
+        let fix = audit
+            .create_upgrade_fix(&uses, "v2".into(), step)
+            .await
+            .unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r"
@@ -622,8 +646,8 @@ jobs:
         ");
     }
 
-    #[test]
-    fn test_first_patched_version_priority() {
+    #[tokio::test]
+    async fn test_first_patched_version_priority() {
         // This test verifies that first_patched_version is used when available
         let workflow_content = r#"
 name: Test First Patched Version Priority
@@ -656,6 +680,7 @@ jobs:
         let audit = create_test_audit();
         let fix_with_patched_version = audit
             .create_upgrade_fix(&uses, "v3.1.0".into(), step)
+            .await
             .unwrap();
         let fixed_document = fix_with_patched_version
             .apply(workflow.as_document())
@@ -673,8 +698,8 @@ jobs:
         "#);
     }
 
-    #[test]
-    fn test_fix_symbolic_ref() {
+    #[tokio::test]
+    async fn test_fix_symbolic_ref() {
         let workflow_content = r#"
 name: Test Non-Commit Ref
 on: push
@@ -703,7 +728,10 @@ jobs:
         };
 
         let audit = create_test_audit();
-        let fix = audit.create_upgrade_fix(&uses, "v4".into(), step).unwrap();
+        let fix = audit
+            .create_upgrade_fix(&uses, "v4".into(), step)
+            .await
+            .unwrap();
 
         let new_doc = fix.apply(workflow.as_document()).unwrap();
 
@@ -719,8 +747,8 @@ jobs:
         ");
     }
 
-    #[test]
-    fn test_offline_audit_state_creation() {
+    #[tokio::test]
+    async fn test_offline_audit_state_creation() {
         // Test that we can create an audit state without a GitHub token
         let state = crate::state::AuditState::default();
 

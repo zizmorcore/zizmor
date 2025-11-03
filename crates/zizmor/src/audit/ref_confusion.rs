@@ -34,13 +34,20 @@ audit_meta!(
 );
 
 impl RefConfusion {
-    fn confusable(&self, uses: &RepositoryUses) -> Result<bool> {
+    async fn confusable(&self, uses: &RepositoryUses) -> Result<bool> {
         let Some(sym_ref) = uses.symbolic_ref() else {
             return Ok(false);
         };
 
-        let branches_match = self.client.has_branch(&uses.owner, &uses.repo, sym_ref)?;
-        let tags_match = self.client.has_tag(&uses.owner, &uses.repo, sym_ref)?;
+        // TODO: use a tokio JoinSet here?
+        let branches_match = self
+            .client
+            .has_branch(&uses.owner, &uses.repo, sym_ref)
+            .await?;
+        let tags_match = self
+            .client
+            .has_tag(&uses.owner, &uses.repo, sym_ref)
+            .await?;
 
         // If both the branch and tag namespaces have a match, we have a
         // confusable ref.
@@ -82,7 +89,7 @@ impl Audit for RefConfusion {
                             continue;
                         };
 
-                        if self.confusable(uses)? {
+                        if self.confusable(uses).await? {
                             findings.push(
                                 Self::finding()
                                     .severity(Severity::Medium)
@@ -103,7 +110,7 @@ impl Audit for RefConfusion {
                         continue;
                     };
 
-                    if self.confusable(uses)? {
+                    if self.confusable(uses).await? {
                         findings.push(
                             Self::finding()
                                 .severity(Severity::Medium)
@@ -135,7 +142,7 @@ impl Audit for RefConfusion {
             return Ok(findings);
         };
 
-        if self.confusable(uses)? {
+        if self.confusable(uses).await? {
             findings.push(
                 Self::finding()
                     .severity(Severity::Medium)

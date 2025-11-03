@@ -515,15 +515,16 @@ pub(crate) struct CollectionOptions {
 }
 
 #[instrument(skip_all)]
-fn collect_inputs(
+async fn collect_inputs(
     inputs: &[String],
     options: &CollectionOptions,
     gh_client: Option<&Client>,
 ) -> Result<InputRegistry, CollectionError> {
     let mut registry = InputRegistry::new();
 
+    // TODO: use tokio's JoinSet?
     for input in inputs.iter() {
-        registry.register_group(input, options, gh_client)?;
+        registry.register_group(input, options, gh_client).await?;
     }
 
     if registry.len() == 0 {
@@ -715,7 +716,8 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         app.inputs.as_slice(),
         &collection_options,
         gh_client.as_ref(),
-    )?;
+    )
+    .await?;
 
     let state = AuditState::new(app.no_online_audits, gh_client);
 

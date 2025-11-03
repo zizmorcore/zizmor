@@ -77,7 +77,7 @@ impl RefVersionMismatch {
         }
     }
 
-    fn audit_step_common<'doc, S: StepCommon<'doc>>(
+    async fn audit_step_common<'doc, S: StepCommon<'doc>>(
         &self,
         step: &S,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
@@ -103,9 +103,10 @@ impl RefVersionMismatch {
             return Ok(findings);
         };
 
-        let Some(commit_for_ref) =
-            self.client
-                .commit_for_ref(&uses.owner, &uses.repo, version_from_comment)?
+        let Some(commit_for_ref) = self
+            .client
+            .commit_for_ref(&uses.owner, &uses.repo, version_from_comment)
+            .await?
         else {
             // TODO(ww): Does it make sense to flag this as well?
             // This indicates a completely bogus version comment,
@@ -133,9 +134,10 @@ impl RefVersionMismatch {
                     Feature::from_subfeature(&subfeature, step),
                 ));
 
-            if let Some(suggestion) =
-                self.client
-                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_sha)?
+            if let Some(suggestion) = self
+                .client
+                .longest_tag_for_commit(&uses.owner, &uses.repo, commit_sha)
+                .await?
             {
                 builder = builder.add_location(
                     uses_location
@@ -173,7 +175,7 @@ impl Audit for RefVersionMismatch {
         step: &Step<'doc>,
         _config: &Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
-        self.audit_step_common(step)
+        self.audit_step_common(step).await
     }
 
     async fn audit_composite_step<'doc>(
@@ -181,7 +183,7 @@ impl Audit for RefVersionMismatch {
         step: &CompositeStep<'doc>,
         _config: &Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>> {
-        self.audit_step_common(step)
+        self.audit_step_common(step).await
     }
 }
 
