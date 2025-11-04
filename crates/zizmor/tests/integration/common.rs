@@ -198,8 +198,8 @@ impl Zizmor {
 
         if let Some(exit_code) = output.status.code() {
             // There are other nonzero exit codes that don't indicate failure;
-            // 1 and 2 do.
-            let is_failure = matches!(exit_code, 1 | 2);
+            // these do. 1/2 are general errors, 101 is Rust's panic exit code.
+            let is_failure = matches!(exit_code, 1 | 2 | 101);
             if is_failure != self.expects_failure {
                 anyhow::bail!("zizmor exited with unexpected code {exit_code}: {raw}");
             }
