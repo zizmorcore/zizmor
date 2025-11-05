@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would crash on an unexpected caching middleware
+  state. `zizmor` will now exit with a controlled error instead (#1319)
+
 ## 1.16.2
 
 ### Enhancements 🌱
