@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.16.3
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would crash on an unexpected caching middleware
