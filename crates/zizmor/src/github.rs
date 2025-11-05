@@ -183,7 +183,7 @@ impl reqwest_middleware::Middleware for CacheLoggingMiddleware {
     ) -> reqwest_middleware::Result<Response> {
         tracing::debug!("Request URL: {}", req.url());
 
-        let res = next.run(req, extensions).await;
+        let res = next.run(req, extensions).await?;
 
         let cache_type = extensions
             .get::<CacheType>()
@@ -193,7 +193,7 @@ impl reqwest_middleware::Middleware for CacheLoggingMiddleware {
             .expect("internal error: expected CacheResult");
         tracing::debug!("{:?} cache was {:?}", cache_type, cache_result);
 
-        res
+        Ok(res)
     }
 }
 
