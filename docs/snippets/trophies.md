@@ -1216,6 +1216,14 @@
         - rubygems/rubygems#8702
 
 
+-   ![](https://github.com/rust-bitcoin.png?size=40){ width="40" loading=lazy align=left } rust-bitcoin
+
+    ---
+
+    ??? example "Examples"
+        - rust-bitcoin/rust-bitcoin#5234
+
+
 -   ![](https://github.com/rust-lang.png?size=40){ width="40" loading=lazy align=left } rust-lang
 
     ---
