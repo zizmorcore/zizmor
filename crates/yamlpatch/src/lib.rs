@@ -354,6 +354,13 @@ fn apply_single_patch(
                 feature.location.byte_span.0..feature.location.byte_span.1,
                 &updated_feature,
             );
+
+            // Preserve trailing newline if original document had one and result doesn't
+            // This handles the case where adding content at the end removes the trailing newline
+            if content.ends_with('\n') && !result.ends_with('\n') {
+                result.push('\n');
+            }
+
             yamlpath::Document::new(result).map_err(Error::from)
         }
         Op::MergeInto { key, updates } => {
