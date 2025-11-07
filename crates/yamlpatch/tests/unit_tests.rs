@@ -2308,3 +2308,51 @@ jobs:
                   persist-credentials: false
         "#);
 }
+
+#[test]
+fn test_preserve_trailing_newline_when_adding_at_end() {
+    // Test case for dependabot cooldown: adding cooldown config at the end of
+    // an ecosystem stanza should preserve the trailing newline
+    let original = r#"version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+    labels:
+      - A-deps
+"#;
+
+    let operations = vec![Patch {
+        route: route!("updates", 0),
+        operation: Op::Add {
+            key: "cooldown".to_string(),
+            value: serde_yaml::Value::Mapping({
+                let mut map = serde_yaml::Mapping::new();
+                map.insert(
+                    serde_yaml::Value::String("default-days".to_string()),
+                    serde_yaml::Value::Number(7.into()),
+                );
+                map
+            }),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        version: 2
+
+        updates:
+          - package-ecosystem: pip
+            directory: /
+            schedule:
+              interval: daily
+            labels:
+              - A-deps
+            cooldown:
+              default-days: 7
+        "#);
+}
