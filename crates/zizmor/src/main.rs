@@ -7,7 +7,7 @@ use std::{
 };
 
 use annotate_snippets::{Group, Level, Renderer};
-use anstream::{eprintln, println, stream::IsTerminal};
+use anstream::{eprintln, println, stderr, stream::IsTerminal};
 use anyhow::anyhow;
 use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
@@ -624,7 +624,13 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     // compose perfectly: `anstream` wants to strip all ANSI escapes,
     // while `tracing_indicatif` needs line control to render progress bars.
     // TODO: In the future, perhaps we could make these work together.
-    if matches!(color_mode, ColorMode::Never) {
+    //
+    // Also, we disable progress bars if stderr is not a terminal.
+    // Technically indicatif does this for us, but tracing_indicatif
+    // surfaces a bug when multiple spans are active and the
+    // output is not a terminal.
+    // See: https://github.com/emersonford/tracing-indicatif/issues/24
+    if matches!(color_mode, ColorMode::Never) || !stderr().is_terminal() {
         app.no_progress = true;
     }
 
