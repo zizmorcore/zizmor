@@ -419,7 +419,7 @@ fn issue_1300() -> Result<()> {
     error: input @@INPUT@@ doesn't contain any workflows
       |
       = help: ensure that @@INPUT@@ contains one or more workflows under `.github/workflows/`
-      = help: ensure that {slug} exists and you have access to it
+      = help: ensure that @@INPUT@@ exists and you have access to it
 
     Caused by:
         0: input @@INPUT@@ doesn't contain any workflows

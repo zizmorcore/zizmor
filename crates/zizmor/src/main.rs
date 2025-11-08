@@ -939,7 +939,9 @@ async fn main() -> ExitCode {
                                         "ensure that {slug} contains one or more workflows under `.github/workflows/`"
                                     )
                                 ),
-                                Level::HELP.message("ensure that {slug} exists and you have access to it")
+                                Level::HELP.message(
+                                    format!("ensure that {slug} exists and you have access to it")
+                                )
                             ]);
 
                         let renderer = Renderer::styled();
