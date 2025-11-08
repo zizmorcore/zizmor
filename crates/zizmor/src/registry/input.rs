@@ -72,6 +72,12 @@ pub(crate) enum CollectionError {
     #[error("invalid input: must have .yml or .yaml extension")]
     InvalidExtension,
 
+    /// Workflow-specific collection was requested, but the remote
+    /// input doesn't contain any workflows. This typically means the remote
+    /// repository doesn't have a `.github` or `.github/workflows` directory.
+    #[error("input {1} doesn't contain any workflows")]
+    RemoteWithoutWorkflows(#[source] ClientError, String),
+
     /// A GitHub API error occurred while fetching a remote input.
     #[error("GitHub API error while fetching remote input")]
     Client(#[from] ClientError),

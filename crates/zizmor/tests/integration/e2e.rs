@@ -396,3 +396,36 @@ fn issue_1286() -> Result<()> {
 
     Ok(())
 }
+
+/// Regression test for #1300.
+///
+/// Ensures that we produce a useful error when a user specifies
+/// `--collect=workflows` on a remote input that doesn't have a
+/// `.github/workflows/` directory.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_1300() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .output(OutputMode::Both)
+            .offline(false)
+            .args(["--collect=workflows"])
+            .input("woodruffw-experiments/empty")
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: input @@INPUT@@ doesn't contain any workflows
+      |
+      = help: ensure that @@INPUT@@ contains one or more workflows under `.github/workflows/`
+
+    Caused by:
+        0: input @@INPUT@@ doesn't contain any workflows
+        1: request error while accessing GitHub API
+        2: HTTP status client error (404 Not Found) for url (https://api.github.com/repos/@@INPUT@@/contents/.github/workflows)
+    "
+    );
+
+    Ok(())
+}
