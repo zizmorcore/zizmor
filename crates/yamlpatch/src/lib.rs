@@ -209,6 +209,43 @@ pub fn apply_yaml_patches(
     Ok(next_document)
 }
 
+/// Compute the replacement range for a byte span, including any trailing newline
+/// that exists immediately after the span in the document.
+///
+/// This fixes the root cause: tree-sitter's byte span doesn't include trailing
+/// newlines that come after the feature node, so we need to extend the range
+/// to include them to avoid losing them during replacement.
+///
+/// We only include the trailing newline if it's the last character in the document,
+/// to avoid including newlines that are part of the document structure rather than
+/// a document-level trailing newline.
+fn compute_replacement_range_for_span(
+    byte_span: (usize, usize),
+    document: &yamlpath::Document,
+) -> std::ops::Range<usize> {
+    let start = byte_span.0;
+    let mut end = byte_span.1;
+    let content = document.source();
+
+    // Only include trailing newline if it's the last character in the document.
+    // This preserves document-level trailing newlines without interfering with
+    // newlines that are part of the document structure.
+    if end < content.len() && content.as_bytes()[end] == b'\n' && end + 1 == content.len() {
+        end += 1;
+    }
+
+    start..end
+}
+
+/// Compute the replacement range for a feature, including any trailing newline
+/// that exists immediately after the feature in the document.
+fn compute_replacement_range(
+    feature: &yamlpath::Feature,
+    document: &yamlpath::Document,
+) -> std::ops::Range<usize> {
+    compute_replacement_range_for_span(feature.location.byte_span, document)
+}
+
 /// Apply a single YAML patch operation
 fn apply_single_patch(
     document: &yamlpath::Document,
@@ -244,10 +281,8 @@ fn apply_single_patch(
 
             // Finally, put our patch back into the overall content.
             let mut patched_content = content.to_string();
-            patched_content.replace_range(
-                feature.location.byte_span.0..feature.location.byte_span.1,
-                &patched_feature,
-            );
+            let replacement_range = compute_replacement_range(&feature, document);
+            patched_content.replace_range(replacement_range, &patched_feature);
 
             yamlpath::Document::new(patched_content).map_err(Error::from)
         }
@@ -272,8 +307,9 @@ fn apply_single_patch(
             };
 
             let mut result = content.to_string();
-            let span = comment_feature.location.byte_span;
-            result.replace_range(span.0..span.1, new);
+            let replacement_range =
+                compute_replacement_range_for_span(comment_feature.location.byte_span, document);
+            result.replace_range(replacement_range, new);
 
             yamlpath::Document::new(result).map_err(Error::from)
         }
@@ -300,7 +336,10 @@ fn apply_single_patch(
 
             // Replace the content
             let mut result = content.to_string();
-            result.replace_range(start_span..end_span, &replacement);
+            // Extend end_span to include trailing newline if present
+            let replacement_range =
+                compute_replacement_range_for_span((start_span, end_span), document);
+            result.replace_range(replacement_range, &replacement);
 
             yamlpath::Document::new(result).map_err(Error::from)
         }
@@ -350,16 +389,8 @@ fn apply_single_patch(
 
             // Replace the content in the document
             let mut result = content.to_string();
-            result.replace_range(
-                feature.location.byte_span.0..feature.location.byte_span.1,
-                &updated_feature,
-            );
-
-            // Preserve trailing newline if original document had one and result doesn't
-            // This handles the case where adding content at the end removes the trailing newline
-            if content.ends_with('\n') && !result.ends_with('\n') {
-                result.push('\n');
-            }
+            let replacement_range = compute_replacement_range(&feature, document);
+            result.replace_range(replacement_range, &updated_feature);
 
             yamlpath::Document::new(result).map_err(Error::from)
         }
