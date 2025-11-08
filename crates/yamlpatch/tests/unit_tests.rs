@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use yamlpatch::*;
 use yamlpath::route;
 
@@ -2355,4 +2356,194 @@ updates:
             cooldown:
               default-days: 7
         "#);
+}
+
+#[test]
+fn test_preserve_trailing_newline_replace_at_end() {
+    // Test Replace operation preserves trailing newline when replacing value at end of document
+    let original = r#"name: Test
+version: 1.0
+"#;
+
+    let operations = vec![Patch {
+        route: route!("version"),
+        operation: Op::Replace(serde_yaml::Value::String("2.0".to_string())),
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        name: Test
+        version: '2.0'
+        "#);
+}
+
+#[test]
+fn test_preserve_trailing_newline_replace_comment_at_end() {
+    // Test ReplaceComment operation preserves trailing newline when replacing comment at end
+    let original = r#"name: Test
+version: 1.0  # old version
+"#;
+
+    let operations = vec![Patch {
+        route: route!("version"),
+        operation: Op::ReplaceComment {
+            new: Cow::Owned("# updated version".to_string()),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        name: Test
+        version: 1.0  # updated version
+        "#);
+}
+
+#[test]
+fn test_preserve_trailing_newline_rewrite_fragment_at_end() {
+    // Test RewriteFragment operation preserves trailing newline when rewriting at end of document
+    let original = r#"run: |
+  echo "Hello ${{ env.NAME }}"
+"#;
+
+    let operations = vec![Patch {
+        route: route!("run"),
+        operation: Op::RewriteFragment {
+            from: subfeature::Subfeature::new(0, "${{ env.NAME }}"),
+            to: Cow::Borrowed("${NAME}"),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        run: |
+          echo "Hello ${NAME}"
+        "#);
+}
+
+#[test]
+fn test_preserve_trailing_newline_add_simple_at_end() {
+    // Test Add operation preserves trailing newline when adding to mapping at end of document
+    let original = r#"name: Test
+key: value
+"#;
+
+    let operations = vec![Patch {
+        route: route!(),
+        operation: Op::Add {
+            key: "newkey".to_string(),
+            value: serde_yaml::Value::String("newvalue".to_string()),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        name: Test
+        key: value
+        newkey: newvalue
+        "#);
+}
+
+#[test]
+fn test_preserve_trailing_newline_replace_nested_at_end() {
+    // Test Replace operation preserves trailing newline when replacing nested value at end
+    let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      VAR: old
+"#;
+
+    let operations = vec![Patch {
+        route: route!("jobs", "test", "env", "VAR"),
+        operation: Op::Replace(serde_yaml::Value::String("new".to_string())),
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            env:
+              VAR: new
+        "#);
+}
+
+#[test]
+fn test_preserve_trailing_newline_add_to_nested_mapping_at_end() {
+    // Test Add operation preserves trailing newline when adding to nested mapping at end
+    let original = r#"jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"
+"#;
+
+    let operations = vec![Patch {
+        route: route!("jobs", "test", "steps", 0),
+        operation: Op::Add {
+            key: "name".to_string(),
+            value: serde_yaml::Value::String("Test step".to_string()),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - run: echo "test"
+                name: Test step
+        "#);
+}
+
+#[test]
+fn test_preserve_trailing_newline_replace_multiline_at_end() {
+    // Test Replace operation preserves trailing newline when replacing multiline value at end
+    let original = r#"description: |
+  Line 1
+  Line 2
+"#;
+
+    let operations = vec![Patch {
+        route: route!("description"),
+        operation: Op::Replace(serde_yaml::Value::String("New description".to_string())),
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        description: New description
+        "#);
+}
+
+#[test]
+fn test_preserve_trailing_newline_no_newline_original() {
+    // Test that operations don't add trailing newline if original document doesn't have one
+    let original = r#"name: Test
+key: value"#;
+
+    let operations = vec![Patch {
+        route: route!("key"),
+        operation: Op::Replace(serde_yaml::Value::String("newvalue".to_string())),
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @"name: Test
+key: newvalue");
 }
