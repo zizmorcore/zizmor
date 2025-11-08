@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* `zizmor` now produces a more useful error message when asked to
+  collect only workflows from a remote input that contains no workflows (#1324)
+
 ### Performance Improvements 🚄
 
 * `zizmor`'s core has been refactored to be asynchronous, making online
