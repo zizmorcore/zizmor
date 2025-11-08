@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Performance Improvements 🚄
+
+* `zizmor`'s core has been refactored to be asynchronous, making online
+  and I/O-heavy audits significantly faster. Typical user workloads
+  should see speedups of 40% to 70% (#1314)
+
 ## 1.16.3
 
 ### Bug Fixes 🐛

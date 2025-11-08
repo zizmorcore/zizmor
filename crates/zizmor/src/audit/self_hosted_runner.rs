@@ -5,7 +5,6 @@
 //! This audit is "auditor" only, since zizmor can't detect
 //! whether self-hosted runners are ephemeral or not.
 
-use anyhow::Result;
 use github_actions_models::{
     common::expr::{ExplicitExpr, LoE},
     workflow::job::RunsOn,
@@ -14,6 +13,7 @@ use github_actions_models::{
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     AuditState,
+    audit::AuditError,
     finding::{Confidence, Persona, Severity},
 };
 use crate::{finding::location::Locatable as _, models::workflow::Matrix};
@@ -26,6 +26,7 @@ audit_meta!(
     "runs on a self-hosted runner"
 );
 
+#[async_trait::async_trait]
 impl Audit for SelfHostedRunner {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -34,11 +35,11 @@ impl Audit for SelfHostedRunner {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,
-    ) -> Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         for job in workflow.jobs() {

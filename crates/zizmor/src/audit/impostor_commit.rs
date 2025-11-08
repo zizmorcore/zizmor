@@ -5,11 +5,12 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
+    audit::AuditError,
     config::Config,
     finding::{
         Confidence, Finding, Fix, FixDisposition, Severity,
@@ -41,16 +42,18 @@ audit_meta!(
 );
 
 impl ImpostorCommit {
-    fn named_ref_contains_commit(
+    async fn named_ref_contains_commit(
         &self,
         uses: &RepositoryUses,
         base_ref: &str,
         head_ref: &str,
-    ) -> Result<bool> {
+    ) -> Result<bool, AuditError> {
         Ok(
             match self
                 .client
-                .compare_commits(&uses.owner, &uses.repo, base_ref, head_ref)?
+                .compare_commits(&uses.owner, &uses.repo, base_ref, head_ref)
+                .await
+                .map_err(Self::err)?
             {
                 // A base ref "contains" a commit if the base is either identical
                 // to the head ("identical") or the target is behind the base ("behind").
@@ -67,7 +70,7 @@ impl ImpostorCommit {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    fn impostor(&self, uses: &RepositoryUses) -> Result<bool> {
+    async fn impostor(&self, uses: &RepositoryUses) -> Result<bool, AuditError> {
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
         let Some(head_ref) = uses.commit_ref() else {
             return Ok(false);
@@ -77,7 +80,11 @@ impl ImpostorCommit {
         // the branch or tag's history, so check those first.
         // Check tags before branches, since in practice version tags
         // are more commonly pinned.
-        let tags = self.client.list_tags(&uses.owner, &uses.repo)?;
+        let tags = self
+            .client
+            .list_tags(&uses.owner, &uses.repo)
+            .await
+            .map_err(Self::err)?;
 
         for tag in &tags {
             if tag.commit.sha == head_ref {
@@ -85,7 +92,11 @@ impl ImpostorCommit {
             }
         }
 
-        let branches = self.client.list_branches(&uses.owner, &uses.repo)?;
+        let branches = self
+            .client
+            .list_branches(&uses.owner, &uses.repo)
+            .await
+            .map_err(Self::err)?;
 
         for branch in &branches {
             if branch.commit.sha == head_ref {
@@ -94,21 +105,19 @@ impl ImpostorCommit {
         }
 
         for branch in &branches {
-            if self.named_ref_contains_commit(
-                uses,
-                &format!("refs/heads/{}", &branch.name),
-                head_ref,
-            )? {
+            if self
+                .named_ref_contains_commit(uses, &format!("refs/heads/{}", &branch.name), head_ref)
+                .await?
+            {
                 return Ok(false);
             }
         }
 
         for tag in &tags {
-            if self.named_ref_contains_commit(
-                uses,
-                &format!("refs/tags/{}", &tag.name),
-                head_ref,
-            )? {
+            if self
+                .named_ref_contains_commit(uses, &format!("refs/tags/{}", &tag.name), head_ref)
+                .await?
+            {
                 return Ok(false);
             }
         }
@@ -119,8 +128,12 @@ impl ImpostorCommit {
     }
 
     /// Return the highest semantically versioned tag in the repository.
-    fn get_highest_tag(&self, uses: &RepositoryUses) -> Result<Option<String>> {
-        let tags = self.client.list_tags(&uses.owner, &uses.repo)?;
+    async fn get_highest_tag(&self, uses: &RepositoryUses) -> Result<Option<String>, AuditError> {
+        let tags = self
+            .client
+            .list_tags(&uses.owner, &uses.repo)
+            .await
+            .map_err(Self::err)?;
 
         // Filter tags down to those that can be parsed as semantic versions,
         // get the highest one, and return its original string representation.
@@ -134,15 +147,20 @@ impl ImpostorCommit {
     }
 
     /// Create a fix for an impostor commit by replacing it with the latest tag
-    fn create_impostor_fix<'doc, T>(&self, uses: &RepositoryUses, step: &T) -> Option<Fix<'doc>>
+    async fn create_impostor_fix<'doc, T>(
+        &self,
+        uses: &RepositoryUses,
+        step: &T,
+    ) -> Option<Fix<'doc>>
     where
         T: StepCommon<'doc> + for<'a> Routable<'a, 'doc>,
     {
         self.create_fix_for_location(uses, step.location().key, step.route().with_key("uses"))
+            .await
     }
 
     /// Create a fix for a reusable workflow job
-    fn create_reusable_fix<'doc>(
+    async fn create_reusable_fix<'doc>(
         &self,
         uses: &RepositoryUses,
         job: &ReusableWorkflowCallJob<'doc>,
@@ -152,17 +170,18 @@ impl ImpostorCommit {
             job.location().key,
             job.location().route.with_key("uses"),
         )
+        .await
     }
 
     /// Create a fix for the given location parameters
-    fn create_fix_for_location<'doc>(
+    async fn create_fix_for_location<'doc>(
         &self,
         uses: &RepositoryUses,
         key: &'doc InputKey,
         route: yamlpath::Route<'doc>,
     ) -> Option<Fix<'doc>> {
         // Get the latest tag for this repository
-        let latest_tag = match self.get_highest_tag(uses) {
+        let latest_tag = match self.get_highest_tag(uses).await {
             Ok(Some(tag)) => tag,
             Ok(None) => {
                 tracing::warn!(
@@ -202,6 +221,7 @@ impl ImpostorCommit {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for ImpostorCommit {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError> {
         if state.no_online_audits {
@@ -217,11 +237,11 @@ impl Audit for ImpostorCommit {
             .map(|client| ImpostorCommit { client })
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
@@ -232,7 +252,7 @@ impl Audit for ImpostorCommit {
                             continue;
                         };
 
-                        if self.impostor(uses)? {
+                        if self.impostor(uses).await? {
                             let mut finding_builder = Self::finding()
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
@@ -240,11 +260,11 @@ impl Audit for ImpostorCommit {
                                     step.location().primary().annotated(IMPOSTOR_ANNOTATION),
                                 );
 
-                            if let Some(fix) = self.create_impostor_fix(uses, &step) {
+                            if let Some(fix) = self.create_impostor_fix(uses, &step).await {
                                 finding_builder = finding_builder.fix(fix);
                             }
 
-                            findings.push(finding_builder.build(workflow)?);
+                            findings.push(finding_builder.build(workflow).map_err(Self::err)?);
                         }
                     }
                 }
@@ -255,7 +275,7 @@ impl Audit for ImpostorCommit {
                         continue;
                     };
 
-                    if self.impostor(uses)? {
+                    if self.impostor(uses).await? {
                         let mut finding_builder = Self::finding()
                             .severity(Severity::High)
                             .confidence(Confidence::High)
@@ -263,11 +283,11 @@ impl Audit for ImpostorCommit {
                                 reusable.location().primary().annotated(IMPOSTOR_ANNOTATION),
                             );
 
-                        if let Some(fix) = self.create_reusable_fix(uses, &reusable) {
+                        if let Some(fix) = self.create_reusable_fix(uses, &reusable).await {
                             finding_builder = finding_builder.fix(fix);
                         }
 
-                        findings.push(finding_builder.build(workflow)?);
+                        findings.push(finding_builder.build(workflow).map_err(Self::err)?);
                     }
                 }
             }
@@ -276,27 +296,27 @@ impl Audit for ImpostorCommit {
         Ok(findings)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &super::CompositeStep<'a>,
         _config: &Config,
-    ) -> Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         let mut findings = vec![];
         let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(findings);
         };
 
-        if self.impostor(uses)? {
+        if self.impostor(uses).await? {
             let mut finding_builder = Self::finding()
                 .severity(Severity::High)
                 .confidence(Confidence::High)
                 .add_location(step.location().primary().annotated(IMPOSTOR_ANNOTATION));
 
-            if let Some(fix) = self.create_impostor_fix(uses, step) {
+            if let Some(fix) = self.create_impostor_fix(uses, step).await {
                 finding_builder = finding_builder.fix(fix);
             }
 
-            findings.push(finding_builder.build(step.action())?);
+            findings.push(finding_builder.build(step.action()).map_err(Self::err)?);
         }
 
         Ok(findings)
@@ -307,8 +327,8 @@ impl Audit for ImpostorCommit {
 mod tests {
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_impostor_commit_fix_snapshot() {
+    #[tokio::test]
+    async fn test_impostor_commit_fix_snapshot() {
         use insta::assert_snapshot;
 
         use crate::models::AsDocument as _;
@@ -348,6 +368,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit("impostor-commit", &input, &Config::default())
+            .await
             .unwrap();
 
         // If we detect an impostor commit, there should be a fix available
@@ -372,8 +393,8 @@ jobs:
     }
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_no_impostor_with_valid_tag() {
+    #[tokio::test]
+    async fn test_no_impostor_with_valid_tag() {
         use super::*;
         use crate::{models::workflow::Workflow, registry::input::InputKey};
 
@@ -407,6 +428,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit("impostor-commit", &input, &Config::default())
+            .await
             .unwrap();
 
         // With a valid tag, we should not find any impostor commits

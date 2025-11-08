@@ -1,6 +1,5 @@
-use anyhow::Result;
-
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::audit::AuditError;
 use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::workflow::Workflow;
@@ -14,16 +13,17 @@ audit_meta!(
     "use of fundamentally insecure workflow trigger"
 );
 
+#[async_trait::async_trait]
 impl Audit for DangerousTriggers {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         if workflow.has_pull_request_target() {
             findings.push(

@@ -6,10 +6,11 @@
 //! but the upstream repository may host *both* a branch and a tag named
 //! `foo`, making it unclear to the end user which is selected.
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
+use crate::audit::AuditError;
 use crate::finding::Finding;
 use crate::finding::location::Locatable as _;
 use crate::models::{StepCommon, action::CompositeStep};
@@ -34,13 +35,22 @@ audit_meta!(
 );
 
 impl RefConfusion {
-    fn confusable(&self, uses: &RepositoryUses) -> Result<bool> {
+    async fn confusable(&self, uses: &RepositoryUses) -> Result<bool, AuditError> {
         let Some(sym_ref) = uses.symbolic_ref() else {
             return Ok(false);
         };
 
-        let branches_match = self.client.has_branch(&uses.owner, &uses.repo, sym_ref)?;
-        let tags_match = self.client.has_tag(&uses.owner, &uses.repo, sym_ref)?;
+        // TODO: use a tokio JoinSet here?
+        let branches_match = self
+            .client
+            .has_branch(&uses.owner, &uses.repo, sym_ref)
+            .await
+            .map_err(Self::err)?;
+        let tags_match = self
+            .client
+            .has_tag(&uses.owner, &uses.repo, sym_ref)
+            .await
+            .map_err(Self::err)?;
 
         // If both the branch and tag namespaces have a match, we have a
         // confusable ref.
@@ -48,6 +58,7 @@ impl RefConfusion {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for RefConfusion {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -66,11 +77,11 @@ impl Audit for RefConfusion {
             .map(|client| RefConfusion { client })
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
@@ -81,7 +92,7 @@ impl Audit for RefConfusion {
                             continue;
                         };
 
-                        if self.confusable(uses)? {
+                        if self.confusable(uses).await? {
                             findings.push(
                                 Self::finding()
                                     .severity(Severity::Medium)
@@ -92,7 +103,8 @@ impl Audit for RefConfusion {
                                             .with_keys(["uses".into()])
                                             .annotated(REF_CONFUSION_ANNOTATION),
                                     )
-                                    .build(workflow)?,
+                                    .build(workflow)
+                                    .map_err(Self::err)?,
                             );
                         }
                     }
@@ -102,7 +114,7 @@ impl Audit for RefConfusion {
                         continue;
                     };
 
-                    if self.confusable(uses)? {
+                    if self.confusable(uses).await? {
                         findings.push(
                             Self::finding()
                                 .severity(Severity::Medium)
@@ -113,7 +125,8 @@ impl Audit for RefConfusion {
                                         .primary()
                                         .annotated(REF_CONFUSION_ANNOTATION),
                                 )
-                                .build(workflow)?,
+                                .build(workflow)
+                                .map_err(Self::err)?,
                         )
                     }
                 }
@@ -123,18 +136,18 @@ impl Audit for RefConfusion {
         Ok(findings)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
         _config: &crate::config::Config,
-    ) -> Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(findings);
         };
 
-        if self.confusable(uses)? {
+        if self.confusable(uses).await? {
             findings.push(
                 Self::finding()
                     .severity(Severity::Medium)
@@ -145,7 +158,8 @@ impl Audit for RefConfusion {
                             .with_keys(["uses".into()])
                             .annotated(REF_CONFUSION_ANNOTATION),
                     )
-                    .build(step.action())?,
+                    .build(step.action())
+                    .map_err(Self::err)?,
             );
         }
 

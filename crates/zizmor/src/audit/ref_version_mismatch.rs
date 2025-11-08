@@ -1,13 +1,13 @@
 use std::sync::LazyLock;
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use github_actions_models::common::Uses;
 use regex::Regex;
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
 use crate::{
-    audit::{Audit, AuditLoadError, AuditState, audit_meta},
+    audit::{Audit, AuditError, AuditLoadError, AuditState, audit_meta},
     config::Config,
     finding::{
         Confidence, Finding, Fix, Severity,
@@ -77,10 +77,10 @@ impl RefVersionMismatch {
         }
     }
 
-    fn audit_step_common<'doc, S: StepCommon<'doc>>(
+    async fn audit_step_common<'doc, S: StepCommon<'doc>>(
         &self,
         step: &S,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let Some(Uses::Repository(uses)) = step.uses() else {
@@ -95,7 +95,8 @@ impl RefVersionMismatch {
         let step_location = step.location();
         let uses_location = step_location
             .with_keys(["uses".into()])
-            .concretize(step.document())?;
+            .concretize(step.document())
+            .map_err(Self::err)?;
 
         let Some(version_from_comment) =
             self.extract_version_from_comments(&uses_location.concrete.comments)
@@ -103,9 +104,11 @@ impl RefVersionMismatch {
             return Ok(findings);
         };
 
-        let Some(commit_for_ref) =
-            self.client
-                .commit_for_ref(&uses.owner, &uses.repo, version_from_comment)?
+        let Some(commit_for_ref) = self
+            .client
+            .commit_for_ref(&uses.owner, &uses.repo, version_from_comment)
+            .await
+            .map_err(Self::err)?
         else {
             // TODO(ww): Does it make sense to flag this as well?
             // This indicates a completely bogus version comment,
@@ -133,9 +136,11 @@ impl RefVersionMismatch {
                     Feature::from_subfeature(&subfeature, step),
                 ));
 
-            if let Some(suggestion) =
-                self.client
-                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_sha)?
+            if let Some(suggestion) = self
+                .client
+                .longest_tag_for_commit(&uses.owner, &uses.repo, commit_sha)
+                .await
+                .map_err(Self::err)?
             {
                 builder = builder.add_location(
                     uses_location
@@ -145,13 +150,14 @@ impl RefVersionMismatch {
                 // Add auto-fix to update the version comment to match the pinned hash
                 builder = builder.fix(self.create_version_comment_fix(step, &suggestion.name));
             }
-            findings.push(builder.build(step)?);
+            findings.push(builder.build(step).map_err(Self::err)?);
         }
 
         Ok(findings)
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for RefVersionMismatch {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError> {
         if state.no_online_audits {
@@ -167,20 +173,20 @@ impl Audit for RefVersionMismatch {
             .map(|client| Self { client })
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
-        self.audit_step_common(step)
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        self.audit_step_common(step).await
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
-        self.audit_step_common(step)
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        self.audit_step_common(step).await
     }
 }
 
@@ -216,8 +222,8 @@ mod tests {
     }
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_fix_version_comment_mismatch() {
+    #[tokio::test]
+    async fn test_fix_version_comment_mismatch() {
         use crate::config::Config;
         use crate::{
             models::{AsDocument, workflow::Workflow},
@@ -260,6 +266,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
             .unwrap();
 
         // We expect at least one finding if there's a version mismatch
@@ -283,8 +290,8 @@ jobs:
     }
 
     #[cfg(feature = "gh-token-tests")]
-    #[test]
-    fn test_fix_version_comment_different_formats() {
+    #[tokio::test]
+    async fn test_fix_version_comment_different_formats() {
         use crate::config::Config;
         use crate::{
             models::{AsDocument, workflow::Workflow},
@@ -331,6 +338,7 @@ jobs:
         let input = workflow.into();
         let findings = audit
             .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
             .unwrap();
 
         assert!(!findings.is_empty(), "Expected to find version mismatch");

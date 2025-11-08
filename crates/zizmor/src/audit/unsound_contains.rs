@@ -7,6 +7,7 @@ use github_actions_models::common::If;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
+    audit::AuditError,
     finding::{Confidence, Severity},
     models::workflow::JobExt as _,
     utils::{self, ExtractedExpr},
@@ -34,6 +35,7 @@ audit_meta!(
     "unsound contains condition"
 );
 
+#[async_trait::async_trait]
 impl Audit for UnsoundContains {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -42,11 +44,11 @@ impl Audit for UnsoundContains {
         Ok(Self)
     }
 
-    fn audit_normal_job<'w>(
+    async fn audit_normal_job<'w>(
         &self,
         job: &super::NormalJob<'w>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<super::Finding<'w>>> {
+    ) -> Result<Vec<super::Finding<'w>>, AuditError> {
         let conditions = job.conditions().filter_map(|(cond, loc)| {
             if let If::Expr(expr) = cond {
                 Some((expr.as_str(), loc))

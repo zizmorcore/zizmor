@@ -133,9 +133,19 @@ pub(crate) trait AuditCore {
     {
         FindingBuilder::new(Self::ident(), Self::desc(), Self::url())
     }
+
+    fn err(error: impl Into<anyhow::Error>) -> AuditError
+    where
+        Self: Sized,
+    {
+        AuditError {
+            ident: Self::ident(),
+            source: error.into(),
+        }
+    }
 }
 
-/// A convenience macro for implementing [`Audit`] on a type.
+/// A convenience macro for implementing [`AuditCore`] on a type.
 ///
 /// Example use:
 ///
@@ -181,6 +191,27 @@ pub(crate) enum AuditLoadError {
     Fail(anyhow::Error),
 }
 
+#[derive(Error, Debug)]
+#[error("error in {ident}")]
+pub(crate) struct AuditError {
+    ident: &'static str,
+    #[source]
+    source: anyhow::Error,
+}
+
+impl AuditError {
+    pub(crate) fn new(ident: &'static str, error: impl Into<anyhow::Error>) -> Self {
+        Self {
+            ident,
+            source: error.into(),
+        }
+    }
+
+    pub(crate) fn ident(&self) -> &'static str {
+        self.ident
+    }
+}
+
 /// Auditing trait.
 ///
 /// Implementors of this trait can choose the level of specificity/context
@@ -207,53 +238,54 @@ pub(crate) enum AuditLoadError {
 /// In other words, if an audit chooses to implement [`Audit::audit`], it should implement
 /// **only** [`Audit::audit`] and not [`Audit::audit_normal_job`] or
 /// [`Audit::audit_step`].
+#[async_trait::async_trait]
 pub(crate) trait Audit: AuditCore {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized;
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         _step: &Step<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
-    fn audit_normal_job<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
         job: &NormalJob<'doc>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
         for step in job.steps() {
-            results.extend(self.audit_step(&step, config)?);
+            results.extend(self.audit_step(&step, config).await?);
         }
         Ok(results)
     }
 
-    fn audit_reusable_job<'doc>(
+    async fn audit_reusable_job<'doc>(
         &self,
         _job: &ReusableWorkflowCallJob<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
             match job {
                 Job::NormalJob(normal) => {
-                    results.extend(self.audit_normal_job(&normal, config)?);
+                    results.extend(self.audit_normal_job(&normal, config).await?);
                 }
                 Job::ReusableWorkflowCallJob(reusable) => {
-                    results.extend(self.audit_reusable_job(&reusable, config)?);
+                    results.extend(self.audit_reusable_job(&reusable, config).await?);
                 }
             }
         }
@@ -261,43 +293,43 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         _step: &CompositeStep<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
-    fn audit_action<'doc>(
+    async fn audit_action<'doc>(
         &self,
         action: &'doc Action,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         if let Some(steps) = action.steps() {
             for step in steps {
-                results.extend(self.audit_composite_step(&step, config)?);
+                results.extend(self.audit_composite_step(&step, config).await?);
             }
         }
 
         Ok(results)
     }
 
-    fn audit_dependabot<'doc>(
+    async fn audit_dependabot<'doc>(
         &self,
         _dependabot: &'doc Dependabot,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
-    fn audit_raw<'doc>(
+    async fn audit_raw<'doc>(
         &self,
         _input: &'doc AuditInput,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
@@ -314,12 +346,12 @@ pub(crate) trait Audit: AuditCore {
     /// TODO: This also means we effectively run the disablement check on every
     /// single input in a group, rather than just once per group.
     #[instrument(skip(self, ident, config))]
-    fn audit<'doc>(
+    async fn audit<'doc>(
         &self,
-        ident: &str,
+        ident: &'static str,
         input: &'doc AuditInput,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         if config.disables(ident) {
             tracing::debug!(
                 "skipping: {ident} is disabled in config for group {group:?}",
@@ -329,12 +361,12 @@ pub(crate) trait Audit: AuditCore {
         }
 
         let mut results = match input {
-            AuditInput::Workflow(workflow) => self.audit_workflow(workflow, config),
-            AuditInput::Action(action) => self.audit_action(action, config),
-            AuditInput::Dependabot(dependabot) => self.audit_dependabot(dependabot, config),
+            AuditInput::Workflow(workflow) => self.audit_workflow(workflow, config).await,
+            AuditInput::Action(action) => self.audit_action(action, config).await,
+            AuditInput::Dependabot(dependabot) => self.audit_dependabot(dependabot, config).await,
         }?;
 
-        results.extend(self.audit_raw(input, config)?);
+        results.extend(self.audit_raw(input, config).await?);
 
         Ok(results)
     }

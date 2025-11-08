@@ -5,6 +5,7 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
+    audit::AuditError,
     finding::{Confidence, Severity, location::Locatable as _},
     state::AuditState,
 };
@@ -17,6 +18,7 @@ audit_meta!(
     "hardcoded credential in GitHub Actions container configurations"
 );
 
+#[async_trait::async_trait]
 impl Audit for HardcodedContainerCredentials {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -25,11 +27,11 @@ impl Audit for HardcodedContainerCredentials {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for job in workflow.jobs() {
@@ -93,7 +95,8 @@ impl Audit for HardcodedContainerCredentials {
                                          hard-coded"
                                     )),
                             )
-                            .build(workflow)?,
+                            .build(workflow)
+                            .map_err(Self::err)?,
                     )
                 }
             }

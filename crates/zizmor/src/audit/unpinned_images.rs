@@ -1,6 +1,5 @@
-use anyhow::Result;
-
 use crate::{
+    audit::AuditError,
     finding::{
         Confidence, Finding, Persona, Severity,
         location::{Locatable as _, SymbolicLocation},
@@ -23,7 +22,7 @@ impl UnpinnedImages {
         annotation: &str,
         persona: Persona,
         job: &super::NormalJob<'doc>,
-    ) -> Result<Finding<'doc>> {
+    ) -> Result<Finding<'doc>, AuditError> {
         let mut annotated_location = location;
         annotated_location = annotated_location.annotated(annotation);
         Self::finding()
@@ -41,16 +40,17 @@ audit_meta!(
     "unpinned image references"
 );
 
+#[async_trait::async_trait]
 impl Audit for UnpinnedImages {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
-    fn audit_normal_job<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> anyhow::Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         let mut image_refs_with_locations: Vec<(DockerUses, SymbolicLocation<'doc>)> = vec![];
 

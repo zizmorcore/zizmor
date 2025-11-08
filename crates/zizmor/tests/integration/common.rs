@@ -144,6 +144,16 @@ impl Zizmor {
             self.cmd.arg("--config").arg(config);
         }
 
+        if !self.unbuffer {
+            // NOTE(ww): We explicitly disable progress bars in test runs
+            // because of a tracing-indicatif bug that surfaces when we have
+            // multiple spans and no terminal.
+            // We only hit this when not using `unbuffer`, because `unbuffer`
+            // simulates a TTY.
+            // See: https://github.com/emersonford/tracing-indicatif/issues/24
+            self.cmd.arg("--no-progress");
+        }
+
         for input in &self.inputs {
             self.cmd.arg(input);
         }
@@ -188,8 +198,8 @@ impl Zizmor {
 
         if let Some(exit_code) = output.status.code() {
             // There are other nonzero exit codes that don't indicate failure;
-            // 1 and 2 do.
-            let is_failure = matches!(exit_code, 1 | 2);
+            // these do. 1/2 are general errors, 101 is Rust's panic exit code.
+            let is_failure = matches!(exit_code, 1 | 2 | 101);
             if is_failure != self.expects_failure {
                 anyhow::bail!("zizmor exited with unexpected code {exit_code}: {raw}");
             }
