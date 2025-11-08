@@ -451,21 +451,88 @@ fn apply_single_patch(
 
             let feature = route_to_feature_pretty(&patch.route, document)?;
 
-            // For removal, we need to remove the entire line including leading whitespace
-            // TODO: This isn't sound, e.g. removing `b:` from `{a: a, b: b}` will
-            // remove the entire line.
-            let start_pos = {
-                let range = line_span(document, feature.location.byte_span.0);
-                range.start
-            };
-            let end_pos = {
-                let range = line_span(document, feature.location.byte_span.1);
-                range.end
+            // Get the parent container to understand the context
+            let parent_route = patch.route.parent();
+
+            let parent_feature = if let Some(parent_route) = parent_route {
+                route_to_feature_pretty(&parent_route, document)?
+            } else {
+                // Removing from root level - use the existing line-based removal for now
+                let start_pos = {
+                    let range = line_span(document, feature.location.byte_span.0);
+                    range.start
+                };
+                let end_pos = {
+                    let range = line_span(document, feature.location.byte_span.1);
+                    range.end
+                };
+
+                let mut result = content.to_string();
+                result.replace_range(start_pos..end_pos, "");
+                return yamlpath::Document::new(result).map_err(Error::from);
             };
 
-            let mut result = content.to_string();
-            result.replace_range(start_pos..end_pos, "");
-            yamlpath::Document::new(result).map_err(Error::from)
+            // Determine the actual container type by examining the parent content
+            let parent_content = document.extract(&parent_feature);
+
+            // Check if the parent content contains a flow mapping or flow sequence
+            if parent_content.contains('{') && parent_content.contains('}') {
+                // This is a flow mapping (possibly within a block mapping)
+                handle_flow_mapping_removal_in_context(
+                    document,
+                    &parent_feature,
+                    &patch.route,
+                    content,
+                )
+            } else if parent_content.contains('[') && parent_content.contains(']') {
+                // This is a flow sequence (possibly within a block mapping)
+                handle_flow_sequence_removal_in_context(
+                    document,
+                    &parent_feature,
+                    &patch.route,
+                    content,
+                )
+            } else {
+                // Use the original style-based approach
+                let parent_style = Style::from_feature(&parent_feature, document);
+
+                match parent_style {
+                    Style::BlockMapping => {
+                        handle_block_mapping_removal(document, &feature, content)
+                    }
+                    Style::FlowMapping => handle_flow_mapping_removal(
+                        document,
+                        &parent_feature,
+                        &patch.route,
+                        content,
+                    ),
+                    Style::BlockSequence => {
+                        handle_block_sequence_removal(document, &feature, content)
+                    }
+                    Style::FlowSequence => handle_flow_sequence_removal(
+                        document,
+                        &parent_feature,
+                        &patch.route,
+                        content,
+                    ),
+                    Style::MultilineFlowMapping => handle_multiline_flow_mapping_removal(
+                        document,
+                        &parent_feature,
+                        &patch.route,
+                        content,
+                    ),
+                    Style::MultilineFlowSequence => handle_multiline_flow_sequence_removal(
+                        document,
+                        &parent_feature,
+                        &patch.route,
+                        content,
+                    ),
+                    _ => Err(Error::InvalidOperation(format!(
+                        "remove operation is not supported for parent style: {:?}",
+                        parent_style
+                    ))),
+                }
+            }
         }
     }
 }
@@ -957,5 +1024,621 @@ fn handle_flow_mapping_value_replacement(
         // Case 2: { key } - no colon, bare key -> { key: value }
         let key_part = trimmed.trim_start_matches('{').trim_end_matches('}').trim();
         Ok(format!("{{ {key_part}: {val_str} }}"))
+    }
+}
+
+/// Handle removal from a block mapping
+fn handle_block_mapping_removal(
+    document: &yamlpath::Document,
+    feature: &yamlpath::Feature,
+    content: &str,
+) -> Result<yamlpath::Document, Error> {
+    // For block mappings, we remove the entire line including leading whitespace
+    let start_pos = {
+        let range = line_span(document, feature.location.byte_span.0);
+        range.start
+    };
+    let end_pos = {
+        let range = line_span(document, feature.location.byte_span.1);
+        range.end
+    };
+
+    let mut result = content.to_string();
+    result.replace_range(start_pos..end_pos, "");
+    yamlpath::Document::new(result).map_err(Error::from)
+}
+
+/// Handle removal from a flow mapping
+fn handle_flow_mapping_removal(
+    document: &yamlpath::Document,
+    parent_feature: &yamlpath::Feature,
+    route: &yamlpath::Route,
+    content: &str,
+) -> Result<yamlpath::Document, Error> {
+    // For flow mappings, we need to deserialize, remove the key, and serialize back
+    let parent_content = document.extract(parent_feature);
+
+    // Parse the flow mapping
+    let mut existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(parent_content)
+        .map_err(Error::Serialization)?;
+
+    // Get the feature that needs to be removed to determine what key/value to remove
+    let feature_to_remove = route_to_feature_exact(route, document)?;
+
+    if let Some(feature) = feature_to_remove {
+        // Extract the content of the feature to remove
+        let feature_content = document.extract(&feature);
+
+        // Try to find and remove the matching key-value pair using improved matching
+        let mut key_to_remove = None;
+
+        // First, try to match values
+        for (key, value) in &existing_mapping {
+            if let Ok(serialized_value) = serialize_yaml_value(value) {
+                if values_match(&serialized_value, feature_content) {
+                    key_to_remove = Some(key.clone());
+                    break;
+                }
+            }
+        }
+
+        // If not found, try to match keys
+        if key_to_remove.is_none() {
+            for (key, _) in &existing_mapping {
+                if let Ok(serialized_key) = serialize_yaml_value(key) {
+                    if values_match(&serialized_key, feature_content) {
+                        key_to_remove = Some(key.clone());
+                        break;
+                    }
+                }
+            }
+        }
+
+        if let Some(key) = key_to_remove {
+            existing_mapping.remove(&key);
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find key to remove in flow mapping".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Feature to remove not found in flow mapping".to_string(),
+        ));
+    }
+
+    // Serialize back to flow style
+    let updated_content = serialize_flow(&serde_yaml::Value::Mapping(existing_mapping))?;
+
+    // Replace the parent feature content
+    let mut result = content.to_string();
+    result.replace_range(
+        parent_feature.location.byte_span.0..parent_feature.location.byte_span.1,
+        &updated_content,
+    );
+
+    yamlpath::Document::new(result).map_err(Error::from)
+}
+
+/// Handle removal from a block sequence
+fn handle_block_sequence_removal(
+    document: &yamlpath::Document,
+    feature: &yamlpath::Feature,
+    content: &str,
+) -> Result<yamlpath::Document, Error> {
+    // For block sequences, we remove the entire line including the dash and leading whitespace
+    let start_pos = {
+        let range = line_span(document, feature.location.byte_span.0);
+        range.start
+    };
+    let end_pos = {
+        let range = line_span(document, feature.location.byte_span.1);
+        range.end
+    };
+
+    let mut result = content.to_string();
+    result.replace_range(start_pos..end_pos, "");
+    yamlpath::Document::new(result).map_err(Error::from)
+}
+
+/// Handle removal from a flow sequence
+fn handle_flow_sequence_removal(
+    document: &yamlpath::Document,
+    parent_feature: &yamlpath::Feature,
+    route: &yamlpath::Route,
+    content: &str,
+) -> Result<yamlpath::Document, Error> {
+    // For flow sequences, we need to deserialize, remove the item, and serialize back
+    let parent_content = document.extract(parent_feature);
+
+    // Parse the flow sequence
+    let mut existing_sequence = serde_yaml::from_str::<serde_yaml::Sequence>(parent_content)
+        .map_err(Error::Serialization)?;
+
+    // Get the feature that needs to be removed to determine what item to remove
+    let feature_to_remove = route_to_feature_exact(route, document)?;
+
+    if let Some(feature) = feature_to_remove {
+        // Extract the content of the feature to remove
+        let feature_content = document.extract(&feature);
+
+        // Try to find and remove the matching sequence item using improved matching
+        let mut index_to_remove = None;
+        for (index, value) in existing_sequence.iter().enumerate() {
+            if let Ok(serialized_value) = serialize_yaml_value(value) {
+                if values_match(&serialized_value, feature_content) {
+                    index_to_remove = Some(index);
+                    break;
+                }
+            }
+        }
+
+        if let Some(index) = index_to_remove {
+            existing_sequence.remove(index);
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find item to remove in flow sequence".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Feature to remove not found in flow sequence".to_string(),
+        ));
+    }
+
+    // Serialize back to flow style
+    let updated_content = serialize_flow(&serde_yaml::Value::Sequence(existing_sequence))?;
+
+    // Replace the parent feature content
+    let mut result = content.to_string();
+    result.replace_range(
+        parent_feature.location.byte_span.0..parent_feature.location.byte_span.1,
+        &updated_content,
+    );
+
+    yamlpath::Document::new(result).map_err(Error::from)
+}
+
+/// Handle removal from a multiline flow mapping
+fn handle_multiline_flow_mapping_removal(
+    document: &yamlpath::Document,
+    parent_feature: &yamlpath::Feature,
+    route: &yamlpath::Route,
+    content: &str,
+) -> Result<yamlpath::Document, Error> {
+    // For multiline flow mappings, we need to carefully parse and reconstruct
+    let parent_content = document.extract(parent_feature);
+
+    // Parse the multiline flow mapping
+    let mut existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(parent_content)
+        .map_err(Error::Serialization)?;
+
+    // Get the feature that needs to be removed to determine what key/value to remove
+    let feature_to_remove = route_to_feature_exact(route, document)?;
+
+    if let Some(feature) = feature_to_remove {
+        // Extract the content of the feature to remove
+        let feature_content = document.extract(&feature);
+
+        // Try to find and remove the matching key-value pair using improved matching
+        let mut key_to_remove = None;
+
+        // First, try to match values
+        for (key, value) in &existing_mapping {
+            if let Ok(serialized_value) = serialize_yaml_value(value) {
+                if values_match(&serialized_value, feature_content) {
+                    key_to_remove = Some(key.clone());
+                    break;
+                }
+            }
+        }
+
+        // If not found, try to match keys
+        if key_to_remove.is_none() {
+            for (key, _) in &existing_mapping {
+                if let Ok(serialized_key) = serialize_yaml_value(key) {
+                    if values_match(&serialized_key, feature_content) {
+                        key_to_remove = Some(key.clone());
+                        break;
+                    }
+                }
+            }
+        }
+
+        if let Some(key) = key_to_remove {
+            existing_mapping.remove(&key);
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find key to remove in multiline flow mapping".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Feature to remove not found in multiline flow mapping".to_string(),
+        ));
+    }
+
+    // Serialize back preserving multiline structure
+    let updated_content = serialize_multiline_flow_mapping(&existing_mapping, parent_content)?;
+
+    // Replace the parent feature content
+    let mut result = content.to_string();
+    result.replace_range(
+        parent_feature.location.byte_span.0..parent_feature.location.byte_span.1,
+        &updated_content,
+    );
+
+    yamlpath::Document::new(result).map_err(Error::from)
+}
+
+/// Handle removal from a multiline flow sequence
+fn handle_multiline_flow_sequence_removal(
+    document: &yamlpath::Document,
+    parent_feature: &yamlpath::Feature,
+    route: &yamlpath::Route,
+    content: &str,
+) -> Result<yamlpath::Document, Error> {
+    // For multiline flow sequences, we need to carefully parse and reconstruct
+    let parent_content = document.extract(parent_feature);
+
+    // Parse the multiline flow sequence
+    let mut existing_sequence = serde_yaml::from_str::<serde_yaml::Sequence>(parent_content)
+        .map_err(Error::Serialization)?;
+
+    // Get the feature that needs to be removed to determine what item to remove
+    let feature_to_remove = route_to_feature_exact(route, document)?;
+
+    if let Some(feature) = feature_to_remove {
+        // Extract the content of the feature to remove
+        let feature_content = document.extract(&feature);
+
+        // Try to find and remove the matching sequence item using improved matching
+        let mut index_to_remove = None;
+        for (index, value) in existing_sequence.iter().enumerate() {
+            if let Ok(serialized_value) = serialize_yaml_value(value) {
+                if values_match(&serialized_value, feature_content) {
+                    index_to_remove = Some(index);
+                    break;
+                }
+            }
+        }
+
+        if let Some(index) = index_to_remove {
+            existing_sequence.remove(index);
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find item to remove in multiline flow sequence".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Feature to remove not found in multiline flow sequence".to_string(),
+        ));
+    }
+
+    // Serialize back preserving multiline structure
+    let updated_content = serialize_multiline_flow_sequence(&existing_sequence, parent_content)?;
+
+    // Replace the parent feature content
+    let mut result = content.to_string();
+    result.replace_range(
+        parent_feature.location.byte_span.0..parent_feature.location.byte_span.1,
+        &updated_content,
+    );
+
+    yamlpath::Document::new(result).map_err(Error::from)
+}
+
+/// Handle removal from a flow mapping that is a value within a block mapping
+fn handle_flow_mapping_removal_in_context(
+    document: &yamlpath::Document,
+    parent_feature: &yamlpath::Feature,
+    route: &yamlpath::Route,
+    content: &str,
+) -> Result<yamlpath::Document, Error> {
+    // For flow mappings within a block mapping, we need to extract just the flow mapping part
+    let parent_content = document.extract(parent_feature);
+
+    // Extract the flow mapping part from the parent content
+    let flow_mapping_content = if let Some(start) = parent_content.find('{') {
+        if let Some(end) = parent_content.rfind('}') {
+            &parent_content[start..=end]
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find closing brace in flow mapping".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Could not find opening brace in flow mapping".to_string(),
+        ));
+    };
+
+    // Parse the flow mapping
+    let mut existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(flow_mapping_content)
+        .map_err(Error::Serialization)?;
+
+    // Get the feature that needs to be removed to determine what key/value to remove
+    let feature_to_remove = route_to_feature_exact(route, document)?;
+
+    if let Some(feature) = feature_to_remove {
+        // Extract the content of the feature to remove
+        let feature_content = document.extract(&feature);
+
+        // Try to find and remove the matching key-value pair using improved matching
+        let mut key_to_remove = None;
+
+        // First, try to match values
+        for (key, value) in &existing_mapping {
+            if let Ok(serialized_value) = serialize_yaml_value(value) {
+                if values_match(&serialized_value, feature_content) {
+                    key_to_remove = Some(key.clone());
+                    break;
+                }
+            }
+        }
+
+        // If not found, try to match keys
+        if key_to_remove.is_none() {
+            for (key, _) in &existing_mapping {
+                if let Ok(serialized_key) = serialize_yaml_value(key) {
+                    if values_match(&serialized_key, feature_content) {
+                        key_to_remove = Some(key.clone());
+                        break;
+                    }
+                }
+            }
+        }
+
+        if let Some(key) = key_to_remove {
+            existing_mapping.remove(&key);
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find key to remove in flow mapping within block mapping".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Feature to remove not found in flow mapping within block mapping".to_string(),
+        ));
+    }
+
+    // Serialize back to flow style
+    let updated_flow_mapping = serialize_flow(&serde_yaml::Value::Mapping(existing_mapping))?;
+
+    // Find the position of the flow mapping within the parent content
+    let flow_mapping_start = parent_content.find('{').unwrap(); // We know this exists from above
+    let flow_mapping_end = parent_content.rfind('}').unwrap(); // We know this exists from above
+
+    // Construct the new parent content with the updated flow mapping
+    let key_part = &parent_content[..flow_mapping_start];
+    let after_part = &parent_content[flow_mapping_end + 1..];
+    let new_parent_content = format!("{}{}{}", key_part, updated_flow_mapping, after_part);
+
+    // Replace the parent feature content
+    let mut result = content.to_string();
+    result.replace_range(
+        parent_feature.location.byte_span.0..parent_feature.location.byte_span.1,
+        &new_parent_content,
+    );
+
+    yamlpath::Document::new(result).map_err(Error::from)
+}
+
+/// Handle removal from a flow sequence that is a value within a block mapping
+fn handle_flow_sequence_removal_in_context(
+    document: &yamlpath::Document,
+    parent_feature: &yamlpath::Feature,
+    route: &yamlpath::Route,
+    content: &str,
+) -> Result<yamlpath::Document, Error> {
+    // For flow sequences within a block mapping, we need to extract just the flow sequence part
+    let parent_content = document.extract(parent_feature);
+
+    // Extract the flow sequence part from the parent content
+    let flow_sequence_content = if let Some(start) = parent_content.find('[') {
+        if let Some(end) = parent_content.rfind(']') {
+            &parent_content[start..=end]
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find closing bracket in flow sequence".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Could not find opening bracket in flow sequence".to_string(),
+        ));
+    };
+
+    // Parse the flow sequence
+    let mut existing_sequence = serde_yaml::from_str::<serde_yaml::Sequence>(flow_sequence_content)
+        .map_err(Error::Serialization)?;
+
+    // Get the feature that needs to be removed to determine what item to remove
+    let feature_to_remove = route_to_feature_exact(route, document)?;
+
+    if let Some(feature) = feature_to_remove {
+        // Extract the content of the feature to remove
+        let feature_content = document.extract(&feature);
+
+        // Try to find and remove the matching sequence item using improved matching
+        let mut index_to_remove = None;
+        for (index, value) in existing_sequence.iter().enumerate() {
+            if let Ok(serialized_value) = serialize_yaml_value(value) {
+                if values_match(&serialized_value, feature_content) {
+                    index_to_remove = Some(index);
+                    break;
+                }
+            }
+        }
+
+        if let Some(index) = index_to_remove {
+            existing_sequence.remove(index);
+        } else {
+            return Err(Error::InvalidOperation(
+                "Could not find item to remove in flow sequence within block mapping".to_string(),
+            ));
+        }
+    } else {
+        return Err(Error::InvalidOperation(
+            "Feature to remove not found in flow sequence within block mapping".to_string(),
+        ));
+    }
+
+    // Serialize back to flow style
+    let updated_flow_sequence = serialize_flow(&serde_yaml::Value::Sequence(existing_sequence))?;
+
+    // Find the position of the flow sequence within the parent content
+    let flow_sequence_start = parent_content.find('[').unwrap(); // We know this exists from above
+    let flow_sequence_end = parent_content.rfind(']').unwrap(); // We know this exists from above
+
+    // Construct the new parent content with the updated flow sequence
+    let key_part = &parent_content[..flow_sequence_start];
+    let after_part = &parent_content[flow_sequence_end + 1..];
+    let new_parent_content = format!("{}{}{}", key_part, updated_flow_sequence, after_part);
+
+    // Replace the parent feature content
+    let mut result = content.to_string();
+    result.replace_range(
+        parent_feature.location.byte_span.0..parent_feature.location.byte_span.1,
+        &new_parent_content,
+    );
+
+    yamlpath::Document::new(result).map_err(Error::from)
+}
+
+/// Check if two values match, handling Unicode normalization and quote differences
+fn values_match(serialized_value: &str, feature_content: &str) -> bool {
+    let trimmed_serialized = serialized_value.trim();
+    let trimmed_feature = feature_content.trim();
+
+    // Direct match
+    if trimmed_serialized == trimmed_feature {
+        return true;
+    }
+
+    // Try normalized comparison
+    let normalized_serialized = normalize_unicode_key(trimmed_serialized);
+    let normalized_feature = normalize_unicode_key(trimmed_feature);
+
+    if normalized_serialized == normalized_feature {
+        return true;
+    }
+
+    // Try removing quotes from both sides
+    let unquoted_serialized = remove_quotes(trimmed_serialized);
+    let unquoted_feature = remove_quotes(trimmed_feature);
+
+    if unquoted_serialized == unquoted_feature {
+        return true;
+    }
+
+    // Try normalized unquoted comparison
+    let normalized_unquoted_serialized = normalize_unicode_key(&unquoted_serialized);
+    let normalized_unquoted_feature = normalize_unicode_key(&unquoted_feature);
+
+    normalized_unquoted_serialized == normalized_unquoted_feature
+}
+
+/// Remove surrounding quotes from a string
+fn remove_quotes(s: &str) -> String {
+    let mut result = s.to_string();
+
+    if (result.starts_with('"') && result.ends_with('"'))
+        || (result.starts_with('\'') && result.ends_with('\''))
+    {
+        result = result[1..result.len() - 1].to_string();
+    }
+
+    result
+}
+
+/// Normalize a Unicode key by handling escape sequences and different encodings
+fn normalize_unicode_key(key: &str) -> String {
+    // Handle basic Unicode normalization
+    let mut result = key.to_string();
+
+    // Handle common escape sequences
+    result = result.replace("\\n", "\n");
+    result = result.replace("\\t", "\t");
+    result = result.replace("\\r", "\r");
+    result = result.replace("\\\\", "\\");
+    result = result.replace("\\\"", "\"");
+    result = result.replace("\\'", "'");
+
+    // Remove surrounding quotes if present
+    if (result.starts_with('"') && result.ends_with('"'))
+        || (result.starts_with('\'') && result.ends_with('\''))
+    {
+        result = result[1..result.len() - 1].to_string();
+    }
+
+    result
+}
+
+/// Serialize a multiline flow mapping while preserving structure
+fn serialize_multiline_flow_mapping(
+    mapping: &serde_yaml::Mapping,
+    original_content: &str,
+) -> Result<String, Error> {
+    if mapping.is_empty() {
+        return Ok("{}".to_string());
+    }
+
+    // Check if the original was multiline
+    if original_content.contains('\n') {
+        // Preserve multiline structure
+        let mut result = String::from("{\n");
+        let entries: Vec<_> = mapping.iter().collect();
+
+        for (i, (key, value)) in entries.iter().enumerate() {
+            let key_str = serialize_yaml_value(key)?;
+            let value_str = serialize_yaml_value(value)?;
+
+            result.push_str(&format!("  {}: {}", key_str.trim(), value_str.trim()));
+
+            if i < entries.len() - 1 {
+                result.push(',');
+            }
+            result.push('\n');
+        }
+
+        result.push('}');
+        Ok(result)
+    } else {
+        // Fall back to single-line flow
+        serialize_flow(&serde_yaml::Value::Mapping(mapping.clone()))
+    }
+}
+
+/// Serialize a multiline flow sequence while preserving structure
+fn serialize_multiline_flow_sequence(
+    sequence: &serde_yaml::Sequence,
+    original_content: &str,
+) -> Result<String, Error> {
+    if sequence.is_empty() {
+        return Ok("[]".to_string());
+    }
+
+    // Check if the original was multiline
+    if original_content.contains('\n') {
+        // Preserve multiline structure
+        let mut result = String::from("[\n");
+
+        for (i, value) in sequence.iter().enumerate() {
+            let value_str = serialize_yaml_value(value)?;
+            result.push_str(&format!("  {}", value_str.trim()));
+
+            if i < sequence.len() - 1 {
+                result.push(',');
+            }
+            result.push('\n');
+        }
+
+        result.push(']');
+        Ok(result)
+    } else {
+        // Fall back to single-line flow
+        serialize_flow(&serde_yaml::Value::Sequence(sequence.clone()))
     }
 }

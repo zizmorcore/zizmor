@@ -244,6 +244,19 @@ impl Feature<'_> {
             "block_sequence" => FeatureKind::BlockSequence,
             "flow_mapping" => FeatureKind::FlowMapping,
             "flow_sequence" => FeatureKind::FlowSequence,
+            // Handle mapping pair nodes by looking at their parent
+            "block_mapping_pair" => {
+                // A block mapping pair is part of a block mapping
+                FeatureKind::BlockMapping
+            }
+            "flow_pair" => {
+                // A flow pair is part of a flow mapping
+                FeatureKind::FlowMapping
+            }
+            "block_sequence_item" => {
+                // A block sequence item is part of a block sequence
+                FeatureKind::BlockSequence
+            }
             "plain_scalar" | "single_quote_scalar" | "double_quote_scalar" | "block_scalar" => {
                 FeatureKind::Scalar
             }
