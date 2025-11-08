@@ -711,7 +711,13 @@ impl Client {
             .await
             .map_err(ClientError::from)?
             .error_for_status()
-            .map_err(ClientError::from)?
+            .map_err(|err| match err {
+                // TODO: Disambiguate a 404 from missing repo vs missing workflows dir.
+                e if e.status() == Some(StatusCode::NOT_FOUND) => {
+                    CollectionError::RemoteWithoutWorkflows(ClientError::from(e), slug.to_string())
+                }
+                e => ClientError::from(e).into(),
+            })?
             .json()
             .await
             .map_err(ClientError::from)?;

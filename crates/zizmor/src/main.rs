@@ -931,6 +931,24 @@ async fn main() -> ExitCode {
 
                         Some(report)
                     }
+                    CollectionError::RemoteWithoutWorkflows(_, slug) => {
+                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                            .elements([
+                                Level::HELP.message(
+                                    format!(
+                                        "ensure that {slug} contains one or more workflows under `.github/workflows/`"
+                                    )
+                                ),
+                                Level::HELP.message(
+                                    format!("ensure that {slug} exists and you have access to it")
+                                )
+                            ]);
+
+                        let renderer = Renderer::styled();
+                        let report = renderer.render(&[group]);
+
+                        Some(report)
+                    }
                     _ => None,
                 },
                 _ => None,
