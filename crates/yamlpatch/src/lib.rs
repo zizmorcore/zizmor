@@ -211,14 +211,6 @@ pub fn apply_yaml_patches(
 
 /// Compute the replacement range for a byte span, including any trailing newline
 /// that exists immediately after the span in the document.
-///
-/// This fixes the root cause: tree-sitter's byte span doesn't include trailing
-/// newlines that come after the feature node, so we need to extend the range
-/// to include them to avoid losing them during replacement.
-///
-/// We only include the trailing newline if it's the last character in the document,
-/// to avoid including newlines that are part of the document structure rather than
-/// a document-level trailing newline.
 fn compute_replacement_range_for_span(
     byte_span: (usize, usize),
     document: &yamlpath::Document,
