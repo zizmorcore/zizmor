@@ -383,12 +383,12 @@ impl Config {
     ///    to discover a config file. This function is typically one
     ///    of [`Config::discover_local`] or [`Config::discover_remote`]
     ///    depending on the input type.
-    pub(crate) fn discover<F>(
+    pub(crate) async fn discover<F>(
         options: &CollectionOptions,
         discover_fn: F,
     ) -> Result<Self, ConfigError>
     where
-        F: FnOnce() -> Result<Option<Self>, ConfigError>,
+        F: AsyncFnOnce() -> Result<Option<Self>, ConfigError>,
     {
         if options.no_config {
             // User has explicitly disabled config loading.
@@ -401,7 +401,7 @@ impl Config {
             Ok(config.clone())
         } else {
             // Attempt to discover a config file using the provided function.
-            discover_fn().map(|conf| conf.unwrap_or_default())
+            discover_fn().await.map(|conf| conf.unwrap_or_default())
         }
     }
 
@@ -464,7 +464,7 @@ impl Config {
     ///
     /// For directories, this attempts to find a `.github/zizmor.yml` or
     /// `zizmor.yml` in the directory itself.
-    pub(crate) fn discover_local(path: &Utf8Path) -> Result<Option<Self>, ConfigError> {
+    pub(crate) async fn discover_local(path: &Utf8Path) -> Result<Option<Self>, ConfigError> {
         tracing::debug!("discovering config for local input `{path}`");
 
         if path.is_dir() {
@@ -497,37 +497,34 @@ impl Config {
     ///
     /// This will look for a `.github/zizmor.yml` or `zizmor.yml`
     /// in the repository's root directory.
-    pub(crate) fn discover_remote(
+    pub(crate) async fn discover_remote(
         client: &Client,
         slug: &RepoSlug,
     ) -> Result<Option<Self>, ConfigError> {
-        let conf = CONFIG_CANDIDATES
-            .iter()
-            .find_map(|candidate| {
-                client
-                    .fetch_single_file(slug, candidate)
-                    .map_err(|err| ConfigError {
+        for candidate in CONFIG_CANDIDATES {
+            match client.fetch_single_file(slug, candidate).await {
+                Ok(Some(contents)) => {
+                    tracing::debug!("retrieved config candidate `{candidate}` for {slug}");
+
+                    return Some(Self::load(&contents).map_err(|err| ConfigError {
+                        path: candidate.to_string(),
+                        source: err,
+                    }))
+                    .transpose();
+                }
+                Ok(None) => {
+                    continue;
+                }
+                Err(err) => {
+                    return Err(ConfigError {
                         path: candidate.to_string(),
                         source: err.into(),
-                    })
-                    .and_then(|contents| {
-                        contents
-                            .map(|contents| {
-                                tracing::debug!(
-                                    "retrieved config candidate `{candidate}` for {slug}"
-                                );
-                                Self::load(&contents).map_err(|err| ConfigError {
-                                    path: candidate.to_string(),
-                                    source: err,
-                                })
-                            })
-                            .transpose()
-                    })
-                    .transpose()
-            })
-            .transpose()?;
+                    });
+                }
+            }
+        }
 
-        Ok(conf)
+        Ok(None)
     }
 
     /// Loads a global [`Config`] for the given [`App`].

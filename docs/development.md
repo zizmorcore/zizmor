@@ -290,12 +290,12 @@ Some things that can be useful to discuss beforehand:
 
 When developing a new `zizmor` audit, there are a couple of implementation details to be aware of:
 
-- All existing audits live in a Rust modules grouped under `crates/zizmor/src/audit` folder
+- All existing audits live in a Rust module grouped under `crates/zizmor/src/audit` folder
 - The expected behavior for all audits is defined by the `Audit` trait at `crates/zizmor/src/audit/mod.rs`
 - The expected outcome of an executed audit is defined by the `Finding` struct at `crates/zizmor/src/finding/mod.rs`
 - Any `Audit` implementation can have access to an `AuditState` instance, as per `crates/zizmor/src/state.rs`
 - If an audit requires data from the GitHub API, there is a `Client` implementation at `crates/zizmor/src/github_api.rs`
-- All the audits must be registered at `crates/zizmor/src/main.rs` according to the `register_audit!` macro
+- All the audits must be registered in the default `AuditRegistry` at `crates/zizmor/src/registry.rs`
 
 Last but not least, it's useful to run the following checks before opening a Pull Request:
 

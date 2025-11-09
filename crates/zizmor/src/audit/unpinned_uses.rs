@@ -1,6 +1,7 @@
 use github_actions_models::common::Uses;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use crate::audit::AuditError;
 use crate::config::{Config, UsesPolicy};
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::uses::RepositoryUsesPattern;
@@ -90,7 +91,7 @@ impl UnpinnedUses {
         &self,
         step: &impl StepCommon<'doc>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let Some(uses) = step.uses() else {
@@ -117,6 +118,7 @@ impl UnpinnedUses {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for UnpinnedUses {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -125,19 +127,19 @@ impl Audit for UnpinnedUses {
         Ok(Self)
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step, config)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
         config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step, config)
     }
 }

@@ -1,6 +1,7 @@
 use github_actions_models::common::{Permission, Permissions};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
+use crate::audit::AuditError;
 use crate::finding::location::Locatable as _;
 use crate::models::AsDocument;
 use crate::{
@@ -16,6 +17,7 @@ audit_meta!(
 
 pub(crate) struct UndocumentedPermissions;
 
+#[async_trait::async_trait]
 impl Audit for UndocumentedPermissions {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -24,11 +26,11 @@ impl Audit for UndocumentedPermissions {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         // Check workflow-level permissions
@@ -64,7 +66,7 @@ impl UndocumentedPermissions {
         permissions: &'a Permissions,
         location: SymbolicLocation<'a>,
         workflow: &'a crate::models::workflow::Workflow,
-    ) -> anyhow::Result<Option<crate::finding::Finding<'a>>> {
+    ) -> Result<Option<crate::finding::Finding<'a>>, AuditError> {
         // Only check explicit permissions blocks
         let Permissions::Explicit(perms) = permissions else {
             return Ok(None);
@@ -113,11 +115,11 @@ impl UndocumentedPermissions {
         &self,
         location: &SymbolicLocation,
         workflow: &crate::models::workflow::Workflow,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool, AuditError> {
         let document = workflow.as_document();
 
         // Use the concretize API to get a Location with concrete Feature
-        let concrete_location = location.clone().concretize(document)?;
+        let concrete_location = location.clone().concretize(document).map_err(Self::err)?;
 
         // Check if there are any meaningful comments
         Ok(concrete_location

@@ -1,7 +1,7 @@
 use github_actions_models::common;
 
 use crate::{
-    audit::{Audit, audit_meta},
+    audit::{Audit, AuditError, audit_meta},
     finding::{
         Confidence, Fix, FixDisposition, Severity,
         location::{Locatable as _, SymbolicLocation},
@@ -112,7 +112,7 @@ impl UnsoundCondition {
         &self,
         doc: &'a impl AsDocument<'a, 'doc>,
         conditions: impl Iterator<Item = (&'doc common::If, SymbolicLocation<'doc>)>,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         for (cond, loc) in conditions {
             if self.is_unsound_fenced_expansion(cond) {
@@ -144,6 +144,7 @@ impl UnsoundCondition {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for UnsoundCondition {
     fn new(_state: &crate::state::AuditState) -> Result<Self, super::AuditLoadError>
     where
@@ -152,28 +153,28 @@ impl Audit for UnsoundCondition {
         Ok(Self)
     }
 
-    fn audit_normal_job<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
         job: &crate::models::workflow::NormalJob<'doc>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         self.process_conditions(job.parent(), job.conditions())
     }
 
-    fn audit_reusable_job<'doc>(
+    async fn audit_reusable_job<'doc>(
         &self,
         job: &crate::models::workflow::ReusableWorkflowCallJob<'doc>,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let conds = job.r#if.iter().map(|cond| (cond, job.location()));
         self.process_conditions(job.parent(), conds)
     }
 
-    fn audit_action<'doc>(
+    async fn audit_action<'doc>(
         &self,
         action: &'doc crate::models::action::Action,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         self.process_conditions(action, action.conditions())
     }
 }
@@ -195,7 +196,10 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(&workflow, findings)
         }};
@@ -216,8 +220,8 @@ mod tests {
         fix.apply(document).unwrap()
     }
 
-    #[test]
-    fn test_simple_literal_block_fix() {
+    #[tokio::test]
+    async fn test_simple_literal_block_fix() {
         let workflow_content = r#"
 name: Test
 on: push
@@ -255,8 +259,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_folded_block_fix() {
+    #[tokio::test]
+    async fn test_folded_block_fix() {
         let workflow_content = r#"
 name: Test
 on: push
@@ -294,8 +298,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_multiline_expression_fix() {
+    #[tokio::test]
+    async fn test_multiline_expression_fix() {
         let workflow_content = r#"
 name: Test
 on: push
@@ -335,8 +339,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_complex_multiline_fix() {
+    #[tokio::test]
+    async fn test_complex_multiline_fix() {
         let workflow_content = r#"
 name: Test
 on: push
@@ -382,8 +386,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_reusable_job_fix() {
+    #[tokio::test]
+    async fn test_reusable_job_fix() {
         let workflow_content = r#"
 name: Test
 on: push
@@ -415,8 +419,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_multiple_fixes_together() {
+    #[tokio::test]
+    async fn test_multiple_fixes_together() {
         let workflow_content = r#"
 name: Test
 on: push
@@ -485,8 +489,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_no_fix_needed_cases() {
+    #[tokio::test]
+    async fn test_no_fix_needed_cases() {
         let workflow_content = r#"
 name: Test
 on: push

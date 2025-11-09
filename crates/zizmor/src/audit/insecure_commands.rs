@@ -1,6 +1,5 @@
 use std::ops::Deref;
 
-use anyhow::Result;
 use github_actions_models::action;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
@@ -8,7 +7,7 @@ use github_actions_models::workflow::job::StepBody;
 use yamlpatch::{Op, Patch};
 
 use super::{AuditLoadError, Job, audit_meta};
-use crate::audit::Audit;
+use crate::audit::{Audit, AuditError};
 use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{
@@ -45,7 +44,7 @@ impl InsecureCommands {
         &self,
         doc: &'a impl AsDocument<'a, 'doc>,
         location: SymbolicLocation<'doc>,
-    ) -> Result<Finding<'doc>> {
+    ) -> Result<Finding<'doc>, AuditError> {
         Self::finding()
             .confidence(Confidence::Low)
             .severity(Severity::High)
@@ -56,13 +55,14 @@ impl InsecureCommands {
                 ),
             )
             .build(doc)
+            .map_err(Self::err)
     }
 
     fn insecure_commands_allowed<'s, 'doc>(
         &self,
         doc: &'s impl AsDocument<'s, 'doc>,
         location: SymbolicLocation<'doc>,
-    ) -> Result<Finding<'doc>> {
+    ) -> Result<Finding<'doc>, AuditError> {
         let fix = self.create_fix(location.clone());
 
         Self::finding()
@@ -76,6 +76,7 @@ impl InsecureCommands {
             )
             .fix(fix)
             .build(doc)
+            .map_err(Self::err)
     }
 
     fn has_insecure_commands_enabled(&self, env: &Env) -> bool {
@@ -89,7 +90,7 @@ impl InsecureCommands {
         &self,
         workflow: &'doc Workflow,
         steps: Steps<'doc>,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         steps
             .into_iter()
             .filter_map(|step| {
@@ -117,6 +118,7 @@ impl InsecureCommands {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for InsecureCommands {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -125,11 +127,11 @@ impl Audit for InsecureCommands {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         match &workflow.env {
@@ -163,11 +165,11 @@ impl Audit for InsecureCommands {
         Ok(results)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let action::StepBody::Run { .. } = &step.body else {
@@ -206,14 +208,17 @@ mod tests {
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
             let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow, &Config::default()).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(&workflow, findings)
         }};
     }
 
-    #[test]
-    fn test_insecure_commands_fix_generation() {
+    #[tokio::test]
+    async fn test_insecure_commands_fix_generation() {
         let workflow_content = r#"
 on: push
 
@@ -250,8 +255,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_fix_removes_insecure_commands_preserves_others() {
+    #[tokio::test]
+    async fn test_fix_removes_insecure_commands_preserves_others() {
         let workflow_content = r#"
 on: push
 
@@ -305,8 +310,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_workflow_level_insecure_commands_fix() {
+    #[tokio::test]
+    async fn test_workflow_level_insecure_commands_fix() {
         let workflow_content = r#"
 on: push
 
@@ -359,8 +364,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_step_level_insecure_commands_fix() {
+    #[tokio::test]
+    async fn test_step_level_insecure_commands_fix() {
         let workflow_content = r#"
 on: push
 
@@ -413,8 +418,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_string_value_insecure_commands_fix() {
+    #[tokio::test]
+    async fn test_string_value_insecure_commands_fix() {
         let workflow_content = r#"
 on: push
 

@@ -7,7 +7,7 @@ use std::{
 };
 
 use annotate_snippets::{Group, Level, Renderer};
-use anstream::{eprintln, println, stream::IsTerminal};
+use anstream::{eprintln, println, stderr, stream::IsTerminal};
 use anyhow::anyhow;
 use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
@@ -15,6 +15,7 @@ use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
+use futures::stream::{FuturesOrdered, StreamExt};
 use github::{GitHubHost, GitHubToken};
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
@@ -515,15 +516,16 @@ pub(crate) struct CollectionOptions {
 }
 
 #[instrument(skip_all)]
-fn collect_inputs(
+async fn collect_inputs(
     inputs: &[String],
     options: &CollectionOptions,
     gh_client: Option<&Client>,
 ) -> Result<InputRegistry, CollectionError> {
     let mut registry = InputRegistry::new();
 
+    // TODO: use tokio's JoinSet?
     for input in inputs.iter() {
-        registry.register_group(input, options, gh_client)?;
+        registry.register_group(input, options, gh_client).await?;
     }
 
     if registry.len() == 0 {
@@ -563,8 +565,8 @@ enum Error {
     /// An error while running an audit.
     #[error("{ident} failed on {input}")]
     Audit {
-        source: anyhow::Error,
         ident: &'static str,
+        source: anyhow::Error,
         input: String,
     },
     /// An error while rendering output.
@@ -575,7 +577,7 @@ enum Error {
     Fix(#[source] anyhow::Error),
 }
 
-fn run(app: &mut App) -> Result<ExitCode, Error> {
+async fn run(app: &mut App) -> Result<ExitCode, Error> {
     #[cfg(feature = "lsp")]
     if app.lsp.lsp {
         lsp::run()?;
@@ -622,7 +624,13 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
     // compose perfectly: `anstream` wants to strip all ANSI escapes,
     // while `tracing_indicatif` needs line control to render progress bars.
     // TODO: In the future, perhaps we could make these work together.
-    if matches!(color_mode, ColorMode::Never) {
+    //
+    // Also, we disable progress bars if stderr is not a terminal.
+    // Technically indicatif does this for us, but tracing_indicatif
+    // surfaces a bug when multiple spans are active and the
+    // output is not a terminal.
+    // See: https://github.com/emersonford/tracing-indicatif/issues/24
+    if matches!(color_mode, ColorMode::Never) || !stderr().is_terminal() {
         app.no_progress = true;
     }
 
@@ -715,7 +723,8 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
         app.inputs.as_slice(),
         &collection_options,
         gh_client.as_ref(),
-    )?;
+    )
+    .await?;
 
     let state = AuditState::new(app.no_online_audits, gh_client);
 
@@ -743,22 +752,26 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
                 warn_once!("for more information, see: https://docs.zizmor.sh/usage/#yaml-anchors");
             }
 
+            let mut completion_stream = FuturesOrdered::new();
             let config = registry.get_config(input_key.group());
             for (ident, audit) in audit_registry.iter_audits() {
-                tracing::debug!("running {ident} on {input}", input = input.key());
+                tracing::debug!("scheduling {ident} on {input}", input = input.key());
 
-                results.extend(
-                    audit
-                        .audit(ident, input, config)
-                        .map_err(|err| Error::Audit {
-                            source: err,
-                            ident,
-                            input: input.key().to_string(),
-                        })?,
-                );
+                completion_stream.push_back(audit.audit(ident, input, config));
+            }
+
+            while let Some(findings) = completion_stream.next().await {
+                let findings = findings.map_err(|err| Error::Audit {
+                    ident: err.ident(),
+                    source: err.into(),
+                    input: input.key().to_string(),
+                })?;
+
+                results.extend(findings);
 
                 Span::current().pb_inc(1);
             }
+
             tracing::info!(
                 "🌈 completed {input}",
                 input = input.key().presentation_path()
@@ -803,7 +816,8 @@ fn run(app: &mut App) -> Result<ExitCode, Error> {
     }
 }
 
-fn main() -> ExitCode {
+#[tokio::main]
+async fn main() -> ExitCode {
     // NOTE: We only use human-panic on non-CI environments.
     // This is because human-panic's output gets sent to a temporary file,
     // which is then typically inaccessible from an already failed
@@ -828,7 +842,7 @@ fn main() -> ExitCode {
 
     // This is a little silly, but returning an ExitCode like this ensures
     // we always exit cleanly, rather than performing a hard process exit.
-    match run(&mut app) {
+    match run(&mut app).await {
         Ok(exit) => exit,
         Err(err) => {
             eprintln!(
@@ -912,6 +926,24 @@ fn main() -> ExitCode {
                                 "https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml",
                             ),
                         ]);
+                        let renderer = Renderer::styled();
+                        let report = renderer.render(&[group]);
+
+                        Some(report)
+                    }
+                    CollectionError::RemoteWithoutWorkflows(_, slug) => {
+                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                            .elements([
+                                Level::HELP.message(
+                                    format!(
+                                        "ensure that {slug} contains one or more workflows under `.github/workflows/`"
+                                    )
+                                ),
+                                Level::HELP.message(
+                                    format!("ensure that {slug} exists and you have access to it")
+                                )
+                            ]);
+
                         let renderer = Renderer::styled();
                         let report = renderer.render(&[group]);
 

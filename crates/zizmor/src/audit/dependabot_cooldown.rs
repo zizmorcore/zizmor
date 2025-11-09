@@ -1,5 +1,5 @@
 use crate::{
-    audit::{Audit, audit_meta},
+    audit::{Audit, AuditError, audit_meta},
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
 };
 use yamlpatch::{Op, Patch};
@@ -73,6 +73,7 @@ impl DependabotCooldown {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for DependabotCooldown {
     fn new(_state: &crate::state::AuditState) -> Result<Self, super::AuditLoadError>
     where
@@ -81,11 +82,11 @@ impl Audit for DependabotCooldown {
         Ok(Self)
     }
 
-    fn audit_dependabot<'doc>(
+    async fn audit_dependabot<'doc>(
         &self,
         dependabot: &'doc crate::models::dependabot::Dependabot,
         _config: &crate::config::Config,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for update in dependabot.updates() {
@@ -170,14 +171,15 @@ mod tests {
             let audit = <$audit_type>::new(&audit_state).unwrap();
             let findings = audit
                 .audit_dependabot(&dependabot, &Config::default())
+                .await
                 .unwrap();
 
             $test_fn(&dependabot, findings)
         }};
     }
 
-    #[test]
-    fn test_fix_missing_cooldown() {
+    #[tokio::test]
+    async fn test_fix_missing_cooldown() {
         let dependabot_content = r#"
 version: 2
 
@@ -216,8 +218,8 @@ updates:
         );
     }
 
-    #[test]
-    fn test_fix_missing_default_days() {
+    #[tokio::test]
+    async fn test_fix_missing_default_days() {
         let dependabot_content = r#"
 version: 2
 
@@ -256,8 +258,8 @@ updates:
         );
     }
 
-    #[test]
-    fn test_fix_insufficient_default_days() {
+    #[tokio::test]
+    async fn test_fix_insufficient_default_days() {
         let dependabot_content = r#"
 version: 2
 
@@ -298,8 +300,8 @@ updates:
         );
     }
 
-    #[test]
-    fn test_fix_multiple_updates() {
+    #[tokio::test]
+    async fn test_fix_multiple_updates() {
         let dependabot_content = r#"
 version: 2
 
@@ -355,8 +357,8 @@ updates:
         );
     }
 
-    #[test]
-    fn test_no_fix_needed_for_sufficient_cooldown() {
+    #[tokio::test]
+    async fn test_no_fix_needed_for_sufficient_cooldown() {
         let dependabot_content = r#"
 version: 2
 

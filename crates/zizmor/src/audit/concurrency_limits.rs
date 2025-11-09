@@ -1,11 +1,11 @@
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
+    audit::AuditError,
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::workflow::Workflow,
     state::AuditState,
 };
-use anyhow::Result;
 use github_actions_models::workflow::Concurrency;
 
 pub(crate) struct ConcurrencyLimits;
@@ -16,16 +16,17 @@ audit_meta!(
     "insufficient job-level concurrency limits"
 );
 
+#[async_trait::async_trait]
 impl Audit for ConcurrencyLimits {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         match &workflow.concurrency {
             Some(Concurrency::Bare(_)) => {

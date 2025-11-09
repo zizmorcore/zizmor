@@ -442,7 +442,6 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main]
     pub(crate) async fn list_branches(
         &self,
         owner: &str,
@@ -493,13 +492,11 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main]
     pub(crate) async fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>, ClientError> {
         self.list_tags_internal(owner, repo).await
     }
 
     #[instrument(skip(self))]
-    #[tokio::main]
     pub(crate) async fn has_branch(
         &self,
         owner: &str,
@@ -514,7 +511,6 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main]
     pub(crate) async fn has_tag(
         &self,
         owner: &str,
@@ -529,7 +525,6 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main]
     pub(crate) async fn commit_for_ref(
         &self,
         owner: &str,
@@ -558,7 +553,7 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn longest_tag_for_commit(
+    pub(crate) async fn longest_tag_for_commit(
         &self,
         owner: &str,
         repo: &str,
@@ -569,7 +564,7 @@ impl Client {
         // do it for them.
         // This could be optimized in various ways, not least of which
         // is not pulling every tag eagerly before scanning them.
-        let tags = self.list_tags(owner, repo)?;
+        let tags = self.list_tags(owner, repo).await?;
 
         // Heuristic: there can be multiple tags for a commit, so we pick
         // the longest one. This isn't super sound, but it gets us from
@@ -581,7 +576,6 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main]
     pub(crate) async fn compare_commits(
         &self,
         owner: &str,
@@ -607,7 +601,6 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    #[tokio::main]
     pub(crate) async fn gha_advisories(
         &self,
         owner: &str,
@@ -636,7 +629,6 @@ impl Client {
     /// Returns the file contents as a `String` if the file exists,
     /// or `None` if the request produces a 404.
     #[instrument(skip(self, slug, file))]
-    #[tokio::main]
     pub(crate) async fn fetch_single_file(
         &self,
         slug: &RepoSlug,
@@ -688,7 +680,6 @@ impl Client {
     /// This is an optimized variant of `fetch_audit_inputs` for the workflow-only
     /// collection case.
     #[instrument(skip(self, options, group))]
-    #[tokio::main]
     pub(crate) async fn fetch_workflows(
         &self,
         slug: &RepoSlug,
@@ -720,7 +711,13 @@ impl Client {
             .await
             .map_err(ClientError::from)?
             .error_for_status()
-            .map_err(ClientError::from)?
+            .map_err(|err| match err {
+                // TODO: Disambiguate a 404 from missing repo vs missing workflows dir.
+                e if e.status() == Some(StatusCode::NOT_FOUND) => {
+                    CollectionError::RemoteWithoutWorkflows(ClientError::from(e), slug.to_string())
+                }
+                e => ClientError::from(e).into(),
+            })?
             .json()
             .await
             .map_err(ClientError::from)?;
@@ -753,7 +750,6 @@ impl Client {
     /// This is much slower than `fetch_workflows`, since it involves
     /// retrieving the entire repository archive and decompressing it.
     #[instrument(skip(self, options, group))]
-    #[tokio::main]
     pub(crate) async fn fetch_audit_inputs(
         &self,
         slug: &RepoSlug,

@@ -8,6 +8,7 @@ use tree_sitter::{
 };
 
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::audit::AuditError;
 use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
@@ -146,17 +147,19 @@ impl GitHubEnv {
     fn bash_uses_github_env<'hay>(
         &self,
         script_body: &'hay str,
-    ) -> Result<Vec<(&'hay str, Range<usize>)>> {
+    ) -> Result<Vec<(&'hay str, Range<usize>)>, AuditError> {
         let mut parser = Parser::new();
         parser
             .set_language(&self.bash)
-            .context("failed to set bash language for parser")?;
+            .context("failed to set bash language for parser")
+            .map_err(Self::err)?;
 
         let mut cursor = QueryCursor::new();
 
         let tree = parser
             .parse(script_body, None)
-            .context("failed to parse `run:` body as bash")?;
+            .context("failed to parse `run:` body as bash")
+            .map_err(Self::err)?;
 
         // Look for redirect patterns, e.g. `... >> $GITHUB_ENV`.
         //
@@ -262,15 +265,17 @@ impl GitHubEnv {
     fn pwsh_uses_github_env<'hay>(
         &self,
         script_body: &'hay str,
-    ) -> Result<Vec<(&'hay str, Range<usize>)>> {
+    ) -> Result<Vec<(&'hay str, Range<usize>)>, AuditError> {
         let mut parser = Parser::new();
         parser
             .set_language(&self.pwsh)
-            .context("failed to set pwsh language for parser")?;
+            .context("failed to set pwsh language for parser")
+            .map_err(Self::err)?;
 
         let tree = parser
             .parse(script_body, None)
-            .context("failed to parse `run:` body as pwsh")?;
+            .context("failed to parse `run:` body as pwsh")
+            .map_err(Self::err)?;
 
         let mut cursor = QueryCursor::new();
         let queries = [&self.pwsh_redirect_query, &self.pwsh_pipeline_query];
@@ -307,7 +312,7 @@ impl GitHubEnv {
         &self,
         run_step_body: &'hay str,
         shell: &str,
-    ) -> Result<Vec<(&'hay str, Range<usize>)>> {
+    ) -> Result<Vec<(&'hay str, Range<usize>)>, AuditError> {
         // The `shell:` stanza can contain a path and/or multiple arguments,
         // which we need to normalize out before comparing.
         // For example, `shell: /bin/bash -e {0}` becomes `bash`.
@@ -329,6 +334,7 @@ impl GitHubEnv {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for GitHubEnv {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -358,11 +364,11 @@ impl Audit for GitHubEnv {
         })
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let workflow = step.workflow();
@@ -410,11 +416,11 @@ impl Audit for GitHubEnv {
         Ok(findings)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
         _config: &Config,
-    ) -> Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let action::StepBody::Run { run, shell, .. } = &step.body else {

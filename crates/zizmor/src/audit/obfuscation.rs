@@ -4,6 +4,7 @@ use yamlpatch::{Op, Patch};
 
 use crate::{
     Confidence, Severity,
+    audit::AuditError,
     config::Config,
     finding::{
         Finding, Fix, FixDisposition, Persona,
@@ -186,7 +187,7 @@ impl Obfuscation {
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         if let Some(Uses::Repository(uses)) = step.uses() {
@@ -211,7 +212,7 @@ impl Obfuscation {
                     finding_builder = finding_builder.fix(fix);
                 }
 
-                findings.push(finding_builder.build(step)?);
+                findings.push(finding_builder.build(step).map_err(Self::err)?);
             }
         }
 
@@ -219,6 +220,7 @@ impl Obfuscation {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for Obfuscation {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -227,11 +229,11 @@ impl Audit for Obfuscation {
         Ok(Self)
     }
 
-    fn audit_raw<'doc>(
+    async fn audit_raw<'doc>(
         &self,
         input: &'doc AuditInput,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for (expr, expr_span) in parse_fenced_expressions_from_input(input) {
@@ -289,26 +291,26 @@ impl Audit for Obfuscation {
                     }
                 }
 
-                findings.push(finding_builder.build(input)?);
+                findings.push(finding_builder.build(input).map_err(Self::err)?);
             }
         }
 
         Ok(findings)
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
         _config: &Config,
-    ) -> anyhow::Result<Vec<Finding<'a>>> {
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step)
     }
 }
@@ -322,7 +324,7 @@ mod tests {
     use crate::state::AuditState;
 
     /// Helper function to apply a fix and return the result for snapshot testing
-    fn apply_fix_for_snapshot(workflow_content: &str, _audit_name: &str) -> String {
+    async fn apply_fix_for_snapshot(workflow_content: &str, _audit_name: &str) -> String {
         let key = InputKey::local("dummy".into(), "test.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
         let audit_state = AuditState {
@@ -332,6 +334,7 @@ mod tests {
         let audit = Obfuscation::new(&audit_state).unwrap();
         let findings = audit
             .audit_workflow(&workflow, &Default::default())
+            .await
             .unwrap();
 
         assert!(!findings.is_empty(), "Expected findings but got none");
@@ -355,8 +358,8 @@ mod tests {
         fixed_document.source().to_string()
     }
 
-    #[test]
-    fn test_obfuscation_fix_uses_path_empty_components() {
+    #[tokio::test]
+    async fn test_obfuscation_fix_uses_path_empty_components() {
         let workflow_content = r#"
 name: Test Workflow
 on: push
@@ -368,7 +371,7 @@ jobs:
       - uses: actions/checkout////@v4
 "#;
 
-        let result = apply_fix_for_snapshot(workflow_content, "obfuscation");
+        let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
         insta::assert_snapshot!(result, @r#"
         name: Test Workflow
         on: push
@@ -381,8 +384,8 @@ jobs:
         "#);
     }
 
-    #[test]
-    fn test_obfuscation_fix_uses_path_dot() {
+    #[tokio::test]
+    async fn test_obfuscation_fix_uses_path_dot() {
         let workflow_content = r#"
 name: Test Workflow
 on: push
@@ -394,7 +397,7 @@ jobs:
       - uses: github/codeql-action/./init@v2
 "#;
 
-        let result = apply_fix_for_snapshot(workflow_content, "obfuscation");
+        let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
         insta::assert_snapshot!(result, @r#"
         name: Test Workflow
         on: push
@@ -407,8 +410,8 @@ jobs:
         "#);
     }
 
-    #[test]
-    fn test_obfuscation_fix_uses_path_double_dot() {
+    #[tokio::test]
+    async fn test_obfuscation_fix_uses_path_double_dot() {
         let workflow_content = r#"
 name: Test Workflow
 on: push
@@ -420,7 +423,7 @@ jobs:
       - uses: actions/cache/save/../save@v4
 "#;
 
-        let result = apply_fix_for_snapshot(workflow_content, "obfuscation");
+        let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
         insta::assert_snapshot!(result, @r#"
         name: Test Workflow
         on: push

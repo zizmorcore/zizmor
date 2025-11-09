@@ -72,6 +72,12 @@ pub(crate) enum CollectionError {
     #[error("invalid input: must have .yml or .yaml extension")]
     InvalidExtension,
 
+    /// Workflow-specific collection was requested, but the remote
+    /// input doesn't contain any workflows. This typically means the remote
+    /// repository doesn't have a `.github` or `.github/workflows` directory.
+    #[error("input {1} doesn't contain any workflows")]
+    RemoteWithoutWorkflows(#[source] ClientError, String),
+
     /// A GitHub API error occurred while fetching a remote input.
     #[error("GitHub API error while fetching remote input")]
     Client(#[from] ClientError),
@@ -372,11 +378,11 @@ impl InputGroup {
         }
     }
 
-    fn collect_from_file(
+    async fn collect_from_file(
         path: &Utf8Path,
         options: &CollectionOptions,
     ) -> Result<Self, CollectionError> {
-        let config = Config::discover(options, || Config::discover_local(path))?;
+        let config = Config::discover(options, || Config::discover_local(path)).await?;
 
         let mut group = Self::new(config);
 
@@ -406,11 +412,11 @@ impl InputGroup {
         Ok(group)
     }
 
-    fn collect_from_dir(
+    async fn collect_from_dir(
         path: &Utf8Path,
         options: &CollectionOptions,
     ) -> Result<Self, CollectionError> {
-        let config = Config::discover(options, || Config::discover_local(path))?;
+        let config = Config::discover(options, || Config::discover_local(path)).await?;
 
         let mut group = Self::new(config);
 
@@ -497,24 +503,26 @@ impl InputGroup {
         Ok(group)
     }
 
-    fn collect_from_repo_slug(
+    async fn collect_from_repo_slug(
         slug: RepoSlug,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
         let client = gh_client.ok_or_else(|| CollectionError::NoGitHubClient(slug.clone()))?;
 
-        let config = Config::discover(options, || Config::discover_remote(client, &slug))?;
+        let config = Config::discover(options, || Config::discover_remote(client, &slug)).await?;
         let mut group = Self::new(config);
 
         if options.mode_set.workflows_only() {
             // Performance: if we're *only* collecting workflows, then we
             // can save ourselves a full repo download and only fetch the
             // repo's workflow files.
-            client.fetch_workflows(&slug, options, &mut group)?;
+            client.fetch_workflows(&slug, options, &mut group).await?;
         } else {
             let before = group.len();
-            client.fetch_audit_inputs(&slug, options, &mut group)?;
+            client
+                .fetch_audit_inputs(&slug, options, &mut group)
+                .await?;
             let after = group.len();
             let len = after - before;
 
@@ -528,7 +536,7 @@ impl InputGroup {
         Ok(group)
     }
 
-    pub(crate) fn collect(
+    pub(crate) async fn collect(
         request: &str,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
@@ -536,12 +544,12 @@ impl InputGroup {
         let path = Utf8Path::new(request);
 
         if path.is_file() {
-            Self::collect_from_file(path, options)
+            Self::collect_from_file(path, options).await
         } else if path.is_dir() {
-            Self::collect_from_dir(path, options)
+            Self::collect_from_dir(path, options).await
         } else {
             let slug = RepoSlug::from_str(request)?;
-            Self::collect_from_repo_slug(slug, options, gh_client)
+            Self::collect_from_repo_slug(slug, options, gh_client).await
         }
     }
 
@@ -571,7 +579,7 @@ impl InputRegistry {
         self.groups.values().map(|g| g.len()).sum()
     }
 
-    pub(crate) fn register_group(
+    pub(crate) async fn register_group(
         &mut self,
         name: &str,
         options: &CollectionOptions,
@@ -581,7 +589,7 @@ impl InputRegistry {
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
         if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.into())) {
-            e.insert(InputGroup::collect(name, options, gh_client)?);
+            e.insert(InputGroup::collect(name, options, gh_client).await?);
         }
 
         Ok(())
