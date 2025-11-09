@@ -222,7 +222,7 @@ fn compute_replacement_range_for_span(
     // Only include trailing newline if it's the last character in the document.
     // This preserves document-level trailing newlines without interfering with
     // newlines that are part of the document structure.
-    if content.as_bytes()[end] == b'\n' && end + 1 == content.len() {
+    if end + 1 == content.len() && content.as_bytes()[end] == b'\n' {
         end += 1;
     }
 
