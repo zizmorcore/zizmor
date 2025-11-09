@@ -20,6 +20,11 @@ of `zizmor`.
   and I/O-heavy audits significantly faster. Typical user workloads
   should see speedups of 40% to 70% (#1314)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where auto-fixes would fail to preserve a document's final
+  newline (#1323)
+
 ## 1.16.3
 
 ### Bug Fixes 🐛
