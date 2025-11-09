@@ -16,6 +16,9 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would crash on an unexpected caching middleware
   state. `zizmor` will now exit with a controlled error instead (#1319)
 
+* Fixed a bug where auto-fixes would fail to preserve a document's final
+  newline (#1323)
+
 ## 1.16.2
 
 ### Enhancements 🌱
