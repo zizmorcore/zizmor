@@ -270,6 +270,7 @@ scientific-python/repo-review#257
 scikit-build/scikit-build-core#983
 scikit-image/scikit-image#7662
 scroll-tech/go-ethereum#1146
+sharkdp/fd#1828
 sigstore/cosign#3959
 sigstore/fulcio#1910
 sigstore/gitsign#602
