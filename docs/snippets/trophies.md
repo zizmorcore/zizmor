@@ -1294,6 +1294,14 @@
         - scroll-tech/go-ethereum#1146
 
 
+-   ![](https://github.com/sharkdp.png?size=40){ width="40" loading=lazy align=left } sharkdp
+
+    ---
+
+    ??? example "Examples"
+        - sharkdp/fd#1828
+
+
 -   ![](https://github.com/sigstore.png?size=40){ width="40" loading=lazy align=left } sigstore
 
     ---
