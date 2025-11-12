@@ -4,7 +4,11 @@
 //! providing higher-level APIs for zizmor to use.
 
 use github_actions_expressions::context;
-use github_actions_models::{action, common, workflow::job::Strategy};
+use github_actions_models::{
+    action,
+    common::{self, expr::LoE},
+    workflow::job::Strategy,
+};
 use terminal_link::Link;
 
 use crate::{
@@ -226,8 +230,12 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
     }
 
     fn shell(&self) -> Option<&str> {
-        // For composite action steps, shell is always explicitly specified in the YAML
-        if let action::StepBody::Run { shell, .. } = &self.inner.body {
+        // For composite action steps, shell is always explicitly specified in the YAML.
+        if let action::StepBody::Run {
+            shell: LoE::Literal(shell),
+            ..
+        } = &self.inner.body
+        {
             Some(shell)
         } else {
             None

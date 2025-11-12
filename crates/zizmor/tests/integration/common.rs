@@ -3,7 +3,7 @@ use camino::Utf8PathBuf;
 use regex::{Captures, Regex};
 use std::{env::current_dir, io::ErrorKind, sync::LazyLock};
 
-use assert_cmd::Command;
+use assert_cmd::{Command, cargo};
 
 static TEST_PREFIX: LazyLock<Utf8PathBuf> = LazyLock::new(|| {
     let current_dir = current_dir().expect("Cannot figure out current directory");
@@ -51,7 +51,7 @@ pub struct Zizmor {
 impl Zizmor {
     /// Create a new zizmor runner.
     pub fn new() -> Self {
-        let cmd = Command::cargo_bin("zizmor").unwrap();
+        let cmd = Command::new(cargo::cargo_bin!());
 
         Self {
             cmd,

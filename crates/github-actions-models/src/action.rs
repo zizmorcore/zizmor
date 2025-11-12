@@ -152,7 +152,7 @@ pub enum StepBody {
         run: String,
 
         /// The shell to run in.
-        shell: String,
+        shell: LoE<String>,
 
         /// An optional working directory to run from.
         working_directory: Option<String>,

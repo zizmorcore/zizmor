@@ -12,6 +12,7 @@ use crate::audit::AuditError;
 use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
+use crate::models::StepCommon;
 use crate::models::{workflow::JobExt as _, workflow::Step};
 use crate::state::AuditState;
 use crate::utils;
@@ -383,8 +384,8 @@ impl Audit for GitHubEnv {
         if let StepBody::Run { run, .. } = &step.deref().body {
             let shell = step.shell().unwrap_or_else(|| {
                 tracing::warn!(
-                    "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}",
-                    workflow = step.workflow().key.filename(),
+                    "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}; assuming bash",
+                    workflow = step.workflow().key.presentation_path(),
                     job = step.parent.id(),
                     stepno = step.index
                 );
@@ -423,9 +424,22 @@ impl Audit for GitHubEnv {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        let action::StepBody::Run { run, shell, .. } = &step.body else {
+        let action::StepBody::Run { run, .. } = &step.body else {
             return Ok(findings);
         };
+
+        let shell = step.shell().unwrap_or_else(|| {
+            tracing::warn!(
+                "github-env: couldn't determine shell type for {action} step {stepno}; assuming bash",
+                action = step.action().key.presentation_path(),
+                stepno = step.index
+            );
+
+            // The only way shell inference can fail for a `run:` in a
+            // composition action is if a user specifies an expression instead
+            // of a string literal. In that case, assume bash.
+            "bash"
+        });
 
         // TODO: actually use the spanning information here.
         for (dest, _span) in self.uses_github_env(run, shell)? {

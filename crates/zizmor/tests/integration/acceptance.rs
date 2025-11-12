@@ -1,5 +1,5 @@
 use crate::common::input_under_test;
-use assert_cmd::Command;
+use assert_cmd::{Command, cargo};
 use serde_json::Value;
 use serde_json_path::JsonPath;
 
@@ -7,7 +7,7 @@ use serde_json_path::JsonPath;
 // For now we don't cover tests that depends on GitHub API under the hood
 
 fn zizmor() -> Command {
-    let mut cmd = Command::cargo_bin("zizmor").expect("Cannot create executable command");
+    let mut cmd = Command::new(cargo::cargo_bin!());
     // All tests are currently offline, and we always need JSON output.
     cmd.args(["--offline", "--format", "json"]);
     cmd
