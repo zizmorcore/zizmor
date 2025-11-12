@@ -1141,5 +1141,25 @@ fn concurrency_limits() -> Result<()> {
     "
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/job-no-cancel.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r"
+    help[concurrency-limits]: insufficient job-level concurrency limits
+     --> @@INPUT@@:9:5
+      |
+    9 |     concurrency: group
+      |     ^^^^^^^^^^^^^^^^^^ job concurrency is missing cancel-in-progress
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
+    );
+
     Ok(())
 }
