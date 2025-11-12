@@ -74,7 +74,7 @@ pub struct Defaults {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct RunDefaults {
-    pub shell: Option<String>,
+    pub shell: Option<LoE<String>>,
     pub working_directory: Option<String>,
 }
 
