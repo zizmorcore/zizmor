@@ -25,6 +25,10 @@ of `zizmor`.
 * Fixed a bug where auto-fixes would fail to preserve a document's final
   newline (#1323)
 
+* `zizmor` now uses the native (OS) TLS roots when performing HTTPS requests,
+  improving compatibility with user environments that perform TLS interception
+  (#1328)
+
 ## 1.16.3
 
 ### Bug Fixes 🐛
