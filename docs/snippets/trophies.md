@@ -1006,6 +1006,14 @@
         - psf/cachecontrol#345
 
 
+-   ![](https://github.com/pubgrub-rs.png?size=40){ width="40" loading=lazy align=left } pubgrub-rs
+
+    ---
+
+    ??? example "Examples"
+        - pubgrub-rs/pubgrub#389
+
+
 -   ![](https://github.com/pyca.png?size=40){ width="40" loading=lazy align=left } pyca
 
     ---
