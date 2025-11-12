@@ -29,6 +29,9 @@ of `zizmor`.
   improving compatibility with user environments that perform TLS interception
   (#1328)
 
+* The [github-env] now falls back to assuming bash-like shell syntax in
+  `run:` blocks if it can't infer the shell being used (#1336)
+
 ## 1.16.3
 
 ### Bug Fixes 🐛
