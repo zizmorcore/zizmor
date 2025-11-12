@@ -1,4 +1,4 @@
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     audit::AuditError,
     config::Config,
@@ -6,6 +6,7 @@ use crate::{
     models::workflow::Workflow,
     state::AuditState,
 };
+use crate::{finding::location::Locatable as _};
 use github_actions_models::workflow::Concurrency;
 
 pub(crate) struct ConcurrencyLimits;
@@ -40,25 +41,55 @@ impl Audit for ConcurrencyLimits {
                                 .location()
                                 .primary()
                                 .with_keys(["concurrency".into()])
-                                .annotated("concurrency is missing cancel-in-progress"),
+                                .annotated("workflow concurrency is missing cancel-in-progress"),
                         )
                         .build(workflow)?,
                 );
             }
             None => {
-                findings.push(
-                    Self::finding()
-                        .confidence(Confidence::High)
-                        .severity(Severity::Low)
-                        .persona(Persona::Pedantic)
-                        .add_location(
-                            workflow
-                                .location()
-                                .primary()
-                                .annotated("missing concurrency setting"),
-                        )
-                        .build(workflow)?,
-                );
+                for job in workflow.jobs() {
+                    let Job::NormalJob(job) = job else {
+                        continue;
+                    };
+                    match &job.concurrency {
+                        Some(Concurrency::Bare(_)) => {
+                            findings.push(
+                                Self::finding()
+                                    .confidence(Confidence::High)
+                                    .severity(Severity::Low)
+                                    .persona(Persona::Pedantic)
+                                    .add_location(
+                                        job
+                                            .location()
+                                            .primary()
+                                            .with_keys(["concurrency".into()])
+                                            .annotated("job concurrency is missing cancel-in-progress"),
+                                    )
+                                    .build(workflow)?,
+                            );
+                        }
+                        None => {
+                            findings.push(
+                                Self::finding()
+                                    .confidence(Confidence::High)
+                                    .severity(Severity::Low)
+                                    .persona(Persona::Pedantic)
+                                    .add_location(
+                                        workflow
+                                            .location()
+                                            .primary()
+                                            .annotated("missing concurrency setting"),
+                                    )
+                                    .build(workflow)?,
+                            );
+                        }
+                        // NOTE: Per #1302, we don't nag the user if they've explicitly set
+                        // `cancel-in-progress: false` or similar. This is like with the
+                        // artipacked audit, where `persist-credentials: true` is seen as
+                        // a positive signal of user intent.
+                        _ => {}
+                    }
+                }
             }
             // NOTE: Per #1302, we don't nag the user if they've explicitly set
             // `cancel-in-progress: false` or similar. This is like with the
