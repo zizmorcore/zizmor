@@ -213,6 +213,7 @@ praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 prometheus/prometheus#16530
 psf/cachecontrol#345
+pubgrub-rs/pubgrub#389
 pyca/service-identity#75
 pydata/pydata-sphinx-theme#2077
 pylast/pylast#465
@@ -270,6 +271,7 @@ scientific-python/repo-review#257
 scikit-build/scikit-build-core#983
 scikit-image/scikit-image#7662
 scroll-tech/go-ethereum#1146
+sharkdp/fd#1828
 sigstore/cosign#3959
 sigstore/fulcio#1910
 sigstore/gitsign#602
