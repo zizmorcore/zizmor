@@ -134,7 +134,7 @@ pub enum StepBody {
 
         /// An optional shell to run in. Defaults to the job or workflow's
         /// default shell.
-        shell: Option<String>,
+        shell: Option<LoE<String>>,
     },
 }
 

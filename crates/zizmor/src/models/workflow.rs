@@ -662,7 +662,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
             } => StepBodyCommon::Run {
                 run,
                 _working_directory: working_directory.as_deref(),
-                _shell: shell.as_deref(),
+                _shell: shell.as_ref(),
             },
         }
     }
@@ -710,11 +710,17 @@ impl<'doc> Step<'doc> {
             panic!("API misuse: can't call shell() on a uses: step")
         };
 
+        let shell = match shell {
+            Some(LoE::Literal(shell)) => Some(shell.as_str()),
+            None => None,
+            // `shell:` is set explicitly to an expression, so we can't infer it.
+            Some(LoE::Expr(_)) => return None,
+        };
+
         // The steps's own `shell:` takes precedence, followed by the
         // job's default, followed by the entire workflow's default,
         // followed by the runner's default.
         shell
-            .as_deref()
             .or_else(|| {
                 self.job()
                     .defaults
