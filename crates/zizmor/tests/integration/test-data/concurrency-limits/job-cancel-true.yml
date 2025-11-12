@@ -1,0 +1,14 @@
+name: Workflow with cancel-in-progress=true in a job
+on: push
+permissions: {}
+
+jobs:
+  job:
+    name: some-job
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+    - name: 1-ok
+      run: echo ok
