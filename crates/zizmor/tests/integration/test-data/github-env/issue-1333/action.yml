@@ -4,6 +4,7 @@ description: |
   Composite action for testing
 inputs:
   shell:
+    description: The shell to use
     default: bash --noprofile {0}
     required: false
 runs:
