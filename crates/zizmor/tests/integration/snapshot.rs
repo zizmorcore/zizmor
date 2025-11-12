@@ -1133,7 +1133,7 @@ fn concurrency_limits() -> Result<()> {
      --> @@INPUT@@:5:1
       |
     5 | concurrency: group
-      | ^^^^^^^^^^^^^^^^^^ concurrency is missing cancel-in-progress
+      | ^^^^^^^^^^^^^^^^^^ workflow concurrency is missing cancel-in-progress
       |
       = note: audit confidence → High
 
