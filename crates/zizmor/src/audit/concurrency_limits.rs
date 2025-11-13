@@ -1,4 +1,5 @@
 use super::{Audit, AuditLoadError, Job, audit_meta};
+use crate::finding::location::Locatable as _;
 use crate::{
     audit::AuditError,
     config::Config,
@@ -6,7 +7,6 @@ use crate::{
     models::workflow::Workflow,
     state::AuditState,
 };
-use crate::{finding::location::Locatable as _};
 use github_actions_models::workflow::Concurrency;
 
 pub(crate) struct ConcurrencyLimits;
@@ -59,11 +59,12 @@ impl Audit for ConcurrencyLimits {
                                     .severity(Severity::Low)
                                     .persona(Persona::Pedantic)
                                     .add_location(
-                                        job
-                                            .location()
+                                        job.location()
                                             .primary()
                                             .with_keys(["concurrency".into()])
-                                            .annotated("job concurrency is missing cancel-in-progress"),
+                                            .annotated(
+                                                "job concurrency is missing cancel-in-progress",
+                                            ),
                                     )
                                     .build(workflow)?,
                             );
