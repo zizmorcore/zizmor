@@ -29,8 +29,11 @@ of `zizmor`.
   improving compatibility with user environments that perform TLS interception
   (#1328)
 
-* The [github-env] now falls back to assuming bash-like shell syntax in
+* The [github-env] audit now falls back to assuming bash-like shell syntax in
   `run:` blocks if it can't infer the shell being used (#1336)
+  
+* The [concurrency-limits] audit now correctly detects job-level `concurrency`
+  settings, in addition to workflow-level settings (#1338)
 
 ## 1.16.3
 
