@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 297
 expression: "zizmor().input(input_under_test(\"use-trusted-publishing/cargo-publish.yml\")).run()?"
 ---
 info[use-trusted-publishing]: prefer trusted publishing for authentication
@@ -91,4 +92,4 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |
    = note: audit confidence → High
 
-10 findings (2 suppressed): 8 informational, 0 low, 0 medium, 0 high
+11 findings (3 suppressed): 8 informational, 0 low, 0 medium, 0 high

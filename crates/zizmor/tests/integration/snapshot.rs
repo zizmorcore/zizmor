@@ -1133,11 +1133,44 @@ fn concurrency_limits() -> Result<()> {
      --> @@INPUT@@:5:1
       |
     5 | concurrency: group
-      | ^^^^^^^^^^^^^^^^^^ concurrency is missing cancel-in-progress
+      | ^^^^^^^^^^^^^^^^^^ workflow concurrency is missing cancel-in-progress
       |
       = note: audit confidence → High
 
     1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/jobs-missing-no-cancel.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r"
+  help[concurrency-limits]: insufficient job-level concurrency limits
+   --> @@INPUT@@:9:5
+    |
+  9 |     concurrency: group
+    |     ^^^^^^^^^^^^^^^^^^ job concurrency is missing cancel-in-progress
+    |
+    = note: audit confidence → High
+
+  help[concurrency-limits]: insufficient job-level concurrency limits
+    --> @@INPUT@@:1:1
+     |
+   1 | / name: Workflow with job 1 missing cancel-in-progress and job 2 missing concurrency
+   2 | | on: push
+   3 | | permissions: {}
+  ...  |
+  17 | |     - name: 2-ok
+  18 | |       run: echo ok
+     | |___________________^ missing concurrency setting
+     |
+     = note: audit confidence → High
+
+  2 findings: 0 informational, 2 low, 0 medium, 0 high
     "
     );
 

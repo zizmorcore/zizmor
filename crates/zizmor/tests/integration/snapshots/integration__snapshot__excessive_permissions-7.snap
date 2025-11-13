@@ -33,4 +33,4 @@ error[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → High
 
-3 findings (1 suppressed): 0 informational, 0 low, 1 medium, 1 high
+4 findings (2 suppressed): 0 informational, 0 low, 1 medium, 1 high

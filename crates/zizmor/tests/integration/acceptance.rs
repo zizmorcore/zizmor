@@ -325,6 +325,21 @@ fn concurrency_limits_cancel_true() -> anyhow::Result<()> {
 }
 
 #[test]
+fn concurrency_limits_cancel_job_true() -> anyhow::Result<()> {
+    let auditable = input_under_test("concurrency-limits/job-cancel-true.yml");
+
+    let cli_args = [&auditable];
+
+    let execution = zizmor().args(cli_args).output()?;
+    assert_eq!(execution.status.code(), Some(0));
+
+    let findings = String::from_utf8(execution.stdout)?;
+    assert_eq!(&findings, "[]");
+
+    Ok(())
+}
+
+#[test]
 fn concurrency_limits_cancel_expr() -> anyhow::Result<()> {
     let auditable = input_under_test("concurrency-limits/cancel-expr.yml");
 

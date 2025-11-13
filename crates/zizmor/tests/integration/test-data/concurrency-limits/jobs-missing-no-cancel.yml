@@ -1,0 +1,18 @@
+name: Workflow with job 1 missing cancel-in-progress and job 2 missing concurrency
+on: push
+permissions: {}
+
+jobs:
+  job1:
+    name: job-1
+    runs-on: ubuntu-latest
+    concurrency: group
+    steps:
+    - name: 1-ok
+      run: echo ok
+  job2:
+    name: job-2
+    runs-on: ubuntu-latest
+    steps:
+    - name: 2-ok
+      run: echo ok
