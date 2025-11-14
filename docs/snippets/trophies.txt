@@ -314,6 +314,7 @@ wntrblm/nox#925
 WordPress/gutenberg#69126
 WordPress/wordpress-develop#8007
 zama-ai/tfhe-rs#2292
+zama-ai/tfhe-rs#2979
 zcash/librustzcash#1679
 ZcashFoundation/zebra#9110
 zkonduit/ezkl#907

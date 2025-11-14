@@ -1525,6 +1525,7 @@
 
     ??? example "Examples"
         - zama-ai/tfhe-rs#2292
+        - zama-ai/tfhe-rs#2979
 
 
 -   ![](https://github.com/zcash.png?size=40){ width="40" loading=lazy align=left } zcash
