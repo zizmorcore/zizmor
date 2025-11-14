@@ -61,6 +61,7 @@ DataDog/dd-trace-rb#4456
 datalens-tech/datalens-backend#777
 davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
+dependabot/dependabot-core#13531
 django-commons/django-tasks-scheduler#272
 Diaoul/subliminal#1190
 docker/compose#12737

@@ -280,6 +280,14 @@
         - deltachat/deltachat-core-rust#6539
 
 
+-   ![](https://github.com/dependabot.png?size=40){ width="40" loading=lazy align=left } dependabot
+
+    ---
+
+    ??? example "Examples"
+        - dependabot/dependabot-core#13531
+
+
 -   ![](https://github.com/Diaoul.png?size=40){ width="40" loading=lazy align=left } Diaoul
 
     ---
