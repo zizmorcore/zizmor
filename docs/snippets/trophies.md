@@ -296,6 +296,14 @@
         - Diaoul/subliminal#1190
 
 
+-   ![](https://github.com/digitalbazaar.png?size=40){ width="40" loading=lazy align=left } digitalbazaar
+
+    ---
+
+    ??? example "Examples"
+        - digitalbazaar/pyld#211
+
+
 -   ![](https://github.com/django-commons.png?size=40){ width="40" loading=lazy align=left } django-commons
 
     ---
@@ -768,6 +776,7 @@
     ---
 
     ??? example "Examples"
+        - microsoft/component-detection#1532
         - microsoft/linux-package-repositories#208
         - microsoft/vscode-python#25047
         - microsoft/vscode-python-debugger#709
@@ -1052,6 +1061,7 @@
 
     ??? example "Examples"
         - pymc-devs/pymc#7624
+        - pymc-devs/pymc#7959
         - pymc-devs/pytensor#1136
 
 

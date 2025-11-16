@@ -62,6 +62,7 @@ datalens-tech/datalens-backend#777
 davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
 dependabot/dependabot-core#13531
+digitalbazaar/pyld#211
 django-commons/django-tasks-scheduler#272
 Diaoul/subliminal#1190
 docker/compose#12737
@@ -166,6 +167,7 @@ maxmind/mmdbwriter#104
 maxmind/GeoIP2-node#1387
 MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
+microsoft/component-detection#1532
 microsoft/linux-package-repositories#208
 microsoft/vscode-python#25047
 microsoft/vscode-python-debugger#709
@@ -224,6 +226,7 @@ pypi/stdlib-list#138
 pypi/warehouse#16996
 pypi/warehouse#18103
 pymc-devs/pymc#7624
+pymc-devs/pymc#7959
 pymc-devs/pytensor#1136
 pytest-dev/pytest#13062
 pytest-dev/pytest-asyncio#1122
