@@ -1,0 +1,31 @@
+name: Test Workflow
+on: push
+permissions: {}
+
+concurrency:
+  group: test-group
+  cancel-in-progress: true
+
+jobs:
+  job1:
+    name: some-job
+    runs-on: ubuntu-latest
+    steps:
+    - name: 1-not-ok
+      run: echo ok
+  job2:
+    name: another-job
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+    - name: 2-ok
+      run: echo ok
+  job3:
+    name: yet-another-job
+    runs-on: ubuntu-latest
+    steps:
+    - name: 3-ok
+      run: echo ok
+      timeout-minutes: 1
+    - name: 4-not-ok
+      run: echo ok
