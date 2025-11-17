@@ -52,7 +52,7 @@ impl Audit for TimeoutMinutes {
         if job.timeout_minutes.is_none() {
             findings.push(self.build_finding(
                 job.location().primary(),
-                "job is missing timeout-minutes",
+                "missing timeout-minutes",
                 job,
             )?);
         }

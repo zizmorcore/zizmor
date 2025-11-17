@@ -352,7 +352,6 @@ impl AuditRegistry {
         register_audit!(audit::self_hosted_runner::SelfHostedRunner);
         register_audit!(audit::known_vulnerable_actions::KnownVulnerableActions);
         register_audit!(audit::unpinned_uses::UnpinnedUses);
-        register_audit!(audit::timeout_minutes::TimeoutMinutes);
         register_audit!(audit::insecure_commands::InsecureCommands);
         register_audit!(audit::github_env::GitHubEnv);
         register_audit!(audit::cache_poisoning::CachePoisoning);
@@ -366,6 +365,7 @@ impl AuditRegistry {
         register_audit!(audit::unpinned_images::UnpinnedImages);
         register_audit!(audit::anonymous_definition::AnonymousDefinition);
         register_audit!(audit::unsound_condition::UnsoundCondition);
+        register_audit!(audit::timeout_minutes::TimeoutMinutes);
 
         Ok(registry)
     }
