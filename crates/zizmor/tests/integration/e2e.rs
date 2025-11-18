@@ -430,3 +430,21 @@ fn issue_1300() -> Result<()> {
 
     Ok(())
 }
+
+/// Regression test for #1341.
+///
+/// Ensures that we successfully collect a *workflow* named `dependabot.yml`, rather
+/// than failing to parse it as a Dependabot config.
+#[test]
+fn issue_1341() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .input(input_under_test(
+                "issue-1341-repro/.github/workflows/dependabot.yml"
+            ))
+            .run()?,
+    );
+
+    Ok(())
+}

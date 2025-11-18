@@ -35,6 +35,10 @@ of `zizmor`.
 * The [concurrency-limits] audit now correctly detects job-level `concurrency`
   settings, in addition to workflow-level settings (#1338)
 
+* Fixed a bug where `zizmor` would fail to collect workflows with names that
+  overlapped with other input types (e.g. `action.yml` and `dependabot.yml`)
+  when passed explicitly by path (#1345)
+
 ## 1.16.3
 
 ### Bug Fixes 🐛

@@ -1,0 +1,5 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().offline(true).input(input_under_test(\"issue-1341-repro/.github/workflows/dependabot.yml\")).run()?"
+---
+No findings to report. Good job! (2 suppressed)
