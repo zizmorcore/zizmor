@@ -1,0 +1,6 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 824
+expression: "zizmor().input(input_under_test(\"obfuscation/issue-1177-repro.yml\")).args([\"--persona=pedantic\"]).run()?"
+---
+No findings to report. Good job!

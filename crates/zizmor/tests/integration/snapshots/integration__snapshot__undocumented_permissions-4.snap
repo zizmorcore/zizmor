@@ -1,0 +1,6 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 899
+expression: "zizmor().input(input_under_test(\"undocumented-permissions/contents-read-only.yml\")).args([\"--persona=pedantic\"]).run()?"
+---
+No findings to report. Good job!

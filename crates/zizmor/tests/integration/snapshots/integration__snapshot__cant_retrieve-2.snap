@@ -1,0 +1,8 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().expects_failure(true).unsetenv(\"GH_TOKEN\").args([\"pypa/sampleproject\"]).run()?"
+---
+fatal: no audit was performed
+error: can't fetch remote repository: pypa/sampleproject
+  |
+  = help: remove --offline to audit remote repositories

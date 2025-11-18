@@ -2,10 +2,14 @@
 source: crates/zizmor/tests/integration/snapshot.rs
 expression: "zizmor().expects_failure(true).config(input_under_test(&format!(\"unpinned-uses/configs/{tc}.yml\",))).input(input_under_test(\"unpinned-uses/menagerie-of-uses.yml\")).run()?"
 ---
- INFO zizmor::registry: skipping impostor-commit: can't run without a GitHub API token
- INFO zizmor::registry: skipping ref-confusion: can't run without a GitHub API token
- INFO zizmor::registry: skipping known-vulnerable-actions: can't run without a GitHub API token
+🌈 zizmor v@@VERSION@@
 fatal: no audit was performed
-error: failed to load audit: unpinned-uses
- = note: invalid configuration: unknown variant `does not exist`, expected one of `any`, `ref-pin`, `hash-pin`
- = note: see: https://docs.zizmor.sh/audits/#unpinned-uses
+error: configuration error in @@CONFIG@@
+  |
+  = help: check the configuration for the 'unpinned-uses' rule
+  = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
+
+Caused by:
+    0: configuration error in @@CONFIG@@
+    1: invalid syntax for audit `unpinned-uses`
+    2: unknown variant `does not exist`, expected one of `any`, `ref-pin`, `hash-pin`

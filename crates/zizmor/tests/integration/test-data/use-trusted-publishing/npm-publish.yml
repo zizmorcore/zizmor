@@ -1,0 +1,136 @@
+on: [push]
+
+name: npm-trusted-publishing-test
+
+jobs:
+  # Test cases that SHOULD be flagged (vulnerable)
+  npm-manual-auth:
+    name: npm-manual-auth
+    runs-on: ubuntu-latest
+    permissions: {}  # No id-token permission
+    steps:
+      # NOT OK: actions/setup-node with registry-url and always-auth
+      - name: vulnerable-1
+        uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+          always-auth: true
+      - name: vulnerable-1-publish
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # NOT OK: actions/setup-node with registry-url (trailing slash) and always-auth
+      - name: vulnerable-2
+        uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org/'
+          always-auth: true
+      - name: vulnerable-2-publish
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  npm-direct-commands:
+    name: npm-direct-commands
+    runs-on: ubuntu-latest
+    permissions: {}  # No id-token permission
+    steps:
+      # NOT OK: direct npm publish command
+      - name: vulnerable-3
+        run: npm publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # NOT OK: npm publish with arguments
+      - name: vulnerable-4
+        run: npm publish --access public
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # NOT OK: multiline npm publish
+      - name: vulnerable-5
+        run: |
+          npm config set registry https://registry.npmjs.org
+          npm publish --access public
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # NOT OK: yarn npm publish
+      - name: vulnerable-6
+        run: yarn npm publish
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # NOT OK: yarn npm publish with arguments
+      - name: vulnerable-7
+        run: yarn npm publish --access public
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # NOT OK: pnpm publish
+      - name: vulnerable-8
+        run: pnpm publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # NOT OK: pnpm publish with arguments
+      - name: vulnerable-9
+        run: pnpm publish --access public
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Test cases that should NOT be flagged (safe)
+  npm-trusted-publishing:
+    name: npm-trusted-publishing
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Has id-token permission
+      contents: read
+    steps:
+      # OK: actions/setup-node with registry-url but no always-auth
+      - name: safe-1
+        uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+      - name: safe-1-publish
+        run: npm publish --provenance
+
+      # OK: actions/setup-node without always-auth, even with trailing slash
+      - name: safe-2
+        uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org/'
+      - name: safe-2-publish
+        run: npm publish --provenance
+
+      # OK: npm publish with id-token permission (trusted publishing)
+      - name: safe-3
+        run: npm publish --provenance
+
+      # OK: actions/setup-node with different registry (not npmjs)
+      - name: safe-4
+        uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+        with:
+          node-version: '18'
+          registry-url: 'https://npm.example.com'
+          always-auth: true
+      - name: safe-4-publish
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.CUSTOM_NPM_TOKEN }}
+
+      # OK: actions/setup-node with no registry-url specified
+      - name: safe-5
+        uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+        with:
+          node-version: '18'
+          always-auth: true
+      - name: safe-5-publish
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

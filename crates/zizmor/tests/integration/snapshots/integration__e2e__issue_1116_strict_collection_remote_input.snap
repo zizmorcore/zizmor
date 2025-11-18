@@ -1,0 +1,11 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().offline(false).expects_failure(true).output(OutputMode::Stderr).args([\"--strict-collection\"]).input(\"woodruffw-experiments/zizmor-issue-1116@f41c414\").run()?"
+---
+🌈 zizmor v@@VERSION@@
+fatal: no audit was performed
+failed to load https://github.com/woodruffw-experiments/zizmor-issue-1116/blob/f41c414/invalid-action/action.yml as action
+
+Caused by:
+    0: input does not match expected validation schema
+    1: null is not of type "object"

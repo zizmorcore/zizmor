@@ -5,7 +5,6 @@
 
 use std::collections::HashMap;
 
-use anyhow::Context as _;
 use github_actions_expressions::context::{self, Context};
 use github_actions_models::{
     common::{self, expr::LoE},
@@ -25,7 +24,7 @@ use crate::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
     },
-    registry::InputError,
+    registry::input::CollectionError,
     utils::{self, WORKFLOW_VALIDATOR, extract_fenced_expressions, from_str_with_validation},
 };
 
@@ -120,11 +119,10 @@ impl HasInputs for Workflow {
 
 impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
-    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
+    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
         let inner = from_str_with_validation(&contents, &WORKFLOW_VALIDATOR)?;
 
-        let document = yamlpath::Document::new(&contents)
-            .context("failed to load internal pathing document")?;
+        let document = yamlpath::Document::new(&contents)?;
 
         let link = match key {
             InputKey::Local(_) => None,
@@ -664,7 +662,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
             } => StepBodyCommon::Run {
                 run,
                 _working_directory: working_directory.as_deref(),
-                _shell: shell.as_deref(),
+                _shell: shell.as_ref(),
             },
         }
     }
@@ -715,21 +713,33 @@ impl<'doc> Step<'doc> {
         // The steps's own `shell:` takes precedence, followed by the
         // job's default, followed by the entire workflow's default,
         // followed by the runner's default.
-        shell
-            .as_deref()
-            .or_else(|| {
-                self.job()
+        // If any of these is an expression, we can't infer the shell
+        // statically, so we terminate early with `None`.
+        let shell = match shell {
+            Some(LoE::Literal(shell)) => Some(shell.as_str()),
+            Some(LoE::Expr(_)) => return None,
+            None => match self
+                .job()
+                .defaults
+                .as_ref()
+                .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_ref()))
+            {
+                Some(LoE::Literal(shell)) => Some(shell.as_str()),
+                Some(LoE::Expr(_)) => return None,
+                None => match self
+                    .workflow()
                     .defaults
                     .as_ref()
-                    .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_deref()))
-            })
-            .or_else(|| {
-                self.workflow()
-                    .defaults
-                    .as_ref()
-                    .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_deref()))
-            })
-            .or_else(|| self.parent.runner_default_shell())
+                    .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_ref()))
+                {
+                    Some(LoE::Literal(shell)) => Some(shell.as_str()),
+                    Some(LoE::Expr(_)) => return None,
+                    None => None,
+                },
+            },
+        };
+
+        shell.or_else(|| self.parent.runner_default_shell())
     }
 }
 
@@ -798,8 +808,10 @@ jobs:
       - run: true
 "#;
 
-        let workflow =
-            Workflow::from_string(workflow.into(), crate::InputKey::local("dummy", None)?)?;
+        let workflow = Workflow::from_string(
+            workflow.into(),
+            crate::InputKey::local("fakegroup".into(), "dummy", None),
+        )?;
 
         // `foo` unifies in favor of the more permissive capability,
         // which is `Capability::Arbitrary` from the `string` input type

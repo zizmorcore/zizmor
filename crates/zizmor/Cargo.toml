@@ -1,12 +1,11 @@
 [package]
 name = "zizmor"
 description = "Static analysis for GitHub Actions"
-version = "1.11.1-rc1"
+version = "1.16.3"
 repository = "https://github.com/zizmorcore/zizmor"
 documentation = "https://docs.zizmor.sh"
 keywords = ["cli", "github-actions", "static-analysis", "security"]
 categories = ["command-line-utilities", "security"]
-rust-version = "1.85.0"
 
 homepage.workspace = true
 license.workspace = true
@@ -19,7 +18,7 @@ workspace = true
 
 [features]
 default = ["lsp"]
-lsp = ["dep:tower-lsp"]
+lsp = ["dep:tower-lsp-server"]
 # Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
 gh-token-tests = []
 # Test-only: enable all online audits.
@@ -31,6 +30,7 @@ tty-tests = []
 annotate-snippets.workspace = true
 anstream.workspace = true
 anyhow.workspace = true
+async-trait.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 clap = { workspace = true, features = ["derive", "env"] }
 clap-verbosity-flag = { workspace = true, features = ["tracing"] }
@@ -39,8 +39,10 @@ clap_complete_nushell.workspace = true
 etcetera.workspace = true
 flate2.workspace = true
 fst.workspace = true
+futures.workspace = true
 github-actions-expressions.workspace = true
 github-actions-models.workspace = true
+http.workspace = true
 http-cache-reqwest.workspace = true
 human-panic.workspace = true
 ignore.workspace = true
@@ -51,7 +53,7 @@ jsonschema.workspace = true
 line-index.workspace = true
 owo-colors.workspace = true
 regex.workspace = true
-reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls"] }
+reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls", "rustls-tls-native-roots"] }
 reqwest-middleware.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde-sarif.workspace = true
@@ -62,7 +64,7 @@ tar.workspace = true
 terminal-link.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "io-std"] }
-tower-lsp = { workspace = true, optional = true }
+tower-lsp-server = { workspace = true, optional = true }
 tracing.workspace = true
 tracing-indicatif.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
@@ -71,6 +73,9 @@ tree-sitter-bash.workspace = true
 tree-sitter-powershell.workspace = true
 yamlpath.workspace = true
 yamlpatch.workspace = true
+
+[target.'cfg(not(target_family = "windows"))'.dependencies]
+tikv-jemallocator.workspace = true
 
 [build-dependencies]
 csv.workspace = true

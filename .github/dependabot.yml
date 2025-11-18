@@ -1,6 +1,8 @@
 version: 2
 updates:
   - package-ecosystem: cargo
+    cooldown:
+      default-days: 7
     directory: "/"
     schedule:
       interval: weekly
@@ -10,6 +12,8 @@ updates:
           - "*"
 
   - package-ecosystem: github-actions
+    cooldown:
+      default-days: 7
     directory: /
     schedule:
       interval: weekly
@@ -19,6 +23,8 @@ updates:
           - "*"
 
   - package-ecosystem: docker
+    cooldown:
+      default-days: 7
     directory: "/"
     schedule:
       interval: "weekly"

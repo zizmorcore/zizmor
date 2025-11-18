@@ -1,13 +1,14 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 102
 expression: "zizmor().input(input_under_test(\"self-hosted.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
-note[self-hosted-runner]: runs on a self-hosted runner
-  --> @@INPUT@@:13:5
+warning[self-hosted-runner]: runs on a self-hosted runner
+  --> @@INPUT@@:17:5
    |
-13 |     runs-on: [self-hosted, my-ubuntu-box]
-   |     ------------------------------------- note: self-hosted runner used here
+17 |     runs-on: [self-hosted, my-ubuntu-box]
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ self-hosted runner used here
    |
    = note: audit confidence → High
 
-1 finding: 1 unknown, 0 informational, 0 low, 0 medium, 0 high
+1 finding: 0 informational, 0 low, 1 medium, 0 high

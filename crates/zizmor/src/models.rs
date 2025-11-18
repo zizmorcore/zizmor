@@ -4,6 +4,7 @@
 use github_actions_expressions::context;
 use github_actions_models::common;
 use github_actions_models::common::Env;
+use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::job::Strategy;
 
 use crate::finding::location::Locatable;
@@ -11,8 +12,10 @@ use crate::models::inputs::HasInputs;
 
 pub(crate) mod action;
 pub(crate) mod coordinate;
+pub(crate) mod dependabot;
 pub(crate) mod inputs;
 pub(crate) mod uses;
+pub(crate) mod version;
 pub(crate) mod workflow;
 
 pub(crate) trait AsDocument<'a, 'doc> {
@@ -28,7 +31,7 @@ pub(crate) enum StepBodyCommon<'s> {
     Run {
         run: &'s str,
         _working_directory: Option<&'s str>,
-        _shell: Option<&'s str>,
+        _shell: Option<&'s LoE<String>>,
     },
 }
 
@@ -57,7 +60,10 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
 
     /// Returns the effective shell for this step, if it can be determined.
     /// This includes the step's explicit shell, job defaults, workflow defaults,
-    /// and runner defaults. Returns `None` if the shell cannot be statically determined.
+    /// and runner defaults.
+    ///
+    /// Returns `None` if the shell cannot be statically determined, including
+    /// if the shell is specified via an expression.
     fn shell(&self) -> Option<&str>;
 }
 

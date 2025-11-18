@@ -1,5 +1,5 @@
 use crate::common::input_under_test;
-use assert_cmd::Command;
+use assert_cmd::{Command, cargo};
 use serde_json::Value;
 use serde_json_path::JsonPath;
 
@@ -7,7 +7,7 @@ use serde_json_path::JsonPath;
 // For now we don't cover tests that depends on GitHub API under the hood
 
 fn zizmor() -> Command {
-    let mut cmd = Command::cargo_bin("zizmor").expect("Cannot create executable command");
+    let mut cmd = Command::new(cargo::cargo_bin!());
     // All tests are currently offline, and we always need JSON output.
     cmd.args(["--offline", "--format", "json"]);
     cmd
@@ -168,7 +168,7 @@ fn audit_self_hosted() -> anyhow::Result<()> {
 
     let execution = zizmor().args(cli_args).output()?;
 
-    assert_eq!(execution.status.code(), Some(10));
+    assert_eq!(execution.status.code(), Some(13));
 
     let findings = serde_json::from_slice(&execution.stdout)?;
 
@@ -305,6 +305,36 @@ fn audit_unpinned_images() -> anyhow::Result<()> {
         "$[3].locations[0].concrete.feature",
         "image: fake.example.com/redis:latest",
     );
+
+    Ok(())
+}
+
+#[test]
+fn concurrency_limits_cancel_true() -> anyhow::Result<()> {
+    let auditable = input_under_test("concurrency-limits/cancel-true.yml");
+
+    let cli_args = [&auditable];
+
+    let execution = zizmor().args(cli_args).output()?;
+    assert_eq!(execution.status.code(), Some(0));
+
+    let findings = String::from_utf8(execution.stdout)?;
+    assert_eq!(&findings, "[]");
+
+    Ok(())
+}
+
+#[test]
+fn concurrency_limits_cancel_expr() -> anyhow::Result<()> {
+    let auditable = input_under_test("concurrency-limits/cancel-expr.yml");
+
+    let cli_args = [&auditable];
+
+    let execution = zizmor().args(cli_args).output()?;
+    assert_eq!(execution.status.code(), Some(0));
+
+    let findings = String::from_utf8(execution.stdout)?;
+    assert_eq!(&findings, "[]");
 
     Ok(())
 }

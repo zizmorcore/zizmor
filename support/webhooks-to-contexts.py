@@ -1,4 +1,12 @@
-#!/usr/bin/env -S uv run --script --only-group codegen
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "prance[osv]",
+#     "requests",
+# ]
+# ///
+
 
 # Retrieves the latest OpenAPI spec for GitHub's webhooks from
 # @octokit/openapi-webhooks and walks the schemas to produce a

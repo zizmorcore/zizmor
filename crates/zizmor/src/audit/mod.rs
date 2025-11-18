@@ -1,17 +1,19 @@
 //! Core namespace for zizmor's audits.
 
-use line_index::LineIndex;
 use thiserror::Error;
 use tracing::instrument;
 use yamlpath::Document;
 
 use crate::{
+    config::Config,
     finding::{Finding, FindingBuilder, location::SymbolicLocation},
     models::{
-        AsDocument, action::Action, action::CompositeStep, workflow::Job, workflow::NormalJob,
-        workflow::ReusableWorkflowCallJob, workflow::Step, workflow::Workflow,
+        AsDocument,
+        action::{Action, CompositeStep},
+        dependabot::Dependabot,
+        workflow::{Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
     },
-    registry::InputKey,
+    registry::input::InputKey,
     state::AuditState,
 };
 
@@ -19,7 +21,10 @@ pub(crate) mod anonymous_definition;
 pub(crate) mod artipacked;
 pub(crate) mod bot_conditions;
 pub(crate) mod cache_poisoning;
+pub(crate) mod concurrency_limits;
 pub(crate) mod dangerous_triggers;
+pub(crate) mod dependabot_cooldown;
+pub(crate) mod dependabot_execution;
 pub(crate) mod excessive_permissions;
 pub(crate) mod forbidden_uses;
 pub(crate) mod github_env;
@@ -30,11 +35,13 @@ pub(crate) mod known_vulnerable_actions;
 pub(crate) mod obfuscation;
 pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
+pub(crate) mod ref_version_mismatch;
 pub(crate) mod secrets_inherit;
 pub(crate) mod self_hosted_runner;
 pub(crate) mod stale_action_refs;
 pub(crate) mod template_injection;
 pub(crate) mod timeout_minutes;
+pub(crate) mod undocumented_permissions;
 pub(crate) mod unpinned_images;
 pub(crate) mod unpinned_uses;
 pub(crate) mod unredacted_secrets;
@@ -46,6 +53,7 @@ pub(crate) mod use_trusted_publishing;
 pub(crate) enum AuditInput {
     Workflow(Workflow),
     Action(Action),
+    Dependabot(Dependabot),
 }
 
 impl AuditInput {
@@ -53,13 +61,7 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => &workflow.key,
             AuditInput::Action(action) => &action.key,
-        }
-    }
-
-    pub(crate) fn line_index(&self) -> &LineIndex {
-        match self {
-            AuditInput::Workflow(workflow) => workflow.as_document().line_index(),
-            AuditInput::Action(action) => action.as_document().line_index(),
+            AuditInput::Dependabot(dependabot) => &dependabot.key,
         }
     }
 
@@ -67,6 +69,7 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => workflow.link.as_deref(),
             AuditInput::Action(action) => action.link.as_deref(),
+            AuditInput::Dependabot(dependabot) => dependabot.link.as_deref(),
         }
     }
 
@@ -74,6 +77,7 @@ impl AuditInput {
         match self {
             AuditInput::Workflow(workflow) => workflow.location(),
             AuditInput::Action(action) => action.location(),
+            AuditInput::Dependabot(dependabot) => dependabot.location(),
         }
     }
 }
@@ -83,6 +87,7 @@ impl<'a> AsDocument<'a, 'a> for AuditInput {
         match self {
             AuditInput::Workflow(workflow) => workflow.as_document(),
             AuditInput::Action(action) => action.as_document(),
+            AuditInput::Dependabot(dependabot) => dependabot.as_document(),
         }
     }
 }
@@ -96,6 +101,12 @@ impl From<Workflow> for AuditInput {
 impl From<Action> for AuditInput {
     fn from(value: Action) -> Self {
         Self::Action(value)
+    }
+}
+
+impl From<Dependabot> for AuditInput {
+    fn from(value: Dependabot) -> Self {
+        Self::Dependabot(value)
     }
 }
 
@@ -123,9 +134,19 @@ pub(crate) trait AuditCore {
     {
         FindingBuilder::new(Self::ident(), Self::desc(), Self::url())
     }
+
+    fn err(error: impl Into<anyhow::Error>) -> AuditError
+    where
+        Self: Sized,
+    {
+        AuditError {
+            ident: Self::ident(),
+            source: error.into(),
+        }
+    }
 }
 
-/// A convenience macro for implementing [`Audit`] on a type.
+/// A convenience macro for implementing [`AuditCore`] on a type.
 ///
 /// Example use:
 ///
@@ -171,6 +192,27 @@ pub(crate) enum AuditLoadError {
     Fail(anyhow::Error),
 }
 
+#[derive(Error, Debug)]
+#[error("error in {ident}")]
+pub(crate) struct AuditError {
+    ident: &'static str,
+    #[source]
+    source: anyhow::Error,
+}
+
+impl AuditError {
+    pub(crate) fn new(ident: &'static str, error: impl Into<anyhow::Error>) -> Self {
+        Self {
+            ident,
+            source: error.into(),
+        }
+    }
+
+    pub(crate) fn ident(&self) -> &'static str {
+        self.ident
+    }
+}
+
 /// Auditing trait.
 ///
 /// Implementors of this trait can choose the level of specificity/context
@@ -197,40 +239,54 @@ pub(crate) enum AuditLoadError {
 /// In other words, if an audit chooses to implement [`Audit::audit`], it should implement
 /// **only** [`Audit::audit`] and not [`Audit::audit_normal_job`] or
 /// [`Audit::audit_step`].
+#[async_trait::async_trait]
 pub(crate) trait Audit: AuditCore {
-    fn new(state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized;
 
-    fn audit_step<'doc>(&self, _step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    async fn audit_step<'doc>(
+        &self,
+        _step: &Step<'doc>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
-    fn audit_normal_job<'doc>(&self, job: &NormalJob<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    async fn audit_normal_job<'doc>(
+        &self,
+        job: &NormalJob<'doc>,
+        config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
         for step in job.steps() {
-            results.extend(self.audit_step(&step)?);
+            results.extend(self.audit_step(&step, config).await?);
         }
         Ok(results)
     }
 
-    fn audit_reusable_job<'doc>(
+    async fn audit_reusable_job<'doc>(
         &self,
         _job: &ReusableWorkflowCallJob<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
-    fn audit_workflow<'doc>(&self, workflow: &'doc Workflow) -> anyhow::Result<Vec<Finding<'doc>>> {
+    async fn audit_workflow<'doc>(
+        &self,
+        workflow: &'doc Workflow,
+        config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
             match job {
                 Job::NormalJob(normal) => {
-                    results.extend(self.audit_normal_job(&normal)?);
+                    results.extend(self.audit_normal_job(&normal, config).await?);
                 }
                 Job::ReusableWorkflowCallJob(reusable) => {
-                    results.extend(self.audit_reusable_job(&reusable)?);
+                    results.extend(self.audit_reusable_job(&reusable, config).await?);
                 }
             }
         }
@@ -238,26 +294,43 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         _step: &CompositeStep<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
-    fn audit_action<'doc>(&self, action: &'doc Action) -> anyhow::Result<Vec<Finding<'doc>>> {
+    async fn audit_action<'doc>(
+        &self,
+        action: &'doc Action,
+        config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         if let Some(steps) = action.steps() {
             for step in steps {
-                results.extend(self.audit_composite_step(&step)?);
+                results.extend(self.audit_composite_step(&step, config).await?);
             }
         }
 
         Ok(results)
     }
 
-    fn audit_raw<'doc>(&self, _input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
+    async fn audit_dependabot<'doc>(
+        &self,
+        _dependabot: &'doc Dependabot,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        Ok(vec![])
+    }
+
+    async fn audit_raw<'doc>(
+        &self,
+        _input: &'doc AuditInput,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
 
@@ -265,14 +338,36 @@ pub(crate) trait Audit: AuditCore {
     ///
     /// Implementors **should not** override this blanket implementation,
     /// since it's marked with tracing instrumentation.
-    #[instrument(skip(self))]
-    fn audit<'doc>(&self, input: &'doc AuditInput) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ///
+    /// NOTE: This method takes the audit's own identifier as an argument,
+    /// so that we can check whether the audit is disabled in the config.
+    /// This is a little silly since the audit would ideally call Self::ident(),
+    /// but this gets invoked through a trait object where `Self` is not `Sized`.
+    ///
+    /// TODO: This also means we effectively run the disablement check on every
+    /// single input in a group, rather than just once per group.
+    #[instrument(skip(self, ident, config))]
+    async fn audit<'doc>(
+        &self,
+        ident: &'static str,
+        input: &'doc AuditInput,
+        config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        if config.disables(ident) {
+            tracing::debug!(
+                "skipping: {ident} is disabled in config for group {group:?}",
+                group = input.key().group()
+            );
+            return Ok(vec![]);
+        }
+
         let mut results = match input {
-            AuditInput::Workflow(workflow) => self.audit_workflow(workflow),
-            AuditInput::Action(action) => self.audit_action(action),
+            AuditInput::Workflow(workflow) => self.audit_workflow(workflow, config).await,
+            AuditInput::Action(action) => self.audit_action(action, config).await,
+            AuditInput::Dependabot(dependabot) => self.audit_dependabot(dependabot, config).await,
         }?;
 
-        results.extend(self.audit_raw(input)?);
+        results.extend(self.audit_raw(input, config).await?);
 
         Ok(results)
     }

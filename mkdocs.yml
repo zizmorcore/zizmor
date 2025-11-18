@@ -14,13 +14,12 @@ nav:
   - "quickstart.md"
   - "usage.md"
   - "integrations.md"
+  - "troubleshooting.md"
   - "release-notes.md"
   - "configuration.md"
   - "audits.md"
   - "development.md"
   - "trophy-case.md"
-  - External links:
-      - "crates.io 🔗": https://crates.io/crates/zizmor
 
 plugins:
   - search
@@ -133,5 +132,8 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/zizmor/
       name: "Zizmor on PyPI"
+    - icon: fontawesome/brands/rust
+      link: https://crates.io/crates/zizmor
+      name: "Zizmor on crates.io"
 
 copyright: "&copy; 2024 William Woodruff"

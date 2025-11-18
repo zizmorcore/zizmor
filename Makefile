@@ -18,18 +18,19 @@ snippets: trophies sponsors
 trophies: docs/snippets/trophies.md
 
 docs/snippets/trophies.md: docs/snippets/trophies.txt docs/snippets/render-trophies.py
-	uv run --no-project docs/snippets/render-trophies.py > $@
+	docs/snippets/render-trophies.py > $@
 
 .PHONY: sponsors
 sponsors: docs/snippets/sponsors.html
 
 docs/snippets/sponsors.html: docs/snippets/sponsors.json docs/snippets/render-sponsors.py
-	uv run --no-project docs/snippets/render-sponsors.py > $@
+	docs/snippets/render-sponsors.py > $@
 
 .PHONY: refresh-schemas
 refresh-schemas:
 	curl https://www.schemastore.org/github-workflow.json > crates/zizmor/src/data/github-workflow.json
 	curl https://www.schemastore.org/github-action.json > crates/zizmor/src/data/github-action.json
+	curl https://www.schemastore.org/dependabot-2.0.json > crates/zizmor/src/data/dependabot-2.0.json
 
 .PHONY: webhooks-to-contexts
 webhooks-to-contexts:
@@ -48,4 +49,4 @@ pinact:
 
 .PHONY: bench
 bench:
-	uv run bench/benchmark.py
+	uv run bench/benchmark.py --offline

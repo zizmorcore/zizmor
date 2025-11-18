@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 798
 expression: "zizmor().config(input_under_test(&format!(\"forbidden-uses/configs/{config}.yml\"))).input(input_under_test(\"forbidden-uses/forbidden-uses-menagerie.yml\")).run()?"
 ---
 error[forbidden-uses]: forbidden action used
@@ -26,4 +27,4 @@ error[forbidden-uses]: forbidden action used
    |
    = note: audit confidence → High
 
-3 findings: 0 unknown, 0 informational, 0 low, 0 medium, 3 high
+4 findings (1 suppressed): 0 informational, 0 low, 0 medium, 3 high

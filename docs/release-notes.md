@@ -9,6 +9,305 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* `zizmor` now produces a more useful error message when asked to
+  collect only workflows from a remote input that contains no workflows (#1324)
+
+### Performance Improvements 🚄
+
+* `zizmor`'s core has been refactored to be asynchronous, making online
+  and I/O-heavy audits significantly faster. Typical user workloads
+  should see speedups of 40% to 70% (#1314)
+
+### Bug Fixes 🐛
+
+* Fixed a bug where auto-fixes would fail to preserve a document's final
+  newline (#1323)
+
+* `zizmor` now uses the native (OS) TLS roots when performing HTTPS requests,
+  improving compatibility with user environments that perform TLS interception
+  (#1328)
+
+* The [github-env] now falls back to assuming bash-like shell syntax in
+  `run:` blocks if it can't infer the shell being used (#1336)
+
+## 1.16.3
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would crash on an unexpected caching middleware
+  state. `zizmor` will now exit with a controlled error instead (#1319)
+
+## 1.16.2
+
+### Enhancements 🌱
+
+* The [concurrency-limits] audit no longer flags explicit user concurrency
+  overrides, e.g. `cancel-in-progress: false` (#1302)
+* zizmor now detects CI environments and specializes its panic handling
+  accordingly, improving the quality of panic reports when running
+  in CI (#1307)
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would reject some Dependabot configuration
+  files with logically unsound schedules (but that are accepted by GitHub
+  regardless) (#1308)
+
+## 1.16.1
+
+### Enhancements 🌱
+
+* `zizmor` now produces a more useful error message when asked to indirectly
+  access a nonexistent or private repository via a `uses:` clause (without
+  a sufficiently privileged GitHub token) (#1293)
+
+## 1.16.0
+
+### New Features 🌈
+
+* **New audit**: [concurrency-limits] detects insufficient concurrency limits
+  in workflows (#1227)
+
+    Many thanks to @jwallwork23 for proposing and implementing this audit!
+
+### Performance Improvements 🚄
+
+* `zizmor`'s online mode is now significantly (40% to over 95%) faster on
+  common workloads, thanks to a combination of caching improvements and
+  conversion of GitHub API requests into Git remote lookups (#1257)
+
+    Many thanks to @Bo98 for implementing these improvements!
+
+### Enhancements 🌱
+
+* When running in `--fix` mode and all fixes are successfully applied,
+  `zizmor` now has similar [exit code] behavior as the `--no-exit-codes`
+  and `--format=sarif` flags (#1242)
+
+    Many thanks to @cnaples79 for implementing this improvement!
+
+* The [dependabot-cooldown] audit now supports auto-fixes for many findings
+  (#1229)
+
+    Many thanks to @mostafa for implementing this improvement!
+
+* The [dependabot-execution] audit now supports auto-fixes for many findings
+  (#1229)
+
+    Many thanks to @mostafa for implementing this improvement!
+
+* `zizmor` now has **limited, experimental** support for handling
+  inputs that contain YAML anchors (#1266)
+
+## 1.15.2
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse some Dependabot configuration
+  files due to missing support for some schedule formats (#1247)
+
+## 1.15.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail to parse Dependabot configuration files
+  due to missing support for some package ecosystems (#1240)
+
+## 1.15.0
+
+This release comes with support for auditing
+[Dependabot](https://docs.github.com/en/code-security/dependabot) configuration
+files! Like with composite action definition auditing (introduced in
+[v1.0.0](#v100)), Dependabot configuration auditing is **enabled by default**
+but can be disabled as part of input collection.
+
+To complement this new functionality, this release comes with two new audits:
+[dependabot-execution] and [dependabot-cooldown].
+
+### New Features 🌈
+
+* **New audit**: [dependabot-execution] detects Dependabot configurations
+  that allow insecure external code execution (#1220)
+
+* **New audit**: [dependabot-cooldown] detects Dependabot configurations
+  that do not include cooldown settings, or that set an insufficient
+  cooldown (#1223)
+
+### Performance Improvements 🚄
+
+* `zizmor` now uses `jemalloc` as its default allocator on non-MSVC targets,
+  which should significantly improve performance for Linux and macOS users
+  (#1200)
+
+### Enhancements 🌱
+
+* `zizmor` now unconditionally emits its version number to stderr on
+  startup (#1199)
+
+* The [ref-version-mismatch] audit now supports auto-fixes for many findings
+  (#1205)
+
+    Many thanks to @mostafa for implementing this improvement!
+
+* The [impostor-commit] audit now supports auto-fixes for many findings
+  (#1090)
+
+    Many thanks to @mostafa for implementing this improvement!
+
+* `zizmor` is now more resilient to sporadic request failures when performing
+  GitHub API requests (#1219)
+
+* `--collect=dependabot` is now supported as a collection option,
+  allowing users to audit only Dependabot configuration files (#1215)
+
+* The `--fix` mode (introduced with v1.10.0) is now considered
+  **stable** and no longer experimental (#1232)
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would fail instead of analyzing single-file
+  inputs that lacked an explicit parent path component, e.g.
+  `zizmor foo.yml` instead of `zizmor ./foo.yml` (#1212)
+
+### Deprecations ⚠️
+
+* The `workflows-only` and `actions-only` values for `--collect` are now
+  deprecated. These values have been replaced with `workflows` and
+  `actions`, respectively, which have the same behavior but
+  can be composed together with other collection modes. The deprecated
+  modes will be removed in a future release (#1228)
+
+    Until removal, using these values will emit a warning.
+
+## 1.14.2
+
+### Bug Fixes 🐛
+
+* Fixed a bug where the [use-trusted-publishing] audit would produce-false
+  positive findings for some `run:` blocks that implicitly performed
+  trusted publishing (#1191)
+
+## 1.14.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where the [ref-version-mismatch] would incorrectly show the
+  wrong commit SHAs in its findings (#1183)
+
+## 1.14.0
+
+### New Features 🌈
+
+* **New audit**: [ref-version-mismatch] detects mismatches between
+  hash-pinned action references and their version comments (#972)
+
+    Many thanks to @segiddins for implementing this audit!
+
+### Enhancements 🌱
+
+* `zizmor` no longer uses the "Unknown" severity or confidence levels
+  for any findings. All findings previously categorized at these levels
+  are now given a more meaningful level (#1164)
+
+* The [use-trusted-publishing] audit now detects various Trusted Publishing
+  patterns for the npm ecosystem (#1161)
+
+    Many thanks to @KristianGrafana for implementing this improvement!
+
+* The [unsound-condition] audit now supports auto-fixes for many
+  findings (#1089)
+
+    Many thanks to @mostafa for implementing this improvement!
+
+* `zizmor`'s error handling has been restructured, improving the quality
+  of error messages and their associated suggestions (#1169)
+
+### Bug Fixes 🐛
+
+* Fixed a bug where the [cache-poisoning] audit would fail to detect
+  some cache usage variants in newer versions of `actions/setup-node`
+  (#1152)
+
+* Fixed a bug where the [obfuscation] audit would incorrectly flag
+  some subexpressions as constant-reducible when they were not (#1170)
+
+### Deprecations ⚠️
+
+* The `unknown` values for `--min-severity` and `--min-confidence`
+  are now deprecated. These values were already no-ops (and have
+  been since introduction), and will be removed in a future release
+  (#1164)
+
+    Until removal, using these values will emit a warning.
+
+## 1.13.0
+
+### New Features 🌈
+
+* **New audit**: [undocumented-permissions] detects explicit permission
+  grants that lack an explanatory comment (#1131)
+
+    Many thanks to @johnbillion for proposing and implementing this audit!
+
+### Enhancements 🌱
+
+* `zizmor`'s configuration discovery behavior has been significantly refactored,
+  making it easier to audit multiple independent inputs with their own
+  configuration files (#1094)
+
+    For most users, this change should cause no compatibility issues.
+    For example, the following commands will continue to load the same
+    configuration files as before:
+
+    ```sh
+    zizmor .
+    zizmor .github/
+    ```
+
+    For other users, the behavior will change, but in a way that's intended
+    to correct a long-standing bug with configuration discovery.
+    In particular, the following commands will now behave differently:
+
+    ```sh
+    # OLD: would discover config in $CWD
+    # NEW: will discover two different configs, one in each of the repos
+    zizmor ./repoA ./repoB
+    ```
+
+    Separately from these changes, `zizmor` continues to support
+    `--config <path>` and `ZIZMOR_CONFIG` with the exact same behavior as
+    before.
+
+    See [Configuration - Discovery](./configuration.md#discovery) for a
+    detailed explanation of the new behavior.
+
+* Audit rules can now be disabled entirely in `zizmor`'s configuration.
+  See [`rules.<id>.disable`](./configuration.md#rulesiddisable)
+  for details (#1132)
+
+* The [obfuscation] audit now supports auto-fixes for many findings (#1088)
+
+### Bug Fixes 🐛
+
+* `zizmor` now correctly honors `--strict-collection` when collecting from
+  remote inputs. This also means that the default collection strictness
+  has changed for remote inputs to match all other inputs (#1122)
+
+* Fixed a bug where `zizmor` would crash on certain UTF-8 inputs lacking
+  an explicit final newline due to a bug in the `annotate-snippets` crate
+  (#1136)
+
+## 1.12.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where the [cache-poisoning] would incorrectly detect the
+  opposite cases for cache enablement (#1081)
+
+## 1.12.0
+
 ### New Features 🌈
 
 * **New audit**: [unsound-condition] detects `if:` conditions that
@@ -950,3 +1249,10 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [anonymous-definition]: ./audits.md#anonymous-definition
 [unsound-condition]: ./audits.md#unsound-condition
 [known-vulnerable-actions]: ./audits.md#known-vulnerable-actions
+[undocumented-permissions]: ./audits.md#undocumented-permissions
+[ref-version-mismatch]: ./audits.md#ref-version-mismatch
+[dependabot-execution]: ./audits.md#dependabot-execution
+[dependabot-cooldown]: ./audits.md#dependabot-cooldown
+[concurrency-limits]: ./audits.md#concurrency-limits
+
+[exit code]: ./usage.md#exit-codes

@@ -3,7 +3,11 @@ on: push
 name: issue-336-repro
 
 permissions:
-  contents: write
+  contents: write  # Needed for the workflow
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   single:

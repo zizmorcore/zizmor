@@ -1,0 +1,10 @@
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /
+    cooldown:
+      default-days: 2
+    schedule:
+      interval: daily
+    insecure-external-code-execution: deny

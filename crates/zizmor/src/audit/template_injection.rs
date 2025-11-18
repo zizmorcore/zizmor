@@ -18,7 +18,7 @@
 use std::{env, ops::Deref, sync::LazyLock, vec};
 
 use fst::Map;
-use github_actions_expressions::{Expr, Literal, context::Context};
+use github_actions_expressions::{Expr, context::Context, literal::Literal};
 use github_actions_models::{
     common::{EnvValue, RepositoryUses, Uses, expr::LoE},
     workflow::job::Strategy,
@@ -27,6 +27,8 @@ use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
+    audit::AuditError,
+    config::Config,
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
         location::{Routable as _, SymbolicLocation},
@@ -49,6 +51,7 @@ audit_meta!(
     "code injection via template expansion"
 );
 
+#[allow(clippy::unwrap_used)]
 static ACTION_INJECTION_SINKS: LazyLock<Vec<(RepositoryUsesPattern, Vec<&str>)>> =
     LazyLock::new(|| {
         let mut sinks: Vec<(RepositoryUsesPattern, Vec<&str>)> = serde_json::from_slice(
@@ -377,8 +380,8 @@ impl TemplateInjection {
                 Subfeature::new(expr_span.start, &parsed),
                 // Intentionally not providing a fix here.
                 None,
-                Severity::Unknown,
-                Confidence::Unknown,
+                Severity::Low,
+                Confidence::High,
                 Persona::Pedantic,
             ));
 
@@ -439,7 +442,7 @@ impl TemplateInjection {
                                             (Severity::High, Confidence::High, Persona::default())
                                         }
                                         None => {
-                                            (Severity::Unknown, Confidence::Low, Persona::default())
+                                            (Severity::Low, Confidence::Low, Persona::default())
                                         }
                                     };
 
@@ -476,7 +479,7 @@ impl TemplateInjection {
                                                 origin.raw,
                                             ),
                                             self.attempt_fix(&expr, &parsed, step),
-                                            Severity::Unknown,
+                                            Severity::Low,
                                             Confidence::High,
                                             Persona::Pedantic,
                                         ));
@@ -561,7 +564,7 @@ impl TemplateInjection {
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for (script, script_loc, related_locs) in Self::scripts_with_location(step) {
@@ -598,22 +601,28 @@ impl TemplateInjection {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for TemplateInjection {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    async fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }
 
-    fn audit_composite_step<'a>(
+    async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
-    ) -> anyhow::Result<Vec<Finding<'a>>> {
+        _config: &Config,
+    ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step)
     }
 }
@@ -624,25 +633,23 @@ mod tests {
 
     use crate::audit::Audit;
     use crate::audit::template_injection::{Capability, TemplateInjection};
-    use crate::github_api::GitHubHost;
+    use crate::config::Config;
     use crate::models::AsDocument;
     use crate::models::workflow::Workflow;
-    use crate::registry::InputKey;
+    use crate::registry::input::InputKey;
     use crate::state::AuditState;
 
     /// Macro for testing workflow audits with common boilerplate
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>);
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(&workflow, findings)
         }};
@@ -665,8 +672,8 @@ mod tests {
         fix.apply(document).unwrap()
     }
 
-    #[test]
-    fn test_template_injection_fix_github_ref_name() {
+    #[tokio::test]
+    async fn test_template_injection_fix_github_ref_name() {
         let workflow_content = r#"
 name: Test Template Injection
 on: push
@@ -714,8 +721,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_github_actor() {
+    #[tokio::test]
+    async fn test_template_injection_fix_github_actor() {
         let workflow_content = r#"
 name: Test Template Injection
 on: push
@@ -767,8 +774,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_with_existing_env() {
+    #[tokio::test]
+    async fn test_template_injection_fix_with_existing_env() {
         let workflow_content = r#"
 name: Test Template Injection
 on: push
@@ -821,8 +828,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_no_fix_for_action_sinks() {
+    #[tokio::test]
+    async fn test_template_injection_no_fix_for_action_sinks() {
         let workflow_content = r#"
 name: Test Template Injection - Actions
 on: push
@@ -856,8 +863,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_multiple_expressions() {
+    #[tokio::test]
+    async fn test_template_injection_fix_multiple_expressions() {
         let workflow_content = r#"
 name: Test Multiple Template Injections
 on: push
@@ -932,8 +939,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_duplicate_expressions() {
+    #[tokio::test]
+    async fn test_template_injection_fix_duplicate_expressions() {
         let workflow_content = r#"
         name: Test Duplicate Template Injections
         on: push
@@ -995,8 +1002,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_equivalent_expressions() {
+    #[tokio::test]
+    async fn test_template_injection_fix_equivalent_expressions() {
         let workflow_content = r#"
         name: Test Duplicate Template Injections
         on: push
@@ -1056,8 +1063,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_no_env_overcorrection() {
+    #[tokio::test]
+    async fn test_template_injection_fix_no_env_overcorrection() {
         // Testcase for #1052.
         let workflow_content = r#"
 name: Test Duplicate Template Injections
@@ -1187,8 +1194,8 @@ jobs:
         }
     }
 
-    #[test]
-    fn test_template_injection_fix_bash_shell() {
+    #[tokio::test]
+    async fn test_template_injection_fix_bash_shell() {
         let workflow_content = r#"
 name: Test Template Injection - Bash
 on: push
@@ -1233,8 +1240,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_bash_shell_full_path() {
+    #[tokio::test]
+    async fn test_template_injection_fix_bash_shell_full_path() {
         let workflow_content = r#"
 name: Test Template Injection - Bash
 on: push
@@ -1279,8 +1286,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_cmd_shell() {
+    #[tokio::test]
+    async fn test_template_injection_fix_cmd_shell() {
         let workflow_content = r#"
 name: Test Template Injection - CMD
 on: push
@@ -1325,8 +1332,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_pwsh_shell() {
+    #[tokio::test]
+    async fn test_template_injection_fix_pwsh_shell() {
         let workflow_content = r#"
 name: Test Template Injection - PowerShell
 on: push
@@ -1371,8 +1378,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_default_shell_ubuntu() {
+    #[tokio::test]
+    async fn test_template_injection_fix_default_shell_ubuntu() {
         let workflow_content = r#"
 name: Test Template Injection - Default Shell Ubuntu
 on: push
@@ -1416,8 +1423,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_default_shell_windows() {
+    #[tokio::test]
+    async fn test_template_injection_fix_default_shell_windows() {
         let workflow_content = r#"
 name: Test Template Injection - Default Shell Windows
 on: push
@@ -1461,8 +1468,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_fix_cmd_shell_with_custom_env() {
+    #[tokio::test]
+    async fn test_template_injection_fix_cmd_shell_with_custom_env() {
         let workflow_content = r#"
 name: Test Template Injection - CMD with Custom Env
 on: push
@@ -1509,8 +1516,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_template_injection_no_fix_unknown_shell() {
+    #[tokio::test]
+    async fn test_template_injection_no_fix_unknown_shell() {
         let workflow_content = r#"
 name: Test Template Injection - Unknown Shell
 on: push

@@ -5,7 +5,6 @@
 //! This audit is "auditor" only, since zizmor can't detect
 //! whether self-hosted runners are ephemeral or not.
 
-use anyhow::Result;
 use github_actions_models::{
     common::expr::{ExplicitExpr, LoE},
     workflow::job::RunsOn,
@@ -14,6 +13,7 @@ use github_actions_models::{
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     AuditState,
+    audit::AuditError,
     finding::{Confidence, Persona, Severity},
 };
 use crate::{finding::location::Locatable as _, models::workflow::Matrix};
@@ -26,18 +26,20 @@ audit_meta!(
     "runs on a self-hosted runner"
 );
 
+#[async_trait::async_trait]
 impl Audit for SelfHostedRunner {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
-    ) -> Result<Vec<crate::finding::Finding<'doc>>> {
+        _config: &crate::config::Config,
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
@@ -58,7 +60,7 @@ impl Audit for SelfHostedRunner {
                             results.push(
                                 Self::finding()
                                     .confidence(Confidence::High)
-                                    .severity(Severity::Unknown)
+                                    .severity(Severity::Medium)
                                     .persona(Persona::Auditor)
                                     .add_location(
                                         job.location()
@@ -76,7 +78,7 @@ impl Audit for SelfHostedRunner {
                             results.push(
                                 Self::finding()
                                     .confidence(Confidence::Low)
-                                    .severity(Severity::Unknown)
+                                    .severity(Severity::Medium)
                                     .persona(Persona::Auditor)
                                     .add_location(
                                         job.location()
@@ -99,7 +101,7 @@ impl Audit for SelfHostedRunner {
                 LoE::Literal(RunsOn::Group { .. }) => results.push(
                     Self::finding()
                         .confidence(Confidence::Low)
-                        .severity(Severity::Unknown)
+                        .severity(Severity::Medium)
                         .persona(Persona::Auditor)
                         .add_location(
                             job.location()
@@ -126,7 +128,7 @@ impl Audit for SelfHostedRunner {
                         results.push(
                             Self::finding()
                                 .confidence(Confidence::High)
-                                .severity(Severity::Unknown)
+                                .severity(Severity::Medium)
                                 .persona(Persona::Auditor)
                                 .add_location(
                                     job.location()

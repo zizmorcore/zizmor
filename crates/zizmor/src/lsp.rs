@@ -1,9 +1,11 @@
 //! zizmor's language server.
 
+use std::str::FromStr;
+
 use camino::Utf8Path;
-use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types;
-use tower_lsp::{Client, LanguageServer, LspService, Server};
+use thiserror::Error;
+use tower_lsp_server::lsp_types::{self, TextDocumentSyncKind};
+use tower_lsp_server::{Client, LanguageServer, LspService, Server};
 
 use crate::audit::AuditInput;
 use crate::config::Config;
@@ -11,11 +13,19 @@ use crate::finding::location::Point;
 use crate::finding::{Persona, Severity};
 use crate::models::action::Action;
 use crate::models::workflow::Workflow;
-use crate::registry::{FindingRegistry, InputKey};
+use crate::registry::input::{InputGroup, InputRegistry};
+use crate::registry::{FindingRegistry, input::InputKey};
 use crate::{AuditRegistry, AuditState};
 
+#[derive(Debug, Error)]
+#[error("LSP server error")]
+pub(crate) struct Error {
+    #[from]
+    inner: anyhow::Error,
+}
+
 struct LspDocumentCommon {
-    uri: lsp_types::Url,
+    uri: lsp_types::Uri,
     text: String,
     version: Option<i32>,
 }
@@ -26,12 +36,11 @@ struct Backend {
     client: Client,
 }
 
-#[tower_lsp::async_trait]
 impl LanguageServer for Backend {
     async fn initialize(
         &self,
         _: lsp_types::InitializeParams,
-    ) -> Result<lsp_types::InitializeResult> {
+    ) -> tower_lsp_server::jsonrpc::Result<lsp_types::InitializeResult> {
         Ok(lsp_types::InitializeResult {
             server_info: Some(lsp_types::ServerInfo {
                 name: "zizmor (LSP)".into(),
@@ -58,6 +67,11 @@ impl LanguageServer for Backend {
                 scheme: None,
                 pattern: Some("**/action.{yml,yaml}".into()),
             },
+            lsp_types::DocumentFilter {
+                language: Some("yaml".into()),
+                scheme: None,
+                pattern: Some("**/.github/dependabot.{yml,yaml}".into()),
+            },
         ];
 
         // Register our capabilities with the client.
@@ -73,7 +87,7 @@ impl LanguageServer for Backend {
                         serde_json::to_value(lsp_types::TextDocumentRegistrationOptions {
                             document_selector: Some(selectors.clone()),
                         })
-                        .unwrap(),
+                        .expect("failed to serialize LSP document registration options"),
                     ),
                 },
                 lsp_types::Registration {
@@ -82,9 +96,9 @@ impl LanguageServer for Backend {
                     register_options: Some(
                         serde_json::to_value(lsp_types::TextDocumentChangeRegistrationOptions {
                             document_selector: Some(selectors.clone()),
-                            sync_kind: 1, // FULL
+                            sync_kind: TextDocumentSyncKind::FULL,
                         })
-                        .unwrap(),
+                        .expect("failed to serialize LSP document registration options"),
                     ),
                 },
                 lsp_types::Registration {
@@ -98,7 +112,7 @@ impl LanguageServer for Backend {
                                     document_selector: Some(selectors.clone()),
                                 },
                         })
-                        .unwrap(),
+                        .expect("failed to serialize LSP document registration options"),
                     ),
                 },
                 lsp_types::Registration {
@@ -108,7 +122,7 @@ impl LanguageServer for Backend {
                         serde_json::to_value(lsp_types::TextDocumentRegistrationOptions {
                             document_selector: Some(selectors),
                         })
-                        .unwrap(),
+                        .expect("failed to serialize LSP document registration options"),
                     ),
                 },
             ])
@@ -120,7 +134,7 @@ impl LanguageServer for Backend {
             .await;
     }
 
-    async fn shutdown(&self) -> Result<()> {
+    async fn shutdown(&self) -> tower_lsp_server::jsonrpc::Result<()> {
         tracing::debug!("graceful shutdown requested");
         Ok(())
     }
@@ -166,25 +180,36 @@ impl LanguageServer for Backend {
 impl Backend {
     async fn audit_inner(&self, params: LspDocumentCommon) -> anyhow::Result<()> {
         tracing::debug!("analyzing: {:?} (version={:?})", params.uri, params.version);
-        let path = Utf8Path::new(params.uri.path());
+        let path = Utf8Path::new(params.uri.path().as_str());
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
             AuditInput::from(Action::from_string(
                 params.text,
-                InputKey::local(path, None)?,
+                InputKey::local("lsp".into(), path, None),
             )?)
         } else if matches!(path.extension(), Some("yml" | "yaml")) {
             AuditInput::from(Workflow::from_string(
                 params.text,
-                InputKey::local(path, None)?,
+                InputKey::local("lsp".into(), path, None),
             )?)
         } else {
             anyhow::bail!("asked to audit unexpected file: {path}");
         };
 
-        let config = Config::default();
-        let mut registry = FindingRegistry::new(None, None, Persona::Regular, &config);
-        for (_, audit) in self.audit_registry.iter_audits() {
-            registry.extend(audit.audit(&input)?);
+        let mut group = InputGroup::new(Config::default());
+        group.register_input(input)?;
+        let mut input_registry = InputRegistry::new();
+        input_registry.groups.insert("lsp".into(), group);
+
+        let mut registry = FindingRegistry::new(&input_registry, None, None, Persona::Regular);
+
+        for (input_key, input) in input_registry.iter_inputs() {
+            for (ident, audit) in self.audit_registry.iter_audits() {
+                registry.extend(
+                    audit
+                        .audit(ident, input, input_registry.get_config(input_key.group()))
+                        .await?,
+                );
+            }
         }
 
         let diagnostics = registry
@@ -200,7 +225,7 @@ impl Backend {
                     severity: Some(finding.determinations.severity.into()),
                     code: Some(lsp_types::NumberOrString::String(finding.ident.into())),
                     code_description: Some(lsp_types::CodeDescription {
-                        href: lsp_types::Url::parse(finding.url)
+                        href: lsp_types::Uri::from_str(finding.url)
                             .expect("finding contains an invalid URL somehow"),
                     }),
                     source: Some("zizmor".into()),
@@ -233,7 +258,6 @@ impl From<Severity> for lsp_types::DiagnosticSeverity {
     fn from(value: Severity) -> Self {
         // TODO: Does this mapping make sense?
         match value {
-            Severity::Unknown => lsp_types::DiagnosticSeverity::HINT,
             Severity::Informational => lsp_types::DiagnosticSeverity::INFORMATION,
             Severity::Low => lsp_types::DiagnosticSeverity::WARNING,
             Severity::Medium => lsp_types::DiagnosticSeverity::WARNING,
@@ -252,20 +276,13 @@ impl From<Point> for lsp_types::Position {
 }
 
 #[tokio::main]
-pub(crate) async fn run() -> anyhow::Result<()> {
+pub(crate) async fn run() -> Result<(), Error> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
-    let config = Config::default();
+    let state = AuditState::default();
 
-    let audit_state = AuditState {
-        config: &config,
-        no_online_audits: false,
-        gh_client: None,
-        gh_hostname: crate::GitHubHost::Standard("github.com".into()),
-    };
-
-    let audits = AuditRegistry::default_audits(&audit_state)?;
+    let audits = AuditRegistry::default_audits(&state)?;
     let (service, socket) = LspService::new(|client| Backend {
         audit_registry: audits,
         client,

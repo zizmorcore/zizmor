@@ -31,19 +31,19 @@ Options:
       --color <MODE>
           Control the use of color in output [possible values: auto, always, never]
   -c, --config <CONFIG>
-          The configuration file to load. By default, any config will be discovered relative to $CWD [env: ZIZMOR_CONFIG=]
+          The configuration file to load. This loads a single configuration file across all input groups, which may not be what you intend [env: ZIZMOR_CONFIG=]
       --no-config
           Disable all configuration loading
       --no-exit-codes
           Disable all error codes besides success and tool failure
       --min-severity <MIN_SEVERITY>
-          Filter all results below this severity [possible values: unknown, informational, low, medium, high]
+          Filter all results below this severity [possible values: informational, low, medium, high]
       --min-confidence <MIN_CONFIDENCE>
-          Filter all results below this confidence [possible values: unknown, low, medium, high]
+          Filter all results below this confidence [possible values: low, medium, high]
       --cache-dir <CACHE_DIR>
           The directory to use for HTTP caching. By default, a host-appropriate user-caching directory will be used
-      --collect <COLLECT>
-          Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows-only, actions-only]
+      --collect <COLLECT>...
+          Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows, actions, dependabot]
       --strict-collection
           Fail instead of warning on syntax and schema errors in collected inputs
       --completions <SHELL>

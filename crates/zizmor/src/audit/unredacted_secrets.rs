@@ -1,9 +1,10 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, SpannedExpr, context::Context};
+use github_actions_expressions::{Expr, SpannedExpr, call::Call, context::Context};
 
 use crate::{
     Confidence, Severity,
+    audit::AuditError,
     finding::location::{Feature, Location},
     utils::parse_fenced_expressions_from_input,
 };
@@ -18,18 +19,20 @@ audit_meta!(
     "leaked secret values"
 );
 
+#[async_trait::async_trait]
 impl Audit for UnredactedSecrets {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_raw<'doc>(
+    async fn audit_raw<'doc>(
         &self,
         input: &'doc super::AuditInput,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+        _config: &crate::config::Config,
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for (expr, span) in parse_fenced_expressions_from_input(input) {
@@ -70,7 +73,7 @@ impl UnredactedSecrets {
         // and therefore bypass GitHub's redaction mechanism.
 
         match expr.deref() {
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 if func == "fromJSON"
                     && args.iter().any(
                         |arg| matches!(arg.deref(), Expr::Context(ctx) if ctx.child_of("secrets")),

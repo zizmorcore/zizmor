@@ -1,11 +1,11 @@
 //! Models and APIs for handling findings and their locations.
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 use self::location::{Location, SymbolicLocation};
-use crate::{InputKey, models::AsDocument};
+use crate::{InputKey, audit::AuditError, models::AsDocument, registry::input::Group};
 use yamlpatch::{self, Patch};
 
 pub(crate) mod location;
@@ -48,45 +48,15 @@ pub(crate) enum Persona {
     Regular,
 }
 
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    Hash,
-    Ord,
-    PartialOrd,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    ValueEnum,
-)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Confidence {
-    #[default]
-    Unknown,
     Low,
     Medium,
     High,
 }
 
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    Hash,
-    Ord,
-    PartialOrd,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    ValueEnum,
-)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Severity {
-    #[default]
-    Unknown,
     Informational,
     Low,
     Medium,
@@ -185,7 +155,15 @@ impl Finding<'_> {
         self.locations
             .iter()
             .find(|l| l.symbolic.is_primary())
-            .unwrap()
+            .expect("internal error: finding has no primary location")
+    }
+
+    /// Return the input group for this finding's primary location.
+    ///
+    /// We assume that all locations in a finding belong to the same group,
+    /// if not the same file within that group.
+    pub(crate) fn input_group(&self) -> &Group {
+        self.primary_location().symbolic.key.group()
     }
 }
 
@@ -207,8 +185,8 @@ impl<'doc> FindingBuilder<'doc> {
             ident,
             desc,
             url,
-            severity: Default::default(),
-            confidence: Default::default(),
+            severity: Severity::Low,
+            confidence: Confidence::Low,
             persona: Default::default(),
             raw_locations: vec![],
             locations: vec![],
@@ -249,18 +227,20 @@ impl<'doc> FindingBuilder<'doc> {
     pub(crate) fn build<'a>(
         self,
         document: &'a impl AsDocument<'a, 'doc>,
-    ) -> Result<Finding<'doc>> {
+    ) -> Result<Finding<'doc>, AuditError> {
         let mut locations = self
             .locations
             .iter()
             .map(|l| l.clone().concretize(document.as_document()))
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<anyhow::Result<Vec<_>>>()
+            .map_err(|e| AuditError::new(self.ident, e))?;
 
         locations.extend(self.raw_locations);
 
         if !locations.iter().any(|l| l.symbolic.is_primary()) {
-            return Err(anyhow!(
-                "API misuse: at least one location must be marked with primary()"
+            return Err(AuditError::new(
+                self.ident,
+                anyhow!("API misuse: at least one location must be marked with primary()"),
             ));
         }
 

@@ -62,3 +62,33 @@ jobs:
             && other.context
           }}
         run: echo not ok
+
+      - name: 10-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: true && ${{ false }}
+        run: echo not ok
+
+      - name: 11-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: ${{ false }} && true
+        run: echo not ok
+
+      - name: 12-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: ${{ false }} lol
+        run: echo not ok
+
+      - name: 13-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: lol ${{ false }}
+        run: echo not ok
+
+      - name: 14-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: "${{ false }} "
+        run: echo not ok
+
+      - name: 15-not-ok
+        # NOT OK: evaluates to true because of stringification
+        if: " ${{ false }}"
+        run: echo not ok

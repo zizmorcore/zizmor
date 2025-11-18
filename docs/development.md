@@ -179,14 +179,22 @@ Benchmarks are stored in the top-level `bench/` directory, and can be
 run locally with:
 
 ```bash
-# run all benchmarks
+# run all offline benchmarks
 make bench
 ```
 
-We currently run benchmarks in the CI and report their results
+We currently run offline benchmarks in the CI and report their results
 to [Bencher](https://bencher.dev/). See
 [our project page](https://bencher.dev/console/projects/zizmor/plots)
 on Bencher for results and trends.
+
+There are also online benchmarks, but these don't get run automatically.
+To run them, you can pass `GH_TOKEN` to the `bench/benchmark.py` script
+directly:
+
+```bash
+GH_TOKEN=$(gh auth token) uv run bench/benchmark.py
+```
 
 ### Adding new benchmarks
 
@@ -251,7 +259,7 @@ will already be up-to-date.
 !!! tip
 
     Additions to the trophy case are welcome, but we currently limit them
-    to repositories with 100 or more "stars" to keep things tractable.
+    to repositories with 500 or more "stars" to keep things tractable.
 
 The [Trophy Case](./trophy-case.md) is kept up-to-date through the data in
 the `docs/snippets/trophies.txt` file.
@@ -282,12 +290,12 @@ Some things that can be useful to discuss beforehand:
 
 When developing a new `zizmor` audit, there are a couple of implementation details to be aware of:
 
-- All existing audits live in a Rust modules grouped under `crates/zizmor/src/audit` folder
+- All existing audits live in a Rust module grouped under `crates/zizmor/src/audit` folder
 - The expected behavior for all audits is defined by the `Audit` trait at `crates/zizmor/src/audit/mod.rs`
 - The expected outcome of an executed audit is defined by the `Finding` struct at `crates/zizmor/src/finding/mod.rs`
 - Any `Audit` implementation can have access to an `AuditState` instance, as per `crates/zizmor/src/state.rs`
 - If an audit requires data from the GitHub API, there is a `Client` implementation at `crates/zizmor/src/github_api.rs`
-- All the audits must be registered at `crates/zizmor/src/main.rs` according to the `register_audit!` macro
+- All the audits must be registered in the default `AuditRegistry` at `crates/zizmor/src/registry.rs`
 
 Last but not least, it's useful to run the following checks before opening a Pull Request:
 

@@ -1,11 +1,12 @@
 //! Symbolic and concrete locations.
 
-use std::{ops::Range, sync::LazyLock};
+use std::ops::Range;
 
-use crate::{audit::AuditInput, models::AsDocument, registry::InputKey};
+use crate::registry::input::InputKey;
+use crate::{models::AsDocument, utils::once::static_regex};
 use line_index::{LineCol, TextSize};
-use regex::Regex;
 use serde::Serialize;
+use subfeature::Subfeature;
 use terminal_link::Link;
 
 /// Represents a location's type.
@@ -293,10 +294,9 @@ impl From<&yamlpath::Location> for ConcreteLocation {
     }
 }
 
-static ANY_COMMENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"#.*$").unwrap());
+static_regex!(ANY_COMMENT, r"#.*$");
 
-static IGNORE_EXPR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"# zizmor: ignore\[(.+)\](?:\s+.*)?$").unwrap());
+static_regex!(IGNORE_EXPR, r"# zizmor: ignore\[(.+)\](?:\s+.*)?$");
 
 /// Represents a single source comment.
 #[derive(Debug, Serialize)]
@@ -304,6 +304,11 @@ static IGNORE_EXPR: LazyLock<Regex> =
 pub(crate) struct Comment<'doc>(&'doc str);
 
 impl Comment<'_> {
+    pub(crate) fn is_meaningful(&self) -> bool {
+        let content = self.0.strip_prefix('#').unwrap_or(self.0).trim();
+        !content.is_empty()
+    }
+
     pub(crate) fn ignores(&self, rule_id: &str) -> bool {
         // Extracts foo,bar from `# zizmor: ignore[foo,bar]`
         let Some(caps) = IGNORE_EXPR.captures(self.0) else {
@@ -311,10 +316,16 @@ impl Comment<'_> {
         };
 
         caps.get(1)
-            .unwrap()
+            .expect("internal error: missing required capture group")
             .as_str()
             .split(",")
             .any(|r| r.trim() == rule_id)
+    }
+}
+
+impl<'a> AsRef<str> for Comment<'a> {
+    fn as_ref(&self) -> &'a str {
+        self.0
     }
 }
 
@@ -332,24 +343,28 @@ pub(crate) struct Feature<'doc> {
 }
 
 impl<'doc> Feature<'doc> {
-    pub(crate) fn from_subfeature(
-        subfeature: &subfeature::Subfeature,
-        input: &'doc AuditInput,
+    pub(crate) fn from_subfeature<'a>(
+        subfeature: &Subfeature,
+        input: &'a impl AsDocument<'a, 'doc>,
     ) -> Self {
         let contents = input.as_document().source();
 
-        let span = subfeature.locate_within(contents).unwrap().as_range();
+        let span = subfeature
+            .locate_within(contents)
+            .expect("subfeature does not occur within feature")
+            .as_range();
 
         Self::from_span(&span, input)
     }
 
-    pub(crate) fn from_span(span: &Range<usize>, input: &'doc AuditInput) -> Self {
+    pub(crate) fn from_span<'a>(span: &Range<usize>, input: &'a impl AsDocument<'a, 'doc>) -> Self {
+        let document = input.as_document();
         let raw = input.as_document().source();
         let start = TextSize::new(span.start as u32);
         let end = TextSize::new(span.end as u32);
 
-        let start_point = input.line_index().line_col(start);
-        let end_point = input.line_index().line_col(end);
+        let start_point = document.line_index().line_col(start);
+        let end_point = document.line_index().line_col(end);
 
         // Extract any comments within the feature's line span.
         //
@@ -364,7 +379,7 @@ impl<'doc> Feature<'doc> {
             .flat_map(|line| {
                 // NOTE: We don't really expect this to fail, since this
                 // line range comes from the line index itself.
-                let line = input.line_index().line(line)?;
+                let line = document.line_index().line(line)?;
                 // Chomp the trailing newline rather than enabling
                 // multi-line mode in ANY_COMMENT, on the theory that
                 // chomping is a little faster.

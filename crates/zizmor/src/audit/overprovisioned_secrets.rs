@@ -1,8 +1,9 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, SpannedExpr};
+use github_actions_expressions::{Expr, SpannedExpr, call::Call};
 
 use crate::{
+    audit::AuditError,
     finding::{
         Confidence, Severity,
         location::{Feature, Location},
@@ -20,6 +21,7 @@ audit_meta!(
     "excessively provisioned secrets"
 );
 
+#[async_trait::async_trait]
 impl Audit for OverprovisionedSecrets {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
@@ -28,10 +30,11 @@ impl Audit for OverprovisionedSecrets {
         Ok(Self)
     }
 
-    fn audit_raw<'doc>(
+    async fn audit_raw<'doc>(
         &self,
         input: &'doc AuditInput,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+        _config: &crate::config::Config,
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for (expr, span) in parse_fenced_expressions_from_input(input) {
@@ -52,7 +55,8 @@ impl Audit for OverprovisionedSecrets {
                                 .primary(),
                             Feature::from_span(&span, input),
                         ))
-                        .build(input)?,
+                        .build(input)
+                        .map_err(Self::err)?,
                 );
             }
         }
@@ -68,7 +72,7 @@ impl OverprovisionedSecrets {
         let mut results = vec![];
 
         match &expr.inner {
-            Expr::Call { func, args } => {
+            Expr::Call(Call { func, args }) => {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
                 // would plausibly call with the entire `secrets` object?

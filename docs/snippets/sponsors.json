@@ -1,26 +1,27 @@
 [
-    {
-        "name": "Astral",
-        "url": "https://astral.sh/",
-        "img": "https://avatars.githubusercontent.com/u/115962839?s=100&v=4",
-        "former": true
-    },
-    {
-        "name": "Grafana Labs",
-        "url": "https://grafana.com/",
-        "img": "https://avatars.githubusercontent.com/u/7195757?s=100&v=4"
-    },
-    {
-        "name": "Trail of Bits",
-        "url": "https://trailofbits.com/",
-        "img": "https://avatars.githubusercontent.com/u/2314423?s=100&v=4"
-    },
-    {
-        "name": "Tenki Cloud",
-        "url": "http://tenki.cloud/"
-    },
-    {
-        "name": "Alexander Riccio",
-        "url": "https://github.com/ariccio"
-    }
+  {
+    "name": "Astral",
+    "url": "https://astral.sh/",
+    "img": "https://avatars.githubusercontent.com/u/115962839?s=100&v=4",
+    "former": true
+  },
+  {
+    "name": "Grafana Labs",
+    "url": "https://grafana.com/",
+    "img": "https://avatars.githubusercontent.com/u/7195757?s=100&v=4"
+  },
+  {
+    "name": "Trail of Bits",
+    "url": "https://trailofbits.com/",
+    "img": "https://avatars.githubusercontent.com/u/2314423?s=100&v=4"
+  },
+  {
+    "name": "Alexander Riccio",
+    "url": "https://github.com/ariccio"
+  },
+  {
+    "name": "Shipfox",
+    "url": "https://www.shipfox.io",
+    "img": "https://avatars.githubusercontent.com/u/163036520?s=100&v=4"
+  }
 ]

@@ -44,14 +44,13 @@ There are three input sources that `zizmor` knows about:
 sources can be mixed and matched:
 
 ```bash
-# audit a single local workflow, an entire local repository, and
+# audit a single local workflow, an entire local directory, and
 # a remote repository all in the same run
 zizmor ../example.yml ../other-repo/ example/example
 ```
 
-When auditing local and/or remote repositories, `zizmor` will collect both
-workflows (e.g. `.github/workflows/ci.yml`) **and** action definitions
-(e.g. `custom-action/foo.yml`) by default. To configure collection behavior,
+When auditing local directories and/or remote repositories, `zizmor` will
+collect all known input kinds by default. To configure collection behavior,
 you can use the `--collect=...` option.
 
 ```bash
@@ -62,11 +61,26 @@ zizmor --collect=all example/example
 zizmor --collect=default example/example
 
 # collect only workflows
-zizmor --collect=workflows-only example/example
+zizmor --collect=workflows example/example
 
 # collect only actions
-zizmor --collect=actions-only example/example
+zizmor --collect=actions example/example
+
+# collect only Dependabot configs
+zizmor --collect=dependabot example/example
+
+# collect only workflows and actions (not Dependabot configs)
+zizmor --collect=workflows,actions example/example
 ```
+
+!!! warning "Deprecation"
+
+  `--collect=workflows-only` and `--collect=actions-only` are
+  deprecated aliases for `--collect=workflows` and
+  `--collect=actions`, respectively, as of `v1.15.0`.
+
+  Users should switch to the non-deprecated forms, as the deprecated
+  forms will be removed in a future release.
 
 !!! tip
 
@@ -77,12 +91,12 @@ zizmor --collect=actions-only example/example
 !!! tip
 
     `--collect=...` only controls input collection from repository input
-    sources. In other words, `zizmor --collect=actions-only workflow.yml`
+    sources. In other words, `zizmor --collect=actions workflow.yml`
     *will* audit `workflow.yml`, since it was passed explicitly and not
     collected indirectly.
 
-By default, `zizmor` will warn (but not fail) if it fails to parse a
-workflow or action definition. To turn these warnings into failures,
+By default, `zizmor` will warn (but not fail) if it fails to parse an
+input file. To turn these warnings into failures,
 you can use the `--strict-collection` option:
 
 ```bash
@@ -265,6 +279,12 @@ zizmor --color=never ...
 
     `--format=json-v1` is available in `v1.6.0` and later.
 
+!!! important
+
+    `--format=json-v1` uses 0-based line numbering, where line numbers are
+    denoted by the key `row`. This is as opposed to `--format=plain` and `--format=SARIF`,
+    where line numbers are 1-based.
+
 With `--format=json`, `zizmor` will produce a flat array of findings in
 JSON format:
 
@@ -356,6 +376,8 @@ functionality via GitHub Actions.
 See [Workflow Commands for GitHub Actions] for additional information about
 annotations.
 
+[Workflow Commands for GitHub Actions]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands
+
 !!! warning
 
     GitHub annotations come with significant limitations: a single CI step
@@ -371,24 +393,50 @@ annotations.
 
 ## Exit codes
 
-!!! note
-
-    Exit codes 10 and above are **not used** if `--no-exit-codes` or
-    `--format sarif` is passed.
-
-`zizmor` uses various exit codes to summarize the results of a run:
+`zizmor` will exit with a variety of exit codes, depending on how
+you invoke it and what happens during the run. In general:
 
 | Code | Meaning |
 | ---- | ------- |
 | 0    | Successful audit; no findings to report (or SARIF mode enabled). |
 | 1    | Error during audit; consult output. |
-| 10   | One or more findings found; highest finding is "unknown" level. |
+| 2    | Argument parsing failure; consult output. |
 | 11   | One or more findings found; highest finding is "informational" level. |
 | 12   | One or more findings found; highest finding is "low" level. |
 | 13   | One or more findings found; highest finding is "medium" level. |
 | 14   | One or more findings found; highest finding is "high" level. |
 
 All other exit codes are currently reserved.
+
+!!! warning "Removal"
+
+    Versions of zizmor prior to `v1.14.0` used exit code `10` to indicate
+    the highest finding having "unknown" severity. This exit code is
+    no longer used as of `v1.14.0`.
+
+Beyond this general table, the following modes of operation also
+change the exit code behavior:
+
+* If you run with `--no-exit-codes`, `zizmor` will **not** use exit codes 11
+  and above.
+* If you use `--format=sarif`, `zizmor` will **not** use exit codes 11 and
+  above.
+
+    !!! tip "Why?"
+
+        Because SARIF consumers generally don't expect SARIF producers
+        (like `zizmor`) to exit with a non-zero code *except* in the case
+        of an internal failure. SARIF consumers expect semantic results
+        to be communicated within the SARIF itself.
+
+* If you run with `--fix` *and* all findings are successfully auto-fixed,
+  `zizmor` will **not** use exit codes 11 and above.
+
+    !!! tip "Why?"
+
+        Because the higher exit codes indicate that action needs to be taken,
+        but a successful application of all fixes means that no action
+        is required.
 
 ## Using personas
 
@@ -460,7 +508,7 @@ sensitive `zizmor`'s analyses are:
     For example, with the default persona:
 
     ```console
-    $ zizmor tests/test-data/self-hosted.yml
+    $ zizmor self-hosted.yml
     🌈 completed self-hosted.yml
     No findings to report. Good job! (1 suppressed)
     ```
@@ -468,33 +516,24 @@ sensitive `zizmor`'s analyses are:
     and with `--persona=auditor`:
 
     ```console
-    $ zizmor --persona=auditor tests/test-data/self-hosted.yml
-    note[self-hosted-runner]: runs on a self-hosted runner
-      --> tests/test-data/self-hosted.yml:8:5
-        |
-      8 |     runs-on: [self-hosted, my-ubuntu-box]
-        |     ------------------------------------- note: self-hosted runner used here
-        |
-        = note: audit confidence → High
+    $ zizmor --persona=auditor self-hosted.yml
+    warning[self-hosted-runner]: runs on a self-hosted runner
+      --> self-hosted.yml:13:5
+       |
+    13 |     runs-on: [self-hosted, my-ubuntu-box]
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ self-hosted runner used here
+       |
+       = note: audit confidence → High
 
-      1 finding: 1 unknown, 0 informational, 0 low, 0 medium, 0 high
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
     ```
 
-## Auto-fixing results *&#8203;*{.chip .chip-experimental} { #auto-fixing-results }
-
-!!! warning
-
-    `zizmor`'s auto-fix mode is currently **experimental** and subject to
-    breaking changes.
-
-    You **will** encounter bugs while experimenting with it;
-    please [file them]!
-
-    [file them]: https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml
+## Auto-fixing results { #auto-fixing-results }
 
 !!! tip
 
-    `--fix=[MODE]` is available in `v1.10.0` and later.
+    `--fix=[MODE]` is available in `v1.10.0` and later, and is
+    considered stable as of `v1.15.0`.
 
 Starting with `v1.10.0`, `zizmor` can automatically fix a subset of its findings.
 
@@ -570,8 +609,15 @@ There are two straightforward ways to filter `zizmor`'s results:
 
         `--min-severity` and `--min-confidence` are available in `v0.6.0` and later.
 
+    !!! warning "Deprecation"
+
+        `--min-severity=unknown` and `--min-confidence=unknown` are
+        **deprecated** as of `v1.14.0` and will be removed in a future release.
+        Users should omit these entirely, as they were no-ops even prior to
+        deprecation.
+
      ```bash
-     # filter unknown, informational, and low findings with unknown, low confidence
+     # filter informational, and low findings with low confidence
      zizmor --min-severity=medium --min-confidence=medium ...
      ```
 
@@ -679,6 +725,14 @@ the `--config` argument. With `--config`, the file can be named anything:
 zizmor --config my-zizmor-config.yml /dir/to/audit
 ```
 
+!!! important
+
+    When using `--config`, only a single configuration file is used
+    (instead of potentially discovering multiple configuration files,
+    one per input source). As a result, using `--config` is
+    **generally not recommended** unless auditing a single input source
+    (file, directory, or remote repository).
+
 !!! tip
 
     Starting with `v1.8.0`, you can use the `ZIZMOR_CONFIG` environment
@@ -687,7 +741,7 @@ zizmor --config my-zizmor-config.yml /dir/to/audit
     `ZIZMOR_CONFIG=my-config.yml` is equivalent to
     `--config my-config.yml`.
 
-[will discover it]: ./configuration.md#precedence
+[will discover it]: ./configuration.md#discovery
 
 See [Configuration: `rules.<id>.ignore`](./configuration.md#rulesidignore) for
 more details on writing ignore rules.
@@ -751,7 +805,7 @@ However, like all tools, `zizmor` is **not a panacea**, and has
 fundamental limitations that must be kept in mind. This page
 documents some of those limitations.
 
-### `zizmor` is a _static_ analysis tool
+### `zizmor` is a _static_ analysis tool { #static-analysis }
 
 `zizmor` is a _static_ analysis tool. It never executes any code, nor does it
 have access to any runtime state.
@@ -795,7 +849,7 @@ the [template-injection](./audits.md#template-injection) audit will flag
 `${{ matrix.something }}` as a potential code injection risk, since it
 can't infer anything about what `matrix.something` might expand to.
 
-### `zizmor` audits workflow and action _definitions_ only
+### `zizmor` audits workflow and action _definitions_ only { #definitions-only }
 
 `zizmor` audits workflow and action _definitions_ only. That means the
 contents of `foo.yml` (for your workflow definitions) or `action.yml` (for your
@@ -827,3 +881,42 @@ More generally, `zizmor` cannot analyze files indirectly referenced within
 workflow/action definitions, as they may not actually exist until runtime.
 For example, `some-script.sh` above may have been generated or downloaded
 outside of any repository-tracked state.
+
+### YAML anchors stymie analysis { #yaml-anchors }
+
+!!! tip "TL;DR"
+
+    `zizmor`'s support for YAML anchors is provided on a **best effort**
+    basis. Users of `zizmor` are **strongly encouraged** to avoid anchors
+    if they care about accurate static analysis results.
+
+`zizmor` tries very hard to present *useful* source spans in its audit
+results.
+
+To do this, `zizmor` needs to know a lot of about the inner workings
+of the YAML serialization format that GitHub Actions workflows, action
+definitions, and Dependabot files are expressed in.
+
+YAML is a complicated serialization format, but GitHub *mostly* uses
+a tractable subset of it. One conspicuous exception to this is
+[YAML anchors](https://yaml.org/spec/1.2.2/#3222-anchors-and-aliases),
+which GitHub has
+[decided to support](https://github.blog/changelog/2025-09-18-actions-yaml-anchors-and-non-public-workflow-templates/)
+in workflow and action definitions as of September 2025.
+
+Anchors make `zizmor`'s analysis job *much* harder, as they introduce a
+layer of (arbitrarily deep) indirection and misalignment between the
+deserialized object model (which is what `zizmor` analyzes) and the source
+representation (which `zizmor` spans back to).
+
+As a result, `zizmor`'s support for YAML anchors is **best effort only**.
+Users are **strongly encouraged** to avoid anchors in their workflows
+and actions. Bug reports for issues in inputs containing anchors are
+appreciated, but will be given a lower priority relative to bugs that
+aren't observed with YAML anchors.
+
+If you're having issues with inputs containing anchors, see
+[Troubleshooting - Failures on inputs containing YAML anchors]
+for some suggested workarounds.
+
+[Troubleshooting - Failures on inputs containing YAML anchors]: ./troubleshooting.md#failures-on-inputs-containing-yaml-anchors

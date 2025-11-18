@@ -1,0 +1,23 @@
+testcase:
+  qux: &qux
+    value: 42
+
+  foo:
+    bar: &bar
+      baz: *qux
+
+  query:
+    me: *bar
+
+queries:
+  - query: [foo, bar, baz, value]
+    mode: exact
+    expected: "42"
+
+  - query: [query, me, baz, value]
+    mode: exact
+    expected: "42"
+
+  - query: [query, me, baz]
+    mode: exact
+    expected: "    value: 42"

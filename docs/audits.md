@@ -10,13 +10,13 @@ See each audit's section for its scope, behavior, and other information.
 
 Legend:
 
-| Type     | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|------------------|---------------|----------------|--------------------|--------------|
-| The kind of audit ("Workflow" or "Action") | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit needs to be explicitly enabled via configuration or an API token | The audit supports custom configuration |
+| Workflow, Action, Dependabot | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit supports auto-fixes when used in the `--fix` mode | The audit supports custom configuration |
 
 ## `anonymous-definition`
 
-| Type            | Examples         | Introduced in | Works offline | Enabled by default | Configurable |
+| Type            | Examples         | Introduced in | Works offline | Auto-fixes available | Configurable |
 |-----------------|------------------|---------------|----------------|--------------------|--------------|
 | Workflow, Action | N/A              | v1.10.0       | ✅             | ❌                 | ❌            |
 
@@ -37,7 +37,7 @@ Add a `name:` field to your workflow or action.
 
 === "Before :warning:"
 
-    ```yaml title="anonymous-definition.yml" hl_lines="7"
+    ```yaml title="anonymous-definition.yml"
     on: push
 
     jobs:
@@ -49,7 +49,7 @@ Add a `name:` field to your workflow or action.
 
 === "After :white_check_mark:"
 
-    ```yaml title="anonymous-definition.yml" hl_lines="7-9"
+    ```yaml title="anonymous-definition.yml" hl_lines="1"
     name: Echo Test
     on: push
 
@@ -62,7 +62,7 @@ Add a `name:` field to your workflow or action.
 
 ## `artipacked`
 
-| Type     | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|------------------|---------------|----------------|--------------------| -------------|
 | Workflow  | [artipacked.yml] | v0.1.0        | ✅             | ✅               | ❌           |
 
@@ -122,7 +122,7 @@ with `#!yaml persist-credentials: true`.
 
 ## `bot-conditions`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow  | [bot-conditions.yml]   | v1.2.0      | ✅             | ✅                 | ❌  |
 
@@ -197,7 +197,7 @@ not using `pull_request_target` for auto-merge workflows.
 
 ## `cache-poisoning`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ✅               | ❌  |
 
@@ -246,11 +246,47 @@ intended to publish build artifacts:
 * Set an action-specific input to disable cache restoration when appropriate,
   such as `lookup-only` in @Swatinem/rust-cache.
 
+## `concurrency-limits`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow | [concurrency-limits/]   | v1.16.0       | ✅             | ❌                 | ❌  |
+
+[concurrency-limits/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/concurrency-limits/
+
+Detects insufficient concurrency limits in workflows.
+
+By default, GitHub Actions allows multiple instances of the same workflow to run
+concurrently, even when the new runs fully supersede the old. This can be a
+resource waste vector for attackers, particularly on billed runners. Separately,
+it can be a source of subtle race conditions when attempting to locate artifacts
+by workflow and job identifiers, rather than run IDs.
+
+Other resources:
+
+* [Guidelines on green software practices for GitHub Actions CI workflows]
+
+### Remediation
+
+Include a `concurrency` setting in your workflow that sets the
+`cancel-in-progress` option either to `true` or to an expression that will be
+true in most cases. Specifying `false` would allow separate instances of the
+workflows to run concurrently, whereas `true` will imply that running jobs are
+cancelled as soon as the workflow is re-triggered.
+
+!!! example
+
+    ```yaml title="cancel-true.yml"
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    ```
+
 ## `dangerous-triggers`
 
-| Type     | Examples                  | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                  | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|---------------------------|---------------|----------------|--------------------|--------------|
-| Workflow  | [pull-request-target.yml] | v0.1.0        | ✅             | ✅                 | ❌         |
+| Workflow  | [pull-request-target.yml] | v0.1.0        | ✅             | ❌                 | ❌         |
 
 [pull-request-target.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pull-request-target.yml
 
@@ -268,10 +304,21 @@ typically triggerable by the latter. This can lead to attacker controlled
 code execution or unexpected action runs with context controlled by a malicious
 fork.
 
+Many online resources suggest that `pull_request_target` and other
+dangerous triggers can be used securely by ensuring that the PR's code
+is not executed, but this is **not true**: an attacker can often find
+ways to execute code in the context of the target repository, even if
+the workflow doesn't explicitly run any code from the PR. Common vectors
+for this include argument injection (e.g. with `xargs`), environment injection
+(e.g. `LD_PRELOAD`), and local file inclusion (e.g. relinking files
+to the runner's credentials file or similar).
+
 Other resources:
 
 * [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]
+* [Keeping your GitHub Actions and workflows secure Part 4: New vulnerability patterns and mitigation strategies]
 * [Vulnerable GitHub Actions Workflows Part 1: Privilege Escalation Inside Your CI/CD Pipeline]
+* [Pwning the Entire Nix Ecosystem]
 
 ### Remediation
 
@@ -312,19 +359,156 @@ Some general pointers:
   request, therefore restricting the target branches reduces the risk of
   a vulnerable `pull_request_target` in a stale or abandoned branch.
 
-* If you have to use a dangerous trigger, consider adding a `github.repository == ...`
-  check to only run for your repository but not in forks of your repository
-  (in case the user has enabled Actions there). This avoids exposing forks
-  to danger in case you fix a vulnerability in the workflow but the fork still
-  contains an old vulnerable version.
+* If you really have to use `pull_request_target`, consider adding a
+  `github.repository == ...` check to only run for your repository but not in
+  forks of your repository (in case the user has enabled Actions there). This
+  avoids exposing forks to danger in case you fix a vulnerability in the
+  workflow but the fork still contains an old vulnerable version.
+
+    !!! important
+
+        Checking `github.repository == ...` is **not** effective on
+        `workflow_run`, since a `workflow_run` **always** runs in the context of
+        the target repository.
 
 [reusable workflow]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 
+## `dependabot-cooldown`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Dependabot  | [dependabot-cooldown/]       | v1.15.0       | ✅             | ✅                 | ❌  |
+
+[dependabot-cooldown/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-cooldown/
+
+Detects missing or insufficient `cooldown` settings in Dependabot configuration
+files.
+
+By default, Dependabot does not perform any "cooldown" on dependency updates.
+In other words, a regularly scheduled Dependabot run may perform an update on a
+dependency that was just released moments before the run began. This presents
+both stability and supply-chain security risks:
+
+* **Stability**: updating to the newest version of a dependency immediately after its
+  release increases the risk of breakage, since new releases may contain
+  regressions or other issues that other users have not yet discovered.
+* **Supply-chain security**: package compromises are frequently *opportunistic*,
+  meaning that the attacker expects to have their compromised version taken
+  down by the packaging ecosystem relatively quickly. Updating immediately to
+  a newly released version increases the risk of automatically pulling in
+  a compromised version before it can be taken down.
+
+To mitigate these risks, Dependabot supports per-updater `cooldown` settings.
+However, these settings are not enabled by default; users **must** explicitly
+enable them.
+
+Other resources:
+
+* [Dependabot options reference - `cooldown`](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#cooldown-)
+
+### Remediation
+
+In general, you should enable `cooldown` for all updaters. The audit currently
+enforces the following minimums:
+
+* `default-days`: must be at least `4`.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="dependabot.yml"
+        version: 2
+        updates:
+          - package-ecosystem: "pip"
+            directory: "/"
+            schedule:
+              interval: "daily"
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="dependabot.yml" hl_lines="7-8"
+        version: 2
+        updates:
+          - package-ecosystem: "pip"
+            directory: "/"
+            schedule:
+              interval: "daily"
+            cooldown:
+              default-days: 7
+        ```
+
+## `dependabot-execution`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Dependabot  | [dependabot-execution/]       | v1.15.0       | ✅             | ✅                | ❌  |
+
+[dependabot-execution/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-execution/
+
+Detects usages of `insecure-external-code-execution` in Dependabot configuration
+files.
+
+By default, Dependabot does not execution code from dependency manifests
+during updates. However, users can opt in to this behavior by setting
+`#!yaml insecure-external-code-execution: allow` in their Dependabot
+configuration.
+
+Some ecosystems (including but not limited to Python, Ruby, and JavaScript)
+depend partially on code execution during dependency resolution.
+
+In these ecosystems fully avoiding build-time code execution is impossible.
+However, build-time code execution *should* be avoided in automated dependency
+update contexts like Dependabot, since a compromised dependency may be able
+to obtain credentials or private source access automatically through
+a Dependabot job.
+
+Other resources:
+
+* [`insecure-external-code-execution` documentation](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#insecure-external-code-execution--)
+* [Dependabot: Allowing external code execution](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-access-to-private-registries-for-dependabot#allowing-external-code-execution)
+
+### Remediation
+
+In general, automatic dependency updates should be limited to only updates
+that do not require code execution at resolution time.
+
+In practice, this means that users should set
+`#!yaml insecure-external-code-execution: deny` **or** omit the field entirely
+(and rely on the default of `deny`).
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="dependabot.yml" hl_lines="7"
+        version: 2
+        updates:
+          - package-ecosystem: "pip"
+            directory: "/"
+            schedule:
+              interval: "daily"
+            insecure-external-code-execution: allow
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="dependabot.yml" hl_lines="7"
+        version: 2
+        updates:
+          - package-ecosystem: "pip"
+            directory: "/"
+            schedule:
+              interval: "daily"
+            insecure-external-code-execution: deny
+        ```
+
 ## `excessive-permissions`
 
-| Type     | Examples                    | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                    | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-----------------------------|---------------|----------------|--------------------|---------------|
-| Workflow  | [excessive-permissions.yml] | v0.1.0        | ✅             | ✅                 | ❌         |
+| Workflow  | [excessive-permissions.yml] | v0.1.0        | ✅             | ❌                 | ❌         |
 
 [excessive-permissions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/excessive-permissions.yml
 
@@ -431,7 +615,7 @@ by default, and then set specific job-level permissions as needed.
 
 ## `forbidden-uses`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow, Action  | N/A            | v1.6.0        | ✅             | ❌                |  ✅ |
 
@@ -518,9 +702,9 @@ your [configuration](#forbidden-uses-configuration).
 
 ## `github-env`
 
-| Type     | Examples           | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples           | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|--------------------|---------------|----------------|--------------------| --------------|
-| Workflow, Action  | [github-env.yml]   | v0.6.0        | ✅             | ✅       | ❌  |
+| Workflow, Action  | [github-env.yml]   | v0.6.0        | ✅             | ❌       | ❌  |
 
 [github-env.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/github-env.yml
 
@@ -557,9 +741,9 @@ If you need to pass state between steps, consider using `GITHUB_OUTPUT` instead.
 
 ## `hardcoded-container-credentials`
 
-| Type     | Examples                    | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                    | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-----------------------------|---------------|----------------|--------------------|---------------|
-| Workflow  | [hardcoded-credentials.yml] | v0.1.0        | ✅             | ✅               | ❌         |
+| Workflow  | [hardcoded-credentials.yml] | v0.1.0        | ✅             | ❌               | ❌         |
 
 [hardcoded-credentials.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/hardcoded-credentials.yml
 
@@ -627,7 +811,7 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 ## `impostor-commit`
 
-| Type     | Examples              | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples              | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-----------------------|---------------|----------------|--------------------|---------------|
 | Workflow, Action  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 | ❌  |
 
@@ -667,7 +851,7 @@ within an authentic commit (or an authentic tag/branch reference).
 
 ## `insecure-commands`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅       | ❌  |
 
@@ -715,7 +899,7 @@ In general, users should use [GitHub Actions environment files]
 
 ## `known-vulnerable-actions`
 
-| Type             | Examples                       | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type             | Examples                       | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |------------------|--------------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow, Action | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 | ❌  |
 
@@ -739,7 +923,7 @@ the action if one is available, or remove the action's usage entirely.
 
 ## `obfuscation`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow, Action  | N/A   | v1.7.0        | ✅             | ✅                 | ❌  |
 
@@ -792,9 +976,9 @@ Address the source of obfuscation by simplifying the expression,
 
 ## `overprovisioned-secrets`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅     | ✅         | ❌  |
+| Workflow, Action  | [overprovisioned-secrets.yml]   | v1.3.0      | ✅     | ❌         | ❌  |
 
 [overprovisioned-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/overprovisioned-secrets.yml
 
@@ -856,9 +1040,9 @@ Secrets should be accessed individually by name.
 
 ## `ref-confusion`
 
-| Type             | Examples            | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type             | Examples            | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |------------------|---------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action | [ref-confusion.yml] | v0.1.0        | ❌             | ✅                 | ❌  |
+| Workflow, Action | [ref-confusion.yml] | v0.1.0        | ❌             | ❌                 | ❌  |
 
 
 [ref-confusion.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/ref-confusion.yml
@@ -880,11 +1064,55 @@ pre-existing consumers of that action without having to modify those consumers.
 
 Switch to hash-pinned actions.
 
+## `ref-version-mismatch`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [ref-version-mismatch.yml] | v1.14.0       | ✅             | ✅                 | ❌  |
+
+[ref-version-mismatch.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/ref-version-mismatch.yml
+
+Detects `#!yaml uses:` clauses where the action is hash-pinned, but the associated
+tag comment (used by tools like Dependabot) does not match the pinned commit.
+
+This can happen innocently when a user (or automation) updates a
+hash-pinned `#!yaml uses:` clause to a newer commit, but fails to update the
+associated tag comment. When this happens, tools like Dependabot will silently
+ignore the comment instead of refreshing it on subsequent updates, making
+it progressively more out-of-date over time.
+
+### Remediation
+
+Update the tag comment to match the pinned commit. Tools like
+@suzuki-shunsuke/pinact may be able to do this automatically for you.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="ref-version-mismatch.yml" hl_lines="5"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.2.2
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="ref-version-mismatch.yml" hl_lines="5"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        ```
+
 ## `secrets-inherit`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow  | [secrets-inherit.yml]   | v1.1.0      | ✅             | ✅                 | ❌  |
+| Workflow  | [secrets-inherit.yml]   | v1.1.0      | ✅             | ❌                 | ❌  |
 
 [secrets-inherit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/secrets-inherit.yml
 
@@ -924,11 +1152,9 @@ that explicitly forwards each secret actually needed by the reusable workflow.
               me-too: ${{ secrets.me-too }}
         ```
 
-
-
 ## `self-hosted-runner`
 
-| Type     | Examples            | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples            | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|---------------------|---------------|----------------|--------------------| ---------------|
 | Workflow  | [self-hosted.yml] | v0.1.0        | ✅             | ❌                 | ❌  |
 
@@ -975,9 +1201,9 @@ there are steps you can take to minimize their risk:
 
 ## `stale-action-refs`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action  | N/A            | v1.7.0        | ❌            | ✅                | ❌          |
+| Workflow, Action  | N/A            | v1.7.0        | ❌            | ❌                | ❌          |
 
 Checks for `#!yaml uses:` clauses which pin an action using a SHA reference,
 but where that reference does not point to a Git tag.
@@ -1007,7 +1233,7 @@ which points to a Git tag.
 
 ## `template-injection`
 
-| Type     | Examples                 | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                 | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|--------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow, Action  | [template-injection.yml] | v0.1.0        | ✅             | ✅        | ❌  |
 
@@ -1025,6 +1251,16 @@ unintended shell injection vectors. This is especially true when they're
 used with attacker-controllable expression contexts, such as
 `github.event.issue.title` (which the attacker can fully control by supplying
 a new issue title).
+
+!!! tip
+
+    When used with a "pedantic" or "auditor"
+    [persona](./usage.md#using-personas), this audit will flag *all* template
+    expansions in code contexts, even ones that are likely safe.
+
+    This is because `zizmor` considers all template expansions in code contexts
+    to be code smells, and attempting to selectively permit them is more
+    error-prone than forbidding them in a blanket fashion.
 
 Other resources:
 
@@ -1085,11 +1321,56 @@ shell quoting/expansion rules.
             ISSUE_TITLE: ${{ github.event.issue.title }}
         ```
 
+## `undocumented-permissions`
+
+| Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|------------------|---------------|----------------|--------------------|--------------|
+| Workflow | [undocumented-permissions.yml] | v1.13.0          | ✅                 | ❌            | ❌            |
+
+[undocumented-permissions.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/undocumented-permissions.yml
+
+Detects explicit permissions blocks that lack explanatory comments.
+
+This audit recommends adding comments to document the purpose of each permission
+in explicit permissions blocks. Well-documented permissions help prevent
+over-scoping and make workflows more maintainable by explaining why specific
+permissions are needed.
+
+The audit does not flag `contents: read`, as this is a common, self-explanatory
+permission.
+
+!!! note
+
+    This is a `--pedantic` only audit, as it focuses on code quality and
+    maintainability rather than security vulnerabilities.
+
+### Remediation
+
+Add inline comments explaining why each permission is needed:
+
+=== "Before :warning:"
+
+    ```yaml title="undocumented-permissions.yml" hl_lines="2-4"
+    permissions:
+      contents: write
+      packages: read
+      issues: write
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="undocumented-permissions.yml" hl_lines="2-4"
+    permissions:
+      contents: write  # Needed to create releases and update files
+      packages: read   # Needed to read existing package metadata
+      issues: write    # Needed to create and update issue comments
+    ```
+
 ## `unpinned-images`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action  | [unpinned-images.yml] | v1.7.0        | ✅            | ✅                | ❌          |
+| Workflow, Action  | [unpinned-images.yml] | v1.7.0        | ✅            | ❌                | ❌          |
 
 [unpinned-images.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned-images.yml
 
@@ -1177,9 +1458,9 @@ by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
 
 ## `unpinned-uses`
 
-| Type             | Examples         | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type             | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |------------------|------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ✅                | ✅           |
+| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ❌                | ✅           |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
@@ -1337,14 +1618,14 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
           unpinned-uses:
               runs-on: ubuntu-latest
               steps:
-              - uses: pypa/gh-action-pypi-publish@v1.12.4
-                with:
-                persist-credentials: false
+                - uses: pypa/gh-action-pypi-publish@v1.12.4
+                  with:
+                    persist-credentials: false
 
-              - uses: docker://ubuntu
-                with:
-                entrypoint: /bin/echo
-                args: hello!
+                - uses: docker://ubuntu
+                  with:
+                    entrypoint: /bin/echo
+                    args: hello!
         ```
 
     === "After :white_check_mark:"
@@ -1357,21 +1638,21 @@ For Docker actions (like `docker://ubuntu`): add an appropriate
           unpinned-uses:
               runs-on: ubuntu-latest
               steps:
-              - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc  # v1.12.4
-                with:
-                persist-credentials: false
+                - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc  # v1.12.4
+                  with:
+                    persist-credentials: false
 
-              - uses: docker://ubuntu:24.04
-                with:
-                entrypoint: /bin/echo
-                args: hello!
+                - uses: docker://ubuntu:24.04
+                  with:
+                    entrypoint: /bin/echo
+                    args: hello!
         ```
 
 ## `unredacted-secrets`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | [unredacted-secrets.yml]   | v1.4.0      | ✅   | ✅                 | ❌  |
+| Workflow, Action  | [unredacted-secrets.yml]   | v1.4.0      | ✅   | ❌                 | ❌  |
 
 [unredacted-secrets.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unredacted-secrets.yml
 
@@ -1439,7 +1720,7 @@ individual fields as separate secrets.
 
 ## `unsound-condition`
 
-| Type     | Examples                | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
 | Workflow, Action  | [unsound-condition.yml]   | v1.12.0      | ✅             | ✅                 | ❌  |
 
@@ -1531,9 +1812,9 @@ There are two ways to remediate this:
 
 ## `unsound-contains`
 
-| Type     | Examples                            | Introduced in | Works offline | Enabled by default | Configurable |
+| Type     | Examples                            | Introduced in | Works offline | Auto-fixes available | Configurable |
 |----------|-------------------------------------|---------------|---------------|--------------------|--------------|
-| Workflow | [unsound-contains.yml]              | v1.7.0        | ✅            | ✅                 | ❌           |
+| Workflow | [unsound-contains.yml]              | v1.7.0        | ✅            | ❌                 | ❌           |
 
 [unsound-contains.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unsound-contains.yml
 
@@ -1609,9 +1890,9 @@ Other resources:
 
 ## `use-trusted-publishing`
 
-| Type     | Examples                     | Introduced in | Works offline  | Enabled by default | Configurable |
+| Type     | Examples                     | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|------------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow  | [pypi-manual-credential.yml] | v0.1.0        | ✅             | ✅                 | ❌  |
+| Workflow  | [pypi-manual-credential.yml] | v0.1.0        | ✅             | ❌                 | ❌  |
 
 [pypi-manual-credential.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/pypi-manual-credential.yml
 
@@ -1685,6 +1966,7 @@ once it's configured:
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+[Keeping your GitHub Actions and workflows secure Part 4: New vulnerability patterns and mitigation strategies]: https://securitylab.github.com/resources/github-actions-new-patterns-and-mitigations/
 [What the fork? Imposter commits in GitHub Actions and CI/CD]: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
 [Self-hosted runner security]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners#self-hosted-runner-security
 [Keeping your GitHub Actions and workflows secure Part 2: Untrusted input]: https://securitylab.github.com/resources/github-actions-untrusted-input/
@@ -1716,3 +1998,5 @@ once it's configured:
 [branch filter]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#running-your-pull_request_target-workflow-based-on-the-head-or-base-branch-of-a-pull-request
 [Aqua: The Challenges of Uniquely Identifying Your Images]: https://www.aquasec.com/blog/docker-image-tags/
 [GitHub: Safeguard your containers with new container signing capability in GitHub Actions]: https://github.blog/security/supply-chain-security/safeguard-container-signing-capability-actions/
+[Pwning the Entire Nix Ecosystem]: https://ptrpa.ws/nixpkgs-actions-abuse
+[Guidelines on green software practices for GitHub Actions CI workflows]: https://github.com/Cambridge-ICCS/green-ci

@@ -6,7 +6,7 @@ build-backend = "maturin"
 # `uv run --only-group docs` from failing.
 [project]
 name = "zizmor"
-dynamic = ["version"]
+dynamic = ["version", "description", "readme", "urls", "authors", "license"]
 # Arbitrarily set to the oldest non-EOL Python.
 requires-python = ">=3.9"
 
@@ -16,4 +16,3 @@ manifest-path = "crates/zizmor/Cargo.toml"
 
 [dependency-groups]
 docs = ["mkdocs ~= 1.6", "mkdocs-material[imaging] ~= 9.5"]
-codegen = ["prance[osv]", "requests", "pyyaml"]

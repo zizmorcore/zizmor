@@ -4,6 +4,8 @@ use anyhow::Result;
 
 use crate::common::{OutputMode, input_under_test, zizmor};
 
+mod anchors;
+mod collect;
 mod json_v1;
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
@@ -33,7 +35,7 @@ fn issue_569() -> Result<()> {
         zizmor()
             .offline(false)
             .output(OutputMode::Both)
-            .args(["--no-online-audits", "--collect=workflows-only"])
+            .args(["--no-online-audits", "--collect=workflows"])
             .input("python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6")
             .run()?
     );
@@ -73,7 +75,7 @@ fn menagerie() -> Result<()> {
             .output(OutputMode::Both)
             .args(["--collect=all"])
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
     );
 
     Ok(())
@@ -263,6 +265,167 @@ fn pr_960_backstop() -> Result<()> {
             .output(OutputMode::Both)
             .input(input_under_test("pr-960-backstop"))
             .run()?
+    );
+
+    Ok(())
+}
+
+/// Regression test for #1116.
+/// Ensures that `--strict-collection` is respected for remote inputs.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_1116_strict_collection_remote_input() -> Result<()> {
+    // Fails with `--strict-collection`.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .expects_failure(true)
+            .output(OutputMode::Stderr)
+            .args(["--strict-collection"])
+            .input("woodruffw-experiments/zizmor-issue-1116@f41c414")
+            .run()?
+    );
+
+    // Works without `--strict-collection`.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(OutputMode::Stderr)
+            .input("woodruffw-experiments/zizmor-issue-1116@f41c414")
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Regression test for #1065.
+///
+/// This was actually a bug in `annotate-snippets` that was fixed
+/// with their 0.12 series, but this ensures that we don't regress.
+#[test]
+fn issue_1065() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Both)
+            .input(input_under_test("issue-1065.yml"))
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Ensures that we emit an appropriate warning when the user
+/// passes `--min-severity=unknown`.
+#[test]
+fn warn_on_min_severity_unknown() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .args(["--min-severity=unknown"])
+            .input(input_under_test("e2e-menagerie"))
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Ensures that we emit an appropriate warning when the user
+/// passes `--min-confidence=unknown`.
+#[test]
+fn warn_on_min_confidence_unknown() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .args(["--min-confidence=unknown"])
+            .input(input_under_test("e2e-menagerie"))
+            .run()?
+    );
+    Ok(())
+}
+
+/// Regression test for #1207.
+///
+/// Ensures that we correctly handle single-inputs that aren't given
+/// with an explicit parent path, e.g. `action.yml` instead of
+/// `./action.yml`.
+#[test]
+fn issue_1207() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Both)
+            .working_dir(input_under_test("e2e-menagerie/dummy-action-1"))
+            // Input doesn't matter, as long as it's relative without a leading
+            // `./` or other path component.
+            .input("action.yaml")
+            .run()?
+    );
+
+    Ok(())
+}
+
+/// Regression test for #1286.
+///
+/// Ensures that we produce a useful error when a user's input references
+/// a private (or missing) repository.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_1286() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .output(OutputMode::Both)
+            .offline(false)
+            .input(input_under_test("issue-1286.yml"))
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    ref-confusion failed on file://@@INPUT@@
+
+    Caused by:
+        0: error in ref-confusion
+        1: couldn't list branches for woodruffw-experiments/this-does-not-exist
+        2: can't access woodruffw-experiments/this-does-not-exist: missing or you have no access
+    ",
+    );
+
+    Ok(())
+}
+
+/// Regression test for #1300.
+///
+/// Ensures that we produce a useful error when a user specifies
+/// `--collect=workflows` on a remote input that doesn't have a
+/// `.github/workflows/` directory.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_1300() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .output(OutputMode::Both)
+            .offline(false)
+            .args(["--collect=workflows"])
+            .input("woodruffw-experiments/empty")
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: input @@INPUT@@ doesn't contain any workflows
+      |
+      = help: ensure that @@INPUT@@ contains one or more workflows under `.github/workflows/`
+      = help: ensure that @@INPUT@@ exists and you have access to it
+
+    Caused by:
+        0: input @@INPUT@@ doesn't contain any workflows
+        1: request error while accessing GitHub API
+        2: HTTP status client error (404 Not Found) for url (https://api.github.com/repos/@@INPUT@@/contents/.github/workflows)
+    "
     );
 
     Ok(())

@@ -3,7 +3,8 @@ use std::sync::LazyLock;
 use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 
-use crate::audit::{Audit, audit_meta};
+use crate::audit::{Audit, AuditError, audit_meta};
+use crate::config::Config;
 use crate::finding::location::{Locatable as _, Routable};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
 use crate::models::StepCommon;
@@ -19,6 +20,7 @@ use super::AuditLoadError;
 /// The list of know cache-aware actions
 /// In the future we can easily retrieve this list from the static API,
 /// since it should be easily serializable
+#[allow(clippy::unwrap_used)]
 static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(|| {
     vec![
         // https://github.com/actions/cache/blob/main/action.yml
@@ -49,12 +51,16 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions/setup-node/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-node".parse().unwrap(),
-            control: ControlExpr::single(
-                Toggle::OptIn,
-                "cache",
-                ControlFieldType::FreeString,
-                false,
-            ),
+            control: ControlExpr::any([
+                ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::FreeString, false),
+                // NOTE: Added with `setup-node@v5`.
+                ControlExpr::single(
+                    Toggle::OptIn,
+                    "package-manager-cache",
+                    ControlFieldType::Boolean,
+                    true,
+                ),
+            ]),
         },
         // https://github.com/actions/setup-python/blob/main/action.yml
         ActionCoordinate::Configurable {
@@ -75,7 +81,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         ActionCoordinate::Configurable {
             uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
             control: ControlExpr::single(
-                Toggle::OptOut,
+                Toggle::OptIn,
                 "enable-cache",
                 ControlFieldType::Boolean,
                 true,
@@ -198,6 +204,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
 
 /// A list of well-know publisher actions
 /// In the future we can retrieve this list from the static API
+#[allow(clippy::unwrap_used)]
 static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(|| {
     vec![
         // Public packages and/or binary distribution channels
@@ -441,15 +448,20 @@ impl CachePoisoning {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for CachePoisoning {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_normal_job<'doc>(&self, job: &NormalJob<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    async fn audit_normal_job<'doc>(
+        &self,
+        job: &NormalJob<'doc>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         let steps = job.steps();
         let trigger = &job.parent().on;
@@ -472,7 +484,7 @@ impl Audit for CachePoisoning {
 mod tests {
     use super::*;
     use crate::{
-        github_api::GitHubHost, models::workflow::Workflow, registry::InputKey, state::AuditState,
+        config::Config, models::workflow::Workflow, registry::input::InputKey, state::AuditState,
     };
 
     /// Macro for testing workflow audits with common boilerplate
@@ -486,16 +498,14 @@ mod tests {
     /// 4. Executes the provided test closure with the findings
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>);
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(findings)
         }};
@@ -519,8 +529,8 @@ mod tests {
         fixed_document.source().to_string()
     }
 
-    #[test]
-    fn test_cache_disable_fix_opt_out_boolean() {
+    #[tokio::test]
+    async fn test_cache_disable_fix_opt_out_boolean() {
         let workflow_content = r#"
 name: Test Workflow
 on: release
@@ -565,8 +575,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_cache_disable_fix_opt_in_boolean() {
+    #[tokio::test]
+    async fn test_cache_disable_fix_opt_in_boolean() {
         let workflow_content = r#"
 name: Test Workflow
 on: release
@@ -606,8 +616,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_cache_disable_fix_opt_in_string() {
+    #[tokio::test]
+    async fn test_cache_disable_fix_opt_in_string() {
         let workflow_content = r#"
 name: Test Workflow
 on: release
@@ -637,8 +647,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_cache_disable_fix_non_configurable() {
+    #[tokio::test]
+    async fn test_cache_disable_fix_non_configurable() {
         let workflow_content = r#"
 name: Test Workflow
 on: release

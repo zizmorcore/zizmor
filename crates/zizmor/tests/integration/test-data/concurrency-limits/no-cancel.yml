@@ -1,0 +1,13 @@
+name: Workflow without cancel-in-progress
+on: push
+permissions: {}
+
+concurrency: group
+
+jobs:
+  job:
+    name: some-job
+    runs-on: ubuntu-latest
+    steps:
+    - name: 1-ok
+      run: echo ok

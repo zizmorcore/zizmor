@@ -39,13 +39,15 @@ Here are some different ways you can run `zizmor` locally:
 
     !!! tip
 
-        Pass `--collect=workflows-only` to disable collecting composite actions.
+        Pass `--collect=workflows` to avoid collecting anything except
+        workflow definitions.
 
     When given one or more local directories, `zizmor` will treat each as a
     GitHub repository and attempt to discover workflows defined under the
     `.github/workflows` subdirectory for each. `zizmor` will also walk each
     directory to find composite action definitions (`action.yml` in any
-    subdirectory).
+    subdirectory) and Dependabot configuration files
+    (`.github/dependabot.yml`).
 
     ```bash
     # repo-a/ contains .github/workflows/{ci,tests}.yml
@@ -55,8 +57,8 @@ Here are some different ways you can run `zizmor` locally:
     # or with multiple directories
     zizmor repo-a/ ../../repo-b/
 
-    # collect only workflows, not composite actions
-    zizmor --collect=workflows-only
+    # collect only workflows, not composite actions or Dependabot configs
+    zizmor --collect=workflows
     ```
 
 === "On one or more remote repositories"
@@ -68,7 +70,8 @@ Here are some different ways you can run `zizmor` locally:
 
     !!! tip
 
-        Pass `--collect=workflows-only` to disable collecting composite actions.
+        Pass `--collect=workflows` to disable collecting anything except
+        workflow definitions.
 
     `zizmor` can also fetch workflows and actions directly from GitHub, if
     given a GitHub API token via `GH_TOKEN` or `--gh-token`:

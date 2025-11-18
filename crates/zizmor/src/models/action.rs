@@ -3,9 +3,12 @@
 //! These models enrich the models under [`github_actions_models::action`],
 //! providing higher-level APIs for zizmor to use.
 
-use anyhow::Context;
 use github_actions_expressions::context;
-use github_actions_models::{action, common, workflow::job::Strategy};
+use github_actions_models::{
+    action,
+    common::{self, expr::LoE},
+    workflow::job::Strategy,
+};
 use terminal_link::Link;
 
 use crate::{
@@ -15,7 +18,7 @@ use crate::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
     },
-    registry::InputError,
+    registry::input::CollectionError,
     utils::{self, ACTION_VALIDATOR, from_str_with_validation},
 };
 
@@ -60,11 +63,10 @@ impl HasInputs for Action {
 
 impl Action {
     /// Load an action from a buffer, with an assigned name.
-    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, InputError> {
+    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
         let inner = from_str_with_validation(&contents, &ACTION_VALIDATOR)?;
 
-        let document = yamlpath::Document::new(&contents)
-            .context("failed to load internal pathing document")?;
+        let document = yamlpath::Document::new(&contents)?;
 
         let link = match key {
             InputKey::Local(_) => None,
@@ -228,8 +230,12 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
     }
 
     fn shell(&self) -> Option<&str> {
-        // For composite action steps, shell is always explicitly specified in the YAML
-        if let action::StepBody::Run { shell, .. } = &self.inner.body {
+        // For composite action steps, shell is always explicitly specified in the YAML.
+        if let action::StepBody::Run {
+            shell: LoE::Literal(shell),
+            ..
+        } = &self.inner.body
+        {
             Some(shell)
         } else {
             None

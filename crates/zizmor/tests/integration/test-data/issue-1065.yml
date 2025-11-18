@@ -1,0 +1,24 @@
+# minimized repro for issue #1065
+# minimized from: https://github.com/withstudiocms/studiocms/blob/9f661223e02be852cc2a770e9b21999476639651/.github/workflows/ci-pr-comment.yml
+# license: MIT
+# https://github.com/withstudiocms/studiocms/blob/9f661223e02be852cc2a770e9b21999476639651/LICENSE
+
+name: issue-1065
+
+on:
+  pull_request:
+
+jobs:
+  issue-1065:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment PR
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          github-token: ${{ secrets.STUDIOCMS_SERVICE_TOKEN }}
+          message: |
+            Thanks for opening this pull request! 🎉
+
+            ${{ github.event.pull_request.number }}
+
+            Please review the changes and provide any feedback. Thanks! 🚀

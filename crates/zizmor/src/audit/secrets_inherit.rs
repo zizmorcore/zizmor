@@ -2,6 +2,7 @@ use github_actions_models::workflow::job::Secrets;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
+    audit::AuditError,
     finding::{Confidence, location::Locatable as _},
     models::workflow::JobExt as _,
 };
@@ -14,18 +15,20 @@ audit_meta!(
     "secrets unconditionally inherited by called workflow"
 );
 
+#[async_trait::async_trait]
 impl Audit for SecretsInherit {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_reusable_job<'doc>(
+    async fn audit_reusable_job<'doc>(
         &self,
         job: &super::ReusableWorkflowCallJob<'doc>,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+        _config: &crate::config::Config,
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         if matches!(job.secrets, Some(Secrets::Inherit)) {

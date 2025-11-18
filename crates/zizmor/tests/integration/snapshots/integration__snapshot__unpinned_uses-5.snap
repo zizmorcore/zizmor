@@ -1,33 +1,37 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 192
 expression: "zizmor().input(input_under_test(\"unpinned-uses/issue-659-repro.yml\")).args([\"--pedantic\"]).run()?"
-snapshot_kind: text
 ---
 warning[excessive-permissions]: overly broad permissions
   --> @@INPUT@@:2:1
    |
  2 | / name: issue-659-repro
  3 | |
+ 4 | | on:
+ 5 | |   workflow_dispatch:
 ...  |
-19 | |         with:
-20 | |           node-version: ${{ env.NODE_VERSION }}
-   | |________________________________________________- default permissions used due to no permissions: block
+23 | |         with:
+24 | |           node-version: ${{ env.NODE_VERSION }}
+   | |________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
 warning[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:8:3
+  --> @@INPUT@@:12:3
    |
- 8 | /   test-itg:
- 9 | |     name: test-itg
+12 | /   test-itg:
+13 | |     name: test-itg
+14 | |     runs-on: ${{ matrix.os }}
+15 | |     strategy:
 ...  |
-19 | |         with:
-20 | |           node-version: ${{ env.NODE_VERSION }}
-   | |                                                -
-   | |________________________________________________|
-   |                                                  this job
+23 | |         with:
+24 | |           node-version: ${{ env.NODE_VERSION }}
+   | |                                                ^
+   | |                                                |
+   | |________________________________________________this job
    |                                                  default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
-2 findings: 0 unknown, 0 informational, 0 low, 2 medium, 0 high
+2 findings: 0 informational, 0 low, 2 medium, 0 high

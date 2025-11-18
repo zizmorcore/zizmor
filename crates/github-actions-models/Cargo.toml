@@ -1,6 +1,6 @@
 [package]
 name = "github-actions-models"
-version = "0.32.0"
+version = "0.39.0"
 description = "Unofficial, high-quality data models for GitHub Actions workflows, actions, and related components"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-models"
 keywords = ["github", "ci"]

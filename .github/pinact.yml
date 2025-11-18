@@ -3,4 +3,9 @@ version: 3
 files:
   # NOTE: we intentionally only update docs with pinact.
   # All non-doc workflows and actions are updated through Dependabot.
-  - pattern: ../docs/*.md
+  - pattern: ../docs/integrations.md
+  - pattern: ../docs/troubleshooting.md
+
+ignore_actions:
+  - name: example/.* # used for examples
+    ref: .*

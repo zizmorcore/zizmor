@@ -1,0 +1,19 @@
+# repro for #1286
+
+name: issue-1286-repro
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  issue-1286-repro:
+    name: issue-1286-repro
+    runs-on: ubuntu-latest
+    steps:
+      - name: private
+        uses: woodruffw-experiments/this-does-not-exist@v1.0.0

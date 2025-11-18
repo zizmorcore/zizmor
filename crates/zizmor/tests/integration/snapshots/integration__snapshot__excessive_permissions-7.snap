@@ -1,17 +1,17 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 639
 expression: "zizmor().input(input_under_test(\"excessive-permissions/jobs-broaden-permissions.yml\")).run()?"
 ---
 warning[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:8:3
+  --> @@INPUT@@:11:5
    |
  8 | /   job1:
  9 | |     name: job1
 10 | |     runs-on: ubuntu-latest
 11 | |     permissions: read-all
-   | |     --------------------- uses read-all permissions
-12 | |     steps:
-13 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+   | |     ^^^^^^^^^^^^^^^^^^^^^ uses read-all permissions
+...  |
 14 | |         with:
 15 | |           persist-credentials: false
    | |____________________________________- this job
@@ -19,19 +19,18 @@ warning[excessive-permissions]: overly broad permissions
    = note: audit confidence → High
 
 error[excessive-permissions]: overly broad permissions
-  --> @@INPUT@@:17:3
+  --> @@INPUT@@:20:5
    |
 17 | /   job2:
 18 | |     name: job2
 19 | |     runs-on: ubuntu-latest
 20 | |     permissions: write-all
    | |     ^^^^^^^^^^^^^^^^^^^^^^ uses write-all permissions
-21 | |     steps:
-22 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+...  |
 23 | |         with:
 24 | |           persist-credentials: false
-   | |_____________________________________^ this job
+   | |_____________________________________- this job
    |
    = note: audit confidence → High
 
-2 findings: 0 unknown, 0 informational, 0 low, 1 medium, 1 high
+3 findings (1 suppressed): 0 informational, 0 low, 1 medium, 1 high

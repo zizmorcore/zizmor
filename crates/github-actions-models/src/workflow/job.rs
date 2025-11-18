@@ -63,12 +63,13 @@ impl<'de> Deserialize<'de> for RunsOn {
         // serde lacks the ability to do inter-field invariants at the derive
         // layer, so we enforce the invariant that a `RunsOn::Group`
         // has either a `group` or at least one label here.
-        if let RunsOn::Group { group, labels } = &runs_on {
-            if group.is_none() && labels.is_empty() {
-                return Err(custom_error::<D>(
-                    "runs-on must provide either `group` or one or more `labels`",
-                ));
-            }
+        if let RunsOn::Group { group, labels } = &runs_on
+            && group.is_none()
+            && labels.is_empty()
+        {
+            return Err(custom_error::<D>(
+                "runs-on must provide either `group` or one or more `labels`",
+            ));
         }
 
         Ok(runs_on)
@@ -133,7 +134,7 @@ pub enum StepBody {
 
         /// An optional shell to run in. Defaults to the job or workflow's
         /// default shell.
-        shell: Option<String>,
+        shell: Option<LoE<String>>,
     },
 }
 

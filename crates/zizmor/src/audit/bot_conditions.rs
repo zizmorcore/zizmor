@@ -1,8 +1,10 @@
 use std::{ops::Deref, sync::LazyLock};
 
 use github_actions_expressions::{
-    BinOp, Expr, SpannedExpr, UnOp,
+    Expr, SpannedExpr,
+    call::Call,
     context::{Context, ContextPattern},
+    op::{BinOp, UnOp},
 };
 use github_actions_models::{
     common::If,
@@ -11,6 +13,7 @@ use github_actions_models::{
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
+    audit::AuditError,
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
     models::workflow::{JobExt, Workflow},
     utils::{self, ExtractedExpr},
@@ -22,6 +25,7 @@ pub(crate) struct BotConditions;
 
 audit_meta!(BotConditions, "bot-conditions", "spoofable bot actor check");
 
+#[allow(clippy::unwrap_used)]
 static SPOOFABLE_ACTOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
     vec![
         ContextPattern::try_new("github.actor").unwrap(),
@@ -30,6 +34,7 @@ static SPOOFABLE_ACTOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::
     ]
 });
 
+#[allow(clippy::unwrap_used)]
 static SPOOFABLE_ACTOR_ID_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
     vec![
         ContextPattern::try_new("github.actor_id").unwrap(),
@@ -53,18 +58,20 @@ const BOT_ACTOR_IDS: &[&str] = &[
     "29139614", // renovate[bot]
 ];
 
+#[async_trait::async_trait]
 impl Audit for BotConditions {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_normal_job<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+        _config: &crate::config::Config,
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         // Track conditions with explicit categorization
@@ -261,10 +268,10 @@ impl BotConditions {
             // check to see if any of the call's arguments are
             // bot conditions. We treat a call as non-dominating always.
             // TODO: Should probably check some variant of `contains` here.
-            Expr::Call {
+            Expr::Call(Call {
                 func: _,
                 args: exprs,
-            }
+            })
             | Expr::Context(Context { parts: exprs, .. }) => exprs
                 .iter()
                 .map(|arg| Self::walk_tree_for_bot_condition(arg, false))
@@ -404,26 +411,24 @@ impl BotConditions {
 mod tests {
     use super::*;
     use crate::{
+        config::Config,
         finding::Finding,
-        github_api::GitHubHost,
         models::{AsDocument, workflow::Workflow},
-        registry::InputKey,
+        registry::input::InputKey,
         state::AuditState,
     };
 
     /// Macro for testing workflow audits with common boilerplate
     macro_rules! test_workflow_audit {
         ($audit_type:ty, $filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local($filename, None::<&str>).unwrap();
+            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>);
             let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
             let audit = <$audit_type>::new(&audit_state).unwrap();
-            let findings = audit.audit_workflow(&workflow).unwrap();
+            let findings = audit
+                .audit_workflow(&workflow, &Config::default())
+                .await
+                .unwrap();
 
             $test_fn(&workflow, findings)
         }};
@@ -498,8 +503,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_replace_actor_fix() {
+    #[tokio::test]
+    async fn test_replace_actor_fix() {
         let workflow_content = r#"
 name: Test Workflow
 on:
@@ -550,8 +555,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_all_fixes_together() {
+    #[tokio::test]
+    async fn test_all_fixes_together() {
         let workflow_content = r#"
 name: Test Workflow
 on:
@@ -600,8 +605,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_event_specific_contexts() {
+    #[tokio::test]
+    async fn test_event_specific_contexts() {
         // Test issue_comment event
         let issue_comment_workflow = r#"
 name: Test Issue Comment
@@ -847,8 +852,8 @@ jobs:
         );
     }
 
-    #[test]
-    fn test_fix_with_complex_conditions() {
+    #[tokio::test]
+    async fn test_fix_with_complex_conditions() {
         let workflow_content = r#"
 name: Test Workflow
 on:

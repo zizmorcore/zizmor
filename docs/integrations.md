@@ -33,12 +33,12 @@ jobs:
       actions: read # only needed for private repos
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
 
       - name: Run zizmor 🌈
-        uses: zizmorcore/zizmor-action@f52a838cfabf134edcbaa7c8b3677dde20045018 # v0.1.1
+        uses: zizmorcore/zizmor-action@e673c3917a1aef3c65c972347ed84ccd013ecda4 # v0.2.0
 ```
 
 See the action's [`inputs` documentation][inputs-documentation] for
@@ -94,12 +94,12 @@ GitHub Actions setup:
           actions: read # only needed for private repos
         steps:
           - name: Checkout repository
-            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+            uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
             with:
               persist-credentials: false
 
           - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
+            uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
 
           - name: Run zizmor 🌈
             run: uvx zizmor --format=sarif . > results.sarif # (2)!
@@ -107,7 +107,7 @@ GitHub Actions setup:
               GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
 
           - name: Upload SARIF file
-            uses: github/codeql-action/upload-sarif@ff0a06e83cb2de871e5a09832bc6a81e7276941f # v3.28.18
+            uses: github/codeql-action/upload-sarif@4e94bd11f71e507f7f87df81788dff88d1dacbfb # v4.31.0
             with:
               sarif_file: results.sarif
               category: zizmor
@@ -125,7 +125,7 @@ GitHub Actions setup:
     !!! important
 
         When using `--format=sarif`, `zizmor` does not use its
-        [exit codes](#exit-codes) to signal the presence of findings. As a result,
+        [exit codes](usage.md/#exit-codes) to signal the presence of findings. As a result,
         `zizmor` will always exit with code `0` even if findings are present,
         **unless** an internal error occurs during the audit.
 
@@ -165,10 +165,10 @@ GitHub Actions setup:
           actions: read # only needed for private repos
         steps:
           - name: Checkout repository
-            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+            uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
           - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
+            uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
 
           - name: Run zizmor 🌈
             run: uvx zizmor --format=github . # (2)!
@@ -256,7 +256,7 @@ To do so, add the following to your `.pre-commit-config.yaml` `#!yaml repos:` se
 
 ```yaml
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
-  rev: v1.11.0 # (1)!
+  rev: v1.16.3 # (1)!
   hooks:
   - id: zizmor
 ```

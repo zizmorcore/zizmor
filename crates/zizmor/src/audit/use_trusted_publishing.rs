@@ -7,6 +7,7 @@ use tree_sitter::Language;
 use tree_sitter::StreamingIterator as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::audit::AuditError;
 use crate::finding::location::Locatable;
 use crate::{
     finding::{Confidence, Finding, Severity},
@@ -29,6 +30,10 @@ const KNOWN_PYTHON_TP_INDICES: &[&str] = &[
     "https://test.pypi.org/legacy/",
 ];
 
+const KNOWN_NPMJS_TP_INDICES: &[&str] =
+    &["https://registry.npmjs.org", "https://registry.npmjs.org/"];
+
+#[allow(clippy::unwrap_used)]
 static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str])>> =
     LazyLock::new(|| {
         vec![
@@ -111,6 +116,29 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
                 },
                 &["with", "api-token"],
             ),
+            // NPM publishing actions that should use trusted publishing
+            // Detects when actions/setup-node is configured for npmjs with always-auth
+            (
+                ActionCoordinate::Configurable {
+                    uses_pattern: "actions/setup-node".parse().unwrap(),
+                    control: ControlExpr::all([
+                        ControlExpr::single(
+                            Toggle::OptIn,
+                            "registry-url",
+                            ControlFieldType::Exact(KNOWN_NPMJS_TP_INDICES),
+                            true,
+                        ),
+                        // Detect when always-auth is enabled (indicating manual token usage)
+                        ControlExpr::single(
+                            Toggle::OptIn,
+                            "always-auth",
+                            ControlFieldType::Boolean,
+                            false,
+                        ),
+                    ]),
+                },
+                &["with", "always-auth"],
+            ),
         ]
     });
 
@@ -136,15 +164,32 @@ const NON_TP_COMMAND_PATTERNS: &[&str] = &[
     r"(?s)twine\s+(.+\s+)?upload",
     // gem ... push ...
     r"(?s)gem\s+(.+\s+)?push",
+    // npm ... publish ...
+    r"(?s)npm\s+(.+\s+)?publish",
+    // yarn ... npm publish ...
+    r"(?s)yarn\s+(.+\s+)?npm\s+publish",
+    // pnpm ... publish ...
+    r"(?s)pnpm\s+(.+\s+)?publish",
+    // yarn run publish / yarn publish (lerna/npm workspaces)
+    r"(?s)yarn\s+(?:run\s+)?publish",
+    // npm run publish
+    r"(?s)npm\s+run\s+publish",
+    // pnpm run publish
+    r"(?s)pnpm\s+run\s+publish",
 ];
 
-static NON_TP_COMMAND_PATTERN_SET: LazyLock<RegexSet> =
-    LazyLock::new(|| RegexSet::new(NON_TP_COMMAND_PATTERNS).unwrap());
+static NON_TP_COMMAND_PATTERN_SET: LazyLock<RegexSet> = LazyLock::new(|| {
+    RegexSet::new(NON_TP_COMMAND_PATTERNS)
+        .expect("internal error: failed to compile NON_TP_COMMAND_PATTERN_SET")
+});
 
 static NON_TP_COMMAND_PATTERN_REGEXES: LazyLock<Vec<regex::Regex>> = LazyLock::new(|| {
     NON_TP_COMMAND_PATTERNS
         .iter()
-        .map(|p| regex::Regex::new(p).unwrap())
+        .map(|p| {
+            regex::Regex::new(p)
+                .expect("internal error: failed to compile NON_TP_COMMAND_PATTERN_REGEXES")
+        })
         .collect()
 });
 
@@ -166,7 +211,7 @@ impl UseTrustedPublishing {
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for (coordinate, keys) in KNOWN_TRUSTED_PUBLISHING_ACTIONS.iter() {
@@ -201,20 +246,23 @@ impl UseTrustedPublishing {
     fn bash_trusted_publishing_command_candidates<'doc>(
         &self,
         run: &'doc str,
-    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         let mut parser = tree_sitter::Parser::new();
-        parser.set_language(&self.bash)?;
+        parser.set_language(&self.bash).map_err(Self::err)?;
 
         let mut cursor = tree_sitter::QueryCursor::new();
         let tree = parser
             .parse(run, None)
-            .context("failed to parse `run:` body as bash")?;
+            .context("failed to parse `run:` body as bash")
+            .map_err(Self::err)?;
 
         Ok(cursor
             .captures(&self.bash_command_query, tree.root_node(), run.as_bytes())
             .filter_map(|(mat, cap_idx)| {
                 let cap_node = mat.captures[*cap_idx].node;
-                let cap_cmd = cap_node.utf8_text(run.as_bytes()).unwrap();
+                let cap_cmd = cap_node
+                    .utf8_text(run.as_bytes())
+                    .expect("impossible: capture should be UTF-8 by construction");
 
                 NON_TP_COMMAND_PATTERN_SET
                     .is_match(cap_cmd)
@@ -227,20 +275,23 @@ impl UseTrustedPublishing {
     fn pwsh_trusted_publishing_command_candidates<'doc>(
         &self,
         run: &'doc str,
-    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         let mut parser = tree_sitter::Parser::new();
-        parser.set_language(&self.pwsh)?;
+        parser.set_language(&self.pwsh).map_err(Self::err)?;
 
         let mut cursor = tree_sitter::QueryCursor::new();
         let tree = parser
             .parse(run, None)
-            .context("failed to parse `run:` body as pwsh")?;
+            .context("failed to parse `run:` body as pwsh")
+            .map_err(Self::err)?;
 
         Ok(cursor
             .captures(&self.pwsh_command_query, tree.root_node(), run.as_bytes())
             .filter_map(|(mat, cap_idx)| {
                 let cap_node = mat.captures[*cap_idx].node;
-                let cap_cmd = cap_node.utf8_text(run.as_bytes()).unwrap();
+                let cap_cmd = cap_node
+                    .utf8_text(run.as_bytes())
+                    .expect("impossible: capture should be UTF-8 by construction");
 
                 NON_TP_COMMAND_PATTERN_SET
                     .is_match(cap_cmd)
@@ -253,11 +304,15 @@ impl UseTrustedPublishing {
     fn raw_trusted_publishing_command_candidates<'doc>(
         &self,
         run: &'doc str,
-    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         Ok(NON_TP_COMMAND_PATTERN_SET
             .matches(run)
             .into_iter()
-            .map(|idx| NON_TP_COMMAND_PATTERN_REGEXES[idx].find(run).unwrap())
+            .map(|idx| {
+                NON_TP_COMMAND_PATTERN_REGEXES[idx].find(run).expect(
+                    "internal error: 1-1 correspondence between RegexSet and regexes violated",
+                )
+            })
             .map(|mat| Subfeature::new(mat.start(), mat.as_str()))
             .collect())
     }
@@ -266,7 +321,7 @@ impl UseTrustedPublishing {
         &self,
         run: &'doc str,
         shell: &str,
-    ) -> anyhow::Result<Vec<Subfeature<'doc>>> {
+    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         let normalized = utils::normalize_shell(shell);
 
         match normalized {
@@ -277,8 +332,9 @@ impl UseTrustedPublishing {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for UseTrustedPublishing {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError> {
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         let bash: Language = tree_sitter_bash::LANGUAGE.into();
         let pwsh: Language = tree_sitter_powershell::LANGUAGE.into();
 
@@ -292,18 +348,26 @@ impl Audit for UseTrustedPublishing {
         })
     }
 
-    fn audit_step<'doc>(
+    async fn audit_step<'doc>(
         &self,
         step: &crate::models::workflow::Step<'doc>,
-    ) -> anyhow::Result<Vec<super::Finding<'doc>>> {
+        _config: &crate::config::Config,
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = self.process_step(step)?;
 
         // In addition to the shared action matching above, we can
         // also check for some `run:` patterns that indicate publishing
         // without Trusted Publishing.
+
         // We can only check these reliably on workflows and not actions,
         // since we need to be able to see the `id-token` permission's
         // state to filter out any false positives.
+        //
+        // NOTE(ww): With #1161 we loosened this check and turned the
+        // "has ID token" check into a confidence modifier rather than
+        // a strict filter. This ended up being overly imprecise, since a lot
+        // of publishing commands use trusted publishing implicitly if
+        // the environment supports it. We reverted this with #1191.
         if let StepBodyCommon::Run { run, .. } = step.body()
             && !step.parent.has_id_token()
         {
@@ -322,12 +386,7 @@ impl Audit for UseTrustedPublishing {
                 findings.push(
                     Self::finding()
                         .severity(Severity::Informational)
-                        // Our confidence is lower here, since we have less
-                        // insight into the publishing command's context
-                        // (e.g. whether it's influenced by something in
-                        // the environment to publish to a different index
-                        // that doesn't support Trusted Publishing).
-                        .confidence(Confidence::Medium)
+                        .confidence(Confidence::High)
                         .add_location(step.location().hidden())
                         .add_location(
                             step.location()
@@ -350,10 +409,11 @@ impl Audit for UseTrustedPublishing {
         Ok(findings)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &crate::models::action::CompositeStep<'doc>,
-    ) -> anyhow::Result<Vec<Finding<'doc>>> {
+        _config: &crate::config::Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }
 }

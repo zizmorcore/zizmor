@@ -3,15 +3,32 @@
 //! TODO: This file is too big; break it into multiple
 //! modules, one per audit/conceptual group.
 
-use crate::common::{input_under_test, zizmor};
+use crate::common::{OutputMode, input_under_test, zizmor};
 use anyhow::Result;
 
 #[test]
-fn test_cant_retrieve() -> Result<()> {
+fn test_cant_retrieve_offline() -> Result<()> {
+    // Fails because --offline prevents network access.
     insta::assert_snapshot!(
         zizmor()
             .expects_failure(true)
             .offline(true)
+            .unsetenv("GH_TOKEN")
+            .args(["pypa/sampleproject"])
+            .run()?
+    );
+
+    Ok(())
+}
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_cant_retrieve_no_gh_token() -> Result<()> {
+    // Fails because GH_TOKEN is not set.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .offline(false)
             .unsetenv("GH_TOKEN")
             .args(["pypa/sampleproject"])
             .run()?
@@ -283,6 +300,21 @@ fn use_trusted_publishing() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/npm-publish.yml"))
+            .run()?
+    );
+
+    // No use-trusted-publishing findings expected here.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "use-trusted-publishing/issue-1191-repro.yml"
+            ))
+            .run()?
+    );
+
     Ok(())
 }
 
@@ -537,6 +569,18 @@ fn cache_poisoning() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("cache-poisoning/issue-1081-repro.yml"))
+            .run()?
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("cache-poisoning/issue-1152-repro.yml"))
+            .run()?
+    );
+
     Ok(())
 }
 
@@ -663,6 +707,21 @@ fn github_env() -> Result<()> {
             .run()?
     );
 
+    // Ensures that we produce a reasonable warning if the user gives us a
+    // `shell:` clause containing an expression.
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Both)
+            .setenv("RUST_LOG", "warn")
+            .input(input_under_test("github-env/issue-1333/action.yml"))
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN zizmor::audit::github_env: github-env: couldn't determine shell type for @@INPUT@@ step 0; assuming bash
+    No findings to report. Good job!
+    "
+    );
+
     Ok(())
 }
 
@@ -777,6 +836,13 @@ fn obfuscation() -> Result<()> {
             .run()?
     );
 
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("obfuscation/issue-1177-repro.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
     Ok(())
 }
 
@@ -806,12 +872,273 @@ fn unpinned_images() -> Result<()> {
     Ok(())
 }
 
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn ref_version_mismatch() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(crate::common::OutputMode::Both)
+            .input(input_under_test("ref-version-mismatch.yml"))
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     INFO audit: zizmor: 🌈 completed @@INPUT@@
+    warning[ref-version-mismatch]: detects commit SHAs that don't match their version comment tags
+      --> @@INPUT@@:22:77
+       |
+    22 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
+       |         -----------------------------------------------------------------   ^^^^^^ points to commit 5e21ff4d9bc1
+       |         |
+       |         is pointed to by tag v3.8.2
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    // Tags that point to other tags are handled correctly.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .input(input_under_test(
+                "ref-version-mismatch/nested-annotated-tags.yml"
+            ))
+            .run()?,
+        @"No findings to report. Good job! (1 suppressed)"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn undocumented_permissions() -> Result<()> {
+    // Test with pedantic persona (should find issues)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with regular persona (should not find issues)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions.yml"))
+            .run()?
+    );
+
+    // Test with properly documented permissions (should not find issues even with pedantic)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("undocumented-permissions/documented.yml"))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with only "contents: read" (should not trigger rule)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "undocumented-permissions/contents-read-only.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with empty permissions (should not trigger rule)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "undocumented-permissions/empty-permissions.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with contents: read plus other permissions (should trigger rule)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "undocumented-permissions/contents-read-with-other.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    // Test with partially documented permissions (should ideally only flag undocumented ones)
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "undocumented-permissions/partially-documented.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?
+    );
+
+    Ok(())
+}
+
 #[test]
 fn unsound_condition() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("unsound-condition.yml"))
             .run()?
+    );
+
+    Ok(())
+}
+
+#[test]
+fn dependabot_execution() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dependabot-execution/basic/dependabot.yml"
+            ))
+            .run()?,
+        @r"
+    error[dependabot-execution]: external code execution in Dependabot updates
+      --> @@INPUT@@:10:5
+       |
+     4 |   - package-ecosystem: pip
+       |     ---------------------- this ecosystem
+    ...
+    10 |     insecure-external-code-execution: allow
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enabled here
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    1 findings (1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn dependabot_cooldown() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dependabot-cooldown/missing/dependabot.yml"
+            ))
+            .run()?,
+        @r"
+    warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+     --> @@INPUT@@:4:5
+      |
+    4 |   - package-ecosystem: pip
+      |     ^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+      |
+      = note: audit confidence → High
+      = note: this finding has an auto-fix
+
+    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dependabot-cooldown/no-default-days/dependabot.yml"
+            ))
+            .run()?,
+        @r"
+    warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+     --> @@INPUT@@:6:5
+      |
+    6 |     cooldown: {}
+      |     ^^^^^^^^^^^^ no default-days configured
+      |
+      = note: audit confidence → High
+      = note: this finding has an auto-fix
+
+    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    ");
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dependabot-cooldown/default-days-too-short/dependabot.yml"
+            ))
+            .run()?,
+        @r"
+    help[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+     --> @@INPUT@@:7:7
+      |
+    7 |       default-days: 2
+      |       ^^^^^^^^^^^^^^^ insufficient default-days configured
+      |
+      = note: audit confidence → Medium
+      = note: this finding has an auto-fix
+
+    1 findings (1 fixable): 0 informational, 1 low, 0 medium, 0 high
+    ");
+
+    Ok(())
+}
+
+#[test]
+fn concurrency_limits() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/missing.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r"
+    help[concurrency-limits]: insufficient job-level concurrency limits
+      --> @@INPUT@@:1:1
+       |
+     1 | / name: Workflow without concurrency
+     2 | | on: push
+     3 | | permissions: {}
+    ...  |
+    10 | |     - name: 1-ok
+    11 | |       run: echo ok
+       | |___________________^ missing concurrency setting
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
+    );
+
+    // Note: per #1302, we intentionally don't produce findings here.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/cancel-false.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/no-cancel.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r"
+    help[concurrency-limits]: insufficient job-level concurrency limits
+     --> @@INPUT@@:5:1
+      |
+    5 | concurrency: group
+      | ^^^^^^^^^^^^^^^^^^ concurrency is missing cancel-in-progress
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
     );
 
     Ok(())

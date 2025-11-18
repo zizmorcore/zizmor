@@ -1,24 +1,27 @@
 use std::ops::{Deref, Range};
-use std::sync::LazyLock;
 
 use anyhow::{Context, Result};
 use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
-use regex::Regex;
 use tree_sitter::{
     Language, Parser, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
 };
 
 use super::{Audit, AuditLoadError, audit_meta};
+use crate::audit::AuditError;
+use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
+use crate::models::StepCommon;
 use crate::models::{workflow::JobExt as _, workflow::Step};
 use crate::state::AuditState;
 use crate::utils;
+use crate::utils::once::static_regex;
 
-static GITHUB_ENV_WRITE_CMD: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?mi)^.+\s*>>?\s*"?%(?<destination>GITHUB_ENV|GITHUB_PATH)%"?.*$"#).unwrap()
-});
+static_regex!(
+    GITHUB_ENV_WRITE_CMD,
+    r#"(?mi)^.+\s*>>?\s*"?%(?<destination>GITHUB_ENV|GITHUB_PATH)%"?.*$"#
+);
 
 pub(crate) struct GitHubEnv {
     bash: Language,
@@ -145,17 +148,19 @@ impl GitHubEnv {
     fn bash_uses_github_env<'hay>(
         &self,
         script_body: &'hay str,
-    ) -> Result<Vec<(&'hay str, Range<usize>)>> {
+    ) -> Result<Vec<(&'hay str, Range<usize>)>, AuditError> {
         let mut parser = Parser::new();
         parser
             .set_language(&self.bash)
-            .context("failed to set bash language for parser")?;
+            .context("failed to set bash language for parser")
+            .map_err(Self::err)?;
 
         let mut cursor = QueryCursor::new();
 
         let tree = parser
             .parse(script_body, None)
-            .context("failed to parse `run:` body as bash")?;
+            .context("failed to parse `run:` body as bash")
+            .map_err(Self::err)?;
 
         // Look for redirect patterns, e.g. `... >> $GITHUB_ENV`.
         //
@@ -167,18 +172,24 @@ impl GitHubEnv {
         let cmd = self
             .bash_redirect_query
             .capture_index_for_name("cmd")
-            .unwrap();
+            .expect("internal error: missing capture index for 'cmd'");
         let args = self
             .bash_redirect_query
             .capture_index_for_name("args")
-            .unwrap();
+            .expect("internal error: missing capture index for 'args'");
 
         let mut matching_spans = vec![];
 
         matches.for_each(|mat| {
             let cmd = {
-                let cap = mat.captures.iter().find(|cap| cap.index == cmd).unwrap();
-                cap.node.utf8_text(script_body.as_bytes()).unwrap()
+                let cap = mat
+                    .captures
+                    .iter()
+                    .find(|cap| cap.index == cmd)
+                    .expect("internal error: expected capture for cmd");
+                cap.node
+                    .utf8_text(script_body.as_bytes())
+                    .expect("impossible: capture should be UTF-8 by construction")
             };
 
             let args = mat.captures.iter().filter(|cap| cap.index == args);
@@ -190,15 +201,17 @@ impl GitHubEnv {
                     .captures
                     .iter()
                     .find(|cap| cap.index == self.bash_redirect_query.span_idx)
-                    .unwrap();
+                    .expect("internal error: expected capture for span");
 
                 let destination = {
                     let cap = mat
                         .captures
                         .iter()
                         .find(|cap| cap.index == self.bash_redirect_query.destination_idx)
-                        .unwrap();
-                    cap.node.utf8_text(script_body.as_bytes()).unwrap()
+                        .expect("internal error: expected capture for destination");
+                    cap.node
+                        .utf8_text(script_body.as_bytes())
+                        .expect("impossible: capture should be UTF-8 by construction")
                 };
                 matching_spans.push((destination, span.node.byte_range()));
             }
@@ -217,15 +230,17 @@ impl GitHubEnv {
                     .captures
                     .iter()
                     .find(|cap| cap.index == query.span_idx)
-                    .unwrap();
+                    .expect("internal error: expected capture for span");
 
                 let destination = {
                     let cap = mat
                         .captures
                         .iter()
                         .find(|cap| cap.index == query.destination_idx)
-                        .unwrap();
-                    cap.node.utf8_text(script_body.as_bytes()).unwrap()
+                        .expect("internal error: expected capture for destination");
+                    cap.node
+                        .utf8_text(script_body.as_bytes())
+                        .expect("impossible: capture should be UTF-8 by construction")
                 };
 
                 matching_spans.push((destination, span.node.byte_range()));
@@ -239,10 +254,11 @@ impl GitHubEnv {
         GITHUB_ENV_WRITE_CMD
             .captures_iter(script_body)
             .map(|c| {
-                let name = c.name("destination").unwrap().as_str();
-                let span = c.name("destination").unwrap().range();
+                let dest = c
+                    .name("destination")
+                    .expect("internal error: capture with missing destination");
 
-                (name, span)
+                (dest.as_str(), dest.range())
             })
             .collect()
     }
@@ -250,15 +266,17 @@ impl GitHubEnv {
     fn pwsh_uses_github_env<'hay>(
         &self,
         script_body: &'hay str,
-    ) -> Result<Vec<(&'hay str, Range<usize>)>> {
+    ) -> Result<Vec<(&'hay str, Range<usize>)>, AuditError> {
         let mut parser = Parser::new();
         parser
             .set_language(&self.pwsh)
-            .context("failed to set pwsh language for parser")?;
+            .context("failed to set pwsh language for parser")
+            .map_err(Self::err)?;
 
         let tree = parser
             .parse(script_body, None)
-            .context("failed to parse `run:` body as pwsh")?;
+            .context("failed to parse `run:` body as pwsh")
+            .map_err(Self::err)?;
 
         let mut cursor = QueryCursor::new();
         let queries = [&self.pwsh_redirect_query, &self.pwsh_pipeline_query];
@@ -271,15 +289,17 @@ impl GitHubEnv {
                     .captures
                     .iter()
                     .find(|cap| cap.index == query.span_idx)
-                    .unwrap();
+                    .expect("internal error: no matching capture");
 
                 let destination = {
                     let cap = mat
                         .captures
                         .iter()
                         .find(|cap| cap.index == query.destination_idx)
-                        .unwrap();
-                    cap.node.utf8_text(script_body.as_bytes()).unwrap()
+                        .expect("internal error: no matching capture");
+                    cap.node
+                        .utf8_text(script_body.as_bytes())
+                        .expect("impossible: capture should be UTF-8 by construction")
                 };
 
                 matching_spans.push((destination, span.node.byte_range()));
@@ -293,7 +313,7 @@ impl GitHubEnv {
         &self,
         run_step_body: &'hay str,
         shell: &str,
-    ) -> Result<Vec<(&'hay str, Range<usize>)>> {
+    ) -> Result<Vec<(&'hay str, Range<usize>)>, AuditError> {
         // The `shell:` stanza can contain a path and/or multiple arguments,
         // which we need to normalize out before comparing.
         // For example, `shell: /bin/bash -e {0}` becomes `bash`.
@@ -315,8 +335,9 @@ impl GitHubEnv {
     }
 }
 
+#[async_trait::async_trait]
 impl Audit for GitHubEnv {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
@@ -344,7 +365,11 @@ impl Audit for GitHubEnv {
         })
     }
 
-    fn audit_step<'doc>(&self, step: &Step<'doc>) -> anyhow::Result<Vec<Finding<'doc>>> {
+    async fn audit_step<'doc>(
+        &self,
+        step: &Step<'doc>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let workflow = step.workflow();
@@ -359,8 +384,8 @@ impl Audit for GitHubEnv {
         if let StepBody::Run { run, .. } = &step.deref().body {
             let shell = step.shell().unwrap_or_else(|| {
                 tracing::warn!(
-                    "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}",
-                    workflow = step.workflow().key.filename(),
+                    "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}; assuming bash",
+                    workflow = step.workflow().key.presentation_path(),
                     job = step.parent.id(),
                     stepno = step.index
                 );
@@ -392,15 +417,29 @@ impl Audit for GitHubEnv {
         Ok(findings)
     }
 
-    fn audit_composite_step<'doc>(
+    async fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
-    ) -> Result<Vec<Finding<'doc>>> {
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        let action::StepBody::Run { run, shell, .. } = &step.body else {
+        let action::StepBody::Run { run, .. } = &step.body else {
             return Ok(findings);
         };
+
+        let shell = step.shell().unwrap_or_else(|| {
+            tracing::warn!(
+                "github-env: couldn't determine shell type for {action} step {stepno}; assuming bash",
+                action = step.action().key.presentation_path(),
+                stepno = step.index
+            );
+
+            // The only way shell inference can fail for a `run:` in a
+            // composition action is if a user specifies an expression instead
+            // of a string literal. In that case, assume bash.
+            "bash"
+        });
 
         // TODO: actually use the spanning information here.
         for (dest, _span) in self.uses_github_env(run, shell)? {
@@ -426,7 +465,6 @@ impl Audit for GitHubEnv {
 mod tests {
     use crate::audit::Audit;
     use crate::audit::github_env::{GITHUB_ENV_WRITE_CMD, GitHubEnv};
-    use crate::github_api::GitHubHost;
     use crate::state::AuditState;
 
     #[test]
@@ -491,12 +529,7 @@ mod tests {
             ("echo 'completely-static' \"foo\" >> $GITHUB_ENV", false), // LHS is completely static
             ("echo \"completely-static\" >> $GITHUB_ENV", false), // LHS is completely static
         ] {
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
 
             let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 
@@ -607,12 +640,7 @@ mod tests {
                 false,
             ), // GITHUB_ENV is not a variable
         ] {
-            let audit_state = AuditState {
-                config: &Default::default(),
-                no_online_audits: false,
-                gh_client: None,
-                gh_hostname: GitHubHost::Standard("github.com".into()),
-            };
+            let audit_state = AuditState::default();
 
             let sut = GitHubEnv::new(&audit_state).expect("failed to create audit");
 

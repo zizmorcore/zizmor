@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::LazyLock};
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
+use crate::audit::AuditError;
 use crate::finding::location::Locatable as _;
 use crate::{
     AuditState,
@@ -39,18 +40,20 @@ audit_meta!(
 
 pub(crate) struct ExcessivePermissions;
 
+#[async_trait::async_trait]
 impl Audit for ExcessivePermissions {
-    fn new(_state: &AuditState<'_>) -> Result<Self, AuditLoadError>
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
         Ok(Self)
     }
 
-    fn audit_workflow<'doc>(
+    async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
-    ) -> anyhow::Result<Vec<crate::finding::Finding<'doc>>> {
+        _config: &crate::config::Config,
+    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         let all_jobs_have_permissions = workflow
@@ -179,7 +182,7 @@ impl ExcessivePermissions {
                     let severity = KNOWN_PERMISSIONS.get(name.as_str()).unwrap_or_else(|| {
                         tracing::warn!("unknown permission: {name}");
 
-                        &Severity::Unknown
+                        &Severity::Medium
                     });
 
                     results.push((

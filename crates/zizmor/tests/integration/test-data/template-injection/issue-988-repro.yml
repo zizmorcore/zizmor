@@ -3,6 +3,9 @@ name: Panic
 on:
   pull_request: {}
 permissions: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   example1:
     name: "Example 1"

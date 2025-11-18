@@ -1,0 +1,8 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().offline(false).output(OutputMode::Stderr).input(\"woodruffw-experiments/zizmor-issue-1116@f41c414\").run()?"
+---
+🌈 zizmor v@@VERSION@@
+ WARN collect_inputs:fetch_audit_inputs{slug=RepoSlug { owner: "woodruffw-experiments", repo: "zizmor-issue-1116", git_ref: Some("f41c414") }}: zizmor::registry::input: failed to validate input as action: input does not match expected validation schema
+ INFO collect_inputs: zizmor::registry::input: collected 1 inputs from woodruffw-experiments/zizmor-issue-1116
+ INFO audit: zizmor: 🌈 completed .github/workflows/hackme.yml

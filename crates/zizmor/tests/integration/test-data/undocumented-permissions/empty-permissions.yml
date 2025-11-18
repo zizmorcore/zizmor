@@ -1,0 +1,22 @@
+name: Empty Permissions Test
+
+on: [push]
+
+# This should NOT trigger the rule since there are no permissions to document
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-job:
+    name: Test Job
+    runs-on: ubuntu-latest
+    # This should also NOT trigger the rule
+    permissions: {}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"

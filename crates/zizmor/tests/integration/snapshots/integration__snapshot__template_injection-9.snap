@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 411
 expression: "zizmor().input(input_under_test(\"template-injection/false-positive-menagerie.yml\")).run()?"
 ---
-No findings to report. Good job! (6 suppressed)
+No findings to report. Good job! (7 suppressed)

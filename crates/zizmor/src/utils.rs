@@ -16,16 +16,32 @@ use std::{
 };
 use std::{fmt::Write, sync::LazyLock};
 
-use crate::{audit::AuditInput, models::AsDocument, registry::InputError};
+use crate::{audit::AuditInput, models::AsDocument, registry::input::CollectionError};
 
-pub(crate) static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
-    validator_for(&serde_json::from_str(include_str!("./data/github-action.json")).unwrap())
-        .unwrap()
-});
+pub(crate) static ZIZMOR_AGENT: &str = concat!("zizmor/", env!("CARGO_PKG_VERSION"));
 
 pub(crate) static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
-    validator_for(&serde_json::from_str(include_str!("./data/github-workflow.json")).unwrap())
-        .unwrap()
+    validator_for(
+        &serde_json::from_str(include_str!("./data/github-workflow.json"))
+            .expect("internal error: compiled asset not JSON?"),
+    )
+    .expect("internal error: failed to load workflow schema")
+});
+
+pub(crate) static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+    validator_for(
+        &serde_json::from_str(include_str!("./data/github-action.json"))
+            .expect("internal error: compiled asset not JSON?"),
+    )
+    .expect("internal error: failed to load action schema")
+});
+
+pub(crate) static DEPENDABOT_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+    validator_for(
+        &serde_json::from_str(include_str!("./data/dependabot-2.0.json"))
+            .expect("internal error: compiled asset not JSON?"),
+    )
+    .expect("internal error: failed to load dependabot schema")
 });
 
 macro_rules! pat {
@@ -302,13 +318,14 @@ fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Er
         if !description.starts_with("{") {
             let location = error.instance_location().as_str();
             if location.is_empty() {
-                writeln!(message, "{description}").unwrap();
+                writeln!(message, "{description}").expect("I/O on a String failed");
             } else {
                 // Convert paths like `/foo/bar/baz` to `foo.bar.baz`,
                 // removing the leading separator.
                 let dotted_location = &location[1..].replace("/", ".");
 
-                writeln!(message, "{dotted_location}: {description}").unwrap();
+                writeln!(message, "{dotted_location}: {description}")
+                    .expect("I/O on a String failed");
             }
         }
     }
@@ -322,7 +339,7 @@ fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Er
 pub(crate) fn from_str_with_validation<'de, T>(
     contents: &'de str,
     validator: &'static Validator,
-) -> Result<T, InputError>
+) -> Result<T, CollectionError>
 where
     T: serde::Deserialize<'de>,
 {
@@ -356,11 +373,13 @@ where
                 Ok(raw_value) => match validator.apply(&raw_value).basic() {
                     Valid(_) => Err(e)
                         .context("this suggests a bug in zizmor; please report it!")
-                        .map_err(InputError::Model),
-                    Invalid(errors) => Err(InputError::Schema(parse_validation_errors(errors))),
+                        .map_err(CollectionError::Model),
+                    Invalid(errors) => {
+                        Err(CollectionError::Schema(parse_validation_errors(errors)))
+                    }
                 },
                 // Syntax error.
-                Err(e) => Err(InputError::Syntax(e.into())),
+                Err(e) => Err(CollectionError::Syntax(e.into())),
             }
         }
     }
@@ -484,7 +503,7 @@ pub(crate) fn extract_fenced_expression(
 
     end.map(|end| {
         (
-            ExtractedExpr::from_fenced(&view[start..=end]).unwrap(),
+            ExtractedExpr::from_fenced(&view[start..=end]).expect("impossible"),
             start + offset..end + offset + 1,
         )
     })
@@ -623,8 +642,12 @@ impl Deref for SpannedQuery {
 impl SpannedQuery {
     pub(crate) fn new(query: &'static str, language: &tree_sitter::Language) -> Self {
         let query = tree_sitter::Query::new(language, query).expect("malformed query");
-        let span_idx = query.capture_index_for_name("span").unwrap();
-        let destination_idx = query.capture_index_for_name("destination").unwrap();
+        let span_idx = query
+            .capture_index_for_name("span")
+            .expect("internal error: missing @span capture");
+        let destination_idx = query
+            .capture_index_for_name("destination")
+            .expect("internal error: missing @destination capture");
 
         Self {
             inner: query,
@@ -634,6 +657,38 @@ impl SpannedQuery {
     }
 }
 
+pub(crate) mod once {
+    macro_rules! once {
+        ($expression:expr) => {{
+            static ONCE: std::sync::Once = std::sync::Once::new();
+            ONCE.call_once(|| {
+                $expression;
+            });
+        }};
+    }
+
+    macro_rules! warn_once {
+        ($($arg:tt)+) => ({
+            crate::utils::once::once!(tracing::warn!($($arg)+))
+        });
+    }
+
+    macro_rules! static_regex {
+        ($ident:ident, $pattern:literal) => {
+            static $ident: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+                regex::Regex::new($pattern).expect(concat!(
+                    "internal error: invalid regex pattern for ",
+                    stringify!($ident)
+                ))
+            });
+        };
+    }
+
+    pub(crate) use once;
+    pub(crate) use static_regex;
+    pub(crate) use warn_once;
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
@@ -641,7 +696,7 @@ mod tests {
 
     use crate::{
         models::{action::Action, workflow::Workflow},
-        registry::InputKey,
+        registry::input::InputKey,
         utils::{
             env_is_static, extract_fenced_expression, extract_fenced_expressions, normalize_shell,
             parse_fenced_expressions_from_input,
@@ -744,7 +799,10 @@ runs:
       shell: bash
 "#;
 
-        let action = Action::from_string(action.into(), InputKey::local("fake", None)?)?;
+        let action = Action::from_string(
+            action.into(),
+            InputKey::local("fakegroup".into(), "fake", None),
+        )?;
         let action = action.into();
 
         let exprs = parse_fenced_expressions_from_input(&action);
@@ -773,7 +831,10 @@ jobs:
       - run: echo hello from ${{ github.actor }}
 "#;
 
-        let workflow = Workflow::from_string(workflow.into(), InputKey::local("fake", None)?)?;
+        let workflow = Workflow::from_string(
+            workflow.into(),
+            InputKey::local("fakegroup".into(), "fake", None),
+        )?;
 
         let exprs = parse_fenced_expressions_from_input(&workflow.into())
             .into_iter()

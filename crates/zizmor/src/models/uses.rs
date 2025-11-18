@@ -1,17 +1,18 @@
 //! Extension traits for the `Uses` APIs.
 
-use std::{str::FromStr, sync::LazyLock};
+use std::str::FromStr;
 
 use github_actions_models::common::{RepositoryUses, Uses};
-use regex::Regex;
 use serde::Deserialize;
 
-/// Matches all variants of [`RepositoryUsesPattern`] except `*`.
-///
-/// TODO: Replace this with a real parser; this is ridiculous.
-static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
+use crate::utils::once::static_regex;
+
+// Matches all variants of [`RepositoryUsesPattern`] except `*`.
+//
+// TODO: Replace this with a real parser; this is ridiculous.
+static_regex!(
+    REPOSITORY_USES_PATTERN,
+    r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
         ^                           # start of line
         ([\w-]+)                    # (1) owner
         /                           # /
@@ -29,15 +30,13 @@ static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
           ([[[:graph:]]&&[^\*]]+)   # (4) git ref (any non-space, non-* characters)
         )?                          # end of non-capturing group for optional git ref
         $                           # end of line
-        "#,
-    )
-    .unwrap()
-});
+        "#
+);
 
 /// Represents a pattern for matching repository `uses` references.
 /// These patterns are ordered by specificity; more specific patterns
 /// should be listed first.
-#[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub(crate) enum RepositoryUsesPattern {
     /// Matches exactly `owner/repo/subpath@ref`.
     ExactWithRef {
@@ -146,6 +145,31 @@ impl FromStr for RepositoryUsesPattern {
                 subpath: subpath.map(|s| s.into()),
                 git_ref: git_ref.into(),
             }),
+        }
+    }
+}
+
+impl std::fmt::Display for RepositoryUsesPattern {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RepositoryUsesPattern::Any => write!(f, "*"),
+            RepositoryUsesPattern::InOwner(owner) => write!(f, "{owner}/*"),
+            RepositoryUsesPattern::InRepo { owner, repo } => write!(f, "{owner}/{repo}/*"),
+            RepositoryUsesPattern::ExactRepo { owner, repo } => write!(f, "{owner}/{repo}"),
+            RepositoryUsesPattern::ExactPath {
+                owner,
+                repo,
+                subpath,
+            } => write!(f, "{owner}/{repo}/{subpath}"),
+            RepositoryUsesPattern::ExactWithRef {
+                owner,
+                repo,
+                subpath,
+                git_ref,
+            } => match subpath {
+                Some(subpath) => write!(f, "{owner}/{repo}/{subpath}@{git_ref}"),
+                None => write!(f, "{owner}/{repo}@{git_ref}"),
+            },
         }
     }
 }

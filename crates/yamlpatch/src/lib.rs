@@ -209,6 +209,35 @@ pub fn apply_yaml_patches(
     Ok(next_document)
 }
 
+/// Compute the replacement range for a byte span, including any trailing newline
+/// that exists immediately after the span in the document.
+fn compute_replacement_range_for_span(
+    byte_span: (usize, usize),
+    document: &yamlpath::Document,
+) -> std::ops::Range<usize> {
+    let start = byte_span.0;
+    let mut end = byte_span.1;
+    let content = document.source();
+
+    // Only include trailing newline if it's the last character in the document.
+    // This preserves document-level trailing newlines without interfering with
+    // newlines that are part of the document structure.
+    if end + 1 == content.len() && content.as_bytes()[end] == b'\n' {
+        end += 1;
+    }
+
+    start..end
+}
+
+/// Compute the replacement range for a feature, including any trailing newline
+/// that exists immediately after the feature in the document.
+fn compute_replacement_range(
+    feature: &yamlpath::Feature,
+    document: &yamlpath::Document,
+) -> std::ops::Range<usize> {
+    compute_replacement_range_for_span(feature.location.byte_span, document)
+}
+
 /// Apply a single YAML patch operation
 fn apply_single_patch(
     document: &yamlpath::Document,
@@ -244,10 +273,8 @@ fn apply_single_patch(
 
             // Finally, put our patch back into the overall content.
             let mut patched_content = content.to_string();
-            patched_content.replace_range(
-                feature.location.byte_span.0..feature.location.byte_span.1,
-                &patched_feature,
-            );
+            let replacement_range = compute_replacement_range(&feature, document);
+            patched_content.replace_range(replacement_range, &patched_feature);
 
             yamlpath::Document::new(patched_content).map_err(Error::from)
         }
@@ -272,8 +299,9 @@ fn apply_single_patch(
             };
 
             let mut result = content.to_string();
-            let span = comment_feature.location.byte_span;
-            result.replace_range(span.0..span.1, new);
+            let replacement_range =
+                compute_replacement_range_for_span(comment_feature.location.byte_span, document);
+            result.replace_range(replacement_range, new);
 
             yamlpath::Document::new(result).map_err(Error::from)
         }
@@ -300,7 +328,10 @@ fn apply_single_patch(
 
             // Replace the content
             let mut result = content.to_string();
-            result.replace_range(start_span..end_span, &replacement);
+            // Extend end_span to include trailing newline if present
+            let replacement_range =
+                compute_replacement_range_for_span((start_span, end_span), document);
+            result.replace_range(replacement_range, &replacement);
 
             yamlpath::Document::new(result).map_err(Error::from)
         }
@@ -350,10 +381,9 @@ fn apply_single_patch(
 
             // Replace the content in the document
             let mut result = content.to_string();
-            result.replace_range(
-                feature.location.byte_span.0..feature.location.byte_span.1,
-                &updated_feature,
-            );
+            let replacement_range = compute_replacement_range(&feature, document);
+            result.replace_range(replacement_range, &updated_feature);
+
             yamlpath::Document::new(result).map_err(Error::from)
         }
         Op::MergeInto { key, updates } => {
@@ -582,7 +612,10 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
 fn line_span(doc: &yamlpath::Document, pos: usize) -> core::ops::Range<usize> {
     let pos = TextSize::new(pos as u32);
     let LineCol { line, .. } = doc.line_index().line_col(pos);
-    doc.line_index().line(line).unwrap().into()
+    doc.line_index()
+        .line(line)
+        .expect("impossible: line index gave us an invalid line")
+        .into()
 }
 
 /// Extract the number of leading spaces need to align a block item with
@@ -874,35 +907,35 @@ fn apply_value_replacement(
 
             if is_multiline_literal {
                 // Check if this is a multiline string value
-                if let serde_yaml::Value::String(string_content) = value {
-                    if string_content.contains('\n') {
-                        // For multiline literal blocks, use the raw string content
-                        let leading_whitespace = extract_leading_whitespace(doc, feature);
-                        let content_indent = format!("{leading_whitespace}  "); // Key indent + 2 spaces for content
+                if let serde_yaml::Value::String(string_content) = value
+                    && string_content.contains('\n')
+                {
+                    // For multiline literal blocks, use the raw string content
+                    let leading_whitespace = extract_leading_whitespace(doc, feature);
+                    let content_indent = format!("{leading_whitespace}  "); // Key indent + 2 spaces for content
 
-                        // Format as: key: |\n  content\n  more content
-                        let indented_content = string_content
-                            .lines()
-                            .map(|line| {
-                                if line.trim().is_empty() {
-                                    String::new()
-                                } else {
-                                    format!("{}{}", content_indent, line.trim_start())
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                            .join("\n");
+                    // Format as: key: |\n  content\n  more content
+                    let indented_content = string_content
+                        .lines()
+                        .map(|line| {
+                            if line.trim().is_empty() {
+                                String::new()
+                            } else {
+                                format!("{}{}", content_indent, line.trim_start())
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
 
-                        // Find the position of | in the original content and include it
-                        let pipe_pos = value_part.find('|').unwrap();
-                        let key_with_pipe = &current_content_with_ws
-                            [..colon_pos + 1 + value_part[..pipe_pos].len() + 1];
-                        return Ok(format!(
-                            "{}\n{}",
-                            key_with_pipe.trim_end(),
-                            indented_content
-                        ));
-                    }
+                    // Find the position of | in the original content and include it
+                    let pipe_pos = value_part.find('|').expect("impossible");
+                    let key_with_pipe = &current_content_with_ws
+                        [..colon_pos + 1 + value_part[..pipe_pos].len() + 1];
+                    return Ok(format!(
+                        "{}\n{}",
+                        key_with_pipe.trim_end(),
+                        indented_content
+                    ));
                 }
             }
         }

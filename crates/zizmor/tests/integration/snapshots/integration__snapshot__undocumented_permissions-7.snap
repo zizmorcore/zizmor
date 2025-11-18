@@ -1,0 +1,48 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 929
+expression: "zizmor().input(input_under_test(\"undocumented-permissions/partially-documented.yml\")).args([\"--persona=pedantic\"]).run()?"
+---
+error[excessive-permissions]: overly broad permissions
+ --> @@INPUT@@:7:3
+  |
+7 |   contents: write  # Needed to create releases
+  |   ^^^^^^^^^^^^^^^ contents: write is overly broad at the workflow level
+  |
+  = note: audit confidence → High
+
+error[excessive-permissions]: overly broad permissions
+ --> @@INPUT@@:9:3
+  |
+9 |   issues: write    # Needed to update issue comments
+  |   ^^^^^^^^^^^^^ issues: write is overly broad at the workflow level
+  |
+  = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+ --> @@INPUT@@:8:3
+  |
+8 |   packages: read
+  |   ^^^^^^^^^^^^^^ needs an explanatory comment
+  |
+  = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> @@INPUT@@:22:7
+   |
+22 |       actions: write
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> @@INPUT@@:35:7
+   |
+35 |       contents: write
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+36 |       issues: read
+   |       ^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+5 findings: 0 informational, 3 low, 0 medium, 2 high

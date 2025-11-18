@@ -1,0 +1,24 @@
+name: Contents Read Only Test
+
+on: [push]
+
+# This should NOT trigger the rule since contents: read is self-explanatory
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-job:
+    name: Test Job
+    runs-on: ubuntu-latest
+    # This should also NOT trigger the rule
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "Test"
