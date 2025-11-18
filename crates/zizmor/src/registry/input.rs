@@ -394,7 +394,7 @@ impl InputGroup {
 
             resolved
                 .parent()
-                .map_or(false, |parent| parent.ends_with(".github/workflows"))
+                .is_some_and(|parent| parent.ends_with(".github/workflows"))
         };
 
         let mut group = Self::new(config);
