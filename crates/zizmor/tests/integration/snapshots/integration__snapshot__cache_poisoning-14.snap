@@ -3,4 +3,4 @@ source: crates/zizmor/tests/integration/snapshot.rs
 assertion_line: 560
 expression: "zizmor().input(input_under_test(\"cache-poisoning/issue-378-repro.yml\")).run()?"
 ---
-No findings to report. Good job! (1 suppressed)
+No findings to report. Good job! (2 suppressed)

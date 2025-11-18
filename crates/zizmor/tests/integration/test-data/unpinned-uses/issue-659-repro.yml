@@ -12,6 +12,7 @@ jobs:
   test-itg:
     name: test-itg
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 1
     strategy:
       fail-fast: false
       matrix:

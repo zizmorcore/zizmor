@@ -4,21 +4,21 @@ assertion_line: 76
 expression: "zizmor().input(input_under_test(\"artipacked.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 warning[artipacked]: credential persistence through GitHub Actions artifacts
-  --> @@INPUT@@:22:9
+  --> @@INPUT@@:23:9
    |
-22 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+23 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
    |
    = note: audit confidence → Low
    = note: this finding has an auto-fix
 
 warning[artipacked]: credential persistence through GitHub Actions artifacts
-  --> @@INPUT@@:28:9
+  --> @@INPUT@@:30:9
    |
-28 |         - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+30 |         - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
    |  _________^
-29 | |         with:
-30 | |           persist-credentials: true
+31 | |         with:
+32 | |           persist-credentials: true
    | |____________________________________^ does not set persist-credentials: false
    |
    = note: audit confidence → Low

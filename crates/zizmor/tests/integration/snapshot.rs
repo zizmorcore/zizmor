@@ -1100,8 +1100,8 @@ fn concurrency_limits() -> Result<()> {
      2 | | on: push
      3 | | permissions: {}
     ...  |
-    10 | |     - name: 1-ok
-    11 | |       run: echo ok
+    11 | |     - name: 1-ok
+    12 | |       run: echo ok
        | |___________________^ missing concurrency setting
        |
        = note: audit confidence → High

@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
+assertion_line: 307
 expression: "zizmor().output(OutputMode::Both).input(input_under_test(\"issue-1065.yml\")).run()?"
 ---
 🌈 zizmor v@@VERSION@@
@@ -28,4 +29,4 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
 
-5 findings (3 suppressed): 0 informational, 0 low, 1 medium, 1 high
+6 findings (4 suppressed): 0 informational, 0 low, 1 medium, 1 high

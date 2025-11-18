@@ -14,4 +14,4 @@ warning[template-injection]: code injection via template expansion
    = note: audit confidence → Medium
    = note: this finding has an auto-fix
 
-3 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+4 findings (3 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high

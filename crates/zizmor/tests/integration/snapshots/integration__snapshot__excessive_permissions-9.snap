@@ -3,4 +3,4 @@ source: crates/zizmor/tests/integration/snapshot.rs
 assertion_line: 655
 expression: "zizmor().input(input_under_test(\"excessive-permissions/workflow-default-perms-all-jobs-explicit.yml\")).run()?"
 ---
-No findings to report. Good job! (4 suppressed)
+No findings to report. Good job! (6 suppressed)

@@ -15,10 +15,12 @@ jobs:
   no-trigger:
     name: This is a test job that will not trigger 
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - run: "echo this job will not trigger"
 
   will-trigger:
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - run: "echo this job will trigger"

@@ -15,6 +15,7 @@ jobs:
   ok:
     name: ok
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 1
 
     strategy:
       matrix:

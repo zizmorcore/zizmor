@@ -13,6 +13,7 @@ jobs:
   whops:
     name: whops
     runs-on: [self-hosted, linux, arm64]
+    timeout-minutes: 1
 
     steps:
       - run: echo \"hello from a self-hosted runner\"

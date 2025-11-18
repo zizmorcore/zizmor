@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/config.rs
+assertion_line: 63
 expression: "zizmor().no_config(true).input(input_under_test(\"config-scenarios/config-in-root\")).setenv(\"RUST_LOG\",\n\"zizmor::config=debug\").output(OutputMode::Both).run()?"
 ---
 🌈 zizmor v@@VERSION@@
@@ -17,4 +18,4 @@ error[template-injection]: code injection via template expansion
    |
    = note: audit confidence → High
 
-3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+4 findings (3 suppressed): 0 informational, 0 low, 0 medium, 1 high

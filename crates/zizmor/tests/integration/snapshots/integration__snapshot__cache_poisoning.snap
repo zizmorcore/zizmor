@@ -1,5 +1,6 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 466
 expression: "zizmor().input(input_under_test(\"cache-poisoning/caching-disabled-by-default.yml\")).run()?"
 ---
-No findings to report. Good job! (1 suppressed)
+No findings to report. Good job! (2 suppressed)

@@ -1,23 +1,24 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 364
 expression: "zizmor().input(input_under_test(\"template-injection/template-injection-dynamic-matrix.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 help[template-injection]: code injection via template expansion
-  --> @@INPUT@@:26:36
+  --> @@INPUT@@:27:36
    |
-25 |         run: |
+26 |         run: |
    |         --- this run block
-26 |           echo "doing a thing: ${{ matrix.dynamic }}"
+27 |           echo "doing a thing: ${{ matrix.dynamic }}"
    |                                    ^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
 warning[template-injection]: code injection via template expansion
-  --> @@INPUT@@:26:36
+  --> @@INPUT@@:27:36
    |
-25 |         run: |
+26 |         run: |
    |         --- this run block
-26 |           echo "doing a thing: ${{ matrix.dynamic }}"
+27 |           echo "doing a thing: ${{ matrix.dynamic }}"
    |                                    ^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → Medium

@@ -4,11 +4,11 @@ assertion_line: 355
 expression: "zizmor().input(input_under_test(\"template-injection/template-injection-static-matrix.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 help[template-injection]: code injection via template expansion
-  --> @@INPUT@@:25:36
+  --> @@INPUT@@:26:36
    |
-24 |         run: |
+25 |         run: |
    |         --- this run block
-25 |           echo "issue created: ${{ matrix.frob }}"
+26 |           echo "issue created: ${{ matrix.frob }}"
    |                                    ^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High

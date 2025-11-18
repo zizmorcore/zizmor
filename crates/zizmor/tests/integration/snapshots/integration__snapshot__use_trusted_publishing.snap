@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 283
 expression: "zizmor().input(input_under_test(\"use-trusted-publishing.yml\")).run()?"
 ---
 info[use-trusted-publishing]: prefer trusted publishing for authentication
@@ -90,4 +91,4 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    |
    = note: audit confidence → High
 
-27 findings (16 ignored, 3 suppressed): 8 informational, 0 low, 0 medium, 0 high
+28 findings (16 ignored, 4 suppressed): 8 informational, 0 low, 0 medium, 0 high

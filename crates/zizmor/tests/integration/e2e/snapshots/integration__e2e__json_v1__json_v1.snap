@@ -275,16 +275,16 @@ expression: output
         "concrete": {
           "location": {
             "start_point": {
-              "row": 20,
+              "row": 21,
               "column": 8
             },
             "end_point": {
-              "row": 20,
+              "row": 21,
               "column": 29
             },
             "offset_span": {
-              "start": 406,
-              "end": 427
+              "start": 429,
+              "end": 450
             }
           },
           "feature": "uses: docker://ubuntu",
@@ -338,16 +338,16 @@ expression: output
         "concrete": {
           "location": {
             "start_point": {
-              "row": 26,
+              "row": 27,
               "column": 8
             },
             "end_point": {
-              "row": 26,
+              "row": 27,
               "column": 58
             },
             "offset_span": {
-              "start": 531,
-              "end": 581
+              "start": 554,
+              "end": 604
             }
           },
           "feature": "uses: docker://ghcr.io/pypa/gh-action-pypi-publish",

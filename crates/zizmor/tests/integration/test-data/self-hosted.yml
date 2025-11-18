@@ -15,6 +15,7 @@ jobs:
   whops:
     name: whops
     runs-on: [self-hosted, my-ubuntu-box]
+    timeout-minutes: 1
 
     steps:
       - run: echo "hello from a self-hosted runner"

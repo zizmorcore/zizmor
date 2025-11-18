@@ -4,17 +4,17 @@ assertion_line: 165
 expression: "zizmor().input(input_under_test(\"unpinned-uses.yml\")).args([\"--pedantic\"]).run()?"
 ---
 warning[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:21:9
+  --> @@INPUT@@:22:9
    |
-21 |       - uses: docker://ubuntu
+22 |       - uses: docker://ubuntu
    |         ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
    |
    = note: audit confidence → High
 
 warning[unpinned-uses]: unpinned action reference
-  --> @@INPUT@@:27:9
+  --> @@INPUT@@:28:9
    |
-27 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
+28 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
    |
    = note: audit confidence → High

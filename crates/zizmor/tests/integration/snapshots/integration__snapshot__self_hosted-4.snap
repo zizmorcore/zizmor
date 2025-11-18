@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 118
 expression: "zizmor().input(input_under_test(\"self-hosted/self-hosted-runner-group.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 warning[self-hosted-runner]: runs on a self-hosted runner
@@ -11,4 +12,18 @@ warning[self-hosted-runner]: runs on a self-hosted runner
    |
    = note: audit confidence → Low
 
-1 finding: 0 informational, 0 low, 1 medium, 0 high
+warning[timeout-minutes]: missing timeout-minutes
+  --> @@INPUT@@:13:3
+   |
+13 | /   whops:
+14 | |     name: whops
+15 | |     runs-on:
+16 | |       group: ubuntu-runners
+17 | |
+18 | |     steps:
+19 | |       - run: echo \"hello from a self-hosted runner\"
+   | |______________________________________________________^ job missing timeout-minutes
+   |
+   = note: audit confidence → High
+
+2 findings: 0 informational, 0 low, 2 medium, 0 high

@@ -16,6 +16,7 @@ jobs:
   test-job-1:
     name: Test Job 1
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     # Job with partial documentation
     permissions:
       contents: read   # Needed to read repo contents
@@ -30,6 +31,7 @@ jobs:
   test-job-2:
     name: Test Job 2
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     # Job with no documentation at all
     permissions:
       contents: write

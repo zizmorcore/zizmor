@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 134
 expression: "zizmor().input(input_under_test(\"self-hosted/self-hosted-matrix-inclusion.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 warning[self-hosted-runner]: runs on a self-hosted runner
@@ -7,12 +8,12 @@ warning[self-hosted-runner]: runs on a self-hosted runner
    |
 15 |       runs-on: ${{ matrix.os }}
    |       ^^^^^^^^^^^^^^^^^^^^^^^^^ expression may expand into a self-hosted runner
-16 |
-17 | /     strategy:
-18 | |       matrix:
-19 | |         os: [macOS-latest, ubuntu-latest]
-20 | |         include:
-21 | |           - os: self-hosted
+...
+18 | /     strategy:
+19 | |       matrix:
+20 | |         os: [macOS-latest, ubuntu-latest]
+21 | |         include:
+22 | |           - os: self-hosted
    | |___________________________- matrix declares self-hosted runner
    |
    = note: audit confidence → High

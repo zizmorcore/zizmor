@@ -39,7 +39,7 @@ fn test_basic() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    5 findings (3 suppressed, 2 fixable): 0 informational, 0 low, 0 medium, 2 high
+    6 findings (4 suppressed, 2 fixable): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 

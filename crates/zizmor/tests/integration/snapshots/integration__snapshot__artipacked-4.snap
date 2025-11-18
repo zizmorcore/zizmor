@@ -1,16 +1,17 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 83
 expression: "zizmor().input(input_under_test(\"artipacked/issue-447-repro.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 warning[artipacked]: credential persistence through GitHub Actions artifacts
-  --> @@INPUT@@:24:9
+  --> @@INPUT@@:25:9
    |
-24 |         - name: true-positive
+25 |         - name: true-positive
    |  _________^
-25 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-26 | |         with:
-27 | |           # finding in auditor mode only
-28 | |           persist-credentials: "true"
+26 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+27 | |         with:
+28 | |           # finding in auditor mode only
+29 | |           persist-credentials: "true"
    | |______________________________________^ does not set persist-credentials: false
    |
    = note: audit confidence → Low

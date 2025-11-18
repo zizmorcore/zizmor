@@ -1,5 +1,6 @@
 ---
-source: tests/integration/snapshot.rs
+source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 813
 expression: "zizmor().config(input_under_test(&format!(\"forbidden-uses/configs/{config}.yml\"))).input(input_under_test(\"forbidden-uses/forbidden-uses-menagerie.yml\")).run()?"
 ---
-No findings to report. Good job! (1 suppressed)
+No findings to report. Good job! (2 suppressed)

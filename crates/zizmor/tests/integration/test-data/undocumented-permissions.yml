@@ -15,6 +15,7 @@ jobs:
   test-job-1:
     name: Test Job 1
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     # This job's permissions block has a comment explaining why
     permissions:
       contents: read  # Needed to read repo contents
@@ -28,6 +29,7 @@ jobs:
   test-job-2:
     name: Test Job 2
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     # Missing individual permission comments
     permissions:
       contents: write
@@ -42,6 +44,7 @@ jobs:
   test-job-3:
     name: Test Job 3 - Empty Comments
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     # Permissions have empty comments
     permissions:
       contents: read #
@@ -56,6 +59,7 @@ jobs:
   test-job-4:
     name: Test Job 4 - Mixed Documentation
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     permissions:
       metadata: read
       packages: write #
@@ -69,6 +73,7 @@ jobs:
   test-job-5:
     name: Test Job 5 - read contents
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     # Only one `contents: read` permission, no comment needed
     permissions:
       contents: read

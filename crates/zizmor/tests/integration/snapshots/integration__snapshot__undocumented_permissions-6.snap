@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
-assertion_line: 919
+assertion_line: 962
 expression: "zizmor().input(input_under_test(\"undocumented-permissions/contents-read-with-other.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
 error[excessive-permissions]: overly broad permissions

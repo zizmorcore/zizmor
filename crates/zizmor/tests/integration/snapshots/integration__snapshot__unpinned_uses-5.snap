@@ -11,8 +11,8 @@ warning[excessive-permissions]: overly broad permissions
  4 | | on:
  5 | |   workflow_dispatch:
 ...  |
-23 | |         with:
-24 | |           node-version: ${{ env.NODE_VERSION }}
+24 | |         with:
+25 | |           node-version: ${{ env.NODE_VERSION }}
    | |________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
@@ -23,10 +23,10 @@ warning[excessive-permissions]: overly broad permissions
 12 | /   test-itg:
 13 | |     name: test-itg
 14 | |     runs-on: ${{ matrix.os }}
-15 | |     strategy:
+15 | |     timeout-minutes: 1
 ...  |
-23 | |         with:
-24 | |           node-version: ${{ env.NODE_VERSION }}
+24 | |         with:
+25 | |           node-version: ${{ env.NODE_VERSION }}
    | |                                                ^
    | |                                                |
    | |________________________________________________this job

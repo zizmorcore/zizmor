@@ -11,6 +11,7 @@ jobs:
   computed-indices:
     name: computed-indices
     runs-on: ubuntu-latest
+    timeout-minutes: 1
 
     steps:
       # not detected because it's in a comment

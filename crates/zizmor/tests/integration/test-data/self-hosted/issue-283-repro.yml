@@ -16,5 +16,6 @@ jobs:
   deploy:
     name: deploy
     runs-on: ${{inputs.os}}
+    timeout-minutes: 1
     steps:
       - run: echo "Hello world"

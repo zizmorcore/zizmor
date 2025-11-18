@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
-assertion_line: 876
+assertion_line: 919
 expression: "zizmor().input(input_under_test(\"undocumented-permissions.yml\")).args([\"--persona=pedantic\"]).run()?"
 ---
 error[excessive-permissions]: overly broad permissions
@@ -22,33 +22,33 @@ help[undocumented-permissions]: permissions without explanatory comments
   = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:33:7
+  --> @@INPUT@@:35:7
    |
-33 |       contents: write
+35 |       contents: write
    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
-34 |       packages: write
+36 |       packages: write
    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
-35 |       actions: write
+37 |       actions: write
    |       ^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:48:7
+  --> @@INPUT@@:51:7
    |
-48 |       packages: write #
+51 |       packages: write #
    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
-49 |       actions: write  #    
+52 |       actions: write  #    
    |       ^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
 
 help[undocumented-permissions]: permissions without explanatory comments
-  --> @@INPUT@@:60:7
+  --> @@INPUT@@:64:7
    |
-60 |       metadata: read
+64 |       metadata: read
    |       ^^^^^^^^^^^^^^ needs an explanatory comment
-61 |       packages: write #
+65 |       packages: write #
    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High

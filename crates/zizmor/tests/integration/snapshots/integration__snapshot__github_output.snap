@@ -9,3 +9,4 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
 ::warning file=@@INPUT@@,line=16,title=template-injection::several-vulnerabilities.yml:16: code injection via template expansion: may expand into attacker-controllable code
 ::error file=@@INPUT@@,line=16,title=template-injection::several-vulnerabilities.yml:16: code injection via template expansion: may expand into attacker-controllable code
 ::warning file=@@INPUT@@,line=1,title=concurrency-limits::several-vulnerabilities.yml:1: insufficient job-level concurrency limits: missing concurrency setting
+::warning file=@@INPUT@@,line=8,title=timeout-minutes::several-vulnerabilities.yml:8: missing timeout-minutes: job missing timeout-minutes

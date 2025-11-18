@@ -51,4 +51,17 @@ help[template-injection]: code injection via template expansion
    |
    = note: audit confidence → High
 
-4 findings: 2 informational, 2 low, 0 medium, 0 high
+warning[timeout-minutes]: missing timeout-minutes
+  --> @@INPUT@@:11:3
+   |
+11 | /   inject-me:
+12 | |     name: inject-me
+13 | |     runs-on: ubuntu-latest
+...  |
+30 | |           echo "CC=clang" >> "$GITHUB_ENV"
+31 | |           echo "CXX=clang++" >> "$GITHUB_ENV"
+   | |______________________________________________^ job missing timeout-minutes
+   |
+   = note: audit confidence → High
+
+5 findings: 2 informational, 2 low, 1 medium, 0 high

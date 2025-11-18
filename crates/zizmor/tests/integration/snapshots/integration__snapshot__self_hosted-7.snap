@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/snapshot.rs
+assertion_line: 143
 expression: "zizmor().input(input_under_test(\"self-hosted/self-hosted-matrix-exclusion.yml\")).args([\"--persona=auditor\"]).run()?"
 ---
 No findings to report. Good job!

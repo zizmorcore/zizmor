@@ -11,19 +11,20 @@ help[anonymous-definition]: workflow or action definition without a name
  7 | |
  8 | | permissions: {}
 ...  |
-23 | |     steps:
-24 | |       - run: "echo this job will trigger"
+25 | |     steps:
+26 | |       - run: "echo this job will trigger"
    | |__________________________________________^ this workflow
    |
    = note: audit confidence → High
 
 info[anonymous-definition]: workflow or action definition without a name
-  --> @@INPUT@@:21:3
+  --> @@INPUT@@:22:3
    |
-21 | /   will-trigger:
-22 | |     runs-on: ubuntu-latest
-23 | |     steps:
-24 | |       - run: "echo this job will trigger"
+22 | /   will-trigger:
+23 | |     runs-on: ubuntu-latest
+24 | |     timeout-minutes: 1
+25 | |     steps:
+26 | |       - run: "echo this job will trigger"
    | |__________________________________________^ this job
    |
    = note: audit confidence → High
