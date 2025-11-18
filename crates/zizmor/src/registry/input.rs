@@ -384,16 +384,29 @@ impl InputGroup {
     ) -> Result<Self, CollectionError> {
         let config = Config::discover(options, || Config::discover_local(path)).await?;
 
+        // Workflows can be named anything, including `dependabot.yml`
+        // (overlapping with Dependabot configs) and `action.yml` (overlapping
+        // with action definitions). Consequently, we make a best effort
+        // disambiguate them by looking at their parent path.
+        // See: https://github.com/zizmorcore/zizmor/issues/1341
+        let is_workflow_path = {
+            let resolved = path.canonicalize_utf8()?;
+
+            resolved
+                .parent()
+                .map_or(false, |parent| parent.ends_with(".github/workflows"))
+        };
+
         let mut group = Self::new(config);
 
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
-            (Some("dependabot"), Some("yml" | "yaml")) => (
+            (Some("dependabot"), Some("yml" | "yaml")) if !is_workflow_path => (
                 InputKey::local(Group(path.as_str().into()), path, None),
                 InputKind::Dependabot,
             ),
-            (Some("action"), Some("yml" | "yaml")) => (
+            (Some("action"), Some("yml" | "yaml")) if !is_workflow_path => (
                 InputKey::local(Group(path.as_str().into()), path, None),
                 InputKind::Action,
             ),
