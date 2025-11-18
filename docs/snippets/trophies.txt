@@ -282,6 +282,7 @@ sigstore/fulcio#1910
 sigstore/gitsign#602
 sigstore/model-transparency#369
 sigstore/sigstore-rs#424
+sigstore/sigstore-rs#519
 simpeg/simpeg#1592
 slackapi/python-slack-hooks#58
 slackapi/bolt-python#1303

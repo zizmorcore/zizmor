@@ -1339,6 +1339,7 @@
         - sigstore/gitsign#602
         - sigstore/model-transparency#369
         - sigstore/sigstore-rs#424
+        - sigstore/sigstore-rs#519
 
 
 -   ![](https://github.com/simpeg.png?size=40){ width="40" loading=lazy align=left } simpeg
