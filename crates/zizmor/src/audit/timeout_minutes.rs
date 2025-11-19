@@ -33,33 +33,12 @@ impl Audit for TimeoutMinutes {
 
         // Check if timeout-minutes is set in the job
         match &job.timeout_minutes {
-            Some(_) => {},
             None => 'label: {
                 // If not, check if it's set in any of the job's steps
                 for step in job.steps() {
                     match &step.timeout_minutes {
                         Some(_) => {
-                            // If so, check if it's missing from any other steps
-                            for step in job.steps() {
-                                match &step.timeout_minutes {
-                                    None => {
-                                        findings.push(
-                                            Self::finding()
-                                                .confidence(Confidence::High)
-                                                .severity(Severity::Medium)
-                                                .persona(Persona::Pedantic)
-                                                .add_location(
-                                                    job
-                                                        .location()
-                                                        .primary()
-                                                        .annotated("step missing timeout-minutes"),
-                                                )
-                                                .build(&step)?,
-                                        );
-                                    },
-                                    _ => {}
-                                }
-                            }
+                            // If so, the job doesn't need to set it
                             break 'label;
                         }
                         None => {}
@@ -79,6 +58,54 @@ impl Audit for TimeoutMinutes {
                         .build(job.parent())?,
                 );
             },
+            _ => {}
+        }
+
+        Ok(findings)
+    }
+
+    async fn audit_step<'doc>(
+        &self,
+        step: &super::Step<'doc>,
+        _config: &Config,
+    ) -> anyhow::Result<Vec<Finding<'doc>>, AuditError> {
+        let mut findings = vec![];
+
+        // Check if timeout-minutes is set in the step
+        match &step.timeout_minutes {
+            None => 'label: {
+                // If not, check if it's set by its parent job
+                let job = &step.parent;
+                match &job.timeout_minutes {
+                    None => {
+                        // If not, check if it's set in any of the job's other steps
+                        for other_step in job.steps() {
+                            match &other_step.timeout_minutes {
+                                Some(_) => {
+                                    // If so, this job should set it, too
+                                    findings.push(
+                                        Self::finding()
+                                            .confidence(Confidence::High)
+                                            .severity(Severity::Medium)
+                                            .persona(Persona::Pedantic)
+                                            .add_location(
+                                                step
+                                                    .location()
+                                                    .primary()
+                                                    .annotated("step missing timeout-minutes"),
+                                            )
+                                            .build(step)?,
+                                    );
+                                    break 'label;
+                                }
+                                None => {}
+                            }
+                        }
+                    },
+                    _ => {}
+                }
+            },
+            _ => {}
         }
 
         Ok(findings)
