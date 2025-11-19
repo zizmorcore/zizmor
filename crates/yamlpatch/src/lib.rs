@@ -176,6 +176,10 @@ pub enum Op<'doc> {
     /// Remove the key at the given path
     #[allow(dead_code)]
     Remove,
+    /// Append a new item to a sequence at the given path.
+    ///
+    /// The sequence must be a block sequence; flow sequences are not supported.
+    Append { value: serde_yaml::Value },
 }
 
 /// Apply a sequence of YAML patch operations to a YAML document.
@@ -497,6 +501,37 @@ fn apply_single_patch(
             result.replace_range(start_pos..end_pos, "");
             yamlpath::Document::new(result).map_err(Error::from)
         }
+        Op::Append { value } => {
+            let feature = route_to_feature_exact(&patch.route, document)?.ok_or_else(|| {
+                Error::InvalidOperation(format!(
+                    "no existing sequence at {route:?}",
+                    route = patch.route
+                ))
+            })?;
+
+            let style = Style::from_feature(&feature, document);
+
+            match style {
+                Style::BlockSequence => {
+                    let updated_feature = handle_block_sequence_append(document, &feature, value)?;
+
+                    // Replace the content in the document
+                    let mut result = content.to_string();
+                    let replacement_range = compute_replacement_range(&feature, document);
+                    result.replace_range(replacement_range, &updated_feature);
+
+                    yamlpath::Document::new(result).map_err(Error::from)
+                }
+                Style::FlowSequence => Err(Error::InvalidOperation(format!(
+                    "append operation is not permitted against flow sequence route: {:?}",
+                    patch.route
+                ))),
+                _ => Err(Error::InvalidOperation(format!(
+                    "append operation is only permitted against sequence routes: {:?}",
+                    patch.route
+                ))),
+            }
+        }
     }
 }
 
@@ -809,6 +844,111 @@ fn handle_block_mapping_addition(
 
     let mut updated_feature = feature_content.to_string();
     updated_feature.insert_str(relative_insertion_point, &final_entry_to_insert);
+
+    Ok(updated_feature)
+}
+
+fn handle_block_sequence_append(
+    doc: &yamlpath::Document,
+    feature: &yamlpath::Feature,
+    value: &serde_yaml::Value,
+) -> Result<String, Error> {
+    let feature_content = doc.extract(feature);
+
+    let indent = {
+        let line_range = line_span(doc, feature.location.byte_span.0);
+        let line_content = &doc.source()[line_range].trim_end();
+        let dash_pos = line_content.bytes().position(|b| b == b'-').unwrap_or(0);
+        " ".repeat(dash_pos)
+    };
+
+    let value_str = serialize_yaml_value(value)?;
+    let insertion_point = find_content_end(feature, doc);
+    let bias = feature.location.byte_span.0;
+    let relative_insertion_point = insertion_point - bias;
+    let has_trailing_newline = relative_insertion_point > 0
+        && feature_content.as_bytes()[relative_insertion_point - 1] == b'\n';
+
+    let new_item = if let serde_yaml::Value::Mapping(mapping) = value {
+        if mapping.is_empty() {
+            if has_trailing_newline {
+                format!("{indent}- {{}}")
+            } else {
+                format!("\n{indent}- {{}}")
+            }
+        } else {
+            let mut result = if has_trailing_newline {
+                format!("{indent}-")
+            } else {
+                format!("\n{indent}-")
+            };
+
+            for (i, (k, v)) in mapping.iter().enumerate() {
+                if let serde_yaml::Value::String(key_str) = k {
+                    if let serde_yaml::Value::Mapping(nested_mapping) = v {
+                        if i == 0 {
+                            result.push_str(&format!(" {key_str}:"));
+                        } else {
+                            result.push_str(&format!("\n{indent}  {key_str}:"));
+                        }
+
+                        for (nested_k, nested_v) in nested_mapping.iter() {
+                            if let serde_yaml::Value::String(nested_key_str) = nested_k {
+                                let nested_value_yaml = serialize_yaml_value(nested_v)?;
+                                result.push_str(&format!(
+                                    "\n{indent}    {nested_key_str}: {nested_value_yaml}"
+                                ));
+                            } else {
+                                return Err(Error::InvalidOperation(
+                                    "mapping keys must be strings".to_string(),
+                                ));
+                            }
+                        }
+                    } else {
+                        let value_yaml = serialize_yaml_value(v)?;
+
+                        if i == 0 {
+                            result.push_str(&format!(" {key_str}: {value_yaml}"));
+                        } else {
+                            result.push_str(&format!("\n{indent}  {key_str}: {value_yaml}"));
+                        }
+                    }
+                } else {
+                    return Err(Error::InvalidOperation(
+                        "mapping keys must be strings".to_string(),
+                    ));
+                }
+            }
+            result
+        }
+    } else if value_str.contains('\n') {
+        let mut result = if has_trailing_newline {
+            format!("{indent}- ")
+        } else {
+            format!("\n{indent}- ")
+        };
+        let lines: Vec<&str> = value_str.lines().collect();
+        for (i, line) in lines.iter().enumerate() {
+            if i == 0 {
+                result.push_str(line);
+            } else {
+                result.push('\n');
+                result.push_str(&indent);
+                result.push_str("  ");
+                result.push_str(line.trim_start());
+            }
+        }
+        result
+    } else {
+        if has_trailing_newline {
+            format!("{indent}- {value_str}")
+        } else {
+            format!("\n{indent}- {value_str}")
+        }
+    };
+
+    let mut updated_feature = feature_content.to_string();
+    updated_feature.insert_str(relative_insertion_point, &new_item);
 
     Ok(updated_feature)
 }

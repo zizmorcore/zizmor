@@ -2547,3 +2547,401 @@ key: value"#;
     insta::assert_snapshot!(result.source(), @"name: Test
 key: newvalue");
 }
+
+#[test]
+fn test_append_simple_scalar_to_sequence() {
+    let original = r#"
+items:
+  - first
+  - second
+"#;
+
+    let operations = vec![Patch {
+        route: route!("items"),
+        operation: Op::Append {
+            value: serde_yaml::Value::String("third".to_string()),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r"
+        items:
+          - first
+          - second
+          - third
+        ");
+}
+
+#[test]
+fn test_append_mapping_to_sequence() {
+    let original = r#"
+databases:
+  - name: primary
+    host: db1.example.com
+    port: 5432
+    max_connections: 100
+    ssl: true
+    readonly: false
+"#;
+
+    let mut new_database = serde_yaml::Mapping::new();
+    new_database.insert(
+        serde_yaml::Value::String("name".to_string()),
+        serde_yaml::Value::String("analytics".to_string()),
+    );
+    new_database.insert(
+        serde_yaml::Value::String("host".to_string()),
+        serde_yaml::Value::String("db2.example.com".to_string()),
+    );
+    new_database.insert(
+        serde_yaml::Value::String("port".to_string()),
+        serde_yaml::Value::Number(5433.into()),
+    );
+    new_database.insert(
+        serde_yaml::Value::String("readonly".to_string()),
+        serde_yaml::Value::Bool(true),
+    );
+
+    let operations = vec![Patch {
+        route: route!("databases"),
+        operation: Op::Append {
+            value: serde_yaml::Value::Mapping(new_database),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        databases:
+          - name: primary
+            host: db1.example.com
+            port: 5432
+            max_connections: 100
+            ssl: true
+            readonly: false
+          - name: analytics
+            host: db2.example.com
+            port: 5433
+            readonly: true
+        "#);
+}
+
+#[test]
+fn test_append_preserves_indentation() {
+    let original = r#"
+jobs:
+  test:
+    steps:
+      - name: First step
+        run: echo "first"
+      - name: Second step
+        run: echo "second"
+"#;
+
+    let mut new_step = serde_yaml::Mapping::new();
+    new_step.insert(
+        serde_yaml::Value::String("name".to_string()),
+        serde_yaml::Value::String("Third step".to_string()),
+    );
+    new_step.insert(
+        serde_yaml::Value::String("run".to_string()),
+        serde_yaml::Value::String("echo \"third\"".to_string()),
+    );
+
+    let operations = vec![Patch {
+        route: route!("jobs", "test", "steps"),
+        operation: Op::Append {
+            value: serde_yaml::Value::Mapping(new_step),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        jobs:
+          test:
+            steps:
+              - name: First step
+                run: echo "first"
+              - name: Second step
+                run: echo "second"
+              - name: Third step
+                run: echo "third"
+        "#);
+}
+
+#[test]
+fn test_append_preserves_comments() {
+    let original = r#"
+servers:
+  # Production server
+  - name: prod
+    host: prod.example.com
+    port: 443
+  # Staging server
+  - name: staging
+    host: staging.example.com  # internal only
+    port: 8443
+"#;
+
+    let mut new_server = serde_yaml::Mapping::new();
+    new_server.insert(
+        serde_yaml::Value::String("name".to_string()),
+        serde_yaml::Value::String("dev".to_string()),
+    );
+    new_server.insert(
+        serde_yaml::Value::String("host".to_string()),
+        serde_yaml::Value::String("localhost".to_string()),
+    );
+    new_server.insert(
+        serde_yaml::Value::String("port".to_string()),
+        serde_yaml::Value::Number(8080.into()),
+    );
+
+    let operations = vec![Patch {
+        route: route!("servers"),
+        operation: Op::Append {
+            value: serde_yaml::Value::Mapping(new_server),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    assert!(result.source().contains("# Production server"));
+    assert!(result.source().contains("# Staging server"));
+    assert!(result.source().contains("# internal only"));
+
+    insta::assert_snapshot!(result.source(), @r#"
+        servers:
+          # Production server
+          - name: prod
+            host: prod.example.com
+            port: 443
+          # Staging server
+          - name: staging
+            host: staging.example.com  # internal only
+            port: 8443
+          - name: dev
+            host: localhost
+            port: 8080
+        "#);
+}
+
+#[test]
+fn test_append_number_to_sequence() {
+    let original = r#"
+ports:
+  - 8080
+  - 8081
+"#;
+
+    let operations = vec![Patch {
+        route: route!("ports"),
+        operation: Op::Append {
+            value: serde_yaml::Value::Number(8082.into()),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r"
+        ports:
+          - 8080
+          - 8081
+          - 8082
+        ");
+}
+
+#[test]
+fn test_append_empty_mapping() {
+    let original = r#"
+configs:
+  - name: config1
+    value: 123
+"#;
+
+    let operations = vec![Patch {
+        route: route!("configs"),
+        operation: Op::Append {
+            value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r"
+        configs:
+          - name: config1
+            value: 123
+          - {}
+        ");
+}
+
+#[test]
+fn test_append_nested_mapping() {
+    let original = r#"
+services:
+  - name: api
+    port: 8080
+"#;
+
+    let mut new_service = serde_yaml::Mapping::new();
+    new_service.insert(
+        serde_yaml::Value::String("name".to_string()),
+        serde_yaml::Value::String("worker".to_string()),
+    );
+    new_service.insert(
+        serde_yaml::Value::String("port".to_string()),
+        serde_yaml::Value::Number(9090.into()),
+    );
+
+    let mut config = serde_yaml::Mapping::new();
+    config.insert(
+        serde_yaml::Value::String("replicas".to_string()),
+        serde_yaml::Value::Number(3.into()),
+    );
+
+    new_service.insert(
+        serde_yaml::Value::String("config".to_string()),
+        serde_yaml::Value::Mapping(config),
+    );
+
+    let operations = vec![Patch {
+        route: route!("services"),
+        operation: Op::Append {
+            value: serde_yaml::Value::Mapping(new_service),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        services:
+          - name: api
+            port: 8080
+          - name: worker
+            port: 9090
+            config:
+              replicas: 3
+        "#);
+}
+
+#[test]
+fn test_append_fails_on_non_sequence() {
+    let original = r#"
+config:
+  name: test
+  value: 123
+"#;
+
+    let operations = vec![Patch {
+        route: route!("config"),
+        operation: Op::Append {
+            value: serde_yaml::Value::String("item".to_string()),
+        },
+    }];
+
+    let result = apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations);
+
+    match result {
+        Ok(_) => panic!("Expected an error but got Ok"),
+        Err(err) => {
+            assert!(
+                err.to_string()
+                    .contains("append operation is only permitted against sequence routes")
+            );
+        }
+    }
+}
+
+#[test]
+fn test_append_multiple_items() {
+    let original = r#"
+tasks:
+  - task1
+"#;
+
+    let operations = vec![
+        Patch {
+            route: route!("tasks"),
+            operation: Op::Append {
+                value: serde_yaml::Value::String("task2".to_string()),
+            },
+        },
+        Patch {
+            route: route!("tasks"),
+            operation: Op::Append {
+                value: serde_yaml::Value::String("task3".to_string()),
+            },
+        },
+    ];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r"
+        tasks:
+          - task1
+          - task2
+          - task3
+        ");
+}
+
+#[test]
+fn test_append_real_world_github_workflow() {
+    let original = r#"
+name: CI
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run tests
+        run: npm test
+"#;
+
+    let mut new_step = serde_yaml::Mapping::new();
+    new_step.insert(
+        serde_yaml::Value::String("name".to_string()),
+        serde_yaml::Value::String("Upload coverage".to_string()),
+    );
+    new_step.insert(
+        serde_yaml::Value::String("uses".to_string()),
+        serde_yaml::Value::String("codecov/codecov-action@v3".to_string()),
+    );
+
+    let operations = vec![Patch {
+        route: route!("jobs", "test", "steps"),
+        operation: Op::Append {
+            value: serde_yaml::Value::Mapping(new_step),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+        name: CI
+        on: push
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+              - name: Run tests
+                run: npm test
+              - name: Upload coverage
+                uses: codecov/codecov-action@v3
+        "#);
+}
