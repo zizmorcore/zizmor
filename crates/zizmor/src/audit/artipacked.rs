@@ -5,7 +5,7 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
-    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _},
+    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _, version::Version},
     state::AuditState,
     utils::split_patterns,
 };
@@ -20,6 +20,52 @@ audit_meta!(
 );
 
 impl Artipacked {
+    /// Check if the checkout action is version 6 or higher.
+    /// Returns None if the version cannot be determined (e.g., for commit SHAs).
+    fn is_checkout_v6_or_higher(
+        uses: &github_actions_models::common::RepositoryUses,
+    ) -> Option<bool> {
+        // Only check symbolic refs (tags/branches), not commit SHAs
+        let Some(ref_str) = uses.symbolic_ref() else {
+            // For commit SHAs, we can't determine the version without API calls
+            return None;
+        };
+
+        // Try to parse the ref as a version
+        let Ok(version) = Version::parse(ref_str) else {
+            // If we can't parse it as a version, assume it's not v6+
+            return Some(false);
+        };
+
+        // Check if version is >= v6
+        let v6 = Version::parse("v6").ok()?;
+
+        Some(version >= v6)
+    }
+
+    /// Determine the severity for an artipacked finding based on checkout version
+    /// and whether there are vulnerable uploads.
+    fn determine_severity(
+        is_v6_or_higher: Option<bool>,
+        has_no_vulnerable_uploads: bool,
+    ) -> Severity {
+        if is_v6_or_higher == Some(true) {
+            // For checkout@v6+, downgrade severity since credentials are stored
+            // in $RUNNER_TEMP instead of .git/config, reducing leakage risk.
+            if has_no_vulnerable_uploads {
+                Severity::Low
+            } else {
+                Severity::Medium
+            }
+        } else {
+            if has_no_vulnerable_uploads {
+                Severity::Medium
+            } else {
+                Severity::High
+            }
+        }
+    }
+
     fn process_steps<'doc>(
         &self,
         steps: impl Iterator<Item = impl StepCommon<'doc>>,
@@ -39,6 +85,7 @@ impl Artipacked {
             };
 
             if uses.matches("actions/checkout") {
+                let is_v6_or_higher = Self::is_checkout_v6_or_higher(uses);
                 match with
                     .get("persist-credentials")
                     .map(|v| v.to_string())
@@ -48,11 +95,11 @@ impl Artipacked {
                     Some("true") => {
                         // If a user explicitly sets `persist-credentials: true`,
                         // they probably mean it. Only report if in auditor mode.
-                        vulnerable_checkouts.push((step, Persona::Auditor))
+                        vulnerable_checkouts.push((step, Persona::Auditor, is_v6_or_higher))
                     }
                     // TODO: handle expressions here.
                     // persist-credentials is true by default.
-                    _ => vulnerable_checkouts.push((step, Persona::default())),
+                    _ => vulnerable_checkouts.push((step, Persona::default(), is_v6_or_higher)),
                 }
             } else if uses.matches("actions/upload-artifact") {
                 let Some(EnvValue::String(path)) = with.get("path") else {
@@ -70,10 +117,13 @@ impl Artipacked {
         if vulnerable_uploads.is_empty() {
             // If we have no vulnerable uploads, then emit lower-confidence
             // findings for just the checkout steps.
-            for (checkout, persona) in &vulnerable_checkouts {
+            for (checkout, persona, is_v6_or_higher) in &vulnerable_checkouts {
+                let severity =
+                    Self::determine_severity(*is_v6_or_higher, vulnerable_uploads.is_empty());
+
                 findings.push(
                     Self::finding()
-                        .severity(Severity::Medium)
+                        .severity(severity)
                         .confidence(Confidence::Low)
                         .persona(*persona)
                         .add_location(
@@ -90,14 +140,17 @@ impl Artipacked {
             // Select only pairs where the vulnerable checkout precedes the
             // vulnerable upload. There are more efficient ways to do this than
             // a cartesian product, but this way is simple.
-            for ((checkout, persona), upload) in vulnerable_checkouts
+            for ((checkout, persona, is_v6_or_higher), upload) in vulnerable_checkouts
                 .iter()
                 .cartesian_product(vulnerable_uploads.iter())
             {
                 if checkout.index() < upload.index() {
+                    let severity =
+                        Self::determine_severity(*is_v6_or_higher, vulnerable_uploads.is_empty());
+
                     findings.push(
                         Self::finding()
-                            .severity(Severity::High)
+                            .severity(severity)
                             .confidence(Confidence::High)
                             .persona(*persona)
                             .add_location(
@@ -190,6 +243,8 @@ impl Audit for Artipacked {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use crate::{
         config::Config,
@@ -235,6 +290,107 @@ mod tests {
         assert_eq!(fix.title, "set persist-credentials: false");
 
         fix.apply(document).unwrap()
+    }
+
+    #[test]
+    fn test_is_checkout_v6_or_higher() {
+        use github_actions_models::common::Uses;
+
+        // Test v6 and higher versions
+        let v6 = Uses::from_str("actions/checkout@v6").unwrap();
+        let v6_0 = Uses::from_str("actions/checkout@v6.0").unwrap();
+        let v6_1_0 = Uses::from_str("actions/checkout@v6.1.0").unwrap();
+        let v7 = Uses::from_str("actions/checkout@v7").unwrap();
+        let v10 = Uses::from_str("actions/checkout@v10").unwrap();
+
+        if let Uses::Repository(uses) = v6 {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+        }
+        if let Uses::Repository(uses) = v6_0 {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+        }
+        if let Uses::Repository(uses) = v6_1_0 {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+        }
+        if let Uses::Repository(uses) = v7 {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+        }
+        if let Uses::Repository(uses) = v10 {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+        }
+
+        // Test versions below v6
+        let v4 = Uses::from_str("actions/checkout@v4").unwrap();
+        let v5 = Uses::from_str("actions/checkout@v5").unwrap();
+        let v5_9 = Uses::from_str("actions/checkout@v5.9").unwrap();
+
+        if let Uses::Repository(uses) = v4 {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(false));
+        }
+        if let Uses::Repository(uses) = v5 {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(false));
+        }
+        if let Uses::Repository(uses) = v5_9 {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(false));
+        }
+
+        // Test commit SHA (should return None)
+        let commit_sha =
+            Uses::from_str("actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683").unwrap();
+        if let Uses::Repository(uses) = commit_sha {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), None);
+        }
+
+        // Test invalid/unparseable refs (should return Some(false))
+        let invalid = Uses::from_str("actions/checkout@main").unwrap();
+        if let Uses::Repository(uses) = invalid {
+            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(false));
+        }
+    }
+
+    #[test]
+    fn test_determine_severity() {
+        const IS_V6_OR_HIGHER: Option<bool> = Some(true);
+        const IS_OLDER_VERSION: Option<bool> = Some(false);
+        const UNKNOWN_VERSION: Option<bool> = None;
+        const HAS_NO_VULNERABLE_UPLOADS: bool = true;
+        const HAS_VULNERABLE_UPLOADS: bool = false;
+
+        // checkout@v6+ with no vulnerable uploads -> Low
+        assert_eq!(
+            Artipacked::determine_severity(IS_V6_OR_HIGHER, HAS_NO_VULNERABLE_UPLOADS),
+            Severity::Low
+        );
+
+        // checkout@v6+ with vulnerable uploads -> Medium
+        assert_eq!(
+            Artipacked::determine_severity(IS_V6_OR_HIGHER, HAS_VULNERABLE_UPLOADS),
+            Severity::Medium
+        );
+
+        // Older checkout versions with no vulnerable uploads -> Medium
+        assert_eq!(
+            Artipacked::determine_severity(IS_OLDER_VERSION, HAS_NO_VULNERABLE_UPLOADS),
+            Severity::Medium
+        );
+
+        // Older checkout versions with vulnerable uploads -> High
+        assert_eq!(
+            Artipacked::determine_severity(IS_OLDER_VERSION, HAS_VULNERABLE_UPLOADS),
+            Severity::High
+        );
+
+        // Unknown version (None) with no vulnerable uploads -> Medium (treated as older)
+        assert_eq!(
+            Artipacked::determine_severity(UNKNOWN_VERSION, HAS_NO_VULNERABLE_UPLOADS),
+            Severity::Medium
+        );
+
+        // Unknown version (None) with vulnerable uploads -> High (treated as older)
+        assert_eq!(
+            Artipacked::determine_severity(UNKNOWN_VERSION, HAS_VULNERABLE_UPLOADS),
+            Severity::High
+        );
     }
 
     #[test]
