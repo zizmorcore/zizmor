@@ -81,6 +81,14 @@ including it in a publicly accessible artifact via @actions/upload-artifact.
 However, even without this, persisting the credential in the `.git/config`
 is non-ideal unless actually needed.
 
+!!! note "checkout@v6+ behavior change"
+
+    Starting with `actions/checkout@v6`, credentials are stored under `$RUNNER_TEMP`
+    instead of the local Git config. This significantly reduces the risk of accidentally
+    leaking credentials through workflow artifacts, Docker builds, or uploaded files.
+    As a result, `zizmor` reports lower severity findings for `checkout@v6+` compared
+    to earlier versions.
+
 Other resources:
 
 * [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]
