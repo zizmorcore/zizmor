@@ -71,15 +71,24 @@ Add a `name:` field to your workflow or action.
 Detects local filesystem `git` credential storage on GitHub Actions, as well as
 potential avenues for unintentional persistence of credentials in artifacts.
 
-By default, using @actions/checkout causes a credential to be persisted
-in the checked-out repo's `.git/config`, so that subsequent `git` operations
-can be authenticated.
+By default, using @actions/checkout causes a credential to be persisted on disk.
+Versions below v6.0.0 store the credential directly in the checked-out repo's
+`.git/config`, while v6.0.0 and later store it under `$RUNNER_TEMP`.
 
-Subsequent steps may accidentally publicly persist `.git/config`, e.g. by
+Subsequent steps may accidentally publicly persist the credential, e.g. by
 including it in a publicly accessible artifact via @actions/upload-artifact.
 
-However, even without this, persisting the credential in the `.git/config`
-is non-ideal unless actually needed.
+However, even without this, persisting the credential on disk is non-ideal
+unless actually needed.
+
+!!! note "Behavior change"
+
+    Starting with zizmor v1.17.0, this audit produces lower-severity findings
+    when v6.0.0 or higher of @actions/checkout is used. This reflects a
+    change in v6.0.0's credential persistence behavior towards a more
+    misuse-resistant location.
+    
+    See orgs/community?179107 for additional information.
 
 Other resources:
 

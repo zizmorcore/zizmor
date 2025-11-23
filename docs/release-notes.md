@@ -13,6 +13,11 @@ of `zizmor`.
 
 * `zizmor` now produces a more useful error message when asked to
   collect only workflows from a remote input that contains no workflows (#1324)
+  
+* `zizmor` now produces more precise severities on @actions/checkout versions
+  that have more misuse-resistant credentials persistence behavior (#1353)
+  
+    Many thanks to @ManuelLerchnerQC for proposing and implementing this improvement!
 
 ### Performance Improvements 🚄
 
