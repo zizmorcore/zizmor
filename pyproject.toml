@@ -15,4 +15,4 @@ bindings = "bin"
 manifest-path = "crates/zizmor/Cargo.toml"
 
 [dependency-groups]
-docs = ["mkdocs ~= 1.6", "mkdocs-material[imaging] ~= 9.5"]
+docs = ["zensical"]
