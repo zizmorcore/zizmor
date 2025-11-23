@@ -273,6 +273,8 @@ impl Audit for Artipacked {
 mod tests {
     use std::str::FromStr;
 
+    use github_actions_models::common::RepositoryUses;
+
     use super::*;
     use crate::{
         config::Config,
@@ -322,90 +324,115 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_checkout_v6_or_higher_offline() {
-        use github_actions_models::common::Uses;
-
         // Test v6 and higher versions
-        let v6 = Uses::from_str("actions/checkout@v6").unwrap();
-        let v6_0 = Uses::from_str("actions/checkout@v6.0").unwrap();
-        let v6_1_0 = Uses::from_str("actions/checkout@v6.1.0").unwrap();
-        let v7 = Uses::from_str("actions/checkout@v7").unwrap();
-        let v10 = Uses::from_str("actions/checkout@v10").unwrap();
+        let v6 = RepositoryUses::from_str("actions/checkout@v6").unwrap();
+        let v6_0 = RepositoryUses::from_str("actions/checkout@v6.0").unwrap();
+        let v6_1_0 = RepositoryUses::from_str("actions/checkout@v6.1.0").unwrap();
+        let v7 = RepositoryUses::from_str("actions/checkout@v7").unwrap();
+        let v10 = RepositoryUses::from_str("actions/checkout@v10").unwrap();
 
         let artipacked = Artipacked { client: None };
 
-        if let Uses::Repository(uses) = v6 {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                Some(true)
-            );
-        }
-        if let Uses::Repository(uses) = v6_0 {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                Some(true)
-            );
-        }
-        if let Uses::Repository(uses) = v6_1_0 {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                Some(true)
-            );
-        }
-        if let Uses::Repository(uses) = v7 {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                Some(true)
-            );
-        }
-        if let Uses::Repository(uses) = v10 {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                Some(true)
-            );
-        }
+        assert_eq!(
+            artipacked.is_checkout_v6_or_higher(&v6).await.unwrap(),
+            Some(true)
+        );
+        assert_eq!(
+            artipacked.is_checkout_v6_or_higher(&v6_0).await.unwrap(),
+            Some(true)
+        );
+        assert_eq!(
+            artipacked.is_checkout_v6_or_higher(&v6_1_0).await.unwrap(),
+            Some(true)
+        );
+        assert_eq!(
+            artipacked.is_checkout_v6_or_higher(&v7).await.unwrap(),
+            Some(true)
+        );
+        assert_eq!(
+            artipacked.is_checkout_v6_or_higher(&v10).await.unwrap(),
+            Some(true)
+        );
 
         // Test versions below v6
-        let v4 = Uses::from_str("actions/checkout@v4").unwrap();
-        let v5 = Uses::from_str("actions/checkout@v5").unwrap();
-        let v5_9 = Uses::from_str("actions/checkout@v5.9").unwrap();
+        let v4 = RepositoryUses::from_str("actions/checkout@v4").unwrap();
+        let v5 = RepositoryUses::from_str("actions/checkout@v5").unwrap();
+        let v5_9 = RepositoryUses::from_str("actions/checkout@v5.9").unwrap();
 
-        if let Uses::Repository(uses) = v4 {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                Some(false)
-            );
-        }
-        if let Uses::Repository(uses) = v5 {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                Some(false)
-            );
-        }
-        if let Uses::Repository(uses) = v5_9 {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                Some(false)
-            );
-        }
+        assert_eq!(
+            artipacked.is_checkout_v6_or_higher(&v4).await.unwrap(),
+            Some(false)
+        );
+        assert_eq!(
+            artipacked.is_checkout_v6_or_higher(&v5).await.unwrap(),
+            Some(false)
+        );
+        assert_eq!(
+            artipacked.is_checkout_v6_or_higher(&v5_9).await.unwrap(),
+            Some(false)
+        );
 
         // Test commit SHA (should return None when offline)
         let commit_sha =
-            Uses::from_str("actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683").unwrap();
-        if let Uses::Repository(uses) = commit_sha {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                None
-            );
-        }
+            RepositoryUses::from_str("actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683")
+                .unwrap();
+        assert_eq!(
+            artipacked
+                .is_checkout_v6_or_higher(&commit_sha)
+                .await
+                .unwrap(),
+            None
+        );
 
         // Test invalid/unparseable refs (should return None)
-        let invalid = Uses::from_str("actions/checkout@main").unwrap();
-        if let Uses::Repository(uses) = invalid {
-            assert_eq!(
-                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
-                None
-            );
-        }
+        let invalid = RepositoryUses::from_str("actions/checkout@main").unwrap();
+        assert_eq!(
+            artipacked.is_checkout_v6_or_higher(&invalid).await.unwrap(),
+            None
+        );
+    }
+
+    #[cfg(feature = "online-tests")]
+    #[tokio::test]
+    async fn test_is_checkout_v6_or_higher_online() {
+        use crate::github;
+
+        let artipacked = Artipacked {
+            client: Some(
+                Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        };
+
+        // Points to v6.0.0.
+        let commit_sha_v6 =
+            RepositoryUses::from_str("actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3")
+                .unwrap();
+
+        assert_eq!(
+            artipacked
+                .is_checkout_v6_or_higher(&commit_sha_v6)
+                .await
+                .unwrap(),
+            Some(true)
+        );
+
+        // Points to v5.0.1.
+        let commit_sha_v5 =
+            RepositoryUses::from_str("actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd")
+                .unwrap();
+
+        assert_eq!(
+            artipacked
+                .is_checkout_v6_or_higher(&commit_sha_v5)
+                .await
+                .unwrap(),
+            Some(false)
+        );
     }
 
     #[test]
