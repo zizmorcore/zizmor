@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
 use itertools::Itertools as _;
 
@@ -11,6 +13,9 @@ use crate::{
     utils::split_patterns,
 };
 use yamlpatch::{Op, Patch};
+
+#[allow(clippy::unwrap_used)]
+static V6: LazyLock<Version> = LazyLock::new(|| Version::parse("v6").unwrap());
 
 pub(crate) struct Artipacked {
     client: Option<Client>,
@@ -42,11 +47,7 @@ impl Artipacked {
             match self.client {
                 Some(ref client) => {
                     let tag = client
-                        .longest_tag_for_commit(
-                            &uses.owner,
-                            &uses.repo,
-                            &uses.commit_ref().unwrap(),
-                        )
+                        .longest_tag_for_commit(&uses.owner, &uses.repo, &uses.git_ref)
                         .await?;
 
                     match tag {
@@ -64,9 +65,7 @@ impl Artipacked {
             return Ok(None);
         };
 
-        let v6 = Version::parse("v6").unwrap();
-
-        Ok(Some(version >= v6))
+        Ok(Some(version >= *V6))
     }
 
     /// Determine the severity for an artipacked finding based on checkout version
@@ -83,12 +82,10 @@ impl Artipacked {
             } else {
                 Severity::Medium
             }
+        } else if has_no_vulnerable_uploads {
+            Severity::Medium
         } else {
-            if has_no_vulnerable_uploads {
-                Severity::Medium
-            } else {
-                Severity::High
-            }
+            Severity::High
         }
     }
 
