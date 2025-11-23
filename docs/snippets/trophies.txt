@@ -63,6 +63,9 @@ davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
 dependabot/dependabot-core#13531
 digitalbazaar/pyld#211
+django/django@09d4bf5cd9c95c588d3ec22edea5db1f5f146900
+django/django@e8958c4690faef27b6715524ecb5c49c3ecb6a09
+django/django@86b8058b40145fb5ba4fd859676225f533eca986
 django-commons/django-tasks-scheduler#272
 Diaoul/subliminal#1190
 docker/compose#12737
