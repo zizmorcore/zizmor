@@ -5,13 +5,16 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
-    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _, version::Version},
+    github::{Client, ClientError},
+    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt, version::Version},
     state::AuditState,
     utils::split_patterns,
 };
 use yamlpatch::{Op, Patch};
 
-pub(crate) struct Artipacked;
+pub(crate) struct Artipacked {
+    client: Option<Client>,
+}
 
 audit_meta!(
     Artipacked,
@@ -20,27 +23,50 @@ audit_meta!(
 );
 
 impl Artipacked {
-    /// Check if the checkout action is version 6 or higher.
-    /// Returns None if the version cannot be determined (e.g., for commit SHAs).
-    fn is_checkout_v6_or_higher(
+    /// Determines if an `actions/checkout` usage is version 6 or higher.
+    ///
+    /// This takes two different paths:
+    /// 1. If the ref is a symbolic ref (tag/branch), we use it for a direct version comparison.
+    /// 2. If the ref is a commit SHA *and* we have a GitHub client, we match the commit
+    ///    to its longest tag. We then use that tag for the version comparison.
+    ///
+    /// If we can't determine the version (e.g., commit SHA without client),
+    /// we return `None`.
+    async fn is_checkout_v6_or_higher(
+        &self,
         uses: &github_actions_models::common::RepositoryUses,
-    ) -> Option<bool> {
-        // Only check symbolic refs (tags/branches), not commit SHAs
-        let Some(ref_str) = uses.symbolic_ref() else {
-            // For commit SHAs, we can't determine the version without API calls
-            return None;
+    ) -> Result<Option<bool>, ClientError> {
+        let version = if !uses.ref_is_commit() {
+            uses.git_ref.clone()
+        } else {
+            match self.client {
+                Some(ref client) => {
+                    let tag = client
+                        .longest_tag_for_commit(
+                            &uses.owner,
+                            &uses.repo,
+                            &uses.commit_ref().unwrap(),
+                        )
+                        .await?;
+
+                    match tag {
+                        Some(tag) => tag.name,
+                        None => return Ok(None),
+                    }
+                }
+                None => return Ok(None),
+            }
         };
 
         // Try to parse the ref as a version
-        let Ok(version) = Version::parse(ref_str) else {
+        let Ok(version) = Version::parse(&version) else {
             // If we can't parse it as a version, assume it's not v6+
-            return Some(false);
+            return Ok(None);
         };
 
-        // Check if version is >= v6
-        let v6 = Version::parse("v6").ok()?;
+        let v6 = Version::parse("v6").unwrap();
 
-        Some(version >= v6)
+        Ok(Some(version >= v6))
     }
 
     /// Determine the severity for an artipacked finding based on checkout version
@@ -66,7 +92,7 @@ impl Artipacked {
         }
     }
 
-    fn process_steps<'doc>(
+    async fn process_steps<'doc>(
         &self,
         steps: impl Iterator<Item = impl StepCommon<'doc>>,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
@@ -85,7 +111,10 @@ impl Artipacked {
             };
 
             if uses.matches("actions/checkout") {
-                let is_v6_or_higher = Self::is_checkout_v6_or_higher(uses);
+                let is_v6_or_higher = self
+                    .is_checkout_v6_or_higher(uses)
+                    .await
+                    .map_err(Self::err)?;
                 match with
                     .get("persist-credentials")
                     .map(|v| v.to_string())
@@ -216,8 +245,10 @@ impl Artipacked {
 
 #[async_trait::async_trait]
 impl Audit for Artipacked {
-    fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
-        Ok(Self)
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError> {
+        Ok(Self {
+            client: state.gh_client.clone(),
+        })
     }
 
     async fn audit_action<'doc>(
@@ -229,7 +260,7 @@ impl Audit for Artipacked {
             return Ok(vec![]);
         };
 
-        self.process_steps(steps)
+        self.process_steps(steps).await
     }
 
     async fn audit_normal_job<'doc>(
@@ -237,7 +268,7 @@ impl Audit for Artipacked {
         job: &super::NormalJob<'doc>,
         _config: &crate::config::Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_steps(job.steps())
+        self.process_steps(job.steps()).await
     }
 }
 
@@ -292,8 +323,8 @@ mod tests {
         fix.apply(document).unwrap()
     }
 
-    #[test]
-    fn test_is_checkout_v6_or_higher() {
+    #[tokio::test]
+    async fn test_is_checkout_v6_or_higher_offline() {
         use github_actions_models::common::Uses;
 
         // Test v6 and higher versions
@@ -303,20 +334,37 @@ mod tests {
         let v7 = Uses::from_str("actions/checkout@v7").unwrap();
         let v10 = Uses::from_str("actions/checkout@v10").unwrap();
 
+        let artipacked = Artipacked { client: None };
+
         if let Uses::Repository(uses) = v6 {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                Some(true)
+            );
         }
         if let Uses::Repository(uses) = v6_0 {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                Some(true)
+            );
         }
         if let Uses::Repository(uses) = v6_1_0 {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                Some(true)
+            );
         }
         if let Uses::Repository(uses) = v7 {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                Some(true)
+            );
         }
         if let Uses::Repository(uses) = v10 {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(true));
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                Some(true)
+            );
         }
 
         // Test versions below v6
@@ -325,26 +373,41 @@ mod tests {
         let v5_9 = Uses::from_str("actions/checkout@v5.9").unwrap();
 
         if let Uses::Repository(uses) = v4 {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(false));
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                Some(false)
+            );
         }
         if let Uses::Repository(uses) = v5 {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(false));
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                Some(false)
+            );
         }
         if let Uses::Repository(uses) = v5_9 {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(false));
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                Some(false)
+            );
         }
 
-        // Test commit SHA (should return None)
+        // Test commit SHA (should return None when offline)
         let commit_sha =
             Uses::from_str("actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683").unwrap();
         if let Uses::Repository(uses) = commit_sha {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), None);
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                None
+            );
         }
 
-        // Test invalid/unparseable refs (should return Some(false))
+        // Test invalid/unparseable refs (should return None)
         let invalid = Uses::from_str("actions/checkout@main").unwrap();
         if let Uses::Repository(uses) = invalid {
-            assert_eq!(Artipacked::is_checkout_v6_or_higher(&uses), Some(false));
+            assert_eq!(
+                artipacked.is_checkout_v6_or_higher(&uses).await.unwrap(),
+                None
+            );
         }
     }
 
