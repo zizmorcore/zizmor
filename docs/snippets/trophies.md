@@ -304,6 +304,16 @@
         - digitalbazaar/pyld#211
 
 
+-   ![](https://github.com/django.png?size=40){ width="40" loading=lazy align=left } django
+
+    ---
+
+    ??? example "Examples"
+        - django/django@09d4bf5cd9c95c588d3ec22edea5db1f5f146900
+        - django/django@e8958c4690faef27b6715524ecb5c49c3ecb6a09
+        - django/django@86b8058b40145fb5ba4fd859676225f533eca986
+
+
 -   ![](https://github.com/django-commons.png?size=40){ width="40" loading=lazy align=left } django-commons
 
     ---
