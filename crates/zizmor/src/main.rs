@@ -494,18 +494,6 @@ pub(crate) enum FixMode {
     All,
 }
 
-pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
-    // NOTE: We use secondary_title here because primary_title doesn't
-    // allow ANSI colors, and some of our errors contain colorized text.
-    let report = vec![
-        Group::with_title(Level::ERROR.secondary_title(err.as_ref()))
-            .elements(tips.iter().map(|tip| Level::HELP.message(tip.as_ref()))),
-    ];
-
-    let renderer = Renderer::styled();
-    renderer.render(&report).to_string()
-}
-
 /// State used when collecting input groups.
 pub(crate) struct CollectionOptions {
     pub(crate) mode_set: CollectionModeSet,
