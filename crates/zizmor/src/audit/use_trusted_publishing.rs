@@ -141,15 +141,9 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
         ]
     });
 
-// Queries that match a command with at least one argument.
-//
-// NOTE: These queries are intentionally very simple. The operating theory here
-// is that it's faster to match a simple query and then filter the results
-// with a compiled regular expression than it is to write a complex
-// query that uses tree-sitter's baked-in regex support.
 const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) @span";
 const PWSH_COMMAND_QUERY: &str =
-    "(command command_name: (_) @cmd command_elements: (_)+ @args) @span";
+    "(command command_name: (_) @cmd command_elements: (_ (generic_token) @args)+) @span";
 
 pub(crate) struct UseTrustedPublishing {
     bash_command_query: utils::SpannedQuery,
@@ -307,12 +301,10 @@ impl UseTrustedPublishing {
         };
 
         let matches = self.query(&query, &mut cursor, &tree, run);
-        let cmd = self
-            .bash_command_query
+        let cmd = query
             .capture_index_for_name("cmd")
             .expect("internal error: missing capture index for 'cmd'");
-        let args = self
-            .bash_command_query
+        let args = query
             .capture_index_for_name("args")
             .expect("internal error: missing capture index for 'args'");
 
@@ -343,7 +335,7 @@ impl UseTrustedPublishing {
                 let span = mat
                     .captures
                     .iter()
-                    .find(|cap| cap.index == self.bash_command_query.span_idx)
+                    .find(|cap| cap.index == query.span_idx)
                     .expect("internal error: expected capture for span");
 
                 let span_contents = span
