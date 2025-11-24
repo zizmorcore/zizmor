@@ -448,3 +448,26 @@ fn issue_1341() -> Result<()> {
 
     Ok(())
 }
+
+/// Regression test for #1356.
+///
+/// Ensures that zizmor's LSP mode (`--lsp`) starts up correctly, i.e.
+/// doesn't crash on launch.
+#[test]
+fn issue_1356_lsp_mode_starts() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(false)
+            .output(OutputMode::Stdout)
+            .stdin("{}") // Not a valid LSP message, but all we're testing is startup.
+            .args(["--lsp"])
+            .run()?,
+        @r#"
+    Content-Length: 75
+
+    {"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error"},"id":null}
+    "#
+    );
+
+    Ok(())
+}

@@ -39,6 +39,7 @@ pub enum OutputMode {
 
 pub struct Zizmor {
     cmd: Command,
+    stdin: Option<String>,
     unbuffer: bool,
     offline: bool,
     inputs: Vec<String>,
@@ -55,6 +56,7 @@ impl Zizmor {
 
         Self {
             cmd,
+            stdin: None,
             unbuffer: false,
             offline: true,
             inputs: vec![],
@@ -63,6 +65,11 @@ impl Zizmor {
             output: OutputMode::Stdout,
             expects_failure: false,
         }
+    }
+
+    pub fn stdin(mut self, input: impl Into<String>) -> Self {
+        self.stdin = Some(input.into());
+        self
     }
 
     pub fn args<'a>(mut self, args: impl IntoIterator<Item = &'a str>) -> Self {
@@ -124,6 +131,10 @@ impl Zizmor {
     }
 
     pub fn run(mut self) -> Result<String> {
+        if let Some(stdin) = &self.stdin {
+            self.cmd.write_stdin(stdin.as_bytes());
+        }
+
         if self.offline {
             self.cmd.arg("--offline");
         } else {
