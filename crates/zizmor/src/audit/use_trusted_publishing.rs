@@ -297,7 +297,10 @@ impl UseTrustedPublishing {
 
                 (&self.pwsh_command_query, tree)
             }
-            _ => return Ok(vec![]),
+            _ => {
+                tracing::debug!("unable to analyze 'run:' block: unknown shell '{normalized}'");
+                return Ok(vec![]);
+            }
         };
 
         let matches = self.query(query, &mut cursor, &tree, run);
