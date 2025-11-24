@@ -300,7 +300,7 @@ impl UseTrustedPublishing {
             _ => return Ok(vec![]),
         };
 
-        let matches = self.query(&query, &mut cursor, &tree, run);
+        let matches = self.query(query, &mut cursor, &tree, run);
         let cmd = query
             .capture_index_for_name("cmd")
             .expect("internal error: missing capture index for 'cmd'");
