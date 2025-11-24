@@ -205,6 +205,10 @@ fn render_finding(registry: &InputRegistry, finding: &Finding) {
         .elements(finding_snippets(registry, finding))
         .element(Level::NOTE.message(confidence));
 
+    if let Some(tip) = &finding.tip {
+        group = group.element(Level::HELP.with_name("tip").message(tip));
+    }
+
     if !finding.fixes.is_empty() {
         group = group.element(Level::NOTE.message("this finding has an auto-fix"));
     }

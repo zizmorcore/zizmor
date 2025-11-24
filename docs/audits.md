@@ -948,6 +948,9 @@ This audit detects a variety of obfuscated usages, including:
 * Obfuscated GitHub expressions, including no-op patterns like
   `fromJSON(toJSON(...))` and calls to `format(...)` where all
   arguments are literal values.
+* Use of the Windows CMD shell, i.e. `#!yaml shell: cmd` and similar.
+  The CMD shell has no formal grammar, making it impossible to accurately
+  analyze for security issues.
 
 ### Remediation
 
