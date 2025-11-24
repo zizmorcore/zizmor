@@ -19,8 +19,12 @@ of `zizmor`.
   
     Many thanks to @ManuelLerchnerQC for proposing and implementing this improvement!
 
-* `zizmor` now correctly detects many more "dry-run" patterns in
-  the [use-trusted-publishing] audit, making it significantly more accurate (#1357)
+* The [use-trusted-publishing] audit now correctly detecting more "dry-run"
+  patterns, making it significantly more accurate (#1357)
+
+* The [obfuscation] audit now detects usages of `#!yaml shell: cmd` and similar,
+  as the Windows CMD shell lacks a formal grammar and limits analysis of `#!yaml run:` blocks
+  in other audits (#1361)
 
 ### Performance Improvements 🚄
 
