@@ -19,6 +19,9 @@ of `zizmor`.
   
     Many thanks to @ManuelLerchnerQC for proposing and implementing this improvement!
 
+* `zizmor` now correctly detects many more "dry-run" patterns in
+  the [use-trusted-publishing] audit, making it significantly more accurate (#1357)
+
 ### Performance Improvements 🚄
 
 * `zizmor`'s core has been refactored to be asynchronous, making online
