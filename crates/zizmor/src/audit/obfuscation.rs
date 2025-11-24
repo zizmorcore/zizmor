@@ -11,7 +11,7 @@ use crate::{
         location::{Feature, Location, Routable},
     },
     models::{StepCommon, action::CompositeStep, workflow::Step},
-    utils::parse_fenced_expressions_from_input,
+    utils::{self, parse_fenced_expressions_from_input},
 };
 use subfeature::Subfeature;
 
@@ -190,30 +190,61 @@ impl Obfuscation {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        if let Some(Uses::Repository(uses)) = step.uses() {
-            let obfuscated_annotations = self.obfuscated_repo_uses(uses);
-            if !obfuscated_annotations.is_empty() {
-                let mut finding_builder = Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(Severity::Low);
+        match step.body() {
+            crate::models::StepBodyCommon::Uses {
+                uses: Uses::Repository(uses),
+                ..
+            } => {
+                let obfuscated_annotations = self.obfuscated_repo_uses(uses);
+                if !obfuscated_annotations.is_empty() {
+                    let mut finding_builder = Self::finding()
+                        .confidence(Confidence::High)
+                        .severity(Severity::Low);
 
-                // Add all annotations as locations
-                for annotation in &obfuscated_annotations {
-                    finding_builder = finding_builder.add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(["uses".into()])
-                            .annotated(*annotation),
-                    );
+                    // Add all annotations as locations
+                    for annotation in &obfuscated_annotations {
+                        finding_builder = finding_builder.add_location(
+                            step.location()
+                                .primary()
+                                .with_keys(["uses".into()])
+                                .annotated(*annotation),
+                        );
+                    }
+
+                    // Try to create a fix for the obfuscated uses path
+                    if let Some(fix) = self.create_uses_fix(uses, step) {
+                        finding_builder = finding_builder.fix(fix);
+                    }
+
+                    findings.push(finding_builder.build(step).map_err(Self::err)?);
                 }
-
-                // Try to create a fix for the obfuscated uses path
-                if let Some(fix) = self.create_uses_fix(uses, step) {
-                    finding_builder = finding_builder.fix(fix);
-                }
-
-                findings.push(finding_builder.build(step).map_err(Self::err)?);
             }
+            crate::models::StepBodyCommon::Run { .. } => {
+                match step.shell().map(utils::normalize_shell) {
+                    Some("cmd" | "cmd.exe") => {
+                        // `shell: cmd` is basically impossible to analyze: it has no formal
+                        // grammar and has several line continuation mechanisms that stymie
+                        // naive matching. It also hasn't been the default shell on Windows
+                        // runners since 2019.
+                        findings.push(
+                            Self::finding()
+                                .confidence(Confidence::High)
+                                .severity(Severity::Low)
+                                .add_location(
+                                    step.location()
+                                        .primary()
+                                        .with_keys(["shell".into()])
+                                        .annotated("Windows CMD shell limits analysis"),
+                                )
+                                .tip("use 'shell: pwsh' or 'shell: bash' for improved analysis")
+                                .build(step)
+                                .map_err(Self::err)?,
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
         }
 
         Ok(findings)
