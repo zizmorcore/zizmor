@@ -35,6 +35,7 @@ autotag-dev/autotag#142
 BerkeleyLearnVerify/Scenic#320
 bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
+bitwarden/sdk-sm#1378
 bitwarden/server#6409
 blakeblackshear/frigate#15490
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
@@ -71,6 +72,7 @@ Diaoul/subliminal#1190
 docker/compose#12737
 earthobservations/wetterdienst#1440
 edgelesssys/contrast#1604
+EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
