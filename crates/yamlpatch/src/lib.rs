@@ -939,12 +939,10 @@ fn handle_block_sequence_append(
             }
         }
         result
+    } else if has_trailing_newline {
+        format!("{indent}- {value_str}")
     } else {
-        if has_trailing_newline {
-            format!("{indent}- {value_str}")
-        } else {
-            format!("\n{indent}- {value_str}")
-        }
+        format!("\n{indent}- {value_str}")
     };
 
     let mut updated_feature = feature_content.to_string();
