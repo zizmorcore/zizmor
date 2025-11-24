@@ -275,7 +275,6 @@ impl From<Point> for lsp_types::Position {
     }
 }
 
-#[tokio::main]
 pub(crate) async fn run() -> Result<(), Error> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
