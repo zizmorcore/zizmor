@@ -133,6 +133,7 @@
     ---
 
     ??? example "Examples"
+        - bitwarden/sdk-sm#1378
         - bitwarden/server#6409
 
 
@@ -344,6 +345,14 @@
 
     ??? example "Examples"
         - edgelesssys/contrast#1604
+
+
+-   ![](https://github.com/EFForg.png?size=40){ width="40" loading=lazy align=left } EFForg
+
+    ---
+
+    ??? example "Examples"
+        - EFForg/rayhunter#711
 
 
 -   ![](https://github.com/Electric-Coin-Company.png?size=40){ width="40" loading=lazy align=left } Electric-Coin-Company
