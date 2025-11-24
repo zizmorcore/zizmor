@@ -1,11 +1,8 @@
 use std::collections::HashSet;
-use std::ops::Index;
 use std::{sync::LazyLock, vec};
 
 use anyhow::Context as _;
-use regex::RegexSet;
 use subfeature::Subfeature;
-use tree_sitter::Language;
 use tree_sitter::StreamingIterator as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
@@ -154,52 +151,7 @@ const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) 
 const PWSH_COMMAND_QUERY: &str =
     "(command command_name: (_) @cmd command_elements: (_)+ @args) @span";
 
-const NON_TP_COMMAND_PATTERNS: &[&str] = &[
-    // cargo ... publish ...
-    r"(?s)cargo\s+(.+\s+)?publish",
-    // uv ... publish ...
-    r"(?s)uv\s+(.+\s+)?publish",
-    // hatch ... publish ...
-    r"(?s)hatch\s+(.+\s+)?publish",
-    // pdm ... publish ...
-    r"(?s)pdm\s+(.+\s+)?publish",
-    // twine ... upload ...
-    r"(?s)twine\s+(.+\s+)?upload",
-    // gem ... push ...
-    r"(?s)gem\s+(.+\s+)?push",
-    // npm ... publish ...
-    r"(?s)npm\s+(.+\s+)?publish",
-    // yarn ... npm publish ...
-    r"(?s)yarn\s+(.+\s+)?npm\s+publish",
-    // pnpm ... publish ...
-    r"(?s)pnpm\s+(.+\s+)?publish",
-    // yarn run publish / yarn publish (lerna/npm workspaces)
-    r"(?s)yarn\s+(?:run\s+)?publish",
-    // npm run publish
-    r"(?s)npm\s+run\s+publish",
-    // pnpm run publish
-    r"(?s)pnpm\s+run\s+publish",
-];
-
-static NON_TP_COMMAND_PATTERN_SET: LazyLock<RegexSet> = LazyLock::new(|| {
-    RegexSet::new(NON_TP_COMMAND_PATTERNS)
-        .expect("internal error: failed to compile NON_TP_COMMAND_PATTERN_SET")
-});
-
-static NON_TP_COMMAND_PATTERN_REGEXES: LazyLock<Vec<regex::Regex>> = LazyLock::new(|| {
-    NON_TP_COMMAND_PATTERNS
-        .iter()
-        .map(|p| {
-            regex::Regex::new(p)
-                .expect("internal error: failed to compile NON_TP_COMMAND_PATTERN_REGEXES")
-        })
-        .collect()
-});
-
 pub(crate) struct UseTrustedPublishing {
-    bash: Language,
-    pwsh: Language,
-
     bash_command_query: utils::SpannedQuery,
     pwsh_command_query: utils::SpannedQuery,
 }
@@ -324,20 +276,37 @@ impl UseTrustedPublishing {
         Ok(findings)
     }
 
-    fn bash_trusted_publishing_command_candidates<'doc>(
+    fn trusted_publishing_command_candidates<'doc>(
         &self,
         run: &'doc str,
+        shell: &str,
     ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
-        let mut parser = tree_sitter::Parser::new();
-        parser.set_language(&self.bash).map_err(Self::err)?;
+        let normalized = utils::normalize_shell(shell);
 
         let mut cursor = tree_sitter::QueryCursor::new();
-        let tree = parser
-            .parse(run, None)
-            .context("failed to parse `run:` body as bash")
-            .map_err(Self::err)?;
+        let (query, tree) = match normalized {
+            "bash" | "sh" | "zsh" => {
+                let mut parser = utils::bash_parser();
+                let tree = parser
+                    .parse(run, None)
+                    .context("failed to parse `run:` body as bash")
+                    .map_err(Self::err)?;
 
-        let matches = self.query(&self.bash_command_query, &mut cursor, &tree, run);
+                (&self.bash_command_query, tree)
+            }
+            "pwsh" | "powershell" => {
+                let mut parser = utils::pwsh_parser();
+                let tree = parser
+                    .parse(run, None)
+                    .context("failed to parse `run:` body as pwsh")
+                    .map_err(Self::err)?;
+
+                (&self.pwsh_command_query, tree)
+            }
+            _ => return Ok(vec![]),
+        };
+
+        let matches = self.query(&query, &mut cursor, &tree, run);
         let cmd = self
             .bash_command_query
             .capture_index_for_name("cmd")
@@ -388,79 +357,14 @@ impl UseTrustedPublishing {
 
         Ok(subfeatures)
     }
-
-    fn pwsh_trusted_publishing_command_candidates<'doc>(
-        &self,
-        run: &'doc str,
-    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
-        Ok(vec![])
-        // let mut parser = tree_sitter::Parser::new();
-        // parser.set_language(&self.pwsh).map_err(Self::err)?;
-
-        // let mut cursor = tree_sitter::QueryCursor::new();
-        // let tree = parser
-        //     .parse(run, None)
-        //     .context("failed to parse `run:` body as pwsh")
-        //     .map_err(Self::err)?;
-
-        // Ok(cursor
-        //     .captures(&self.pwsh_command_query, tree.root_node(), run.as_bytes())
-        //     .filter_map(|(mat, cap_idx)| {
-        //         let cap_node = mat.captures[*cap_idx].node;
-        //         let cap_cmd = cap_node
-        //             .utf8_text(run.as_bytes())
-        //             .expect("impossible: capture should be UTF-8 by construction");
-
-        //         NON_TP_COMMAND_PATTERN_SET
-        //             .is_match(cap_cmd)
-        //             .then(|| Subfeature::new(cap_node.start_byte(), cap_cmd))
-        //     })
-        //     .cloned()
-        //     .collect())
-    }
-
-    fn raw_trusted_publishing_command_candidates<'doc>(
-        &self,
-        run: &'doc str,
-    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
-        Ok(NON_TP_COMMAND_PATTERN_SET
-            .matches(run)
-            .into_iter()
-            .map(|idx| {
-                NON_TP_COMMAND_PATTERN_REGEXES[idx].find(run).expect(
-                    "internal error: 1-1 correspondence between RegexSet and regexes violated",
-                )
-            })
-            .map(|mat| Subfeature::new(mat.start(), mat.as_str()))
-            .collect())
-    }
-
-    fn trusted_publishing_command_candidates<'doc>(
-        &self,
-        run: &'doc str,
-        shell: &str,
-    ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
-        let normalized = utils::normalize_shell(shell);
-
-        match normalized {
-            "bash" | "sh" | "zsh" => self.bash_trusted_publishing_command_candidates(run),
-            "pwsh" | "powershell" => self.pwsh_trusted_publishing_command_candidates(run),
-            _ => self.raw_trusted_publishing_command_candidates(run),
-        }
-    }
 }
 
 #[async_trait::async_trait]
 impl Audit for UseTrustedPublishing {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
-        let bash: Language = tree_sitter_bash::LANGUAGE.into();
-        let pwsh: Language = tree_sitter_powershell::LANGUAGE.into();
-
         Ok(Self {
-            bash_command_query: utils::SpannedQuery::new(BASH_COMMAND_QUERY, &bash),
-            pwsh_command_query: utils::SpannedQuery::new(PWSH_COMMAND_QUERY, &pwsh),
-            bash,
-            pwsh,
+            bash_command_query: utils::SpannedQuery::new(BASH_COMMAND_QUERY, &utils::BASH),
+            pwsh_command_query: utils::SpannedQuery::new(PWSH_COMMAND_QUERY, &utils::PWSH),
         })
     }
 
