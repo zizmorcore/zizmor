@@ -220,28 +220,25 @@ impl Obfuscation {
                 }
             }
             crate::models::StepBodyCommon::Run { .. } => {
-                match step.shell().map(utils::normalize_shell) {
-                    Some("cmd" | "cmd.exe") => {
-                        // `shell: cmd` is basically impossible to analyze: it has no formal
-                        // grammar and has several line continuation mechanisms that stymie
-                        // naive matching. It also hasn't been the default shell on Windows
-                        // runners since 2019.
-                        findings.push(
-                            Self::finding()
-                                .confidence(Confidence::High)
-                                .severity(Severity::Low)
-                                .add_location(
-                                    step.location()
-                                        .primary()
-                                        .with_keys(["shell".into()])
-                                        .annotated("Windows CMD shell limits analysis"),
-                                )
-                                .tip("use 'shell: pwsh' or 'shell: bash' for improved analysis")
-                                .build(step)
-                                .map_err(Self::err)?,
-                        );
-                    }
-                    _ => {}
+                if let Some("cmd" | "cmd.exe") = step.shell().map(utils::normalize_shell) {
+                    // `shell: cmd` is basically impossible to analyze: it has no formal
+                    // grammar and has several line continuation mechanisms that stymie
+                    // naive matching. It also hasn't been the default shell on Windows
+                    // runners since 2019.
+                    findings.push(
+                        Self::finding()
+                            .confidence(Confidence::High)
+                            .severity(Severity::Low)
+                            .add_location(
+                                step.location()
+                                    .primary()
+                                    .with_keys(["shell".into()])
+                                    .annotated("Windows CMD shell limits analysis"),
+                            )
+                            .tip("use 'shell: pwsh' or 'shell: bash' for improved analysis")
+                            .build(step)
+                            .map_err(Self::err)?,
+                    );
                 }
             }
             _ => {}
