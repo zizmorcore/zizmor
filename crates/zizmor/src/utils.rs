@@ -628,7 +628,6 @@ pub(crate) fn normalize_shell(shell: &str) -> &str {
 pub(crate) struct SpannedQuery {
     inner: tree_sitter::Query,
     pub(crate) span_idx: u32,
-    pub(crate) destination_idx: u32,
 }
 
 impl Deref for SpannedQuery {
@@ -645,14 +644,10 @@ impl SpannedQuery {
         let span_idx = query
             .capture_index_for_name("span")
             .expect("internal error: missing @span capture");
-        let destination_idx = query
-            .capture_index_for_name("destination")
-            .expect("internal error: missing @destination capture");
 
         Self {
             inner: query,
             span_idx,
-            destination_idx,
         }
     }
 }

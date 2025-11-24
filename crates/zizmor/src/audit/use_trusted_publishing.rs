@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use std::ops::Index;
 use std::{sync::LazyLock, vec};
 
 use anyhow::Context as _;
@@ -148,8 +150,9 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
 // is that it's faster to match a simple query and then filter the results
 // with a compiled regular expression than it is to write a complex
 // query that uses tree-sitter's baked-in regex support.
-const BASH_COMMAND_QUERY: &str = "(command name: (_) argument: (_)+) @cmd";
-const PWSH_COMMAND_QUERY: &str = "(command command_name: (_) command_elements: (_)+) @cmd";
+const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) @span";
+const PWSH_COMMAND_QUERY: &str =
+    "(command command_name: (_) @cmd command_elements: (_)+ @args) @span";
 
 const NON_TP_COMMAND_PATTERNS: &[&str] = &[
     // cargo ... publish ...
@@ -197,8 +200,8 @@ pub(crate) struct UseTrustedPublishing {
     bash: Language,
     pwsh: Language,
 
-    bash_command_query: tree_sitter::Query,
-    pwsh_command_query: tree_sitter::Query,
+    bash_command_query: utils::SpannedQuery,
+    pwsh_command_query: utils::SpannedQuery,
 }
 
 audit_meta!(
@@ -208,6 +211,84 @@ audit_meta!(
 );
 
 impl UseTrustedPublishing {
+    fn query<'a>(
+        &self,
+        query: &'a utils::SpannedQuery,
+        cursor: &'a mut tree_sitter::QueryCursor,
+        tree: &'a tree_sitter::Tree,
+        source: &'a str,
+    ) -> tree_sitter::QueryMatches<'a, 'a, &'a [u8], &'a [u8]> {
+        cursor.matches(query, tree.root_node(), source.as_bytes())
+    }
+
+    /// Determine whether the given command and arguments correspond to a publishing
+    /// command, e.g., `cargo publish`, `twine upload`, etc.
+    fn is_publish_command<'a>(&self, cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
+        // NOTE(ww): The implementation below is frustratingly manual.
+        // Ideally we'd use clap or similar to define an (imprecise) model of what we're
+        // looking for, but as of 2025-11 none of the popular Rust command-line parsing
+        // libraries do a great job of handling unknown commands and arguments (which we want,
+        // because we don't want to have to define a perfectly accurate model for all
+        // of the commands we're trying to match).
+        let mut args = args;
+
+        match cmd {
+            "cargo" => {
+                let args = args.collect::<HashSet<_>>();
+
+                // Looking for `cargo ... publish` without `--dry-run` or `-n`.
+                args.contains("publish") && !args.contains("--dry-run") && !args.contains("-n")
+            }
+            "uv" => {
+                let args = args.collect::<HashSet<_>>();
+
+                // Looking for `uv ... publish` without `--dry-run`.
+                args.contains("publish") && !args.contains("--dry-run")
+            }
+            "hatch" | "pdm" => {
+                // Looking for `hatch ... publish` or `pdm ... publish`.
+                args.any(|arg| arg == "publish")
+            }
+            "twine" => {
+                // Looking for `twine ... upload`.
+                args.any(|arg| arg == "upload")
+            }
+            "gem" => {
+                // Looking for `gem ... push`.
+                args.any(|arg| arg == "push")
+            }
+            "npm" => {
+                let args = args.collect::<HashSet<_>>();
+
+                // TODO: Figure out `npm run ... publish` patterns.
+
+                // Looking for `npm ... publish` without `--dry-run`.
+                args.contains("publish") && !args.contains("--dry-run")
+            }
+            "yarn" => {
+                let args = args.collect::<HashSet<_>>();
+
+                // TODO: Figure out `yarn run ... publish` patterns.
+                // TODO: Figure out `yarn ... publish` patterns for lerna/npm workspaces.
+
+                // Looking for `yarn ... npm publish` without `--dry-run` or `-n`.
+                args.contains("npm")
+                    && args.contains("publish")
+                    && !args.contains("--dry-run")
+                    && !args.contains("-n")
+            }
+            "pnpm" => {
+                let args = args.collect::<HashSet<_>>();
+
+                // TODO: Figure out `pnpm run ... publish` patterns.
+
+                // Looking for `pnpm ... publish` without `--dry-run`.
+                args.contains("publish") && !args.contains("--dry-run")
+            }
+            _ => false,
+        }
+    }
+
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
@@ -256,49 +337,86 @@ impl UseTrustedPublishing {
             .context("failed to parse `run:` body as bash")
             .map_err(Self::err)?;
 
-        Ok(cursor
-            .captures(&self.bash_command_query, tree.root_node(), run.as_bytes())
-            .filter_map(|(mat, cap_idx)| {
-                let cap_node = mat.captures[*cap_idx].node;
-                let cap_cmd = cap_node
+        let matches = self.query(&self.bash_command_query, &mut cursor, &tree, run);
+        let cmd = self
+            .bash_command_query
+            .capture_index_for_name("cmd")
+            .expect("internal error: missing capture index for 'cmd'");
+        let args = self
+            .bash_command_query
+            .capture_index_for_name("args")
+            .expect("internal error: missing capture index for 'args'");
+
+        let mut subfeatures = vec![];
+        matches.for_each(|mat| {
+            let cmd = {
+                let cap = mat
+                    .captures
+                    .iter()
+                    .find(|cap| cap.index == cmd)
+                    .expect("internal error: expected capture for cmd");
+                cap.node
+                    .utf8_text(run.as_bytes())
+                    .expect("impossible: capture should be UTF-8 by construction")
+            };
+
+            let args = mat
+                .captures
+                .iter()
+                .filter(|cap| cap.index == args)
+                .map(|cap| {
+                    cap.node
+                        .utf8_text(run.as_bytes())
+                        .expect("impossible: capture should be UTF-8 by construction")
+                });
+
+            if self.is_publish_command(cmd, args) {
+                let span = mat
+                    .captures
+                    .iter()
+                    .find(|cap| cap.index == self.bash_command_query.span_idx)
+                    .expect("internal error: expected capture for span");
+
+                let span_contents = span
+                    .node
                     .utf8_text(run.as_bytes())
                     .expect("impossible: capture should be UTF-8 by construction");
 
-                NON_TP_COMMAND_PATTERN_SET
-                    .is_match(cap_cmd)
-                    .then(|| Subfeature::new(cap_node.start_byte(), cap_cmd))
-            })
-            .cloned()
-            .collect())
+                subfeatures.push(Subfeature::new(span.node.start_byte(), span_contents));
+            }
+        });
+
+        Ok(subfeatures)
     }
 
     fn pwsh_trusted_publishing_command_candidates<'doc>(
         &self,
         run: &'doc str,
     ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
-        let mut parser = tree_sitter::Parser::new();
-        parser.set_language(&self.pwsh).map_err(Self::err)?;
+        Ok(vec![])
+        // let mut parser = tree_sitter::Parser::new();
+        // parser.set_language(&self.pwsh).map_err(Self::err)?;
 
-        let mut cursor = tree_sitter::QueryCursor::new();
-        let tree = parser
-            .parse(run, None)
-            .context("failed to parse `run:` body as pwsh")
-            .map_err(Self::err)?;
+        // let mut cursor = tree_sitter::QueryCursor::new();
+        // let tree = parser
+        //     .parse(run, None)
+        //     .context("failed to parse `run:` body as pwsh")
+        //     .map_err(Self::err)?;
 
-        Ok(cursor
-            .captures(&self.pwsh_command_query, tree.root_node(), run.as_bytes())
-            .filter_map(|(mat, cap_idx)| {
-                let cap_node = mat.captures[*cap_idx].node;
-                let cap_cmd = cap_node
-                    .utf8_text(run.as_bytes())
-                    .expect("impossible: capture should be UTF-8 by construction");
+        // Ok(cursor
+        //     .captures(&self.pwsh_command_query, tree.root_node(), run.as_bytes())
+        //     .filter_map(|(mat, cap_idx)| {
+        //         let cap_node = mat.captures[*cap_idx].node;
+        //         let cap_cmd = cap_node
+        //             .utf8_text(run.as_bytes())
+        //             .expect("impossible: capture should be UTF-8 by construction");
 
-                NON_TP_COMMAND_PATTERN_SET
-                    .is_match(cap_cmd)
-                    .then(|| Subfeature::new(cap_node.start_byte(), cap_cmd))
-            })
-            .cloned()
-            .collect())
+        //         NON_TP_COMMAND_PATTERN_SET
+        //             .is_match(cap_cmd)
+        //             .then(|| Subfeature::new(cap_node.start_byte(), cap_cmd))
+        //     })
+        //     .cloned()
+        //     .collect())
     }
 
     fn raw_trusted_publishing_command_candidates<'doc>(
@@ -339,10 +457,8 @@ impl Audit for UseTrustedPublishing {
         let pwsh: Language = tree_sitter_powershell::LANGUAGE.into();
 
         Ok(Self {
-            bash_command_query: tree_sitter::Query::new(&bash, BASH_COMMAND_QUERY)
-                .map_err(|e| AuditLoadError::Fail(e.into()))?,
-            pwsh_command_query: tree_sitter::Query::new(&pwsh, PWSH_COMMAND_QUERY)
-                .map_err(|e| AuditLoadError::Fail(e.into()))?,
+            bash_command_query: utils::SpannedQuery::new(BASH_COMMAND_QUERY, &bash),
+            pwsh_command_query: utils::SpannedQuery::new(PWSH_COMMAND_QUERY, &pwsh),
             bash,
             pwsh,
         })
