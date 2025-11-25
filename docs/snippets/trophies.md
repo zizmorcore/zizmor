@@ -111,6 +111,14 @@
         - autotag-dev/autotag#142
 
 
+-   ![](https://github.com/ben-manes.png?size=40){ width="40" loading=lazy align=left } ben-manes
+
+    ---
+
+    ??? example "Examples"
+        - ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
+
+
 -   ![](https://github.com/BerkeleyLearnVerify.png?size=40){ width="40" loading=lazy align=left } BerkeleyLearnVerify
 
     ---
@@ -505,6 +513,7 @@
     ---
 
     ??? example "Examples"
+        - google/zerocop#2810
         - google/zx#1067
         - google/zx#1126
 
