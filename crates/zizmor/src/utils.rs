@@ -44,6 +44,12 @@ pub(crate) static DEPENDABOT_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
     .expect("internal error: failed to load dependabot schema")
 });
 
+pub(crate) static BASH: LazyLock<tree_sitter::Language> =
+    LazyLock::new(|| tree_sitter_bash::LANGUAGE.into());
+
+pub(crate) static PWSH: LazyLock<tree_sitter::Language> =
+    LazyLock::new(|| tree_sitter_powershell::LANGUAGE.into());
+
 macro_rules! pat {
     ($pat:expr) => {
         ContextPattern::new($pat)
@@ -628,7 +634,6 @@ pub(crate) fn normalize_shell(shell: &str) -> &str {
 pub(crate) struct SpannedQuery {
     inner: tree_sitter::Query,
     pub(crate) span_idx: u32,
-    pub(crate) destination_idx: u32,
 }
 
 impl Deref for SpannedQuery {
@@ -639,20 +644,32 @@ impl Deref for SpannedQuery {
     }
 }
 
+pub(crate) fn bash_parser() -> tree_sitter::Parser {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&BASH)
+        .expect("internal error: failed to set bash language");
+    parser
+}
+
+pub(crate) fn pwsh_parser() -> tree_sitter::Parser {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&PWSH)
+        .expect("internal error: failed to set powershell language");
+    parser
+}
+
 impl SpannedQuery {
     pub(crate) fn new(query: &'static str, language: &tree_sitter::Language) -> Self {
         let query = tree_sitter::Query::new(language, query).expect("malformed query");
         let span_idx = query
             .capture_index_for_name("span")
             .expect("internal error: missing @span capture");
-        let destination_idx = query
-            .capture_index_for_name("destination")
-            .expect("internal error: missing @destination capture");
 
         Self {
             inner: query,
             span_idx,
-            destination_idx,
         }
     }
 }

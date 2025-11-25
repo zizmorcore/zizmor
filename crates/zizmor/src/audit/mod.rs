@@ -185,10 +185,6 @@ pub(crate) enum AuditLoadError {
     /// be skipped, rather than failing the entire run.
     #[error("{0}")]
     Skip(anyhow::Error),
-    /// The audit's initialization failed in a way that suggests that the
-    /// entire run should be aborted.
-    #[error("{0}")]
-    Fail(anyhow::Error),
 }
 
 #[derive(Error, Debug)]

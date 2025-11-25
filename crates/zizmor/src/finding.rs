@@ -126,6 +126,8 @@ pub(crate) struct Finding<'doc> {
     /// and carries metadata about how an output layer might choose to
     /// present it.
     pub(crate) locations: Vec<Location<'doc>>,
+    /// A tip or recommendation associated with this finding.
+    pub(crate) tip: Option<String>,
     /// Whether this finding is ignored, either via inline comments or
     /// through a user's configuration.
     pub(crate) ignored: bool,
@@ -176,6 +178,7 @@ pub(crate) struct FindingBuilder<'doc> {
     persona: Persona,
     raw_locations: Vec<Location<'doc>>,
     locations: Vec<SymbolicLocation<'doc>>,
+    tip: Option<String>,
     fixes: Vec<Fix<'doc>>,
 }
 
@@ -190,6 +193,7 @@ impl<'doc> FindingBuilder<'doc> {
             persona: Default::default(),
             raw_locations: vec![],
             locations: vec![],
+            tip: None,
             fixes: vec![],
         }
     }
@@ -216,6 +220,11 @@ impl<'doc> FindingBuilder<'doc> {
 
     pub(crate) fn add_location(mut self, location: SymbolicLocation<'doc>) -> Self {
         self.locations.push(location);
+        self
+    }
+
+    pub(crate) fn tip(mut self, tip: impl Into<String>) -> Self {
+        self.tip = Some(tip.into());
         self
     }
 
@@ -256,6 +265,7 @@ impl<'doc> FindingBuilder<'doc> {
                 persona: self.persona,
             },
             locations,
+            tip: self.tip,
             ignored: should_ignore,
             fixes: self.fixes,
         })
