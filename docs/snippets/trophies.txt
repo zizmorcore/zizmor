@@ -32,6 +32,7 @@ astronomer/astronomer-cosmos#1870
 astronomer/dag-factory#482
 astropy/astropy#17315
 autotag-dev/autotag#142
+ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
 BerkeleyLearnVerify/Scenic#320
 bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
@@ -104,6 +105,7 @@ grafana/pyroscope#4157
 grafana/rollout-operator#218
 grafana/synthetic-monitoring-app#1126
 grafana/tanka#1441
+google/zerocop#2810
 google/zx#1067
 google/zx#1126
 guacsec/guac#2276
