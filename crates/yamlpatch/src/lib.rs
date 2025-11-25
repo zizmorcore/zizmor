@@ -860,84 +860,35 @@ fn handle_block_sequence_append(
     let insertion_point = find_content_end(feature, doc);
     let bias = feature.location.byte_span.0;
     let relative_insertion_point = insertion_point - bias;
-    let has_trailing_newline = relative_insertion_point > 0
-        && feature_content.as_bytes()[relative_insertion_point - 1] == b'\n';
 
-    let new_item = if let serde_yaml::Value::Mapping(mapping) = value {
-        if mapping.is_empty() {
-            if has_trailing_newline {
-                format!("{indent}- {{}}")
-            } else {
-                format!("\n{indent}- {{}}")
-            }
-        } else {
-            let mut result = if has_trailing_newline {
-                format!("{indent}-")
-            } else {
-                format!("\n{indent}-")
-            };
-
-            for (i, (k, v)) in mapping.iter().enumerate() {
-                if let serde_yaml::Value::String(key_str) = k {
-                    if let serde_yaml::Value::Mapping(nested_mapping) = v {
-                        if i == 0 {
-                            result.push_str(&format!(" {key_str}:"));
-                        } else {
-                            result.push_str(&format!("\n{indent}  {key_str}:"));
-                        }
-
-                        for (nested_k, nested_v) in nested_mapping.iter() {
-                            if let serde_yaml::Value::String(nested_key_str) = nested_k {
-                                let nested_value_yaml = serialize_yaml_value(nested_v)?;
-                                result.push_str(&format!(
-                                    "\n{indent}    {nested_key_str}: {nested_value_yaml}"
-                                ));
-                            } else {
-                                return Err(Error::InvalidOperation(
-                                    "mapping keys must be strings".to_string(),
-                                ));
-                            }
-                        }
-                    } else {
-                        let value_yaml = serialize_yaml_value(v)?;
-
-                        if i == 0 {
-                            result.push_str(&format!(" {key_str}: {value_yaml}"));
-                        } else {
-                            result.push_str(&format!("\n{indent}  {key_str}: {value_yaml}"));
-                        }
-                    }
-                } else {
-                    return Err(Error::InvalidOperation(
-                        "mapping keys must be strings".to_string(),
-                    ));
-                }
-            }
-            result
-        }
-    } else if value_str.contains('\n') {
-        let mut result = if has_trailing_newline {
-            format!("{indent}- ")
-        } else {
-            format!("\n{indent}- ")
-        };
-        let lines: Vec<&str> = value_str.lines().collect();
-        for (i, line) in lines.iter().enumerate() {
-            if i == 0 {
-                result.push_str(line);
-            } else {
-                result.push('\n');
-                result.push_str(&indent);
-                result.push_str("  ");
-                result.push_str(line.trim_start());
-            }
-        }
-        result
-    } else if has_trailing_newline {
-        format!("{indent}- {value_str}")
+    // Check if a newline is needed before adding the new item.
+    let needs_leading_newline = if relative_insertion_point > 0 {
+        feature_content.chars().nth(relative_insertion_point - 1) != Some('\n')
     } else {
-        format!("\n{indent}- {value_str}")
+        !feature_content.is_empty()
     };
+
+    let mut new_item = String::new();
+    if needs_leading_newline {
+        new_item.push('\n');
+    }
+
+    let mut lines = value_str.lines();
+    if let Some(first_line) = lines.next() {
+        // The first line of the item is placed next to the dash.
+        new_item.push_str(&format!("{}- {}", indent, first_line));
+
+        // Subsequent lines are indented two spaces deeper than the dash.
+        let item_content_indent = format!("{}  ", indent);
+        for line in lines {
+            new_item.push('\n');
+            new_item.push_str(&item_content_indent);
+            new_item.push_str(line);
+        }
+    } else {
+        // This handles cases like an empty string value.
+        new_item.push_str(&format!("{}- {}", indent, value_str));
+    }
 
     let mut updated_feature = feature_content.to_string();
     updated_feature.insert_str(relative_insertion_point, &new_item);
