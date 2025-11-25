@@ -855,13 +855,7 @@ fn handle_block_sequence_append(
 ) -> Result<String, Error> {
     let feature_content = doc.extract(feature);
 
-    let indent = {
-        let line_range = line_span(doc, feature.location.byte_span.0);
-        let line_content = &doc.source()[line_range].trim_end();
-        let dash_pos = line_content.bytes().position(|b| b == b'-').unwrap_or(0);
-        " ".repeat(dash_pos)
-    };
-
+    let indent = extract_leading_whitespace(doc, feature);
     let value_str = serialize_yaml_value(value)?;
     let insertion_point = find_content_end(feature, doc);
     let bias = feature.location.byte_span.0;
