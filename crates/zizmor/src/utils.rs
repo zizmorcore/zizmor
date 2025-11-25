@@ -10,10 +10,7 @@ use jsonschema::{
     output::{ErrorDescription, OutputUnit},
     validator_for,
 };
-use std::{
-    collections::VecDeque,
-    ops::{Deref, Range},
-};
+use std::ops::{Deref, Range};
 use std::{fmt::Write, sync::LazyLock};
 
 use crate::{audit::AuditInput, models::AsDocument, registry::input::CollectionError};
@@ -310,7 +307,7 @@ pub(crate) static DEFAULT_ENVIRONMENT_VARIABLES: &[(
     ),
 ];
 
-fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Error {
+fn parse_validation_errors(errors: Vec<OutputUnit<ErrorDescription>>) -> Error {
     let mut message = String::new();
 
     for error in errors {
