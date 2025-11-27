@@ -2945,3 +2945,32 @@ jobs:
                 uses: codecov/codecov-action@v3
         "#);
 }
+
+#[test]
+fn test_append_nested_sequence() {
+    let original = r#"
+foo:
+  - abc
+"#;
+
+    let mut nested_sequence = serde_yaml::Sequence::new();
+    nested_sequence.push(serde_yaml::Value::String("def".to_string()));
+    nested_sequence.push(serde_yaml::Value::String("ghi".to_string()));
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::Append {
+            value: serde_yaml::Value::Sequence(nested_sequence),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r"
+        foo:
+          - abc
+          - - def
+            - ghi
+        ");
+}
