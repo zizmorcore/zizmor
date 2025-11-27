@@ -2,6 +2,11 @@ use std::borrow::Cow;
 use yamlpatch::*;
 use yamlpath::route;
 
+/// Format the patch with fencing to ensure that interior whitespace is preserved.
+fn format_patch(patch: &str) -> String {
+    format!("--- PATCH ---\n{patch}\n--- END PATCH ---")
+}
+
 #[test]
 fn test_serialize_flow() {
     let doc = r#"
@@ -26,7 +31,11 @@ flow: [1, 2, 3, {more: 456, evenmore: "abc\ndef"}]
     // serialized is valid YAML
     assert!(serde_yaml::from_str::<serde_yaml::Value>(&serialized).is_ok());
 
-    insta::assert_snapshot!(serialized, @r#"{ foo: { bar: , baz: qux, abc: [def, ghi, null, null, "abcd\nefgh\n"] }, flow: [1, 2, 3, { more: 456, evenmore: "abc\ndef" }] }"#);
+    insta::assert_snapshot!(format_patch(&serialized), @r#"
+    --- PATCH ---
+    { foo: { bar: , baz: qux, abc: [def, ghi, null, null, "abcd\nefgh\n"] }, flow: [1, 2, 3, { more: 456, evenmore: "abc\ndef" }] }
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -232,10 +241,14 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        foo:
-          bar: 'echo "foo: ${FOO}"'
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+
+    foo:
+      bar: 'echo "foo: ${FOO}"'
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -261,13 +274,17 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        foo:
-          bar: |
-            echo "foo: ${FOO}"
-            echo "bar: ${{ bar }}"
-            echo "foo: ${{ foo }}"
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+
+    foo:
+      bar: |
+        echo "foo: ${FOO}"
+        echo "bar: ${{ bar }}"
+        echo "foo: ${{ foo }}"
+
+    --- END PATCH ---
+    "#);
 
     // Now test with after set to skip the first occurrence
     let operations = vec![Patch {
@@ -283,13 +300,17 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        foo:
-          bar: |
-            echo "foo: ${{ foo }}"
-            echo "bar: ${{ bar }}"
-            echo "foo: ${FOO}"
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+
+    foo:
+      bar: |
+        echo "foo: ${{ foo }}"
+        echo "bar: ${{ bar }}"
+        echo "foo: ${FOO}"
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -325,15 +346,20 @@ jobs:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - run: |
-                  echo "foo: ${FOO}"
-                  echo "bar: ${BAR}"
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - run: |
+              echo "foo: ${FOO}"
+              echo "bar: ${BAR}"
+            
+
+    --- END PATCH ---
+    "#);
 }
 
 /// `Operation::ReplaceComment` should replace the comment
@@ -358,11 +384,15 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        foo:
-          bar: baz # Updated comment
-          abc: def # Another comment
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo:
+      bar: baz # Updated comment
+      abc: def # Another comment
+
+    --- END PATCH ---
+    ");
 }
 
 /// `Operation::ReplaceComment` should fdo nothing if there is no comment
@@ -386,11 +416,15 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        foo:
-            bar: baz
-            abc: def
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo:
+        bar: baz
+        abc: def
+
+    --- END PATCH ---
+    ");
 }
 
 /// `Operation::ReplaceComment` should fail if there are multiple comments
@@ -433,10 +467,14 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        foo:
-          bar: abc
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo:
+      bar: abc
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -454,7 +492,14 @@ fn test_replace_empty_flow_value() {
 
     let result = apply_yaml_patches(&document, &patches).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"foo: { bar: abc }");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+        foo: { bar: abc }
+        
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -472,7 +517,14 @@ fn test_replace_empty_flow_value_no_colon() {
 
     let result = apply_yaml_patches(&document, &patches).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"foo: { bar: abc }");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+            foo: { bar: abc }
+            
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -494,13 +546,17 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        foo:
-          bar:
-            baz: |
-              New content.
-              More new content.
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo:
+      bar:
+        baz: |
+          New content.
+          More new content.
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -531,21 +587,25 @@ jobs:
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
     // Preserves all comments, but changes the value of `contents`
-    insta::assert_snapshot!(result.source(), @r"
-        # This is a workflow file
-        name: CI
-        on: push
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
 
-        permissions: # This configures permissions
-          contents: write  # Only read access
-          actions: write  # Write access for actions
+    # This is a workflow file
+    name: CI
+    on: push
 
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - uses: actions/checkout@v4
-        ");
+    permissions: # This configures permissions
+      contents: write  # Only read access
+      actions: write  # Write access for actions
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v4
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -596,12 +656,16 @@ permissions:
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
     // Preserves original content, adds new key while maintaining indentation
-    insta::assert_snapshot!(result.source(), @r"
-        permissions:
-          contents: read
-          actions: write
-          issues: read
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    permissions:
+      contents: read
+      actions: write
+      issues: read
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -621,7 +685,13 @@ foo: { bar: abc }
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @"foo: { bar: abc, baz: qux }");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo: { bar: abc, baz: qux }
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -643,11 +713,15 @@ permissions:
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
     // Preserves other content, removes the target line
-    insta::assert_snapshot!(result.source(), @r"
-        permissions:
-          contents: read  # Keep this comment
-          issues: read
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    permissions:
+      contents: read  # Keep this comment
+      issues: read
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -686,22 +760,26 @@ jobs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // All comments preserved, all changes applied
-    insta::assert_snapshot!(result.source(), @r"
-        # Main configuration
-        name: Test Workflow
-        on:
-          push: # Trigger on push
-            branches: [main]
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
 
-        permissions:  # Security settings
-          contents: write
-          actions: read
-          issues: write
+    # Main configuration
+    name: Test Workflow
+    on:
+      push: # Trigger on push
+        branches: [main]
 
-        jobs:
-          build: # Main job
-            runs-on: ubuntu-latest
-        ");
+    permissions:  # Security settings
+      contents: write
+      actions: read
+      issues: write
+
+    jobs:
+      build: # Main job
+        runs-on: ubuntu-latest
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -889,24 +967,28 @@ jobs:
     )
     .unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        # GitHub Actions Workflow
-        name: CI
-        on: push
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
 
-        # Security permissions
-        permissions: # This section defines permissions
-          contents: write  # Only read access to repository contents
-          actions: write  # Write access for GitHub Actions
-          issues: read    # Read access to issues
-          packages: read
+    # GitHub Actions Workflow
+    name: CI
+    on: push
 
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - uses: actions/checkout@v4
-        ")
+    # Security permissions
+    permissions: # This section defines permissions
+      contents: write  # Only read access to repository contents
+      actions: write  # Write access for GitHub Actions
+      issues: read    # Read access to issues
+      packages: read
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v4
+
+    --- END PATCH ---
+    ")
 }
 
 #[test]
@@ -930,13 +1012,16 @@ jobs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // Empty mapping should be formatted inline
-    insta::assert_snapshot!(result.source(), @r"
-        name: Test
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            permissions: {}
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    name: Test
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        permissions: {}
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -965,15 +1050,18 @@ jobs:
     )
     .unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        name: Test
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - run: echo "test"
-            permissions: {}
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    name: Test
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - run: echo "test"
+        permissions: {}
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1057,17 +1145,20 @@ fn test_step_insertion_with_comments() {
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // The with section should be added to the first step correctly, not mixed with comments
-    insta::assert_snapshot!(result.source(), @r#"
-        steps:
-          - name: Checkout
-            uses: actions/checkout@v4
-            with:
-              persist-credentials: false
-            # This is a comment after the step
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+        # This is a comment after the step
 
-          - name: Build
-            run: echo "build"
-        "#);
+      - name: Build
+        run: echo "build"
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1168,18 +1259,21 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        # GitHub Actions Workflow
-        name: CI
-        on: push
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    # GitHub Actions Workflow
+    name: CI
+    on: push
 
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - uses: actions/checkout@v4
-        permissions: {}
-        ");
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v4
+    permissions: {}
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -1203,14 +1297,17 @@ jobs:
     assert!(result.is_ok());
 
     let result = result.unwrap();
-    insta::assert_snapshot!(result.source(), @r"
-        name: Test
-        on: push
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-        permissions: {}
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    name: Test
+    on: push
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+    permissions: {}
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -1242,18 +1339,21 @@ fn test_step_content_end_detection() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        steps:
-          - name: Step1
-            uses: actions/checkout@v4
-            with:
-              persist-credentials: false
-            # Comment after step1
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    steps:
+      - name: Step1
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+        # Comment after step1
 
-          # Comment before step2
-          - name: Step2
-            run: echo "test"
-        "#);
+      # Comment before step2
+      - name: Step2
+        run: echo "test"
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1279,16 +1379,19 @@ fn test_merge_into_new_key() {
 
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                run: echo "hello"
-                env:
-                  TEST_VAR: test_value
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Test step
+            run: echo "hello"
+            env:
+              TEST_VAR: test_value
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1318,17 +1421,20 @@ fn test_merge_into_existing_key() {
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // Should merge the new mapping with the existing one
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                run: echo "hello"
-                env:
-                  EXISTING_VAR: existing_value
-                  NEW_VAR: new_value
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Test step
+            run: echo "hello"
+            env:
+              EXISTING_VAR: existing_value
+              NEW_VAR: new_value
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1360,18 +1466,21 @@ fn test_merge_into_prevents_duplicate_keys() {
 
     // Should only have one env: key
     assert_eq!(result.source().matches("env:").count(), 1);
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                run: echo "hello"
-                env:
-                  EXISTING_VAR: existing_value
-                  ANOTHER_VAR: another_value
-                  NEW_VAR: new_value
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Test step
+            run: echo "hello"
+            env:
+              EXISTING_VAR: existing_value
+              ANOTHER_VAR: another_value
+              NEW_VAR: new_value
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1456,17 +1565,20 @@ fn test_debug_indentation_issue() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          build:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                run: |
-                  echo "line 1"
-                  echo "line 2"
-                shell: bash
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Test step
+            run: |
+              echo "line 1"
+              echo "line 2"
+            shell: bash
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1560,23 +1672,26 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        name: Test
-        on: push
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    name: Test
+    on: push
+    permissions: {}
+    jobs:
+      test:
+        runs-on: ubuntu-latest
         permissions: {}
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            permissions: {}
-            steps:
-              - name: Multiline step with env
-                run: |
-                  echo "${{ steps.meta.outputs.tags }}" | xargs -I {} echo {}
-                env:
-                  IDENTITY: ${{ secrets.IDENTITY }}
-                  STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}
-                shell: bash
-        "#);
+        steps:
+          - name: Multiline step with env
+            run: |
+              echo "${{ steps.meta.outputs.tags }}" | xargs -I {} echo {}
+            env:
+              IDENTITY: ${{ secrets.IDENTITY }}
+              STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}
+            shell: bash
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1611,19 +1726,22 @@ fn test_merge_into_complex_env_mapping() {
 
     // Should only have one env: key
     assert_eq!(result.source().matches("env:").count(), 1);
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                run: echo "hello"
-                env:
-                  IDENTITY: ${{ secrets.IDENTITY }}
-                  OIDC_ISSUER_URL: ${{ secrets.OIDC_ISSUER_URL }}
-                  STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}
-                shell: bash
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Test step
+            run: echo "hello"
+            env:
+              IDENTITY: ${{ secrets.IDENTITY }}
+              OIDC_ISSUER_URL: ${{ secrets.OIDC_ISSUER_URL }}
+              STEPS_META_OUTPUTS_TAGS: ${{ steps.meta.outputs.tags }}
+            shell: bash
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1653,18 +1771,21 @@ fn test_merge_into_reuses_existing_key_no_duplicates() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                run: echo "hello"
-                env:
-                  EXISTING_VAR: existing_value
-                  ANOTHER_VAR: another_value
-                  NEW_VAR: new_value
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Test step
+            run: echo "hello"
+            env:
+              EXISTING_VAR: existing_value
+              ANOTHER_VAR: another_value
+              NEW_VAR: new_value
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1708,19 +1829,22 @@ fn test_merge_into_with_mapping_merge_behavior() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                run: echo "hello"
-                env:
-                  EXISTING_VAR: existing_value
-                  KEEP_THIS: keep_value
-                  NEW_VAR_1: new_value_1
-                  NEW_VAR_2: new_value_2
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Test step
+            run: echo "hello"
+            env:
+              EXISTING_VAR: existing_value
+              KEEP_THIS: keep_value
+              NEW_VAR_1: new_value_1
+              NEW_VAR_2: new_value_2
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1770,34 +1894,38 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        name: CI
-        on:
-          push:
-            branches: [main]   # Flow sequence inside block mapping
-          pull_request: { branches: [main, develop], types: [opened, synchronize] }  # Flow mapping with flow sequence
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
 
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            strategy:
-              matrix:
-                include:
-                  - { os: ubuntu-latest, node: 18 }  # Flow mapping in block list
-                  - os: macos-latest                 # Block mapping in block list
-                    node: 20
-                    extra_flags: ["--verbose"]       # Flow sequence in block mapping
-                  - { os: windows-latest, node: 16, extra_flags: ["--silent", "--prod"] }  # Mixed flow
-            steps:
-              - name: Checkout
-                uses: actions/checkout@v4
-                with: { fetch-depth: 0 }           # Flow mapping in block context
-              - name: Setup Node
-                uses: actions/setup-node@v4
-                with:
-                  node-version: ${{ matrix.node }}
-                  cache: npm
-        "#);
+    name: CI
+    on:
+      push:
+        branches: [main]   # Flow sequence inside block mapping
+      pull_request: { branches: [main, develop], types: [opened, synchronize] }  # Flow mapping with flow sequence
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+            include:
+              - { os: ubuntu-latest, node: 18 }  # Flow mapping in block list
+              - os: macos-latest                 # Block mapping in block list
+                node: 20
+                extra_flags: ["--verbose"]       # Flow sequence in block mapping
+              - { os: windows-latest, node: 16, extra_flags: ["--silent", "--prod"] }  # Mixed flow
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+            with: { fetch-depth: 0 }           # Flow mapping in block context
+          - name: Setup Node
+            uses: actions/setup-node@v4
+            with:
+              node-version: ${{ matrix.node }}
+              cache: npm
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -1819,14 +1947,18 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Test step
-                with: { timeout: 600 }
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Test step
+            with: { timeout: 600 }
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -1850,14 +1982,18 @@ foo:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        foo:
-          bar:
-            baz: abc # comment
-            qux: xyz
-            # another comment
-        # some nonsense here
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo:
+      bar:
+        baz: abc # comment
+        qux: xyz
+        # another comment
+    # some nonsense here
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -1882,15 +2018,19 @@ matrix:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        matrix:
-          include:
-            - os: ubuntu-latest
-              node: 18
-              arch: x64
-            - os: macos-latest
-              node: 20
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    matrix:
+      include:
+        - os: ubuntu-latest
+          node: 18
+          arch: x64
+        - os: macos-latest
+          node: 20
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -1915,15 +2055,19 @@ matrix:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        matrix:
-           include:
-              -   os: ubuntu-latest
-                  node: 18
-                  arch: x64
-              -   os: macos-latest
-                  node: 20
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    matrix:
+       include:
+          -   os: ubuntu-latest
+              node: 18
+              arch: x64
+          -   os: macos-latest
+              node: 20
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -1947,13 +2091,17 @@ strategy:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        strategy:
-          matrix:
-            include:
-              - { os: ubuntu-latest, node: 18, arch: x64 }
-              - { os: macos-latest, node: 20 }
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 18, arch: x64 }
+          - { os: macos-latest, node: 20 }
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -1976,12 +2124,16 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            env: { NODE_ENV: production, DEBUG: true, LOG_LEVEL: info }
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        env: { NODE_ENV: production, DEBUG: true, LOG_LEVEL: info }
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -2005,12 +2157,16 @@ jobs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // The trailing comment should be preserved after the mapping
-    insta::assert_snapshot!(result.source(), @r"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            env: { NODE_ENV: production, DEBUG: true, LOG_LEVEL: info } # trailing comment
-        ");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        env: { NODE_ENV: production, DEBUG: true, LOG_LEVEL: info } # trailing comment
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -2037,7 +2193,7 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2073,7 +2229,7 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2106,12 +2262,16 @@ permissions:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        permissions:
-          contents: read
-          actions: { read: true, write: false, delete: true }  # Flow mapping in block context
-          packages: write
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    permissions:
+      contents: read
+      actions: { read: true, write: false, delete: true }  # Flow mapping in block context
+      packages: write
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -2135,14 +2295,18 @@ on:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        on:
-          push:
-            branches: [main, develop]
-            tags: ["v*"]
-          schedule:
-            - cron: "0 0 * * *"
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+
+    on:
+      push:
+        branches: [main, develop]
+        tags: ["v*"]
+      schedule:
+        - cron: "0 0 * * *"
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -2167,14 +2331,18 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            env: { NODE_ENV: test }
-            steps:
-              - run: echo "test"
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        env: { NODE_ENV: test }
+        steps:
+          - run: echo "test"
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -2213,18 +2381,21 @@ fn test_merge_into_preserves_comments_in_env_block() {
             .contains("# An existing comment about this wacky env-var")
     );
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Needs a redirection
-                run: ${{ inputs.script }}
-                env:
-                  # An existing comment about this wacky env-var
-                  WACKY: "It's just a wacky world"
-                  INPUTS_SCRIPT: ${{ inputs.script }}
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Needs a redirection
+            run: ${{ inputs.script }}
+            env:
+              # An existing comment about this wacky env-var
+              WACKY: "It's just a wacky world"
+              INPUTS_SCRIPT: ${{ inputs.script }}
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -2259,15 +2430,19 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Step1
-                uses: actions/checkout@v4
-                with: { persist-credentials: false, another-key: some-value }  # Flow mapping in block context
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Step1
+            uses: actions/checkout@v4
+            with: { persist-credentials: false, another-key: some-value }  # Flow mapping in block context
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -2298,7 +2473,7 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
         jobs:
           test:
             runs-on: ubuntu-latest
@@ -2343,19 +2518,22 @@ updates:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        version: 2
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    version: 2
 
-        updates:
-          - package-ecosystem: pip
-            directory: /
-            schedule:
-              interval: daily
-            labels:
-              - A-deps
-            cooldown:
-              default-days: 7
-        "#);
+    updates:
+      - package-ecosystem: pip
+        directory: /
+        schedule:
+          interval: daily
+        labels:
+          - A-deps
+        cooldown:
+          default-days: 7
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -2373,10 +2551,13 @@ version: 1.0
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        name: Test
-        version: '2.0'
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    name: Test
+    version: '2.0'
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -2396,10 +2577,13 @@ version: 1.0  # old version
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        name: Test
-        version: 1.0  # updated version
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    name: Test
+    version: 1.0  # updated version
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -2420,10 +2604,13 @@ fn test_preserve_trailing_newline_rewrite_fragment_at_end() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        run: |
-          echo "Hello ${NAME}"
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    run: |
+      echo "Hello ${NAME}"
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -2444,11 +2631,14 @@ key: value
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        name: Test
-        key: value
-        newkey: newvalue
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    name: Test
+    key: value
+    newkey: newvalue
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -2469,13 +2659,16 @@ fn test_preserve_trailing_newline_replace_nested_at_end() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            env:
-              VAR: new
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        env:
+          VAR: new
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]
@@ -2499,14 +2692,17 @@ fn test_preserve_trailing_newline_add_to_nested_mapping_at_end() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - run: echo "test"
-                name: Test step
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - run: echo "test"
+            name: Test step
+
+    --- END PATCH ---
+    "#);
 }
 
 #[test]
@@ -2525,9 +2721,16 @@ fn test_preserve_trailing_newline_replace_multiline_at_end() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        description: New description
-        "#);
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    description: New description
+
+    --- END PATCH ---
+    ");
+
+    // NOTE: Ensure that the trailing newline is preserved after replacement;
+    // insta's snapshots are trimmed, so the above isn't a strong guarantee.
+    assert!(result.source().ends_with('\n'));
 }
 
 #[test]
@@ -2544,6 +2747,11 @@ key: value"#;
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @"name: Test
-key: newvalue");
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    name: Test
+    key: newvalue
+
+    --- END PATCH ---
+    ");
 }

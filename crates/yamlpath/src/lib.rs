@@ -13,7 +13,10 @@
 #![allow(clippy::redundant_field_names)]
 #![forbid(unsafe_code)]
 
-use std::{collections::HashMap, ops::Deref};
+use std::{
+    collections::HashMap,
+    ops::{Deref, RangeBounds},
+};
 
 use line_index::LineIndex;
 use serde::Serialize;
@@ -249,6 +252,16 @@ impl Feature<'_> {
             }
             kind => unreachable!("unexpected feature kind: {kind}"),
         }
+    }
+}
+
+impl RangeBounds<usize> for &Feature<'_> {
+    fn start_bound(&self) -> std::ops::Bound<&usize> {
+        std::ops::Bound::Included(&self.location.byte_span.0)
+    }
+
+    fn end_bound(&self) -> std::ops::Bound<&usize> {
+        std::ops::Bound::Excluded(&self.location.byte_span.1)
     }
 }
 
