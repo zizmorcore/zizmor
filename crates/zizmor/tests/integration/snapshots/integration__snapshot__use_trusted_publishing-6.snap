@@ -1,0 +1,35 @@
+---
+source: crates/zizmor/tests/integration/snapshot.rs
+expression: "zizmor().input(input_under_test(\"use-trusted-publishing/nuget-push.yml\")).run()?"
+---
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:12:14
+   |
+12 |         run: nuget push foo.nupkg
+   |         ---  ^^^^^^^^^^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:15:14
+   |
+15 |         run: nuget.exe push foo.nupkg
+   |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> @@INPUT@@:18:14
+   |
+18 |         run: dotnet nuget push foo.nupkg
+   |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+5 findings (2 suppressed): 3 informational, 0 low, 0 medium, 0 high
