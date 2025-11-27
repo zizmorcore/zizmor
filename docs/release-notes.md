@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## Enhancements 🌱
+
+* The [use-trusted-publishing] audit now detects NuGet publishing commands
+  (#1369)
+
 ## 1.17.0
 
 ### Enhancements 🌱
