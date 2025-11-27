@@ -2517,6 +2517,8 @@ fn test_preserve_trailing_newline_replace_multiline_at_end() {
   Line 2
 "#;
 
+    assert!(original.ends_with('\n'));
+
     let operations = vec![Patch {
         route: route!("description"),
         operation: Op::Replace(serde_yaml::Value::String("New description".to_string())),
@@ -2528,6 +2530,10 @@ fn test_preserve_trailing_newline_replace_multiline_at_end() {
     insta::assert_snapshot!(result.source(), @r#"
         description: New description
         "#);
+
+    // NOTE: Ensure that the trailing newline is preserved after replacement;
+    // insta's snapshots are trimmed, so the above isn't a strong guarantee.
+    assert!(result.source().ends_with('\n'));
 }
 
 #[test]

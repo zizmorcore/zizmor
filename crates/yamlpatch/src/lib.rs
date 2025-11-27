@@ -209,42 +209,13 @@ pub fn apply_yaml_patches(
     Ok(next_document)
 }
 
-/// Compute the replacement range for a byte span, including any trailing newline
-/// that exists immediately after the span in the document.
-fn compute_replacement_range_for_span(
-    byte_span: (usize, usize),
-    document: &yamlpath::Document,
-) -> std::ops::Range<usize> {
-    let start = byte_span.0;
-    let mut end = byte_span.1;
-    let content = document.source();
-
-    // Only include trailing newline if it's the last character in the document.
-    // This preserves document-level trailing newlines without interfering with
-    // newlines that are part of the document structure.
-    if end + 1 == content.len() && content.as_bytes()[end] == b'\n' {
-        end += 1;
-    }
-
-    start..end
-}
-
-/// Compute the replacement range for a feature, including any trailing newline
-/// that exists immediately after the feature in the document.
-fn compute_replacement_range(
-    feature: &yamlpath::Feature,
-    document: &yamlpath::Document,
-) -> std::ops::Range<usize> {
-    compute_replacement_range_for_span(feature.location.byte_span, document)
-}
-
 /// Apply a single YAML patch operation
 fn apply_single_patch(
     document: &yamlpath::Document,
     patch: &Patch,
 ) -> Result<yamlpath::Document, Error> {
     let content = document.source();
-    match &patch.operation {
+    let mut patched_content = match &patch.operation {
         Op::RewriteFragment { from, to } => {
             let Some(feature) = route_to_feature_exact(&patch.route, document)? else {
                 return Err(Error::InvalidOperation(format!(
@@ -273,10 +244,9 @@ fn apply_single_patch(
 
             // Finally, put our patch back into the overall content.
             let mut patched_content = content.to_string();
-            let replacement_range = compute_replacement_range(&feature, document);
-            patched_content.replace_range(replacement_range, &patched_feature);
+            patched_content.replace_range(&feature, &patched_feature);
 
-            yamlpath::Document::new(patched_content).map_err(Error::from)
+            patched_content
         }
         Op::ReplaceComment { new } => {
             let feature = route_to_feature_exact(&patch.route, document)?.ok_or_else(|| {
@@ -299,11 +269,9 @@ fn apply_single_patch(
             };
 
             let mut result = content.to_string();
-            let replacement_range =
-                compute_replacement_range_for_span(comment_feature.location.byte_span, document);
-            result.replace_range(replacement_range, new);
+            result.replace_range(comment_feature, new);
 
-            yamlpath::Document::new(result).map_err(Error::from)
+            result
         }
         Op::Replace(value) => {
             let feature = route_to_feature_pretty(&patch.route, document)?;
@@ -328,12 +296,9 @@ fn apply_single_patch(
 
             // Replace the content
             let mut result = content.to_string();
-            // Extend end_span to include trailing newline if present
-            let replacement_range =
-                compute_replacement_range_for_span((start_span, end_span), document);
-            result.replace_range(replacement_range, &replacement);
+            result.replace_range(start_span..end_span, &replacement);
 
-            yamlpath::Document::new(result).map_err(Error::from)
+            result
         }
         Op::Add { key, value } => {
             // Check to see whether `key` is already present within the route.
@@ -381,10 +346,9 @@ fn apply_single_patch(
 
             // Replace the content in the document
             let mut result = content.to_string();
-            let replacement_range = compute_replacement_range(&feature, document);
-            result.replace_range(replacement_range, &updated_feature);
+            result.replace_range(&feature, &updated_feature);
 
-            yamlpath::Document::new(result).map_err(Error::from)
+            result
         }
         Op::MergeInto { key, updates } => {
             let existing_key_route = patch.route.with_key(key.as_str());
@@ -451,25 +415,29 @@ fn apply_single_patch(
                         }
                     }
 
-                    Ok(current_document)
+                    return Ok(current_document);
                 }
                 // The key exists, but has an empty body.
                 // TODO: Support this.
-                Ok(None) => Err(Error::InvalidOperation(format!(
-                    "MergeInto: cannot merge into empty key at {existing_key_route:?}"
-                ))),
+                Ok(None) => {
+                    return Err(Error::InvalidOperation(format!(
+                        "MergeInto: cannot merge into empty key at {existing_key_route:?}"
+                    )));
+                }
                 // The key does not exist.
-                Err(Error::Query(yamlpath::QueryError::ExhaustedMapping(_))) => apply_single_patch(
-                    document,
-                    &Patch {
-                        route: patch.route.clone(),
-                        operation: Op::Add {
-                            key: key.clone(),
-                            value: serde_yaml::to_value(updates.clone())?,
+                Err(Error::Query(yamlpath::QueryError::ExhaustedMapping(_))) => {
+                    return apply_single_patch(
+                        document,
+                        &Patch {
+                            route: patch.route.clone(),
+                            operation: Op::Add {
+                                key: key.clone(),
+                                value: serde_yaml::to_value(updates.clone())?,
+                            },
                         },
-                    },
-                ),
-                Err(e) => Err(e),
+                    );
+                }
+                Err(e) => return Err(e),
             }
         }
         Op::Remove => {
@@ -495,9 +463,16 @@ fn apply_single_patch(
 
             let mut result = content.to_string();
             result.replace_range(start_pos..end_pos, "");
-            yamlpath::Document::new(result).map_err(Error::from)
+
+            result
         }
+    };
+
+    if !patched_content.ends_with('\n') {
+        patched_content.push('\n');
     }
+
+    yamlpath::Document::new(patched_content).map_err(Error::from)
 }
 
 pub fn route_to_feature_pretty<'a>(
