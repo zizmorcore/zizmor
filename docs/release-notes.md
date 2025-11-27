@@ -14,6 +14,11 @@ of `zizmor`.
 * The [use-trusted-publishing] audit now detects NuGet publishing commands
   (#1369)
 
+### Bug Fixes 🐛
+
+* Fixed additional edge cases where auto-fixed would fail to preserve
+  a document's final newline (#1372)
+
 ## 1.17.0
 
 ### Enhancements 🌱
