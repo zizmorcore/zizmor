@@ -169,7 +169,7 @@ impl UseTrustedPublishing {
 
     /// Determine whether the given command and arguments correspond to a publishing
     /// command, e.g., `cargo publish`, `twine upload`, etc.
-    fn is_publish_command<'a>(&self, cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
+    fn is_publish_command<'a>(cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
         // NOTE(ww): The implementation below is frustratingly manual.
         // Ideally we'd use clap or similar to define an (imprecise) model of what we're
         // looking for, but as of 2025-11 none of the popular Rust command-line parsing
@@ -230,6 +230,16 @@ impl UseTrustedPublishing {
 
                 // Looking for `pnpm ... publish` without `--dry-run`.
                 args.contains("publish") && !args.contains("--dry-run")
+            }
+            "nuget" | "nuget.exe" => {
+                // Looking for `nuget ... push`.
+                args.any(|arg| arg == "push")
+            }
+            "dotnet" => {
+                // Looking for `dotnet ... nuget push`.
+                args.next()
+                    .map(|cmd| cmd == "nuget" && Self::is_publish_command(cmd, args))
+                    .unwrap_or(false)
             }
             _ => false,
         }
@@ -334,7 +344,7 @@ impl UseTrustedPublishing {
                         .expect("impossible: capture should be UTF-8 by construction")
                 });
 
-            if self.is_publish_command(cmd, args) {
+            if Self::is_publish_command(cmd, args) {
                 let span = mat
                     .captures
                     .iter()
