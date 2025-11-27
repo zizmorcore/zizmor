@@ -2517,8 +2517,6 @@ fn test_preserve_trailing_newline_replace_multiline_at_end() {
   Line 2
 "#;
 
-    assert!(original.ends_with('\n'));
-
     let operations = vec![Patch {
         route: route!("description"),
         operation: Op::Replace(serde_yaml::Value::String("New description".to_string())),
