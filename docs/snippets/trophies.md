@@ -141,6 +141,7 @@
     ---
 
     ??? example "Examples"
+        - bitwarden/ios#2124
         - bitwarden/sdk-sm#1378
         - bitwarden/server#6409
 
