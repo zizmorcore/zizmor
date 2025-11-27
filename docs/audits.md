@@ -1973,6 +1973,14 @@ once it's configured:
     ---
 
     See: [Trusted publishing for npm packages]
+    
+-   :simple-nuget:{.lg .middle} .NET (nuget.org)
+
+    ---
+    
+    Usage: @NuGet/login
+
+    See: [Trusted publishing for nuget.org]
 </div>
 
 
@@ -1987,6 +1995,7 @@ once it's configured:
 [Trusted Publishing - crates.io]: https://crates.io/docs/trusted-publishing
 [Automated publishing of packages to pub.dev]: https://dart.dev/tools/pub/automated-publishing
 [Trusted publishing for npm packages]: https://docs.npmjs.com/trusted-publishers
+[Trusted publishing for nuget.org]: https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing
 [Trusted publishing: a new benchmark for packaging security]: https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/
 [Trusted Publishers for All Package Repositories]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
 [were deprecated by GitHub]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
