@@ -9,6 +9,18 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## Enhancements 🌱
+
+* The [use-trusted-publishing] audit now detects NuGet publishing commands
+  (#1369)
+
+### Bug Fixes 🐛
+
+* Fixed additional edge cases where auto-fixed would fail to preserve
+  a document's final newline (#1372)
+
+## 1.17.0
+
 ### Enhancements 🌱
 
 * `zizmor` now produces a more useful error message when asked to
@@ -18,6 +30,13 @@ of `zizmor`.
   that have more misuse-resistant credentials persistence behavior (#1353)
   
     Many thanks to @ManuelLerchnerQC for proposing and implementing this improvement!
+
+* The [use-trusted-publishing] audit now correctly detecting more "dry-run"
+  patterns, making it significantly more accurate (#1357)
+
+* The [obfuscation] audit now detects usages of `#!yaml shell: cmd` and similar,
+  as the Windows CMD shell lacks a formal grammar and limits analysis of `#!yaml run:` blocks
+  in other audits (#1361)
 
 ### Performance Improvements 🚄
 

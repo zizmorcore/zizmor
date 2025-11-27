@@ -1,0 +1,18 @@
+on: [push]
+
+name: use-trusted-publishing
+
+jobs:
+  nuget-push:
+    name: nuget-push
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: vulnerable-1
+        run: nuget push foo.nupkg
+
+      - name: vulnerable-2
+        run: nuget.exe push foo.nupkg
+
+      - name: vulnerable-3
+        run: dotnet nuget push foo.nupkg

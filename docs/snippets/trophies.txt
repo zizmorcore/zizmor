@@ -32,9 +32,11 @@ astronomer/astronomer-cosmos#1870
 astronomer/dag-factory#482
 astropy/astropy#17315
 autotag-dev/autotag#142
+ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
 BerkeleyLearnVerify/Scenic#320
 bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
+bitwarden/sdk-sm#1378
 bitwarden/server#6409
 blakeblackshear/frigate#15490
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
@@ -71,6 +73,7 @@ Diaoul/subliminal#1190
 docker/compose#12737
 earthobservations/wetterdienst#1440
 edgelesssys/contrast#1604
+EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
 esl/MongooseIM#4435
 ethereum/hevm#615
@@ -102,6 +105,7 @@ grafana/pyroscope#4157
 grafana/rollout-operator#218
 grafana/synthetic-monitoring-app#1126
 grafana/tanka#1441
+google/zerocop#2810
 google/zx#1067
 google/zx#1126
 guacsec/guac#2276

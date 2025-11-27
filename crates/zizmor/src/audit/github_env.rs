@@ -177,6 +177,10 @@ impl GitHubEnv {
             .bash_redirect_query
             .capture_index_for_name("args")
             .expect("internal error: missing capture index for 'args'");
+        let destination = self
+            .bash_redirect_query
+            .capture_index_for_name("destination")
+            .expect("internal error: missing capture index for 'destination'");
 
         let mut matching_spans = vec![];
 
@@ -207,7 +211,7 @@ impl GitHubEnv {
                     let cap = mat
                         .captures
                         .iter()
-                        .find(|cap| cap.index == self.bash_redirect_query.destination_idx)
+                        .find(|cap| cap.index == destination)
                         .expect("internal error: expected capture for destination");
                     cap.node
                         .utf8_text(script_body.as_bytes())
@@ -223,6 +227,9 @@ impl GitHubEnv {
         ];
 
         for query in queries {
+            let destination = query.capture_index_for_name("destination").expect(
+                "internal error: missing capture index for 'destination' in bash pipeline query",
+            );
             let matches = self.query(query, &mut cursor, &tree, script_body);
 
             matches.for_each(|mat| {
@@ -236,7 +243,7 @@ impl GitHubEnv {
                     let cap = mat
                         .captures
                         .iter()
-                        .find(|cap| cap.index == query.destination_idx)
+                        .find(|cap| cap.index == destination)
                         .expect("internal error: expected capture for destination");
                     cap.node
                         .utf8_text(script_body.as_bytes())
@@ -283,6 +290,9 @@ impl GitHubEnv {
         let mut matching_spans = vec![];
 
         for query in queries {
+            let destination = query
+                .capture_index_for_name("destination")
+                .expect("internal error: missing capture index for 'destination' in pwsh query");
             let matches = self.query(query, &mut cursor, &tree, script_body);
             matches.for_each(|mat| {
                 let span = mat
@@ -295,7 +305,7 @@ impl GitHubEnv {
                     let cap = mat
                         .captures
                         .iter()
-                        .find(|cap| cap.index == query.destination_idx)
+                        .find(|cap| cap.index == destination)
                         .expect("internal error: no matching capture");
                     cap.node
                         .utf8_text(script_body.as_bytes())

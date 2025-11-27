@@ -111,6 +111,14 @@
         - autotag-dev/autotag#142
 
 
+-   ![](https://github.com/ben-manes.png?size=40){ width="40" loading=lazy align=left } ben-manes
+
+    ---
+
+    ??? example "Examples"
+        - ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
+
+
 -   ![](https://github.com/BerkeleyLearnVerify.png?size=40){ width="40" loading=lazy align=left } BerkeleyLearnVerify
 
     ---
@@ -133,6 +141,7 @@
     ---
 
     ??? example "Examples"
+        - bitwarden/sdk-sm#1378
         - bitwarden/server#6409
 
 
@@ -346,6 +355,14 @@
         - edgelesssys/contrast#1604
 
 
+-   ![](https://github.com/EFForg.png?size=40){ width="40" loading=lazy align=left } EFForg
+
+    ---
+
+    ??? example "Examples"
+        - EFForg/rayhunter#711
+
+
 -   ![](https://github.com/Electric-Coin-Company.png?size=40){ width="40" loading=lazy align=left } Electric-Coin-Company
 
     ---
@@ -496,6 +513,7 @@
     ---
 
     ??? example "Examples"
+        - google/zerocop#2810
         - google/zx#1067
         - google/zx#1126
 
