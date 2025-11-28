@@ -28,3 +28,5 @@ mod unpinned_images;
 mod unpinned_uses;
 mod unredacted_secrets;
 mod unsound_condition;
+mod unsound_contains;
+mod use_trusted_publishing;
