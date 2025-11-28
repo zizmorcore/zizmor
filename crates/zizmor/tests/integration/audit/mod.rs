@@ -4,3 +4,4 @@ mod anonymous_definition;
 mod artipacked;
 mod bot_conditions;
 mod cache_poisoning;
+mod concurrency_limits;
