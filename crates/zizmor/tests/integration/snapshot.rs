@@ -652,7 +652,7 @@ fn use_trusted_publishing() -> Result<()> {
        |
        = note: audit confidence → High
 
-    5 findings (2 suppressed): 3 informational, 0 low, 0 medium, 0 high
+    7 findings (4 suppressed): 3 informational, 0 low, 0 medium, 0 high
     "
     );
 
