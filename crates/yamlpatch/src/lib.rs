@@ -176,6 +176,10 @@ pub enum Op<'doc> {
     /// Remove the key at the given path
     #[allow(dead_code)]
     Remove,
+    /// Append a new item to a sequence at the given path.
+    ///
+    /// The sequence must be a block sequence; flow sequences are not supported.
+    Append { value: serde_yaml::Value },
 }
 
 /// Apply a sequence of YAML patch operations to a YAML document.
@@ -465,6 +469,40 @@ fn apply_single_patch(
             result.replace_range(start_pos..end_pos, "");
 
             result
+        }
+        Op::Append { value } => {
+            let feature = route_to_feature_exact(&patch.route, document)?.ok_or_else(|| {
+                Error::InvalidOperation(format!(
+                    "no existing sequence at {route:?}",
+                    route = patch.route
+                ))
+            })?;
+
+            let style = Style::from_feature(&feature, document);
+
+            match style {
+                Style::BlockSequence => {
+                    let updated_feature = handle_block_sequence_append(document, &feature, value)?;
+
+                    // Replace the content in the document
+                    let mut result = content.to_string();
+                    result.replace_range(&feature, &updated_feature);
+
+                    result
+                }
+                Style::FlowSequence => {
+                    return Err(Error::InvalidOperation(format!(
+                        "append operation is not permitted against flow sequence route: {:?}",
+                        patch.route
+                    )));
+                }
+                _ => {
+                    return Err(Error::InvalidOperation(format!(
+                        "append operation is only permitted against sequence routes: {:?}",
+                        patch.route
+                    )));
+                }
+            }
         }
     };
 
@@ -784,6 +822,54 @@ fn handle_block_mapping_addition(
 
     let mut updated_feature = feature_content.to_string();
     updated_feature.insert_str(relative_insertion_point, &final_entry_to_insert);
+
+    Ok(updated_feature)
+}
+
+fn handle_block_sequence_append(
+    doc: &yamlpath::Document,
+    feature: &yamlpath::Feature,
+    value: &serde_yaml::Value,
+) -> Result<String, Error> {
+    let feature_content = doc.extract(feature);
+
+    let indent = extract_leading_whitespace(doc, feature);
+    let value_str = serialize_yaml_value(value)?;
+    let insertion_point = find_content_end(feature, doc);
+    let bias = feature.location.byte_span.0;
+    let relative_insertion_point = insertion_point - bias;
+
+    // Check if a newline is needed before adding the new item.
+    let needs_leading_newline = if relative_insertion_point > 0 {
+        feature_content.chars().nth(relative_insertion_point - 1) != Some('\n')
+    } else {
+        !feature_content.is_empty()
+    };
+
+    let mut new_item = String::new();
+    if needs_leading_newline {
+        new_item.push('\n');
+    }
+
+    let mut lines = value_str.lines();
+    if let Some(first_line) = lines.next() {
+        // The first line of the item is placed next to the dash.
+        new_item.push_str(&format!("{}- {}", indent, first_line));
+
+        // Subsequent lines are indented two spaces deeper than the dash.
+        let item_content_indent = format!("{}  ", indent);
+        for line in lines {
+            new_item.push('\n');
+            new_item.push_str(&item_content_indent);
+            new_item.push_str(line);
+        }
+    } else {
+        // This handles cases like an empty string value.
+        new_item.push_str(&format!("{}- {}", indent, value_str));
+    }
+
+    let mut updated_feature = feature_content.to_string();
+    updated_feature.insert_str(relative_insertion_point, &new_item);
 
     Ok(updated_feature)
 }
