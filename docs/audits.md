@@ -420,7 +420,7 @@ Other resources:
 In general, you should enable `cooldown` for all updaters. The audit currently
 enforces the following minimums:
 
-* `default-days`: must be at least `4`.
+* `default-days`: must be at least `7`.
 
 !!! example
 
