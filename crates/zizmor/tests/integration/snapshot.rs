@@ -1488,6 +1488,15 @@ fn dependabot_cooldown() -> Result<()> {
     "
     );
 
+    // A very short cooldown, but permitted by config.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("dependabot-cooldown/default-days-too-short/dependabot.yml"))
+            .config(input_under_test("dependabot-cooldown/configs/cooldown-one-day.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
     Ok(())
 }
 
