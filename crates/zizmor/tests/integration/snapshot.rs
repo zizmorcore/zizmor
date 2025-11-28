@@ -3,7 +3,7 @@
 //! TODO: This file is too big; break it into multiple
 //! modules, one per audit/conceptual group.
 
-use crate::common::{OutputMode, input_under_test, zizmor};
+use crate::common::{input_under_test, zizmor};
 use anyhow::Result;
 
 #[test]
@@ -607,38 +607,6 @@ fn use_trusted_publishing() -> Result<()> {
 
     7 findings (4 suppressed): 3 informational, 0 low, 0 medium, 0 high
     "
-    );
-
-    Ok(())
-}
-
-#[test]
-fn insecure_commands() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("insecure-commands.yml"))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("insecure-commands.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("insecure-commands/action.yml"))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("insecure-commands/issue-839-repro.yml"))
-            .args(["--persona=auditor"])
-            .run()?
     );
 
     Ok(())
