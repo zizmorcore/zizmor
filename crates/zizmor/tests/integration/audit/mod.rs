@@ -19,3 +19,5 @@ mod obfuscation;
 mod overprovisioned_secrets;
 mod ref_confusion;
 mod ref_version_mismatch;
+mod secrets_inherit;
+mod self_hosted_runner;

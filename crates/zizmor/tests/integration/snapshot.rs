@@ -51,69 +51,6 @@ fn test_github_output() -> Result<()> {
 }
 
 #[test]
-fn self_hosted() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("self-hosted.yml"))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(zizmor().input(input_under_test("self-hosted.yml")).run()?);
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("self-hosted/self-hosted-runner-label.yml"))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("self-hosted/self-hosted-runner-group.yml"))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "self-hosted/self-hosted-matrix-dimension.yml"
-            ))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "self-hosted/self-hosted-matrix-inclusion.yml"
-            ))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "self-hosted/self-hosted-matrix-exclusion.yml"
-            ))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    // Fixed regressions
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("self-hosted/issue-283-repro.yml"))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
 fn unpinned_uses() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
@@ -717,17 +654,6 @@ fn template_injection() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-988-repro.yml"))
             .args(["--persona=pedantic"])
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
-fn secrets_inherit() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("secrets-inherit.yml"))
             .run()?
     );
 
