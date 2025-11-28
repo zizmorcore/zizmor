@@ -386,7 +386,7 @@ Some general pointers:
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Dependabot  | [dependabot-cooldown/]       | v1.15.0       | ✅             | ✅                 | ❌  |
+| Dependabot  | [dependabot-cooldown/]       | v1.15.0       | ✅             | ✅                 | ✅  |
 
 [dependabot-cooldown/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-cooldown/
 
@@ -414,13 +414,23 @@ enable them.
 Other resources:
 
 * [Dependabot options reference - `cooldown`](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#cooldown-)
+* [We should all be using Dependency cooldowns](https://blog.yossarian.net/2025/11/21/We-should-all-be-using-dependency-cooldowns)
+
+### Configuration
+
+#### `rules.dependabot-cooldown.config.days`
+
+Type: number
+
+The `rules.dependabot-cooldown.config.days` setting controls the minimum acceptable
+`default-days` value for Dependabot's `cooldown` setting. Settings beneath this
+value will produce findings.
+
+The default value is `7`.
 
 ### Remediation
 
-In general, you should enable `cooldown` for all updaters. The audit currently
-enforces the following minimums:
-
-* `default-days`: must be at least `7`.
+In general, you should enable `cooldown` for all updaters.
 
 !!! example
 

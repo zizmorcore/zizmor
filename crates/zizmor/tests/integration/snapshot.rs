@@ -1421,6 +1421,82 @@ fn dependabot_cooldown() -> Result<()> {
     1 findings (1 fixable): 0 informational, 1 low, 0 medium, 0 high
     ");
 
+    // dependabot-cooldown audit config is invalid.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("neutral.yml"))
+            .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-not-number.yml"))
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r#"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: configuration error in @@CONFIG@@
+      |
+      = help: check the configuration for the 'dependabot-cooldown' rule
+      = help: see: https://docs.zizmor.sh/audits/#dependabot-cooldown-configuration
+
+    Caused by:
+        0: configuration error in @@CONFIG@@
+        1: invalid syntax for audit `dependabot-cooldown`
+        2: invalid type: string "lol", expected a nonzero usize
+    "#
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("neutral.yml"))
+            .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-zero-days.yml"))
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: configuration error in @@CONFIG@@
+      |
+      = help: check the configuration for the 'dependabot-cooldown' rule
+      = help: see: https://docs.zizmor.sh/audits/#dependabot-cooldown-configuration
+
+    Caused by:
+        0: configuration error in @@CONFIG@@
+        1: invalid syntax for audit `dependabot-cooldown`
+        2: invalid value: integer `0`, expected a nonzero usize
+    "
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("neutral.yml"))
+            .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-negative-days.yml"))
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: configuration error in @@CONFIG@@
+      |
+      = help: check the configuration for the 'dependabot-cooldown' rule
+      = help: see: https://docs.zizmor.sh/audits/#dependabot-cooldown-configuration
+
+    Caused by:
+        0: configuration error in @@CONFIG@@
+        1: invalid syntax for audit `dependabot-cooldown`
+        2: invalid value: integer `-1`, expected a nonzero usize
+    "
+    );
+
+    // A very short cooldown, but permitted by config.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("dependabot-cooldown/default-days-too-short/dependabot.yml"))
+            .config(input_under_test("dependabot-cooldown/configs/cooldown-one-day.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
     Ok(())
 }
 

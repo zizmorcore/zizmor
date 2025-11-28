@@ -16,6 +16,10 @@ of `zizmor`.
   
 * The [dependabot-cooldown] audit now flags cooldown periods of less than 7
   days by default (#1375)
+  
+* The [dependabot-cooldown] audit can now be configured with a custom
+  minimum cooldown period via `rules.dependabot-cooldown.config.days`
+  (#1377)
 
 ### Bug Fixes 🐛
 
