@@ -550,117 +550,6 @@ fn use_trusted_publishing() -> Result<()> {
 }
 
 #[test]
-fn template_injection() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "template-injection/template-injection-static-matrix.yml"
-            ))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "template-injection/template-injection-dynamic-matrix.yml"
-            ))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("template-injection/issue-22-repro.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("template-injection/pr-317-repro.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("template-injection/static-env.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("template-injection/issue-339-repro.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("template-injection/issue-418-repro.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "template-injection/pr-425-backstop/action.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "template-injection/false-positive-menagerie.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("template-injection/issue-749-repro.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("template-injection/codeql-sinks.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("template-injection/pwsh-script.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "template-injection/issue-883-repro/action.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "template-injection/multiline-expression.yml"
-            ))
-            .args(["--persona=pedantic"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("template-injection/issue-988-repro.yml"))
-            .args(["--persona=pedantic"])
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
 fn unsound_contains() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
@@ -676,20 +565,6 @@ fn unredacted_secrets() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("unredacted-secrets.yml"))
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
-#[test]
-fn stale_action_refs() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("stale-action-refs.yml"))
-            .offline(false)
-            .args(["--persona=pedantic"])
             .run()?
     );
 
