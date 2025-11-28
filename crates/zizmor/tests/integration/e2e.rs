@@ -308,7 +308,36 @@ fn issue_1065() -> Result<()> {
         zizmor()
             .output(OutputMode::Both)
             .input(input_under_test("issue-1065.yml"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     INFO audit: zizmor: 🌈 completed @@INPUT@@
+    warning[excessive-permissions]: overly broad permissions
+      --> @@INPUT@@:12:3
+       |
+    12 | /   issue-1065:
+    13 | |     runs-on: ubuntu-latest
+    14 | |     steps:
+    15 | |       - name: Comment PR
+    ...  |
+    24 | |             Please review the changes and provide any feedback. Thanks! 🚀
+       | |                                                                          ^
+       | |                                                                          |
+       | |__________________________________________________________________________this job
+       |                                                                            default permissions used due to no permissions: block
+       |
+       = note: audit confidence → Medium
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:16:9
+       |
+    16 |         uses: thollander/actions-comment-pull-request@v3
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    5 findings (3 suppressed): 0 informational, 0 low, 1 medium, 1 high
+    "
     );
 
     Ok(())
@@ -325,7 +354,12 @@ fn warn_on_min_severity_unknown() -> Result<()> {
             .setenv("RUST_LOG", "warn")
             .args(["--min-severity=unknown"])
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN zizmor: `unknown` is a deprecated minimum severity that has no effect
+     WARN zizmor: future versions of zizmor will reject this value
+    "
     );
 
     Ok(())
@@ -342,7 +376,12 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
             .setenv("RUST_LOG", "warn")
             .args(["--min-confidence=unknown"])
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN zizmor: `unknown` is a deprecated minimum confidence that has no effect
+     WARN zizmor: future versions of zizmor will reject this value
+    "
     );
     Ok(())
 }
