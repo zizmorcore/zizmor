@@ -18,3 +18,4 @@ mod insecure_commands;
 mod obfuscation;
 mod overprovisioned_secrets;
 mod ref_confusion;
+mod ref_version_mismatch;
