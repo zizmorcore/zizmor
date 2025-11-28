@@ -745,17 +745,6 @@ fn unsound_contains() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn overprovisioned_secrets() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("overprovisioned-secrets.yml"))
-            .run()?
-    );
-
-    Ok(())
-}
-
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn ref_confusion() -> Result<()> {

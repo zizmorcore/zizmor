@@ -16,3 +16,4 @@ mod github_env;
 mod insecure_commands;
 // mod known_vulnerable_actions; // TODO
 mod obfuscation;
+mod overprovisioned_secrets;
