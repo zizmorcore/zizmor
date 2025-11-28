@@ -26,3 +26,5 @@ mod template_injection;
 mod undocumented_permissions;
 mod unpinned_images;
 mod unpinned_uses;
+mod unredacted_secrets;
+mod unsound_condition;

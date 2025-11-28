@@ -441,25 +441,3 @@ fn unsound_contains() -> Result<()> {
 
     Ok(())
 }
-
-#[test]
-fn unredacted_secrets() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("unredacted-secrets.yml"))
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
-fn unsound_condition() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("unsound-condition.yml"))
-            .run()?
-    );
-
-    Ok(())
-}
