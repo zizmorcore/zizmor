@@ -10,3 +10,4 @@ mod dependabot_cooldown;
 mod dependabot_execution;
 mod excessive_permissions;
 mod forbidden_uses;
+mod github_env;

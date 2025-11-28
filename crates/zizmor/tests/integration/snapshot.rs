@@ -756,44 +756,6 @@ fn template_injection() -> Result<()> {
 }
 
 #[test]
-fn github_env() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("github-env/action.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("github-env/github-path.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("github-env/issue-397-repro.yml"))
-            .run()?
-    );
-
-    // Ensures that we produce a reasonable warning if the user gives us a
-    // `shell:` clause containing an expression.
-    insta::assert_snapshot!(
-        zizmor()
-            .output(OutputMode::Both)
-            .setenv("RUST_LOG", "warn")
-            .input(input_under_test("github-env/issue-1333/action.yml"))
-            .run()?,
-        @r"
-    🌈 zizmor v@@VERSION@@
-     WARN zizmor::audit::github_env: github-env: couldn't determine shell type for @@INPUT@@ step 0; assuming bash
-    No findings to report. Good job!
-    "
-    );
-
-    Ok(())
-}
-
-#[test]
 fn secrets_inherit() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
