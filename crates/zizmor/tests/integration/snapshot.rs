@@ -745,26 +745,6 @@ fn unsound_contains() -> Result<()> {
     Ok(())
 }
 
-#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
-#[test]
-fn ref_confusion() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("ref-confusion.yml"))
-            .offline(false)
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("ref-confusion/issue-518-repro.yml"))
-            .offline(false)
-            .run()?
-    );
-
-    Ok(())
-}
-
 #[test]
 fn unredacted_secrets() -> Result<()> {
     insta::assert_snapshot!(
