@@ -8,3 +8,4 @@ mod concurrency_limits;
 mod dangerous_triggers;
 mod dependabot_cooldown;
 mod dependabot_execution;
+mod excessive_permissions;
