@@ -209,7 +209,20 @@ fn invalid_config_file() -> Result<()> {
             .expects_failure(true)
             .config(if cfg!(windows) { "NUL" } else { "/dev/null" })
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: configuration error in @@CONFIG@@
+      |
+      = help: check your configuration file for syntax errors
+      = help: see: https://docs.zizmor.sh/configuration/
+
+    Caused by:
+        0: configuration error in @@CONFIG@@
+        1: invalid configuration syntax
+        2: missing field `rules`
+    "
     );
 
     Ok(())
@@ -308,7 +321,36 @@ fn issue_1065() -> Result<()> {
         zizmor()
             .output(OutputMode::Both)
             .input(input_under_test("issue-1065.yml"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     INFO audit: zizmor: 🌈 completed @@INPUT@@
+    warning[excessive-permissions]: overly broad permissions
+      --> @@INPUT@@:12:3
+       |
+    12 | /   issue-1065:
+    13 | |     runs-on: ubuntu-latest
+    14 | |     steps:
+    15 | |       - name: Comment PR
+    ...  |
+    24 | |             Please review the changes and provide any feedback. Thanks! 🚀
+       | |                                                                          ^
+       | |                                                                          |
+       | |__________________________________________________________________________this job
+       |                                                                            default permissions used due to no permissions: block
+       |
+       = note: audit confidence → Medium
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:16:9
+       |
+    16 |         uses: thollander/actions-comment-pull-request@v3
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    5 findings (3 suppressed): 0 informational, 0 low, 1 medium, 1 high
+    "
     );
 
     Ok(())
@@ -325,7 +367,12 @@ fn warn_on_min_severity_unknown() -> Result<()> {
             .setenv("RUST_LOG", "warn")
             .args(["--min-severity=unknown"])
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN zizmor: `unknown` is a deprecated minimum severity that has no effect
+     WARN zizmor: future versions of zizmor will reject this value
+    "
     );
 
     Ok(())
@@ -342,7 +389,12 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
             .setenv("RUST_LOG", "warn")
             .args(["--min-confidence=unknown"])
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN zizmor: `unknown` is a deprecated minimum confidence that has no effect
+     WARN zizmor: future versions of zizmor will reject this value
+    "
     );
     Ok(())
 }
@@ -467,6 +519,78 @@ fn issue_1356_lsp_mode_starts() -> Result<()> {
 
     {"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error"},"id":null}
     "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_cant_retrieve_offline() -> Result<()> {
+    // Fails because --offline prevents network access.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .offline(true)
+            .unsetenv("GH_TOKEN")
+            .args(["pypa/sampleproject"])
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: can't fetch remote repository: pypa/sampleproject
+      |
+      = help: remove --offline to audit remote repositories
+
+    Caused by:
+        can't fetch remote repository: pypa/sampleproject
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_cant_retrieve_no_gh_token() -> Result<()> {
+    // Fails because GH_TOKEN is not set.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .offline(false)
+            .unsetenv("GH_TOKEN")
+            .args(["pypa/sampleproject"])
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: can't fetch remote repository: pypa/sampleproject
+      |
+      = help: set a GitHub token with --gh-token or GH_TOKEN
+
+    Caused by:
+        can't fetch remote repository: pypa/sampleproject
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_github_output() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .input(input_under_test("several-vulnerabilities.yml"))
+            .args(["--persona=auditor", "--format=github"])
+            .run()?,
+        @r"
+    ::error file=@@INPUT@@,line=5,title=excessive-permissions::several-vulnerabilities.yml:5: overly broad permissions: uses write-all permissions
+    ::error file=@@INPUT@@,line=11,title=excessive-permissions::several-vulnerabilities.yml:11: overly broad permissions: uses write-all permissions
+    ::error file=@@INPUT@@,line=2,title=dangerous-triggers::several-vulnerabilities.yml:2: use of fundamentally insecure workflow trigger: pull_request_target is almost always used insecurely
+    ::warning file=@@INPUT@@,line=16,title=template-injection::several-vulnerabilities.yml:16: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=16,title=template-injection::several-vulnerabilities.yml:16: code injection via template expansion: may expand into attacker-controllable code
+    ::warning file=@@INPUT@@,line=1,title=concurrency-limits::several-vulnerabilities.yml:1: insufficient job-level concurrency limits: missing concurrency setting
+    "
     );
 
     Ok(())

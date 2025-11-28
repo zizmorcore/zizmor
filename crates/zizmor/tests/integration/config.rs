@@ -12,7 +12,14 @@ fn test_discovers_config_in_root() -> anyhow::Result<()> {
             .input(input_under_test("config-scenarios/config-in-root"))
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
+    DEBUG zizmor::config: attempting config discovery in `@@INPUT@@`
+    DEBUG zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
+    No findings to report. Good job! (1 ignored, 2 suppressed)
+    "
     );
 
     Ok(())
@@ -31,7 +38,14 @@ fn test_discovers_config_in_root_from_file_input() -> anyhow::Result<()> {
             ))
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
+    DEBUG zizmor::config: attempting config discovery in `@@TEST_PREFIX@@/config-scenarios/config-in-root/.github/workflows`
+    DEBUG zizmor::config: found config candidate at `@@TEST_PREFIX@@/config-scenarios/config-in-root/zizmor.yml`
+    No findings to report. Good job! (1 ignored, 2 suppressed)
+    "
     );
 
     Ok(())
@@ -50,7 +64,14 @@ fn test_discovers_config_in_root_from_child_dir() -> anyhow::Result<()> {
             ))
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
+    DEBUG zizmor::config: attempting config discovery in `@@INPUT@@`
+    DEBUG zizmor::config: found config candidate at `@@TEST_PREFIX@@/config-scenarios/config-in-root/zizmor.yml`
+    No findings to report. Good job! (1 ignored, 2 suppressed)
+    "
     );
 
     Ok(())
@@ -65,8 +86,12 @@ fn test_ignores_config_in_root() -> anyhow::Result<()> {
             .no_config(true)
             .input(input_under_test("config-scenarios/config-in-root"))
             .setenv("RUST_LOG", "zizmor::config=debug")
-            .output(OutputMode::Both)
-            .run()?
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: skipping config discovery: explicitly disabled
+    "
     );
 
     Ok(())
@@ -83,8 +108,12 @@ fn test_ignores_config_in_root_from_file_input() -> anyhow::Result<()> {
                 "config-scenarios/config-in-root/.github/workflows/hackme.yml"
             ))
             .setenv("RUST_LOG", "zizmor::config=debug")
-            .output(OutputMode::Both)
-            .run()?
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: skipping config discovery: explicitly disabled
+    "
     );
 
     Ok(())
@@ -101,8 +130,12 @@ fn test_ignores_config_in_root_from_child_dir() -> anyhow::Result<()> {
                 "config-scenarios/config-in-root/.github/workflows"
             ))
             .setenv("RUST_LOG", "zizmor::config=debug")
-            .output(OutputMode::Both)
-            .run()?
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: skipping config discovery: explicitly disabled
+    "
     );
 
     Ok(())
@@ -118,7 +151,14 @@ fn test_discovers_config_in_dotgithub() -> anyhow::Result<()> {
             .input(input_under_test("config-scenarios/config-in-dotgithub"))
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
+    DEBUG zizmor::config: attempting config discovery in `@@INPUT@@`
+    DEBUG zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yml`
+    No findings to report. Good job! (1 ignored, 2 suppressed)
+    ",
     );
 
     Ok(())
@@ -137,7 +177,14 @@ fn test_discovers_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
             ))
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
+    DEBUG zizmor::config: attempting config discovery in `@@TEST_PREFIX@@/config-scenarios/config-in-dotgithub/.github/workflows`
+    DEBUG zizmor::config: found config candidate at `@@TEST_PREFIX@@/config-scenarios/config-in-dotgithub/.github/zizmor.yml`
+    No findings to report. Good job! (1 ignored, 2 suppressed)
+    "
     );
 
     Ok(())
@@ -152,8 +199,12 @@ fn test_ignores_config_in_dotgithub() -> anyhow::Result<()> {
             .no_config(true)
             .input(input_under_test("config-scenarios/config-in-dotgithub"))
             .setenv("RUST_LOG", "zizmor::config=debug")
-            .output(OutputMode::Both)
-            .run()?
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: skipping config discovery: explicitly disabled
+    "
     );
 
     Ok(())
@@ -170,8 +221,12 @@ fn test_ignores_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
                 "config-scenarios/config-in-dotgithub/.github/workflows/hackme.yml"
             ))
             .setenv("RUST_LOG", "zizmor::config=debug")
-            .output(OutputMode::Both)
-            .run()?
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: skipping config discovery: explicitly disabled
+    "
     );
 
     Ok(())
@@ -185,7 +240,12 @@ fn test_disablement() -> anyhow::Result<()> {
             .input(input_under_test("config-scenarios/disablement"))
             .setenv("RUST_LOG", "zizmor::audit=debug")
             .output(OutputMode::Both)
-            .run()?
+            .run()?,
+        @r#"
+    🌈 zizmor v@@VERSION@@
+    DEBUG audit{input=Workflow(file://@@INPUT@@/.github/workflows/hackme.yml)}: zizmor::audit: skipping: template-injection is disabled in config for group Group("@@INPUT@@")
+    No findings to report. Good job! (1 suppressed)
+    "#
     );
 
     Ok(())
@@ -203,7 +263,20 @@ fn test_invalid_configs() -> anyhow::Result<()> {
                 "config-scenarios/zizmor.invalid-schema-1.yml"
             ))
             .output(OutputMode::Stderr)
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: configuration error in @@CONFIG@@
+      |
+      = help: check your configuration file for syntax errors
+      = help: see: https://docs.zizmor.sh/configuration/
+
+    Caused by:
+        0: configuration error in @@CONFIG@@
+        1: invalid configuration syntax
+        2: unknown field `rule`, expected `rules` at line 4 column 1
+    "
     );
 
     // forbidden-uses audit config is invalid.
@@ -216,6 +289,19 @@ fn test_invalid_configs() -> anyhow::Result<()> {
             ))
             .output(OutputMode::Stderr)
             .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: configuration error in @@CONFIG@@
+      |
+      = help: check the configuration for the 'forbidden-uses' rule
+      = help: see: https://docs.zizmor.sh/audits/#forbidden-uses-configuration
+
+    Caused by:
+        0: configuration error in @@CONFIG@@
+        1: invalid syntax for audit `forbidden-uses`
+        2: data did not match any variant of untagged enum ForbiddenUsesConfig
+    "
     );
 
     // unpinned-uses audit config is invalid.
@@ -228,6 +314,16 @@ fn test_invalid_configs() -> anyhow::Result<()> {
             ))
             .output(OutputMode::Stderr)
             .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: configuration error in @@CONFIG@@
+
+    Caused by:
+        0: configuration error in @@CONFIG@@
+        1: invalid `unpinned-uses` config
+        2: cannot use exact ref patterns here: `actions/checkout@v3`
+    "
     );
 
     Ok(())

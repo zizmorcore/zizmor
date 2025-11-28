@@ -1,0 +1,55 @@
+use crate::common::{input_under_test, zizmor};
+
+#[test]
+fn test_normal_persona() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unsound-contains.yml"))
+            .run()?,
+        @r"
+    error[unsound-contains]: unsound contains condition
+      --> @@INPUT@@:20:9
+       |
+    20 |         if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'github.ref'
+       |
+       = note: audit confidence → High
+
+    error[unsound-contains]: unsound contains condition
+      --> @@INPUT@@:24:9
+       |
+    24 |         if: ${{ contains('main,develop', env.GITHUB_REF_NAME) }}
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'env.GITHUB_REF_NAME'
+       |
+       = note: audit confidence → High
+
+    error[unsound-contains]: unsound contains condition
+      --> @@INPUT@@:28:9
+       |
+    28 |         if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'github.ref_name'
+       |
+       = note: audit confidence → High
+
+    error[unsound-contains]: unsound contains condition
+      --> @@INPUT@@:28:9
+       |
+    28 |         if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'github.actor'
+       |
+       = note: audit confidence → High
+
+    info[unsound-contains]: unsound contains condition
+      --> @@INPUT@@:32:9
+       |
+    32 |         if: contains('runner1,runner2', runner.name)
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ contains(..) condition can be bypassed if attacker can control 'runner.name'
+       |
+       = note: audit confidence → High
+
+    6 findings (1 suppressed): 1 informational, 0 low, 0 medium, 4 high
+    "
+    );
+
+    Ok(())
+}

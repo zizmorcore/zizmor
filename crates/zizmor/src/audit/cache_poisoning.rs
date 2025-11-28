@@ -400,7 +400,7 @@ impl CachePoisoning {
         let (coord, cache_usage) = self.evaluate_cache_usage(step)?;
 
         let (yaml_key, annotation) = match cache_usage {
-            Usage::Always => ("uses", "caching always restored here"),
+            Usage::Always => ("uses", "cache always restored here"),
             Usage::DefaultActionBehaviour => ("uses", "cache enabled by default here"),
             Usage::DirectOptIn => ("with", "opt-in for caching here"),
             Usage::ConditionalOptIn => ("with", "opt-in for caching might happen here"),

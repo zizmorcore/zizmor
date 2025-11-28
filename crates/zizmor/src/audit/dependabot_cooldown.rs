@@ -121,7 +121,7 @@ impl Audit for DependabotCooldown {
                                         .location()
                                         .with_keys(["cooldown".into(), "default-days".into()])
                                         .primary()
-                                        .annotated("insufficient default-days configured"),
+                                        .annotated(format!("insufficient default-days configured (less than {days})", days = config.dependabot_cooldown_config.days)),
                                 )
                                 .confidence(Confidence::Medium)
                                 .severity(Severity::Low)

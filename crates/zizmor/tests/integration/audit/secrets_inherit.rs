@@ -1,0 +1,26 @@
+use crate::common::{input_under_test, zizmor};
+
+#[test]
+fn secrets_inherit() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("secrets-inherit.yml"))
+            .run()?,
+        @r"
+    warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+      --> @@INPUT@@:10:5
+       |
+    10 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+    11 |     # NOT OK: unconditionally inherits
+    12 |     secrets: inherit
+       |     ---------------- inherits all parent secrets
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}

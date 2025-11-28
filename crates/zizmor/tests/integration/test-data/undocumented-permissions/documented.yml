@@ -4,8 +4,8 @@ on: [push, pull_request]
 
 # GitHub token permissions for all jobs in this workflow
 permissions:
-  contents: read  # Needed to fetch code
-  packages: write # Needed to publish packages
+  contents: read # Needed to fetch code
+  packages: write # zizmor: ignore[excessive-permissions] Needed to publish packages
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     # Override workflow permissions for this specific job
     permissions:
-      contents: write  # Needed to create releases
-      issues: write    # Needed to create and update issues
+      contents: write # Needed to create releases
+      issues: write # Needed to create and update issues
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,9 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     # Specific permissions documented for admin operations
     permissions:
-      contents: write  # Needed for admin operations
-      packages: write  # Needed to publish packages
-      actions: write   # Needed to manage workflow runs
+      contents: write # Needed for admin operations
+      packages: write # Needed to publish packages
+      actions: write # Needed to manage workflow runs
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,10 +42,10 @@ jobs:
   test-job-3:
     name: Test Job 3
     runs-on: ubuntu-latest
-    # Specific permissions documented for analysis job  
+    # Specific permissions documented for analysis job
     permissions:
-      contents: read   # Needed for analysis job
-      metadata: read   # Needed to read repository metadata
+      contents: read # Needed for analysis job
+      metadata: read # Needed to read repository metadata
     steps:
       - uses: actions/checkout@v4
         with:

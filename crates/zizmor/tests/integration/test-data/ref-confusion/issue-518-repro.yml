@@ -10,4 +10,4 @@ jobs:
 
     steps:
       - name: Install Task
-        uses: arduino/setup-task@v2
+        uses: arduino/setup-task@v2 # zizmor: ignore[unpinned-uses]
