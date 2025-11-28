@@ -209,7 +209,20 @@ fn invalid_config_file() -> Result<()> {
             .expects_failure(true)
             .config(if cfg!(windows) { "NUL" } else { "/dev/null" })
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: configuration error in @@CONFIG@@
+      |
+      = help: check your configuration file for syntax errors
+      = help: see: https://docs.zizmor.sh/configuration/
+
+    Caused by:
+        0: configuration error in @@CONFIG@@
+        1: invalid configuration syntax
+        2: missing field `rules`
+    "
     );
 
     Ok(())
