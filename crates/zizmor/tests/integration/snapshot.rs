@@ -51,53 +51,6 @@ fn test_github_output() -> Result<()> {
 }
 
 #[test]
-fn anonymous_definition() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("anonymous-definition.yml"))
-            .args(["--persona=pedantic"])
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
-fn artipacked() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("artipacked.yml"))
-            .args(["--persona=pedantic"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(zizmor().input(input_under_test("artipacked.yml")).run()?);
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("artipacked.yml"))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("artipacked/issue-447-repro.yml"))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("artipacked/demo-action/action.yml"))
-            .args(["--persona=auditor"])
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
 fn self_hosted() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
@@ -803,129 +756,6 @@ fn template_injection() -> Result<()> {
 }
 
 #[test]
-fn cache_poisoning() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "cache-poisoning/caching-disabled-by-default.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "cache-poisoning/caching-enabled-by-default.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "cache-poisoning/caching-opt-in-boolean-toggle.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "cache-poisoning/caching-opt-in-expression.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "cache-poisoning/caching-opt-in-multi-value-toggle.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("cache-poisoning/caching-opt-out.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("cache-poisoning/no-cache-aware-steps.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("cache-poisoning/workflow-tag-trigger.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "cache-poisoning/caching-opt-in-boolish-toggle.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("cache-poisoning/publisher-step.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("cache-poisoning/issue-343-repro.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "cache-poisoning/caching-not-configurable.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "cache-poisoning/workflow-release-branch-trigger.yml"
-            ))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("cache-poisoning/issue-378-repro.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("cache-poisoning/issue-642-repro.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("cache-poisoning/issue-1081-repro.yml"))
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("cache-poisoning/issue-1152-repro.yml"))
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
 fn excessive_permissions() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
@@ -1082,17 +912,6 @@ fn unsound_contains() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("unsound-contains.yml"))
-            .run()?
-    );
-
-    Ok(())
-}
-
-#[test]
-fn bot_conditions() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("bot-conditions.yml"))
             .run()?
     );
 

@@ -2,6 +2,8 @@
 
 /// Basic acceptance tests.
 mod acceptance;
+/// Audit-specific tests.
+mod audit;
 /// Helpers.
 mod common;
 /// Configuration discovery tests.
