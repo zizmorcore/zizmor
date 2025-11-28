@@ -13,6 +13,9 @@ of `zizmor`.
 
 * The [use-trusted-publishing] audit now detects NuGet publishing commands
   (#1369)
+  
+* The [dependabot-cooldown] audit now flags cooldown periods of less than 7
+  days by default (#1375)
 
 ### Bug Fixes 🐛
 

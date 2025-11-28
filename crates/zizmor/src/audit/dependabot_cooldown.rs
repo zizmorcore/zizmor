@@ -111,12 +111,11 @@ impl Audit for DependabotCooldown {
                             .fix(Self::create_add_default_days_fix(update))
                             .build(dependabot)?,
                     ),
-                    // We currently (arbitrarily) consider cooldowns under 4 days
-                    // to be insufficient. The rationale here is that under 4 days
-                    // can overlap with inopportune times like long weekends.
+                    // We currently (arbitrarily) consider cooldowns under 7 days
+                    // to be insufficient.
                     //
                     // TODO(ww): This should probably be configurable.
-                    Some(default_days) if default_days < 4 => findings.push(
+                    Some(default_days) if default_days < 7 => findings.push(
                         Self::finding()
                             .add_location(
                                 update
