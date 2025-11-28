@@ -85,7 +85,7 @@ impl Audit for DependabotCooldown {
     async fn audit_dependabot<'doc>(
         &self,
         dependabot: &'doc crate::models::dependabot::Dependabot,
-        _config: &crate::config::Config,
+        config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -111,24 +111,24 @@ impl Audit for DependabotCooldown {
                             .fix(Self::create_add_default_days_fix(update))
                             .build(dependabot)?,
                     ),
-                    // We currently (arbitrarily) consider cooldowns under 7 days
-                    // to be insufficient.
-                    //
-                    // TODO(ww): This should probably be configurable.
-                    Some(default_days) if default_days < 7 => findings.push(
-                        Self::finding()
-                            .add_location(
-                                update
-                                    .location()
-                                    .with_keys(["cooldown".into(), "default-days".into()])
-                                    .primary()
-                                    .annotated("insufficient default-days configured"),
-                            )
-                            .confidence(Confidence::Medium)
-                            .severity(Severity::Low)
-                            .fix(Self::create_increase_default_days_fix(update))
-                            .build(dependabot)?,
-                    ),
+                    Some(default_days)
+                        if default_days < config.dependabot_cooldown_config.days.get() as u64 =>
+                    {
+                        findings.push(
+                            Self::finding()
+                                .add_location(
+                                    update
+                                        .location()
+                                        .with_keys(["cooldown".into(), "default-days".into()])
+                                        .primary()
+                                        .annotated("insufficient default-days configured"),
+                                )
+                                .confidence(Confidence::Medium)
+                                .severity(Severity::Low)
+                                .fix(Self::create_increase_default_days_fix(update))
+                                .build(dependabot)?,
+                        )
+                    }
                     Some(_) => {}
                 },
                 None => findings.push(

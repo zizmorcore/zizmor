@@ -11,7 +11,10 @@ use thiserror::Error;
 
 use crate::{
     App, CollectionOptions,
-    audit::{AuditCore, forbidden_uses::ForbiddenUses, unpinned_uses::UnpinnedUses},
+    audit::{
+        AuditCore, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
+        unpinned_uses::UnpinnedUses,
+    },
     finding::Finding,
     github::{Client, ClientError},
     models::uses::RepositoryUsesPattern,
@@ -148,6 +151,20 @@ impl RawConfig {
             .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
             .transpose()
             .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) struct DependabotCooldownConfig {
+    pub(crate) days: NonZeroUsize,
+}
+
+impl Default for DependabotCooldownConfig {
+    fn default() -> Self {
+        Self {
+            days: NonZeroUsize::new(7).expect("impossible"),
+        }
     }
 }
 
@@ -344,6 +361,7 @@ impl TryFrom<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Config {
     raw: RawConfig,
+    pub(crate) dependabot_cooldown_config: DependabotCooldownConfig,
     pub(crate) forbidden_uses_config: Option<ForbiddenUsesConfig>,
     pub(crate) unpinned_uses_policies: UnpinnedUsesPolicies,
 }
@@ -352,6 +370,10 @@ impl Config {
     /// Loads a [`Config`] from the given contents.
     fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
         let raw = RawConfig::load(contents)?;
+
+        let dependabot_cooldown_config = raw
+            .rule_config(DependabotCooldown::ident())?
+            .unwrap_or_default();
 
         let forbidden_uses_config = raw.rule_config(ForbiddenUses::ident())?;
 
@@ -367,6 +389,7 @@ impl Config {
 
         Ok(Self {
             raw,
+            dependabot_cooldown_config,
             forbidden_uses_config,
             unpinned_uses_policies,
         })
