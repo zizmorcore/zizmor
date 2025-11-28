@@ -329,7 +329,7 @@ fn test_caching_not_configurable() -> anyhow::Result<()> {
        | |____________- generally used when publishing artifacts generated at runtime
     ...
     21 |           uses: Mozilla-Actions/sccache-action@054db53350805f83040bf3e6e9b8cf5a139aa7c9
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ caching always restored here
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache always restored here
        |
        = note: audit confidence → Low
 
