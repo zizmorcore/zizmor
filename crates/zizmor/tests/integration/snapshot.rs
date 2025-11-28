@@ -787,27 +787,6 @@ fn unredacted_secrets() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn obfuscation() -> Result<()> {
-    insta::assert_snapshot!(zizmor().input(input_under_test("obfuscation.yml")).run()?);
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("obfuscation/computed-indices.yml"))
-            .args(["--persona=pedantic"])
-            .run()?
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("obfuscation/issue-1177-repro.yml"))
-            .args(["--persona=pedantic"])
-            .run()?
-    );
-
-    Ok(())
-}
-
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn stale_action_refs() -> Result<()> {
