@@ -24,3 +24,5 @@ mod self_hosted_runner;
 mod stale_action_refs;
 mod template_injection;
 mod undocumented_permissions;
+mod unpinned_images;
+mod unpinned_uses;
