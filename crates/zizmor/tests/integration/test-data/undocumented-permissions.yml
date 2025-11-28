@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 # This workflow-level permission block has no comment
 permissions:
-  contents: write
+  contents: write # zizmor: ignore[excessive-permissions]
   packages: read
 
 concurrency:
@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     # This job's permissions block has a comment explaining why
     permissions:
-      contents: read  # Needed to read repo contents
-      issues: write   # Needed to write issue comments
+      contents: read # Needed to read repo contents
+      issues: write # Needed to write issue comments
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,7 +46,7 @@ jobs:
     permissions:
       contents: read #
       packages: write #
-      actions: write  #    
+      actions: write #
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,7 +59,7 @@ jobs:
     permissions:
       metadata: read
       packages: write #
-      issues: write   # Needed to post status updates
+      issues: write # Needed to post status updates
     steps:
       - uses: actions/checkout@v4
         with:

@@ -23,3 +23,4 @@ mod secrets_inherit;
 mod self_hosted_runner;
 mod stale_action_refs;
 mod template_injection;
+mod undocumented_permissions;
