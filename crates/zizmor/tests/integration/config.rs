@@ -300,7 +300,7 @@ fn test_invalid_configs() -> anyhow::Result<()> {
     Caused by:
         0: configuration error in @@CONFIG@@
         1: invalid syntax for audit `forbidden-uses`
-        2: data did not match any variant of untagged enum ForbiddenUsesConfig
+        2: invalid pattern: */*
     "
     );
 
