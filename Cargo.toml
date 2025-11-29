@@ -73,7 +73,7 @@ tree-sitter = "0.25.10"
 tree-sitter-bash = "0.25.0"
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "0.0.2" }
 tree-sitter-powershell = "0.25.9"
-yamlpath = { path = "crates/yamlpath", version = "0.28.0" }
+yamlpath = { path = "crates/yamlpath", version = "0.29.0" }
 yamlpatch = { path = "crates/yamlpatch", version = "0.6.0" }
 tree-sitter-yaml = "0.7.2"
 tikv-jemallocator = "0.6"
