@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
+use std::{collections::HashMap, fs, num::NonZeroUsize, ops::Deref, str::FromStr};
 
 use anyhow::{Context as _, anyhow};
 use camino::Utf8Path;
@@ -168,11 +168,33 @@ impl Default for DependabotCooldownConfig {
     }
 }
 
+/// Slightly annoying wrapper for [`ForbiddenUsesConfigInner`], which is our
+/// real configuration type for the `forbidden-uses` rule.
+///
+/// We need this wrapper type so that we can apply the `singleton_map`
+/// deserializer to the inner type, ensuring that we deserialize from a
+/// mapping with an explicit key discriminant (i.e. `allow:` or `deny:`)
+/// rather than a YAML tag. We could work around this by using serde's
+/// `untagged` instead, but this produces suboptimal user-facing error messages.
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "kebab-case", untagged)]
-pub(crate) enum ForbiddenUsesConfig {
-    Allow { allow: Vec<RepositoryUsesPattern> },
-    Deny { deny: Vec<RepositoryUsesPattern> },
+#[serde(transparent)]
+pub(crate) struct ForbiddenUsesConfig(
+    #[serde(with = "serde_yaml::with::singleton_map")] pub(crate) ForbiddenUsesConfigInner,
+);
+
+impl Deref for ForbiddenUsesConfig {
+    type Target = ForbiddenUsesConfigInner;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum ForbiddenUsesConfigInner {
+    Allow(Vec<RepositoryUsesPattern>),
+    Deny(Vec<RepositoryUsesPattern>),
 }
 
 /// Config for the `unpinned-uses` rule.

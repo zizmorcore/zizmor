@@ -20,6 +20,9 @@ of `zizmor`.
 * The [dependabot-cooldown] audit can now be configured with a custom
   minimum cooldown period via `rules.dependabot-cooldown.config.days`
   (#1377)
+  
+* `zizmor` now produces slightly more useful error messages when the user supplies
+  an invalid configuration for the [forbidden-uses] audit (#1381)
 
 ### Bug Fixes 🐛
 
