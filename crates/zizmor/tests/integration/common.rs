@@ -47,7 +47,7 @@ pub struct Zizmor {
     no_config: bool,
     output: OutputMode,
     expects_failure: bool,
-    show_urls: bool,
+    show_audit_urls: bool,
 }
 
 impl Zizmor {
@@ -65,7 +65,7 @@ impl Zizmor {
             no_config: false,
             output: OutputMode::Stdout,
             expects_failure: false,
-            show_urls: false,
+            show_audit_urls: false,
         }
     }
 
@@ -127,8 +127,8 @@ impl Zizmor {
         self
     }
 
-    pub fn show_urls(mut self, flag: bool) -> Self {
-        self.show_urls = flag;
+    pub fn show_audit_urls(mut self, flag: bool) -> Self {
+        self.show_audit_urls = flag;
         self
     }
 
@@ -172,10 +172,10 @@ impl Zizmor {
             self.cmd.arg("--no-progress");
         }
 
-        if self.show_urls {
-            self.cmd.arg("--show-urls=always");
+        if self.show_audit_urls {
+            self.cmd.arg("--show-audit-urls=always");
         } else {
-            self.cmd.arg("--show-urls=never");
+            self.cmd.arg("--show-audit-urls=never");
         }
 
         for input in &self.inputs {

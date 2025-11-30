@@ -122,7 +122,7 @@ struct App {
     ///
     /// Only affects `--format=plain` (the default).
     #[arg(long, value_enum, default_value_t, env = "ZIZMOR_SHOW_URLS")]
-    show_urls: CliShowUrlsMode,
+    show_audit_urls: CliShowAuditUrls,
 
     /// Control the use of color in output.
     #[arg(long, value_enum, value_name = "MODE")]
@@ -325,36 +325,36 @@ pub(crate) enum OutputFormat {
 }
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
-pub(crate) enum CliShowUrlsMode {
-    /// Render URLs in output automatically based on output format and runtime context.
+pub(crate) enum CliShowAuditUrls {
+    /// Render audit URLs in output automatically based on output format and runtime context.
     ///
     /// For example, URLs will be shown if a CI runtime is detected.
     #[default]
     Auto,
-    /// Always render URLs in output.
+    /// Always render audit URLs in output.
     Always,
-    /// Never render URLs in output.
+    /// Never render audit URLs in output.
     Never,
 }
 
 #[derive(Debug, Copy, Clone)]
-pub(crate) enum ShowUrlsMode {
+pub(crate) enum ShowAuditUrls {
     Always,
     Never,
 }
 
-impl From<CliShowUrlsMode> for ShowUrlsMode {
-    fn from(value: CliShowUrlsMode) -> Self {
+impl From<CliShowAuditUrls> for ShowAuditUrls {
+    fn from(value: CliShowAuditUrls) -> Self {
         match value {
-            CliShowUrlsMode::Auto => {
+            CliShowAuditUrls::Auto => {
                 if utils::is_ci() {
-                    ShowUrlsMode::Always
+                    ShowAuditUrls::Always
                 } else {
-                    ShowUrlsMode::Never
+                    ShowAuditUrls::Never
                 }
             }
-            CliShowUrlsMode::Always => ShowUrlsMode::Always,
-            CliShowUrlsMode::Never => ShowUrlsMode::Never,
+            CliShowAuditUrls::Always => ShowAuditUrls::Always,
+            CliShowAuditUrls::Never => ShowAuditUrls::Never,
         }
     }
 }
@@ -811,9 +811,12 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     }
 
     match app.format {
-        OutputFormat::Plain => {
-            output::plain::render_findings(&registry, &results, &app.show_urls.into(), app.naches)
-        }
+        OutputFormat::Plain => output::plain::render_findings(
+            &registry,
+            &results,
+            &app.show_audit_urls.into(),
+            app.naches,
+        ),
         OutputFormat::Json | OutputFormat::JsonV1 => {
             output::json::v1::output(stdout(), results.findings()).map_err(Error::Output)?
         }
