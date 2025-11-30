@@ -5,7 +5,12 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 use self::location::{Location, SymbolicLocation};
-use crate::{InputKey, audit::AuditError, models::AsDocument, registry::input::Group};
+use crate::{
+    InputKey,
+    audit::AuditError,
+    models::{AsDocument, StepCommon},
+    registry::input::Group,
+};
 use yamlpatch::{self, Patch};
 
 pub(crate) mod location;
@@ -220,6 +225,28 @@ impl<'doc> FindingBuilder<'doc> {
 
     pub(crate) fn add_location(mut self, location: SymbolicLocation<'doc>) -> Self {
         self.locations.push(location);
+        self
+    }
+
+    /// Add a location derived from the given step, if the step has an
+    /// identifying name or ID.
+    ///
+    /// If the step lacks a name or ID, no location is added.
+    pub(crate) fn with_step(mut self, step: impl StepCommon<'doc>) -> Self {
+        if step.name().is_some() {
+            self.locations.push(
+                step.location()
+                    .with_keys(["name".into()])
+                    .annotated("this step"),
+            )
+        } else if step.id().is_some() {
+            self.locations.push(
+                step.location()
+                    .with_keys(["id".into()])
+                    .annotated("this step"),
+            )
+        }
+
         self
     }
 

@@ -37,6 +37,12 @@ pub(crate) enum StepBodyCommon<'s> {
 
 /// Common interfaces between workflow and action steps.
 pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
+    /// Returns the step's name, if it has one.
+    fn name(&self) -> Option<&str>;
+
+    /// Returns the step's id, if it has one.
+    fn id(&self) -> Option<&str>;
+
     /// Returns the step's index within its parent job or action.
     fn index(&self) -> usize;
 
