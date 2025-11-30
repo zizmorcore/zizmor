@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* The [use-trusted-publishing] audit now detects additional publishing command
+  patterns, including common "wrapped" patterns like `bundle exec gem publish`
+  (#1394)
+
 ## 1.18.0
 
 ### Enhancements 🌱

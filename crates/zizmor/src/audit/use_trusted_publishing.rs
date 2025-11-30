@@ -199,9 +199,33 @@ impl UseTrustedPublishing {
                 // Looking for `twine ... upload`.
                 args.any(|arg| arg == "upload")
             }
+            "pipx" => {
+                // TODO: also match `pipx ... run ... uv ... publish`, etc.
+
+                // Looking for `pipx ... run ... twine ... upload`.
+                //
+                // A wrinkle here is that `pipx run` takes version specifiers
+                // too, e.g. `pipx run twine==X.Y.Z upload ...`. So we only
+                // loosely match the `twine` part.
+                args.any(|arg| arg == "run")
+                    && args.any(|arg| arg.starts_with("twine"))
+                    && args.any(|arg| arg == "upload")
+            }
+            _ if cmd.starts_with("python") => {
+                // Looking for `python* ... -m ... twine ... upload`.
+                args.any(|arg| arg == "-m")
+                    && args.any(|arg| arg == "twine")
+                    && args.any(|arg| arg == "upload")
+            }
             "gem" => {
                 // Looking for `gem ... push`.
                 args.any(|arg| arg == "push")
+            }
+            "bundle" => {
+                // Looking for `bundle ... exec ... gem ... push`.
+                args.any(|arg| arg == "exec")
+                    && args.any(|arg| arg == "gem")
+                    && args.any(|arg| arg == "push")
             }
             "npm" => {
                 let args = args.collect::<HashSet<_>>();
@@ -236,10 +260,8 @@ impl UseTrustedPublishing {
                 args.any(|arg| arg == "push")
             }
             "dotnet" => {
-                // Looking for `dotnet ... nuget push`.
-                args.next()
-                    .map(|cmd| cmd == "nuget" && Self::is_publish_command(cmd, args))
-                    .unwrap_or(false)
+                // Looking for `dotnet ... nuget ... push`.
+                args.any(|arg| arg == "nuget") && args.any(|arg| arg == "push")
             }
             _ => false,
         }
@@ -440,5 +462,61 @@ impl Audit for UseTrustedPublishing {
         _config: &crate::config::Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_is_publish_command() {
+        for (args, is_publish_command) in &[
+            (&["cargo", "publish"][..], true),
+            (&["cargo", "publish", "-p", "foo"][..], true),
+            (&["cargo", "publish", "--dry-run"][..], false),
+            (&["cargo", "publish", "-n"][..], false),
+            (&["cargo", "build"][..], false),
+            (&["uv", "publish"][..], true),
+            (&["uv", "publish", "dist/*"][..], true),
+            (&["uv", "publish", "--dry-run"][..], false),
+            (&["hatch", "publish"][..], true),
+            (&["pdm", "publish"][..], true),
+            (&["twine", "upload", "dist/*"][..], true),
+            (&["pipx", "run", "twine", "upload", "dist/*"][..], true),
+            (
+                &["pipx", "run", "twine==3.4.1", "upload", "dist/*"][..],
+                true,
+            ),
+            (
+                &["pipx", "run", "twine==6.1.0", "upload", "dist/*"][..],
+                true,
+            ),
+            (&["python", "-m", "twine", "upload", "dist/*"][..], true),
+            (&["python3.9", "-m", "twine", "upload", "dist/*"][..], true),
+            (&["twine", "check", "dist/*"], false),
+            (&["gem", "push", "mygem-0.1.0.gem"][..], true),
+            (
+                &["bundle", "exec", "gem", "push", "mygem-0.1.0.gem"][..],
+                true,
+            ),
+            (&["npm", "publish"][..], true),
+            (&["npm", "run", "publish"][..], true),
+            (&["npm", "publish", "--dry-run"][..], false),
+            (&["yarn", "npm", "publish"][..], true),
+            (&["yarn", "npm", "publish", "--dry-run"][..], false),
+            (&["pnpm", "publish"][..], true),
+            (&["pnpm", "publish", "--dry-run"][..], false),
+            (&["nuget", "push", "MyPackage.nupkg"][..], true),
+            (&["nuget.exe", "push", "MyPackage.nupkg"][..], true),
+            (&["dotnet", "nuget", "push", "MyPackage.nupkg"][..], true),
+            (&["dotnet", "build"][..], false),
+        ] {
+            let cmd = args[0];
+            let args_iter = args[1..].iter().map(|s| *s);
+            assert_eq!(
+                super::UseTrustedPublishing::is_publish_command(cmd, args_iter),
+                *is_publish_command,
+                "cmd: {cmd:?}, args: {args:?}"
+            );
+        }
     }
 }
