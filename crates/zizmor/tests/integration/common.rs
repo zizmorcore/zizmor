@@ -127,6 +127,11 @@ impl Zizmor {
         self
     }
 
+    pub fn show_urls(mut self, flag: bool) -> Self {
+        self.show_urls = flag;
+        self
+    }
+
     pub fn working_dir(mut self, dir: impl Into<String>) -> Self {
         self.cmd.current_dir(dir.into());
         self

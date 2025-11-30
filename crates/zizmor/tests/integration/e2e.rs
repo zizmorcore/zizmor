@@ -595,3 +595,25 @@ fn test_github_output() -> Result<()> {
 
     Ok(())
 }
+
+/// Ensures that the `--show-urls` flag works as expected.
+#[test]
+fn test_show_urls() -> Result<()> {
+    let with_urls = zizmor()
+        .offline(true)
+        .show_urls(true)
+        .input(input_under_test("several-vulnerabilities.yml"))
+        .run()?;
+
+    assert!(with_urls.contains("audit documentation → "));
+
+    let without_urls = zizmor()
+        .offline(true)
+        .show_urls(false)
+        .input(input_under_test("several-vulnerabilities.yml"))
+        .run()?;
+
+    assert!(!without_urls.contains("audit documentation → "));
+
+    Ok(())
+}
