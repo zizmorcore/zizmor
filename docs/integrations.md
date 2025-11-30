@@ -274,6 +274,20 @@ This will run `zizmor` on every commit.
     See [`pre-commit`](https://pre-commit.com/) documentation for more
     information on how to configure `pre-commit`.
 
+## Linter frameworks
+
+!!! important
+
+    These are third-party integrations; please report any issues
+    you encounter to the appropriate upstream project.
+
+### super-linter
+
+You can use `zizmor` with @super-linter/super-linter.
+
+Refer to the [super-linter documentation](https://github.com/super-linter/super-linter)
+for additional details.
+
 ## Tab completion { #integration-tab-completion }
 
 !!! note
