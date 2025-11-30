@@ -1405,6 +1405,14 @@
         - stravalib/stravalib#649
 
 
+-   ![](https://github.com/super-linter.png?size=40){ width="40" loading=lazy align=left } super-linter
+
+    ---
+
+    ??? example "Examples"
+        - super-linter/super-linter#7241
+
+
 -   ![](https://github.com/Swatinem.png?size=40){ width="40" loading=lazy align=left } Swatinem
 
     ---
