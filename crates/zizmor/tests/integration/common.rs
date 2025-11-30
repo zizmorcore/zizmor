@@ -47,6 +47,7 @@ pub struct Zizmor {
     no_config: bool,
     output: OutputMode,
     expects_failure: bool,
+    show_urls: bool,
 }
 
 impl Zizmor {
@@ -64,6 +65,7 @@ impl Zizmor {
             no_config: false,
             output: OutputMode::Stdout,
             expects_failure: false,
+            show_urls: false,
         }
     }
 
@@ -163,6 +165,12 @@ impl Zizmor {
             // simulates a TTY.
             // See: https://github.com/emersonford/tracing-indicatif/issues/24
             self.cmd.arg("--no-progress");
+        }
+
+        if self.show_urls {
+            self.cmd.arg("--show-urls=always");
+        } else {
+            self.cmd.arg("--show-urls=never");
         }
 
         for input in &self.inputs {
