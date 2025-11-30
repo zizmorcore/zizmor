@@ -4,7 +4,7 @@ all:
 
 .PHONY: site
 site:
-	uv run --only-group docs zensical build
+	uv run --only-group docs zensical build --clean
 
 .PHONY: site-live
 site-live:
