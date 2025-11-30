@@ -347,7 +347,7 @@ impl From<CliShowAuditUrls> for ShowAuditUrls {
     fn from(value: CliShowAuditUrls) -> Self {
         match value {
             CliShowAuditUrls::Auto => {
-                if utils::is_ci() {
+                if utils::is_ci() || !stdout().is_terminal() {
                     ShowAuditUrls::Always
                 } else {
                     ShowAuditUrls::Never

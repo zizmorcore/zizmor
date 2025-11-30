@@ -224,6 +224,36 @@ disable output colorization by setting `NO_COLOR=1` in their environment.
 
 This format can also be explicitly selected with `--format=plain`.
 
+#### Audit documentation links
+
+By default, `zizmor` includes links to relevant documentation pages
+for each finding in its plain output format. These links are provided via
+[OSC 8](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda)
+hyperlinks, which are supported by many modern terminal emulators.
+
+For example, in the output above, `template-injection` within
+`error[template-injection]: ...` is a clickable link that takes you to
+the [template-injection](./audits#template-injection) audit documentation.
+
+In addition to these OSC 8 links, `zizmor` also includes the full URL
+as part of each finding _if_ it detects a non-terminal output _or_
+a CI environment (e.g. GitHub Actions).
+
+To make this behavior explicir, users can supply the `--show-audit-urls`
+option:
+
+```bash
+# always show audit documentation URLs, even if output is to a terminal
+zizmor --show-audit-urls=always ...
+
+# never show audit documentation URLs
+zizmor --show-audit-urls=never ... 
+```
+
+!!! note
+
+    `--show-audit-urls=...` is available in `v1.19.0` and later.
+
 #### Color customization
 
 When invoked from a terminal, `zizmor` will attempt to enrich its output
