@@ -199,6 +199,24 @@ impl UseTrustedPublishing {
                 // Looking for `twine ... upload`.
                 args.any(|arg| arg == "upload")
             }
+            "pipx" => {
+                // TODO: also match `pipx ... run ... uv ... publish`, etc.
+
+                // Looking for `pipx ... run ... twine ... upload`.
+                //
+                // A wrinkle here is that `pipx run` takes version specifiers
+                // too, e.g. `pipx run twine==X.Y.Z upload ...`. So we only
+                // loosely match the `twine` part.
+                args.any(|arg| arg == "run")
+                    && args.any(|arg| arg.starts_with("twine"))
+                    && args.any(|arg| arg == "upload")
+            }
+            _ if cmd.starts_with("python") => {
+                // Looking for `python* ... -m ... twine ... upload`.
+                args.any(|arg| arg == "-m")
+                    && args.any(|arg| arg == "twine")
+                    && args.any(|arg| arg == "upload")
+            }
             "gem" => {
                 // Looking for `gem ... push`.
                 args.any(|arg| arg == "push")

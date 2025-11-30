@@ -452,3 +452,60 @@ fn test_gem_push() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_twine_upload() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/twine-upload.yml"))
+            .run()?,
+        @r"
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:12:14
+       |
+    12 |         run: twine upload dist/*
+       |         ---  ^^^^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:15:14
+       |
+    15 |         run: python -m twine upload dist/*
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:19:11
+       |
+    18 |           run: |
+       |           --- this step
+    19 | /           python3.10 -m \
+    20 | |             twine \
+    21 | |             upload \
+    22 | |             dist/*
+       | |__________________^ this command
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:26:11
+       |
+    25 |         run: |
+       |         --- this step
+    26 |           pipx run twine==6.1.0 upload dist/*
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+       |
+       = note: audit confidence → High
+
+    6 findings (2 suppressed): 4 informational, 0 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}

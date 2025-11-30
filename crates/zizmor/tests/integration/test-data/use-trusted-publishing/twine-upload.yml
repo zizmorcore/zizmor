@@ -1,0 +1,26 @@
+on: [push]
+
+name: use-trusted-publishing
+
+jobs:
+  publish-1:
+    name: publish-1
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: vulnerable-1
+        run: twine upload dist/*
+
+      - name: vulnerable-2
+        run: python -m twine upload dist/*
+
+      - name: vulnerable-3
+        run: |
+          python3.10 -m \
+            twine \
+            upload \
+            dist/*
+
+      - name: vulnerable-4
+        run: |
+          pipx run twine==6.1.0 upload dist/*
