@@ -7,6 +7,7 @@ use anstream::{eprintln, print, println};
 use owo_colors::OwoColorize;
 
 use crate::{
+    ShowAuditUrls,
     finding::{
         Finding, Severity,
         location::{Location, LocationKind},
@@ -94,10 +95,11 @@ pub(crate) fn finding_snippets<'doc>(
 pub(crate) fn render_findings(
     registry: &InputRegistry,
     findings: &FindingRegistry,
+    show_urls_mode: &ShowAuditUrls,
     naches_mode: bool,
 ) {
     for finding in findings.findings() {
-        render_finding(registry, finding);
+        render_finding(registry, finding, show_urls_mode);
         println!();
     }
 
@@ -190,7 +192,7 @@ pub(crate) fn render_findings(
     }
 }
 
-fn render_finding(registry: &InputRegistry, finding: &Finding) {
+fn render_finding(registry: &InputRegistry, finding: &Finding, show_urls_mode: &ShowAuditUrls) {
     let title = Level::from(&finding.determinations.severity)
         .primary_title(finding.desc)
         .id(finding.ident)
@@ -211,6 +213,13 @@ fn render_finding(registry: &InputRegistry, finding: &Finding) {
 
     if !finding.fixes.is_empty() {
         group = group.element(Level::NOTE.message("this finding has an auto-fix"));
+    }
+
+    if matches!(show_urls_mode, ShowAuditUrls::Always) {
+        group = group.element(Level::HELP.message(format!(
+            "audit documentation → {url}",
+            url = finding.url.green()
+        )))
     }
 
     // TODO: Evaluate alternative decor styles.

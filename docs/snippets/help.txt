@@ -28,6 +28,8 @@ Options:
           Don't show progress bars, even if the terminal supports them
       --format <FORMAT>
           The output format to emit. By default, cargo-style diagnostics will be emitted [default: plain] [possible values: plain, json, json-v1, sarif, github]
+      --show-audit-urls <SHOW_AUDIT_URLS>
+          Whether to render audit URLs in the output, separately from any URLs embedded in OSC 8 links [env: ZIZMOR_SHOW_AUDIT_URLS=] [default: auto] [possible values: auto, always, never]
       --color <MODE>
           Control the use of color in output [possible values: auto, always, never]
   -c, --config <CONFIG>

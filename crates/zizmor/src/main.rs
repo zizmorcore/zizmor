@@ -2,6 +2,7 @@
 
 use std::{
     collections::HashSet,
+    env,
     io::{Write, stdout},
     process::ExitCode,
 };
@@ -115,6 +116,13 @@ struct App {
     /// The output format to emit. By default, cargo-style diagnostics will be emitted.
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
+
+    /// Whether to render audit URLs in the output, separately from any URLs
+    /// embedded in OSC 8 links.
+    ///
+    /// Only affects `--format=plain` (the default).
+    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_SHOW_AUDIT_URLS")]
+    show_audit_urls: CliShowAuditUrls,
 
     /// Control the use of color in output.
     #[arg(long, value_enum, value_name = "MODE")]
@@ -314,6 +322,41 @@ pub(crate) enum OutputFormat {
     Sarif,
     /// GitHub Actions workflow command-formatted output.
     Github,
+}
+
+#[derive(Debug, Default, Copy, Clone, ValueEnum)]
+pub(crate) enum CliShowAuditUrls {
+    /// Render audit URLs in output automatically based on output format and runtime context.
+    ///
+    /// For example, URLs will be shown if a CI runtime is detected.
+    #[default]
+    Auto,
+    /// Always render audit URLs in output.
+    Always,
+    /// Never render audit URLs in output.
+    Never,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum ShowAuditUrls {
+    Always,
+    Never,
+}
+
+impl From<CliShowAuditUrls> for ShowAuditUrls {
+    fn from(value: CliShowAuditUrls) -> Self {
+        match value {
+            CliShowAuditUrls::Auto => {
+                if utils::is_ci() || !stdout().is_terminal() {
+                    ShowAuditUrls::Always
+                } else {
+                    ShowAuditUrls::Never
+                }
+            }
+            CliShowAuditUrls::Always => ShowAuditUrls::Always,
+            CliShowAuditUrls::Never => ShowAuditUrls::Never,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
@@ -768,7 +811,12 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     }
 
     match app.format {
-        OutputFormat::Plain => output::plain::render_findings(&registry, &results, app.naches),
+        OutputFormat::Plain => output::plain::render_findings(
+            &registry,
+            &results,
+            &app.show_audit_urls.into(),
+            app.naches,
+        ),
         OutputFormat::Json | OutputFormat::JsonV1 => {
             output::json::v1::output(stdout(), results.findings()).map_err(Error::Output)?
         }
@@ -811,7 +859,7 @@ async fn main() -> ExitCode {
     // which is then typically inaccessible from an already failed
     // CI job. In those cases, it's better to dump directly to stderr,
     // since that'll typically be captured by console logging.
-    if std::env::var_os("CI").is_some() {
+    if utils::is_ci() {
         std::panic::set_hook(Box::new(|info| {
             let trace = std::backtrace::Backtrace::force_capture();
             eprintln!("FATAL: zizmor crashed. This is a bug that should be reported.");

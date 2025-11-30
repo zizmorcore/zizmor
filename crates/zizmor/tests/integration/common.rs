@@ -47,6 +47,7 @@ pub struct Zizmor {
     no_config: bool,
     output: OutputMode,
     expects_failure: bool,
+    show_audit_urls: bool,
 }
 
 impl Zizmor {
@@ -64,6 +65,7 @@ impl Zizmor {
             no_config: false,
             output: OutputMode::Stdout,
             expects_failure: false,
+            show_audit_urls: false,
         }
     }
 
@@ -125,6 +127,11 @@ impl Zizmor {
         self
     }
 
+    pub fn show_audit_urls(mut self, flag: bool) -> Self {
+        self.show_audit_urls = flag;
+        self
+    }
+
     pub fn working_dir(mut self, dir: impl Into<String>) -> Self {
         self.cmd.current_dir(dir.into());
         self
@@ -163,6 +170,12 @@ impl Zizmor {
             // simulates a TTY.
             // See: https://github.com/emersonford/tracing-indicatif/issues/24
             self.cmd.arg("--no-progress");
+        }
+
+        if self.show_audit_urls {
+            self.cmd.arg("--show-audit-urls=always");
+        } else {
+            self.cmd.arg("--show-audit-urls=never");
         }
 
         for input in &self.inputs {

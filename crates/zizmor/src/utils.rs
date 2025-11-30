@@ -703,6 +703,13 @@ pub(crate) mod once {
     pub(crate) use warn_once;
 }
 
+/// Returns whether we are running in a CI environment.
+pub(crate) fn is_ci() -> bool {
+    static IS_CI: LazyLock<bool> = LazyLock::new(|| std::env::var_os("CI").is_some());
+
+    *IS_CI
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
