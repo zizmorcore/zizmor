@@ -121,7 +121,7 @@ struct App {
     /// embedded in OSC 8 links.
     ///
     /// Only affects `--format=plain` (the default).
-    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_SHOW_URLS")]
+    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_SHOW_AUDIT_URLS")]
     show_audit_urls: CliShowAuditUrls,
 
     /// Control the use of color in output.
