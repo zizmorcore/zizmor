@@ -387,9 +387,7 @@ where
                     .basic()
                 {
                     Valid(_) => Err(e)
-                        .context(format!(
-                            "this suggests a bug in zizmor; please report it! raw: {raw_value:?}"
-                        ))
+                        .context("this suggests a bug in zizmor; please report it!")
                         .map_err(CollectionError::Model),
                     Invalid(errors) => {
                         Err(CollectionError::Schema(parse_validation_errors(errors)))
