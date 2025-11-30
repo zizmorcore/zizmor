@@ -254,6 +254,50 @@ fn invalid_inputs() -> Result<()> {
     Ok(())
 }
 
+/// Reproduction test for #1395.
+///
+/// Ensures that we produce a useful error message when the user gives us an
+/// invalid YAML input (specifically, one with duplicate mapping keys).
+#[test]
+fn test_issue_1394() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test(
+                "invalid/issue-1395-repro-duplicate-mapping-keys.yml"
+            ))
+            .args(["--strict-collection"])
+            .run()?,
+        @r#"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    failed to load file://@@INPUT@@ as workflow
+
+    Caused by:
+        0: invalid YAML syntax: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+        1: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+    "#
+    );
+
+    // Without --strict-collection, we get a warning and then a collection failure error.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test(
+                "invalid/issue-1395-repro-duplicate-mapping-keys.yml"
+            ))
+            .run()?,
+        @r#"
+    🌈 zizmor v@@VERSION@@
+     WARN collect_inputs: zizmor::registry::input: failed to parse input: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+    fatal: no audit was performed
+    no inputs collected
+    "#
+    );
+
+    Ok(())
+}
+
 #[test]
 fn invalid_input_not_strict() -> Result<()> {
     for tc in ["invalid-workflow", "invalid-action-1/action"] {
