@@ -14,6 +14,10 @@ of `zizmor`.
 * The [use-trusted-publishing] audit now detects additional publishing command
   patterns, including common "wrapped" patterns like `bundle exec gem publish`
   (#1394)
+  
+* zizmor now produces better error messages on a handful of error cases involving
+  invalid input files. Specifically, a subset of syntax and schema errors now
+  produce more detailed and actionable error messages (#1396)
 
 ## 1.18.0
 
