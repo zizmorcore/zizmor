@@ -1,6 +1,6 @@
 //! Helper routines.
 
-use anyhow::{Context as _, Error, anyhow};
+use anyhow::{Error, anyhow};
 use camino::Utf8Path;
 use github_actions_expressions::context::{Context, ContextPattern};
 use github_actions_models::common::{Env, expr::LoE};
@@ -386,9 +386,7 @@ where
                     )
                     .basic()
                 {
-                    Valid(_) => Err(e)
-                        .context("this suggests a bug in zizmor; please report it!")
-                        .map_err(CollectionError::Model),
+                    Valid(_) => Err(e.into()),
                     Invalid(errors) => {
                         Err(CollectionError::Schema(parse_validation_errors(errors)))
                     }
