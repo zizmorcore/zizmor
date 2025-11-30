@@ -203,6 +203,12 @@ impl UseTrustedPublishing {
                 // Looking for `gem ... push`.
                 args.any(|arg| arg == "push")
             }
+            "bundle" => {
+                // Looking for `bundle ... exec ... gem ... push`.
+                args.any(|arg| arg == "exec")
+                    && args.any(|arg| arg == "gem")
+                    && args.any(|arg| arg == "push")
+            }
             "npm" => {
                 let args = args.collect::<HashSet<_>>();
 
@@ -236,10 +242,8 @@ impl UseTrustedPublishing {
                 args.any(|arg| arg == "push")
             }
             "dotnet" => {
-                // Looking for `dotnet ... nuget push`.
-                args.next()
-                    .map(|cmd| cmd == "nuget" && Self::is_publish_command(cmd, args))
-                    .unwrap_or(false)
+                // Looking for `dotnet ... nuget ... push`.
+                args.any(|arg| arg == "nuget") && args.any(|arg| arg == "push")
             }
             _ => false,
         }
