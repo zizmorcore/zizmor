@@ -406,3 +406,49 @@ fn test_nuget_push() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_gem_push() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/gem-push.yml"))
+            .run()?,
+        @r"
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:12:14
+       |
+    12 |         run: gem push foo-0.1.0.gem
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:15:14
+       |
+    15 |         run: bundle exec gem push foo-0.1.0.gem
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:20:11
+       |
+    19 |           run: |
+       |           --- this step
+    20 | /           gem \
+    21 | |             push \
+    22 | |             foo-0.1.0.gem
+       | |_________________________^ this command
+       |
+       = note: audit confidence → High
+
+    5 findings (2 suppressed): 3 informational, 0 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
