@@ -8,4 +8,6 @@ failed to load https://github.com/woodruffw-experiments/zizmor-issue-1116/blob/f
 
 Caused by:
     0: input does not match expected validation schema
-    1: null is not of type "object"
+    1: "name" is a required property
+       "description" is a required property
+       "runs" is a required property
