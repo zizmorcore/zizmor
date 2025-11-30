@@ -7,5 +7,5 @@ fatal: no audit was performed
 failed to load file://@@INPUT@@ as workflow
 
 Caused by:
-    0: input does not match expected validation schema
-    1: "lol" is not of type "object"
+    0: invalid YAML syntax: invalid type: string "lol", expected a YAML mapping
+    1: invalid type: string "lol", expected a YAML mapping

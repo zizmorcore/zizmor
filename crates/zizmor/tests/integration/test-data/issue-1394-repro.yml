@@ -1,0 +1,13 @@
+name: Demonstration of Zizmor bug
+on: workflow_dispatch
+jobs:
+  demo:
+    name: Demonstration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Duplicate env block breaks Zizmor
+        env:
+          FOO: foo
+        run: echo ...
+        env:
+          BAR: bar

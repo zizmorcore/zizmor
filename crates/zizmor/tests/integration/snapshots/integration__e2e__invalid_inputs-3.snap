@@ -8,4 +8,5 @@ failed to load file://@@INPUT@@ as workflow
 
 Caused by:
     0: input does not match expected validation schema
-    1: null is not of type "object"
+    1: "on" is a required property
+       "jobs" is a required property

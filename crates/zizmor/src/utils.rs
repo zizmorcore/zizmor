@@ -353,10 +353,16 @@ where
             // to distinguish between syntax and semantic errors,
             // but serde-yaml doesn't give us an API to do that.
             // To approximate it, we re-parse the input as a
-            // `Value` and use that as an oracle -- a successful
+            // `serde_yaml::Mapping`, then convert that `serde_yaml::Mapping`
+            // into a `serde_json::Value` and use it as an oracle -- a successful
             // re-parse indicates that the input is valid YAML and
             // that our error is semantic, while a failed re-parse
             // indicates a syntax error.
+            //
+            // We need to round-trip through a `serde_yaml::Mapping` to ensure that
+            // all of YAML's validity rules are preserved -- directly deserializing
+            // into a `serde_json::Value` would miss some YAML-specific checks,
+            // like duplicate keys within mappings. See #1395 for an example of this.
             //
             // We do this in a nested fashion to avoid re-parsing
             // the input twice if we can help it, and because the
@@ -366,16 +372,24 @@ where
             // See: https://github.com/dtolnay/serde-yaml/issues/170
             // See: https://github.com/dtolnay/serde-yaml/issues/395
 
-            match serde_yaml::from_str(contents) {
+            match serde_yaml::from_str::<serde_yaml::Mapping>(contents) {
                 // We know we have valid YAML, so one of two things happened here:
                 // 1. The input is semantically valid, but we have a bug in
                 //    `github-actions-models`.
                 // 2. The input is semantically invalid, and the user
                 //    needs to fix it.
                 // We the JSON schema `validator` to separate these.
-                Ok(raw_value) => match validator.apply(&raw_value).basic() {
+                Ok(raw_value) => match validator
+                    .apply(
+                        &serde_json::to_value(&raw_value)
+                            .map_err(|e| CollectionError::Syntax(e.into()))?,
+                    )
+                    .basic()
+                {
                     Valid(_) => Err(e)
-                        .context("this suggests a bug in zizmor; please report it!")
+                        .context(format!(
+                            "this suggests a bug in zizmor; please report it! raw: {raw_value:?}"
+                        ))
                         .map_err(CollectionError::Model),
                     Invalid(errors) => {
                         Err(CollectionError::Schema(parse_validation_errors(errors)))
