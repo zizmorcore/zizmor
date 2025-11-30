@@ -206,16 +206,15 @@ By default, `zizmor` produces `cargo`-style diagnostic output.
 
 ```console
 error[template-injection]: code injection via template expansion
-  --> ./tests/integration/test-data/template-injection/pr-425-backstop/action.yml:28:7
+  --> ./tests/integration/test-data/template-injection/pr-425-backstop/action.yml:31:56
    |
-28 |     - name: case4
-   |       ^^^^^^^^^^^ this step
-29 |       uses: azure/powershell
+29 |       uses: azure/powershell@whatever
+   |       ------------------------------- action accepts arbitrary code
 30 |       with:
 31 |         inlineScript: Get-AzVM -ResourceGroupName "${{ inputs.expandme }}"
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ inputs.expandme may expand into attacker-controllable code
+   |         ------------ via this input                    ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 ```
 
 This output will be colorized by default when sent to a supporting terminal and
