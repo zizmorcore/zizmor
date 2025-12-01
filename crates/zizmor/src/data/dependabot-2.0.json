@@ -1045,6 +1045,21 @@
         "versioning-strategy": {
           "$ref": "#/definitions/versioning-strategy",
           "description": "How to update manifest version requirements"
+        },
+        "patterns": {
+          "description": "Array of dependency patterns to include in a multi-ecosystem group. Required when using multi-ecosystem-group. Use '*' to include all dependencies.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "multi-ecosystem-group": {
+          "description": "String identifier linking this ecosystem to a multi-ecosystem group",
+          "type": "string",
+          "minLength": 1
         }
       },
       "allOf": [
@@ -1056,6 +1071,15 @@
             { "required": ["directories"] },
             { "required": ["directory"] }
           ]
+        },
+        {
+          "$comment": "If multi-ecosystem-group is specified, patterns is required",
+          "if": {
+            "required": ["multi-ecosystem-group"]
+          },
+          "then": {
+            "required": ["patterns"]
+          }
         }
       ]
     },
@@ -1132,6 +1156,129 @@
         }
       },
       "minProperties": 1
+    },
+    "multi-ecosystem-group": {
+      "type": "object",
+      "description": "Define a group that spans multiple package ecosystems, allowing consolidated pull requests across different ecosystems",
+      "additionalProperties": false,
+      "properties": {
+        "schedule": {
+          "description": "Schedule preferences for the group",
+          "type": "object",
+          "properties": {
+            "interval": {
+              "$ref": "#/definitions/schedule-interval"
+            },
+            "day": {
+              "$ref": "#/definitions/schedule-day",
+              "description": "Specify an alternative day to check for updates"
+            },
+            "time": {
+              "type": "string",
+              "description": "Specify an alternative time of day to check for updates (format: hh:mm)",
+              "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+            },
+            "timezone": {
+              "$ref": "#/definitions/timezone",
+              "description": "The time zone identifier must be from the Time Zone database maintained by IANA"
+            },
+            "cronjob": {
+              "type": "string",
+              "description": "Specify a valid cron expression for updates"
+            }
+          },
+          "allOf": [
+            {
+              "$comment": "If interval type is 'cron', enforce 'cronjob' property.",
+              "if": {
+                "properties": {
+                  "interval": {
+                    "const": "cron"
+                  }
+                }
+              },
+              "then": {
+                "required": ["interval", "cronjob"]
+              },
+              "else": {
+                "required": ["interval"]
+              }
+            }
+          ]
+        },
+        "labels": {
+          "description": "Labels to set on pull requests (additive - merges with ecosystem-level labels)",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "assignees": {
+          "description": "Assignees to set on pull requests (additive - merges with ecosystem-level assignees)",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "milestone": {
+          "description": "Associate all pull requests raised for this group with a milestone. You need to specify the numeric identifier of the milestone and not its label.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "target-branch": {
+          "description": "Specify a different branch for manifest files and for pull requests.",
+          "type": "string",
+          "minLength": 1
+        },
+        "commit-message": {
+          "description": "Commit message preferences for the group",
+          "type": "object",
+          "properties": {
+            "prefix": {
+              "description": "A prefix for all commit messages",
+              "type": "string",
+              "maxLength": 50
+            },
+            "prefix-development": {
+              "description": "A separate prefix for all commit messages that update dependencies in the Development dependency group",
+              "type": "string",
+              "maxLength": 50
+            },
+            "include": {
+              "description": "Specifies that any prefix is followed by a list of the dependencies updated in the commit",
+              "type": "string",
+              "enum": ["scope"]
+            }
+          },
+          "anyOf": [
+            { "required": ["prefix"] },
+            { "required": ["prefix-development"] },
+            { "required": ["include"] }
+          ],
+          "additionalProperties": false
+        },
+        "pull-request-branch-name": {
+          "description": "Pull request branch name preferences for the group",
+          "type": "object",
+          "properties": {
+            "separator": {
+              "description": "Change separator for PR branch name",
+              "type": "string",
+              "default": "/",
+              "enum": ["-", "_", "/"]
+            }
+          },
+          "required": ["separator"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["schedule"]
     }
   },
   "properties": {
@@ -1155,6 +1302,14 @@
     },
     "registries": {
       "$ref": "#/definitions/registry"
+    },
+    "multi-ecosystem-groups": {
+      "type": "object",
+      "description": "Define groups that span multiple package ecosystems, allowing consolidated pull requests across different ecosystems",
+      "additionalProperties": {
+        "$ref": "#/definitions/multi-ecosystem-group"
+      },
+      "minProperties": 1
     }
   },
   "required": ["version", "updates"],
