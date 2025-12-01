@@ -37,6 +37,7 @@ BerkeleyLearnVerify/Scenic#320
 bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
 bitwarden/ios#2124
+bitwarden/passkeys-index#128
 bitwarden/sdk-sm#1378
 bitwarden/server#6409
 blakeblackshear/frigate#15490
@@ -222,6 +223,7 @@ PlasmaPy/PlasmaPy#2975
 PowerDNS/pdns#15600
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
+privacyidea/privacyidea#4854
 prometheus/prometheus#16530
 psf/cachecontrol#345
 pubgrub-rs/pubgrub#389

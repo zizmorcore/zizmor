@@ -142,6 +142,7 @@
 
     ??? example "Examples"
         - bitwarden/ios#2124
+        - bitwarden/passkeys-index#128
         - bitwarden/sdk-sm#1378
         - bitwarden/server#6409
 
@@ -1034,6 +1035,14 @@
 
     ??? example "Examples"
         - prettytable/prettytable#339
+
+
+-   ![](https://github.com/privacyidea.png?size=40){ width="40" loading=lazy align=left } privacyidea
+
+    ---
+
+    ??? example "Examples"
+        - privacyidea/privacyidea#4854
 
 
 -   ![](https://github.com/prometheus.png?size=40){ width="40" loading=lazy align=left } prometheus
