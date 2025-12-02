@@ -245,7 +245,6 @@ impl UseTrustedPublishing {
                 // TODO: Figure out `yarn ... publish` patterns for lerna/npm workspaces.
 
                 // Looking for `yarn ... npm publish` without `--dry-run` or `-n`.
-
                 args.any(|arg| arg == "npm") && args.all(|arg| arg != "--dry-run" && arg != "-n")
             }
             "pnpm" => {
