@@ -882,6 +882,14 @@
         - nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
 
 
+-   ![](https://github.com/neocmakelsp.png?size=40){ width="40" loading=lazy align=left } neocmakelsp
+
+    ---
+
+    ??? example "Examples"
+        - neocmakelsp/neocmakelsp#216
+
+
 -   ![](https://github.com/NetApp.png?size=40){ width="40" loading=lazy align=left } NetApp
 
     ---
