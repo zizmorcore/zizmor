@@ -51,6 +51,7 @@ canonical/testflinger#630
 certbot/josepy#193
 coder/coder#19459
 conda/conda-lock#814
+containers/podman#27642
 cunla/fakeredis-py#391
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
