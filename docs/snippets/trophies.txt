@@ -194,6 +194,7 @@ mozilla/neqo#2413
 mozilla/neqo#2721
 narwhals-dev/narwhals#1567
 nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
+neocmakelsp/neocmakelsp#216
 NetApp/harvest#3247
 nextcloud/user_saml#947
 nextcloud/.github#477
