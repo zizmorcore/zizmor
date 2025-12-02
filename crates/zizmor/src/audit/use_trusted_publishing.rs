@@ -197,9 +197,24 @@ impl UseTrustedPublishing {
                     _ => false,
                 }
             }
+            "uvx" => {
+                // Looking for `uvx twine ... upload`.
+                // Like with pipx, we loosely match the `twine` part
+                // to allow for version specifiers. In uvx's case, these
+                // are formatted like `twine@X.Y.Z`.
+
+                args.any(|arg| arg.starts_with("twine")) && args.any(|arg| arg == "upload")
+            }
             "hatch" | "pdm" => {
                 // Looking for `hatch ... publish` or `pdm ... publish`.
                 args.any(|arg| arg == "publish")
+            }
+            "poetry" => {
+                // Looking for `poetry ... publish` without `--dry-run`.
+                //
+                // Poetry has no support for Trusted Publishing at all as
+                // of 2025-12-1: https://github.com/python-poetry/poetry/issues/7940
+                args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
             "twine" => {
                 // Looking for `twine ... upload`.
@@ -237,7 +252,6 @@ impl UseTrustedPublishing {
                 // Looking for `npm ... publish` without `--dry-run`.
 
                 // TODO: Figure out `npm run ... publish` patterns.
-
                 args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
             "yarn" => {
@@ -251,7 +265,6 @@ impl UseTrustedPublishing {
                 // TODO: Figure out `pnpm run ... publish` patterns.
 
                 // Looking for `pnpm ... publish` without `--dry-run`.
-
                 args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
             "nuget" | "nuget.exe" => {
@@ -481,6 +494,12 @@ mod tests {
             (&["uv", "run", "twine", "upload"][..], true),
             (&["uv"][..], false),
             (&["uv", "sync"][..], false),
+            (&["uvx", "twine", "upload"][..], true),
+            (&["uvx", "twine@3.4.1", "upload"][..], true),
+            (&["uvx", "twine@6.1.0", "upload"][..], true),
+            (&["uvx", "twine"][..], false),
+            (&["poetry", "publish"][..], true),
+            (&["poetry", "publish", "--dry-run"][..], false),
             (&["hatch", "publish"][..], true),
             (&["pdm", "publish"][..], true),
             (&["twine", "upload", "dist/*"][..], true),
