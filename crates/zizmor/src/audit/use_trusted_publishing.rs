@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::{sync::LazyLock, vec};
 
 use anyhow::Context as _;
@@ -180,16 +179,25 @@ impl UseTrustedPublishing {
 
         match cmd {
             "cargo" => {
-                let args = args.collect::<HashSet<_>>();
-
                 // Looking for `cargo ... publish` without `--dry-run` or `-n`.
-                args.contains("publish") && !args.contains("--dry-run") && !args.contains("-n")
+
+                args.any(|arg| arg == "publish")
+                    && args.all(|arg| arg != "--dry-run" && arg != "-n")
             }
             "uv" => {
-                let args = args.collect::<HashSet<_>>();
+                let cmd = args.find(|arg| *arg == "publish" || *arg == "run");
 
-                // Looking for `uv ... publish` without `--dry-run`.
-                args.contains("publish") && !args.contains("--dry-run")
+                match cmd {
+                    Some("publish") => {
+                        // `uv ... publish` without `--dry-run`.
+                        args.all(|arg| arg != "--dry-run")
+                    }
+                    Some("run") => {
+                        // `uv ... run ... twine ... upload`.
+                        args.any(|arg| arg == "twine") && args.any(|arg| arg == "upload")
+                    }
+                    _ => false,
+                }
             }
             "hatch" | "pdm" => {
                 // Looking for `hatch ... publish` or `pdm ... publish`.
@@ -228,32 +236,26 @@ impl UseTrustedPublishing {
                     && args.any(|arg| arg == "push")
             }
             "npm" => {
-                let args = args.collect::<HashSet<_>>();
+                // Looking for `npm ... publish` without `--dry-run`.
 
                 // TODO: Figure out `npm run ... publish` patterns.
 
-                // Looking for `npm ... publish` without `--dry-run`.
-                args.contains("publish") && !args.contains("--dry-run")
+                args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
             "yarn" => {
-                let args = args.collect::<HashSet<_>>();
-
                 // TODO: Figure out `yarn run ... publish` patterns.
                 // TODO: Figure out `yarn ... publish` patterns for lerna/npm workspaces.
 
                 // Looking for `yarn ... npm publish` without `--dry-run` or `-n`.
-                args.contains("npm")
-                    && args.contains("publish")
-                    && !args.contains("--dry-run")
-                    && !args.contains("-n")
+
+                args.any(|arg| arg == "npm") && args.all(|arg| arg != "--dry-run" && arg != "-n")
             }
             "pnpm" => {
-                let args = args.collect::<HashSet<_>>();
-
                 // TODO: Figure out `pnpm run ... publish` patterns.
 
                 // Looking for `pnpm ... publish` without `--dry-run`.
-                args.contains("publish") && !args.contains("--dry-run")
+
+                args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
             "nuget" | "nuget.exe" => {
                 // Looking for `nuget ... push`.
@@ -478,6 +480,10 @@ mod tests {
             (&["uv", "publish"][..], true),
             (&["uv", "publish", "dist/*"][..], true),
             (&["uv", "publish", "--dry-run"][..], false),
+            (&["uv", "run", "--dev", "twine", "upload"][..], true),
+            (&["uv", "run", "twine", "upload"][..], true),
+            (&["uv"][..], false),
+            (&["uv", "sync"][..], false),
             (&["hatch", "publish"][..], true),
             (&["pdm", "publish"][..], true),
             (&["twine", "upload", "dist/*"][..], true),
