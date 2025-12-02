@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::{sync::LazyLock, vec};
 
 use anyhow::Context as _;
@@ -180,20 +179,42 @@ impl UseTrustedPublishing {
 
         match cmd {
             "cargo" => {
-                let args = args.collect::<HashSet<_>>();
-
                 // Looking for `cargo ... publish` without `--dry-run` or `-n`.
-                args.contains("publish") && !args.contains("--dry-run") && !args.contains("-n")
+
+                args.any(|arg| arg == "publish")
+                    && args.all(|arg| arg != "--dry-run" && arg != "-n")
             }
             "uv" => {
-                let args = args.collect::<HashSet<_>>();
+                match args.find(|arg| *arg == "publish" || *arg == "run") {
+                    Some("publish") => {
+                        // `uv ... publish` without `--dry-run`.
+                        args.all(|arg| arg != "--dry-run")
+                    }
+                    Some("run") => {
+                        // `uv ... run ... twine ... upload`.
+                        args.any(|arg| arg == "twine") && args.any(|arg| arg == "upload")
+                    }
+                    _ => false,
+                }
+            }
+            "uvx" => {
+                // Looking for `uvx twine ... upload`.
+                // Like with pipx, we loosely match the `twine` part
+                // to allow for version specifiers. In uvx's case, these
+                // are formatted like `twine@X.Y.Z`.
 
-                // Looking for `uv ... publish` without `--dry-run`.
-                args.contains("publish") && !args.contains("--dry-run")
+                args.any(|arg| arg.starts_with("twine")) && args.any(|arg| arg == "upload")
             }
             "hatch" | "pdm" => {
                 // Looking for `hatch ... publish` or `pdm ... publish`.
                 args.any(|arg| arg == "publish")
+            }
+            "poetry" => {
+                // Looking for `poetry ... publish` without `--dry-run`.
+                //
+                // Poetry has no support for Trusted Publishing at all as
+                // of 2025-12-1: https://github.com/python-poetry/poetry/issues/7940
+                args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
             "twine" => {
                 // Looking for `twine ... upload`.
@@ -228,32 +249,23 @@ impl UseTrustedPublishing {
                     && args.any(|arg| arg == "push")
             }
             "npm" => {
-                let args = args.collect::<HashSet<_>>();
+                // Looking for `npm ... publish` without `--dry-run`.
 
                 // TODO: Figure out `npm run ... publish` patterns.
-
-                // Looking for `npm ... publish` without `--dry-run`.
-                args.contains("publish") && !args.contains("--dry-run")
+                args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
             "yarn" => {
-                let args = args.collect::<HashSet<_>>();
-
                 // TODO: Figure out `yarn run ... publish` patterns.
                 // TODO: Figure out `yarn ... publish` patterns for lerna/npm workspaces.
 
                 // Looking for `yarn ... npm publish` without `--dry-run` or `-n`.
-                args.contains("npm")
-                    && args.contains("publish")
-                    && !args.contains("--dry-run")
-                    && !args.contains("-n")
+                args.any(|arg| arg == "npm") && args.all(|arg| arg != "--dry-run" && arg != "-n")
             }
             "pnpm" => {
-                let args = args.collect::<HashSet<_>>();
-
                 // TODO: Figure out `pnpm run ... publish` patterns.
 
                 // Looking for `pnpm ... publish` without `--dry-run`.
-                args.contains("publish") && !args.contains("--dry-run")
+                args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
             "nuget" | "nuget.exe" => {
                 // Looking for `nuget ... push`.
@@ -478,6 +490,16 @@ mod tests {
             (&["uv", "publish"][..], true),
             (&["uv", "publish", "dist/*"][..], true),
             (&["uv", "publish", "--dry-run"][..], false),
+            (&["uv", "run", "--dev", "twine", "upload"][..], true),
+            (&["uv", "run", "twine", "upload"][..], true),
+            (&["uv"][..], false),
+            (&["uv", "sync"][..], false),
+            (&["uvx", "twine", "upload"][..], true),
+            (&["uvx", "twine@3.4.1", "upload"][..], true),
+            (&["uvx", "twine@6.1.0", "upload"][..], true),
+            (&["uvx", "twine"][..], false),
+            (&["poetry", "publish"][..], true),
+            (&["poetry", "publish", "--dry-run"][..], false),
             (&["hatch", "publish"][..], true),
             (&["pdm", "publish"][..], true),
             (&["twine", "upload", "dist/*"][..], true),

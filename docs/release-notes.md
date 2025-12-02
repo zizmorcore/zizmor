@@ -18,6 +18,10 @@ of `zizmor`.
 * zizmor now produces better error messages on a handful of error cases involving
   invalid input files. Specifically, a subset of syntax and schema errors now
   produce more detailed and actionable error messages (#1396)
+  
+* The [use-trusted-publishing] audit now detects additional publishing command
+  patterns, including `uv run ...`, `uvx ...`, and `poetry publish`
+  (#1402)
 
 ## 1.18.0
 
