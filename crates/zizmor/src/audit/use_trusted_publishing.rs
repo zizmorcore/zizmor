@@ -185,9 +185,7 @@ impl UseTrustedPublishing {
                     && args.all(|arg| arg != "--dry-run" && arg != "-n")
             }
             "uv" => {
-                let cmd = args.find(|arg| *arg == "publish" || *arg == "run");
-
-                match cmd {
+                match args.find(|arg| *arg == "publish" || *arg == "run") {
                     Some("publish") => {
                         // `uv ... publish` without `--dry-run`.
                         args.all(|arg| arg != "--dry-run")
