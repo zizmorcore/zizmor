@@ -32,6 +32,14 @@
         - anchore/vunnel#832
 
 
+-   ![](https://github.com/ansible.png?size=40){ width="40" loading=lazy align=left } ansible
+
+    ---
+
+    ??? example "Examples"
+        - ansible/ansible-documentation#3188
+
+
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
 
     ---
