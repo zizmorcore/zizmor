@@ -35,8 +35,8 @@ impl ArchivedUses {
         // automaton to search the FST case-insensitively?
         let normalized = format!(
             "{owner}/{repo}",
-            owner = uses.owner.to_lowercase(),
-            repo = uses.repo.to_lowercase()
+            owner = uses.owner().to_lowercase(),
+            repo = uses.repo().to_lowercase()
         );
 
         ARCHIVED_REPOS_FST.contains(normalized.as_bytes()).then(|| {
@@ -73,7 +73,7 @@ impl Audit for ArchivedUses {
                     .add_location(
                         step.location()
                             .with_keys(["uses".into()])
-                            .subfeature(Subfeature::new(uses.owner.len(), uses.repo.as_str()))
+                            .subfeature(Subfeature::new(0, uses.slug()))
                             .annotated("repository is archived")
                             .primary(),
                     )

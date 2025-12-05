@@ -33,7 +33,7 @@ impl Obfuscation {
         // GitHub happily interprets but otherwise gums up pattern matching
         // in audits like unpinned-uses, forbidden-uses, and cache-poisoning.
         // We check for some of these forms of nonsense here and report them.
-        if let Some(subpath) = uses.subpath.as_deref() {
+        if let Some(subpath) = uses.subpath() {
             for component in subpath.split('/') {
                 match component {
                     // . and .. are valid in uses subpaths, but are impossible to
@@ -60,7 +60,7 @@ impl Obfuscation {
 
     /// Normalizes a uses path by removing unnecessary components like empty slashes, `.`, and `..`.
     fn normalize_uses_path(&self, uses: &RepositoryUses) -> Option<String> {
-        let subpath = uses.subpath.as_deref()?;
+        let subpath = uses.subpath()?;
 
         let mut components = Vec::new();
         for component in subpath.split('/') {
@@ -83,14 +83,19 @@ impl Obfuscation {
 
         // If all components were removed, the subpath should be empty
         if components.is_empty() {
-            Some(format!("{}/{}@{}", uses.owner, uses.repo, uses.git_ref))
+            Some(format!(
+                "{}/{}@{}",
+                uses.owner(),
+                uses.repo(),
+                uses.git_ref()
+            ))
         } else {
             Some(format!(
                 "{}/{}/{}@{}",
-                uses.owner,
-                uses.repo,
+                uses.owner(),
+                uses.repo(),
                 components.join("/"),
-                uses.git_ref
+                uses.git_ref()
             ))
         }
     }

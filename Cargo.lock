@@ -926,6 +926,8 @@ name = "github-actions-models"
 version = "0.39.0"
 dependencies = [
  "indexmap",
+ "insta",
+ "self_cell",
  "serde",
  "serde_yaml",
  "tracing",
