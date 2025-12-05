@@ -408,7 +408,7 @@ mod tests {
 
         // Points to v6.0.0.
         let commit_sha_v6 =
-            RepositoryUses::from_str("actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3")
+            RepositoryUses::parse("actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3")
                 .unwrap();
 
         assert_eq!(
@@ -421,7 +421,7 @@ mod tests {
 
         // Points to v5.0.1.
         let commit_sha_v5 =
-            RepositoryUses::from_str("actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd")
+            RepositoryUses::parse("actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd")
                 .unwrap();
 
         assert_eq!(
