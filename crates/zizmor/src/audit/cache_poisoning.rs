@@ -444,7 +444,7 @@ impl CachePoisoning {
             finding_builder = finding_builder.fix(fix);
         }
 
-        finding_builder.build(step.workflow()).ok()
+        finding_builder.build(step).ok()
     }
 }
 

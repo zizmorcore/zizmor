@@ -9,7 +9,6 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, Severity},
-    models::workflow::JobCommon as _,
     utils::{self, ExtractedExpr},
 };
 
@@ -68,7 +67,7 @@ impl Audit for UnsoundContains {
                                 .primary()
                                 .annotated(format!("contains(..) condition can be bypassed if attacker can control '{context}'")),
                         )
-                        .build(job.parent())
+                        .build(job)
                 })
             })
             .collect()

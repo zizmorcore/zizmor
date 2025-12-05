@@ -6,7 +6,7 @@ use crate::{
         Confidence, Fix, FixDisposition, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
-    models::{AsDocument, workflow::JobCommon},
+    models::AsDocument,
     utils,
 };
 use yamlpatch::{Op, Patch};
@@ -158,7 +158,7 @@ impl Audit for UnsoundCondition {
         job: &crate::models::workflow::NormalJob<'doc>,
         _config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
-        self.process_conditions(job.parent(), job.conditions())
+        self.process_conditions(job, job.conditions())
     }
 
     async fn audit_reusable_job<'doc>(
@@ -167,7 +167,7 @@ impl Audit for UnsoundCondition {
         _config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let conds = job.r#if.iter().map(|cond| (cond, job.location()));
-        self.process_conditions(job.parent(), conds)
+        self.process_conditions(job, conds)
     }
 
     async fn audit_action<'doc>(

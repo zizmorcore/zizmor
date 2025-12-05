@@ -286,6 +286,12 @@ impl<'doc> NormalJob<'doc> {
     }
 }
 
+impl<'a, 'doc> AsDocument<'a, 'doc> for NormalJob<'doc> {
+    fn as_document(&'a self) -> &'doc yamlpath::Document {
+        self.parent.as_document()
+    }
+}
+
 impl<'doc> JobCommon<'doc> for NormalJob<'doc> {
     fn id(&self) -> &'doc str {
         self.id
@@ -326,6 +332,12 @@ impl<'doc> ReusableWorkflowCallJob<'doc> {
         parent: &'doc Workflow,
     ) -> Self {
         Self { id, inner, parent }
+    }
+}
+
+impl<'a, 'doc> AsDocument<'a, 'doc> for ReusableWorkflowCallJob<'doc> {
+    fn as_document(&'a self) -> &'doc yamlpath::Document {
+        self.parent.as_document()
     }
 }
 

@@ -130,7 +130,7 @@ impl Audit for BotConditions {
                     finding_builder = finding_builder.fix(fix);
                 }
 
-                findings.push(finding_builder.build(job.parent())?);
+                findings.push(finding_builder.build(job)?);
             }
         }
 

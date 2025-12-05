@@ -316,7 +316,7 @@ impl Audit for ImpostorCommit {
                 finding_builder = finding_builder.fix(fix);
             }
 
-            findings.push(finding_builder.build(step.action()).map_err(Self::err)?);
+            findings.push(finding_builder.build(step).map_err(Self::err)?);
         }
 
         Ok(findings)

@@ -11,7 +11,7 @@ use crate::{
     models::{
         StepCommon as _,
         action::CompositeStep,
-        workflow::{JobCommon, ReusableWorkflowCallJob, Step},
+        workflow::{ReusableWorkflowCallJob, Step},
     },
     state::AuditState,
 };
@@ -129,7 +129,7 @@ impl Audit for ArchivedUses {
                             .annotated("repository is archived")
                             .primary(),
                     )
-                    .build(job.parent())?,
+                    .build(job)?,
             )
         }
 

@@ -4,7 +4,6 @@ use crate::{
         Confidence, Finding, Persona, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
-    models::workflow::JobCommon as _,
     state::AuditState,
 };
 
@@ -30,7 +29,7 @@ impl UnpinnedImages {
             .confidence(Confidence::High)
             .add_location(annotated_location)
             .persona(persona)
-            .build(job.parent())
+            .build(job)
     }
 }
 
