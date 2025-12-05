@@ -13,7 +13,7 @@ use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::StepCommon;
-use crate::models::{workflow::JobExt as _, workflow::Step};
+use crate::models::{workflow::JobCommon as _, workflow::Step};
 use crate::state::AuditState;
 use crate::utils;
 use crate::utils::once::static_regex;

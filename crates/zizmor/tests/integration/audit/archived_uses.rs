@@ -9,7 +9,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
       --> @@INPUT@@:17:23
        |
     16 |       - name: setup ruby
-       |         ---------------- in this step
+       |         ---------------- this step
     17 |         uses: actions/setup-ruby@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
        |                       ^^^^^^^^^^ repository is archived
        |
@@ -19,7 +19,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
       --> @@INPUT@@:20:23
        |
     19 |       - name: SETUP RUBY BUT LOUDLY
-       |         --------------------------- in this step
+       |         --------------------------- this step
     20 |         uses: ACTIONS/SETUP-RUBY@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
        |                       ^^^^^^^^^^ repository is archived
        |
@@ -28,12 +28,10 @@ fn test_regular_persona() -> anyhow::Result<()> {
     warning[archived-uses]: action or reusable workflow from archived repository
       --> @@INPUT@@:24:5
        |
-    22 | /   archived-uses-reusable:
-    23 | |     name: archived-uses-reusable
-    24 | |     uses: actions/setup-ruby/.github/workflows/notreal.yml@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
-       | |_____^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^_________- this job
-       |       |
-       |       repository is archived
+    23 |     name: archived-uses-reusable
+       |     ---------------------------- this job
+    24 |     uses: actions/setup-ruby/.github/workflows/notreal.yml@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ repository is archived
        |
        = note: audit confidence → High
 

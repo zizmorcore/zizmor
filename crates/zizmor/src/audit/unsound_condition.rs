@@ -6,7 +6,7 @@ use crate::{
         Confidence, Fix, FixDisposition, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
-    models::{AsDocument, workflow::JobExt},
+    models::{AsDocument, workflow::JobCommon},
     utils,
 };
 use yamlpatch::{Op, Patch};

@@ -9,7 +9,7 @@ use crate::finding::location::{Locatable as _, Routable};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
 use crate::models::StepCommon;
 use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
-use crate::models::workflow::{JobExt as _, NormalJob, Step, Steps};
+use crate::models::workflow::{JobCommon as _, NormalJob, Step, Steps};
 use crate::state::AuditState;
 
 use indexmap::IndexMap;

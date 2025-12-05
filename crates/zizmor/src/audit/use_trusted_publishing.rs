@@ -12,7 +12,7 @@ use crate::{
     models::{
         StepBodyCommon, StepCommon,
         coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle},
-        workflow::JobExt as _,
+        workflow::JobCommon as _,
     },
     state::AuditState,
     utils,

@@ -9,7 +9,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, Severity},
-    models::workflow::JobExt as _,
+    models::workflow::JobCommon as _,
     utils::{self, ExtractedExpr},
 };
 

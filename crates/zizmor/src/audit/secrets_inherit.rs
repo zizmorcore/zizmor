@@ -4,7 +4,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, location::Locatable as _},
-    models::workflow::JobExt as _,
+    models::workflow::JobCommon as _,
 };
 
 pub(crate) struct SecretsInherit;

@@ -286,7 +286,7 @@ impl<'doc> NormalJob<'doc> {
     }
 }
 
-impl<'doc> JobExt<'doc> for NormalJob<'doc> {
+impl<'doc> JobCommon<'doc> for NormalJob<'doc> {
     fn id(&self) -> &'doc str {
         self.id
     }
@@ -329,7 +329,7 @@ impl<'doc> ReusableWorkflowCallJob<'doc> {
     }
 }
 
-impl<'doc> JobExt<'doc> for ReusableWorkflowCallJob<'doc> {
+impl<'doc> JobCommon<'doc> for ReusableWorkflowCallJob<'doc> {
     fn id(&self) -> &'doc str {
         self.id
     }
@@ -352,7 +352,7 @@ impl<'doc> std::ops::Deref for ReusableWorkflowCallJob<'doc> {
 }
 
 /// Common behavior across both normal and reusable jobs.
-pub(crate) trait JobExt<'doc> {
+pub(crate) trait JobCommon<'doc>: Locatable<'doc> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
     fn id(&self) -> &'doc str;
 
@@ -363,7 +363,7 @@ pub(crate) trait JobExt<'doc> {
     fn parent(&self) -> &'doc Workflow;
 }
 
-impl<'doc, T: JobExt<'doc>> Locatable<'doc> for T {
+impl<'doc, T: JobCommon<'doc>> Locatable<'doc> for T {
     /// Returns this job's [`SymbolicLocation`].
     fn location(&self) -> SymbolicLocation<'doc> {
         self.parent()

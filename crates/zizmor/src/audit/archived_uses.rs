@@ -11,7 +11,7 @@ use crate::{
     models::{
         StepCommon as _,
         action::CompositeStep,
-        workflow::{JobExt, ReusableWorkflowCallJob, Step},
+        workflow::{JobCommon, ReusableWorkflowCallJob, Step},
     },
     state::AuditState,
 };
@@ -122,7 +122,7 @@ impl Audit for ArchivedUses {
         {
             findings.push(
                 finding
-                    .add_location(job.location())
+                    .with_job(job)
                     .add_location(
                         job.location()
                             .with_keys(["uses".into()])

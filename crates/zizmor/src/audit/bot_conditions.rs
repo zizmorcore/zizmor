@@ -15,7 +15,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
-    models::workflow::{JobExt, Workflow},
+    models::workflow::{JobCommon, Workflow},
     utils::{self, ExtractedExpr},
 };
 use subfeature::Subfeature;
