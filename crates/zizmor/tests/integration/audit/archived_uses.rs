@@ -30,8 +30,8 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |
     22 | /   archived-uses-reusable:
     23 | |     name: archived-uses-reusable
-    24 | |     uses: actions/setup-ruby/.github/workflows/reusable.yml@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
-       | |_____^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^_________- this job
+    24 | |     uses: actions/setup-ruby/.github/workflows/notreal.yml@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
+       | |_____^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^_________- this job
        |       |
        |       repository is archived
        |

@@ -21,4 +21,4 @@ jobs:
 
   archived-uses-reusable:
     name: archived-uses-reusable
-    uses: actions/setup-ruby/.github/workflows/reusable.yml@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
+    uses: actions/setup-ruby/.github/workflows/notreal.yml@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
