@@ -10,6 +10,7 @@ use serde::Deserialize;
 ///
 /// TODO: Replace this with a real parser; this is ridiculous.
 static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    #[allow(clippy::unwrap_used)]
     Regex::new(
         r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
         ^                           # start of line
@@ -90,7 +91,7 @@ impl RepositoryUsesPattern {
                 // if the platform separator is not /).
                 uses.owner().eq_ignore_ascii_case(owner)
                     && uses.repo().eq_ignore_ascii_case(repo)
-                    && uses.subpath().as_deref().is_some_and(|s| s == subpath)
+                    && uses.subpath().is_some_and(|s| s == subpath)
             }
             RepositoryUsesPattern::ExactRepo { owner, repo } => {
                 uses.owner().eq_ignore_ascii_case(owner)

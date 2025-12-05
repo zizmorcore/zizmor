@@ -315,22 +315,22 @@ impl RepositoryUses {
 
     /// Get the raw `uses:` string.
     pub fn raw(&self) -> &str {
-        &self.borrow_owner()
+        self.borrow_owner()
     }
 
     /// Get the owner (user or org) of this repository `uses:` clause.
     pub fn owner(&self) -> &str {
-        &self.borrow_dependent().owner
+        self.borrow_dependent().owner
     }
 
     /// Get the repository name of this repository `uses:` clause.
     pub fn repo(&self) -> &str {
-        &self.borrow_dependent().repo
+        self.borrow_dependent().repo
     }
 
     /// Get the owner/repo slug of this repository `uses:` clause.
     pub fn slug(&self) -> &str {
-        &self.borrow_dependent().slug
+        self.borrow_dependent().slug
     }
 
     /// Get the optional subpath of this repository `uses:` clause.
@@ -340,7 +340,7 @@ impl RepositoryUses {
 
     /// Get the git ref (branch, tag, or SHA) of this repository `uses:` clause.
     pub fn git_ref(&self) -> &str {
-        &self.borrow_dependent().git_ref
+        self.borrow_dependent().git_ref
     }
 }
 
