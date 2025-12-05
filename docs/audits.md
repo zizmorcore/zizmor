@@ -60,6 +60,56 @@ Add a `name:` field to your workflow or action.
           - run: echo "Hello!"
     ```
 
+## `archived-uses`
+
+| Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action | [archived-uses.yml] | v1.19.0        | ✅             | ❌                 | ❌           |
+
+[archived-uses.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/archived-uses.yml
+
+
+Detects `#!yaml uses:` clauses that reference [archived repositories].
+
+[archived repositories]: https://docs.github.com/en/repositories/archiving-a-github-repository/archiving-repositories
+
+Archival on GitHub makes a repository read-only, and indicates that the
+repository is no longer maintained. Using actions or reusable workflows from archived
+represents a supply chain risk:
+
+- Unmaintained repositories are more likely to accumulate indirect vulnerabilties,
+  including in any dependencies that have been vendored into JavaScript actions
+  (or that are used indirectly through transitive dependencies that have gone
+  stale).
+
+- Any vulnerabilities discovered in the action or reusable workflow *itself*
+  are unlikely to be fixed, since the repository is read-only.
+  
+Consequently, users are encouraged to avoid dependening on archived repositories
+for actions or reusable workflows.
+
+### Remediation
+
+Depending on the archived repository's functionality, you may be able to:
+
+- _Remove_ the action/reusable workflow entirely. Actions @actions-rs/cargo,
+  for example, can be replaced by directly invoking the correct `#!bash cargo ...`
+  command in a `#!yaml run:` step.
+  
+- _Replace_ the archived action/reusable workflow with a maintained alternative.
+  For example, @actions/setup-ruby can be replaced with @ruby/setup-ruby.
+  
+!!! tip
+
+    Many archived actions are thin wrappers around GitHub's REST and GraphQL
+    APIs. In most cases, you can replace these actions with usage of the
+    [`gh` CLI](https://cli.github.com/), which is pre-installed on GitHub-hosted
+    runners.
+    
+    For more information, see [Using GitHub CLI in workflows].
+    
+    [Using GitHub CLI in workflows]: https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-github-cli
+
 ## `artipacked`
 
 | Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
