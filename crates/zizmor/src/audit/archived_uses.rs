@@ -73,7 +73,7 @@ impl Audit for ArchivedUses {
                     .add_location(
                         step.location()
                             .with_keys(["uses".into()])
-                            .subfeature(Subfeature::new(0, uses.raw()))
+                            .subfeature(Subfeature::new(0, uses.slug()))
                             .annotated("repository is archived")
                             .primary(),
                     )

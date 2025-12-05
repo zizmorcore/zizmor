@@ -11,7 +11,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
     16 |       - name: setup ruby
        |         ---------------- this step
     17 |         uses: actions/setup-ruby@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ repository is archived
+       |               ^^^^^^^^^^^^^^^^^^ repository is archived
        |
        = note: audit confidence → High
 
@@ -21,7 +21,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
     19 |       - name: SETUP RUBY BUT LOUDLY
        |         --------------------------- this step
     20 |         uses: ACTIONS/SETUP-RUBY@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ repository is archived
+       |               ^^^^^^^^^^^^^^^^^^ repository is archived
        |
        = note: audit confidence → High
 

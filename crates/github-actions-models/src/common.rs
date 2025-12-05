@@ -250,6 +250,8 @@ struct RepositoryUsesInner<'a> {
     owner: &'a str,
     /// The repo name.
     repo: &'a str,
+    /// The owner/repo slug.
+    slug: &'a str,
     /// The subpath to the action or reusable workflow, if present.
     subpath: Option<&'a str>,
     /// The `@<ref>` that the `uses:` is pinned to.
@@ -272,9 +274,16 @@ impl<'a> RepositoryUsesInner<'a> {
         {
             let subpath = components.next();
 
+            let slug = if subpath.is_none() {
+                path
+            } else {
+                &path[..owner.len() + 1 + repo.len()]
+            };
+
             Ok(RepositoryUsesInner {
                 owner,
                 repo,
+                slug,
                 subpath,
                 git_ref,
             })
@@ -317,6 +326,11 @@ impl RepositoryUses {
     /// Get the repository name of this repository `uses:` clause.
     pub fn repo(&self) -> &str {
         &self.borrow_dependent().repo
+    }
+
+    /// Get the owner/repo slug of this repository `uses:` clause.
+    pub fn slug(&self) -> &str {
+        &self.borrow_dependent().slug
     }
 
     /// Get the optional subpath of this repository `uses:` clause.
@@ -518,6 +532,7 @@ mod tests {
                 dependent: RepositoryUsesInner {
                     owner: "actions",
                     repo: "checkout",
+                    slug: "actions/checkout",
                     subpath: None,
                     git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3",
                 },
@@ -536,6 +551,7 @@ mod tests {
                 dependent: RepositoryUsesInner {
                     owner: "actions",
                     repo: "aws",
+                    slug: "actions/aws",
                     subpath: Some(
                         "ec2",
                     ),
@@ -556,6 +572,7 @@ mod tests {
                 dependent: RepositoryUsesInner {
                     owner: "example",
                     repo: "foo",
+                    slug: "example/foo",
                     subpath: Some(
                         "bar/baz/quux",
                     ),
@@ -576,6 +593,7 @@ mod tests {
                 dependent: RepositoryUsesInner {
                     owner: "actions",
                     repo: "checkout",
+                    slug: "actions/checkout",
                     subpath: None,
                     git_ref: "v4",
                 },
@@ -593,6 +611,7 @@ mod tests {
                 dependent: RepositoryUsesInner {
                     owner: "actions",
                     repo: "checkout",
+                    slug: "actions/checkout",
                     subpath: None,
                     git_ref: "abcd",
                 },
@@ -806,6 +825,7 @@ mod tests {
                 dependent: RepositoryUsesInner {
                     owner: "octo-org",
                     repo: "this-repo",
+                    slug: "octo-org/this-repo",
                     subpath: Some(
                         ".github/workflows/workflow-1.yml",
                     ),
@@ -827,6 +847,7 @@ mod tests {
                 dependent: RepositoryUsesInner {
                     owner: "octo-org",
                     repo: "this-repo",
+                    slug: "octo-org/this-repo",
                     subpath: Some(
                         ".github/workflows/workflow-1.yml",
                     ),
@@ -848,6 +869,7 @@ mod tests {
                 dependent: RepositoryUsesInner {
                     owner: "octo-org",
                     repo: "this-repo",
+                    slug: "octo-org/this-repo",
                     subpath: Some(
                         ".github/workflows/workflow-1.yml",
                     ),
