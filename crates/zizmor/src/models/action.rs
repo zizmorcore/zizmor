@@ -190,6 +190,14 @@ impl HasInputs for CompositeStep<'_> {
 }
 
 impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
+    fn name(&self) -> Option<&'doc str> {
+        self.name.as_deref()
+    }
+
+    fn id(&self) -> Option<&'doc str> {
+        self.id.as_deref()
+    }
+
     fn index(&self) -> usize {
         self.index
     }

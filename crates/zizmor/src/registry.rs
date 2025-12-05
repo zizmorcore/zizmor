@@ -74,6 +74,7 @@ impl AuditRegistry {
         register_audit!(audit::dependabot_execution::DependabotExecution);
         register_audit!(audit::dependabot_cooldown::DependabotCooldown);
         register_audit!(audit::concurrency_limits::ConcurrencyLimits);
+        register_audit!(audit::archived_uses::ArchivedUses);
 
         Ok(registry)
     }

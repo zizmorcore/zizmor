@@ -632,6 +632,14 @@ impl HasInputs for Step<'_> {
 }
 
 impl<'doc> StepCommon<'doc> for Step<'doc> {
+    fn name(&self) -> Option<&'doc str> {
+        self.inner.name.as_deref()
+    }
+
+    fn id(&self) -> Option<&'doc str> {
+        self.inner.id.as_deref()
+    }
+
     fn index(&self) -> usize {
         self.index
     }
