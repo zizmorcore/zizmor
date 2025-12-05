@@ -51,7 +51,7 @@ impl ImpostorCommit {
         Ok(
             match self
                 .client
-                .compare_commits(&uses.owner, &uses.repo, base_ref, head_ref)
+                .compare_commits(uses.owner(), uses.repo(), base_ref, head_ref)
                 .await
                 .map_err(Self::err)?
             {
@@ -82,7 +82,7 @@ impl ImpostorCommit {
         // are more commonly pinned.
         let tags = self
             .client
-            .list_tags(&uses.owner, &uses.repo)
+            .list_tags(uses.owner(), uses.repo())
             .await
             .map_err(Self::err)?;
 
@@ -94,7 +94,7 @@ impl ImpostorCommit {
 
         let branches = self
             .client
-            .list_branches(&uses.owner, &uses.repo)
+            .list_branches(uses.owner(), uses.repo())
             .await
             .map_err(Self::err)?;
 
@@ -131,7 +131,7 @@ impl ImpostorCommit {
     async fn get_highest_tag(&self, uses: &RepositoryUses) -> Result<Option<String>, AuditError> {
         let tags = self
             .client
-            .list_tags(&uses.owner, &uses.repo)
+            .list_tags(uses.owner(), uses.repo())
             .await
             .map_err(Self::err)?;
 
@@ -186,16 +186,16 @@ impl ImpostorCommit {
             Ok(None) => {
                 tracing::warn!(
                     "No tags found for {}/{}, cannot create fix",
-                    uses.owner,
-                    uses.repo
+                    uses.owner(),
+                    uses.repo()
                 );
                 return None;
             }
             Err(e) => {
                 tracing::error!(
                     "Failed to get latest tag for {}/{}: {}",
-                    uses.owner,
-                    uses.repo,
+                    uses.owner(),
+                    uses.repo(),
                     e
                 );
                 return None;
@@ -203,8 +203,8 @@ impl ImpostorCommit {
         };
 
         // Build the new uses string with the latest tag
-        let mut uses_slug = format!("{}/{}", uses.owner, uses.repo);
-        if let Some(subpath) = &uses.subpath {
+        let mut uses_slug = format!("{}/{}", uses.owner(), uses.repo());
+        if let Some(subpath) = &uses.subpath() {
             uses_slug.push_str(&format!("/{subpath}"));
         }
         let fixed_uses = format!("{uses_slug}@{latest_tag}");

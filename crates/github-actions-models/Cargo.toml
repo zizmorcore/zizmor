@@ -17,8 +17,10 @@ workspace = true
 
 [dependencies]
 indexmap.workspace = true
+self_cell.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+insta.workspace = true

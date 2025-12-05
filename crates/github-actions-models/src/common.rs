@@ -6,6 +6,7 @@ use std::{
 };
 
 use indexmap::IndexMap;
+use self_cell::self_cell;
 use serde::{Deserialize, Deserializer, Serialize, de};
 
 pub mod expr;
@@ -201,57 +202,62 @@ pub enum Uses {
     Docker(DockerUses),
 }
 
-impl FromStr for Uses {
-    type Err = UsesError;
+impl Uses {
+    /// Parse a `uses:` clause into its appropriate variant.
+    pub fn parse(uses: impl Into<String>) -> Result<Self, UsesError> {
+        let uses = uses.into();
 
-    fn from_str(uses: &str) -> Result<Self, Self::Err> {
         if uses.starts_with("./") {
-            LocalUses::from_str(uses).map(Self::Local)
+            Ok(Self::Local(LocalUses::new(uses)))
         } else if let Some(image) = uses.strip_prefix("docker://") {
             DockerUses::from_str(image).map(Self::Docker)
         } else {
-            RepositoryUses::from_str(uses).map(Self::Repository)
+            RepositoryUses::parse(uses).map(Self::Repository)
         }
     }
 }
 
 /// A `uses: ./some/path` clause.
 #[derive(Debug, PartialEq)]
+#[non_exhaustive]
 pub struct LocalUses {
     pub path: String,
 }
 
-impl FromStr for LocalUses {
-    type Err = UsesError;
-
-    fn from_str(uses: &str) -> Result<Self, Self::Err> {
-        Ok(LocalUses { path: uses.into() })
+impl LocalUses {
+    fn new(path: String) -> Self {
+        LocalUses { path }
     }
 }
 
-/// A `uses: some/repo` clause.
+// /// A `uses: some/repo` clause.
+// #[derive(Debug, PartialEq)]
+// #[non_exhaustive]
+// pub struct RepositoryUses {
+//     /// The repo user or org.
+//     pub owner: String,
+//     /// The repo name.
+//     pub repo: String,
+//     /// The subpath to the action or reusable workflow, if present.
+//     pub subpath: Option<String>,
+//     /// The `@<ref>` that the `uses:` is pinned to.
+//     pub git_ref: String,
+// }
+
 #[derive(Debug, PartialEq)]
-pub struct RepositoryUses {
+struct RepositoryUsesInner<'a> {
     /// The repo user or org.
-    pub owner: String,
+    owner: &'a str,
     /// The repo name.
-    pub repo: String,
+    repo: &'a str,
     /// The subpath to the action or reusable workflow, if present.
-    pub subpath: Option<String>,
+    subpath: Option<&'a str>,
     /// The `@<ref>` that the `uses:` is pinned to.
-    pub git_ref: String,
+    git_ref: &'a str,
 }
 
-impl FromStr for RepositoryUses {
-    type Err = UsesError;
-
-    fn from_str(uses: &str) -> Result<Self, Self::Err> {
-        // NOTE: FromStr is slightly sub-optimal, since it takes a borrowed
-        // &str and results in bunch of allocs for a fully owned type.
-        //
-        // In theory we could do `From<String>` instead, but
-        // `&mut str::split_mut` and similar don't exist yet.
-
+impl<'a> RepositoryUsesInner<'a> {
+    fn from_str(uses: &'a str) -> Result<Self, UsesError> {
         // NOTE: Both git refs and paths can contain `@`, but in practice
         // GHA refuses to run a `uses:` clause with more than one `@` in it.
         let (path, git_ref) = match uses.rsplit_once('@') {
@@ -259,17 +265,68 @@ impl FromStr for RepositoryUses {
             None => return Err(UsesError(format!("missing `@<ref>` in {uses}"))),
         };
 
-        let components = path.splitn(3, '/').collect::<Vec<_>>();
-        if components.len() < 2 {
-            return Err(UsesError(format!("owner/repo slug is too short: {uses}")));
-        }
+        let mut components = path.splitn(3, '/');
 
-        Ok(RepositoryUses {
-            owner: components[0].into(),
-            repo: components[1].into(),
-            subpath: components.get(2).map(ToString::to_string),
-            git_ref: git_ref.into(),
+        if let Some(owner) = components.next()
+            && let Some(repo) = components.next()
+        {
+            let subpath = components.next();
+
+            Ok(RepositoryUsesInner {
+                owner,
+                repo,
+                subpath,
+                git_ref,
+            })
+        } else {
+            Err(UsesError(format!("owner/repo slug is too short: {uses}")))
+        }
+    }
+}
+
+self_cell!(
+    /// A `uses: some/repo` clause.
+    pub struct RepositoryUses {
+        owner: String,
+
+        #[covariant]
+        dependent: RepositoryUsesInner,
+    }
+
+    impl {Debug, PartialEq}
+);
+
+impl RepositoryUses {
+    pub fn parse(uses: impl Into<String>) -> Result<Self, UsesError> {
+        RepositoryUses::try_new(uses.into(), |s| {
+            let inner = RepositoryUsesInner::from_str(s)?;
+            Ok(inner)
         })
+    }
+
+    /// Get the raw `uses:` string.
+    pub fn raw(&self) -> &str {
+        &self.borrow_owner()
+    }
+
+    /// Get the owner (user or org) of this repository `uses:` clause.
+    pub fn owner(&self) -> &str {
+        &self.borrow_dependent().owner
+    }
+
+    /// Get the repository name of this repository `uses:` clause.
+    pub fn repo(&self) -> &str {
+        &self.borrow_dependent().repo
+    }
+
+    /// Get the optional subpath of this repository `uses:` clause.
+    pub fn subpath(&self) -> Option<&str> {
+        self.borrow_dependent().subpath
+    }
+
+    /// Get the git ref (branch, tag, or SHA) of this repository `uses:` clause.
+    pub fn git_ref(&self) -> &str {
+        &self.borrow_dependent().git_ref
     }
 }
 
@@ -356,8 +413,8 @@ pub(crate) fn step_uses<'de, D>(de: D) -> Result<Uses, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let uses = <&str>::deserialize(de)?;
-    Uses::from_str(uses).map_err(custom_error::<D>)
+    let uses = <String>::deserialize(de)?;
+    Uses::parse(uses).map_err(custom_error::<D>)
 }
 
 /// Deserialize a reusable workflow step `uses:`
@@ -396,9 +453,7 @@ mod tests {
 
     use crate::common::{BasePermission, Env, EnvValue, Permission};
 
-    use super::{
-        DockerUses, LocalUses, Permissions, RepositoryUses, Uses, UsesError, reusable_step_uses,
-    };
+    use super::{Permissions, Uses, reusable_step_uses};
 
     #[test]
     fn test_permissions() {
@@ -453,230 +508,386 @@ mod tests {
 
     #[test]
     fn test_uses_parses() {
-        let vectors = [
-            (
-                // Valid: fully pinned.
-                "actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Ok(Uses::Repository(RepositoryUses {
-                    owner: "actions".to_owned(),
-                    repo: "checkout".to_owned(),
+        // Fully pinned.
+        insta::assert_debug_snapshot!(
+            Uses::parse("actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3").unwrap(),
+            @r#"
+        Repository(
+            RepositoryUses {
+                owner: "actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
+                dependent: RepositoryUsesInner {
+                    owner: "actions",
+                    repo: "checkout",
                     subpath: None,
-                    git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned(),
-                })),
-            ),
-            (
-                // Valid: fully pinned, subpath
-                "actions/aws/ec2@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Ok(Uses::Repository(RepositoryUses {
-                    owner: "actions".to_owned(),
-                    repo: "aws".to_owned(),
-                    subpath: Some("ec2".to_owned()),
-                    git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned(),
-                })),
-            ),
-            (
-                // Valid: fully pinned, complex subpath
-                "example/foo/bar/baz/quux@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Ok(Uses::Repository(RepositoryUses {
-                    owner: "example".to_owned(),
-                    repo: "foo".to_owned(),
-                    subpath: Some("bar/baz/quux".to_owned()),
-                    git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned(),
-                })),
-            ),
-            (
-                // Valid: pinned with branch/tag
-                "actions/checkout@v4",
-                Ok(Uses::Repository(RepositoryUses {
-                    owner: "actions".to_owned(),
-                    repo: "checkout".to_owned(),
-                    subpath: None,
-                    git_ref: "v4".to_owned(),
-                })),
-            ),
-            (
-                "actions/checkout@abcd",
-                Ok(Uses::Repository(RepositoryUses {
-                    owner: "actions".to_owned(),
-                    repo: "checkout".to_owned(),
-                    subpath: None,
-                    git_ref: "abcd".to_owned(),
-                })),
-            ),
-            (
-                // Invalid: unpinned
-                "actions/checkout",
-                Err(UsesError(
-                    "missing `@<ref>` in actions/checkout".to_owned(),
-                )),
-            ),
-            (
-                // Valid: Docker ref, implicit registry
-                "docker://alpine:3.8",
-                Ok(Uses::Docker(DockerUses {
-                    registry: None,
-                    image: "alpine".to_owned(),
-                    tag: Some("3.8".to_owned()),
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, localhost
-                "docker://localhost/alpine:3.8",
-                Ok(Uses::Docker(DockerUses {
-                    registry: Some("localhost".to_owned()),
-                    image: "alpine".to_owned(),
-                    tag: Some("3.8".to_owned()),
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, localhost w/ port
-                "docker://localhost:1337/alpine:3.8",
-                Ok(Uses::Docker(DockerUses {
-                    registry: Some("localhost:1337".to_owned()),
-                    image: "alpine".to_owned(),
-                    tag: Some("3.8".to_owned()),
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, custom registry
-                "docker://ghcr.io/foo/alpine:3.8",
-                Ok(Uses::Docker(DockerUses {
-                    registry: Some("ghcr.io".to_owned()),
-                    image: "foo/alpine".to_owned(),
-                    tag: Some("3.8".to_owned()),
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, missing tag
-                "docker://ghcr.io/foo/alpine",
-                Ok(Uses::Docker(DockerUses {
-                    registry: Some("ghcr.io".to_owned()),
-                    image: "foo/alpine".to_owned(),
-                    tag: None,
-                    hash: None,
-                })),
-            ),
-            (
-                // Invalid, but allowed: Docker ref, empty tag
-                "docker://ghcr.io/foo/alpine:",
-                Ok(Uses::Docker(DockerUses {
-                    registry: Some("ghcr.io".to_owned()),
-                    image: "foo/alpine".to_owned(),
-                    tag: None,
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, bare
-                "docker://alpine",
-                Ok(Uses::Docker(DockerUses {
-                    registry: None,
-                    image: "alpine".to_owned(),
-                    tag: None,
-                    hash: None,
-                })),
-            ),
-            (
-                // Valid: Docker ref, hash
-                "docker://alpine@hash",
-                Ok(Uses::Docker(DockerUses {
-                    registry: None,
-                    image: "alpine".to_owned(),
-                    tag: None,
-                    hash: Some("hash".to_owned()),
-                })),
-            ),
-            (
-                // Valid: Local action "ref", actually part of the path
-                "./.github/actions/hello-world-action@172239021f7ba04fe7327647b213799853a9eb89",
-                Ok(Uses::Local(LocalUses {
-                    path: "./.github/actions/hello-world-action@172239021f7ba04fe7327647b213799853a9eb89".to_owned(),
-                })),
-            ),
-            (
-                // Valid: Local action ref, unpinned
-                "./.github/actions/hello-world-action",
-                Ok(Uses::Local(LocalUses {
-                    path: "./.github/actions/hello-world-action".to_owned(),
-                })),
-            ),
-            // Invalid: missing user/repo
-            (
-                "checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
-                Err(UsesError(
-                    "owner/repo slug is too short: checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3".to_owned()
-                )),
-            ),
-        ];
+                    git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3",
+                },
+            },
+        )
+        "#,
+        );
 
-        for (input, expected) in vectors {
-            assert_eq!(input.parse(), expected);
-        }
+        // Fully pinned, subpath.
+        insta::assert_debug_snapshot!(
+            Uses::parse("actions/aws/ec2@8f4b7f84864484a7bf31766abe9204da3cbe65b3").unwrap(),
+            @r#"
+        Repository(
+            RepositoryUses {
+                owner: "actions/aws/ec2@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
+                dependent: RepositoryUsesInner {
+                    owner: "actions",
+                    repo: "aws",
+                    subpath: Some(
+                        "ec2",
+                    ),
+                    git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3",
+                },
+            },
+        )
+        "#
+        );
+
+        // Fully pinned, complex subpath.
+        insta::assert_debug_snapshot!(
+            Uses::parse("example/foo/bar/baz/quux@8f4b7f84864484a7bf31766abe9204da3cbe65b3").unwrap(),
+            @r#"
+        Repository(
+            RepositoryUses {
+                owner: "example/foo/bar/baz/quux@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
+                dependent: RepositoryUsesInner {
+                    owner: "example",
+                    repo: "foo",
+                    subpath: Some(
+                        "bar/baz/quux",
+                    ),
+                    git_ref: "8f4b7f84864484a7bf31766abe9204da3cbe65b3",
+                },
+            },
+        )
+        "#
+        );
+
+        // Pinned with branch/tag.
+        insta::assert_debug_snapshot!(
+            Uses::parse("actions/checkout@v4").unwrap(),
+            @r#"
+        Repository(
+            RepositoryUses {
+                owner: "actions/checkout@v4",
+                dependent: RepositoryUsesInner {
+                    owner: "actions",
+                    repo: "checkout",
+                    subpath: None,
+                    git_ref: "v4",
+                },
+            },
+        )
+        "#
+        );
+
+        insta::assert_debug_snapshot!(
+            Uses::parse("actions/checkout@abcd").unwrap(),
+            @r#"
+        Repository(
+            RepositoryUses {
+                owner: "actions/checkout@abcd",
+                dependent: RepositoryUsesInner {
+                    owner: "actions",
+                    repo: "checkout",
+                    subpath: None,
+                    git_ref: "abcd",
+                },
+            },
+        )
+        "#
+        );
+
+        // Invalid: unpinned.
+        insta::assert_debug_snapshot!(
+            Uses::parse("actions/checkout").unwrap_err(),
+            @r#"
+        UsesError(
+            "missing `@<ref>` in actions/checkout",
+        )
+        "#
+        );
+
+        // Valid: Docker ref, implicit registry.
+        insta::assert_debug_snapshot!(
+            Uses::parse("docker://alpine:3.8").unwrap(),
+            @r#"
+        Docker(
+            DockerUses {
+                registry: None,
+                image: "alpine",
+                tag: Some(
+                    "3.8",
+                ),
+                hash: None,
+            },
+        )
+        "#
+        );
+
+        // Valid: Docker ref, localhost.
+        insta::assert_debug_snapshot!(
+            Uses::parse("docker://localhost/alpine:3.8").unwrap(),
+            @r#"
+        Docker(
+            DockerUses {
+                registry: Some(
+                    "localhost",
+                ),
+                image: "alpine",
+                tag: Some(
+                    "3.8",
+                ),
+                hash: None,
+            },
+        )
+        "#
+        );
+
+        // Valid: Docker ref, localhost with port.
+        insta::assert_debug_snapshot!(
+            Uses::parse("docker://localhost:1337/alpine:3.8").unwrap(),
+            @r#"
+        Docker(
+            DockerUses {
+                registry: Some(
+                    "localhost:1337",
+                ),
+                image: "alpine",
+                tag: Some(
+                    "3.8",
+                ),
+                hash: None,
+            },
+        )
+        "#
+        );
+
+        // Valid: Docker ref, custom registry.
+        insta::assert_debug_snapshot!(
+            Uses::parse("docker://ghcr.io/foo/alpine:3.8").unwrap(),
+            @r#"
+        Docker(
+            DockerUses {
+                registry: Some(
+                    "ghcr.io",
+                ),
+                image: "foo/alpine",
+                tag: Some(
+                    "3.8",
+                ),
+                hash: None,
+            },
+        )
+        "#
+        );
+
+        // Valid: Docker ref, missing tag.
+        insta::assert_debug_snapshot!(
+            Uses::parse("docker://ghcr.io/foo/alpine").unwrap(),
+            @r#"
+        Docker(
+            DockerUses {
+                registry: Some(
+                    "ghcr.io",
+                ),
+                image: "foo/alpine",
+                tag: None,
+                hash: None,
+            },
+        )
+        "#
+        );
+
+        // Invalid, but allowed: Docker ref, empty tag
+        insta::assert_debug_snapshot!(
+            Uses::parse("docker://ghcr.io/foo/alpine:").unwrap(),
+            @r#"
+        Docker(
+            DockerUses {
+                registry: Some(
+                    "ghcr.io",
+                ),
+                image: "foo/alpine",
+                tag: None,
+                hash: None,
+            },
+        )
+        "#
+        );
+
+        // Valid: Docker ref, bare.
+        insta::assert_debug_snapshot!(
+            Uses::parse("docker://alpine").unwrap(),
+            @r#"
+        Docker(
+            DockerUses {
+                registry: None,
+                image: "alpine",
+                tag: None,
+                hash: None,
+            },
+        )
+        "#
+        );
+
+        // Valid: Docker ref, with hash.
+        insta::assert_debug_snapshot!(
+            Uses::parse("docker://alpine@hash").unwrap(),
+            @r#"
+        Docker(
+            DockerUses {
+                registry: None,
+                image: "alpine",
+                tag: None,
+                hash: Some(
+                    "hash",
+                ),
+            },
+        )
+        "#
+        );
+
+        // Valid: Local action "ref", actually part of the path
+        insta::assert_debug_snapshot!(
+            Uses::parse("./.github/actions/hello-world-action@172239021f7ba04fe7327647b213799853a9eb89").unwrap(),
+            @r#"
+        Local(
+            LocalUses {
+                path: "./.github/actions/hello-world-action@172239021f7ba04fe7327647b213799853a9eb89",
+            },
+        )
+        "#
+        );
+
+        // Valid: Local action ref, unpinned.
+        insta::assert_debug_snapshot!(
+            Uses::parse("./.github/actions/hello-world-action").unwrap(),
+            @r#"
+        Local(
+            LocalUses {
+                path: "./.github/actions/hello-world-action",
+            },
+        )
+        "#
+        );
+
+        // Invalid: missing user/repo
+        insta::assert_debug_snapshot!(
+            Uses::parse("checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3").unwrap_err(),
+            @r#"
+        UsesError(
+            "owner/repo slug is too short: checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
+        )
+        "#
+        );
     }
 
     #[test]
     fn test_uses_deser_reusable() {
-        let vectors = [
-            // Valid, as expected.
-            (
-                "octo-org/this-repo/.github/workflows/workflow-1.yml@\
-                 172239021f7ba04fe7327647b213799853a9eb89",
-                Some(Uses::Repository(RepositoryUses {
-                    owner: "octo-org".to_owned(),
-                    repo: "this-repo".to_owned(),
-                    subpath: Some(".github/workflows/workflow-1.yml".to_owned()),
-                    git_ref: "172239021f7ba04fe7327647b213799853a9eb89".to_owned(),
-                })),
-            ),
-            (
-                "octo-org/this-repo/.github/workflows/workflow-1.yml@notahash",
-                Some(Uses::Repository(RepositoryUses {
-                    owner: "octo-org".to_owned(),
-                    repo: "this-repo".to_owned(),
-                    subpath: Some(".github/workflows/workflow-1.yml".to_owned()),
-                    git_ref: "notahash".to_owned(),
-                })),
-            ),
-            (
-                "octo-org/this-repo/.github/workflows/workflow-1.yml@abcd",
-                Some(Uses::Repository(RepositoryUses {
-                    owner: "octo-org".to_owned(),
-                    repo: "this-repo".to_owned(),
-                    subpath: Some(".github/workflows/workflow-1.yml".to_owned()),
-                    git_ref: "abcd".to_owned(),
-                })),
-            ),
-            // Invalid: remote reusable workflow without ref
-            ("octo-org/this-repo/.github/workflows/workflow-1.yml", None),
-            // Invalid: local reusable workflow with ref
-            (
-                "./.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89",
-                None,
-            ),
-            // Invalid: no ref at all
-            ("octo-org/this-repo/.github/workflows/workflow-1.yml", None),
-            (".github/workflows/workflow-1.yml", None),
-            // Invalid: missing user/repo
-            (
-                "workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89",
-                None,
-            ),
-        ];
-
         // Dummy type for testing deser of `Uses`.
         #[derive(Deserialize)]
         #[serde(transparent)]
         struct Dummy(#[serde(deserialize_with = "reusable_step_uses")] Uses);
 
-        for (input, expected) in vectors {
-            assert_eq!(
-                serde_yaml::from_str::<Dummy>(input).map(|d| d.0).ok(),
-                expected
-            );
-        }
+        insta::assert_debug_snapshot!(
+            serde_yaml::from_str::<Dummy>(
+                "octo-org/this-repo/.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
+            )
+            .map(|d| d.0)
+            .unwrap(),
+            @r#"
+        Repository(
+            RepositoryUses {
+                owner: "octo-org/this-repo/.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89",
+                dependent: RepositoryUsesInner {
+                    owner: "octo-org",
+                    repo: "this-repo",
+                    subpath: Some(
+                        ".github/workflows/workflow-1.yml",
+                    ),
+                    git_ref: "172239021f7ba04fe7327647b213799853a9eb89",
+                },
+            },
+        )
+        "#
+        );
+
+        insta::assert_debug_snapshot!(
+            serde_yaml::from_str::<Dummy>(
+                "octo-org/this-repo/.github/workflows/workflow-1.yml@notahash"
+            ).map(|d| d.0).unwrap(),
+            @r#"
+        Repository(
+            RepositoryUses {
+                owner: "octo-org/this-repo/.github/workflows/workflow-1.yml@notahash",
+                dependent: RepositoryUsesInner {
+                    owner: "octo-org",
+                    repo: "this-repo",
+                    subpath: Some(
+                        ".github/workflows/workflow-1.yml",
+                    ),
+                    git_ref: "notahash",
+                },
+            },
+        )
+        "#
+        );
+
+        insta::assert_debug_snapshot!(
+            serde_yaml::from_str::<Dummy>(
+                "octo-org/this-repo/.github/workflows/workflow-1.yml@abcd"
+            ).map(|d| d.0).unwrap(),
+            @r#"
+        Repository(
+            RepositoryUses {
+                owner: "octo-org/this-repo/.github/workflows/workflow-1.yml@abcd",
+                dependent: RepositoryUsesInner {
+                    owner: "octo-org",
+                    repo: "this-repo",
+                    subpath: Some(
+                        ".github/workflows/workflow-1.yml",
+                    ),
+                    git_ref: "abcd",
+                },
+            },
+        )
+        "#
+        );
+
+        // Invalid: remote reusable workflow without ref
+        insta::assert_debug_snapshot!(
+            serde_yaml::from_str::<Dummy>(
+                "octo-org/this-repo/.github/workflows/workflow-1.yml"
+            ).map(|d| d.0).unwrap_err(),
+            @r#"Error("malformed `uses` ref: missing `@<ref>` in octo-org/this-repo/.github/workflows/workflow-1.yml")"#
+        );
+
+        // Invalid: local reusable workflow with ref
+        insta::assert_debug_snapshot!(
+            serde_yaml::from_str::<Dummy>(
+                "./.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
+            ).map(|d| d.0).unwrap_err(),
+            @r#"Error("local reusable workflow reference can't specify `@<ref>`")"#
+        );
+
+        // Invalid: no ref at all
+        insta::assert_debug_snapshot!(
+            serde_yaml::from_str::<Dummy>(
+                ".github/workflows/workflow-1.yml"
+            ).map(|d| d.0).unwrap_err(),
+            @r#"Error("malformed `uses` ref: missing `@<ref>` in .github/workflows/workflow-1.yml")"#
+        );
+
+        // Invalid: missing user/repo
+        insta::assert_debug_snapshot!(
+            serde_yaml::from_str::<Dummy>(
+                "workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
+            ).map(|d| d.0).unwrap_err(),
+            @r#"Error("malformed `uses` ref: owner/repo slug is too short: workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89")"#
+        );
     }
 }

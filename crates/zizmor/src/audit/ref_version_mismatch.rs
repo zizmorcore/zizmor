@@ -106,7 +106,7 @@ impl RefVersionMismatch {
 
         let Some(commit_for_ref) = self
             .client
-            .commit_for_ref(&uses.owner, &uses.repo, version_from_comment)
+            .commit_for_ref(uses.owner(), uses.repo(), version_from_comment)
             .await
             .map_err(Self::err)?
         else {
@@ -138,7 +138,7 @@ impl RefVersionMismatch {
 
             if let Some(suggestion) = self
                 .client
-                .longest_tag_for_commit(&uses.owner, &uses.repo, commit_sha)
+                .longest_tag_for_commit(uses.owner(), uses.repo(), commit_sha)
                 .await
                 .map_err(Self::err)?
             {

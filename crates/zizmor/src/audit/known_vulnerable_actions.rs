@@ -34,7 +34,7 @@ impl KnownVulnerableActions {
         &self,
         uses: &RepositoryUses,
     ) -> Result<Vec<(Severity, String, Option<String>)>, AuditError> {
-        let version = match &uses.git_ref {
+        let version = match &uses.git_ref() {
             // If `uses` is pinned to a symbolic ref, we need to perform
             // feats of heroism to figure out what's going on.
             // In the "happy" case the symbolic ref is an exact version tag,
@@ -54,7 +54,7 @@ impl KnownVulnerableActions {
             version if !uses.ref_is_commit() => {
                 let Some(commit_ref) = self
                     .client
-                    .commit_for_ref(&uses.owner, &uses.repo, version)
+                    .commit_for_ref(uses.owner(), uses.repo(), version)
                     .await
                     .map_err(Self::err)?
                 else {
@@ -65,7 +65,7 @@ impl KnownVulnerableActions {
 
                 match self
                     .client
-                    .longest_tag_for_commit(&uses.owner, &uses.repo, &commit_ref)
+                    .longest_tag_for_commit(uses.owner(), uses.repo(), &commit_ref)
                     .await
                     .map_err(Self::err)?
                 {
@@ -84,7 +84,7 @@ impl KnownVulnerableActions {
             commit_ref => {
                 match self
                     .client
-                    .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
+                    .longest_tag_for_commit(uses.owner(), uses.repo(), commit_ref)
                     .await
                     .map_err(Self::err)?
                 {
@@ -100,7 +100,7 @@ impl KnownVulnerableActions {
 
         let vulns = self
             .client
-            .gha_advisories(&uses.owner, &uses.repo, &version)
+            .gha_advisories(uses.owner(), uses.repo(), &version)
             .await
             .map_err(Self::err)?;
 
@@ -135,8 +135,8 @@ impl KnownVulnerableActions {
         target_version: String,
         step: &impl StepCommon<'doc>,
     ) -> Result<Fix<'doc>, AuditError> {
-        let mut uses_slug = format!("{}/{}", uses.owner, uses.repo);
-        if let Some(subpath) = &uses.subpath {
+        let mut uses_slug = format!("{}/{}", uses.owner(), uses.repo());
+        if let Some(subpath) = &uses.subpath() {
             uses_slug.push_str(&format!("/{subpath}"));
         }
 
@@ -162,13 +162,13 @@ impl KnownVulnerableActions {
 
                 let (target_ref, target_commit) = match self
                     .client
-                    .commit_for_ref(&uses.owner, &uses.repo, &prefixed_version)
+                    .commit_for_ref(uses.owner(), uses.repo(), &prefixed_version)
                     .await
                 {
                     Ok(commit) => commit.map(|commit| (&prefixed_version, commit)),
                     Err(_) => self
                         .client
-                        .commit_for_ref(&uses.owner, &uses.repo, &bare_version)
+                        .commit_for_ref(uses.owner(), uses.repo(), &bare_version)
                         .await
                         .map_err(Self::err)?
                         .map(|commit| (&bare_version, commit)),
@@ -176,8 +176,8 @@ impl KnownVulnerableActions {
                 .ok_or_else(|| {
                     Self::err(anyhow!(
                         "Cannot resolve version {bare_version} to commit hash for {}/{}",
-                        uses.owner,
-                        uses.repo
+                        uses.owner(),
+                        uses.repo()
                     ))
                 })?;
 
@@ -208,7 +208,7 @@ impl KnownVulnerableActions {
                 // prefixed with `v` or not. Instead of trying to figure it out
                 // via the GitHub API, we match the style of the current `uses`
                 // clause.
-                let target_version_tag = if uses.git_ref.starts_with('v') {
+                let target_version_tag = if uses.git_ref().starts_with('v') {
                     prefixed_version
                 } else {
                     bare_version
@@ -362,12 +362,7 @@ jobs:
         let step = &steps[0];
 
         // Test the fix directly
-        let uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: "v2".to_string(),
-            subpath: None,
-        };
+        let uses = RepositoryUses::parse("actions/checkout@v2").unwrap();
 
         let audit = create_test_audit();
         let fix = audit
@@ -417,12 +412,7 @@ jobs:
         let step = &steps[0];
 
         // Test the fix directly
-        let uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "setup-node".to_string(),
-            git_ref: "v1".to_string(),
-            subpath: None,
-        };
+        let uses = RepositoryUses::parse("actions/setup-node@v1").unwrap();
 
         let audit = create_test_audit();
         let fix = audit
@@ -474,12 +464,7 @@ jobs:
         let step = &steps[0];
 
         // Test the fix directly
-        let uses = RepositoryUses {
-            owner: "codecov".to_string(),
-            repo: "codecov-action".to_string(),
-            git_ref: "v1".to_string(),
-            subpath: None,
-        };
+        let uses = RepositoryUses::parse("codecov/codecov-action@v1").unwrap();
 
         let audit = create_test_audit();
         let fix = audit
@@ -541,12 +526,7 @@ jobs:
         let audit = create_test_audit();
 
         // Fix checkout action
-        let uses_checkout = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: "v2".to_string(),
-            subpath: None,
-        };
+        let uses_checkout = RepositoryUses::parse("actions/checkout@v2").unwrap();
         let fix_checkout = audit
             .create_upgrade_fix(&uses_checkout, "v4".into(), &steps[0])
             .await
@@ -554,12 +534,7 @@ jobs:
         current_document = fix_checkout.apply(&current_document).unwrap();
 
         // Fix setup-node action
-        let uses_node = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "setup-node".to_string(),
-            git_ref: "v1".to_string(),
-            subpath: None,
-        };
+        let uses_node = RepositoryUses::parse("actions/setup-node@v1").unwrap();
         let fix_node = audit
             .create_upgrade_fix(&uses_node, "v4".into(), &steps[1])
             .await
@@ -567,12 +542,7 @@ jobs:
         current_document = fix_node.apply(&current_document).unwrap();
 
         // Fix cache action
-        let uses_cache = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "cache".to_string(),
-            git_ref: "v2".to_string(),
-            subpath: None,
-        };
+        let uses_cache = RepositoryUses::parse("actions/cache@v2").unwrap();
         let fix_cache = audit
             .create_upgrade_fix(&uses_cache, "v4".into(), &steps[2])
             .await
@@ -627,12 +597,7 @@ jobs:
         let step = &steps[0];
 
         // Test the fix with subpath
-        let uses = RepositoryUses {
-            owner: "owner".to_string(),
-            repo: "repo".to_string(),
-            git_ref: "v1".to_string(),
-            subpath: Some("subpath".to_string()),
-        };
+        let uses = RepositoryUses::parse("owner/repo/subpath@v1").unwrap();
 
         let audit = create_test_audit();
         let fix = audit
@@ -678,12 +643,7 @@ jobs:
         };
         let step = &steps[0];
 
-        let uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: "v2".to_string(),
-            subpath: None,
-        };
+        let uses = RepositoryUses::parse("actions/checkout@v2").unwrap();
 
         // Test that when first_patched_version is provided, it's used
         let audit = create_test_audit();
@@ -729,12 +689,7 @@ jobs:
         };
         let step = &steps[0];
 
-        let uses = RepositoryUses {
-            owner: "actions".to_string(),
-            repo: "checkout".to_string(),
-            git_ref: "v2".to_string(),
-            subpath: None,
-        };
+        let uses = RepositoryUses::parse("actions/checkout@v2").unwrap();
 
         let audit = create_test_audit();
         let fix = audit
