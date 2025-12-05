@@ -41,3 +41,27 @@ fn test_regular_persona() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_composite_action() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("archived-uses/action/"))
+            .run()?,
+        @r"
+    warning[archived-uses]: action or reusable workflow from archived repository
+     --> @@INPUT@@action.yml:9:7
+      |
+    8 |     - name: setup ruby
+      |       ---------------- this step
+    9 |       uses: actions/setup-ruby@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
+      |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ repository is archived
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
