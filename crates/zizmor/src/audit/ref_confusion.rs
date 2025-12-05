@@ -158,7 +158,7 @@ impl Audit for RefConfusion {
                             .with_keys(["uses".into()])
                             .annotated(REF_CONFUSION_ANNOTATION),
                     )
-                    .build(step.action())
+                    .build(step)
                     .map_err(Self::err)?,
             );
         }

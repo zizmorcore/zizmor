@@ -42,6 +42,10 @@ codeql-injection-sinks: crates/zizmor/data/codeql-injection-sinks.json
 crates/zizmor/data/codeql-injection-sinks.json: support/codeql-injection-sinks.py
 	$< > $@
 
+.PHONY: archived-repos
+archived-repos:
+	support/archived-repos.py
+
 .PHONY: pinact
 pinact:
 	pinact run --update --verify

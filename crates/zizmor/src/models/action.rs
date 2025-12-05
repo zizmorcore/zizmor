@@ -190,6 +190,14 @@ impl HasInputs for CompositeStep<'_> {
 }
 
 impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
+    fn name(&self) -> Option<&'doc str> {
+        self.name.as_deref()
+    }
+
+    fn id(&self) -> Option<&'doc str> {
+        self.id.as_deref()
+    }
+
     fn index(&self) -> usize {
         self.index
     }
@@ -198,7 +206,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         utils::env_is_static(ctx, &[&self.env])
     }
 
-    fn uses(&self) -> Option<&common::Uses> {
+    fn uses(&self) -> Option<&'doc common::Uses> {
         let action::StepBody::Uses { uses, .. } = &self.inner.body else {
             return None;
         };

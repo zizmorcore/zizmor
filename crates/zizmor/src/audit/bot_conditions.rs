@@ -15,7 +15,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
-    models::workflow::{JobExt, Workflow},
+    models::workflow::{JobCommon, Workflow},
     utils::{self, ExtractedExpr},
 };
 use subfeature::Subfeature;
@@ -130,7 +130,7 @@ impl Audit for BotConditions {
                     finding_builder = finding_builder.fix(fix);
                 }
 
-                findings.push(finding_builder.build(job.parent())?);
+                findings.push(finding_builder.build(job)?);
             }
         }
 

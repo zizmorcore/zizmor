@@ -286,7 +286,13 @@ impl<'doc> NormalJob<'doc> {
     }
 }
 
-impl<'doc> JobExt<'doc> for NormalJob<'doc> {
+impl<'a, 'doc> AsDocument<'a, 'doc> for NormalJob<'doc> {
+    fn as_document(&'a self) -> &'doc yamlpath::Document {
+        self.parent.as_document()
+    }
+}
+
+impl<'doc> JobCommon<'doc> for NormalJob<'doc> {
     fn id(&self) -> &'doc str {
         self.id
     }
@@ -329,7 +335,13 @@ impl<'doc> ReusableWorkflowCallJob<'doc> {
     }
 }
 
-impl<'doc> JobExt<'doc> for ReusableWorkflowCallJob<'doc> {
+impl<'a, 'doc> AsDocument<'a, 'doc> for ReusableWorkflowCallJob<'doc> {
+    fn as_document(&'a self) -> &'doc yamlpath::Document {
+        self.parent.as_document()
+    }
+}
+
+impl<'doc> JobCommon<'doc> for ReusableWorkflowCallJob<'doc> {
     fn id(&self) -> &'doc str {
         self.id
     }
@@ -352,7 +364,7 @@ impl<'doc> std::ops::Deref for ReusableWorkflowCallJob<'doc> {
 }
 
 /// Common behavior across both normal and reusable jobs.
-pub(crate) trait JobExt<'doc> {
+pub(crate) trait JobCommon<'doc>: Locatable<'doc> {
     /// The job's unique ID (i.e., its key in the workflow's `jobs:` block).
     fn id(&self) -> &'doc str;
 
@@ -363,7 +375,7 @@ pub(crate) trait JobExt<'doc> {
     fn parent(&self) -> &'doc Workflow;
 }
 
-impl<'doc, T: JobExt<'doc>> Locatable<'doc> for T {
+impl<'doc, T: JobCommon<'doc>> Locatable<'doc> for T {
     /// Returns this job's [`SymbolicLocation`].
     fn location(&self) -> SymbolicLocation<'doc> {
         self.parent()
@@ -632,6 +644,14 @@ impl HasInputs for Step<'_> {
 }
 
 impl<'doc> StepCommon<'doc> for Step<'doc> {
+    fn name(&self) -> Option<&'doc str> {
+        self.inner.name.as_deref()
+    }
+
+    fn id(&self) -> Option<&'doc str> {
+        self.inner.id.as_deref()
+    }
+
     fn index(&self) -> usize {
         self.index
     }
@@ -640,7 +660,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         utils::env_is_static(ctx, &[&self.env, &self.job().env, &self.workflow().env])
     }
 
-    fn uses(&self) -> Option<&common::Uses> {
+    fn uses(&self) -> Option<&'doc common::Uses> {
         let StepBody::Uses { uses, .. } = &self.inner.body else {
             return None;
         };

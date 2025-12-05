@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [archived-uses] detects usages of archived repositories in
+  `#!yaml uses:` clauses (#1411)
+
 ### Enhancements 🌱
 
 * The [use-trusted-publishing] audit now detects additional publishing command
@@ -1311,5 +1316,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [dependabot-execution]: ./audits.md#dependabot-execution
 [dependabot-cooldown]: ./audits.md#dependabot-cooldown
 [concurrency-limits]: ./audits.md#concurrency-limits
+[archived-uses]: ./audits.md#archived-uses
 
 [exit code]: ./usage.md#exit-codes

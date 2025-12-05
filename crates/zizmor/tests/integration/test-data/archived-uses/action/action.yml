@@ -1,0 +1,9 @@
+name: archived-uses
+
+description: archived-uses composite action
+
+runs:
+  using: composite
+  steps:
+    - name: setup ruby
+      uses: actions/setup-ruby@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3

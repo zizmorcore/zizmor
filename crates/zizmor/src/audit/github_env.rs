@@ -13,7 +13,7 @@ use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::StepCommon;
-use crate::models::{workflow::JobExt as _, workflow::Step};
+use crate::models::{workflow::JobCommon as _, workflow::Step};
 use crate::state::AuditState;
 use crate::utils;
 use crate::utils::once::static_regex;
@@ -419,7 +419,7 @@ impl Audit for GitHubEnv {
                                 .with_keys(["run".into()])
                                 .annotated(format!("write to {dest} may allow code execution")),
                         )
-                        .build(step.workflow())?,
+                        .build(step)?,
                 )
             }
         }
@@ -463,7 +463,7 @@ impl Audit for GitHubEnv {
                             .with_keys(["run".into()])
                             .annotated(format!("write to {dest} may allow code execution")),
                     )
-                    .build(step.action())?,
+                    .build(step)?,
             )
         }
 

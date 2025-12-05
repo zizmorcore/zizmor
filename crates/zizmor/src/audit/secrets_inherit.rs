@@ -4,7 +4,6 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, location::Locatable as _},
-    models::workflow::JobExt as _,
 };
 
 pub(crate) struct SecretsInherit;
@@ -47,7 +46,7 @@ impl Audit for SecretsInherit {
                     )
                     .confidence(Confidence::High)
                     .severity(crate::finding::Severity::Medium)
-                    .build(job.parent())?,
+                    .build(job)?,
             );
         }
 
