@@ -51,7 +51,7 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
     fn env_is_static(&self, ctx: &context::Context) -> bool;
 
     /// Returns a [`common::Uses`] for this step, if it has one.
-    fn uses(&self) -> Option<&common::Uses>;
+    fn uses(&self) -> Option<&'doc common::Uses>;
 
     /// Returns this step's job's strategy, if present.
     ///

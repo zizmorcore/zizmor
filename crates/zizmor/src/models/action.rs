@@ -206,7 +206,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         utils::env_is_static(ctx, &[&self.env])
     }
 
-    fn uses(&self) -> Option<&common::Uses> {
+    fn uses(&self) -> Option<&'doc common::Uses> {
         let action::StepBody::Uses { uses, .. } = &self.inner.body else {
             return None;
         };

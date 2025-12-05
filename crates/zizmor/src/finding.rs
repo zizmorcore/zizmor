@@ -233,13 +233,13 @@ impl<'doc> FindingBuilder<'doc> {
             self.locations.push(
                 step.location()
                     .with_keys(["name".into()])
-                    .annotated("this step"),
+                    .annotated("in this step"),
             );
         } else if step.id().is_some() {
             self.locations.push(
                 step.location()
                     .with_keys(["id".into()])
-                    .annotated("this step"),
+                    .annotated("in this step"),
             );
         }
 

@@ -648,7 +648,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         utils::env_is_static(ctx, &[&self.env, &self.job().env, &self.workflow().env])
     }
 
-    fn uses(&self) -> Option<&common::Uses> {
+    fn uses(&self) -> Option<&'doc common::Uses> {
         let StepBody::Uses { uses, .. } = &self.inner.body else {
             return None;
         };

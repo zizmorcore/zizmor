@@ -2,6 +2,7 @@ use std::sync::LazyLock;
 
 use fst::Set;
 use github_actions_models::common::{RepositoryUses, Uses};
+use subfeature::Subfeature;
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
@@ -72,7 +73,8 @@ impl Audit for ArchivedUses {
                     .add_location(
                         step.location()
                             .with_keys(["uses".into()])
-                            .annotated("references an archived repository")
+                            .subfeature(Subfeature::new(uses.owner.len(), uses.repo.as_str()))
+                            .annotated("repository is archived")
                             .primary(),
                     )
                     .build(step)?,
