@@ -100,7 +100,7 @@ impl Audit for ArchivedUses {
                     .add_location(
                         step.location()
                             .with_keys(["uses".into()])
-                            .annotated("uses an archived repository")
+                            .annotated("repository is archived")
                             .primary(),
                     )
                     .build(step)?,
@@ -126,7 +126,7 @@ impl Audit for ArchivedUses {
                     .add_location(
                         job.location()
                             .with_keys(["uses".into()])
-                            .annotated("references an archived repository")
+                            .annotated("repository is archived")
                             .primary(),
                     )
                     .build(job.parent())?,

@@ -25,7 +25,19 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings: 0 informational, 0 low, 2 medium, 0 high
+    warning[archived-uses]: action or reusable workflow from archived repository
+      --> @@INPUT@@:24:5
+       |
+    22 | /   archived-uses-reusable:
+    23 | |     name: archived-uses-reusable
+    24 | |     uses: actions/setup-ruby/.github/workflows/reusable.yml@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
+       | |_____^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^_________- this job
+       |       |
+       |       repository is archived
+       |
+       = note: audit confidence → High
+
+    3 findings: 0 informational, 0 low, 3 medium, 0 high
     "
     );
 
