@@ -189,10 +189,9 @@ pub(crate) enum AuditLoadError {
 }
 
 #[derive(Error, Debug)]
-#[error("error in {ident}")]
+#[error("error in '{ident}' audit")]
 pub(crate) struct AuditError {
     ident: &'static str,
-    #[source]
     source: anyhow::Error,
 }
 

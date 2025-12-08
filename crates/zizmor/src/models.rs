@@ -7,7 +7,7 @@ use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::job::Strategy;
 
-use crate::finding::location::Locatable;
+use crate::finding::location::{Locatable, SymbolicLocation};
 use crate::models::inputs::HasInputs;
 
 pub(crate) mod action;
@@ -64,7 +64,7 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
     ///
     /// Returns `None` if the shell cannot be statically determined, including
     /// if the shell is specified via an expression.
-    fn shell(&self) -> Option<&str>;
+    fn shell(&self) -> Option<(&str, SymbolicLocation<'doc>)>;
 }
 
 impl<'a, 'doc, T: StepCommon<'doc>> AsDocument<'a, 'doc> for T {

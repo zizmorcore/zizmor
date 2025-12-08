@@ -1,0 +1,16 @@
+name: issue-1414-repro
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  some-job:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: say hi
+        run: echo hi

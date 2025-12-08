@@ -430,7 +430,7 @@ impl Audit for UseTrustedPublishing {
         if let StepBodyCommon::Run { run, .. } = step.body()
             && !step.parent.has_id_token()
         {
-            let shell = step.shell().unwrap_or_else(|| {
+            let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
                 tracing::debug!(
                     "use-trusted-publishing: couldn't determine shell type for {workflow}:{job} step {stepno}",
                     workflow = step.workflow().key.filename(),
