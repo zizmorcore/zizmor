@@ -162,7 +162,6 @@ GitHub Actions setup:
         runs-on: ubuntu-latest
         permissions:
           contents: read # Only needed for private repos. Needed to clone the repo.
-          actions: read # only needed for private repos
         steps:
           - name: Checkout repository
             uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
