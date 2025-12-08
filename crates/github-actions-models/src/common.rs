@@ -1,9 +1,6 @@
 //! Shared models and utilities.
 
-use std::{
-    fmt::{self, Display},
-    str::FromStr,
-};
+use std::fmt::{self, Display};
 
 use indexmap::IndexMap;
 use self_cell::self_cell;
@@ -210,7 +207,7 @@ impl Uses {
         if uses.starts_with("./") {
             Ok(Self::Local(LocalUses::new(uses)))
         } else if let Some(image) = uses.strip_prefix("docker://") {
-            DockerUses::from_str(image).map(Self::Docker)
+            DockerUses::parse(image).map(Self::Docker)
         } else {
             RepositoryUses::parse(uses).map(Self::Repository)
         }
@@ -229,20 +226,6 @@ impl LocalUses {
         LocalUses { path }
     }
 }
-
-// /// A `uses: some/repo` clause.
-// #[derive(Debug, PartialEq)]
-// #[non_exhaustive]
-// pub struct RepositoryUses {
-//     /// The repo user or org.
-//     pub owner: String,
-//     /// The repo name.
-//     pub repo: String,
-//     /// The subpath to the action or reusable workflow, if present.
-//     pub subpath: Option<String>,
-//     /// The `@<ref>` that the `uses:` is pinned to.
-//     pub git_ref: String,
-// }
 
 #[derive(Debug, PartialEq)]
 struct RepositoryUsesInner<'a> {
@@ -306,6 +289,7 @@ self_cell!(
 );
 
 impl RepositoryUses {
+    /// Parse a `uses: some/repo` clause.
     pub fn parse(uses: impl Into<String>) -> Result<Self, UsesError> {
         RepositoryUses::try_new(uses.into(), |s| {
             let inner = RepositoryUsesInner::from_str(s)?;
@@ -344,30 +328,26 @@ impl RepositoryUses {
     }
 }
 
-/// A `uses: docker://some-image` clause.
 #[derive(Debug, PartialEq)]
-pub struct DockerUses {
+#[non_exhaustive]
+pub struct DockerUsesInner<'a> {
     /// The registry this image is on, if present.
-    pub registry: Option<String>,
+    registry: Option<&'a str>,
     /// The name of the Docker image.
-    pub image: String,
+    image: &'a str,
     /// An optional tag for the image.
-    pub tag: Option<String>,
+    tag: Option<&'a str>,
     /// An optional integrity hash for the image.
-    pub hash: Option<String>,
+    hash: Option<&'a str>,
 }
 
-impl DockerUses {
+impl<'a> DockerUsesInner<'a> {
     fn is_registry(registry: &str) -> bool {
         // https://stackoverflow.com/a/42116190
         registry == "localhost" || registry.contains('.') || registry.contains(':')
     }
-}
 
-impl FromStr for DockerUses {
-    type Err = UsesError;
-
-    fn from_str(uses: &str) -> Result<Self, Self::Err> {
+    fn from_str(uses: &'a str) -> Result<Self, UsesError> {
         let (registry, image) = match uses.split_once('/') {
             Some((registry, image)) if Self::is_registry(registry) => (Some(registry), image),
             _ => (None, uses),
@@ -385,11 +365,11 @@ impl FromStr for DockerUses {
                 Some(&hash[1..])
             };
 
-            Ok(DockerUses {
-                registry: registry.map(Into::into),
-                image: image.into(),
+            Ok(DockerUsesInner {
+                registry,
+                image,
                 tag: None,
-                hash: hash.map(Into::into),
+                hash,
             })
         } else {
             let (image, tag) = match image.split_once(':') {
@@ -398,13 +378,60 @@ impl FromStr for DockerUses {
                 _ => (image, None),
             };
 
-            Ok(DockerUses {
-                registry: registry.map(Into::into),
-                image: image.into(),
-                tag: tag.map(Into::into),
+            Ok(DockerUsesInner {
+                registry,
+                image,
+                tag,
                 hash: None,
             })
         }
+    }
+}
+
+self_cell!(
+    /// A `uses: docker://some-image` clause.
+    pub struct DockerUses {
+        owner: String,
+
+        #[covariant]
+        dependent: DockerUsesInner,
+    }
+
+    impl {Debug, PartialEq}
+);
+
+impl DockerUses {
+    /// Parse a `uses: docker://some-image` clause.
+    pub fn parse(uses: impl Into<String>) -> Result<Self, UsesError> {
+        DockerUses::try_new(uses.into(), |s| {
+            let inner = DockerUsesInner::from_str(s)?;
+            Ok(inner)
+        })
+    }
+
+    /// Get the raw uses clause. This does not include the `docker://` prefix.
+    pub fn raw(&self) -> &str {
+        self.borrow_owner()
+    }
+
+    /// Get the optional registry of this Docker image.
+    pub fn registry(&self) -> Option<&str> {
+        self.borrow_dependent().registry
+    }
+
+    /// Get the image name of this Docker image.
+    pub fn image(&self) -> &str {
+        self.borrow_dependent().image
+    }
+
+    /// Get the optional tag of this Docker image.
+    pub fn tag(&self) -> Option<&str> {
+        self.borrow_dependent().tag
+    }
+
+    /// Get the optional hash of this Docker image.
+    pub fn hash(&self) -> Option<&str> {
+        self.borrow_dependent().hash
     }
 }
 
@@ -420,6 +447,15 @@ where
     let msg = msg.to_string();
     tracing::error!(msg);
     de::Error::custom(msg)
+}
+
+/// Deserialize a `DockerUses`.
+pub(crate) fn docker_uses<'de, D>(de: D) -> Result<DockerUses, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let uses = <String>::deserialize(de)?;
+    DockerUses::parse(uses).map_err(custom_error::<D>)
 }
 
 /// Deserialize an ordinary step `uses:`.
@@ -636,12 +672,15 @@ mod tests {
             @r#"
         Docker(
             DockerUses {
-                registry: None,
-                image: "alpine",
-                tag: Some(
-                    "3.8",
-                ),
-                hash: None,
+                owner: "alpine:3.8",
+                dependent: DockerUsesInner {
+                    registry: None,
+                    image: "alpine",
+                    tag: Some(
+                        "3.8",
+                    ),
+                    hash: None,
+                },
             },
         )
         "#
@@ -653,14 +692,17 @@ mod tests {
             @r#"
         Docker(
             DockerUses {
-                registry: Some(
-                    "localhost",
-                ),
-                image: "alpine",
-                tag: Some(
-                    "3.8",
-                ),
-                hash: None,
+                owner: "localhost/alpine:3.8",
+                dependent: DockerUsesInner {
+                    registry: Some(
+                        "localhost",
+                    ),
+                    image: "alpine",
+                    tag: Some(
+                        "3.8",
+                    ),
+                    hash: None,
+                },
             },
         )
         "#
@@ -672,14 +714,17 @@ mod tests {
             @r#"
         Docker(
             DockerUses {
-                registry: Some(
-                    "localhost:1337",
-                ),
-                image: "alpine",
-                tag: Some(
-                    "3.8",
-                ),
-                hash: None,
+                owner: "localhost:1337/alpine:3.8",
+                dependent: DockerUsesInner {
+                    registry: Some(
+                        "localhost:1337",
+                    ),
+                    image: "alpine",
+                    tag: Some(
+                        "3.8",
+                    ),
+                    hash: None,
+                },
             },
         )
         "#
@@ -691,14 +736,17 @@ mod tests {
             @r#"
         Docker(
             DockerUses {
-                registry: Some(
-                    "ghcr.io",
-                ),
-                image: "foo/alpine",
-                tag: Some(
-                    "3.8",
-                ),
-                hash: None,
+                owner: "ghcr.io/foo/alpine:3.8",
+                dependent: DockerUsesInner {
+                    registry: Some(
+                        "ghcr.io",
+                    ),
+                    image: "foo/alpine",
+                    tag: Some(
+                        "3.8",
+                    ),
+                    hash: None,
+                },
             },
         )
         "#
@@ -710,12 +758,15 @@ mod tests {
             @r#"
         Docker(
             DockerUses {
-                registry: Some(
-                    "ghcr.io",
-                ),
-                image: "foo/alpine",
-                tag: None,
-                hash: None,
+                owner: "ghcr.io/foo/alpine",
+                dependent: DockerUsesInner {
+                    registry: Some(
+                        "ghcr.io",
+                    ),
+                    image: "foo/alpine",
+                    tag: None,
+                    hash: None,
+                },
             },
         )
         "#
@@ -727,12 +778,15 @@ mod tests {
             @r#"
         Docker(
             DockerUses {
-                registry: Some(
-                    "ghcr.io",
-                ),
-                image: "foo/alpine",
-                tag: None,
-                hash: None,
+                owner: "ghcr.io/foo/alpine:",
+                dependent: DockerUsesInner {
+                    registry: Some(
+                        "ghcr.io",
+                    ),
+                    image: "foo/alpine",
+                    tag: None,
+                    hash: None,
+                },
             },
         )
         "#
@@ -744,10 +798,13 @@ mod tests {
             @r#"
         Docker(
             DockerUses {
-                registry: None,
-                image: "alpine",
-                tag: None,
-                hash: None,
+                owner: "alpine",
+                dependent: DockerUsesInner {
+                    registry: None,
+                    image: "alpine",
+                    tag: None,
+                    hash: None,
+                },
             },
         )
         "#
@@ -759,12 +816,15 @@ mod tests {
             @r#"
         Docker(
             DockerUses {
-                registry: None,
-                image: "alpine",
-                tag: None,
-                hash: Some(
-                    "hash",
-                ),
+                owner: "alpine@hash",
+                dependent: DockerUsesInner {
+                    registry: None,
+                    image: "alpine",
+                    tag: None,
+                    hash: Some(
+                        "hash",
+                    ),
+                },
             },
         )
         "#

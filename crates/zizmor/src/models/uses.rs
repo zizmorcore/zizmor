@@ -248,7 +248,7 @@ impl UsesExt for Uses {
     /// Whether the `uses:` is unpinned.
     fn unpinned(&self) -> bool {
         match self {
-            Uses::Docker(docker) => docker.hash.is_none() && docker.tag.is_none(),
+            Uses::Docker(docker) => docker.hash().is_none() && docker.tag().is_none(),
             Uses::Repository(_) => false,
             // Local `uses:` are always unpinned; any `@ref` component
             // is actually part of the path.
@@ -265,7 +265,7 @@ impl UsesExt for Uses {
             // (since it's fully contained within the calling repo),
             Uses::Local(_) => false,
             Uses::Repository(repo) => !repo.ref_is_commit(),
-            Uses::Docker(docker) => docker.hash.is_none(),
+            Uses::Docker(docker) => docker.hash().is_none(),
         }
     }
 }
