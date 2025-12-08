@@ -185,7 +185,7 @@ impl TemplateInjection {
             return None;
         }
 
-        let shell = utils::normalize_shell(step.shell()?);
+        let shell = utils::normalize_shell(step.shell()?.0);
 
         match shell {
             "bash" | "sh" | "zsh" => Some(format!("${{{env_var}}}")),

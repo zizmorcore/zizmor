@@ -30,6 +30,7 @@ use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 use crate::{
+    audit::AuditError,
     config::{Config, ConfigError, ConfigErrorInner},
     github::Client,
     models::AsDocument,
@@ -594,10 +595,10 @@ enum Error {
     #[error("failed to load audit rules")]
     AuditLoad(#[source] anyhow::Error),
     /// An error while running an audit.
-    #[error("{ident} failed on {input}")]
+    #[error("'{ident}' audit failed on {input}")]
     Audit {
         ident: &'static str,
-        source: anyhow::Error,
+        source: AuditError,
         input: String,
     },
     /// An error while rendering output.
@@ -794,7 +795,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             while let Some(findings) = completion_stream.next().await {
                 let findings = findings.map_err(|err| Error::Audit {
                     ident: err.ident(),
-                    source: err.into(),
+                    source: err,
                     input: input.key().to_string(),
                 })?;
 

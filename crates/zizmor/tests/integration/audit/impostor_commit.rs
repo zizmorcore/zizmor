@@ -1,7 +1,9 @@
 use crate::common::{input_under_test, zizmor};
 
-#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
-#[cfg_attr(not(feature = "slow-tests"), ignore)]
+#[cfg_attr(
+    any(not(feature = "gh-token-tests"), not(feature = "slow-tests")),
+    ignore
+)]
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(

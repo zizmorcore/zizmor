@@ -392,7 +392,7 @@ impl Audit for GitHubEnv {
         }
 
         if let StepBody::Run { run, .. } = &step.deref().body {
-            let shell = step.shell().unwrap_or_else(|| {
+            let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
                 tracing::warn!(
                     "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}; assuming bash",
                     workflow = step.workflow().key.presentation_path(),
@@ -438,7 +438,7 @@ impl Audit for GitHubEnv {
             return Ok(findings);
         };
 
-        let shell = step.shell().unwrap_or_else(|| {
+        let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
             tracing::warn!(
                 "github-env: couldn't determine shell type for {action} step {stepno}; assuming bash",
                 action = step.action().key.presentation_path(),

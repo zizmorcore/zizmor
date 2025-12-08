@@ -232,14 +232,19 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         self.action().as_document()
     }
 
-    fn shell(&self) -> Option<&str> {
+    fn shell(&self) -> Option<(&str, SymbolicLocation<'doc>)> {
         // For composite action steps, shell is always explicitly specified in the YAML.
         if let action::StepBody::Run {
             shell: LoE::Literal(shell),
             ..
         } = &self.inner.body
         {
-            Some(shell)
+            Some((
+                shell,
+                self.location()
+                    .with_keys(["shell".into()])
+                    .annotated("shell defined here"),
+            ))
         } else {
             None
         }

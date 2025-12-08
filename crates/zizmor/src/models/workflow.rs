@@ -691,7 +691,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         self.workflow().as_document()
     }
 
-    fn shell(&self) -> Option<&str> {
+    fn shell(&self) -> Option<(&str, SymbolicLocation<'doc>)> {
         // For workflow steps, we can use the existing shell() method
         self.shell()
     }
@@ -720,7 +720,7 @@ impl<'doc> Step<'doc> {
     /// if the shell can't be statically inferred.
     ///
     /// Invariant: panics if the step is not a `run:` step.
-    pub(crate) fn shell(&self) -> Option<&str> {
+    pub(crate) fn shell(&self) -> Option<(&str, SymbolicLocation<'doc>)> {
         let StepBody::Run {
             run: _,
             working_directory: _,
@@ -736,7 +736,12 @@ impl<'doc> Step<'doc> {
         // If any of these is an expression, we can't infer the shell
         // statically, so we terminate early with `None`.
         let shell = match shell {
-            Some(LoE::Literal(shell)) => Some(shell.as_str()),
+            Some(LoE::Literal(shell)) => Some((
+                shell.as_str(),
+                self.location()
+                    .with_keys(["shell".into()])
+                    .annotated("shell defined here"),
+            )),
             Some(LoE::Expr(_)) => return None,
             None => match self
                 .job()
@@ -744,7 +749,13 @@ impl<'doc> Step<'doc> {
                 .as_ref()
                 .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_ref()))
             {
-                Some(LoE::Literal(shell)) => Some(shell.as_str()),
+                Some(LoE::Literal(shell)) => Some((
+                    shell.as_str(),
+                    self.job()
+                        .location()
+                        .with_keys(["defaults".into(), "run".into(), "shell".into()])
+                        .annotated("job default shell defined here"),
+                )),
                 Some(LoE::Expr(_)) => return None,
                 None => match self
                     .workflow()
@@ -752,14 +763,30 @@ impl<'doc> Step<'doc> {
                     .as_ref()
                     .and_then(|d| d.run.as_ref().and_then(|r| r.shell.as_ref()))
                 {
-                    Some(LoE::Literal(shell)) => Some(shell.as_str()),
+                    Some(LoE::Literal(shell)) => Some((
+                        shell.as_str(),
+                        self.workflow()
+                            .location()
+                            .with_keys(["defaults".into(), "run".into(), "shell".into()])
+                            .annotated("workflow default shell defined here"),
+                    )),
                     Some(LoE::Expr(_)) => return None,
                     None => None,
                 },
             },
         };
 
-        shell.or_else(|| self.parent.runner_default_shell())
+        shell.or_else(|| {
+            self.parent.runner_default_shell().map(|shell| {
+                (
+                    shell,
+                    self.job()
+                        .location()
+                        .with_keys(["runs-on".into()])
+                        .annotated("shell implied by runner"),
+                )
+            })
+        })
     }
 }
 

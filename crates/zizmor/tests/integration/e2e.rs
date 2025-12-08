@@ -481,10 +481,10 @@ fn issue_1286() -> Result<()> {
         @r"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
-    ref-confusion failed on file://@@INPUT@@
+    'ref-confusion' audit failed on file://@@INPUT@@
 
     Caused by:
-        0: error in ref-confusion
+        0: error in 'ref-confusion' audit
         1: couldn't list branches for woodruffw-experiments/this-does-not-exist
         2: can't access woodruffw-experiments/this-does-not-exist: missing or you have no access
     ",
