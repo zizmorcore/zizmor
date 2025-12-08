@@ -795,7 +795,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             while let Some(findings) = completion_stream.next().await {
                 let findings = findings.map_err(|err| Error::Audit {
                     ident: err.ident(),
-                    source: err.into(),
+                    source: err,
                     input: input.key().to_string(),
                 })?;
 
