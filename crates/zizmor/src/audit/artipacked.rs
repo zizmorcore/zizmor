@@ -42,12 +42,12 @@ impl Artipacked {
         uses: &github_actions_models::common::RepositoryUses,
     ) -> Result<Option<bool>, ClientError> {
         let version = if !uses.ref_is_commit() {
-            uses.git_ref.clone()
+            uses.git_ref().to_string()
         } else {
             match self.client {
                 Some(ref client) => {
                     let tag = client
-                        .longest_tag_for_commit(&uses.owner, &uses.repo, &uses.git_ref)
+                        .longest_tag_for_commit(uses.owner(), uses.repo(), uses.git_ref())
                         .await?;
 
                     match tag {
@@ -271,8 +271,6 @@ impl Audit for Artipacked {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use github_actions_models::common::RepositoryUses;
 
     use super::*;
@@ -325,11 +323,11 @@ mod tests {
     #[tokio::test]
     async fn test_is_checkout_v6_or_higher_offline() {
         // Test v6 and higher versions
-        let v6 = RepositoryUses::from_str("actions/checkout@v6").unwrap();
-        let v6_0 = RepositoryUses::from_str("actions/checkout@v6.0").unwrap();
-        let v6_1_0 = RepositoryUses::from_str("actions/checkout@v6.1.0").unwrap();
-        let v7 = RepositoryUses::from_str("actions/checkout@v7").unwrap();
-        let v10 = RepositoryUses::from_str("actions/checkout@v10").unwrap();
+        let v6 = RepositoryUses::parse("actions/checkout@v6").unwrap();
+        let v6_0 = RepositoryUses::parse("actions/checkout@v6.0").unwrap();
+        let v6_1_0 = RepositoryUses::parse("actions/checkout@v6.1.0").unwrap();
+        let v7 = RepositoryUses::parse("actions/checkout@v7").unwrap();
+        let v10 = RepositoryUses::parse("actions/checkout@v10").unwrap();
 
         let artipacked = Artipacked { client: None };
 
@@ -355,9 +353,9 @@ mod tests {
         );
 
         // Test versions below v6
-        let v4 = RepositoryUses::from_str("actions/checkout@v4").unwrap();
-        let v5 = RepositoryUses::from_str("actions/checkout@v5").unwrap();
-        let v5_9 = RepositoryUses::from_str("actions/checkout@v5.9").unwrap();
+        let v4 = RepositoryUses::parse("actions/checkout@v4").unwrap();
+        let v5 = RepositoryUses::parse("actions/checkout@v5").unwrap();
+        let v5_9 = RepositoryUses::parse("actions/checkout@v5.9").unwrap();
 
         assert_eq!(
             artipacked.is_checkout_v6_or_higher(&v4).await.unwrap(),
@@ -374,7 +372,7 @@ mod tests {
 
         // Test commit SHA (should return None when offline)
         let commit_sha =
-            RepositoryUses::from_str("actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683")
+            RepositoryUses::parse("actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683")
                 .unwrap();
         assert_eq!(
             artipacked
@@ -385,7 +383,7 @@ mod tests {
         );
 
         // Test invalid/unparseable refs (should return None)
-        let invalid = RepositoryUses::from_str("actions/checkout@main").unwrap();
+        let invalid = RepositoryUses::parse("actions/checkout@main").unwrap();
         assert_eq!(
             artipacked.is_checkout_v6_or_higher(&invalid).await.unwrap(),
             None
@@ -410,7 +408,7 @@ mod tests {
 
         // Points to v6.0.0.
         let commit_sha_v6 =
-            RepositoryUses::from_str("actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3")
+            RepositoryUses::parse("actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3")
                 .unwrap();
 
         assert_eq!(
@@ -423,7 +421,7 @@ mod tests {
 
         // Points to v5.0.1.
         let commit_sha_v5 =
-            RepositoryUses::from_str("actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd")
+            RepositoryUses::parse("actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd")
                 .unwrap();
 
         assert_eq!(

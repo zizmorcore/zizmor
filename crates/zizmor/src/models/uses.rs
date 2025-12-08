@@ -1,18 +1,18 @@
 //! Extension traits for the `Uses` APIs.
 
-use std::str::FromStr;
+use std::{str::FromStr, sync::LazyLock};
 
 use github_actions_models::common::{RepositoryUses, Uses};
+use regex::Regex;
 use serde::Deserialize;
 
-use crate::utils::once::static_regex;
-
-// Matches all variants of [`RepositoryUsesPattern`] except `*`.
-//
-// TODO: Replace this with a real parser; this is ridiculous.
-static_regex!(
-    REPOSITORY_USES_PATTERN,
-    r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
+/// Matches all variants of [`RepositoryUsesPattern`] except `*`.
+///
+/// TODO: Replace this with a real parser; this is ridiculous.
+static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    #[allow(clippy::unwrap_used)]
+    Regex::new(
+        r#"(?xmi)                   # verbose, multi-line mode, case-insensitive
         ^                           # start of line
         ([\w-]+)                    # (1) owner
         /                           # /
@@ -30,8 +30,10 @@ static_regex!(
           ([[[:graph:]]&&[^\*]]+)   # (4) git ref (any non-space, non-* characters)
         )?                          # end of non-capturing group for optional git ref
         $                           # end of line
-        "#
-);
+        "#,
+    )
+    .unwrap()
+});
 
 /// Represents a pattern for matching repository `uses` references.
 /// These patterns are ordered by specificity; more specific patterns
@@ -71,10 +73,10 @@ impl RepositoryUsesPattern {
                 subpath,
                 git_ref,
             } => {
-                uses.owner.eq_ignore_ascii_case(owner)
-                    && uses.repo.eq_ignore_ascii_case(repo)
-                    && uses.subpath == *subpath
-                    && uses.git_ref.as_str() == git_ref
+                uses.owner().eq_ignore_ascii_case(owner)
+                    && uses.repo().eq_ignore_ascii_case(repo)
+                    && uses.subpath() == subpath.as_deref()
+                    && uses.git_ref() == git_ref
             }
             RepositoryUsesPattern::ExactPath {
                 owner,
@@ -87,19 +89,19 @@ impl RepositoryUsesPattern {
                 // Utf8Path gets us part of the way there, but is
                 // platform dependent (i.e. will do the wrong thing
                 // if the platform separator is not /).
-                uses.owner.eq_ignore_ascii_case(owner)
-                    && uses.repo.eq_ignore_ascii_case(repo)
-                    && uses.subpath.as_deref().is_some_and(|s| s == subpath)
+                uses.owner().eq_ignore_ascii_case(owner)
+                    && uses.repo().eq_ignore_ascii_case(repo)
+                    && uses.subpath().is_some_and(|s| s == subpath)
             }
             RepositoryUsesPattern::ExactRepo { owner, repo } => {
-                uses.owner.eq_ignore_ascii_case(owner)
-                    && uses.repo.eq_ignore_ascii_case(repo)
-                    && uses.subpath.is_none()
+                uses.owner().eq_ignore_ascii_case(owner)
+                    && uses.repo().eq_ignore_ascii_case(repo)
+                    && uses.subpath().is_none()
             }
             RepositoryUsesPattern::InRepo { owner, repo } => {
-                uses.owner.eq_ignore_ascii_case(owner) && uses.repo.eq_ignore_ascii_case(repo)
+                uses.owner().eq_ignore_ascii_case(owner) && uses.repo().eq_ignore_ascii_case(repo)
             }
-            RepositoryUsesPattern::InOwner(owner) => uses.owner.eq_ignore_ascii_case(owner),
+            RepositoryUsesPattern::InOwner(owner) => uses.owner().eq_ignore_ascii_case(owner),
             RepositoryUsesPattern::Any => true,
         }
     }
@@ -218,18 +220,18 @@ impl RepositoryUsesExt for RepositoryUses {
     }
 
     fn ref_is_commit(&self) -> bool {
-        self.git_ref.len() == 40 && self.git_ref.chars().all(|c| c.is_ascii_hexdigit())
+        self.git_ref().len() == 40 && self.git_ref().chars().all(|c| c.is_ascii_hexdigit())
     }
 
     fn commit_ref(&self) -> Option<&str> {
-        match &self.git_ref {
+        match &self.git_ref() {
             git_ref if self.ref_is_commit() => Some(git_ref),
             _ => None,
         }
     }
 
     fn symbolic_ref(&self) -> Option<&str> {
-        match &self.git_ref {
+        match &self.git_ref() {
             git_ref if !self.ref_is_commit() => Some(git_ref),
             _ => None,
         }
@@ -246,7 +248,7 @@ impl UsesExt for Uses {
     /// Whether the `uses:` is unpinned.
     fn unpinned(&self) -> bool {
         match self {
-            Uses::Docker(docker) => docker.hash.is_none() && docker.tag.is_none(),
+            Uses::Docker(docker) => docker.hash().is_none() && docker.tag().is_none(),
             Uses::Repository(_) => false,
             // Local `uses:` are always unpinned; any `@ref` component
             // is actually part of the path.
@@ -263,7 +265,7 @@ impl UsesExt for Uses {
             // (since it's fully contained within the calling repo),
             Uses::Local(_) => false,
             Uses::Repository(repo) => !repo.ref_is_commit(),
-            Uses::Docker(docker) => docker.hash.is_none(),
+            Uses::Docker(docker) => docker.hash().is_none(),
         }
     }
 }
@@ -477,7 +479,7 @@ mod tests {
             ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
             ("actions/checkout/foo@v1", "actions/checkout/foo@v3", false),
         ] {
-            let Ok(Uses::Repository(uses)) = Uses::from_str(uses) else {
+            let Ok(Uses::Repository(uses)) = Uses::parse(uses) else {
                 return Err(anyhow!("invalid uses: {uses}"));
             };
 

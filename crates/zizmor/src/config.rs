@@ -254,7 +254,7 @@ impl UnpinnedUsesPolicies {
         &self,
         uses: &RepositoryUses,
     ) -> (Option<&RepositoryUsesPattern>, UsesPolicy) {
-        match self.policy_tree.get(&uses.owner) {
+        match self.policy_tree.get(uses.owner()) {
             Some(policies) => {
                 // Policies are ordered by specificity, so we can
                 // iterate and return eagerly.

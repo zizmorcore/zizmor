@@ -51,13 +51,11 @@ impl Audit for UnpinnedImages {
         _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
-        let mut image_refs_with_locations: Vec<(DockerUses, SymbolicLocation<'doc>)> = vec![];
+        let mut image_refs_with_locations: Vec<(&'doc DockerUses, SymbolicLocation<'doc>)> = vec![];
 
         if let Some(Container::Container { image, .. }) = &job.container {
             image_refs_with_locations.push((
-                image
-                    .parse()
-                    .expect("failed to parse job container image as DockerUses"),
+                image,
                 job.location()
                     .primary()
                     .with_keys(["container".into(), "image".into()]),
@@ -67,9 +65,7 @@ impl Audit for UnpinnedImages {
         for (service, config) in job.services.iter() {
             if let Container::Container { image, .. } = &config {
                 image_refs_with_locations.push((
-                    image
-                        .parse()
-                        .expect("failed to parse service container image as DockerUses"),
+                    image,
                     job.location().primary().with_keys([
                         "services".into(),
                         service.as_str().into(),
@@ -80,9 +76,9 @@ impl Audit for UnpinnedImages {
         }
 
         for (image, location) in image_refs_with_locations {
-            match image.hash {
+            match image.hash() {
                 Some(_) => continue,
-                None => match image.tag.as_deref() {
+                None => match image.tag() {
                     Some("latest") => {
                         findings.push(self.build_finding(
                             location,

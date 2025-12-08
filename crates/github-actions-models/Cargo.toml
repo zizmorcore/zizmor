@@ -1,6 +1,6 @@
 [package]
 name = "github-actions-models"
-version = "0.39.0"
+version = "0.40.0"
 description = "Unofficial, high-quality data models for GitHub Actions workflows, actions, and related components"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-models"
 keywords = ["github", "ci"]
@@ -17,8 +17,10 @@ workspace = true
 
 [dependencies]
 indexmap.workspace = true
+self_cell.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+insta.workspace = true
