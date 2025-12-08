@@ -208,12 +208,12 @@ pub(crate) trait Locatable<'doc> {
     fn location(&self) -> SymbolicLocation<'doc>;
 
     /// Returns an "enriched" symbolic location of this model,
-    /// when the model is of a type that has a name. Otherwise,
-    /// returns the same symbolic location as `location()`.
+    /// when the model has one or more "grip" fields that are
+    /// visually useful to key off of (like a `name` or `id` field).
     ///
     /// For example, a GitHub Actions workflow step has an optional name,
     /// which is included in this symbolic location if present.
-    fn location_with_name(&self) -> SymbolicLocation<'doc> {
+    fn location_with_grip(&self) -> SymbolicLocation<'doc> {
         self.location()
     }
 }

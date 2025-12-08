@@ -2,7 +2,7 @@ pub(crate) struct AnonymousDefinition;
 
 use crate::{
     audit::AuditError,
-    finding::{Confidence, Persona, Severity},
+    finding::{Confidence, Persona, Severity, location::Locatable as _},
     state::AuditState,
 };
 
@@ -53,7 +53,7 @@ impl Audit for AnonymousDefinition {
                                 .severity(ANONYMOUS_DEFINITION_JOB_SEVERITY)
                                 .confidence(Confidence::High)
                                 .persona(Persona::Pedantic)
-                                .with_job(&normal)
+                                .add_location(normal.location_with_grip().primary())
                                 .tip("use 'name: ...' to give this job a name")
                                 .build(workflow)?,
                         );

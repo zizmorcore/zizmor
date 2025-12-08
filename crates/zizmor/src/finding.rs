@@ -6,10 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use self::location::{Location, SymbolicLocation};
 use crate::{
-    InputKey,
-    audit::AuditError,
-    finding::location::LocationKind,
-    models::{AsDocument, StepCommon, workflow::JobCommon},
+    InputKey, audit::AuditError, finding::location::LocationKind, models::AsDocument,
     registry::input::Group,
 };
 use yamlpatch::{self, Patch};
@@ -226,45 +223,6 @@ impl<'doc> FindingBuilder<'doc> {
 
     pub(crate) fn add_location(mut self, location: SymbolicLocation<'doc>) -> Self {
         self.locations.push(location);
-        self
-    }
-
-    /// Add a "useful" location for the given step, if it has a name or ID.
-    pub(crate) fn with_step(mut self, step: &impl StepCommon<'doc>) -> Self {
-        if step.name().is_some() {
-            self.locations.push(
-                step.location()
-                    .with_keys(["name".into()])
-                    .annotated("this step"),
-            );
-        } else if step.id().is_some() {
-            self.locations.push(
-                step.location()
-                    .with_keys(["id".into()])
-                    .annotated("this step"),
-            );
-        }
-
-        self
-    }
-
-    pub(crate) fn with_job(mut self, job: &impl JobCommon<'doc>) -> Self {
-        if job.name().is_some() {
-            self.locations.push(
-                job.location()
-                    .with_keys(["name".into()])
-                    .annotated("this job"),
-            );
-        } else {
-            self.locations.push(
-                job.parent()
-                    .location()
-                    .with_keys(["jobs".into(), job.id().into()])
-                    .key_only()
-                    .annotated("this job"),
-            );
-        }
-
         self
     }
 

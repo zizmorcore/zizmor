@@ -135,7 +135,7 @@ impl Audit for DependabotCooldown {
                     Self::finding()
                         .add_location(
                             update
-                                .location_with_name()
+                                .location_with_grip()
                                 .primary()
                                 .annotated("missing cooldown configuration"),
                         )

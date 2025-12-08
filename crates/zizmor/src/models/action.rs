@@ -175,10 +175,13 @@ impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
         ])
     }
 
-    fn location_with_name(&self) -> SymbolicLocation<'doc> {
-        match self.inner.name {
-            Some(_) => self.location().with_keys(["name".into()]),
-            None => self.location(),
+    fn location_with_grip(&self) -> SymbolicLocation<'doc> {
+        if self.inner.name.is_some() {
+            self.location().with_keys(["name".into()])
+        } else if self.inner.id.is_some() {
+            self.location().with_keys(["id".into()])
+        } else {
+            self.location()
         }
     }
 }
@@ -190,14 +193,6 @@ impl HasInputs for CompositeStep<'_> {
 }
 
 impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
-    fn name(&self) -> Option<&'doc str> {
-        self.name.as_deref()
-    }
-
-    fn id(&self) -> Option<&'doc str> {
-        self.id.as_deref()
-    }
-
     fn index(&self) -> usize {
         self.index
     }

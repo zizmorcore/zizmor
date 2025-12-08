@@ -69,7 +69,7 @@ impl Audit for ArchivedUses {
         {
             findings.push(
                 finding
-                    .with_step(step)
+                    .add_location(step.location_with_grip())
                     .add_location(
                         step.location()
                             .with_keys(["uses".into()])
@@ -96,10 +96,11 @@ impl Audit for ArchivedUses {
         {
             findings.push(
                 finding
-                    .with_step(step)
+                    .add_location(step.location_with_grip())
                     .add_location(
                         step.location()
                             .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.slug()))
                             .annotated("repository is archived")
                             .primary(),
                     )
@@ -122,10 +123,11 @@ impl Audit for ArchivedUses {
         {
             findings.push(
                 finding
-                    .with_job(job)
+                    .add_location(job.location_with_grip())
                     .add_location(
                         job.location()
                             .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.slug()))
                             .annotated("repository is archived")
                             .primary(),
                     )
