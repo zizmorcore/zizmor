@@ -28,9 +28,9 @@ jobs:
     name: Run zizmor 🌈
     runs-on: ubuntu-latest
     permissions:
-      security-events: write
-      contents: read # only needed for private repos
-      actions: read # only needed for private repos
+      security-events: write # Required for upload-sarif (used by zizmor-action) to upload SARIF files.
+      contents: read         # Only needed for private repos. Needed to clone the repo.
+      actions: read          # Only needed for private repos. Needed for upload-sarif to read workflow run info.
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -89,9 +89,9 @@ GitHub Actions setup:
         name: zizmor latest via PyPI
         runs-on: ubuntu-latest
         permissions:
-          security-events: write # needed for SARIF uploads
-          contents: read # only needed for private repos
-          actions: read # only needed for private repos
+          security-events: write # Required for upload-sarif (used by zizmor-action) to upload SARIF files.
+          contents: read         # Only needed for private repos. Needed to clone the repo.
+          actions: read          # Only needed for private repos. Needed for upload-sarif to read workflow run info.
         steps:
           - name: Checkout repository
             uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -161,7 +161,7 @@ GitHub Actions setup:
         name: zizmor latest via PyPI
         runs-on: ubuntu-latest
         permissions:
-          contents: read # only needed for private repos
+          contents: read # Only needed for private repos. Needed to clone the repo.
           actions: read # only needed for private repos
         steps:
           - name: Checkout repository
