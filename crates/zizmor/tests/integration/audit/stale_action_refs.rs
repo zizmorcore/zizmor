@@ -11,10 +11,10 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .run()?,
         @r"
     help[stale-action-refs]: commit hash does not point to a Git tag
-      --> @@INPUT@@:34:7
+      --> @@INPUT@@:34:13
        |
     34 |     - uses: actions/checkout@009b9ae9e446ad8d9b8c809870b0fbcc5e03573e
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+       |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
        |
        = note: audit confidence → High
 

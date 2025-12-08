@@ -13,7 +13,7 @@ mod excessive_permissions;
 mod forbidden_uses;
 mod github_env;
 // mod hardcoded_container_credentials; // TODO
-// mod impostor_commit; // TODO
+mod impostor_commit;
 mod insecure_commands;
 // mod known_vulnerable_actions; // TODO
 mod obfuscation;

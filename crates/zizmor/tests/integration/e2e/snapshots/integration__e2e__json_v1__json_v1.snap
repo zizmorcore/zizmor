@@ -1,6 +1,5 @@
 ---
 source: crates/zizmor/tests/integration/e2e/json_v1.rs
-assertion_line: 17
 expression: output
 ---
 [
@@ -249,7 +248,7 @@ expression: output
               "given_path": "@@INPUT@@"
             }
           },
-          "annotation": "action is not pinned to a tag, branch, or hash ref",
+          "annotation": "image is not pinned to a tag, branch, or hash ref",
           "route": {
             "route": [
               {
@@ -269,25 +268,32 @@ expression: output
               }
             ]
           },
-          "feature_kind": "Normal",
+          "feature_kind": {
+            "Subfeature": {
+              "after": 0,
+              "fragment": {
+                "Raw": "ubuntu"
+              }
+            }
+          },
           "kind": "Primary"
         },
         "concrete": {
           "location": {
             "start_point": {
               "row": 20,
-              "column": 8
+              "column": 23
             },
             "end_point": {
               "row": 20,
               "column": 29
             },
             "offset_span": {
-              "start": 406,
+              "start": 421,
               "end": 427
             }
           },
-          "feature": "uses: docker://ubuntu",
+          "feature": "docker://ubuntu",
           "comments": []
         }
       }
@@ -312,7 +318,7 @@ expression: output
               "given_path": "@@INPUT@@"
             }
           },
-          "annotation": "action is not pinned to a tag, branch, or hash ref",
+          "annotation": "image is not pinned to a tag, branch, or hash ref",
           "route": {
             "route": [
               {
@@ -332,25 +338,32 @@ expression: output
               }
             ]
           },
-          "feature_kind": "Normal",
+          "feature_kind": {
+            "Subfeature": {
+              "after": 0,
+              "fragment": {
+                "Raw": "ghcr.io/pypa/gh-action-pypi-publish"
+              }
+            }
+          },
           "kind": "Primary"
         },
         "concrete": {
           "location": {
             "start_point": {
               "row": 26,
-              "column": 8
+              "column": 23
             },
             "end_point": {
               "row": 26,
               "column": 58
             },
             "offset_span": {
-              "start": 531,
+              "start": 546,
               "end": 581
             }
           },
-          "feature": "uses: docker://ghcr.io/pypa/gh-action-pypi-publish",
+          "feature": "docker://ghcr.io/pypa/gh-action-pypi-publish",
           "comments": []
         }
       }

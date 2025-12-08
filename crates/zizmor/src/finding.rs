@@ -6,9 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use self::location::{Location, SymbolicLocation};
 use crate::{
-    InputKey,
-    audit::AuditError,
-    models::{AsDocument, StepCommon, workflow::JobCommon},
+    InputKey, audit::AuditError, finding::location::LocationKind, models::AsDocument,
     registry::input::Group,
 };
 use yamlpatch::{self, Patch};
@@ -228,44 +226,6 @@ impl<'doc> FindingBuilder<'doc> {
         self
     }
 
-    /// Add a "useful" location for the given step, if it has a name or ID.
-    pub(crate) fn with_step(mut self, step: &impl StepCommon<'doc>) -> Self {
-        if step.name().is_some() {
-            self.locations.push(
-                step.location()
-                    .with_keys(["name".into()])
-                    .annotated("this step"),
-            );
-        } else if step.id().is_some() {
-            self.locations.push(
-                step.location()
-                    .with_keys(["id".into()])
-                    .annotated("this step"),
-            );
-        }
-
-        self
-    }
-
-    pub(crate) fn with_job(mut self, job: &impl JobCommon<'doc>) -> Self {
-        if job.name().is_some() {
-            self.locations.push(
-                job.location()
-                    .with_keys(["name".into()])
-                    .annotated("this job"),
-            );
-        } else {
-            self.locations.push(
-                job.parent()
-                    .location()
-                    .with_keys(["jobs".into(), job.id().into()])
-                    .annotated("this job"),
-            );
-        }
-
-        self
-    }
-
     pub(crate) fn tip(mut self, tip: impl Into<String>) -> Self {
         self.tip = Some(tip.into());
         self
@@ -289,7 +249,12 @@ impl<'doc> FindingBuilder<'doc> {
 
         locations.extend(self.raw_locations);
 
-        if !locations.iter().any(|l| l.symbolic.is_primary()) {
+        if locations.len() == 1
+            && let Some(location) = locations.get_mut(0)
+        {
+            // If there's only one location, then it's primary by definition.
+            location.symbolic.kind = LocationKind::Primary;
+        } else if !locations.iter().any(|l| l.symbolic.is_primary()) {
             return Err(AuditError::new(
                 self.ident,
                 anyhow!("API misuse: at least one location must be marked with primary()"),

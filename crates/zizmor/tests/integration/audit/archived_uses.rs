@@ -26,12 +26,12 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
 
     warning[archived-uses]: action or reusable workflow from archived repository
-      --> @@INPUT@@:24:5
+      --> @@INPUT@@:24:11
        |
     23 |     name: archived-uses-reusable
        |     ---------------------------- this job
     24 |     uses: actions/setup-ruby/.github/workflows/notreal.yml@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
-       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ repository is archived
+       |           ^^^^^^^^^^^^^^^^^^ repository is archived
        |
        = note: audit confidence → High
 
@@ -50,12 +50,12 @@ fn test_composite_action() -> anyhow::Result<()> {
             .run()?,
         @r"
     warning[archived-uses]: action or reusable workflow from archived repository
-     --> @@INPUT@@action.yml:9:7
+     --> @@INPUT@@action.yml:9:13
       |
     8 |     - name: setup ruby
       |       ---------------- this step
     9 |       uses: actions/setup-ruby@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
-      |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ repository is archived
+      |             ^^^^^^^^^^^^^^^^^^ repository is archived
       |
       = note: audit confidence → High
 

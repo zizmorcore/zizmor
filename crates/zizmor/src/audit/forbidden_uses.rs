@@ -1,4 +1,5 @@
 use github_actions_models::common::Uses;
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
@@ -59,6 +60,7 @@ impl ForbiddenUses {
                         step.location()
                             .primary()
                             .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.raw()))
                             .annotated("use of this action is forbidden"),
                     )
                     .build(step)?,

@@ -131,7 +131,7 @@ impl<'doc> Locatable<'doc> for Update<'doc> {
             .annotated("this update rule")
     }
 
-    fn location_with_name(&self) -> SymbolicLocation<'doc> {
+    fn location_with_grip(&self) -> SymbolicLocation<'doc> {
         self.location()
             .with_keys(["package-ecosystem".into()])
             .annotated("this ecosystem")

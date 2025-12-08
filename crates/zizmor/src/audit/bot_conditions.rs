@@ -81,7 +81,7 @@ impl Audit for BotConditions {
         if let Some(If::Expr(expr)) = &job.r#if {
             conds.push((
                 expr,
-                job.location_with_name(),
+                job.location_with_grip(),
                 job.location().with_keys(["if".into()]),
             ));
         }
@@ -91,7 +91,7 @@ impl Audit for BotConditions {
             if let Some(If::Expr(expr)) = &step.r#if {
                 conds.push((
                     expr,
-                    step.location_with_name(),
+                    step.location_with_grip(),
                     step.location().with_keys(["if".into()]),
                 ));
             }
@@ -130,7 +130,7 @@ impl Audit for BotConditions {
                     finding_builder = finding_builder.fix(fix);
                 }
 
-                findings.push(finding_builder.build(job)?);
+                findings.push(finding_builder.build(job.parent())?);
             }
         }
 

@@ -196,15 +196,11 @@ fn audit_unpinned_uses() -> anyhow::Result<()> {
 
     assert_value_match(&findings, "$[0].determinations.confidence", "High");
     assert_value_match(&findings, "$[0].determinations.severity", "Medium");
-    assert_value_match(
-        &findings,
-        "$[0].locations[0].concrete.feature",
-        "uses: docker://ubuntu",
-    );
+    assert_value_match(&findings, "$[0].locations[0].concrete.feature", "ubuntu");
     assert_value_match(
         &findings,
         "$[1].locations[0].concrete.feature",
-        "uses: docker://ghcr.io/pypa/gh-action-pypi-publish",
+        "ghcr.io/pypa/gh-action-pypi-publish",
     );
 
     Ok(())

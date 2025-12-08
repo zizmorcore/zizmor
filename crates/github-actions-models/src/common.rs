@@ -212,6 +212,15 @@ impl Uses {
             RepositoryUses::parse(uses).map(Self::Repository)
         }
     }
+
+    /// Returns the original raw `uses:` clause.
+    pub fn raw(&self) -> &str {
+        match self {
+            Uses::Local(local) => &local.path,
+            Uses::Repository(repo) => repo.raw(),
+            Uses::Docker(docker) => docker.raw(),
+        }
+    }
 }
 
 /// A `uses: ./some/path` clause.

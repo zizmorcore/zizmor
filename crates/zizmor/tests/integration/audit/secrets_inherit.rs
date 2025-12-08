@@ -8,10 +8,10 @@ fn secrets_inherit() -> anyhow::Result<()> {
             .run()?,
         @r"
     warning[secrets-inherit]: secrets unconditionally inherited by called workflow
-      --> @@INPUT@@:10:5
+      --> @@INPUT@@:10:11
        |
     10 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
     11 |     # NOT OK: unconditionally inherits
     12 |     secrets: inherit
        |     ---------------- inherits all parent secrets

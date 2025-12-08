@@ -61,7 +61,7 @@ impl Audit for DependabotExecution {
                                 .primary()
                                 .annotated("enabled here"),
                         )
-                        .add_location(update.location_with_name())
+                        .add_location(update.location_with_grip())
                         .fix(Self::create_set_deny_fix(update))
                         .build(dependabot)?,
                 );
