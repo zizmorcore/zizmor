@@ -1,0 +1,34 @@
+# impostor-commit.yml
+#
+# what:
+# an example of commit impersonation. GitHub repositories and their forks
+# share a "network" of commit objects, meaning that GitHub's backend
+# can't easily distinguish between them. as a result, workflows that
+# appear to be pinned to a hash on a specific repo may actually be pinned
+# to a hash within a different fork repo, which can be malicious.
+#
+# how:
+# a user is unlikely to accidentally write a malicious commit, but may merge
+# an otherwise innocent-looking change from a third party without realizing
+# that the commits pinned by that party are actually references to a malicious
+# fork.
+#
+# see also: https://www.chainguard.dev/unchained/what-the-fork-imposter-commits-in-github-actions-and-ci-cd
+
+name: example
+on: [push]
+
+permissions: {}
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      # NOT OK: c7d749a2d57b4b375d1ebcd17cfbfb60c676f18e is an impostor
+      - uses: actions/checkout@c7d749a2d57b4b375d1ebcd17cfbfb60c676f18e
+        with:
+          persist-credentials: false
+      - shell: bash
+        run: |
+          echo 'hello world!'

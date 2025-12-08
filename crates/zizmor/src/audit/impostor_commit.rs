@@ -7,6 +7,7 @@
 
 use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
@@ -256,8 +257,13 @@ impl Audit for ImpostorCommit {
                             let mut finding_builder = Self::finding()
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
+                                .add_location(step.location_with_grip())
                                 .add_location(
-                                    step.location().primary().annotated(IMPOSTOR_ANNOTATION),
+                                    step.location()
+                                        .with_keys(["uses".into()])
+                                        .subfeature(Subfeature::new(0, uses.raw()))
+                                        .primary()
+                                        .annotated(IMPOSTOR_ANNOTATION),
                                 );
 
                             if let Some(fix) = self.create_impostor_fix(uses, &step).await {
@@ -279,8 +285,14 @@ impl Audit for ImpostorCommit {
                         let mut finding_builder = Self::finding()
                             .severity(Severity::High)
                             .confidence(Confidence::High)
+                            .add_location(reusable.location_with_grip())
                             .add_location(
-                                reusable.location().primary().annotated(IMPOSTOR_ANNOTATION),
+                                reusable
+                                    .location()
+                                    .with_keys(["uses".into()])
+                                    .subfeature(Subfeature::new(0, uses.raw()))
+                                    .primary()
+                                    .annotated(IMPOSTOR_ANNOTATION),
                             );
 
                         if let Some(fix) = self.create_reusable_fix(uses, &reusable).await {
@@ -310,7 +322,14 @@ impl Audit for ImpostorCommit {
             let mut finding_builder = Self::finding()
                 .severity(Severity::High)
                 .confidence(Confidence::High)
-                .add_location(step.location().primary().annotated(IMPOSTOR_ANNOTATION));
+                .add_location(step.location_with_grip())
+                .add_location(
+                    step.location()
+                        .with_keys(["uses".into()])
+                        .subfeature(Subfeature::new(0, uses.raw()))
+                        .primary()
+                        .annotated(IMPOSTOR_ANNOTATION),
+                );
 
             if let Some(fix) = self.create_impostor_fix(uses, step).await {
                 finding_builder = finding_builder.fix(fix);
