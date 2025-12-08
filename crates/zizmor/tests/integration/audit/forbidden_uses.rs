@@ -27,26 +27,26 @@ fn test_deny_all() -> Result<()> {
             .run()?,
         @r"
     error[forbidden-uses]: forbidden action used
-      --> @@INPUT@@:13:9
+      --> @@INPUT@@:13:15
        |
     13 |       - uses: actions/setup-python@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
        |
        = note: audit confidence → High
 
     error[forbidden-uses]: forbidden action used
-      --> @@INPUT@@:14:9
+      --> @@INPUT@@:14:15
        |
     14 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
        |
        = note: audit confidence → High
 
     error[forbidden-uses]: forbidden action used
-      --> @@INPUT@@:15:9
+      --> @@INPUT@@:15:15
        |
     15 |       - uses: actions/checkout@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |               ^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
        |
        = note: audit confidence → High
 
@@ -68,10 +68,10 @@ fn test_allow_some() -> Result<()> {
             .run()?,
         @r"
     error[forbidden-uses]: forbidden action used
-      --> @@INPUT@@:13:9
+      --> @@INPUT@@:13:15
        |
     13 |       - uses: actions/setup-python@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
        |
        = note: audit confidence → High
 
@@ -93,18 +93,18 @@ fn test_deny_some() -> Result<()> {
             .run()?,
         @r"
     error[forbidden-uses]: forbidden action used
-      --> @@INPUT@@:14:9
+      --> @@INPUT@@:14:15
        |
     14 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
        |
        = note: audit confidence → High
 
     error[forbidden-uses]: forbidden action used
-      --> @@INPUT@@:15:9
+      --> @@INPUT@@:15:15
        |
     15 |       - uses: actions/checkout@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |               ^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
        |
        = note: audit confidence → High
 
@@ -126,18 +126,18 @@ fn test_deny_some_refs() -> Result<()> {
             .run()?,
         @r"
     error[forbidden-uses]: forbidden action used
-      --> @@INPUT@@:13:9
+      --> @@INPUT@@:13:15
        |
     13 |       - uses: actions/setup-python@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
        |
        = note: audit confidence → High
 
     error[forbidden-uses]: forbidden action used
-      --> @@INPUT@@:14:9
+      --> @@INPUT@@:14:15
        |
     14 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
        |
        = note: audit confidence → High
 
@@ -159,10 +159,10 @@ fn test_allow_some_refs() -> Result<()> {
             .run()?,
         @r"
     error[forbidden-uses]: forbidden action used
-      --> @@INPUT@@:15:9
+      --> @@INPUT@@:15:15
        |
     15 |       - uses: actions/checkout@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |               ^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
        |
        = note: audit confidence → High
 

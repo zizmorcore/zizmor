@@ -1,4 +1,5 @@
 use github_actions_models::common::Uses;
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
@@ -31,7 +32,7 @@ impl UnpinnedUses {
             Uses::Docker(_) => {
                 if uses.unpinned() {
                     Some((
-                        "action is not pinned to a tag, branch, or hash ref".into(),
+                        "image is not pinned to a tag, branch, or hash ref".into(),
                         Severity::Medium,
                         Persona::default(),
                     ))
@@ -108,6 +109,7 @@ impl UnpinnedUses {
                         step.location()
                             .primary()
                             .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.raw()))
                             .annotated(annotation),
                     )
                     .build(step)?,

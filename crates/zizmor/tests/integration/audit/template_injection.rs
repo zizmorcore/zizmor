@@ -247,10 +247,10 @@ fn test_pr_425_backstop_action() -> Result<()> {
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:29:7
+      --> @@INPUT@@:29:13
        |
     29 |       uses: azure/powershell@whatever
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |             ^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 

@@ -10,18 +10,18 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
             .run()?,
         @r"
     warning[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:21:9
+      --> @@INPUT@@:21:24
        |
     21 |       - uses: docker://ubuntu
-       |         ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
+       |                        ^^^^^^ image is not pinned to a tag, branch, or hash ref
        |
        = note: audit confidence → High
 
     warning[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:27:9
+      --> @@INPUT@@:27:24
        |
     27 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
+       |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ image is not pinned to a tag, branch, or hash ref
        |
        = note: audit confidence → High
 
@@ -40,18 +40,18 @@ fn test_unpinned_uses_default() -> Result<()> {
             .run()?,
         @r"
     warning[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:21:9
+      --> @@INPUT@@:21:24
        |
     21 |       - uses: docker://ubuntu
-       |         ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
+       |                        ^^^^^^ image is not pinned to a tag, branch, or hash ref
        |
        = note: audit confidence → High
 
     warning[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:27:9
+      --> @@INPUT@@:27:24
        |
     27 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a tag, branch, or hash ref
+       |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ image is not pinned to a tag, branch, or hash ref
        |
        = note: audit confidence → High
 
@@ -71,18 +71,18 @@ fn test_action_pedantic() -> Result<()> {
             .run()?,
         @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:12:7
+      --> @@INPUT@@:12:13
        |
     12 |       uses: asdf-vm/actions/setup@v3
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |             ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:15:7
+      --> @@INPUT@@:15:13
        |
     15 |       uses: asdf-vm/actions/setup@main
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -129,10 +129,10 @@ fn test_default_config() -> Result<()> {
             .run()?,
         @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:22:9
+      --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -155,42 +155,42 @@ fn test_hash_pin_everything_config() -> Result<()> {
             .run()?,
         @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:12:9
+      --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:14:9
+      --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:22:9
+      --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:24:9
+      --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:26:9
+      --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -226,26 +226,26 @@ fn test_composite_config() -> Result<()> {
             .run()?,
         @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:12:9
+      --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by actions/setup-python policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by actions/setup-python policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:24:9
+      --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:26:9
+      --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -265,18 +265,18 @@ fn test_composite_config_2() -> Result<()> {
             .run()?,
         @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:24:9
+      --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by github/codeql-action/init policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by github/codeql-action/init policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:26:9
+      --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by github/codeql-action/upload-sarif policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by github/codeql-action/upload-sarif policy)
        |
        = note: audit confidence → High
 
@@ -296,42 +296,42 @@ fn test_empty_config() -> Result<()> {
             .run()?,
         @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:12:9
+      --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:14:9
+      --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:22:9
+      --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:24:9
+      --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:26:9
+      --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 

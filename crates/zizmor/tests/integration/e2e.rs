@@ -386,10 +386,10 @@ fn issue_1065() -> Result<()> {
        = note: audit confidence → Medium
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:16:9
+      --> @@INPUT@@:16:15
        |
     16 |         uses: thollander/actions-comment-pull-request@v3
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
