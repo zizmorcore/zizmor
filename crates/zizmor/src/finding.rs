@@ -8,6 +8,7 @@ use self::location::{Location, SymbolicLocation};
 use crate::{
     InputKey,
     audit::AuditError,
+    finding::location::LocationKind,
     models::{AsDocument, StepCommon, workflow::JobCommon},
     registry::input::Group,
 };
@@ -259,6 +260,7 @@ impl<'doc> FindingBuilder<'doc> {
                 job.parent()
                     .location()
                     .with_keys(["jobs".into(), job.id().into()])
+                    .key_only()
                     .annotated("this job"),
             );
         }
@@ -289,7 +291,12 @@ impl<'doc> FindingBuilder<'doc> {
 
         locations.extend(self.raw_locations);
 
-        if !locations.iter().any(|l| l.symbolic.is_primary()) {
+        if locations.len() == 1
+            && let Some(location) = locations.get_mut(0)
+        {
+            // If there's only one location, then it's primary by definition.
+            location.symbolic.kind = LocationKind::Primary;
+        } else if !locations.iter().any(|l| l.symbolic.is_primary()) {
             return Err(AuditError::new(
                 self.ident,
                 anyhow!("API misuse: at least one location must be marked with primary()"),
