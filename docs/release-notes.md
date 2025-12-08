@@ -27,6 +27,9 @@ of `zizmor`.
 * The [use-trusted-publishing] audit now detects additional publishing command
   patterns, including `uv run ...`, `uvx ...`, and `poetry publish`
   (#1402)
+  
+* zizmor now produces more useful and less ambiguous spans for many findings,
+  particularly those from the [anonymous-definition] audit (#1416)
 
 ## 1.18.0
 
