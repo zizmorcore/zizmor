@@ -156,15 +156,11 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
 error[bot-conditions]: spoofable bot actor check
   --> .github/workflows/bot-conditions.yml:18:9
    |
-16 | /   hackme:
-17 | |     runs-on: ubuntu-latest
-18 | |     if: github.actor == 'dependabot[bot]'
-   | |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
-19 | |     steps:
-...  |
-33 | |         run: echo hello
-34 | |         if: github.actor == 'notabot'
-   | |______________________________________- this job
+16 |   hackme:
+   |   ------ this job
+17 |     runs-on: ubuntu-latest
+18 |     if: github.actor == 'dependabot[bot]'
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -768,10 +764,10 @@ warning[excessive-permissions]: overly broad permissions
    = note: audit confidence → Medium
 
 warning[secrets-inherit]: secrets unconditionally inherited by called workflow
-  --> .github/workflows/secrets-inherit.yml:16:5
+  --> .github/workflows/secrets-inherit.yml:16:11
    |
 16 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
 17 |     # NOT OK: unconditionally inherits
 18 |     secrets: inherit
    |     ---------------- inherits all parent secrets

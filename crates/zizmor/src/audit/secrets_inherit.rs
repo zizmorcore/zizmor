@@ -1,4 +1,5 @@
 use github_actions_models::workflow::job::Secrets;
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
@@ -37,6 +38,7 @@ impl Audit for SecretsInherit {
                         job.location()
                             .primary()
                             .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, job.uses.raw()))
                             .annotated("this reusable workflow"),
                     )
                     .add_location(

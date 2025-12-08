@@ -2,6 +2,7 @@
 
 use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
@@ -53,7 +54,12 @@ impl StaleActionRefs {
                     .confidence(Confidence::High)
                     .severity(Severity::Low)
                     .persona(Persona::Pedantic)
-                    .add_location(step.location().primary().with_keys(["uses".into()]))
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.raw())),
+                    )
                     .build(step)?,
             );
         }
