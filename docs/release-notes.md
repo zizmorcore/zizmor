@@ -31,6 +31,12 @@ of `zizmor`.
 * zizmor now produces more useful and less ambiguous spans for many findings,
   particularly those from the [anonymous-definition] audit (#1416)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [obfuscation] audit would crash if it encountered
+  a CMD shell that was defined outside of the current step block (i.e. 
+  as a job or workflow default) (#1418)
+
 ## 1.18.0
 
 ### Enhancements 🌱
