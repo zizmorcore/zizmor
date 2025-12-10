@@ -77,7 +77,7 @@ impl ImpostorCommit {
             return Ok(false);
         };
 
-        // Fast path: almost all commit refs will be at the tip of
+        // Fastest path: almost all commit refs will be at the tip of
         // the branch or tag's history, so check those first.
         // Check tags before branches, since in practice version tags
         // are more commonly pinned.
@@ -105,6 +105,21 @@ impl ImpostorCommit {
             }
         }
 
+        // Fast path: attempt to use GitHub's undocumented `branch_commits`
+        // API to see if the commit is present in any branch/tag.
+        // There are no stabilitiy guarantees for this API, so we fall back
+        // to the slow(er) paths if it fails.
+        match self
+            .client
+            .branch_commits(uses.owner(), uses.repo(), head_ref)
+            .await
+        {
+            Ok(branch_commits) => return Ok(branch_commits.is_empty()),
+            Err(e) => tracing::warn!("fast path impostor check failed for {uses}: {e}"),
+        }
+
+        // Slow path: use GitHub's comparison API to check each branch and tag's
+        // history for presence of the commit.
         for branch in &branches {
             if self
                 .named_ref_contains_commit(uses, &format!("refs/heads/{}", &branch.name), head_ref)

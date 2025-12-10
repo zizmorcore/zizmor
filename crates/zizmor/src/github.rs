@@ -576,6 +576,29 @@ impl Client {
     }
 
     #[instrument(skip(self))]
+    pub(crate) async fn branch_commits(
+        &self,
+        owner: &str,
+        repo: &str,
+        commit: &str,
+    ) -> Result<BranchCommits, ClientError> {
+        // NOTE(ww): This API is undocumented.
+        // See: https://github.com/orgs/community/discussions/78161
+        let url = format!("https://github.com/{owner}/{repo}/branch_commits/{commit}");
+
+        // We ask GitHub for JSON, because it sends HTML by default for this endpoint.
+        self.base_client
+            .get(&url)
+            .header(ACCEPT, "application/json")
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await
+            .map_err(Into::into)
+    }
+
+    #[instrument(skip(self))]
     pub(crate) async fn compare_commits(
         &self,
         owner: &str,
@@ -857,6 +880,23 @@ pub(crate) struct Tag {
 #[derive(Clone)]
 pub(crate) struct Commit {
     pub(crate) sha: String,
+}
+
+/// The response structure from GitHub's undocumented `branch_commits` API.
+///
+/// This model is intentionally incomplete.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "lowercase")]
+#[non_exhaustive]
+pub(crate) struct BranchCommits {
+    branches: Vec<serde_json::Value>,
+    tags: Vec<String>,
+}
+
+impl BranchCommits {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.branches.is_empty() && self.tags.is_empty()
+    }
 }
 
 #[derive(Clone, Deserialize)]
