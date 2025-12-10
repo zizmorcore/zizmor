@@ -30,6 +30,13 @@ of `zizmor`.
   
 * zizmor now produces more useful and less ambiguous spans for many findings,
   particularly those from the [anonymous-definition] audit (#1416)
+  
+### Performance Improvements 🚄
+
+* The [impostor-commit] audit is now significantly faster on true positives,
+  making true positive detection virtually as fast as true negative detection.
+  In practice, true positive runs are over 100 times faster than before
+  (#1429)
 
 ### Bug Fixes 🐛
 

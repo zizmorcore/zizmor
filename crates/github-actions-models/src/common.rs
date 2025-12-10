@@ -297,6 +297,12 @@ self_cell!(
     impl {Debug, PartialEq}
 );
 
+impl Display for RepositoryUses {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.raw())
+    }
+}
+
 impl RepositoryUses {
     /// Parse a `uses: some/repo` clause.
     pub fn parse(uses: impl Into<String>) -> Result<Self, UsesError> {
