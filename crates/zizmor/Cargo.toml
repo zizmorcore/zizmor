@@ -25,8 +25,6 @@ gh-token-tests = []
 online-tests = ["gh-token-tests"]
 # Test-only: enable tests that require `unbuffer` for TTY behavior.
 tty-tests = []
-# Test-only: enable tests that are typically very slow.
-slow-tests = []
 
 [dependencies]
 annotate-snippets.workspace = true
