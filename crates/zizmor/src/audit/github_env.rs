@@ -88,20 +88,22 @@ const PWSH_REDIRECT_QUERY: &str = r#"
 
 const PWSH_PIPELINE_QUERY: &str = r#"
 (pipeline
-  (command
-    command_name: (command_name) @cmd
-    command_elements: (command_elements
-      (_)*
-      (array_literal_expression
-        (unary_expression [
-          (string_literal
-            (expandable_string_literal (variable) @destination))
-          (variable) @destination
-        ])
-      )
-      (_)*))
-  (#match? @cmd "(?i)out-file|add-content|set-content|tee-object")
-  (#match? @destination "(?i)ENV:GITHUB_ENV|ENV:GITHUB_PATH")
+  (pipeline_chain
+    (command
+        command_name: (command_name) @cmd
+        command_elements: (command_elements
+        (_)*
+        (array_literal_expression
+            (unary_expression [
+            (string_literal
+                (expandable_string_literal (variable) @destination))
+            (variable) @destination
+            ])
+        )
+        (_)*))
+    (#match? @cmd "(?i)out-file|add-content|set-content|tee-object")
+    (#match? @destination "(?i)ENV:GITHUB_ENV|ENV:GITHUB_PATH")
+  )
 ) @span
 "#;
 
