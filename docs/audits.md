@@ -519,7 +519,7 @@ In general, you should enable `cooldown` for all updaters.
 Detects usages of `insecure-external-code-execution` in Dependabot configuration
 files.
 
-By default, Dependabot does not execution code from dependency manifests
+By default, Dependabot does not execute code from dependency manifests
 during updates. However, users can opt in to this behavior by setting
 `#!yaml insecure-external-code-execution: allow` in their Dependabot
 configuration.
