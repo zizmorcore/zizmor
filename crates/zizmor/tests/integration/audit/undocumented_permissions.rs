@@ -64,7 +64,7 @@ fn test_undocumented_permissions_default() -> Result<()> {
         zizmor()
             .input(input_under_test("undocumented-permissions.yml"))
             .run()?,
-        @r"No findings to report. Good job! (5 suppressed)"
+        @"No findings to report. Good job! (5 suppressed)"
     );
 
     Ok(())
@@ -78,7 +78,7 @@ fn test_documented_permissions_pedantic() -> Result<()> {
             .input(input_under_test("undocumented-permissions/documented.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"No findings to report. Good job! (1 ignored)"
+        @"No findings to report. Good job! (1 ignored)"
     );
 
     Ok(())
@@ -94,7 +94,7 @@ fn test_contents_read_only_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"No findings to report. Good job!"
+        @"No findings to report. Good job!"
     );
 
     Ok(())
@@ -110,7 +110,7 @@ fn test_empty_permissions_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"No findings to report. Good job!"
+        @"No findings to report. Good job!"
     );
 
     Ok(())

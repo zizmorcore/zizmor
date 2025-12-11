@@ -4,12 +4,8 @@ use anyhow::{Error, anyhow};
 use camino::Utf8Path;
 use github_actions_expressions::context::{Context, ContextPattern};
 use github_actions_models::common::{Env, expr::LoE};
-use jsonschema::{
-    BasicOutput::{Invalid, Valid},
-    Validator,
-    output::{ErrorDescription, OutputUnit},
-    validator_for,
-};
+use jsonschema::ErrorEntry;
+use jsonschema::{Validator, validator_for};
 use std::ops::{Deref, Range};
 use std::{fmt::Write, sync::LazyLock};
 
@@ -307,11 +303,11 @@ pub(crate) static DEFAULT_ENVIRONMENT_VARIABLES: &[(
     ),
 ];
 
-fn parse_validation_errors(errors: Vec<OutputUnit<ErrorDescription>>) -> Error {
+fn parse_validation_errors(errors: Vec<ErrorEntry<'_>>) -> Error {
     let mut message = String::new();
 
     for error in errors {
-        let description = error.error_description().to_string();
+        let description = error.error.to_string();
         // HACK: error descriptions are sometimes a long rats' nest
         // of JSON objects. We should render this in a palatable way
         // but doing so is nontrivial, so we just skip them for now.
@@ -319,7 +315,7 @@ fn parse_validation_errors(errors: Vec<OutputUnit<ErrorDescription>>) -> Error {
         // the error for an unmatched "oneOf", so these errors are
         // typically less useful anyways.
         if !description.starts_with("{") {
-            let location = error.instance_location().as_str();
+            let location = error.instance_location.as_str();
             if location.is_empty() {
                 writeln!(message, "{description}").expect("I/O on a String failed");
             } else {
@@ -379,18 +375,19 @@ where
                 // 2. The input is semantically invalid, and the user
                 //    needs to fix it.
                 // We the JSON schema `validator` to separate these.
-                Ok(raw_value) => match validator
-                    .apply(
+                Ok(raw_value) => {
+                    let evaluation = validator.evaluate(
                         &serde_json::to_value(&raw_value)
                             .map_err(|e| CollectionError::Syntax(e.into()))?,
-                    )
-                    .basic()
-                {
-                    Valid(_) => Err(e.into()),
-                    Invalid(errors) => {
+                    );
+
+                    if evaluation.flag().valid {
+                        Err(e.into())
+                    } else {
+                        let errors = evaluation.iter_errors().collect::<Vec<_>>();
                         Err(CollectionError::Schema(parse_validation_errors(errors)))
                     }
-                },
+                }
                 // Syntax error.
                 Err(e) => Err(CollectionError::Syntax(e.into())),
             }

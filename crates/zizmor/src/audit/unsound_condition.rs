@@ -406,7 +406,7 @@ jobs:
                 assert_eq!(findings.len(), 1);
 
                 let fixed_document = apply_fix_for_snapshot(workflow.as_document(), findings);
-                insta::assert_snapshot!(fixed_document.source(), @r#"
+                insta::assert_snapshot!(fixed_document.source(), @r"
                 name: Test
                 on: push
                 jobs:
@@ -414,7 +414,7 @@ jobs:
                     if: |-
                       ${{ github.event_name == 'pull_request' }}
                     uses: ./.github/workflows/reusable.yml
-                "#);
+                ");
             }
         );
     }

@@ -1316,7 +1316,7 @@ jobs:
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    insta::assert_snapshot!(fixed_content.source(), @r"
                     name: Test Template Injection - CMD
                     on: push
                     jobs:
@@ -1326,7 +1326,7 @@ jobs:
                           - name: Vulnerable step with cmd shell
                             shell: cmd
                             run: echo User is %GITHUB_ACTOR%
-                    "#);
+                    ");
                 }
             }
         );
@@ -1498,7 +1498,7 @@ jobs:
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content.source(), @r#"
+                    insta::assert_snapshot!(fixed_content.source(), @r"
                     name: Test Template Injection - CMD with Custom Env
                     on: push
                     jobs:
@@ -1510,7 +1510,7 @@ jobs:
                             run: echo PR title is %GITHUB_EVENT_PULL_REQUEST_TITLE%
                             env:
                               GITHUB_EVENT_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
-                    "#);
+                    ");
                 }
             }
         );

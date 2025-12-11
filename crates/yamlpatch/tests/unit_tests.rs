@@ -903,21 +903,21 @@ normal:
     let end = find_content_end(&feature, &doc);
 
     insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @r"
-        bar: baz
-          abc: def # comment
-        ");
+    bar: baz
+      abc: def # comment
+    ");
 
     let feature = route_to_feature_exact(&route!("interior-spaces"), &doc)
         .unwrap()
         .unwrap();
     let end = find_content_end(&feature, &doc);
     insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @r"
-        - foo
+    - foo
 
-          - bar
-          # hello
-          - baz # hello
-        ");
+      - bar
+      # hello
+      - baz # hello
+    ");
 
     let feature = route_to_feature_exact(&route!("normal"), &doc)
         .unwrap()
@@ -2775,11 +2775,11 @@ items:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
-        items:
-          - first
-          - second
-          - third
-        ");
+    items:
+      - first
+      - second
+      - third
+    ");
 }
 
 #[test]
@@ -2822,19 +2822,19 @@ databases:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        databases:
-          - name: primary
-            host: db1.example.com
-            port: 5432
-            max_connections: 100
-            ssl: true
-            readonly: false
-          - name: analytics
-            host: db2.example.com
-            port: 5433
-            readonly: true
-        "#);
+    insta::assert_snapshot!(result.source(), @r"
+    databases:
+      - name: primary
+        host: db1.example.com
+        port: 5432
+        max_connections: 100
+        ssl: true
+        readonly: false
+      - name: analytics
+        host: db2.example.com
+        port: 5433
+        readonly: true
+    ");
 }
 
 #[test]
@@ -2870,16 +2870,16 @@ jobs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r#"
-        jobs:
-          test:
-            steps:
-              - name: First step
-                run: echo "first"
-              - name: Second step
-                run: echo "second"
-              - name: Third step
-                run: echo "third"
-        "#);
+    jobs:
+      test:
+        steps:
+          - name: First step
+            run: echo "first"
+          - name: Second step
+            run: echo "second"
+          - name: Third step
+            run: echo "third"
+    "#);
 }
 
 #[test]
@@ -2924,20 +2924,20 @@ servers:
     assert!(result.source().contains("# Staging server"));
     assert!(result.source().contains("# internal only"));
 
-    insta::assert_snapshot!(result.source(), @r#"
-        servers:
-          # Production server
-          - name: prod
-            host: prod.example.com
-            port: 443
-          # Staging server
-          - name: staging
-            host: staging.example.com  # internal only
-            port: 8443
-          - name: dev
-            host: localhost
-            port: 8080
-        "#);
+    insta::assert_snapshot!(result.source(), @r"
+    servers:
+      # Production server
+      - name: prod
+        host: prod.example.com
+        port: 443
+      # Staging server
+      - name: staging
+        host: staging.example.com  # internal only
+        port: 8443
+      - name: dev
+        host: localhost
+        port: 8080
+    ");
 }
 
 #[test]
@@ -2959,11 +2959,11 @@ ports:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
-        ports:
-          - 8080
-          - 8081
-          - 8082
-        ");
+    ports:
+      - 8080
+      - 8081
+      - 8082
+    ");
 }
 
 #[test]
@@ -2985,11 +2985,11 @@ configs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
-        configs:
-          - name: config1
-            value: 123
-          - {}
-        ");
+    configs:
+      - name: config1
+        value: 123
+      - {}
+    ");
 }
 
 #[test]
@@ -3031,15 +3031,15 @@ services:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        services:
-          - name: api
-            port: 8080
-          - name: worker
-            port: 9090
-            config:
-              replicas: 3
-        "#);
+    insta::assert_snapshot!(result.source(), @r"
+    services:
+      - name: api
+        port: 8080
+      - name: worker
+        port: 9090
+        config:
+          replicas: 3
+    ");
 }
 
 #[test]
@@ -3096,11 +3096,11 @@ tasks:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
-        tasks:
-          - task1
-          - task2
-          - task3
-        ");
+    tasks:
+      - task1
+      - task2
+      - task3
+    ");
 }
 
 #[test]
@@ -3138,20 +3138,20 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r#"
-        name: CI
-        on: push
-        jobs:
-          test:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Checkout
-                uses: actions/checkout@v4
-              - name: Run tests
-                run: npm test
-              - name: Upload coverage
-                uses: codecov/codecov-action@v3
-        "#);
+    insta::assert_snapshot!(result.source(), @r"
+    name: CI
+    on: push
+    jobs:
+      test:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+          - name: Run tests
+            run: npm test
+          - name: Upload coverage
+            uses: codecov/codecov-action@v3
+    ");
 }
 
 #[test]
@@ -3176,9 +3176,9 @@ foo:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
-        foo:
-          - abc
-          - - def
-            - ghi
-        ");
+    foo:
+      - abc
+      - - def
+        - ghi
+    ");
 }

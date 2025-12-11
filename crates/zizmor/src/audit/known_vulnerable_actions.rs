@@ -421,7 +421,7 @@ jobs:
             .unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
-        insta::assert_snapshot!(fixed_document.source(), @r#"
+        insta::assert_snapshot!(fixed_document.source(), @r"
         name: Test Node Setup
         on: push
         jobs:
@@ -434,7 +434,7 @@ jobs:
                   node-version: '18'
               - name: Install dependencies
                 run: npm install
-        "#);
+        ");
     }
 
     #[tokio::test]
@@ -549,7 +549,7 @@ jobs:
             .unwrap();
         current_document = fix_cache.apply(&current_document).unwrap();
 
-        insta::assert_snapshot!(current_document.source(), @r#"
+        insta::assert_snapshot!(current_document.source(), @r"
         name: Test Multiple Vulnerable Actions
         on: push
         jobs:
@@ -569,7 +569,7 @@ jobs:
                   key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
               - name: Install dependencies
                 run: npm install
-        "#);
+        ");
     }
 
     #[tokio::test]
@@ -655,7 +655,7 @@ jobs:
             .apply(workflow.as_document())
             .unwrap();
 
-        insta::assert_snapshot!(fixed_document.source(), @r#"
+        insta::assert_snapshot!(fixed_document.source(), @r"
         name: Test First Patched Version Priority
         on: push
         jobs:
@@ -664,7 +664,7 @@ jobs:
             steps:
               - name: Vulnerable action
                 uses: actions/checkout@v3.1.0
-        "#);
+        ");
     }
 
     #[tokio::test]
