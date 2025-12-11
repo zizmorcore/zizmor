@@ -165,7 +165,7 @@ fn test_config_short_cooldown_permitted() -> anyhow::Result<()> {
             .input(input_under_test("dependabot-cooldown/default-days-too-short/dependabot.yml"))
             .config(input_under_test("dependabot-cooldown/configs/cooldown-one-day.yml"))
             .run()?,
-        @r"No findings to report. Good job!"
+        @"No findings to report. Good job!"
     );
 
     Ok(())

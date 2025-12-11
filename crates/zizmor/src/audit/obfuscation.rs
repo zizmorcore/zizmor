@@ -407,7 +407,8 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result, @r"
+
         name: Test Workflow
         on: push
 
@@ -416,7 +417,7 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - uses: actions/checkout@v4
-        "#);
+        ");
     }
 
     #[tokio::test]
@@ -433,7 +434,8 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result, @r"
+
         name: Test Workflow
         on: push
 
@@ -442,7 +444,7 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - uses: github/codeql-action/init@v2
-        "#);
+        ");
     }
 
     #[tokio::test]
@@ -459,7 +461,8 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result, @r"
+
         name: Test Workflow
         on: push
 
@@ -468,6 +471,6 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - uses: actions/cache/save@v4
-        "#);
+        ");
     }
 }

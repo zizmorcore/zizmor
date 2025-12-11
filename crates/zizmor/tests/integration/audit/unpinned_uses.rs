@@ -114,7 +114,7 @@ fn test_issue_659_repro() -> Result<()> {
             .input(input_under_test("unpinned-uses/issue-659-repro.yml"))
             .args(["--pedantic"])
             .run()?,
-        @r"No findings to report. Good job!"
+        @"No findings to report. Good job!"
     );
 
     Ok(())

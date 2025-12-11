@@ -33,7 +33,7 @@ fn test_issue_518_repro() -> Result<()> {
             .input(input_under_test("ref-confusion/issue-518-repro.yml"))
             .offline(false)
             .run()?,
-        @r"No findings to report. Good job! (1 ignored, 1 suppressed)"
+        @"No findings to report. Good job! (1 ignored, 1 suppressed)"
     );
 
     Ok(())

@@ -7,7 +7,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("anonymous-definition.yml"))
             .run()?,
-        @r"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())

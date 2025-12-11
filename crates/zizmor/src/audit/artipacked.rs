@@ -524,6 +524,7 @@ jobs:
             |workflow: &Workflow, findings| {
                 let fixed = apply_fix_for_snapshot(workflow.as_document(), findings);
                 insta::assert_snapshot!(fixed.source(), @r"
+
                 name: Test Workflow
                 on: push
                 jobs:
@@ -571,6 +572,7 @@ jobs:
             |workflow: &Workflow, findings| {
                 let fixed = apply_fix_for_snapshot(workflow.as_document(), findings);
                 insta::assert_snapshot!(fixed.source(), @r"
+
                 name: Test Workflow
                 on: push
                 jobs:

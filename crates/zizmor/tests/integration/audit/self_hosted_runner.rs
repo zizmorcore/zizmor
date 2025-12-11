@@ -30,7 +30,7 @@ fn test_self_hosted_default() -> Result<()> {
         zizmor()
             .input(input_under_test("self-hosted.yml"))
             .run()?,
-        @r"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())

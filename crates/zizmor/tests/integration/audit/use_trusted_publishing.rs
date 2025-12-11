@@ -357,7 +357,7 @@ fn test_issue_1191_repro() -> Result<()> {
                 "use-trusted-publishing/issue-1191-repro.yml"
             ))
             .run()?,
-        @r"No findings to report. Good job! (3 suppressed)"
+        @"No findings to report. Good job! (3 suppressed)"
     );
 
     Ok(())

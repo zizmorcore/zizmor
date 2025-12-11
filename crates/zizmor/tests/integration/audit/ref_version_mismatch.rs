@@ -42,7 +42,7 @@ fn test_nested_annotated_tags() -> Result<()> {
                 "ref-version-mismatch/nested-annotated-tags.yml"
             ))
             .run()?,
-        @r"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())
