@@ -21,7 +21,12 @@ use crate::{
     registry::input::RepoSlug,
 };
 
-const CONFIG_CANDIDATES: &[&str] = &[".github/zizmor.yml", "zizmor.yml"];
+const CONFIG_CANDIDATES: &[&str] = &[
+    ".github/zizmor.yml",
+    ".github/zizmor.yaml",
+    "zizmor.yml",
+    "zizmor.yaml",
+];
 
 #[derive(Error, Debug)]
 #[error("configuration error in {path}")]
