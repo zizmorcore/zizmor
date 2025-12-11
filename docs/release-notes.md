@@ -31,6 +31,9 @@ of `zizmor`.
 * zizmor now produces more useful and less ambiguous spans for many findings,
   particularly those from the [anonymous-definition] audit (#1416)
   
+* zizmor now discovers configuration files named `zizmor.yaml`, in addition
+  to `zizmor.yml` (#1431)
+  
 ### Performance Improvements 🚄
 
 * The [impostor-commit] audit is now significantly faster on true positives,
