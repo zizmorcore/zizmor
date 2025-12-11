@@ -123,6 +123,7 @@ updates:
                 let fix = &finding.fixes[0];
                 let fixed_document = fix.apply(dependabot.as_document()).unwrap();
                 insta::assert_snapshot!(fixed_document.source(), @r"
+
                 version: 2
 
                 updates:
@@ -158,6 +159,7 @@ updates:
 
                 // Verify the document remains unchanged
                 insta::assert_snapshot!(dependabot.as_document().source(), @r"
+
                 version: 2
 
                 updates:
@@ -192,6 +194,7 @@ updates:
 
                 // Verify the document remains unchanged
                 insta::assert_snapshot!(dependabot.as_document().source(), @r"
+
                 version: 2
 
                 updates:
@@ -240,6 +243,7 @@ updates:
                 }
 
                 insta::assert_snapshot!(document.source(), @r"
+
                 version: 2
 
                 updates:

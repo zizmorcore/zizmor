@@ -295,6 +295,7 @@ jobs:
                 assert!(fixed_document.source().contains("ANOTHER_VAR: also-keep"));
 
                 insta::assert_snapshot!(fixed_document.source(), @r#"
+
                 on: push
 
                 jobs:
@@ -349,6 +350,7 @@ jobs:
                 assert!(fixed_document.source().contains("GLOBAL_VAR: keep-me"));
 
                 insta::assert_snapshot!(fixed_document.source(), @r#"
+
                 on: push
 
                 env:
@@ -403,6 +405,7 @@ jobs:
                 assert!(fixed_document.source().contains("STEP_VAR: keep-me"));
 
                 insta::assert_snapshot!(fixed_document.source(), @r#"
+
                 on: push
 
                 jobs:
@@ -446,6 +449,7 @@ jobs:
                 let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
                 insta::assert_snapshot!(fixed_document.source(), @r#"
+
                 on: push
 
                 jobs:

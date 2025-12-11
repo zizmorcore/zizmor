@@ -2775,6 +2775,7 @@ items:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
+
     items:
       - first
       - second
@@ -2823,6 +2824,7 @@ databases:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
+
     databases:
       - name: primary
         host: db1.example.com
@@ -2870,6 +2872,7 @@ jobs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r#"
+
     jobs:
       test:
         steps:
@@ -2925,6 +2928,7 @@ servers:
     assert!(result.source().contains("# internal only"));
 
     insta::assert_snapshot!(result.source(), @r"
+
     servers:
       # Production server
       - name: prod
@@ -2959,6 +2963,7 @@ ports:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
+
     ports:
       - 8080
       - 8081
@@ -2985,6 +2990,7 @@ configs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
+
     configs:
       - name: config1
         value: 123
@@ -3032,6 +3038,7 @@ services:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
+
     services:
       - name: api
         port: 8080
@@ -3096,6 +3103,7 @@ tasks:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
+
     tasks:
       - task1
       - task2
@@ -3139,6 +3147,7 @@ jobs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
+
     name: CI
     on: push
     jobs:
@@ -3176,6 +3185,7 @@ foo:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r"
+
     foo:
       - abc
       - - def

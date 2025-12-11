@@ -372,6 +372,7 @@ jobs:
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r#"
+
         name: Test Vulnerable Actions
         on: push
         jobs:
@@ -422,6 +423,7 @@ jobs:
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r"
+
         name: Test Node Setup
         on: push
         jobs:
@@ -474,6 +476,7 @@ jobs:
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r#"
+
         name: Test Third Party Action
         on: push
         jobs:
@@ -550,6 +553,7 @@ jobs:
         current_document = fix_cache.apply(&current_document).unwrap();
 
         insta::assert_snapshot!(current_document.source(), @r"
+
         name: Test Multiple Vulnerable Actions
         on: push
         jobs:
@@ -607,6 +611,7 @@ jobs:
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r"
+
         name: Test Action with Subpath
         on: push
         jobs:
@@ -656,6 +661,7 @@ jobs:
             .unwrap();
 
         insta::assert_snapshot!(fixed_document.source(), @r"
+
         name: Test First Patched Version Priority
         on: push
         jobs:
@@ -700,6 +706,7 @@ jobs:
         let new_doc = fix.apply(workflow.as_document()).unwrap();
 
         assert_snapshot!(new_doc.source(), @r"
+
         name: Test Non-Commit Ref
         on: push
         jobs:
@@ -763,6 +770,7 @@ jobs:
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
         assert_snapshot!(new_doc.source(), @r"
+
         name: Test Commit Hash Pinning Real API
         on: push
         permissions: {}
@@ -819,6 +827,7 @@ jobs:
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
         assert_snapshot!(new_doc.source(), @r"
+
         name: Test Commit Hash Pinning Real API
         on: push
         permissions: {}

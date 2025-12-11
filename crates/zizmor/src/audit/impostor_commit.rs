@@ -415,6 +415,7 @@ jobs:
             // Apply the fix and snapshot test the result
             let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
             assert_snapshot!(new_doc.source(), @r"
+
             name: Test Impostor Commit Fix
             on: push
             jobs:

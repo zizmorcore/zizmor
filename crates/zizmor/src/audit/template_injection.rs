@@ -707,6 +707,7 @@ jobs:
                         "replace expression with environment variable",
                     );
                     insta::assert_snapshot!(fixed_content.source(), @r#"
+
                     name: Test Template Injection
                     on: push
                     jobs:
@@ -758,6 +759,7 @@ jobs:
                         "replace expression with environment variable",
                     );
                     insta::assert_snapshot!(fixed_content.source(), @r#"
+
                     name: Test Template Injection
                     on: push
                     jobs:
@@ -811,6 +813,7 @@ jobs:
                         "replace expression with environment variable",
                     );
                     insta::assert_snapshot!(fixed_content.source(), @r#"
+
                     name: Test Template Injection
                     on: push
                     jobs:
@@ -920,6 +923,7 @@ jobs:
                 }
 
                 insta::assert_snapshot!(current_document.source(), @r#"
+
                 name: Test Multiple Template Injections
                 on: push
                 jobs:
@@ -986,6 +990,7 @@ jobs:
                 }
 
                 insta::assert_snapshot!(current_document.source(), @r#"
+
                 name: Test Duplicate Template Injections
                 on: push
                 jobs:
@@ -1046,6 +1051,7 @@ jobs:
                 }
 
                 insta::assert_snapshot!(current_document.source(), @r#"
+
                 name: Test Duplicate Template Injections
                 on: push
                 jobs:
@@ -1109,6 +1115,7 @@ jobs:
                 }
 
                 insta::assert_snapshot!(current_document.source(), @r#"
+
                 name: Test Duplicate Template Injections
                 on: push
                 jobs:
@@ -1225,6 +1232,7 @@ jobs:
                         "replace expression with environment variable",
                     );
                     insta::assert_snapshot!(fixed_content.source(), @r#"
+
                     name: Test Template Injection - Bash
                     on: push
                     jobs:
@@ -1271,6 +1279,7 @@ jobs:
                         "replace expression with environment variable",
                     );
                     insta::assert_snapshot!(fixed_content.source(), @r#"
+
                     name: Test Template Injection - Bash
                     on: push
                     jobs:
@@ -1317,6 +1326,7 @@ jobs:
                         "replace expression with environment variable",
                     );
                     insta::assert_snapshot!(fixed_content.source(), @r"
+
                     name: Test Template Injection - CMD
                     on: push
                     jobs:
@@ -1363,6 +1373,7 @@ jobs:
                         "replace expression with environment variable",
                     );
                     insta::assert_snapshot!(fixed_content.source(), @r#"
+
                     name: Test Template Injection - PowerShell
                     on: push
                     jobs:
@@ -1409,6 +1420,7 @@ jobs:
                     );
                     // Ubuntu default shell is bash, so should use ${VAR} syntax
                     insta::assert_snapshot!(fixed_content.source(), @r#"
+
                     name: Test Template Injection - Default Shell Ubuntu
                     on: push
                     jobs:
@@ -1454,6 +1466,7 @@ jobs:
                     );
                     // Windows default shell is pwsh, so should use $env:VAR syntax
                     insta::assert_snapshot!(fixed_content.source(), @r#"
+
                     name: Test Template Injection - Default Shell Windows
                     on: push
                     jobs:
@@ -1499,6 +1512,7 @@ jobs:
                         "replace expression with environment variable",
                     );
                     insta::assert_snapshot!(fixed_content.source(), @r"
+
                     name: Test Template Injection - CMD with Custom Env
                     on: push
                     jobs:
