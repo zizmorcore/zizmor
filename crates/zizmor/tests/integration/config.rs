@@ -164,6 +164,31 @@ fn test_discovers_config_in_dotgithub() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Ensures we correctly discover a `zizmor.yaml` configuration file in a `.github`
+/// subdirectory of a given input directory, i.e.
+/// `config-in-dotgithub/.github/zizmor.yaml` in this case.
+///
+/// This tests that both `.yml` and `.yaml` extensions are supported.
+#[test]
+fn test_discovers_dotyaml_config_in_dotgithub() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("config-scenarios/dotyaml-config-in-dotgithub"))
+            .setenv("RUST_LOG", "zizmor::config=debug")
+            .output(OutputMode::Both)
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
+    DEBUG zizmor::config: attempting config discovery in `@@INPUT@@`
+    DEBUG zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yaml`
+    No findings to report. Good job! (1 ignored, 2 suppressed)
+    ",
+    );
+
+    Ok(())
+}
+
 /// Ensures we correctly discover a configuration file in a `.github`
 /// subdirectory from an input filename, i.e. going from
 /// `config-in-dotgithub/.github/workflows/hackme.yml`
