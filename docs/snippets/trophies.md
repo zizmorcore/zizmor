@@ -1114,6 +1114,10 @@
     ---
 
     ??? example "Examples"
+        - psf/black#4901
+        - psf/black#4905
+        - psf/black#4906
+        - psf/black#4911
         - psf/cachecontrol#345
 
 

@@ -232,6 +232,10 @@ praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 privacyidea/privacyidea#4854
 prometheus/prometheus#16530
+psf/black#4901
+psf/black#4905
+psf/black#4906
+psf/black#4911
 psf/cachecontrol#345
 pubgrub-rs/pubgrub#389
 pyca/service-identity#75
