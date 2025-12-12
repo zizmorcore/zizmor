@@ -24,6 +24,14 @@
         - aio-libs/aiobotocore#1355
 
 
+-   ![](https://github.com/altair-graphql.png?size=40){ width="40" loading=lazy align=left } altair-graphql
+
+    ---
+
+    ??? example "Examples"
+        - altair-graphql/altair@4aa5679f89528c183321a07e387567c13be29f26
+
+
 -   ![](https://github.com/anchore.png?size=40){ width="40" loading=lazy align=left } anchore
 
     ---
