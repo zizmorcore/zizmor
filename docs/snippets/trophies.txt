@@ -8,6 +8,7 @@ adafruit/circuitpython#9785
 ag2ai/faststream#2398
 aio-libs/aiobotocore#1344
 aio-libs/aiobotocore#1355
+altair-graphql/altair@4aa5679f89528c183321a07e387567c13be29f26
 anchore/vunnel#832
 ansible/ansible-documentation#3188
 apache/airflow#45408
