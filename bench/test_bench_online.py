@@ -6,36 +6,42 @@ from bench.common import zizmor
 
 
 @pytest.mark.skipif("GH_TOKEN" not in os.environ, reason="GH_TOKEN not set")
-@pytest.mark.benchmark(max_time=20)
-def test_zizmor_online_gha_hazmat_da3c3cd():
+def test_zizmor_online_gha_hazmat_da3c3cd(benchmark):
     """
     Runs `zizmor --format=plain --no-exit-codes --no-config woodruffw/gha-hazmat@da3c3cd`
     """
 
-    zizmor(
-        [
-            "--format=plain",
-            "--no-exit-codes",
-            "--no-config",
-            "woodruffw/gha-hazmat@da3c3cd",
-        ],
-        check=True,
+    benchmark.pedantic(
+        zizmor,
+        args=(
+            [
+                "--format=plain",
+                "--no-exit-codes",
+                "--no-config",
+                "woodruffw/gha-hazmat@da3c3cd",
+            ],
+        ),
+        warmup_rounds=2,
+        iterations=10,
     )
 
 
 @pytest.mark.skipif("GH_TOKEN" not in os.environ, reason="GH_TOKEN not set")
-@pytest.mark.benchmark(max_time=20)
-def test_zizmor_online_cpython_48f88310044c():
+def test_zizmor_online_cpython_48f88310044c(benchmark):
     """
     Runs `zizmor --format=plain --no-exit-codes --no-config python/cpython@48f88310044c`
     """
 
-    zizmor(
-        [
-            "--format=plain",
-            "--no-exit-codes",
-            "--no-config",
-            "python/cpython@48f88310044c",
-        ],
-        check=True,
+    benchmark.pedantic(
+        zizmor,
+        args=(
+            [
+                "--format=plain",
+                "--no-exit-codes",
+                "--no-config",
+                "python/cpython@48f88310044c",
+            ],
+        ),
+        warmup_rounds=2,
+        iterations=10,
     )
