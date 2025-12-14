@@ -172,7 +172,7 @@ See [insta's documentation] for more details.
 
 ## Benchmarking
 
-`zizmor` currently uses [hyperfine](https://github.org/sharkdp/hyperfine)
+`zizmor` currently uses [pytest-codspeed](https://github.com/CodSpeedHQ/pytest-codspeed)
 for command-line benchmarking.
 
 Benchmarks are stored in the top-level `bench/` directory, and can be
@@ -184,27 +184,22 @@ make bench
 ```
 
 We currently run offline benchmarks in the CI and report their results
-to [Bencher](https://bencher.dev/). See
-[our project page](https://bencher.dev/console/projects/zizmor/plots)
-on Bencher for results and trends.
+to [CodSpeed](https://codspeed.io). See
+[our project page](https://codspeed.io/zizmorcore/zizmor)
+on CodSpeed for results and trends.
 
 There are also online benchmarks, but these don't get run automatically.
-To run them, you can pass `GH_TOKEN` to the `bench/benchmark.py` script
-directly:
+To run them, you can set `GH_TOKEN`:
 
 ```bash
-GH_TOKEN=$(gh auth token) uv run bench/benchmark.py
+GH_TOKEN=$(gh auth token) make bench
 ```
 
 ### Adding new benchmarks
 
-`zizmor` currently orchestrates benchmarks with `bench/benchmark.py`,
-which wraps `hyperfine` to add a planning phase.
+Benchmarks are currently written as pytest functions.
 
-Take a look at `bench/benchmarks.json` for the current benchmarks.
-Observe that each benchmark tells `benchmark.py` how to retrieve its
-input as well as provides a `stencil` that the benchmark runner will
-expand to run the benchmark.
+Take a look at `bench/test_*.py` for existing benchmarks.
 
 ## Building the website
 
