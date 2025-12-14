@@ -53,4 +53,4 @@ pinact:
 
 .PHONY: bench
 bench:
-	uv run bench/benchmark.py --offline
+	uv run --only-group=bench pytest bench/ --codspeed
