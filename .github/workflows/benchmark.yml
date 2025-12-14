@@ -5,6 +5,12 @@ on:
     branches:
       - "main"
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
   # `workflow_dispatch` allows CodSpeed to trigger backtest
   # performance analysis in order to generate initial data.
   workflow_dispatch:
@@ -18,13 +24,22 @@ concurrency:
 jobs:
   benchmarks:
     name: Run benchmarks
+    # PRs only get benchmarked if they have the `run-benchmarks` label.
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'run-benchmarks')
+        || github.event_name == 'push'
+        || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
 
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        with:
+          cache-all-crates: true
 
       - uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
 
@@ -33,8 +48,6 @@ jobs:
 
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@346a2d8a8d9d38909abd0bc3d23f773110f076ad # v4.4.1
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          mode: simulation
+          mode: walltime
           run: make bench
