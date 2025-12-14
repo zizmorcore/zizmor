@@ -10,3 +10,6 @@
 
 # pending snapshots
 .*.pending-snap
+
+# benchmarks
+.codspeed/

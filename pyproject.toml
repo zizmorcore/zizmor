@@ -16,4 +16,8 @@ manifest-path = "crates/zizmor/Cargo.toml"
 include = [{ path = "README.md", format = "sdist" }, { path = "LICENSE", format = "sdist" }]
 
 [dependency-groups]
+bench = [
+    "pytest>=9.0.2",
+    "pytest-codspeed>=4.2.0",
+]
 docs = ["zensical"]
