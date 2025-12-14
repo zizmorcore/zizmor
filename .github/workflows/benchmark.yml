@@ -18,6 +18,11 @@ concurrency:
 jobs:
   benchmarks:
     name: Run benchmarks
+    # PRs only get benchmarked if they have the `run-benchmarks` label.
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'run-benchmarks')
+        || github.event_name == 'push'
+        || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
