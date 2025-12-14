@@ -34,6 +34,10 @@ of `zizmor`.
 * zizmor now discovers configuration files named `zizmor.yaml`, in addition
   to `zizmor.yml` (#1431)
   
+* zizmor now produces a more useful error message when input collection
+  yields no inputs (#1439)
+
+ 
 ### Performance Improvements 🚄
 
 * The [impostor-commit] audit is now significantly faster on true positives,

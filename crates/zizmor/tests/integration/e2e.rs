@@ -251,6 +251,25 @@ fn invalid_inputs() -> Result<()> {
         );
     }
 
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(true)
+            .input(input_under_test("invalid/empty/"))
+            .args(["--strict-collection"])
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+
+    Caused by:
+        no inputs collected
+    "
+    );
+
     Ok(())
 }
 
@@ -291,7 +310,13 @@ fn test_issue_1394() -> Result<()> {
     🌈 zizmor v@@VERSION@@
      WARN collect_inputs: zizmor::registry::input: failed to parse input: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
     fatal: no audit was performed
-    no inputs collected
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+
+    Caused by:
+        no inputs collected
     "#
     );
 

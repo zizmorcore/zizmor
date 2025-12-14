@@ -920,6 +920,16 @@ async fn main() -> ExitCode {
                     Some(report)
                 }
                 Error::Collection(err) => match err.inner() {
+                    CollectionError::NoInputs => {
+                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                            .element(Level::HELP.message("collection yielded no auditable inputs"))
+                            .element(Level::HELP.message("inputs must contain at least one valid workflow, action, or Dependabot config"));
+
+                        let renderer = Renderer::styled();
+                        let report = renderer.render(&[group]);
+
+                        Some(report)
+                    }
                     CollectionError::DuplicateInput(..) => {
                         let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
                             .element(Level::HELP.message(format!(
