@@ -6,7 +6,7 @@ from bench.common import zizmor
 
 
 @pytest.mark.skipif("GH_TOKEN" not in os.environ, reason="GH_TOKEN not set")
-@pytest.mark.benchmark
+@pytest.mark.benchmark(max_time=20)
 def test_zizmor_online_gha_hazmat_da3c3cd():
     """
     Runs `zizmor --format=plain --no-exit-codes --no-config woodruffw/gha-hazmat@da3c3cd`
@@ -24,7 +24,7 @@ def test_zizmor_online_gha_hazmat_da3c3cd():
 
 
 @pytest.mark.skipif("GH_TOKEN" not in os.environ, reason="GH_TOKEN not set")
-@pytest.mark.benchmark
+@pytest.mark.benchmark(max_time=20)
 def test_zizmor_online_cpython_48f88310044c():
     """
     Runs `zizmor --format=plain --no-exit-codes --no-config python/cpython@48f88310044c`
