@@ -5,4 +5,10 @@ expression: "zizmor().expects_failure(true).input(input_under_test(&format!(\"in
 🌈 zizmor v@@VERSION@@
  WARN collect_inputs: zizmor::registry::input: failed to validate input as action: input does not match expected validation schema
 fatal: no audit was performed
-no inputs collected
+error: no inputs collected
+  |
+  = help: collection yielded no auditable inputs
+  = help: inputs must contain at least one valid workflow, action, or Dependabot config
+
+Caused by:
+    no inputs collected
