@@ -65,7 +65,7 @@ tar = "0.4.44"
 terminal-link = "0.1.0"
 thiserror = "2.0.17"
 tokio = { version = "1.47.1", features = ["rt-multi-thread", "io-std"] }
-tower-lsp-server = "0.22"
+tower-lsp-server = "0.23"
 tracing = "0.1.43"
 tracing-indicatif = "0.3.14"
 tracing-subscriber = "0.3.20"
