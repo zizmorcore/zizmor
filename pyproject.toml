@@ -19,5 +19,6 @@ include = [{ path = "README.md", format = "sdist" }, { path = "LICENSE", format 
 bench = [
     "pytest>=9.0.2",
     "pytest-codspeed>=4.2.0",
+    "urllib3>=2.6.2",
 ]
 docs = ["zensical"]
