@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use camino::Utf8Path;
 use thiserror::Error;
-use tower_lsp_server::lsp_types::{self, TextDocumentSyncKind};
+use tower_lsp_server::ls_types::{self, TextDocumentSyncKind};
 use tower_lsp_server::{Client, LanguageServer, LspService, Server};
 
 use crate::audit::AuditInput;
@@ -25,7 +25,7 @@ pub(crate) struct Error {
 }
 
 struct LspDocumentCommon {
-    uri: lsp_types::Uri,
+    uri: ls_types::Uri,
     text: String,
     version: Option<i32>,
 }
@@ -39,35 +39,35 @@ struct Backend {
 impl LanguageServer for Backend {
     async fn initialize(
         &self,
-        _: lsp_types::InitializeParams,
-    ) -> tower_lsp_server::jsonrpc::Result<lsp_types::InitializeResult> {
-        Ok(lsp_types::InitializeResult {
-            server_info: Some(lsp_types::ServerInfo {
+        _: ls_types::InitializeParams,
+    ) -> tower_lsp_server::jsonrpc::Result<ls_types::InitializeResult> {
+        Ok(ls_types::InitializeResult {
+            server_info: Some(ls_types::ServerInfo {
                 name: "zizmor (LSP)".into(),
                 version: Some(env!("CARGO_PKG_VERSION").into()),
             }),
-            capabilities: lsp_types::ServerCapabilities {
-                text_document_sync: Some(lsp_types::TextDocumentSyncCapability::Kind(
-                    lsp_types::TextDocumentSyncKind::FULL,
+            capabilities: ls_types::ServerCapabilities {
+                text_document_sync: Some(ls_types::TextDocumentSyncCapability::Kind(
+                    ls_types::TextDocumentSyncKind::FULL,
                 )),
                 ..Default::default()
             },
         })
     }
 
-    async fn initialized(&self, _: lsp_types::InitializedParams) {
+    async fn initialized(&self, _: ls_types::InitializedParams) {
         let selectors = vec![
-            lsp_types::DocumentFilter {
+            ls_types::DocumentFilter {
                 language: Some("yaml".into()),
                 scheme: None,
                 pattern: Some("**/.github/workflows/*.{yml,yaml}".into()),
             },
-            lsp_types::DocumentFilter {
+            ls_types::DocumentFilter {
                 language: Some("yaml".into()),
                 scheme: None,
                 pattern: Some("**/action.{yml,yaml}".into()),
             },
-            lsp_types::DocumentFilter {
+            ls_types::DocumentFilter {
                 language: Some("yaml".into()),
                 scheme: None,
                 pattern: Some("**/.github/dependabot.{yml,yaml}".into()),
@@ -80,46 +80,46 @@ impl LanguageServer for Backend {
         // neglects to.
         self.client
             .register_capability(vec![
-                lsp_types::Registration {
+                ls_types::Registration {
                     id: "zizmor-didopen".into(),
                     method: "textDocument/didOpen".into(),
                     register_options: Some(
-                        serde_json::to_value(lsp_types::TextDocumentRegistrationOptions {
+                        serde_json::to_value(ls_types::TextDocumentRegistrationOptions {
                             document_selector: Some(selectors.clone()),
                         })
                         .expect("failed to serialize LSP document registration options"),
                     ),
                 },
-                lsp_types::Registration {
+                ls_types::Registration {
                     id: "zizmor-didchange".into(),
                     method: "textDocument/didChange".into(),
                     register_options: Some(
-                        serde_json::to_value(lsp_types::TextDocumentChangeRegistrationOptions {
+                        serde_json::to_value(ls_types::TextDocumentChangeRegistrationOptions {
                             document_selector: Some(selectors.clone()),
                             sync_kind: TextDocumentSyncKind::FULL,
                         })
                         .expect("failed to serialize LSP document registration options"),
                     ),
                 },
-                lsp_types::Registration {
+                ls_types::Registration {
                     id: "zizmor-didsave".into(),
                     method: "textDocument/didSave".into(),
                     register_options: Some(
-                        serde_json::to_value(lsp_types::TextDocumentSaveRegistrationOptions {
+                        serde_json::to_value(ls_types::TextDocumentSaveRegistrationOptions {
                             include_text: Some(true),
                             text_document_registration_options:
-                                lsp_types::TextDocumentRegistrationOptions {
+                                ls_types::TextDocumentRegistrationOptions {
                                     document_selector: Some(selectors.clone()),
                                 },
                         })
                         .expect("failed to serialize LSP document registration options"),
                     ),
                 },
-                lsp_types::Registration {
+                ls_types::Registration {
                     id: "zizmor-didclose".into(),
                     method: "textDocument/didClose".into(),
                     register_options: Some(
-                        serde_json::to_value(lsp_types::TextDocumentRegistrationOptions {
+                        serde_json::to_value(ls_types::TextDocumentRegistrationOptions {
                             document_selector: Some(selectors),
                         })
                         .expect("failed to serialize LSP document registration options"),
@@ -130,7 +130,7 @@ impl LanguageServer for Backend {
             .expect("failed to register text document capabilities with the LSP client");
 
         self.client
-            .log_message(lsp_types::MessageType::INFO, "server initialized!")
+            .log_message(ls_types::MessageType::INFO, "server initialized!")
             .await;
     }
 
@@ -139,7 +139,7 @@ impl LanguageServer for Backend {
         Ok(())
     }
 
-    async fn did_open(&self, params: lsp_types::DidOpenTextDocumentParams) {
+    async fn did_open(&self, params: ls_types::DidOpenTextDocumentParams) {
         tracing::debug!("did_open: {:?}", params);
         self.audit(LspDocumentCommon {
             uri: params.text_document.uri,
@@ -149,7 +149,7 @@ impl LanguageServer for Backend {
         .await;
     }
 
-    async fn did_change(&self, params: lsp_types::DidChangeTextDocumentParams) {
+    async fn did_change(&self, params: ls_types::DidChangeTextDocumentParams) {
         tracing::debug!("did_change: {:?}", params);
         let mut params = params;
         let Some(change) = params.content_changes.pop() else {
@@ -164,7 +164,7 @@ impl LanguageServer for Backend {
         .await;
     }
 
-    async fn did_save(&self, params: lsp_types::DidSaveTextDocumentParams) {
+    async fn did_save(&self, params: ls_types::DidSaveTextDocumentParams) {
         tracing::debug!("did_save: {:?}", params);
         if let Some(text) = params.text {
             self.audit(LspDocumentCommon {
@@ -217,15 +217,15 @@ impl Backend {
             .iter()
             .map(|finding| {
                 let primary = finding.primary_location();
-                lsp_types::Diagnostic {
-                    range: lsp_types::Range {
+                ls_types::Diagnostic {
+                    range: ls_types::Range {
                         start: primary.concrete.location.start_point.into(),
                         end: primary.concrete.location.end_point.into(),
                     },
                     severity: Some(finding.determinations.severity.into()),
-                    code: Some(lsp_types::NumberOrString::String(finding.ident.into())),
-                    code_description: Some(lsp_types::CodeDescription {
-                        href: lsp_types::Uri::from_str(finding.url)
+                    code: Some(ls_types::NumberOrString::String(finding.ident.into())),
+                    code_description: Some(ls_types::CodeDescription {
+                        href: ls_types::Uri::from_str(finding.url)
                             .expect("finding contains an invalid URL somehow"),
                     }),
                     source: Some("zizmor".into()),
@@ -248,25 +248,25 @@ impl Backend {
     async fn audit(&self, params: LspDocumentCommon) {
         if let Err(e) = self.audit_inner(params).await {
             self.client
-                .log_message(lsp_types::MessageType::ERROR, format!("audit failed: {e}"))
+                .log_message(ls_types::MessageType::ERROR, format!("audit failed: {e}"))
                 .await;
         }
     }
 }
 
-impl From<Severity> for lsp_types::DiagnosticSeverity {
+impl From<Severity> for ls_types::DiagnosticSeverity {
     fn from(value: Severity) -> Self {
         // TODO: Does this mapping make sense?
         match value {
-            Severity::Informational => lsp_types::DiagnosticSeverity::INFORMATION,
-            Severity::Low => lsp_types::DiagnosticSeverity::WARNING,
-            Severity::Medium => lsp_types::DiagnosticSeverity::WARNING,
-            Severity::High => lsp_types::DiagnosticSeverity::ERROR,
+            Severity::Informational => ls_types::DiagnosticSeverity::INFORMATION,
+            Severity::Low => ls_types::DiagnosticSeverity::WARNING,
+            Severity::Medium => ls_types::DiagnosticSeverity::WARNING,
+            Severity::High => ls_types::DiagnosticSeverity::ERROR,
         }
     }
 }
 
-impl From<Point> for lsp_types::Position {
+impl From<Point> for ls_types::Position {
     fn from(value: Point) -> Self {
         Self {
             line: value.row as u32,
