@@ -76,6 +76,7 @@ django/django@86b8058b40145fb5ba4fd859676225f533eca986
 django-commons/django-tasks-scheduler#272
 Diaoul/subliminal#1190
 docker/compose#12737
+dubzzz/fast-check#6369
 earthobservations/wetterdienst#1440
 edgelesssys/contrast#1604
 EFForg/rayhunter#711
