@@ -387,6 +387,8 @@ pub enum PackageEcosystem {
     Npm,
     /// `nuget`
     Nuget,
+    /// `opentofu`
+    Opentofu,
     /// `pip`
     Pip,
     /// `pub`

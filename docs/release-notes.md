@@ -50,6 +50,9 @@ of `zizmor`.
 * Fixed a bug where the [obfuscation] audit would crash if it encountered
   a CMD shell that was defined outside of the current step block (i.e. 
   as a job or workflow default) (#1418)
+  
+* Fixed a bug where the `opentofu` ecosystem was not recognized in
+  Dependabot configuration files (#1452)
 
 ## 1.18.0
 
