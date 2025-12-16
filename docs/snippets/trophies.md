@@ -371,6 +371,7 @@
 
     ??? example "Examples"
         - dubzzz/fast-check#6369
+        - dubzzz/fast-check#6370
 
 
 -   ![](https://github.com/earthobservations.png?size=40){ width="40" loading=lazy align=left } earthobservations

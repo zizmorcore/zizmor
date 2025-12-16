@@ -77,6 +77,7 @@ django-commons/django-tasks-scheduler#272
 Diaoul/subliminal#1190
 docker/compose#12737
 dubzzz/fast-check#6369
+dubzzz/fast-check#6370
 earthobservations/wetterdienst#1440
 edgelesssys/contrast#1604
 EFForg/rayhunter#711
