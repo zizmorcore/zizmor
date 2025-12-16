@@ -1,0 +1,23 @@
+# https://github.com/zizmorcore/zizmor/issues/1451
+
+version: 2
+enable-beta-ecosystems: true
+
+updates:
+  - package-ecosystem: "opentofu"
+    directories:
+      - "/stack"
+      - "/modules/default-branch-protection"
+    schedule:
+      interval: "cron"
+      cronjob: "30 7 * * *"
+      timezone: "Europe/London"
+    target-branch: "main"
+    groups:
+      terraform:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
