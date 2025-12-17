@@ -641,7 +641,6 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
                 ColorMode::Never
             } else if std::env::var("FORCE_COLOR").is_ok()
                 || std::env::var("CLICOLOR_FORCE").is_ok()
-                || utils::is_ci()
             {
                 ColorMode::Always
             } else {
