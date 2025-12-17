@@ -355,7 +355,12 @@ impl From<CliRenderLinks> for RenderLinks {
     fn from(value: CliRenderLinks) -> Self {
         match value {
             CliRenderLinks::Auto => {
-                if supports_hyperlinks::supports_hyperlinks() {
+                // We render links if stdout is a terminal. This is assumed
+                // to preclude CI environments and log files.
+                //
+                // TODO: Switch this to the support-hyperlinks crate?
+                // See: https://github.com/zkat/supports-hyperlinks/pull/8
+                if stdout().is_terminal() {
                     RenderLinks::Always
                 } else {
                     RenderLinks::Never
