@@ -85,7 +85,6 @@ fn menagerie() -> Result<()> {
 fn color_control_basic() -> Result<()> {
     // No terminal and not CI, so no color by default.
     let no_color_default_output = zizmor()
-        .unsetenv("CI")
         .output(OutputMode::Both)
         .input(input_under_test("e2e-menagerie"))
         .run()?;
@@ -609,7 +608,6 @@ fn test_cant_retrieve_offline() -> Result<()> {
         zizmor()
             .expects_failure(true)
             .offline(true)
-            .unsetenv("GH_TOKEN")
             .args(["pypa/sampleproject"])
             .run()?,
         @r"
@@ -635,7 +633,7 @@ fn test_cant_retrieve_no_gh_token() -> Result<()> {
         zizmor()
             .expects_failure(true)
             .offline(false)
-            .unsetenv("GH_TOKEN")
+            .gh_token(false)
             .args(["pypa/sampleproject"])
             .run()?,
         @r"

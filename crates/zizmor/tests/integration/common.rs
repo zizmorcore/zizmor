@@ -42,6 +42,7 @@ pub struct Zizmor {
     stdin: Option<String>,
     unbuffer: bool,
     offline: bool,
+    gh_token: bool,
     inputs: Vec<String>,
     config: Option<String>,
     no_config: bool,
@@ -53,13 +54,19 @@ pub struct Zizmor {
 impl Zizmor {
     /// Create a new zizmor runner.
     pub fn new() -> Self {
-        let cmd = Command::new(cargo::cargo_bin!());
+        let mut cmd = Command::new(cargo::cargo_bin!());
+
+        // Our child `zizmor` process starts with a clean environment, to
+        // ensure we explicitly test interactions with things like `CI`
+        // and `GH_TOKEN`.
+        cmd.env_clear();
 
         Self {
             cmd,
             stdin: None,
             unbuffer: false,
             offline: true,
+            gh_token: true,
             inputs: vec![],
             config: None,
             no_config: false,
@@ -81,11 +88,6 @@ impl Zizmor {
 
     pub fn setenv(mut self, key: &str, value: &str) -> Self {
         self.cmd.env(key, value);
-        self
-    }
-
-    pub fn unsetenv(mut self, key: &str) -> Self {
-        self.cmd.env_remove(key);
         self
     }
 
@@ -111,6 +113,11 @@ impl Zizmor {
 
     pub fn offline(mut self, flag: bool) -> Self {
         self.offline = flag;
+        self
+    }
+
+    pub fn gh_token(mut self, flag: bool) -> Self {
+        self.gh_token = flag;
         self
     }
 
@@ -147,7 +154,12 @@ impl Zizmor {
         } else {
             // If we're running in online mode, we pre-assert the
             // presence of GH_TOKEN to make configuration failures more obvious.
-            std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
+            let token =
+                std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
+
+            if self.gh_token {
+                self.cmd.env("GH_TOKEN", token);
+            }
         }
 
         if self.no_config && self.config.is_some() {
