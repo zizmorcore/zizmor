@@ -44,6 +44,7 @@ impl From<&Severity> for Level<'_> {
 pub(crate) fn finding_snippets<'doc>(
     registry: &'doc InputRegistry,
     finding: &'doc Finding<'doc>,
+    render_links_mode: &RenderLinks,
 ) -> Vec<Snippet<'doc, Annotation<'doc>>> {
     // Our finding might span multiple workflows, so we need to group locations
     // by their enclosing workflow to generate each snippet correctly.
@@ -68,15 +69,20 @@ pub(crate) fn finding_snippets<'doc>(
     for (input_key, locations) in locations_by_workflow {
         let input = registry.get_input(input_key);
 
+        let path = match render_links_mode {
+            RenderLinks::Always => input.link().unwrap_or(input_key.presentation_path()),
+            RenderLinks::Never => input_key.presentation_path(),
+        };
+
         snippets.push(
             Snippet::source(input.as_document().source())
                 .fold(true)
                 .line_start(1)
-                .path(input.link().unwrap_or(input_key.presentation_path()))
+                .path(path)
                 .annotations(locations.iter().map(|loc| {
-                    let annotation = match loc.symbolic.link {
-                        Some(ref link) => link,
-                        None => &loc.symbolic.annotation,
+                    let annotation = match (loc.symbolic.link.as_deref(), render_links_mode) {
+                        (Some(link), RenderLinks::Always) => link,
+                        _ => &loc.symbolic.annotation,
                     };
 
                     AnnotationKind::from(loc.symbolic.kind)
@@ -213,7 +219,7 @@ fn render_finding(
     );
 
     let mut group = Group::with_title(title)
-        .elements(finding_snippets(registry, finding))
+        .elements(finding_snippets(registry, finding, render_links_mode))
         .element(Level::NOTE.message(confidence));
 
     if let Some(tip) = &finding.tip {
