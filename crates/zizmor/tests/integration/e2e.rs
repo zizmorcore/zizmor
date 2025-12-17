@@ -83,12 +83,21 @@ fn menagerie() -> Result<()> {
 
 #[test]
 fn color_control_basic() -> Result<()> {
-    // No terminal, so no color by default.
+    // No terminal and not CI, so no color by default.
     let no_color_default_output = zizmor()
+        .unsetenv("CI")
         .output(OutputMode::Both)
         .input(input_under_test("e2e-menagerie"))
         .run()?;
     assert!(!no_color_default_output.contains("\x1b["));
+
+    // No terminal but CI, so color by default.
+    let color_default_ci_output = zizmor()
+        .setenv("CI", "true")
+        .output(OutputMode::Both)
+        .input(input_under_test("e2e-menagerie"))
+        .run()?;
+    assert!(color_default_ci_output.contains("\x1b["));
 
     // Force color via --color=always.
     let forced_color_via_arg_output = zizmor()
