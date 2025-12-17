@@ -60,6 +60,7 @@ serde-sarif.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
 subfeature.workspace = true
+supports-hyperlinks.workspace = true
 tar.workspace = true
 terminal-link.workspace = true
 thiserror.workspace = true

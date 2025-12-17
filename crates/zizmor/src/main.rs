@@ -23,6 +23,7 @@ use owo_colors::OwoColorize;
 use registry::input::{InputKey, InputRegistry};
 use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
+use supports_hyperlinks::supports_hyperlinks;
 use terminal_link::Link;
 use thiserror::Error;
 use tracing::{Span, info_span, instrument, warn};
@@ -117,6 +118,15 @@ struct App {
     /// The output format to emit. By default, cargo-style diagnostics will be emitted.
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
+
+    /// Whether to render OSC 8 links in the output.
+    ///
+    /// This affects links under audit IDs, as well as any links
+    /// produced by audit rules.
+    ///
+    /// Only affects `--format=plain` (the default).
+    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_RENDER_LINKS")]
+    render_links: CliRenderLinks,
 
     /// Whether to render audit URLs in the output, separately from any URLs
     /// embedded in OSC 8 links.
@@ -323,6 +333,39 @@ pub(crate) enum OutputFormat {
     Sarif,
     /// GitHub Actions workflow command-formatted output.
     Github,
+}
+
+#[derive(Debug, Default, Copy, Clone, ValueEnum)]
+pub(crate) enum CliRenderLinks {
+    /// Render OSC 8 links in output if support is detected.
+    #[default]
+    Auto,
+    /// Always render OSC 8 links in output.
+    Always,
+    /// Never render OSC 8 links in output.
+    Never,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum RenderLinks {
+    Always,
+    Never,
+}
+
+impl From<CliRenderLinks> for RenderLinks {
+    fn from(value: CliRenderLinks) -> Self {
+        match value {
+            CliRenderLinks::Auto => {
+                if supports_hyperlinks::supports_hyperlinks() {
+                    RenderLinks::Always
+                } else {
+                    RenderLinks::Never
+                }
+            }
+            CliRenderLinks::Always => RenderLinks::Always,
+            CliRenderLinks::Never => RenderLinks::Never,
+        }
+    }
 }
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
@@ -817,6 +860,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             &registry,
             &results,
             &app.show_audit_urls.into(),
+            &app.render_links.into(),
             app.naches,
         ),
         OutputFormat::Json | OutputFormat::JsonV1 => {

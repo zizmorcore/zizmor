@@ -7,7 +7,7 @@ use anstream::{eprintln, print, println};
 use owo_colors::OwoColorize;
 
 use crate::{
-    ShowAuditUrls,
+    RenderLinks, ShowAuditUrls,
     finding::{
         Finding, Severity,
         location::{Location, LocationKind},
@@ -96,10 +96,11 @@ pub(crate) fn render_findings(
     registry: &InputRegistry,
     findings: &FindingRegistry,
     show_urls_mode: &ShowAuditUrls,
+    render_links_mode: &RenderLinks,
     naches_mode: bool,
 ) {
     for finding in findings.findings() {
-        render_finding(registry, finding, show_urls_mode);
+        render_finding(registry, finding, show_urls_mode, render_links_mode);
         println!();
     }
 
@@ -192,11 +193,19 @@ pub(crate) fn render_findings(
     }
 }
 
-fn render_finding(registry: &InputRegistry, finding: &Finding, show_urls_mode: &ShowAuditUrls) {
-    let title = Level::from(&finding.determinations.severity)
+fn render_finding(
+    registry: &InputRegistry,
+    finding: &Finding,
+    show_urls_mode: &ShowAuditUrls,
+    render_links_mode: &RenderLinks,
+) {
+    let mut title = Level::from(&finding.determinations.severity)
         .primary_title(finding.desc)
-        .id(finding.ident)
-        .id_url(finding.url);
+        .id(finding.ident);
+
+    if matches!(render_links_mode, RenderLinks::Always) {
+        title = title.id_url(finding.url);
+    }
 
     let confidence = format!(
         "audit confidence → {:?}",
