@@ -23,7 +23,6 @@ use owo_colors::OwoColorize;
 use registry::input::{InputKey, InputRegistry};
 use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
-use supports_hyperlinks::supports_hyperlinks;
 use terminal_link::Link;
 use thiserror::Error;
 use tracing::{Span, info_span, instrument, warn};
