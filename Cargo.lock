@@ -3140,7 +3140,7 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-iter"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "tree-sitter",
  "tree-sitter-yaml",
@@ -3804,7 +3804,7 @@ checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
 
 [[package]]
 name = "yamlpatch"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "indexmap",
  "insta",
@@ -3820,7 +3820,7 @@ dependencies = [
 
 [[package]]
 name = "yamlpath"
-version = "0.30.0"
+version = "0.31.0"
 dependencies = [
  "line-index",
  "self_cell",
