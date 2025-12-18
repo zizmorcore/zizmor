@@ -118,6 +118,15 @@ struct App {
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
 
+    /// Whether to render OSC 8 links in the output.
+    ///
+    /// This affects links under audit IDs, as well as any links
+    /// produced by audit rules.
+    ///
+    /// Only affects `--format=plain` (the default).
+    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_RENDER_LINKS")]
+    render_links: CliRenderLinks,
+
     /// Whether to render audit URLs in the output, separately from any URLs
     /// embedded in OSC 8 links.
     ///
@@ -323,6 +332,44 @@ pub(crate) enum OutputFormat {
     Sarif,
     /// GitHub Actions workflow command-formatted output.
     Github,
+}
+
+#[derive(Debug, Default, Copy, Clone, ValueEnum)]
+pub(crate) enum CliRenderLinks {
+    /// Render OSC 8 links in output if support is detected.
+    #[default]
+    Auto,
+    /// Always render OSC 8 links in output.
+    Always,
+    /// Never render OSC 8 links in output.
+    Never,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum RenderLinks {
+    Always,
+    Never,
+}
+
+impl From<CliRenderLinks> for RenderLinks {
+    fn from(value: CliRenderLinks) -> Self {
+        match value {
+            CliRenderLinks::Auto => {
+                // We render links if stdout is a terminal. This is assumed
+                // to preclude CI environments and log files.
+                //
+                // TODO: Switch this to the support-hyperlinks crate?
+                // See: https://github.com/zkat/supports-hyperlinks/pull/8
+                if stdout().is_terminal() {
+                    RenderLinks::Always
+                } else {
+                    RenderLinks::Never
+                }
+            }
+            CliRenderLinks::Always => RenderLinks::Always,
+            CliRenderLinks::Never => RenderLinks::Never,
+        }
+    }
 }
 
 #[derive(Debug, Default, Copy, Clone, ValueEnum)]
@@ -641,6 +688,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
                 ColorMode::Never
             } else if std::env::var("FORCE_COLOR").is_ok()
                 || std::env::var("CLICOLOR_FORCE").is_ok()
+                || utils::is_ci()
             {
                 ColorMode::Always
             } else {
@@ -816,6 +864,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             &registry,
             &results,
             &app.show_audit_urls.into(),
+            &app.render_links.into(),
             app.naches,
         ),
         OutputFormat::Json | OutputFormat::JsonV1 => {
