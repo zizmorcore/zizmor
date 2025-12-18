@@ -1200,7 +1200,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ### What's Changed
 * fix(cli): remove '0 ignored' from another place by @woodruffw in #157
-* perf: speed up impostor-commit's fast path by @woodruffw in #158
+* perf: speed up [impostor-commit]'s fast path by @woodruffw in #158
 * fix(cli): fixup error printing by @woodruffw in #159
 
 ## v0.3.1
@@ -1353,5 +1353,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [dependabot-cooldown]: ./audits.md#dependabot-cooldown
 [concurrency-limits]: ./audits.md#concurrency-limits
 [archived-uses]: ./audits.md#archived-uses
+[impostor-commit]: ./audits.md#impostor-commit
 
 [exit code]: ./usage.md#exit-codes
