@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.19.0
+
 ### New Features 🌈
 
 * **New audit**: [archived-uses] detects usages of archived repositories in
