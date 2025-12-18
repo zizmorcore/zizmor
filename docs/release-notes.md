@@ -37,6 +37,10 @@ of `zizmor`.
 * zizmor now produces a more useful error message when input collection
   yields no inputs (#1439)
 
+* The `--render-links` flag now allows users to control `zizmor`'s OSC 8 terminal
+  link rendering behavior. This is particularly useful in environments that
+  advertise themselves as terminals but fail to correctly render or ignore
+  OSC 8 links (#1454)
  
 ### Performance Improvements 🚄
 
@@ -53,6 +57,10 @@ of `zizmor`.
   
 * Fixed a bug where the `opentofu` ecosystem was not recognized in
   Dependabot configuration files (#1452)
+
+* `--color=always` no longer implies `--render-links=always`, as some
+  environments (like GitHub Actions) support ANSI color codes but fail
+  to handle OSC escapes gracefully (#1454)
 
 ## 1.18.0
 
