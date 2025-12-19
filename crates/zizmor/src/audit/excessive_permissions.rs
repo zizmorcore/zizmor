@@ -14,6 +14,7 @@ use crate::{
 static KNOWN_PERMISSIONS: LazyLock<HashMap<&str, Severity>> = LazyLock::new(|| {
     [
         ("actions", Severity::High),
+        ("artifact-metadata", Severity::Medium),
         ("attestations", Severity::High),
         ("checks", Severity::Medium),
         ("contents", Severity::High),
@@ -21,6 +22,8 @@ static KNOWN_PERMISSIONS: LazyLock<HashMap<&str, Severity>> = LazyLock::new(|| {
         ("discussions", Severity::Medium),
         ("id-token", Severity::High),
         ("issues", Severity::High),
+        // What does the write permission even do here?
+        ("models", Severity::Low),
         ("packages", Severity::High),
         ("pages", Severity::High),
         ("pull-requests", Severity::High),
