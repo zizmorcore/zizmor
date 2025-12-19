@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* The [excessive-permissions] audit is now aware of the `artifact-metadata`
+  and `models` permissions (#1461)
+
 ## 1.19.0
 
 ### New Features 🌈
