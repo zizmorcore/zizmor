@@ -8,59 +8,11 @@ fn test_obfuscation() -> Result<()> {
             .input(input_under_test("obfuscation.yml"))
             .run()?,
         @r"
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:13:15
-       |
-    13 |       - uses: actions/checkout/@v4
-       |               ^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:16:15
-       |
-    16 |       - uses: actions/checkout////@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:19:15
-       |
-    19 |       - uses: github/codeql-action/./init@v2
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:20:15
-       |
-    20 |       - uses: actions/checkout/.@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:23:15
-       |
-    23 |       - uses: actions/cache/save/../save@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:26:15
-       |
-    26 |       - uses: actions/cache/../../save@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:13:9
        |
-    13 |       - uses: actions/checkout/@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains empty component
+    13 |       - uses: actions/checkout/@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains empty component
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -68,8 +20,8 @@ fn test_obfuscation() -> Result<()> {
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:16:9
        |
-    16 |       - uses: actions/checkout////@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    16 |       - uses: actions/checkout////@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
        |         |
        |         actions reference contains empty component
        |         actions reference contains empty component
@@ -82,8 +34,8 @@ fn test_obfuscation() -> Result<()> {
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:19:9
        |
-    19 |       - uses: github/codeql-action/./init@v2
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains '.'
+    19 |       - uses: github/codeql-action/./init@b8d3b6e8af63cde30bdc382c0bc28114f4346c88 # v2.28.1
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains '.'
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -91,8 +43,8 @@ fn test_obfuscation() -> Result<()> {
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:20:9
        |
-    20 |       - uses: actions/checkout/.@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains '.'
+    20 |       - uses: actions/checkout/.@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains '.'
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -100,8 +52,8 @@ fn test_obfuscation() -> Result<()> {
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:23:9
        |
-    23 |       - uses: actions/cache/save/../save@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains '..'
+    23 |       - uses: actions/cache/save/../save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actions reference contains '..'
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -109,8 +61,8 @@ fn test_obfuscation() -> Result<()> {
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:26:9
        |
-    26 |       - uses: actions/cache/../../save@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    26 |       - uses: actions/cache/../../save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
        |         |
        |         actions reference contains '..'
        |         actions reference contains '..'
@@ -243,7 +195,7 @@ fn test_obfuscation() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    45 findings (1 ignored, 18 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 6 high
+    39 findings (1 ignored, 18 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
     "
     );
 
