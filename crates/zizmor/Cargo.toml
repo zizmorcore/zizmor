@@ -19,6 +19,8 @@ workspace = true
 [features]
 default = ["lsp"]
 lsp = ["dep:tower-lsp-server"]
+# Enable JSON Schema generation for zizmor.yml
+schema = ["dep:schemars"]
 # Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
 gh-token-tests = []
 # Test-only: enable all online audits.
@@ -55,6 +57,7 @@ owo-colors.workspace = true
 regex.workspace = true
 reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls", "rustls-tls-native-roots"] }
 reqwest-middleware.workspace = true
+schemars = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde-sarif.workspace = true
 serde_json.workspace = true
