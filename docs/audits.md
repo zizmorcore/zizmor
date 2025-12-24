@@ -1559,11 +1559,16 @@ If the upstream repository is trusted, then symbolic references are
 often suitable. However, if the upstream repository is not trusted, then
 actions should be pinned by SHA reference.
 
-By default, this audit applies the following policy:
+By default, this audit applies a blanket hash-pinning policy:
+all actions must be pinned by SHA reference.
 
-* Official GitHub actions namespaces can be pinned by branch or tag.
-  In other words, `actions/checkout@v4` is acceptable.
-* All other actions must be pinned by SHA reference.
+!!! note "Behavior change"
+
+    Starting with zizmor v1.20.0, the default policy for `unpinned-uses`
+    is to require hash-pinning on *all* actions, not just third-party ones.
+    The previous behavior (of allowing `actions/*` and similar to be ref-pinned)
+    is no longer the default but can be re-enabled via configuration;
+    see the configuration section below for details.
 
 This audit can be configured with a custom set of rules, e.g. to
 allow symbolic references for trusted repositories or entire namespaces
