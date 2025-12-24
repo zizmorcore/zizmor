@@ -20,7 +20,7 @@ jobs:
       contents: read # Needed to read repo contents
       issues: write # Needed to write issue comments
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
       - run: echo "Test"
@@ -34,7 +34,7 @@ jobs:
       packages: write
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
       - run: echo "Test"
@@ -48,7 +48,7 @@ jobs:
       packages: write #
       actions: write #
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
       - run: echo "Test"
@@ -61,7 +61,7 @@ jobs:
       packages: write #
       issues: write # Needed to post status updates
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
       - run: echo "Test"
@@ -73,7 +73,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
       - run: echo "Test"

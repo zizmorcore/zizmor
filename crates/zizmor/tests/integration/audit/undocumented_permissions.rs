@@ -10,46 +10,6 @@ fn test_undocumented_permissions_pedantic() -> Result<()> {
             .args(["--persona=pedantic"])
             .run()?,
         @r"
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:23:15
-       |
-    23 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:37:15
-       |
-    37 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:51:15
-       |
-    51 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:64:15
-       |
-    64 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:76:15
-       |
-    76 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
     help[undocumented-permissions]: permissions without explanatory comments
      --> @@INPUT@@:8:3
       |
@@ -90,7 +50,7 @@ fn test_undocumented_permissions_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    10 findings (1 ignored): 0 informational, 4 low, 0 medium, 5 high
+    5 findings (1 ignored): 0 informational, 4 low, 0 medium, 0 high
     "
     );
 
@@ -104,49 +64,7 @@ fn test_undocumented_permissions_default() -> Result<()> {
         zizmor()
             .input(input_under_test("undocumented-permissions.yml"))
             .run()?,
-        @r"
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:23:15
-       |
-    23 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:37:15
-       |
-    37 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:51:15
-       |
-    51 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:64:15
-       |
-    64 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:76:15
-       |
-    76 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    10 findings (5 suppressed): 0 informational, 0 low, 0 medium, 5 high
-    "
+        @"No findings to report. Good job! (5 suppressed)"
     );
 
     Ok(())
