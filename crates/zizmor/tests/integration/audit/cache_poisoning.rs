@@ -252,38 +252,6 @@ fn test_issue_343() -> anyhow::Result<()> {
             .input(input_under_test("cache-poisoning/issue-343-repro.yml"))
             .run()?,
         @r#"
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:21:15
-       |
-    21 |         uses: actions/setup-go@v5
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:28:15
-       |
-    28 |         uses: actions/setup-go@v5
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:34:15
-       |
-    34 |         uses: actions/setup-go@v5
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:41:15
-       |
-    41 |         uses: actions/setup-go@v5
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:28:9
        |
@@ -293,8 +261,8 @@ fn test_issue_343() -> anyhow::Result<()> {
      8 | |       - "v*.*.*"
        | |________________- generally used when publishing artifacts generated at runtime
     ...
-    28 |           uses: actions/setup-go@v5
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+    28 |           uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -335,7 +303,7 @@ fn test_issue_343() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    9 findings (2 suppressed, 3 fixable): 0 informational, 0 low, 0 medium, 7 high
+    5 findings (2 suppressed, 3 fixable): 0 informational, 0 low, 0 medium, 3 high
     "#
     );
 
@@ -499,38 +467,14 @@ fn test_issue_1152() -> anyhow::Result<()> {
             .input(input_under_test("cache-poisoning/issue-1152-repro.yml"))
             .run()?,
         @r"
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:16:15
-       |
-    16 |         uses: actions/setup-node@v5
-       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:20:15
-       |
-    20 |         uses: actions/setup-node@v5
-       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:30:15
-       |
-    30 |         uses: actions/setup-node@v5
-       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:16:9
        |
      5 | on: release
        | ----------- generally used when publishing artifacts generated at runtime
     ...
-    16 |         uses: actions/setup-node@v5
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+    16 |         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
        |
        = note: audit confidence → Low
 
@@ -557,7 +501,7 @@ fn test_issue_1152() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    9 findings (3 suppressed): 0 informational, 0 low, 0 medium, 6 high
+    6 findings (3 suppressed): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
