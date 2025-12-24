@@ -168,6 +168,7 @@ kata-containers/kata-containers#11475
 kubecolor/kubecolor#273
 libssh2/libssh2#1609
 lmstudio-ai/venvstacks#51
+maplibre/martin#2440
 matplotlib/matplotlib#29251
 marcusvolz/strava_py#53
 maxmind/mmdbinspect#82
@@ -342,6 +343,7 @@ wagtail/wagtail-localize#843
 wntrblm/nox#925
 WordPress/gutenberg#69126
 WordPress/wordpress-develop#8007
+yt-dlp/yt-dlp#15324
 zama-ai/tfhe-rs#2292
 zama-ai/tfhe-rs#2979
 zcash/librustzcash#1679
