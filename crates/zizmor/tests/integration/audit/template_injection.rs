@@ -72,7 +72,25 @@ fn test_issue_22_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-22-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (6 suppressed)"
+        @r"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:40:15
+       |
+    40 |       - uses: actions/checkout@v4
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:44:15
+       |
+    44 |       - uses: actions/setup-python@v5
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    8 findings (6 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    "
     );
 
     Ok(())
@@ -183,7 +201,17 @@ fn test_issue_418_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-418-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (3 suppressed)"
+        @r"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:18:15
+       |
+    18 |       - uses: actions/github-script@v7
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    4 findings (3 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "
     );
 
     Ok(())

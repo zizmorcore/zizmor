@@ -252,6 +252,38 @@ fn test_issue_343() -> anyhow::Result<()> {
             .input(input_under_test("cache-poisoning/issue-343-repro.yml"))
             .run()?,
         @r#"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:21:15
+       |
+    21 |         uses: actions/setup-go@v5
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:28:15
+       |
+    28 |         uses: actions/setup-go@v5
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:34:15
+       |
+    34 |         uses: actions/setup-go@v5
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:41:15
+       |
+    41 |         uses: actions/setup-go@v5
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:28:9
        |
@@ -303,7 +335,7 @@ fn test_issue_343() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    5 findings (2 suppressed, 3 fixable): 0 informational, 0 low, 0 medium, 3 high
+    9 findings (2 suppressed, 3 fixable): 0 informational, 0 low, 0 medium, 7 high
     "#
     );
 
@@ -467,6 +499,30 @@ fn test_issue_1152() -> anyhow::Result<()> {
             .input(input_under_test("cache-poisoning/issue-1152-repro.yml"))
             .run()?,
         @r"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:16:15
+       |
+    16 |         uses: actions/setup-node@v5
+       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:20:15
+       |
+    20 |         uses: actions/setup-node@v5
+       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:30:15
+       |
+    30 |         uses: actions/setup-node@v5
+       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:16:9
        |
@@ -501,7 +557,7 @@ fn test_issue_1152() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    6 findings (3 suppressed): 0 informational, 0 low, 0 medium, 3 high
+    9 findings (3 suppressed): 0 informational, 0 low, 0 medium, 6 high
     "
     );
 

@@ -281,30 +281,7 @@ impl UnpinnedUsesPolicies {
 impl Default for UnpinnedUsesPolicies {
     fn default() -> Self {
         Self {
-            policy_tree: [
-                (
-                    "actions".into(),
-                    vec![(
-                        RepositoryUsesPattern::InOwner("actions".into()),
-                        UsesPolicy::RefPin,
-                    )],
-                ),
-                (
-                    "github".into(),
-                    vec![(
-                        RepositoryUsesPattern::InOwner("github".into()),
-                        UsesPolicy::RefPin,
-                    )],
-                ),
-                (
-                    "dependabot".into(),
-                    vec![(
-                        RepositoryUsesPattern::InOwner("dependabot".into()),
-                        UsesPolicy::RefPin,
-                    )],
-                ),
-            ]
-            .into(),
+            policy_tree: [].into(),
             default_policy: UsesPolicy::HashPin,
         }
     }

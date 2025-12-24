@@ -145,6 +145,54 @@ warning[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → Medium
 
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/artipacked.yml:35:15
+   |
+35 |         uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/artipacked.yml:39:15
+   |
+39 |         uses: actions/upload-artifact@v4
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/artipacked.yml:52:15
+   |
+52 |       - uses: actions/checkout@v3
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/artipacked.yml:64:15
+   |
+64 |         uses: actions/upload-artifact@v3
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/artipacked.yml:78:15
+   |
+78 |         uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/artipacked.yml:81:15
+   |
+81 |       - uses: actions/upload-artifact@v4
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   --> .github/workflows/bot-conditions.yml:11:1
    |
@@ -550,6 +598,22 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pull-request-target.yml:29:15
+   |
+29 |       - uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/pull-request-target.yml:35:15
+   |
+35 |       - uses: actions/setup-node@v4
+   |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> .github/workflows/pypi-manual-credential.yml:27:9
    |
@@ -842,6 +906,14 @@ error[template-injection]: code injection via template expansion
     |
     = note: audit confidence → High
 
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/template-injection.yml:116:15
+    |
+116 |         uses: actions/github-script@v7
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
 error[unpinned-images]: unpinned image references
   --> .github/workflows/unpinned-images.yml:23:7
    |
@@ -991,4 +1063,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-197 findings (111 suppressed): 7 informational, 0 low, 29 medium, 50 high
+206 findings (111 suppressed): 7 informational, 0 low, 29 medium, 59 high

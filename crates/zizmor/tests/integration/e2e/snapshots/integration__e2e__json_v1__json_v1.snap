@@ -236,6 +236,76 @@ expression: output
     "url": "https://docs.zizmor.sh/audits/#unpinned-uses",
     "determinations": {
       "confidence": "High",
+      "severity": "High",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "action is not pinned to a hash (required by blanket policy)",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "unpinned-0"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 0
+              },
+              {
+                "Key": "uses"
+              }
+            ]
+          },
+          "feature_kind": {
+            "Subfeature": {
+              "after": 0,
+              "fragment": {
+                "Raw": "actions/checkout@v3"
+              }
+            }
+          },
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 15,
+              "column": 14
+            },
+            "end_point": {
+              "row": 15,
+              "column": 33
+            },
+            "offset_span": {
+              "start": 301,
+              "end": 320
+            }
+          },
+          "feature": "actions/checkout@v3",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  },
+  {
+    "ident": "unpinned-uses",
+    "desc": "unpinned action reference",
+    "url": "https://docs.zizmor.sh/audits/#unpinned-uses",
+    "determinations": {
+      "confidence": "High",
       "severity": "Medium",
       "persona": "Regular"
     },

@@ -8,6 +8,54 @@ fn test_obfuscation() -> Result<()> {
             .input(input_under_test("obfuscation.yml"))
             .run()?,
         @r"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:13:15
+       |
+    13 |       - uses: actions/checkout/@v4
+       |               ^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:16:15
+       |
+    16 |       - uses: actions/checkout////@v4
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:19:15
+       |
+    19 |       - uses: github/codeql-action/./init@v2
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:20:15
+       |
+    20 |       - uses: actions/checkout/.@v4
+       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:23:15
+       |
+    23 |       - uses: actions/cache/save/../save@v4
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:26:15
+       |
+    26 |       - uses: actions/cache/../../save@v4
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:13:9
        |
@@ -195,7 +243,7 @@ fn test_obfuscation() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    39 findings (1 ignored, 18 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
+    45 findings (1 ignored, 18 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 6 high
     "
     );
 

@@ -341,7 +341,7 @@ fn test_npm_publish() -> Result<()> {
         |
         = note: audit confidence → High
 
-    16 findings (4 suppressed): 12 informational, 0 low, 0 medium, 0 high
+    22 findings (6 ignored, 4 suppressed): 12 informational, 0 low, 0 medium, 0 high
     "
     );
 
