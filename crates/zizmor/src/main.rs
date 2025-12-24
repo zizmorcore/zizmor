@@ -40,6 +40,8 @@ use crate::{
 
 mod audit;
 mod config;
+#[cfg(feature = "schema")]
+mod config_schema;
 mod finding;
 mod github;
 #[cfg(feature = "lsp")]
@@ -208,6 +210,11 @@ struct App {
     /// Emit thank-you messages for zizmor's sponsors.
     #[arg(long, exclusive = true)]
     thanks: bool,
+
+    /// Generate JSON Schema for zizmor.yml configuration files.
+    #[cfg(feature = "schema")]
+    #[arg(long, exclusive = true)]
+    generate_schema: bool,
 
     /// The inputs to audit.
     ///
@@ -669,6 +676,12 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             let link = Link::new(name, url);
             println!("🌈 {link}")
         }
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    #[cfg(feature = "schema")]
+    if app.generate_schema {
+        println!("{}", config_schema::generate_schema());
         return Ok(ExitCode::SUCCESS);
     }
 

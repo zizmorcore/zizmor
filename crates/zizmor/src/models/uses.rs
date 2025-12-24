@@ -186,6 +186,30 @@ impl<'de> Deserialize<'de> for RepositoryUsesPattern {
     }
 }
 
+#[cfg(feature = "schema")]
+impl schemars::JsonSchema for RepositoryUsesPattern {
+    fn schema_name() -> String {
+        "RepositoryUsesPattern".to_string()
+    }
+
+    fn json_schema(_gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        schemars::schema::Schema::Object(schemars::schema::SchemaObject {
+            instance_type: Some(schemars::schema::InstanceType::String.into()),
+            metadata: Some(Box::new(schemars::schema::Metadata {
+                description: Some(
+                    "A pattern for matching GitHub Actions repository uses. \
+                    Patterns can be: '*' (any), 'owner/*' (any repo under owner), \
+                    'owner/repo' (exact repo), 'owner/repo/*' (any path in repo), \
+                    'owner/repo/path' (exact path), or 'owner/repo@ref' (exact ref)"
+                        .to_string(),
+                ),
+                ..Default::default()
+            })),
+            ..Default::default()
+        })
+    }
+}
+
 /// Useful APIs for interacting with `uses: owner/repo` clauses.
 pub(crate) trait RepositoryUsesExt {
     /// Returns whether this `uses:` clause matches the given pattern.
