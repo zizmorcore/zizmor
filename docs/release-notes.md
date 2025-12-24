@@ -14,6 +14,26 @@ of `zizmor`.
 * The [excessive-permissions] audit is now aware of the `artifact-metadata`
   and `models` permissions (#1461)
 
+### Changes ⚠️
+
+* The default policy for the [unpinned-uses] audit has changed from allowing
+  ref-pinning for first-party actions (those under `actions/*` and similar)
+  to requiring hash-pinning. This makes the default policy more strict,
+  as well as more consistent across the actions ecosystem.
+
+    Users who with to retain the old (permissive policy) for first-party
+    actions may configure it explicitly in their `zizmor.yml`:
+  
+    ```yaml title="zizmor.yml"
+    rules:
+      unpinned-uses:
+        config:
+          policies:
+            actions/*: ref-pin
+            github/*: ref-pin
+            dependabot/*: ref-pin
+    ```
+
 ## 1.19.0
 
 ### New Features 🌈

@@ -9,6 +9,14 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
             .args(["--pedantic"])
             .run()?,
         @r"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:16:15
+       |
+    16 |       - uses: actions/checkout@v3
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
     warning[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:21:24
        |
@@ -25,7 +33,7 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings: 0 informational, 0 low, 2 medium, 0 high
+    3 findings: 0 informational, 0 low, 2 medium, 1 high
     "
     );
 
@@ -39,6 +47,14 @@ fn test_unpinned_uses_default() -> Result<()> {
             .input(input_under_test("unpinned-uses.yml"))
             .run()?,
         @r"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:16:15
+       |
+    16 |       - uses: actions/checkout@v3
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
     warning[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:21:24
        |
@@ -55,7 +71,7 @@ fn test_unpinned_uses_default() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings: 0 informational, 0 low, 2 medium, 0 high
+    3 findings: 0 informational, 0 low, 2 medium, 1 high
     "
     );
 
@@ -114,7 +130,17 @@ fn test_issue_659_repro() -> Result<()> {
             .input(input_under_test("unpinned-uses/issue-659-repro.yml"))
             .args(["--pedantic"])
             .run()?,
-        @"No findings to report. Good job!"
+        @r"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:24:15
+       |
+    24 |         uses: actions/setup-node@v4
+       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "
     );
 
     Ok(())
@@ -129,6 +155,22 @@ fn test_default_config() -> Result<()> {
             .run()?,
         @r"
     error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:12:15
+       |
+    12 |       - uses: actions/setup-python@v4
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:14:15
+       |
+    14 |       - uses: actions/checkout@v3
+       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
@@ -136,7 +178,23 @@ fn test_default_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:24:15
+       |
+    24 |       - uses: github/codeql-action/init@v3
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:26:15
+       |
+    26 |       - uses: github/codeql-action/upload-sarif@v3
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    6 findings (1 suppressed): 0 informational, 0 low, 0 medium, 5 high
     "
     );
 

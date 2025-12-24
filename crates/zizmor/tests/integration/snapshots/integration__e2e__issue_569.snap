@@ -24,10 +24,74 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-onlin
  INFO audit: zizmor: 🌈 completed .github/workflows/tail-call.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/verify-ensurepip-wheels.yml
 error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/add-issue-header.yml:23:15
+   |
+23 |       - uses: actions/github-script@v7
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/build.yml:61:15
+   |
+61 |       - uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/build.yml:98:15
+   |
+98 |       - uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:101:15
+    |
+101 |       - uses: actions/setup-python@v5
+    |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:107:15
+    |
+107 |         uses: actions/cache@v4
+    |               ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:117:15
     |
 117 |         uses: hendrikmuhs/ccache-action@v1.2
     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:281:13
+    |
+281 |     - uses: actions/checkout@v4
+    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:287:13
+    |
+287 |       uses: actions/cache@v4
+    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:302:13
+    |
+302 |       uses: actions/cache@v4
+    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
 
@@ -40,10 +104,66 @@ error[unpinned-uses]: unpinned action reference
     = note: audit confidence → High
 
 error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:343:13
+    |
+343 |     - uses: actions/checkout@v4
+    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:357:13
+    |
+357 |       uses: actions/cache@v4
+    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:368:13
     |
 368 |       uses: hendrikmuhs/ccache-action@v1.2
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:382:13
+    |
+382 |       uses: actions/cache@v4
+    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:416:13
+    |
+416 |       uses: actions/cache@v4
+    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:442:13
+    |
+442 |     - uses: actions/upload-artifact@v4
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:462:13
+    |
+462 |     - uses: actions/checkout@v4
+    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:468:13
+    |
+468 |       uses: actions/cache@v4
+    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
 
@@ -56,10 +176,34 @@ error[unpinned-uses]: unpinned action reference
     = note: audit confidence → High
 
 error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:487:13
+    |
+487 |       uses: actions/cache@v4
+    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:498:13
     |
 498 |       uses: hendrikmuhs/ccache-action@v1.2
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:534:15
+    |
+534 |       - uses: actions/checkout@v4
+    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:540:15
+    |
+540 |         uses: actions/cache@v4
+    |               ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
 
@@ -76,6 +220,22 @@ error[unpinned-uses]: unpinned action reference
     |
 588 |         uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:596:15
+    |
+596 |         uses: actions/upload-artifact@v4
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/build.yml:602:15
+    |
+602 |         uses: github/codeql-action/upload-sarif@v3
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
 
@@ -97,10 +257,106 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
 
 error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/jit.yml:37:15
+   |
+37 |       - uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/jit.yml:91:15
+   |
+91 |       - uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/jit.yml:94:15
+   |
+94 |       - uses: actions/setup-python@v5
+   |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/jit.yml:146:15
+    |
+146 |       - uses: actions/checkout@v4
+    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/jit.yml:149:15
+    |
+149 |       - uses: actions/setup-python@v5
+    |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/lint.yml:22:15
+   |
+22 |       - uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/lint.yml:25:15
+   |
+25 |       - uses: actions/setup-python@v5
+   |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
   --> .github/workflows/lint.yml:28:15
    |
 28 |       - uses: pre-commit/action@v3.0.1
    |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/mypy.yml:53:15
+   |
+53 |       - uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/mypy.yml:56:15
+   |
+56 |       - uses: actions/setup-python@v5
+   |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/new-bugs-announce-notifier.yml:16:15
+   |
+16 |       - uses: actions/setup-node@v4
+   |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/new-bugs-announce-notifier.yml:21:15
+   |
+21 |         uses: actions/github-script@v7
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/project-updater.yml:26:15
+   |
+26 |       - uses: actions/add-to-project@v1.0.0
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -137,10 +393,114 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
 
 error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-context.yml:53:13
+   |
+53 |       uses: actions/setup-python@v5
+   |             ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-context.yml:60:13
+   |
+60 |     - uses: actions/checkout@v4
+   |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-docs.yml:30:13
+   |
+30 |       uses: actions/checkout@v4
+   |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-docs.yml:55:13
+   |
+55 |       uses: actions/setup-python@v5
+   |             ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-docs.yml:85:13
+   |
+85 |     - uses: actions/checkout@v4
+   |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-docs.yml:88:13
+   |
+88 |     - uses: actions/cache@v4
+   |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-macos.yml:34:13
+   |
+34 |     - uses: actions/checkout@v4
+   |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-macos.yml:40:13
+   |
+40 |       uses: actions/cache@v4
+   |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-tsan.yml:24:13
+   |
+24 |     - uses: actions/checkout@v4
+   |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-tsan.yml:30:13
+   |
+30 |       uses: actions/cache@v4
+   |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-tsan.yml:60:13
    |
 60 |       uses: hendrikmuhs/ccache-action@v1.2
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-tsan.yml:85:13
+   |
+85 |       uses: actions/upload-artifact@v4
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-ubuntu.yml:37:13
+   |
+37 |     - uses: actions/checkout@v4
+   |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-ubuntu.yml:57:13
+   |
+57 |       uses: actions/cache@v4
+   |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -153,10 +513,34 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
 
 error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-ubuntu.yml:83:13
+   |
+83 |       uses: actions/cache@v4
+   |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-wasi.yml:25:13
+   |
+25 |     - uses: actions/checkout@v4
+   |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-wasi.yml:30:13
    |
 30 |       uses: bytecodealliance/actions/wasmtime/setup@v1
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-wasi.yml:35:13
+   |
+35 |       uses: actions/cache@v4
+   |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -168,4 +552,84 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
 
-98 findings (1 ignored, 79 suppressed): 0 informational, 1 low, 0 medium, 17 high
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-wasi.yml:53:13
+   |
+53 |       uses: actions/setup-python@v5
+   |             ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-wasi.yml:59:13
+   |
+59 |       uses: actions/cache@v4
+   |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-wasi.yml:71:13
+   |
+71 |       uses: actions/cache@v4
+   |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-windows-msi.yml:26:13
+   |
+26 |     - uses: actions/checkout@v4
+   |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/reusable-windows.yml:33:13
+   |
+33 |     - uses: actions/checkout@v4
+   |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/stale.yml:17:13
+   |
+17 |       uses: actions/stale@v9
+   |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/tail-call.yml:73:15
+   |
+73 |       - uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/tail-call.yml:76:15
+   |
+76 |       - uses: actions/setup-python@v5
+   |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/verify-ensurepip-wheels.yml:28:15
+   |
+28 |       - uses: actions/checkout@v4
+   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/verify-ensurepip-wheels.yml:31:15
+   |
+31 |       - uses: actions/setup-python@v5
+   |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+156 findings (1 ignored, 79 suppressed): 0 informational, 1 low, 0 medium, 75 high
