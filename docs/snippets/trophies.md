@@ -800,6 +800,14 @@
         - lmstudio-ai/venvstacks#51
 
 
+-   ![](https://github.com/maplibre.png?size=40){ width="40" loading=lazy align=left } maplibre
+
+    ---
+
+    ??? example "Examples"
+        - maplibre/martin#2440
+
+
 -   ![](https://github.com/marcusvolz.png?size=40){ width="40" loading=lazy align=left } marcusvolz
 
     ---
@@ -1644,6 +1652,14 @@
     ??? example "Examples"
         - WordPress/gutenberg#69126
         - WordPress/wordpress-develop#8007
+
+
+-   ![](https://github.com/yt-dlp.png?size=40){ width="40" loading=lazy align=left } yt-dlp
+
+    ---
+
+    ??? example "Examples"
+        - yt-dlp/yt-dlp#15324
 
 
 -   ![](https://github.com/zama-ai.png?size=40){ width="40" loading=lazy align=left } zama-ai
