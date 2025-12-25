@@ -87,11 +87,11 @@ jobs:
       - name: Verify schema covers all audits
         run: |
           REGISTRY_COUNT=$(grep -c "register_audit!" crates/zizmor/src/registry.rs)
-          SCHEMA_COUNT=$(jq '.definitions.RulesConfig.properties | length' crates/zizmor/src/data/zizmor.schema.json)
+          SCHEMA_COUNT=$(jq '.definitions.RulesConfig.properties | length' support/zizmor.schema.json)
           if [ "$REGISTRY_COUNT" -ne "$SCHEMA_COUNT" ]; then
             echo "Error: registry.rs has $REGISTRY_COUNT audits but schema has $SCHEMA_COUNT"
-            echo "Update config_schema.rs and regenerate the schema:"
-            echo "  cargo run --features schema -- --generate-schema > crates/zizmor/src/data/zizmor.schema.json"
+            echo "Update config/schema.rs and regenerate the schema:"
+            echo "  make generate-schema"
             exit 1
           fi
           echo "Schema covers all $REGISTRY_COUNT audits"

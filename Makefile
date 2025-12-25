@@ -57,4 +57,4 @@ bench:
 
 .PHONY: generate-schema
 generate-schema:
-	cargo run --features schema -- --generate-schema > crates/zizmor/src/data/zizmor.schema.json
+	cargo run --features schema -- --generate-schema > support/zizmor.schema.json
