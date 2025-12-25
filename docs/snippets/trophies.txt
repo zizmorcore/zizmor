@@ -263,6 +263,7 @@ python/miss-islington#705
 python/mypy#18413
 python-attrs/attrs#1368
 python-attrs/cattrs#605
+python-babel/babel#1230
 python-humanize/humanize#221
 python-pillow/Pillow#8526
 python-poetry/cleo#462
