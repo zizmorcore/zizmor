@@ -54,3 +54,7 @@ pinact:
 .PHONY: bench
 bench:
 	uv run --only-group=bench pytest bench/ --codspeed
+
+.PHONY: generate-schema
+generate-schema:
+	cargo run --features schema -- --generate-schema > crates/zizmor/src/data/zizmor.schema.json

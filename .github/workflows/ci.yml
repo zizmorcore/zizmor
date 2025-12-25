@@ -100,8 +100,8 @@ jobs:
 
       - name: Verify committed schema is up-to-date
         run: |
-          cargo run --features schema -- --generate-schema > /tmp/generated-schema.json
-          diff -u crates/zizmor/src/data/zizmor.schema.json /tmp/generated-schema.json
+          make generate-schema
+          git diff --exit-code
 
   all-tests-pass:
     name: All tests pass
