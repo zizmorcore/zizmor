@@ -181,8 +181,8 @@ impl<'de> Deserialize<'de> for RepositoryUsesPattern {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        RepositoryUsesPattern::from_str(&s).map_err(serde::de::Error::custom)
+        let s = <&str>::deserialize(deserializer)?;
+        RepositoryUsesPattern::from_str(s).map_err(serde::de::Error::custom)
     }
 }
 

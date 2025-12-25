@@ -51,7 +51,7 @@ impl<'de> Deserialize<'de> for ExplicitExpr {
     where
         D: serde::Deserializer<'de>,
     {
-        let raw = String::deserialize(deserializer)?;
+        let raw = <&str>::deserialize(deserializer)?;
 
         let Some(expr) = Self::from_curly(raw) else {
             return Err(serde::de::Error::custom(
