@@ -32,12 +32,8 @@ pub struct DependabotCooldownConfig {
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DependabotCooldownRuleConfig {
-    #[serde(default)]
-    pub disable: Option<bool>,
-
-    #[serde(default)]
-    #[schemars(schema_with = "workflow_rule_vec_schema")]
-    pub ignore: Option<Vec<String>>,
+    #[serde(flatten)]
+    pub base: BaseRuleConfig,
 
     #[serde(default)]
     pub config: Option<DependabotCooldownConfig>,
@@ -73,12 +69,8 @@ pub enum ForbiddenUsesConfig {
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ForbiddenUsesRuleConfig {
-    #[serde(default)]
-    pub disable: Option<bool>,
-
-    #[serde(default)]
-    #[schemars(schema_with = "workflow_rule_vec_schema")]
-    pub ignore: Option<Vec<String>>,
+    #[serde(flatten)]
+    pub base: BaseRuleConfig,
 
     #[serde(default)]
     pub config: Option<ForbiddenUsesConfig>,
@@ -115,12 +107,8 @@ pub struct UnpinnedUsesConfig {
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UnpinnedUsesRuleConfig {
-    #[serde(default)]
-    pub disable: Option<bool>,
-
-    #[serde(default)]
-    #[schemars(schema_with = "workflow_rule_vec_schema")]
-    pub ignore: Option<Vec<String>>,
+    #[serde(flatten)]
+    pub base: BaseRuleConfig,
 
     #[serde(default)]
     pub config: Option<UnpinnedUsesConfig>,
