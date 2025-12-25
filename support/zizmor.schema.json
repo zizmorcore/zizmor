@@ -21,18 +21,12 @@
       "type": "object",
       "properties": {
         "disable": {
-          "default": null,
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "default": false,
+          "type": "boolean"
         },
         "ignore": {
-          "default": null,
-          "type": [
-            "array",
-            "null"
-          ],
+          "default": [],
+          "type": "array",
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
@@ -44,11 +38,8 @@
       "type": "object",
       "properties": {
         "days": {
-          "default": null,
-          "type": [
-            "integer",
-            "null"
-          ],
+          "default": 0,
+          "type": "integer",
           "format": "uint64",
           "minimum": 0.0
         }
@@ -69,18 +60,12 @@
           ]
         },
         "disable": {
-          "default": null,
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "default": false,
+          "type": "boolean"
         },
         "ignore": {
-          "default": null,
-          "type": [
-            "array",
-            "null"
-          ],
+          "default": [],
+          "type": "array",
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
@@ -142,18 +127,12 @@
           ]
         },
         "disable": {
-          "default": null,
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "default": false,
+          "type": "boolean"
         },
         "ignore": {
-          "default": null,
-          "type": [
-            "array",
-            "null"
-          ],
+          "default": [],
+          "type": "array",
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
@@ -517,7 +496,7 @@
       "properties": {
         "policies": {
           "description": "A mapping of action patterns to pinning policies. Keys are patterns like '*', 'owner/*', 'owner/repo', etc.",
-          "default": null,
+          "default": {},
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/UsesPolicy"
@@ -540,18 +519,12 @@
           ]
         },
         "disable": {
-          "default": null,
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "default": false,
+          "type": "boolean"
         },
         "ignore": {
-          "default": null,
-          "type": [
-            "array",
-            "null"
-          ],
+          "default": [],
+          "type": "array",
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }

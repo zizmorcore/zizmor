@@ -20,24 +20,24 @@ use crate::models::uses::RepositoryUsesPattern;
 #[serde(deny_unknown_fields)]
 pub struct BaseRuleConfig {
     #[serde(default)]
-    pub disable: Option<bool>,
+    pub disable: bool,
 
     #[serde(default)]
     #[schemars(schema_with = "workflow_rule_vec_schema")]
-    pub ignore: Option<Vec<String>>,
+    pub ignore: Vec<String>,
 }
 
 fn workflow_rule_vec_schema(
     generator: &mut schemars::r#gen::SchemaGenerator,
 ) -> schemars::schema::Schema {
-    generator.subschema_for::<Option<Vec<WorkflowRule>>>()
+    generator.subschema_for::<Vec<WorkflowRule>>()
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DependabotCooldownConfig {
     #[serde(default)]
-    pub days: Option<u64>,
+    pub days: u64,
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]
@@ -112,7 +112,7 @@ fn policies_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars
 pub struct UnpinnedUsesConfig {
     #[serde(default)]
     #[schemars(schema_with = "policies_schema")]
-    pub policies: Option<HashMap<String, UsesPolicy>>,
+    pub policies: HashMap<String, UsesPolicy>,
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]
