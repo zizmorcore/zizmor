@@ -1,18 +1,17 @@
 use std::collections::HashMap;
 
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use super::{UsesPolicy, WorkflowRule};
 use crate::models::uses::RepositoryUsesPattern;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BaseRuleConfig {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub disable: Option<bool>,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     #[schemars(schema_with = "workflow_rule_vec_schema")]
     pub ignore: Option<Vec<String>>,
 }
@@ -23,24 +22,24 @@ fn workflow_rule_vec_schema(
     generator.subschema_for::<Option<Vec<WorkflowRule>>>()
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DependabotCooldownConfig {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub days: Option<u64>,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DependabotCooldownRuleConfig {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub disable: Option<bool>,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     #[schemars(schema_with = "workflow_rule_vec_schema")]
     pub ignore: Option<Vec<String>>,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub config: Option<DependabotCooldownConfig>,
 }
 
@@ -50,38 +49,38 @@ fn repo_uses_pattern_vec_schema(
     generator.subschema_for::<Vec<RepositoryUsesPattern>>()
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ForbiddenUsesAllowConfig {
     #[schemars(schema_with = "repo_uses_pattern_vec_schema")]
     pub allow: Vec<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ForbiddenUsesDenyConfig {
     #[schemars(schema_with = "repo_uses_pattern_vec_schema")]
     pub deny: Vec<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, JsonSchema)]
 #[serde(untagged)]
 pub enum ForbiddenUsesConfig {
     Allow(ForbiddenUsesAllowConfig),
     Deny(ForbiddenUsesDenyConfig),
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ForbiddenUsesRuleConfig {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub disable: Option<bool>,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     #[schemars(schema_with = "workflow_rule_vec_schema")]
     pub ignore: Option<Vec<String>>,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub config: Option<ForbiddenUsesConfig>,
 }
 
@@ -105,25 +104,25 @@ fn policies_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars
     })
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UnpinnedUsesConfig {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     #[schemars(schema_with = "policies_schema")]
     pub policies: Option<HashMap<String, UsesPolicy>>,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UnpinnedUsesRuleConfig {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub disable: Option<bool>,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     #[schemars(schema_with = "workflow_rule_vec_schema")]
     pub ignore: Option<Vec<String>>,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub config: Option<UnpinnedUsesConfig>,
 }
 
@@ -133,17 +132,17 @@ macro_rules! define_audit_rules {
         ;
         $( [$config_type:ty] $custom_field:ident => $custom_name:literal, $custom_desc:literal ),* $(,)?
     ) => {
-        #[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+        #[derive(Clone, Debug, Default, JsonSchema)]
         #[serde(deny_unknown_fields)]
         pub struct RulesConfig {
             $(
                 #[doc = $desc]
-                #[serde(default, rename = $name, skip_serializing_if = "Option::is_none")]
+                #[serde(default, rename = $name)]
                 pub $field: Option<BaseRuleConfig>,
             )*
             $(
                 #[doc = $custom_desc]
-                #[serde(default, rename = $custom_name, skip_serializing_if = "Option::is_none")]
+                #[serde(default, rename = $custom_name)]
                 pub $custom_field: Option<$config_type>,
             )*
         }
@@ -185,14 +184,14 @@ define_audit_rules! {
     [UnpinnedUsesRuleConfig] unpinned_uses => "unpinned-uses", "unpinned action reference"
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[schemars(
     title = "zizmor configuration",
     description = "Configuration file for zizmor, a static analysis tool for GitHub Actions\nhttps://docs.zizmor.sh/configuration/"
 )]
 pub struct ZizmorConfig {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub rules: Option<RulesConfig>,
 }
 
