@@ -1239,6 +1239,14 @@
         - python-attrs/cattrs#605
 
 
+-   ![](https://github.com/python-babel.png?size=40){ width="40" loading=lazy align=left } python-babel
+
+    ---
+
+    ??? example "Examples"
+        - python-babel/babel#1230
+
+
 -   ![](https://github.com/python-humanize.png?size=40){ width="40" loading=lazy align=left } python-humanize
 
     ---
