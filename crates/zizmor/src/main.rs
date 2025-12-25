@@ -40,8 +40,6 @@ use crate::{
 
 mod audit;
 mod config;
-#[cfg(feature = "schema")]
-mod config_schema;
 mod finding;
 mod github;
 #[cfg(feature = "lsp")]
@@ -681,7 +679,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     #[cfg(feature = "schema")]
     if app.generate_schema {
-        println!("{}", config_schema::generate_schema());
+        println!("{}", config::schema::generate_schema());
         return Ok(ExitCode::SUCCESS);
     }
 

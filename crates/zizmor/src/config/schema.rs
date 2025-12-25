@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::config::{UsesPolicy, WorkflowRule};
+use super::{UsesPolicy, WorkflowRule};
 use crate::models::uses::RepositoryUsesPattern;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]

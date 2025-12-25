@@ -9,6 +9,9 @@ use serde::{
 };
 use thiserror::Error;
 
+#[cfg(feature = "schema")]
+pub mod schema;
+
 use crate::{
     App, CollectionOptions,
     audit::{
