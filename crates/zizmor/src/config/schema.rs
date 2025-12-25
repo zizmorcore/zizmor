@@ -1,3 +1,14 @@
+//! Schema types for JSON Schema generation of zizmor configuration.
+//!
+//! These types are used exclusively for generating JSON Schema via schemars.
+//! They are not instantiated or read at runtime - schemars uses reflection
+//! to inspect the type structure for schema generation.
+//!
+//! The `dead_code` lint is suppressed because the compiler cannot detect
+//! that these types are accessed through schemars' procedural macros.
+
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 
 use schemars::JsonSchema;
