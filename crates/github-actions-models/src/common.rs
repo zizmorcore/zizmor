@@ -469,7 +469,7 @@ pub(crate) fn docker_uses<'de, D>(de: D) -> Result<DockerUses, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let uses = <String>::deserialize(de)?;
+    let uses = <&str>::deserialize(de)?;
     DockerUses::parse(uses).map_err(custom_error::<D>)
 }
 
@@ -478,7 +478,7 @@ pub(crate) fn step_uses<'de, D>(de: D) -> Result<Uses, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let uses = <String>::deserialize(de)?;
+    let uses = <&str>::deserialize(de)?;
     Uses::parse(uses).map_err(custom_error::<D>)
 }
 
