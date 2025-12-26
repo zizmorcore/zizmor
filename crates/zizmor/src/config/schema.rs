@@ -166,4 +166,103 @@ mod tests {
 
     static SCHEMA_VALIDATOR: LazyLock<Validator> =
         LazyLock::new(|| validator_for(&schemars::schema_for!(Config).to_value()).unwrap());
+
+    #[test]
+    fn test_empty_rules() {
+        let empty = "rules: {}";
+        let instance = serde_yaml::from_str::<serde_json::Value>(empty).unwrap();
+
+        SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect("empty rules should be valid");
+    }
+
+    #[test]
+    fn test_disabled_rule() {
+        let disabled = r#"
+        rules:
+          stale-action-refs:
+            disable: true
+
+          unpinned-uses:
+            disable: false
+        "#;
+        let instance = serde_yaml::from_str::<serde_json::Value>(disabled).unwrap();
+
+        SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect("disabled rule should be valid");
+    }
+
+    #[test]
+    fn test_unknown_audit() {
+        let unknown_audit = r#"
+        rules:
+          this-audit-does-not-exist:
+            disable: false
+        "#;
+        let instance = serde_yaml::from_str::<serde_json::Value>(unknown_audit).unwrap();
+
+        let result = SCHEMA_VALIDATOR.validate(&instance);
+        assert!(result.is_err(), "unknown audit should be invalid");
+    }
+
+    #[test]
+    fn test_forbidden_uses_config() {
+        let forbidden_uses_allow = r#"
+        rules:
+          forbidden-uses:
+            config:
+              allow:
+                - actions/checkout@v2
+                - actions/setup-node@v3
+                - foo/*
+        "#;
+        let instance = serde_yaml::from_str::<serde_json::Value>(forbidden_uses_allow).unwrap();
+
+        SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect("forbidden uses allow config should be valid");
+
+        let forbidden_uses_deny = r#"
+        rules:
+          forbidden-uses:
+            config:
+              deny:
+                - actions/checkout@v1
+                - actions/setup-node@v1
+                - foo/*
+        "#;
+        let instance = serde_yaml::from_str::<serde_json::Value>(forbidden_uses_deny).unwrap();
+
+        SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect("forbidden uses deny config should be valid");
+    }
+
+    #[test]
+    fn test_unpinned_uses_config() {
+        let valid = r#"
+        rules:
+          unpinned-uses:
+            config:
+              policies:
+                actions/checkout: hash-pin
+        "#;
+        let instance = serde_yaml::from_str::<serde_json::Value>(valid).unwrap();
+        SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect("unpinned uses config should be valid");
+
+        let unknown_policy = r#"
+        rules:
+          unpinned-uses:
+            config:
+              policies:
+                actions/checkout: unknown-policy
+        "#;
+        let instance = serde_yaml::from_str::<serde_json::Value>(unknown_policy).unwrap();
+        let result = SCHEMA_VALIDATOR.validate(&instance);
+        assert!(result.is_err(), "unknown policy should be invalid");
+    }
 }
