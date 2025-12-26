@@ -252,14 +252,7 @@
       "type": "object",
       "properties": {
         "config": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/UnpinnedUsesConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/UnpinnedUsesConfig"
         },
         "disable": {
           "type": "boolean",
