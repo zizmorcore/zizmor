@@ -41,7 +41,7 @@ fn default_cooldown_days() -> u64 {
 #[serde(deny_unknown_fields)]
 pub struct DependabotCooldownConfig {
     #[serde(default = "default_cooldown_days")]
-    #[schemars(default = "default_cooldown_days")]
+    #[schemars(default = "default_cooldown_days", range(min = 1))]
     pub days: u64,
 }
 
