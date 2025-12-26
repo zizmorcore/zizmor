@@ -691,3 +691,47 @@ impl Config {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::WorkflowRule;
+
+    #[test]
+    fn test_parse_workflow_rule() -> anyhow::Result<()> {
+        assert_eq!(
+            WorkflowRule::from_str("foo.yml:1:2")?,
+            WorkflowRule {
+                filename: "foo.yml".into(),
+                line: Some(1),
+                column: Some(2)
+            }
+        );
+
+        assert_eq!(
+            WorkflowRule::from_str("foo.yml:123")?,
+            WorkflowRule {
+                filename: "foo.yml".into(),
+                line: Some(123),
+                column: None
+            }
+        );
+
+        assert!(WorkflowRule::from_str("foo.yml:0:0").is_err());
+        assert!(WorkflowRule::from_str("foo.yml:1:0").is_err());
+        assert!(WorkflowRule::from_str("foo.yml:0:1").is_err());
+        assert!(WorkflowRule::from_str("foo.yml:123:").is_err());
+        assert!(WorkflowRule::from_str("foo.yml::").is_err());
+        assert!(WorkflowRule::from_str("foo.yml::1").is_err());
+        assert!(WorkflowRule::from_str("foo::1").is_err());
+        assert!(WorkflowRule::from_str("foo.unrelated::1").is_err());
+        // TODO: worth dealing with?
+        // assert!(WorkflowRule::from_str(".yml:1:1").is_err());
+        assert!(WorkflowRule::from_str("::1").is_err());
+        assert!(WorkflowRule::from_str(":1:1").is_err());
+        assert!(WorkflowRule::from_str("1:1").is_err());
+
+        Ok(())
+    }
+}
