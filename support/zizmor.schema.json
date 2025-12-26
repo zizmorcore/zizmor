@@ -14,11 +14,10 @@
       "type": "object",
       "properties": {
         "disable": {
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "ignore": {
-          "default": [],
           "type": "array",
           "items": {
             "$ref": "#/definitions/WorkflowRule"
@@ -31,10 +30,10 @@
       "type": "object",
       "properties": {
         "days": {
-          "default": 7,
           "type": "integer",
           "format": "uint",
-          "minimum": 1.0
+          "default": 7,
+          "minimum": 1
         }
       },
       "additionalProperties": false
@@ -46,11 +45,10 @@
           "$ref": "#/definitions/DependabotCooldownConfig"
         },
         "disable": {
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "ignore": {
-          "default": [],
           "type": "array",
           "items": {
             "$ref": "#/definitions/WorkflowRule"
@@ -61,9 +59,6 @@
     },
     "ForbiddenUsesAllowConfig": {
       "type": "object",
-      "required": [
-        "allow"
-      ],
       "properties": {
         "allow": {
           "type": "array",
@@ -72,7 +67,10 @@
           }
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "required": [
+        "allow"
+      ]
     },
     "ForbiddenUsesConfig": {
       "anyOf": [
@@ -86,9 +84,6 @@
     },
     "ForbiddenUsesDenyConfig": {
       "type": "object",
-      "required": [
-        "deny"
-      ],
       "properties": {
         "deny": {
           "type": "array",
@@ -97,7 +92,10 @@
           }
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "required": [
+        "deny"
+      ]
     },
     "ForbiddenUsesRuleConfig": {
       "type": "object",
@@ -113,11 +111,10 @@
           ]
         },
         "disable": {
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "ignore": {
-          "default": [],
           "type": "array",
           "items": {
             "$ref": "#/definitions/WorkflowRule"
@@ -127,7 +124,7 @@
       "additionalProperties": false
     },
     "RepositoryUsesPattern": {
-      "description": "A pattern for matching GitHub Actions repository uses. Patterns can be: '*' (any), 'owner/*' (any repo under owner), 'owner/repo' (exact repo), 'owner/repo/*' (any path in repo), 'owner/repo/path' (exact path), or 'owner/repo@ref' (exact ref)",
+      "description": "Represents a pattern for matching repository `uses` references.\nThese patterns are ordered by specificity; more specific patterns\nshould be listed first.",
       "type": "string"
     },
     "RulesConfig": {
@@ -481,7 +478,6 @@
       "type": "object",
       "properties": {
         "policies": {
-          "description": "A mapping of action patterns to pinning policies. Keys are patterns like '*', 'owner/*', 'owner/repo', etc.",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/UsesPolicy"
@@ -504,11 +500,10 @@
           ]
         },
         "disable": {
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "ignore": {
-          "default": [],
           "type": "array",
           "items": {
             "$ref": "#/definitions/WorkflowRule"
@@ -523,30 +518,23 @@
         {
           "description": "No policy; all `uses:` references are allowed, even unpinned ones.",
           "type": "string",
-          "enum": [
-            "any"
-          ]
+          "const": "any"
         },
         {
           "description": "`uses:` references must be pinned to a tag, branch, or hash ref.",
           "type": "string",
-          "enum": [
-            "ref-pin"
-          ]
+          "const": "ref-pin"
         },
         {
           "description": "`uses:` references must be pinned to a hash ref.",
           "type": "string",
-          "enum": [
-            "hash-pin"
-          ]
+          "const": "hash-pin"
         }
       ]
     },
     "WorkflowRule": {
-      "description": "A workflow ignore rule in the format: filename.yml, filename.yml:line, or filename.yml:line:col",
-      "type": "string",
-      "pattern": "^[^:]+\\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$"
+      "description": "A workflow ignore rule.\n\nIgnore rules are specified as `filename.yml:line:col`, where\n`line` and `col` are optional 1-based indices. If `line` is\nomitted, `col` must also be omitted.",
+      "type": "string"
     }
   }
 }

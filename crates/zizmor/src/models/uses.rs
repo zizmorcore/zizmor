@@ -39,6 +39,11 @@ static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 /// These patterns are ordered by specificity; more specific patterns
 /// should be listed first.
 #[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(with = "String")
+)]
 pub(crate) enum RepositoryUsesPattern {
     /// Matches exactly `owner/repo/subpath@ref`.
     ExactWithRef {
@@ -183,30 +188,6 @@ impl<'de> Deserialize<'de> for RepositoryUsesPattern {
     {
         let s = String::deserialize(deserializer)?;
         RepositoryUsesPattern::from_str(&s).map_err(serde::de::Error::custom)
-    }
-}
-
-#[cfg(feature = "schema")]
-impl schemars::JsonSchema for RepositoryUsesPattern {
-    fn schema_name() -> String {
-        "RepositoryUsesPattern".to_string()
-    }
-
-    fn json_schema(_gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
-        schemars::schema::Schema::Object(schemars::schema::SchemaObject {
-            instance_type: Some(schemars::schema::InstanceType::String.into()),
-            metadata: Some(Box::new(schemars::schema::Metadata {
-                description: Some(
-                    "A pattern for matching GitHub Actions repository uses. \
-                    Patterns can be: '*' (any), 'owner/*' (any repo under owner), \
-                    'owner/repo' (exact repo), 'owner/repo/*' (any path in repo), \
-                    'owner/repo/path' (exact path), or 'owner/repo@ref' (exact ref)"
-                        .to_string(),
-                ),
-                ..Default::default()
-            })),
-            ..Default::default()
-        })
     }
 }
 

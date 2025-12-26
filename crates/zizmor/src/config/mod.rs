@@ -63,7 +63,17 @@ pub(crate) enum ConfigErrorInner {
     Client(#[from] ClientError),
 }
 
+/// A workflow ignore rule.
+///
+/// Ignore rules are specified as `filename.yml:line:col`, where
+/// `line` and `col` are optional 1-based indices. If `line` is
+/// omitted, `col` must also be omitted.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(with = "String")
+)]
 pub(crate) struct WorkflowRule {
     /// The workflow filename.
     pub(crate) filename: String,
@@ -117,30 +127,6 @@ impl<'de> Deserialize<'de> for WorkflowRule {
     {
         let raw = String::deserialize(deserializer)?;
         WorkflowRule::from_str(&raw).map_err(de::Error::custom)
-    }
-}
-
-#[cfg(feature = "schema")]
-impl schemars::JsonSchema for WorkflowRule {
-    fn schema_name() -> String {
-        "WorkflowRule".to_string()
-    }
-
-    fn json_schema(_gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
-        schemars::schema::Schema::Object(schemars::schema::SchemaObject {
-            instance_type: Some(schemars::schema::InstanceType::String.into()),
-            metadata: Some(Box::new(schemars::schema::Metadata {
-                description: Some(
-                    "A workflow ignore rule in the format: filename.yml, filename.yml:line, or filename.yml:line:col".to_string(),
-                ),
-                ..Default::default()
-            })),
-            string: Some(Box::new(schemars::schema::StringValidation {
-                pattern: Some(r"^[^:]+\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$".to_string()),
-                ..Default::default()
-            })),
-            ..Default::default()
-        })
     }
 }
 

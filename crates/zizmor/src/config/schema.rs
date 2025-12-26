@@ -23,14 +23,7 @@ pub struct BaseRuleConfig {
     pub disable: bool,
 
     #[serde(default)]
-    #[schemars(schema_with = "workflow_rule_vec_schema")]
-    pub ignore: Vec<String>,
-}
-
-fn workflow_rule_vec_schema(
-    generator: &mut schemars::r#gen::SchemaGenerator,
-) -> schemars::schema::Schema {
-    generator.subschema_for::<Vec<WorkflowRule>>()
+    pub ignore: Vec<WorkflowRule>,
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]
@@ -43,24 +36,16 @@ pub struct DependabotCooldownRuleConfig {
     pub config: DependabotCooldownConfig,
 }
 
-fn repo_uses_pattern_vec_schema(
-    generator: &mut schemars::r#gen::SchemaGenerator,
-) -> schemars::schema::Schema {
-    generator.subschema_for::<Vec<RepositoryUsesPattern>>()
-}
-
 #[derive(Clone, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ForbiddenUsesAllowConfig {
-    #[schemars(schema_with = "repo_uses_pattern_vec_schema")]
-    pub allow: Vec<String>,
+    pub allow: Vec<RepositoryUsesPattern>,
 }
 
 #[derive(Clone, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ForbiddenUsesDenyConfig {
-    #[schemars(schema_with = "repo_uses_pattern_vec_schema")]
-    pub deny: Vec<String>,
+    pub deny: Vec<RepositoryUsesPattern>,
 }
 
 #[derive(Clone, Debug, JsonSchema)]
@@ -80,31 +65,10 @@ pub struct ForbiddenUsesRuleConfig {
     pub config: Option<ForbiddenUsesConfig>,
 }
 
-fn policies_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
-    let policy_schema = generator.subschema_for::<UsesPolicy>();
-    schemars::schema::Schema::Object(schemars::schema::SchemaObject {
-        instance_type: Some(schemars::schema::InstanceType::Object.into()),
-        metadata: Some(Box::new(schemars::schema::Metadata {
-            description: Some(
-                "A mapping of action patterns to pinning policies. \
-                Keys are patterns like '*', 'owner/*', 'owner/repo', etc."
-                    .to_string(),
-            ),
-            ..Default::default()
-        })),
-        object: Some(Box::new(schemars::schema::ObjectValidation {
-            additional_properties: Some(Box::new(policy_schema)),
-            ..Default::default()
-        })),
-        ..Default::default()
-    })
-}
-
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UnpinnedUsesConfig {
     #[serde(default)]
-    #[schemars(schema_with = "policies_schema")]
     pub policies: HashMap<String, UsesPolicy>,
 }
 
@@ -188,6 +152,18 @@ pub struct Config {
 }
 
 pub fn generate_schema() -> String {
-    let schema = schemars::schema_for!(Config);
+    // NOTE: We intentioally use Draft 7, since SchemaStore prefers it.
+    let generator = schemars::generate::SchemaSettings::draft07().into_generator();
+    let schema = generator.into_root_schema_for::<Config>();
     serde_json::to_string_pretty(&schema).expect("failed to serialize schema")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Config;
+    use jsonschema::{Validator, validator_for};
+    use std::sync::LazyLock;
+
+    static SCHEMA_VALIDATOR: LazyLock<Validator> =
+        LazyLock::new(|| validator_for(&schemars::schema_for!(Config).to_value()).unwrap());
 }
