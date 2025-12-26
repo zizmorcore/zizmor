@@ -26,6 +26,7 @@ struct BaseRuleConfig {
     ignore: Vec<WorkflowRule>,
 }
 
+/// Configuration for the `dependabot-cooldown` audit.
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct DependabotCooldownRuleConfig {
@@ -36,6 +37,7 @@ struct DependabotCooldownRuleConfig {
     config: DependabotCooldownConfig,
 }
 
+/// Configuration for the `forbidden-uses` audit.
 #[derive(Clone, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct ForbiddenUsesAllowConfig {

@@ -30,6 +30,7 @@
       "type": "object",
       "properties": {
         "days": {
+          "description": "The minimum acceptable `default-days` value for Dependabot's cooldown setting.\n\nSettings beneath this value will produce findings.",
           "type": "integer",
           "format": "uint",
           "default": 7,
@@ -39,6 +40,7 @@
       "additionalProperties": false
     },
     "DependabotCooldownRuleConfig": {
+      "description": "Configuration for the `dependabot-cooldown` audit.",
       "type": "object",
       "properties": {
         "config": {
@@ -58,6 +60,7 @@
       "additionalProperties": false
     },
     "ForbiddenUsesAllowConfig": {
+      "description": "Configuration for the `forbidden-uses` audit.",
       "type": "object",
       "properties": {
         "allow": {

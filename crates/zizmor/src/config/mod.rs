@@ -179,6 +179,9 @@ impl RawConfig {
 #[serde(default)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub(crate) struct DependabotCooldownConfig {
+    /// The minimum acceptable `default-days` value for Dependabot's cooldown setting.
+    ///
+    /// Settings beneath this value will produce findings.
     pub(crate) days: NonZeroUsize,
 }
 
