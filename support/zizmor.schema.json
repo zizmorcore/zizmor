@@ -139,314 +139,97 @@
       "type": "object",
       "properties": {
         "anonymous-definition": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "archived-uses": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "artipacked": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "bot-conditions": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "cache-poisoning": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "concurrency-limits": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "dangerous-triggers": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "dependabot-cooldown": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/DependabotCooldownRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/DependabotCooldownRuleConfig"
         },
         "dependabot-execution": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "excessive-permissions": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "forbidden-uses": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ForbiddenUsesRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/ForbiddenUsesRuleConfig"
         },
         "github-env": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "hardcoded-container-credentials": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "impostor-commit": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "insecure-commands": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "known-vulnerable-actions": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "obfuscation": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "overprovisioned-secrets": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "ref-confusion": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "ref-version-mismatch": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "secrets-inherit": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "self-hosted-runner": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "stale-action-refs": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "template-injection": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "undocumented-permissions": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "unpinned-images": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "unpinned-uses": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/UnpinnedUsesRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/UnpinnedUsesRuleConfig"
         },
         "unredacted-secrets": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "unsound-condition": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "unsound-contains": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         },
         "use-trusted-publishing": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BaseRuleConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/BaseRuleConfig"
         }
       },
       "additionalProperties": false

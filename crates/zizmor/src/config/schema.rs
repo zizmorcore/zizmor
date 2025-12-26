@@ -87,7 +87,7 @@ struct UnpinnedUsesRuleConfig {
     base: BaseRuleConfig,
 
     #[serde(default)]
-    config: Option<UnpinnedUsesConfig>,
+    config: UnpinnedUsesConfig,
 }
 
 macro_rules! define_audit_rules {
@@ -100,10 +100,10 @@ macro_rules! define_audit_rules {
         #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
         struct RulesConfig {
             $(
-                $field: Option<BaseRuleConfig>,
+                $field: BaseRuleConfig,
             )*
             $(
-                $custom_field: Option<$config_type>,
+                $custom_field: $config_type,
             )*
         }
     };
@@ -226,7 +226,7 @@ mod tests {
         let errors = SCHEMA_VALIDATOR.iter_errors(&instance).into_errors();
         insta::assert_snapshot!(errors, @r#"
         Validation errors:
-        01: {"ignore":["foo.yml:invalid"]} is not valid under any of the schemas listed in the 'anyOf' keyword
+        01: "foo.yml:invalid" does not match "^[^:]+\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$"
         "#);
     }
 
@@ -301,7 +301,7 @@ mod tests {
         let errors = SCHEMA_VALIDATOR.iter_errors(&instance).into_errors();
         insta::assert_snapshot!(errors, @r#"
         Validation errors:
-        01: {"config":{"policies":{"actions/checkout":"unknown-policy"}}} is not valid under any of the schemas listed in the 'anyOf' keyword
+        01: "unknown-policy" is not valid under any of the schemas listed in the 'oneOf' keyword
         "#);
     }
 }
