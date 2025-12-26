@@ -243,7 +243,7 @@ pub(crate) struct UnpinnedUsesConfig {
 
 /// A singular policy for a `uses:` reference.
 #[derive(Copy, Clone, Debug, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema, serde::Serialize))]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum UsesPolicy {
     /// No policy; all `uses:` references are allowed, even unpinned ones.

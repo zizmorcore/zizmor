@@ -482,7 +482,6 @@
       "properties": {
         "policies": {
           "description": "A mapping of action patterns to pinning policies. Keys are patterns like '*', 'owner/*', 'owner/repo', etc.",
-          "default": {},
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/UsesPolicy"
