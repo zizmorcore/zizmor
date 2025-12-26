@@ -16,6 +16,7 @@ use schemars::JsonSchema;
 use super::{DependabotCooldownConfig, UsesPolicy, WorkflowRule};
 use crate::models::uses::RepositoryUsesPattern;
 
+/// Base configuration for all audit rules.
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct BaseRuleConfig {
@@ -44,12 +45,14 @@ struct ForbiddenUsesAllowConfig {
     allow: Vec<RepositoryUsesPattern>,
 }
 
+/// Configuration for the `forbidden-uses` audit.
 #[derive(Clone, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct ForbiddenUsesDenyConfig {
     deny: Vec<RepositoryUsesPattern>,
 }
 
+/// Configuration for the `forbidden-uses` audit.
 #[derive(Clone, Debug, JsonSchema)]
 #[serde(untagged)]
 enum ForbiddenUsesConfig {
@@ -57,6 +60,7 @@ enum ForbiddenUsesConfig {
     Deny(ForbiddenUsesDenyConfig),
 }
 
+/// Configuration for the `forbidden-uses` audit.
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct ForbiddenUsesRuleConfig {
@@ -67,6 +71,7 @@ struct ForbiddenUsesRuleConfig {
     config: Option<ForbiddenUsesConfig>,
 }
 
+/// Configuration for the `unpinned-uses` audit.
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct UnpinnedUsesConfig {
@@ -74,6 +79,7 @@ struct UnpinnedUsesConfig {
     policies: HashMap<String, UsesPolicy>,
 }
 
+/// Configuration for the `unpinned-uses` audit.
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct UnpinnedUsesRuleConfig {
@@ -86,60 +92,56 @@ struct UnpinnedUsesRuleConfig {
 
 macro_rules! define_audit_rules {
     (
-        $( $field:ident => $name:literal, $desc:literal ),* $(,)?
+        $( $field:ident ),* $(,)?
         ;
-        $( [$config_type:ty] $custom_field:ident => $custom_name:literal, $custom_desc:literal ),* $(,)?
+        $( [$config_type:ty] $custom_field:ident ),* $(,)?
     ) => {
         #[derive(Clone, Debug, Default, JsonSchema)]
-        #[serde(deny_unknown_fields)]
+        #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
         struct RulesConfig {
             $(
-                #[doc = $desc]
-                #[serde(default, rename = $name)]
-                 $field: Option<BaseRuleConfig>,
+                $field: Option<BaseRuleConfig>,
             )*
             $(
-                #[doc = $custom_desc]
-                #[serde(default, rename = $custom_name)]
-                 $custom_field: Option<$config_type>,
+                $custom_field: Option<$config_type>,
             )*
         }
     };
 }
 
 define_audit_rules! {
-    artipacked => "artipacked", "credential persistence through GitHub Actions artifacts",
-    unsound_contains => "unsound-contains", "unsound contains condition",
-    excessive_permissions => "excessive-permissions", "overly broad permissions",
-    dangerous_triggers => "dangerous-triggers", "use of fundamentally insecure workflow trigger",
-    impostor_commit => "impostor-commit", "commit with no history in referenced repository",
-    ref_confusion => "ref-confusion", "git ref for action with ambiguous ref type",
-    use_trusted_publishing => "use-trusted-publishing", "prefer trusted publishing for authentication",
-    template_injection => "template-injection", "code injection via template expansion",
-    hardcoded_container_credentials => "hardcoded-container-credentials", "hardcoded credential in GitHub Actions container configurations",
-    self_hosted_runner => "self-hosted-runner", "runs on a self-hosted runner",
-    known_vulnerable_actions => "known-vulnerable-actions", "action has a known vulnerability",
-    undocumented_permissions => "undocumented-permissions", "permissions without explanatory comments",
-    insecure_commands => "insecure-commands", "execution of insecure workflow commands is enabled",
-    github_env => "github-env", "dangerous use of environment file",
-    cache_poisoning => "cache-poisoning", "runtime artifacts potentially vulnerable to a cache poisoning attack",
-    secrets_inherit => "secrets-inherit", "secrets unconditionally inherited by called workflow",
-    bot_conditions => "bot-conditions", "spoofable bot actor check",
-    overprovisioned_secrets => "overprovisioned-secrets", "excessively provisioned secrets",
-    unredacted_secrets => "unredacted-secrets", "leaked secret values",
-    obfuscation => "obfuscation", "obfuscated usage of GitHub Actions features",
-    stale_action_refs => "stale-action-refs", "commit hash does not point to a Git tag",
-    unpinned_images => "unpinned-images", "unpinned image references",
-    anonymous_definition => "anonymous-definition", "workflow or action definition without a name",
-    unsound_condition => "unsound-condition", "unsound conditional expression",
-    ref_version_mismatch => "ref-version-mismatch", "detects commit SHAs that don't match their version comment tags",
-    dependabot_execution => "dependabot-execution", "external code execution in Dependabot updates",
-    concurrency_limits => "concurrency-limits", "insufficient job-level concurrency limits",
-    archived_uses => "archived-uses", "action or reusable workflow from archived repository";
+    artipacked,
+    unsound_contains,
+    excessive_permissions,
+    dangerous_triggers,
+    impostor_commit,
+    ref_confusion,
+    use_trusted_publishing,
+    template_injection,
+    hardcoded_container_credentials,
+    self_hosted_runner,
+    known_vulnerable_actions,
+    undocumented_permissions,
+    insecure_commands,
+    github_env,
+    cache_poisoning,
+    secrets_inherit,
+    bot_conditions,
+    overprovisioned_secrets,
+    unredacted_secrets,
+    obfuscation,
+    stale_action_refs,
+    unpinned_images,
+    anonymous_definition,
+    unsound_condition,
+    ref_version_mismatch,
+    dependabot_execution,
+    concurrency_limits,
+    archived_uses;
 
-    [DependabotCooldownRuleConfig] dependabot_cooldown => "dependabot-cooldown", "insufficient cooldown in Dependabot updates",
-    [ForbiddenUsesRuleConfig] forbidden_uses => "forbidden-uses", "forbidden action used",
-    [UnpinnedUsesRuleConfig] unpinned_uses => "unpinned-uses", "unpinned action reference"
+    [DependabotCooldownRuleConfig] dependabot_cooldown,
+    [ForbiddenUsesRuleConfig] forbidden_uses,
+    [UnpinnedUsesRuleConfig] unpinned_uses,
 }
 
 /// # zizmor's configuration

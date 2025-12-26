@@ -11,6 +11,7 @@
   "additionalProperties": false,
   "definitions": {
     "BaseRuleConfig": {
+      "description": "Base configuration for all audit rules.",
       "type": "object",
       "properties": {
         "disable": {
@@ -76,6 +77,7 @@
       ]
     },
     "ForbiddenUsesConfig": {
+      "description": "Configuration for the `forbidden-uses` audit.",
       "anyOf": [
         {
           "$ref": "#/definitions/ForbiddenUsesAllowConfig"
@@ -86,6 +88,7 @@
       ]
     },
     "ForbiddenUsesDenyConfig": {
+      "description": "Configuration for the `forbidden-uses` audit.",
       "type": "object",
       "properties": {
         "deny": {
@@ -101,6 +104,7 @@
       ]
     },
     "ForbiddenUsesRuleConfig": {
+      "description": "Configuration for the `forbidden-uses` audit.",
       "type": "object",
       "properties": {
         "config": {
@@ -135,7 +139,6 @@
       "type": "object",
       "properties": {
         "anonymous-definition": {
-          "description": "workflow or action definition without a name",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -146,7 +149,6 @@
           ]
         },
         "archived-uses": {
-          "description": "action or reusable workflow from archived repository",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -157,7 +159,6 @@
           ]
         },
         "artipacked": {
-          "description": "credential persistence through GitHub Actions artifacts",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -168,7 +169,6 @@
           ]
         },
         "bot-conditions": {
-          "description": "spoofable bot actor check",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -179,7 +179,6 @@
           ]
         },
         "cache-poisoning": {
-          "description": "runtime artifacts potentially vulnerable to a cache poisoning attack",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -190,7 +189,6 @@
           ]
         },
         "concurrency-limits": {
-          "description": "insufficient job-level concurrency limits",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -201,7 +199,6 @@
           ]
         },
         "dangerous-triggers": {
-          "description": "use of fundamentally insecure workflow trigger",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -212,7 +209,6 @@
           ]
         },
         "dependabot-cooldown": {
-          "description": "insufficient cooldown in Dependabot updates",
           "anyOf": [
             {
               "$ref": "#/definitions/DependabotCooldownRuleConfig"
@@ -223,7 +219,6 @@
           ]
         },
         "dependabot-execution": {
-          "description": "external code execution in Dependabot updates",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -234,7 +229,6 @@
           ]
         },
         "excessive-permissions": {
-          "description": "overly broad permissions",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -245,7 +239,6 @@
           ]
         },
         "forbidden-uses": {
-          "description": "forbidden action used",
           "anyOf": [
             {
               "$ref": "#/definitions/ForbiddenUsesRuleConfig"
@@ -256,7 +249,6 @@
           ]
         },
         "github-env": {
-          "description": "dangerous use of environment file",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -267,7 +259,6 @@
           ]
         },
         "hardcoded-container-credentials": {
-          "description": "hardcoded credential in GitHub Actions container configurations",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -278,7 +269,6 @@
           ]
         },
         "impostor-commit": {
-          "description": "commit with no history in referenced repository",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -289,7 +279,6 @@
           ]
         },
         "insecure-commands": {
-          "description": "execution of insecure workflow commands is enabled",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -300,7 +289,6 @@
           ]
         },
         "known-vulnerable-actions": {
-          "description": "action has a known vulnerability",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -311,7 +299,6 @@
           ]
         },
         "obfuscation": {
-          "description": "obfuscated usage of GitHub Actions features",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -322,7 +309,6 @@
           ]
         },
         "overprovisioned-secrets": {
-          "description": "excessively provisioned secrets",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -333,7 +319,6 @@
           ]
         },
         "ref-confusion": {
-          "description": "git ref for action with ambiguous ref type",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -344,7 +329,6 @@
           ]
         },
         "ref-version-mismatch": {
-          "description": "detects commit SHAs that don't match their version comment tags",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -355,7 +339,6 @@
           ]
         },
         "secrets-inherit": {
-          "description": "secrets unconditionally inherited by called workflow",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -366,7 +349,6 @@
           ]
         },
         "self-hosted-runner": {
-          "description": "runs on a self-hosted runner",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -377,7 +359,6 @@
           ]
         },
         "stale-action-refs": {
-          "description": "commit hash does not point to a Git tag",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -388,7 +369,6 @@
           ]
         },
         "template-injection": {
-          "description": "code injection via template expansion",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -399,7 +379,6 @@
           ]
         },
         "undocumented-permissions": {
-          "description": "permissions without explanatory comments",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -410,7 +389,6 @@
           ]
         },
         "unpinned-images": {
-          "description": "unpinned image references",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -421,7 +399,6 @@
           ]
         },
         "unpinned-uses": {
-          "description": "unpinned action reference",
           "anyOf": [
             {
               "$ref": "#/definitions/UnpinnedUsesRuleConfig"
@@ -432,7 +409,6 @@
           ]
         },
         "unredacted-secrets": {
-          "description": "leaked secret values",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -443,7 +419,6 @@
           ]
         },
         "unsound-condition": {
-          "description": "unsound conditional expression",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -454,7 +429,6 @@
           ]
         },
         "unsound-contains": {
-          "description": "unsound contains condition",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -465,7 +439,6 @@
           ]
         },
         "use-trusted-publishing": {
-          "description": "prefer trusted publishing for authentication",
           "anyOf": [
             {
               "$ref": "#/definitions/BaseRuleConfig"
@@ -479,6 +452,7 @@
       "additionalProperties": false
     },
     "UnpinnedUsesConfig": {
+      "description": "Configuration for the `unpinned-uses` audit.",
       "type": "object",
       "properties": {
         "policies": {
@@ -491,6 +465,7 @@
       "additionalProperties": false
     },
     "UnpinnedUsesRuleConfig": {
+      "description": "Configuration for the `unpinned-uses` audit.",
       "type": "object",
       "properties": {
         "config": {
