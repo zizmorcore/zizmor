@@ -10,6 +10,7 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
 
 use schemars::JsonSchema;
 
@@ -33,16 +34,19 @@ fn workflow_rule_vec_schema(
     generator.subschema_for::<Vec<WorkflowRule>>()
 }
 
-fn default_cooldown_days() -> u64 {
-    7
+#[derive(Clone, Debug, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[serde(default)]
+pub struct DependabotCooldownConfig {
+    pub days: NonZeroUsize,
 }
 
-#[derive(Clone, Debug, Default, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct DependabotCooldownConfig {
-    #[serde(default = "default_cooldown_days")]
-    #[schemars(default = "default_cooldown_days", range(min = 1))]
-    pub days: u64,
+impl Default for DependabotCooldownConfig {
+    fn default() -> Self {
+        Self {
+            days: NonZeroUsize::new(7).expect("impossible"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]
@@ -52,7 +56,7 @@ pub struct DependabotCooldownRuleConfig {
     pub base: BaseRuleConfig,
 
     #[serde(default)]
-    pub config: Option<DependabotCooldownConfig>,
+    pub config: DependabotCooldownConfig,
 }
 
 fn repo_uses_pattern_vec_schema(
@@ -196,7 +200,7 @@ define_audit_rules! {
 )]
 pub struct ZizmorConfig {
     #[serde(default)]
-    pub rules: Option<RulesConfig>,
+    pub rules: RulesConfig,
 }
 
 pub fn generate_schema() -> String {

@@ -5,14 +5,7 @@
   "type": "object",
   "properties": {
     "rules": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/RulesConfig"
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "$ref": "#/definitions/RulesConfig"
     }
   },
   "additionalProperties": false,
@@ -40,7 +33,7 @@
         "days": {
           "default": 7,
           "type": "integer",
-          "format": "uint64",
+          "format": "uint",
           "minimum": 1.0
         }
       },
@@ -50,14 +43,7 @@
       "type": "object",
       "properties": {
         "config": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/DependabotCooldownConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/DependabotCooldownConfig"
         },
         "disable": {
           "default": false,
