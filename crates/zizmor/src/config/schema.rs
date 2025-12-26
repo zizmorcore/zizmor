@@ -198,12 +198,12 @@ define_audit_rules! {
     title = "zizmor configuration",
     description = "Configuration file for zizmor, a static analysis tool for GitHub Actions\nhttps://docs.zizmor.sh/configuration/"
 )]
-pub struct ZizmorConfig {
+pub struct Config {
     #[serde(default)]
     pub rules: RulesConfig,
 }
 
 pub fn generate_schema() -> String {
-    let schema = schemars::schema_for!(ZizmorConfig);
+    let schema = schemars::schema_for!(Config);
     serde_json::to_string_pretty(&schema).expect("failed to serialize schema")
 }
