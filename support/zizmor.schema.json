@@ -539,7 +539,8 @@
     "WorkflowRule": {
       "title": "A workflow ignore rule.",
       "description": "Ignore rules are specified as `filename.yml:line:col`, where\n`line` and `col` are optional 1-based indices. If `line` is\nomitted, `col` must also be omitted.",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[^:]+\\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$"
     }
   }
 }

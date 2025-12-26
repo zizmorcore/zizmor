@@ -72,9 +72,7 @@ pub(crate) enum ConfigErrorInner {
 #[cfg_attr(
     feature = "schema",
     derive(schemars::JsonSchema),
-    schemars(with = "String"),
-    // TODO: This doesn't seem to work.
-    // schemars(regex(pattern = r"^[^:]+\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$"))
+    schemars(with = "String", extend("pattern" = r"^[^:]+\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$"))
 )]
 pub(crate) struct WorkflowRule {
     /// The workflow filename.

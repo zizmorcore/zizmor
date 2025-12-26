@@ -198,6 +198,37 @@ mod tests {
     }
 
     #[test]
+    fn test_ignore_rule() {
+        let ignore = r#"
+        rules:
+          stale-action-refs:
+            ignore:
+              - foo.yml
+              - foo.yml:10
+              - foo.yml:10:20
+        "#;
+        let instance = serde_yaml::from_str::<serde_json::Value>(ignore).unwrap();
+
+        SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect("ignore rule should be valid");
+
+        // Invalid workflow rules should be rejected.
+        let invalid_ignore = r#"
+        rules:
+          stale-action-refs:
+            ignore:
+              - foo.yml:invalid
+        "#;
+        let instance = serde_yaml::from_str::<serde_json::Value>(invalid_ignore).unwrap();
+        let errors = SCHEMA_VALIDATOR.iter_errors(&instance).into_errors();
+        insta::assert_snapshot!(errors, @r#"
+        Validation errors:
+        01: {"ignore":["foo.yml:invalid"]} is not valid under any of the schemas listed in the 'anyOf' keyword
+        "#);
+    }
+
+    #[test]
     fn test_unknown_audit() {
         let unknown_audit = r#"
         rules:
@@ -265,7 +296,10 @@ mod tests {
                 actions/checkout: unknown-policy
         "#;
         let instance = serde_yaml::from_str::<serde_json::Value>(unknown_policy).unwrap();
-        let result = SCHEMA_VALIDATOR.validate(&instance);
-        assert!(result.is_err(), "unknown policy should be invalid");
+        let errors = SCHEMA_VALIDATOR.iter_errors(&instance).into_errors();
+        insta::assert_snapshot!(errors, @r#"
+        Validation errors:
+        01: {"config":{"policies":{"actions/checkout":"unknown-policy"}}} is not valid under any of the schemas listed in the 'anyOf' keyword
+        "#);
     }
 }
