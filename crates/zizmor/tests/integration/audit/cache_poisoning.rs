@@ -261,8 +261,8 @@ fn test_issue_343() -> anyhow::Result<()> {
      8 | |       - "v*.*.*"
        | |________________- generally used when publishing artifacts generated at runtime
     ...
-    28 |           uses: actions/setup-go@v5
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+    28 |           uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -473,8 +473,8 @@ fn test_issue_1152() -> anyhow::Result<()> {
      5 | on: release
        | ----------- generally used when publishing artifacts generated at runtime
     ...
-    16 |         uses: actions/setup-node@v5
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+    16 |         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
        |
        = note: audit confidence → Low
 
