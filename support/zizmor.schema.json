@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "zizmor configuration",
-  "description": "Configuration file for zizmor, a static analysis tool for GitHub Actions\nhttps://docs.zizmor.sh/configuration/",
+  "title": "zizmor's configuration",
+  "description": "Configuration file for zizmor, a static analysis tool for GitHub Actions.\n\nSee: https://docs.zizmor.sh/configuration/",
   "type": "object",
   "properties": {
     "rules": {

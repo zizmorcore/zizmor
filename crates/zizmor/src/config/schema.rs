@@ -18,68 +18,68 @@ use crate::models::uses::RepositoryUsesPattern;
 
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct BaseRuleConfig {
+struct BaseRuleConfig {
     #[serde(default)]
-    pub disable: bool,
+    disable: bool,
 
     #[serde(default)]
-    pub ignore: Vec<WorkflowRule>,
+    ignore: Vec<WorkflowRule>,
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct DependabotCooldownRuleConfig {
+struct DependabotCooldownRuleConfig {
     #[serde(flatten)]
-    pub base: BaseRuleConfig,
+    base: BaseRuleConfig,
 
     #[serde(default)]
-    pub config: DependabotCooldownConfig,
+    config: DependabotCooldownConfig,
 }
 
 #[derive(Clone, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct ForbiddenUsesAllowConfig {
-    pub allow: Vec<RepositoryUsesPattern>,
+struct ForbiddenUsesAllowConfig {
+    allow: Vec<RepositoryUsesPattern>,
 }
 
 #[derive(Clone, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct ForbiddenUsesDenyConfig {
-    pub deny: Vec<RepositoryUsesPattern>,
+struct ForbiddenUsesDenyConfig {
+    deny: Vec<RepositoryUsesPattern>,
 }
 
 #[derive(Clone, Debug, JsonSchema)]
 #[serde(untagged)]
-pub enum ForbiddenUsesConfig {
+enum ForbiddenUsesConfig {
     Allow(ForbiddenUsesAllowConfig),
     Deny(ForbiddenUsesDenyConfig),
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct ForbiddenUsesRuleConfig {
+struct ForbiddenUsesRuleConfig {
     #[serde(flatten)]
-    pub base: BaseRuleConfig,
+    base: BaseRuleConfig,
 
     #[serde(default)]
-    pub config: Option<ForbiddenUsesConfig>,
+    config: Option<ForbiddenUsesConfig>,
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct UnpinnedUsesConfig {
+struct UnpinnedUsesConfig {
     #[serde(default)]
-    pub policies: HashMap<String, UsesPolicy>,
+    policies: HashMap<String, UsesPolicy>,
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct UnpinnedUsesRuleConfig {
+struct UnpinnedUsesRuleConfig {
     #[serde(flatten)]
-    pub base: BaseRuleConfig,
+    base: BaseRuleConfig,
 
     #[serde(default)]
-    pub config: Option<UnpinnedUsesConfig>,
+    config: Option<UnpinnedUsesConfig>,
 }
 
 macro_rules! define_audit_rules {
@@ -90,16 +90,16 @@ macro_rules! define_audit_rules {
     ) => {
         #[derive(Clone, Debug, Default, JsonSchema)]
         #[serde(deny_unknown_fields)]
-        pub struct RulesConfig {
+        struct RulesConfig {
             $(
                 #[doc = $desc]
                 #[serde(default, rename = $name)]
-                pub $field: Option<BaseRuleConfig>,
+                 $field: Option<BaseRuleConfig>,
             )*
             $(
                 #[doc = $custom_desc]
                 #[serde(default, rename = $custom_name)]
-                pub $custom_field: Option<$config_type>,
+                 $custom_field: Option<$config_type>,
             )*
         }
     };
@@ -140,18 +140,19 @@ define_audit_rules! {
     [UnpinnedUsesRuleConfig] unpinned_uses => "unpinned-uses", "unpinned action reference"
 }
 
+/// # zizmor's configuration
+///
+/// Configuration file for zizmor, a static analysis tool for GitHub Actions.
+///
+/// See: https://docs.zizmor.sh/configuration/
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
-#[schemars(
-    title = "zizmor configuration",
-    description = "Configuration file for zizmor, a static analysis tool for GitHub Actions\nhttps://docs.zizmor.sh/configuration/"
-)]
-pub struct Config {
+struct Config {
     #[serde(default)]
-    pub rules: RulesConfig,
+    rules: RulesConfig,
 }
 
-pub fn generate_schema() -> String {
+pub(crate) fn generate_schema() -> String {
     // NOTE: We intentioally use Draft 7, since SchemaStore prefers it.
     let generator = schemars::generate::SchemaSettings::draft07().into_generator();
     let schema = generator.into_root_schema_for::<Config>();
