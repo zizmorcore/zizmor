@@ -157,7 +157,7 @@ struct Config {
 }
 
 pub(crate) fn generate_schema() -> String {
-    // NOTE: We intentioally use Draft 7, since SchemaStore prefers it.
+    // NOTE: We intentionally use Draft 7, since SchemaStore prefers it.
     let generator = schemars::generate::SchemaSettings::draft07().into_generator();
     let schema = generator.into_root_schema_for::<Config>();
     serde_json::to_string_pretty(&schema).expect("failed to serialize schema")
