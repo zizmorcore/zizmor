@@ -33,10 +33,15 @@ fn workflow_rule_vec_schema(
     generator.subschema_for::<Vec<WorkflowRule>>()
 }
 
+fn default_cooldown_days() -> u64 {
+    7
+}
+
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DependabotCooldownConfig {
-    #[serde(default)]
+    #[serde(default = "default_cooldown_days")]
+    #[schemars(default = "default_cooldown_days")]
     pub days: u64,
 }
 
