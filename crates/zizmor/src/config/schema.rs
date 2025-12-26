@@ -10,11 +10,10 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
-use std::num::NonZeroUsize;
 
 use schemars::JsonSchema;
 
-use super::{UsesPolicy, WorkflowRule};
+use super::{DependabotCooldownConfig, UsesPolicy, WorkflowRule};
 use crate::models::uses::RepositoryUsesPattern;
 
 #[derive(Clone, Debug, Default, JsonSchema)]
@@ -32,21 +31,6 @@ fn workflow_rule_vec_schema(
     generator: &mut schemars::r#gen::SchemaGenerator,
 ) -> schemars::schema::Schema {
     generator.subschema_for::<Vec<WorkflowRule>>()
-}
-
-#[derive(Clone, Debug, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[serde(default)]
-pub struct DependabotCooldownConfig {
-    pub days: NonZeroUsize,
-}
-
-impl Default for DependabotCooldownConfig {
-    fn default() -> Self {
-        Self {
-            days: NonZeroUsize::new(7).expect("impossible"),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default, JsonSchema)]

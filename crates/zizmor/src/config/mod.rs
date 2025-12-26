@@ -187,7 +187,9 @@ impl RawConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[serde(default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub(crate) struct DependabotCooldownConfig {
     pub(crate) days: NonZeroUsize,
 }
