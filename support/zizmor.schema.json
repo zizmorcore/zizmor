@@ -124,7 +124,8 @@
       "additionalProperties": false
     },
     "RepositoryUsesPattern": {
-      "description": "Represents a pattern for matching repository `uses` references.\nThese patterns are ordered by specificity; more specific patterns\nshould be listed first.",
+      "title": "Represents a pattern for matching repository `uses` references.",
+      "description": "These patterns are ordered by specificity; more specific patterns\nshould be listed first.",
       "type": "string"
     },
     "RulesConfig": {
@@ -533,7 +534,8 @@
       ]
     },
     "WorkflowRule": {
-      "description": "A workflow ignore rule.\n\nIgnore rules are specified as `filename.yml:line:col`, where\n`line` and `col` are optional 1-based indices. If `line` is\nomitted, `col` must also be omitted.",
+      "title": "A workflow ignore rule.",
+      "description": "Ignore rules are specified as `filename.yml:line:col`, where\n`line` and `col` are optional 1-based indices. If `line` is\nomitted, `col` must also be omitted.",
       "type": "string"
     }
   }

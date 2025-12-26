@@ -63,7 +63,7 @@ pub(crate) enum ConfigErrorInner {
     Client(#[from] ClientError),
 }
 
-/// A workflow ignore rule.
+/// # A workflow ignore rule.
 ///
 /// Ignore rules are specified as `filename.yml:line:col`, where
 /// `line` and `col` are optional 1-based indices. If `line` is
@@ -72,7 +72,9 @@ pub(crate) enum ConfigErrorInner {
 #[cfg_attr(
     feature = "schema",
     derive(schemars::JsonSchema),
-    schemars(with = "String")
+    schemars(with = "String"),
+    // TODO: This doesn't seem to work.
+    // schemars(regex(pattern = r"^[^:]+\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$"))
 )]
 pub(crate) struct WorkflowRule {
     /// The workflow filename.
