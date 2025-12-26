@@ -54,7 +54,7 @@ jobs:
           sudo apt install -y expect
 
       - name: Test
-        run: cargo test --features online-tests,tty-tests
+        run: cargo test --features online-tests,tty-tests,schema
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
