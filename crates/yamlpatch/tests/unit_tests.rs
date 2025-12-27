@@ -3188,7 +3188,6 @@ foo:
 
     foo:
       - abc
-      - - def
-        - ghi
+      - [def, ghi]
     ");
 }
