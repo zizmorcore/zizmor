@@ -28,6 +28,7 @@
       "additionalProperties": false
     },
     "DependabotCooldownConfig": {
+      "description": "Configuration for the `dependabot-cooldown` audit.",
       "type": "object",
       "properties": {
         "days": {

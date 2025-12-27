@@ -172,6 +172,7 @@ impl RawConfig {
     }
 }
 
+/// Configuration for the `dependabot-cooldown` audit.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[serde(default)]
