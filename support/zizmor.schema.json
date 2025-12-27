@@ -1,0 +1,292 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "zizmor's configuration",
+  "description": "Configuration file for zizmor, a static analysis tool for GitHub Actions.\n\nSee: https://docs.zizmor.sh/configuration/",
+  "type": "object",
+  "properties": {
+    "rules": {
+      "$ref": "#/definitions/RulesConfig"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "BaseRuleConfig": {
+      "description": "Base configuration for all audit rules.",
+      "type": "object",
+      "properties": {
+        "disable": {
+          "type": "boolean",
+          "default": false
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowRule"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "DependabotCooldownConfig": {
+      "description": "Configuration for the `dependabot-cooldown` audit.",
+      "type": "object",
+      "properties": {
+        "days": {
+          "description": "The minimum acceptable `default-days` value for Dependabot's cooldown setting.\n\nSettings beneath this value will produce findings.",
+          "type": "integer",
+          "format": "uint",
+          "default": 7,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "DependabotCooldownRuleConfig": {
+      "description": "Configuration for the `dependabot-cooldown` audit.",
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/DependabotCooldownConfig"
+        },
+        "disable": {
+          "type": "boolean",
+          "default": false
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowRule"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ForbiddenUsesConfig": {
+      "description": "An `allow` or `deny` list of `uses:` patterns for the `forbidden-uses` audit.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "allow": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/RepositoryUsesPattern"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "allow"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "deny": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/RepositoryUsesPattern"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "deny"
+          ]
+        }
+      ]
+    },
+    "ForbiddenUsesRuleConfig": {
+      "description": "Configuration for the `forbidden-uses` audit.",
+      "type": "object",
+      "properties": {
+        "config": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ForbiddenUsesConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disable": {
+          "type": "boolean",
+          "default": false
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowRule"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "RepositoryUsesPattern": {
+      "title": "Represents a pattern for matching repository `uses` references.",
+      "description": "These patterns are ordered by specificity; more specific patterns\nshould be listed first.",
+      "type": "string"
+    },
+    "RulesConfig": {
+      "type": "object",
+      "properties": {
+        "anonymous-definition": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "archived-uses": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "artipacked": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "bot-conditions": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "cache-poisoning": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "concurrency-limits": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "dangerous-triggers": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "dependabot-cooldown": {
+          "$ref": "#/definitions/DependabotCooldownRuleConfig"
+        },
+        "dependabot-execution": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "excessive-permissions": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "forbidden-uses": {
+          "$ref": "#/definitions/ForbiddenUsesRuleConfig"
+        },
+        "github-env": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "hardcoded-container-credentials": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "impostor-commit": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "insecure-commands": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "known-vulnerable-actions": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "obfuscation": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "overprovisioned-secrets": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "ref-confusion": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "ref-version-mismatch": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "secrets-inherit": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "self-hosted-runner": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "stale-action-refs": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "template-injection": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "undocumented-permissions": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "unpinned-images": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "unpinned-uses": {
+          "$ref": "#/definitions/UnpinnedUsesRuleConfig"
+        },
+        "unredacted-secrets": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "unsound-condition": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "unsound-contains": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
+        "use-trusted-publishing": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        }
+      },
+      "additionalProperties": false
+    },
+    "UnpinnedUsesConfig": {
+      "title": "Configuration for the `unpinned-uses` audit.",
+      "description": "This configuration is reified into an `UnpinnedUsesPolicies`.",
+      "type": "object",
+      "properties": {
+        "policies": {
+          "description": "A mapping of `uses:` patterns to policies.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/UsesPolicy"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "UnpinnedUsesRuleConfig": {
+      "description": "Configuration for the `unpinned-uses` audit.",
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/UnpinnedUsesConfig"
+        },
+        "disable": {
+          "type": "boolean",
+          "default": false
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowRule"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "UsesPolicy": {
+      "description": "A singular policy for a `uses:` reference.",
+      "oneOf": [
+        {
+          "description": "No policy; all `uses:` references are allowed, even unpinned ones.",
+          "type": "string",
+          "const": "any"
+        },
+        {
+          "description": "`uses:` references must be pinned to a tag, branch, or hash ref.",
+          "type": "string",
+          "const": "ref-pin"
+        },
+        {
+          "description": "`uses:` references must be pinned to a hash ref.",
+          "type": "string",
+          "const": "hash-pin"
+        }
+      ]
+    },
+    "WorkflowRule": {
+      "title": "A workflow ignore rule.",
+      "description": "Ignore rules are specified as `filename.yml:line:col`, where\n`line` and `col` are optional 1-based indices. If `line` is\nomitted, `col` must also be omitted.",
+      "type": "string",
+      "pattern": "^[^:]+\\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$"
+    }
+  }
+}

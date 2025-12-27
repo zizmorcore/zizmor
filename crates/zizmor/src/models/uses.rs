@@ -35,10 +35,16 @@ static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-/// Represents a pattern for matching repository `uses` references.
+/// # Represents a pattern for matching repository `uses` references.
+///
 /// These patterns are ordered by specificity; more specific patterns
 /// should be listed first.
 #[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(with = "String")
+)]
 pub(crate) enum RepositoryUsesPattern {
     /// Matches exactly `owner/repo/subpath@ref`.
     ExactWithRef {

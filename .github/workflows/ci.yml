@@ -54,7 +54,7 @@ jobs:
           sudo apt install -y expect
 
       - name: Test
-        run: cargo test --features online-tests,tty-tests
+        run: cargo test --features online-tests,tty-tests,schema
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -76,10 +76,37 @@ jobs:
       - name: Test site
         run: make site
 
+  test-schema:
+    name: Test schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify schema covers all audits
+        run: |
+          REGISTRY_COUNT=$(grep -c "register_audit!" crates/zizmor/src/registry.rs)
+          SCHEMA_COUNT=$(jq '.definitions.RulesConfig.properties | length' support/zizmor.schema.json)
+          if [ "$REGISTRY_COUNT" -ne "$SCHEMA_COUNT" ]; then
+            echo "Error: registry.rs has $REGISTRY_COUNT audits but schema has $SCHEMA_COUNT"
+            echo "Update config/schema.rs and regenerate the schema:"
+            echo "  make generate-schema"
+            exit 1
+          fi
+          echo "Schema covers all $REGISTRY_COUNT audits"
+
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+
+      - name: Verify committed schema is up-to-date
+        run: |
+          make generate-schema
+          git diff --exit-code
+
   all-tests-pass:
     name: All tests pass
     if: always()
-    needs: [lint, test, test-site]
+    needs: [lint, test, test-site, test-schema]
     runs-on: ubuntu-latest
 
     steps:

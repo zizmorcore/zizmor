@@ -209,6 +209,11 @@ struct App {
     #[arg(long, exclusive = true)]
     thanks: bool,
 
+    /// Generate JSON Schema for zizmor.yml configuration files.
+    #[cfg(feature = "schema")]
+    #[arg(long, exclusive = true)]
+    generate_schema: bool,
+
     /// The inputs to audit.
     ///
     /// These can be individual workflow filenames, action definitions
@@ -669,6 +674,12 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             let link = Link::new(name, url);
             println!("🌈 {link}")
         }
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    #[cfg(feature = "schema")]
+    if app.generate_schema {
+        println!("{}", config::schema::generate_schema());
         return Ok(ExitCode::SUCCESS);
     }
 
