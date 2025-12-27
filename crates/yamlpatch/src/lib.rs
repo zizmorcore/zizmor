@@ -832,9 +832,14 @@ fn handle_block_sequence_append(
     value: &serde_yaml::Value,
 ) -> Result<String, Error> {
     let feature_content = doc.extract(feature);
-
     let indent = extract_leading_whitespace(doc, feature);
-    let value_str = serialize_yaml_value(value)?;
+
+    // Use flow-style for nested sequences to produce more idiomatic YAML
+    let value_str = if matches!(value, serde_yaml::Value::Sequence(_)) {
+        serialize_flow(value)?
+    } else {
+        serialize_yaml_value(value)?
+    };
     let insertion_point = find_content_end(feature, doc);
     let bias = feature.location.byte_span.0;
     let relative_insertion_point = insertion_point - bias;
