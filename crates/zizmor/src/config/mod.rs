@@ -191,17 +191,23 @@ impl Default for DependabotCooldownConfig {
     }
 }
 
-/// Slightly annoying wrapper for [`ForbiddenUsesConfigInner`], which is our
-/// real configuration type for the `forbidden-uses` rule.
-///
-/// We need this wrapper type so that we can apply the `singleton_map`
-/// deserializer to the inner type, ensuring that we deserialize from a
-/// mapping with an explicit key discriminant (i.e. `allow:` or `deny:`)
-/// rather than a YAML tag. We could work around this by using serde's
-/// `untagged` instead, but this produces suboptimal user-facing error messages.
+/// An `allow` or `deny` list of `uses:` patterns for the `forbidden-uses` audit.
 #[derive(Clone, Debug, Deserialize)]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(with = "ForbiddenUsesConfigInner")
+)]
 #[serde(transparent)]
 pub(crate) struct ForbiddenUsesConfig(
+    // Slightly annoying wrapper for [`ForbiddenUsesConfigInner`], which is our
+    // real configuration type for the `forbidden-uses` rule.
+    //
+    // We need this wrapper type so that we can apply the `singleton_map`
+    // deserializer to the inner type, ensuring that we deserialize from a
+    // mapping with an explicit key discriminant (i.e. `allow:` or `deny:`)
+    // rather than a YAML tag. We could work around this by using serde's
+    // `untagged` instead, but this produces suboptimal user-facing error messages.
     #[serde(with = "serde_yaml::with::singleton_map")] pub(crate) ForbiddenUsesConfigInner,
 );
 
@@ -214,19 +220,22 @@ impl Deref for ForbiddenUsesConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum ForbiddenUsesConfigInner {
     Allow(Vec<RepositoryUsesPattern>),
     Deny(Vec<RepositoryUsesPattern>),
 }
 
-/// Config for the `unpinned-uses` rule.
+/// # Configuration for the `unpinned-uses` audit.
 ///
 /// This configuration is reified into an `UnpinnedUsesPolicies`.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub(crate) struct UnpinnedUsesConfig {
     /// A mapping of `uses:` patterns to policies.
+    #[serde(default)]
     policies: HashMap<RepositoryUsesPattern, UsesPolicy>,
 }
 

@@ -9,12 +9,9 @@
 
 #![allow(dead_code)]
 
-use std::collections::HashMap;
-
 use schemars::JsonSchema;
 
-use super::{DependabotCooldownConfig, UsesPolicy, WorkflowRule};
-use crate::models::uses::RepositoryUsesPattern;
+use super::{DependabotCooldownConfig, ForbiddenUsesConfig, UnpinnedUsesConfig, WorkflowRule};
 
 /// Base configuration for all audit rules.
 #[derive(Clone, Debug, Default, JsonSchema)]
@@ -39,28 +36,6 @@ struct DependabotCooldownRuleConfig {
 }
 
 /// Configuration for the `forbidden-uses` audit.
-#[derive(Clone, Debug, JsonSchema)]
-#[serde(deny_unknown_fields)]
-struct ForbiddenUsesAllowConfig {
-    allow: Vec<RepositoryUsesPattern>,
-}
-
-/// Configuration for the `forbidden-uses` audit.
-#[derive(Clone, Debug, JsonSchema)]
-#[serde(deny_unknown_fields)]
-struct ForbiddenUsesDenyConfig {
-    deny: Vec<RepositoryUsesPattern>,
-}
-
-/// Configuration for the `forbidden-uses` audit.
-#[derive(Clone, Debug, JsonSchema)]
-#[serde(untagged)]
-enum ForbiddenUsesConfig {
-    Allow(ForbiddenUsesAllowConfig),
-    Deny(ForbiddenUsesDenyConfig),
-}
-
-/// Configuration for the `forbidden-uses` audit.
 #[derive(Clone, Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct ForbiddenUsesRuleConfig {
@@ -72,15 +47,7 @@ struct ForbiddenUsesRuleConfig {
 }
 
 /// Configuration for the `unpinned-uses` audit.
-#[derive(Clone, Debug, Default, JsonSchema)]
-#[serde(deny_unknown_fields)]
-struct UnpinnedUsesConfig {
-    #[serde(default)]
-    policies: HashMap<String, UsesPolicy>,
-}
-
-/// Configuration for the `unpinned-uses` audit.
-#[derive(Clone, Debug, Default, JsonSchema)]
+#[derive(Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct UnpinnedUsesRuleConfig {
     #[serde(flatten)]
@@ -96,7 +63,7 @@ macro_rules! define_audit_rules {
         ;
         $( [$config_type:ty] $custom_field:ident ),* $(,)?
     ) => {
-        #[derive(Clone, Debug, Default, JsonSchema)]
+        #[derive(Debug, Default, JsonSchema)]
         #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
         struct RulesConfig {
             $(
@@ -149,7 +116,7 @@ define_audit_rules! {
 /// Configuration file for zizmor, a static analysis tool for GitHub Actions.
 ///
 /// See: https://docs.zizmor.sh/configuration/
-#[derive(Clone, Debug, Default, JsonSchema)]
+#[derive(Debug, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct Config {
     #[serde(default)]

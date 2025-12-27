@@ -60,47 +60,39 @@
       },
       "additionalProperties": false
     },
-    "ForbiddenUsesAllowConfig": {
-      "description": "Configuration for the `forbidden-uses` audit.",
-      "type": "object",
-      "properties": {
-        "allow": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/RepositoryUsesPattern"
-          }
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "allow"
-      ]
-    },
     "ForbiddenUsesConfig": {
-      "description": "Configuration for the `forbidden-uses` audit.",
-      "anyOf": [
+      "description": "An `allow` or `deny` list of `uses:` patterns for the `forbidden-uses` audit.",
+      "oneOf": [
         {
-          "$ref": "#/definitions/ForbiddenUsesAllowConfig"
+          "type": "object",
+          "properties": {
+            "allow": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/RepositoryUsesPattern"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "allow"
+          ]
         },
         {
-          "$ref": "#/definitions/ForbiddenUsesDenyConfig"
+          "type": "object",
+          "properties": {
+            "deny": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/RepositoryUsesPattern"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "deny"
+          ]
         }
-      ]
-    },
-    "ForbiddenUsesDenyConfig": {
-      "description": "Configuration for the `forbidden-uses` audit.",
-      "type": "object",
-      "properties": {
-        "deny": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/RepositoryUsesPattern"
-          }
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "deny"
       ]
     },
     "ForbiddenUsesRuleConfig": {
@@ -235,10 +227,12 @@
       "additionalProperties": false
     },
     "UnpinnedUsesConfig": {
-      "description": "Configuration for the `unpinned-uses` audit.",
+      "title": "Configuration for the `unpinned-uses` audit.",
+      "description": "This configuration is reified into an `UnpinnedUsesPolicies`.",
       "type": "object",
       "properties": {
         "policies": {
+          "description": "A mapping of `uses:` patterns to policies.",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/UsesPolicy"
