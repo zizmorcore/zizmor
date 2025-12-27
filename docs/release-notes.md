@@ -34,6 +34,13 @@ of `zizmor`.
             dependabot/*: ref-pin
     ```
 
+### Miscellaneous 🛠
+
+* zizmor's configuration now has an official JSON schema that will
+  be available via [SchemaStore](https://www.schemastore.org) soon!
+
+    Many thanks to @kiwamizamurai for implementing this improvement!
+
 ## 1.19.0
 
 ### New Features 🌈
