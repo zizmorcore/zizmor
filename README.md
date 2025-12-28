@@ -48,7 +48,7 @@ See [our contributing guide!](./CONTRIBUTING.md)
 
 [Now you can have beautiful clean workflows!]: https://www.youtube.com/watch?v=ol7rxFCvpy8
 
-## Sponsors 💖
+## Sponsors
 
 `zizmor`'s development is supported by these amazing sponsors!
 
