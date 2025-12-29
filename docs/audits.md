@@ -443,6 +443,11 @@ Some general pointers:
 Detects missing or insufficient `cooldown` settings in Dependabot configuration
 files.
 
+!!! note
+    Some package ecosystems do not support cooldown configuration in Dependabot.
+    This audit automatically skips such ecosystems (currently: `opentofu`).
+    See [issue #1451](https://github.com/zizmorcore/zizmor/issues/1451) for details.
+
 By default, Dependabot does not perform any "cooldown" on dependency updates.
 In other words, a regularly scheduled Dependabot run may perform an update on a
 dependency that was just released moments before the run began. This presents
