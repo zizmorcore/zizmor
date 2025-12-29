@@ -170,3 +170,15 @@ fn test_config_short_cooldown_permitted() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_opentofu_no_cooldown_no_findings() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("dependabot-cooldown/opentofu-no-cooldown/dependabot.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}

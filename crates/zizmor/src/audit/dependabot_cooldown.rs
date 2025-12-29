@@ -2,6 +2,7 @@ use crate::{
     audit::{Audit, AuditError, audit_meta},
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
 };
+use github_actions_models::dependabot::v2::PackageEcosystem;
 use yamlpatch::{Op, Patch};
 
 audit_meta!(
@@ -11,6 +12,11 @@ audit_meta!(
 );
 
 pub(crate) struct DependabotCooldown;
+
+/// Checks if the given Dependabot package ecosystem supports cooldown configuration.
+fn supports_cooldown(ecosystem: &PackageEcosystem) -> bool {
+    !matches!(ecosystem, PackageEcosystem::Opentofu)
+}
 
 impl DependabotCooldown {
     /// Creates a fix that adds default-days to an existing cooldown block
@@ -90,6 +96,11 @@ impl Audit for DependabotCooldown {
         let mut findings = vec![];
 
         for update in dependabot.updates() {
+            // Skip ecosystems that don't support cooldown
+            if !supports_cooldown(&update.package_ecosystem) {
+                continue;
+            }
+
             match &update.cooldown {
                 // TODO(ww): Should we have opinions about the other
                 // cooldown settings?
@@ -394,6 +405,33 @@ updates:
                     schedule:
                       interval: daily
                 ");
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn test_opentofu_no_cooldown_no_findings() {
+        let dependabot_content = r#"
+version: 2
+enable-beta-ecosystems: true
+
+updates:
+  - package-ecosystem: opentofu
+    directory: /
+    schedule:
+      interval: daily
+"#;
+
+        test_dependabot_audit!(
+            DependabotCooldown,
+            "test_opentofu_no_cooldown.yml",
+            dependabot_content,
+            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                assert_eq!(
+                    findings.len(),
+                    0,
+                    "Expected no findings for OpenTofu without cooldown"
+                );
             }
         );
     }

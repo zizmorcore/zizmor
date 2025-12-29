@@ -34,6 +34,11 @@ of `zizmor`.
             dependabot/*: ref-pin
     ```
 
+### Bug Fixes 🐛
+
+* The [dependabot-cooldown] audit no longer flags missing cooldowns on
+  ecosystems that don't (yet) support cooldowns, such as `opentofu` (#1480)
+
 ### Miscellaneous 🛠
 
 * zizmor's configuration now has an official JSON schema that will
