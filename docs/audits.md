@@ -445,8 +445,7 @@ files.
 
 !!! note
     Some package ecosystems do not support cooldown configuration in Dependabot.
-    This audit automatically skips such ecosystems (currently: `opentofu`).
-    See [issue #1451](https://github.com/zizmorcore/zizmor/issues/1451) for details.
+    This audit will not produce findings for those ecosystems.
 
 By default, Dependabot does not perform any "cooldown" on dependency updates.
 In other words, a regularly scheduled Dependabot run may perform an update on a
