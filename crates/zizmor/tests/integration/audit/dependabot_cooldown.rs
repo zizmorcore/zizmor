@@ -173,8 +173,6 @@ fn test_config_short_cooldown_permitted() -> anyhow::Result<()> {
 
 #[test]
 fn test_opentofu_no_cooldown_no_findings() -> anyhow::Result<()> {
-    // OpenTofu ecosystem does not support cooldown, so no findings should be reported.
-    // See: https://github.com/zizmorcore/zizmor/issues/1451
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("dependabot-cooldown/opentofu-no-cooldown/dependabot.yml"))

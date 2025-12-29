@@ -13,12 +13,7 @@ audit_meta!(
 
 pub(crate) struct DependabotCooldown;
 
-/// Checks if the given package ecosystem supports cooldown configuration.
-///
-/// Some ecosystems, like OpenTofu, do not support cooldown settings in
-/// Dependabot. This function returns `false` for such ecosystems.
-///
-/// See: https://github.com/zizmorcore/zizmor/issues/1451
+/// Checks if the given Dependabot package ecosystem supports cooldown configuration.
 fn supports_cooldown(ecosystem: &PackageEcosystem) -> bool {
     !matches!(ecosystem, PackageEcosystem::Opentofu)
 }
@@ -416,8 +411,6 @@ updates:
 
     #[tokio::test]
     async fn test_opentofu_no_cooldown_no_findings() {
-        // OpenTofu ecosystem does not support cooldown.
-        // See: https://github.com/zizmorcore/zizmor/issues/1451
         let dependabot_content = r#"
 version: 2
 enable-beta-ecosystems: true
