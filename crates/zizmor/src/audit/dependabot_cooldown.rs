@@ -434,7 +434,11 @@ updates:
             "test_opentofu_no_cooldown.yml",
             dependabot_content,
             |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
-                assert_eq!(findings.len(), 0, "Expected no findings for OpenTofu without cooldown");
+                assert_eq!(
+                    findings.len(),
+                    0,
+                    "Expected no findings for OpenTofu without cooldown"
+                );
             }
         );
     }
