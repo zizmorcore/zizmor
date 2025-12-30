@@ -162,8 +162,8 @@ pub struct Matrix {
 pub enum Container {
     Name(String),
     Container {
-        #[serde(deserialize_with = "crate::common::docker_uses")]
-        image: DockerUses,
+        // TODO: Need to also handle expressions here.
+        image: LoE<DockerUses>,
         credentials: Option<DockerCredentials>,
         #[serde(default)]
         env: LoE<Env>,

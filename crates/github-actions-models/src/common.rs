@@ -450,6 +450,16 @@ impl DockerUses {
     }
 }
 
+impl<'de> Deserialize<'de> for DockerUses {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let uses = <String>::deserialize(deserializer)?;
+        DockerUses::parse(uses).map_err(custom_error::<D>)
+    }
+}
+
 /// Wraps a `de::Error::custom` call to log the same error as
 /// a `tracing::error!` event.
 ///
@@ -462,15 +472,6 @@ where
     let msg = msg.to_string();
     tracing::error!(msg);
     de::Error::custom(msg)
-}
-
-/// Deserialize a `DockerUses`.
-pub(crate) fn docker_uses<'de, D>(de: D) -> Result<DockerUses, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let uses = <String>::deserialize(de)?;
-    DockerUses::parse(uses).map_err(custom_error::<D>)
 }
 
 /// Deserialize an ordinary step `uses:`.

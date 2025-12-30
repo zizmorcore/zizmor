@@ -7,7 +7,7 @@ use crate::{
     state::AuditState,
 };
 
-use github_actions_models::common::DockerUses;
+use github_actions_models::common::{DockerUses, expr::LoE};
 use github_actions_models::workflow::job::Container;
 
 use super::{Audit, AuditLoadError, audit_meta};
@@ -51,7 +51,8 @@ impl Audit for UnpinnedImages {
         _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
-        let mut image_refs_with_locations: Vec<(&'doc DockerUses, SymbolicLocation<'doc>)> = vec![];
+        let mut image_refs_with_locations: Vec<(&'doc LoE<DockerUses>, SymbolicLocation<'doc>)> =
+            vec![];
 
         if let Some(Container::Container { image, .. }) = &job.container {
             image_refs_with_locations.push((
@@ -76,33 +77,41 @@ impl Audit for UnpinnedImages {
         }
 
         for (image, location) in image_refs_with_locations {
-            match image.hash() {
-                Some(_) => continue,
-                None => match image.tag() {
-                    Some("latest") => {
-                        findings.push(self.build_finding(
-                            location,
-                            "container image is pinned to latest",
-                            Persona::Regular,
-                            job,
-                        )?);
-                    }
-                    None => {
-                        findings.push(self.build_finding(
-                            location,
-                            "container image is unpinned",
-                            Persona::Regular,
-                            job,
-                        )?);
-                    }
-                    Some(_) => {
-                        findings.push(self.build_finding(
-                            location,
-                            "container image is not pinned to a SHA256 hash",
-                            Persona::Pedantic,
-                            job,
-                        )?);
-                    }
+            match image {
+                LoE::Expr(_) => {
+                    // TODO: We have something like `image: ${{ matrix.image }}`;
+                    // we want to see if any expansion of `image` in the matrix
+                    // is unpinned.
+                    continue;
+                }
+                LoE::Literal(image) => match image.hash() {
+                    Some(_) => continue,
+                    None => match image.tag() {
+                        Some("latest") => {
+                            findings.push(self.build_finding(
+                                location,
+                                "container image is pinned to latest",
+                                Persona::Regular,
+                                job,
+                            )?);
+                        }
+                        None => {
+                            findings.push(self.build_finding(
+                                location,
+                                "container image is unpinned",
+                                Persona::Regular,
+                                job,
+                            )?);
+                        }
+                        Some(_) => {
+                            findings.push(self.build_finding(
+                                location,
+                                "container image is not pinned to a SHA256 hash",
+                                Persona::Pedantic,
+                                job,
+                            )?);
+                        }
+                    },
                 },
             }
         }
