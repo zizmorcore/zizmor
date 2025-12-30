@@ -162,7 +162,6 @@ pub struct Matrix {
 pub enum Container {
     Name(String),
     Container {
-        // TODO: Need to also handle expressions here.
         image: LoE<DockerUses>,
         credentials: Option<DockerCredentials>,
         #[serde(default)]
