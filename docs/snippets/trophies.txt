@@ -36,6 +36,7 @@ astropy/astropy#17315
 autotag-dev/autotag#142
 ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
 BerkeleyLearnVerify/Scenic#320
+bevyengine/bevy#22294
 bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
 bitwarden/ios#2124

@@ -143,6 +143,14 @@
         - BerkeleyLearnVerify/Scenic#320
 
 
+-   ![](https://github.com/bevyengine.png?size=40){ width="40" loading=lazy align=left } bevyengine
+
+    ---
+
+    ??? example "Examples"
+        - bevyengine/bevy#22294
+
+
 -   ![](https://github.com/bitcoindevkit.png?size=40){ width="40" loading=lazy align=left } bitcoindevkit
 
     ---
