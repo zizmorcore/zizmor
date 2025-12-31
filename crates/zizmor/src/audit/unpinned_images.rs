@@ -81,11 +81,12 @@ impl Audit for UnpinnedImages {
         for (image, location) in image_refs_with_locations {
             match image {
                 LoE::Expr(expr) => {
-                    // TODO: We have something like `image: ${{ matrix.image }}`;
-                    // we want to see if any expansion of `image` in the matrix
-                    // is unpinned.
-                    let _ = match Expr::parse(expr.as_bare()).map(|e| e.inner) {
+                    let context = match Expr::parse(expr.as_bare()).map(|e| e.inner) {
+                        // Our expression is `${{ matrix.abc... }}`.
                         Ok(Expr::Context(context)) if context.child_of("matrix") => context,
+                        // An invalid expression, or otherwise any expression that's
+                        // more complex than a simple matrix reference.
+                        // TODO: Be more precise in some of these cases.
                         _ => {
                             findings.push(self.build_finding(
                                 location,
@@ -97,6 +98,36 @@ impl Audit for UnpinnedImages {
                             continue;
                         }
                     };
+
+                    let Some(matrix) = job.matrix() else {
+                        tracing::warn!(
+                            "job references {expr} but has no matrix",
+                            expr = expr.as_bare()
+                        );
+                        continue;
+                    };
+
+                    if matrix.expands_to_static_values(&context) {
+                        // If we can statically expand the matrix values for this context,
+                        // we do so to determine pinning.
+                        // TODO: Actually implement this.
+                        findings.push(self.build_finding(
+                            location,
+                            "container image may be unpinned",
+                            Confidence::Low,
+                            Persona::Regular,
+                            job,
+                        )?);
+                    } else {
+                        // Otherwise, we have to assume the worst and say it's unpinned.
+                        findings.push(self.build_finding(
+                            location,
+                            "container image may be unpinned",
+                            Confidence::Low,
+                            Persona::Regular,
+                            job,
+                        )?);
+                    }
                 }
                 LoE::Literal(image) => match image.hash() {
                     Some(_) => continue,

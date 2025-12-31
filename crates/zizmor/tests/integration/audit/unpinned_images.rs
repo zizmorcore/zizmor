@@ -62,3 +62,25 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_matrix_in_image() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-images/matrix-in-image.yml"))
+            .run()?,
+        @r"
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:16:7
+       |
+    16 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+       |
+       = note: audit confidence → Low
+
+    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}

@@ -5,6 +5,8 @@ name: matrix-in-image
 on:
   workflow_call:
 
+permissions: {}
+
 jobs:
   matrix-in-image:
     name: matrix-in-image
