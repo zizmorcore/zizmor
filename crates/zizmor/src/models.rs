@@ -5,10 +5,10 @@ use github_actions_expressions::context;
 use github_actions_models::common;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
-use github_actions_models::workflow::job::Strategy;
 
 use crate::finding::location::{Locatable, SymbolicLocation};
 use crate::models::inputs::HasInputs;
+use crate::models::workflow::Matrix;
 
 pub(crate) mod action;
 pub(crate) mod coordinate;
@@ -47,10 +47,10 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
     /// Returns a [`common::Uses`] for this step, if it has one.
     fn uses(&self) -> Option<&'doc common::Uses>;
 
-    /// Returns this step's job's strategy, if present.
+    /// Returns this step's job's computed matrix, if present.
     ///
-    /// Composite action steps have no strategy.
-    fn strategy(&self) -> Option<&Strategy>;
+    /// Composite action steps have no matrix.
+    fn matrix(&self) -> Option<&Matrix<'doc>>;
 
     /// Returns a [`StepBodyCommon`] for this step.
     fn body(&self) -> StepBodyCommon<'doc>;

@@ -11,12 +11,12 @@ use github_actions_models::{
 };
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
+use crate::finding::location::Locatable as _;
 use crate::{
     AuditState,
     audit::AuditError,
     finding::{Confidence, Persona, Severity},
 };
-use crate::{finding::location::Locatable as _, models::workflow::Matrix};
 
 pub(crate) struct SelfHostedRunner;
 
@@ -114,11 +114,11 @@ impl Audit for SelfHostedRunner {
                 // The entire `runs-on:` is an expression, which may or may
                 // not be a self-hosted runner when expanded, like above.
                 LoE::Expr(exp) => {
-                    let Ok(matrix) = Matrix::try_from(&job) else {
+                    let Some(matrix) = job.matrix() else {
                         continue;
                     };
 
-                    let expansions = matrix.expanded_values;
+                    let expansions = &matrix.expanded_values;
 
                     let self_hosted = expansions.iter().any(|(path, expansion)| {
                         exp.as_bare() == path && expansion.contains("self-hosted")

@@ -24,6 +24,16 @@ impl<'src> Context<'src> {
         }
     }
 
+    /// Parse a context from the given string.
+    pub fn parse(raw: &'src str) -> anyhow::Result<Self> {
+        let expr = Expr::parse(raw)?;
+
+        match expr.inner {
+            Expr::Context(ctx) => Ok(ctx),
+            _ => Err(anyhow::anyhow!("expected context, found {:?}", expr)),
+        }
+    }
+
     /// Returns whether the context matches the given pattern exactly.
     pub fn matches(&self, pattern: impl TryInto<ContextPattern<'src>>) -> bool {
         let Ok(pattern) = pattern.try_into() else {

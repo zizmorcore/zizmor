@@ -84,7 +84,7 @@ impl Audit for UnpinnedImages {
                     // TODO: We have something like `image: ${{ matrix.image }}`;
                     // we want to see if any expansion of `image` in the matrix
                     // is unpinned.
-                    let context = match Expr::parse(expr.as_bare()).map(|e| e.inner) {
+                    let _ = match Expr::parse(expr.as_bare()).map(|e| e.inner) {
                         Ok(Expr::Context(context)) if context.child_of("matrix") => context,
                         _ => {
                             findings.push(self.build_finding(

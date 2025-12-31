@@ -3,15 +3,13 @@
 //! These models enrich the models under [`github_actions_models::workflow`],
 //! providing higher-level APIs for zizmor to use.
 
-use std::collections::HashMap;
-
 use github_actions_expressions::context::{self, Context};
 use github_actions_models::{
     common::{self, expr::LoE},
     workflow::{
         self, Trigger,
         event::{BareEvent, OptionalBody},
-        job::{self, RunsOn, StepBody, Strategy},
+        job::{self, RunsOn, StepBody},
     },
 };
 use indexmap::IndexMap;
@@ -209,11 +207,21 @@ pub(crate) struct NormalJob<'doc> {
     inner: &'doc job::NormalJob,
     /// The job's parent [`Workflow`].
     parent: &'doc Workflow,
+    /// An expanded matrix for this job, if it has one.
+    matrix: Option<Matrix<'doc>>,
 }
 
 impl<'doc> NormalJob<'doc> {
     pub(crate) fn new(id: &'doc str, inner: &'doc job::NormalJob, parent: &'doc Workflow) -> Self {
-        Self { id, inner, parent }
+        Self {
+            id,
+            inner,
+            parent,
+            matrix: inner
+                .strategy
+                .as_ref()
+                .and_then(|s| s.matrix.as_ref().map(|m| Matrix::new(m))),
+        }
     }
 
     /// An iterator of this job's constituent [`Step`]s.
@@ -283,6 +291,11 @@ impl<'doc> NormalJob<'doc> {
             self.steps()
                 .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location()))),
         )
+    }
+
+    /// Return this job's expanded matrix, if it has one.
+    pub(crate) fn matrix(&self) -> Option<&Matrix<'doc>> {
+        self.matrix.as_ref()
     }
 }
 
@@ -461,24 +474,8 @@ impl<'doc> std::ops::Deref for Matrix<'doc> {
     }
 }
 
-impl<'doc> TryFrom<&'doc NormalJob<'doc>> for Matrix<'doc> {
-    type Error = anyhow::Error;
-
-    fn try_from(job: &'doc NormalJob<'doc>) -> Result<Self, Self::Error> {
-        let Some(Strategy {
-            matrix: Some(inner),
-            ..
-        }) = &job.strategy
-        else {
-            anyhow::bail!("job does not define a strategy or interior matrix")
-        };
-
-        Ok(Matrix::new(inner))
-    }
-}
-
 impl<'doc> Matrix<'doc> {
-    pub(crate) fn new(inner: &'doc LoE<job::Matrix>) -> Self {
+    fn new(inner: &'doc LoE<job::Matrix>) -> Self {
         Self {
             inner,
             expanded_values: Matrix::expand_values(inner),
@@ -487,6 +484,12 @@ impl<'doc> Matrix<'doc> {
 
     /// Checks whether some expanded path leads to an expression
     pub(crate) fn expands_to_static_values(&self, context: &Context) -> bool {
+        // If we have an indirect matrix, we can't determine whether it expands to
+        // static values or not.
+        if matches!(self.inner, LoE::Expr(_)) {
+            return false;
+        }
+
         let expands_to_expression = self.expanded_values.iter().any(|(path, expansion)| {
             // Each expanded value in the matrix might be an expression, or contain
             // one or more expressions (e.g. `foo-${{ bar }}-${{ baz }}`). So we
@@ -547,7 +550,7 @@ impl<'doc> Matrix<'doc> {
         let normalized = include
             .iter()
             .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
-            .collect::<HashMap<_, _>>();
+            .collect::<IndexMap<_, _>>();
 
         Matrix::expand(normalized)
     }
@@ -558,12 +561,12 @@ impl<'doc> Matrix<'doc> {
         let normalized = dimensions
             .iter()
             .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
-            .collect::<HashMap<_, _>>();
+            .collect::<IndexMap<_, _>>();
 
         Matrix::expand(normalized)
     }
 
-    fn expand(values: HashMap<String, serde_json::Value>) -> Vec<(String, String)> {
+    fn expand(values: IndexMap<String, serde_json::Value>) -> Vec<(String, String)> {
         values
             .iter()
             .flat_map(|(key, value)| Matrix::walk_path(value, format!("matrix.{key}")))
@@ -668,8 +671,8 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         Some(uses)
     }
 
-    fn strategy(&self) -> Option<&Strategy> {
-        self.job().strategy.as_ref()
+    fn matrix(&self) -> Option<&Matrix<'doc>> {
+        self.job().matrix.as_ref()
     }
 
     fn body(&self) -> StepBodyCommon<'doc> {
@@ -821,9 +824,12 @@ impl<'doc> Iterator for Steps<'doc> {
 
 #[cfg(test)]
 mod tests {
+    use github_actions_expressions::context::Context;
+    use github_actions_models::workflow::job::Strategy;
+
     use crate::models::{
         inputs::{Capability, HasInputs as _},
-        workflow::Workflow,
+        workflow::{Matrix, Workflow},
     };
 
     #[test]
@@ -870,6 +876,117 @@ jobs:
         // `workflow_dispatch` and `workflow_call` define it as a boolean.
         let bar_cap = workflow.get_input("bar").unwrap();
         assert_eq!(bar_cap, Capability::Fixed);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_matrix_expanded_values() -> anyhow::Result<()> {
+        let strategy_yaml = r#"
+        matrix:
+          os: [ubuntu-latest, windows-latest, macos-latest]
+          node: [12, 14, 16]
+          nested:
+            - { a: 1, b: 2 }
+            - { a: 3, b: 4 }
+        "#;
+
+        let strategy = serde_yaml::from_str::<Strategy>(strategy_yaml)?;
+        assert!(strategy.matrix.is_some());
+
+        let matrix = Matrix::new(strategy.matrix.as_ref().unwrap());
+        insta::assert_debug_snapshot!(matrix.expanded_values, @r#"
+        [
+            (
+                "matrix.os",
+                "ubuntu-latest",
+            ),
+            (
+                "matrix.os",
+                "windows-latest",
+            ),
+            (
+                "matrix.os",
+                "macos-latest",
+            ),
+            (
+                "matrix.node",
+                "12",
+            ),
+            (
+                "matrix.node",
+                "14",
+            ),
+            (
+                "matrix.node",
+                "16",
+            ),
+            (
+                "matrix.nested.a",
+                "1",
+            ),
+            (
+                "matrix.nested.b",
+                "2",
+            ),
+            (
+                "matrix.nested.a",
+                "3",
+            ),
+            (
+                "matrix.nested.b",
+                "4",
+            ),
+        ]
+        "#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_direct_matrix_expands_to_static_values() -> anyhow::Result<()> {
+        let strategy_yaml = r#"
+        matrix:
+          trivially-static: [a, b, c, d]
+          trivially-dynamic: [a, '${{ github.ref }}', c, d]
+          nested-static:
+            - { a: 1, b: 2 }
+            - { a: 3, b: 4 }
+          nested-dynamic:
+            - { a: 1, b: '${{ github.ref }}' }
+            - { a: 3, b: 4 }
+        "#;
+
+        let strategy = serde_yaml::from_str::<Strategy>(strategy_yaml)?;
+        assert!(strategy.matrix.is_some());
+
+        let matrix = Matrix::new(strategy.matrix.as_ref().unwrap());
+
+        assert!(matrix.expands_to_static_values(&Context::parse("matrix.trivially-static")?));
+        assert!(!matrix.expands_to_static_values(&Context::parse("matrix.trivially-dynamic")?));
+        assert!(matrix.expands_to_static_values(&Context::parse("matrix.nested-static.a")?));
+        assert!(!matrix.expands_to_static_values(&Context::parse("matrix.nested-dynamic.b")?));
+
+        // We can assert that a nonexistent path expands to static values because
+        // we have a 'direct' matrix here, not a dynamic expression.
+        assert!(matrix.expands_to_static_values(&Context::parse("matrix.nonexistent")?));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_indirect_matrix_expands_to_static_values() -> anyhow::Result<()> {
+        let strategy_yaml = r#"
+        matrix: ${{ dynamic }}
+        "#;
+
+        let strategy = serde_yaml::from_str::<Strategy>(strategy_yaml)?;
+        assert!(strategy.matrix.is_some());
+
+        let matrix = Matrix::new(strategy.matrix.as_ref().unwrap());
+        assert!(matrix.expanded_values.is_empty());
+
+        assert!(!matrix.expands_to_static_values(&Context::parse("matrix.nonexistent")?));
 
         Ok(())
     }
