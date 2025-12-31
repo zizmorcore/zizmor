@@ -7,6 +7,7 @@ use crate::{
     state::AuditState,
 };
 
+use github_actions_expressions::Expr;
 use github_actions_models::common::{DockerUses, expr::LoE};
 use github_actions_models::workflow::job::Container;
 
@@ -19,6 +20,7 @@ impl UnpinnedImages {
         &self,
         location: SymbolicLocation<'doc>,
         annotation: &str,
+        confidence: Confidence,
         persona: Persona,
         job: &super::NormalJob<'doc>,
     ) -> Result<Finding<'doc>, AuditError> {
@@ -26,7 +28,7 @@ impl UnpinnedImages {
         annotated_location = annotated_location.annotated(annotation);
         Self::finding()
             .severity(Severity::High)
-            .confidence(Confidence::High)
+            .confidence(confidence)
             .add_location(annotated_location)
             .persona(persona)
             .build(job)
@@ -78,11 +80,23 @@ impl Audit for UnpinnedImages {
 
         for (image, location) in image_refs_with_locations {
             match image {
-                LoE::Expr(_) => {
+                LoE::Expr(expr) => {
                     // TODO: We have something like `image: ${{ matrix.image }}`;
                     // we want to see if any expansion of `image` in the matrix
                     // is unpinned.
-                    continue;
+                    let context = match Expr::parse(expr.as_bare()).map(|e| e.inner) {
+                        Ok(Expr::Context(context)) if context.child_of("matrix") => context,
+                        _ => {
+                            findings.push(self.build_finding(
+                                location,
+                                "container image may be unpinned",
+                                Confidence::Low,
+                                Persona::Regular,
+                                job,
+                            )?);
+                            continue;
+                        }
+                    };
                 }
                 LoE::Literal(image) => match image.hash() {
                     Some(_) => continue,
@@ -91,6 +105,7 @@ impl Audit for UnpinnedImages {
                             findings.push(self.build_finding(
                                 location,
                                 "container image is pinned to latest",
+                                Confidence::High,
                                 Persona::Regular,
                                 job,
                             )?);
@@ -99,6 +114,7 @@ impl Audit for UnpinnedImages {
                             findings.push(self.build_finding(
                                 location,
                                 "container image is unpinned",
+                                Confidence::High,
                                 Persona::Regular,
                                 job,
                             )?);
@@ -107,6 +123,7 @@ impl Audit for UnpinnedImages {
                             findings.push(self.build_finding(
                                 location,
                                 "container image is not pinned to a SHA256 hash",
+                                Confidence::High,
                                 Persona::Pedantic,
                                 job,
                             )?);
