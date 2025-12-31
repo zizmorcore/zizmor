@@ -345,6 +345,7 @@ wntrblm/nox#925
 WordPress/gutenberg#69126
 WordPress/wordpress-develop#8007
 yt-dlp/yt-dlp#15324
+yt-dlp/yt-dlp#15387
 zama-ai/tfhe-rs#2292
 zama-ai/tfhe-rs#2979
 zcash/librustzcash#1679
