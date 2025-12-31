@@ -1668,6 +1668,7 @@
 
     ??? example "Examples"
         - yt-dlp/yt-dlp#15324
+        - yt-dlp/yt-dlp#15387
 
 
 -   ![](https://github.com/zama-ai.png?size=40){ width="40" loading=lazy align=left } zama-ai
