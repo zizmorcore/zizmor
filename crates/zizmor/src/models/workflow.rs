@@ -220,7 +220,7 @@ impl<'doc> NormalJob<'doc> {
             matrix: inner
                 .strategy
                 .as_ref()
-                .and_then(|s| s.matrix.as_ref().map(|m| Matrix::new(m))),
+                .and_then(|s| s.matrix.as_ref().map(Matrix::new)),
         }
     }
 
