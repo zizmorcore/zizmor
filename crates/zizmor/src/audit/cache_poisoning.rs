@@ -52,7 +52,13 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-node".parse().unwrap(),
             control: ControlExpr::any([
-                ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::FreeString, false),
+                ControlExpr::single(
+                    Toggle::OptIn,
+                    "cache",
+                    // https://github.com/actions/setup-node/blob/65d868f8d4/src/cache-utils.ts#L101-L111
+                    ControlFieldType::Exact(&["npm", "yarn", "pnpm"]),
+                    false,
+                ),
                 // NOTE: Added with `setup-node@v5`.
                 ControlExpr::single(
                     Toggle::OptIn,

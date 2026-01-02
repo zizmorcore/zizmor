@@ -87,6 +87,16 @@ impl Display for EnvValue {
 }
 
 impl EnvValue {
+    /// Returns whether the original value was empty.
+    ///
+    /// For example, `foo:` and `foo: ''` would both return true.
+    pub fn is_empty(&self) -> bool {
+        match self {
+            EnvValue::String(s) => s.is_empty(),
+            _ => false,
+        }
+    }
+
     /// Returns whether this [`EnvValue`] is a "trueish" value
     /// per C#'s `Boolean.TryParse`.
     ///
