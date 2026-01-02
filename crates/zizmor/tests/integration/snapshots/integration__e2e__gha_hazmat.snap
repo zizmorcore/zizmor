@@ -308,16 +308,18 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
    = note: audit confidence → High
 
 error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-  --> .github/workflows/cache-poisoning.yml:36:9
+  --> .github/workflows/cache-poisoning.yml:35:9
    |
 22 |   on: release
    |   ----------- generally used when publishing artifacts generated at runtime
 ...
+35 |           uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
 36 | /         with:
 37 | |           distribution: "zulu"
 38 | |           cache: "gradle"
 39 | |           java-version: "17"
-   | |____________________________^ opt-in for caching here
+   | |____________________________- enables caching explicitly here
    |
    = note: audit confidence → Low
 
@@ -328,7 +330,7 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    | ----------- generally used when publishing artifacts generated at runtime
 ...
 55 |         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cache enabled by default here
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
    |
    = note: audit confidence → Low
    = note: this finding has an auto-fix
