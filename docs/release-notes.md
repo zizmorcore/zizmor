@@ -14,6 +14,9 @@ of `zizmor`.
 * The [excessive-permissions] audit is now aware of the `artifact-metadata`
   and `models` permissions (#1461)
 
+* The [cache-poisoning] audit is now aware of the @ramsey/composer-install
+  action (#1489)
+
 ### Changes ⚠️
 
 * The default policy for the [unpinned-uses] audit has changed from allowing
