@@ -507,3 +507,18 @@ fn test_issue_1152() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Bug #1485: `cache: ""` should not be treated as opt-in for caching.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/1485>
+#[test]
+fn test_issue_1485() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("cache-poisoning/issue-1485-repro.yml"))
+            .run()?,
+        @"No findings to report. Good job! (2 suppressed)"
+    );
+
+    Ok(())
+}

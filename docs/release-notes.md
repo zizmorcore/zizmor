@@ -39,6 +39,10 @@ of `zizmor`.
 * The [dependabot-cooldown] audit no longer flags missing cooldowns on
   ecosystems that don't (yet) support cooldowns, such as `opentofu` (#1480)
 
+* Fixed a false positive in the [cache-poisoning] audit where `zizmor` would
+  treat empty strings (e.g. `cache: ''`) as enabling rather than disabling
+  caching (#1482)
+
 ### Miscellaneous 🛠
 
 * zizmor's configuration now has an official JSON schema that will
