@@ -30,4 +30,9 @@ jobs:
       - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
         with:
           # OK: caching explicitly disabled
+          ignore-cache: "yes"
+
+      - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
+        with:
+          # OK: caching explicitly disabled
           ignore-cache: 1
