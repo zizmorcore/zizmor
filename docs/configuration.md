@@ -98,7 +98,7 @@ Disables the audit entirely if `true`.
     alternatives:
 
     1. Ignoring specific findings via [`rules.<id>.ignore`](#rulesidignore).
-    1. Changing your [persona](./usage.md/#using-personas) to a less sensitive
+    1. Changing your [persona](./usage.md#using-personas) to a less sensitive
        one. For example, consider removing `--persona=pedantic`
        or `--persona=auditor` if you're using one of those.
 
@@ -144,7 +144,7 @@ entire file or entire line.
 !!! important
 
     Composite action findings cannot be ignored via `zizmor.yml` currently,
-    They can be ignored inline [with comments](./usage.md/#ignoring-results).
+    They can be ignored inline [with comments](./usage.md#ignoring-results).
 
 For example, here is a configuration file with two different audit ignore
 rule groups:
