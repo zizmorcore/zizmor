@@ -50,6 +50,13 @@ of `zizmor`.
 
     Many thanks to @kiwamizamurai for implementing this improvement!
 
+### Sponsors 💖
+
+This release was sponsored by @jrfnl. Thank you for your support!
+
+*Do you want to see your name or logo here? Consider
+[sponsoring zizmor's development!](https://github.com/sponsors/woodruffw)*
+
 ## 1.19.0
 
 ### New Features 🌈
