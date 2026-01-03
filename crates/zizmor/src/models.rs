@@ -8,7 +8,7 @@ use github_actions_models::common::expr::LoE;
 
 use crate::finding::location::{Locatable, SymbolicLocation};
 use crate::models::inputs::HasInputs;
-use crate::models::workflow::Matrix;
+use crate::models::workflow::matrix::Matrix;
 
 pub(crate) mod action;
 pub(crate) mod coordinate;

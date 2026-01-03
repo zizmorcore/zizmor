@@ -16,7 +16,7 @@ use crate::{
     models::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
-        workflow::Matrix,
+        workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
     utils::{self, ACTION_VALIDATOR, from_str_with_validation},
