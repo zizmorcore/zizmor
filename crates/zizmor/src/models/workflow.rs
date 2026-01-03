@@ -458,15 +458,15 @@ pub(crate) struct Matrix<'doc> {
 }
 
 impl<'doc> Matrix<'doc> {
+    /// Constructs a new [`Matrix`] from the given parent job, if the job has a matrix.
     fn new(parent: &NormalJob<'doc>) -> Option<Self> {
-        match parent.strategy.as_ref()?.matrix.as_ref() {
-            Some(matrix) => Some(Self {
-                inner: matrix,
-                parent: parent.clone(),
-                expanded_values: Matrix::expand_values(matrix),
-            }),
-            None => None,
-        }
+        let matrix = parent.strategy.as_ref()?.matrix.as_ref()?;
+
+        Some(Self {
+            inner: matrix,
+            parent: parent.clone(),
+            expanded_values: Matrix::expand_values(matrix),
+        })
     }
 
     /// Checks whether some expanded path leads to an expression
