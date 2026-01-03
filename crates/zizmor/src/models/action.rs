@@ -209,7 +209,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         Some(uses)
     }
 
-    fn matrix(&self) -> Option<&Matrix<'doc>> {
+    fn matrix(&self) -> Option<Matrix<'doc>> {
         None
     }
 

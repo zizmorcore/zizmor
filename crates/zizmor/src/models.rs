@@ -50,7 +50,7 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
     /// Returns this step's job's computed matrix, if present.
     ///
     /// Composite action steps have no matrix.
-    fn matrix(&self) -> Option<&Matrix<'doc>>;
+    fn matrix(&self) -> Option<Matrix<'doc>>;
 
     /// Returns a [`StepBodyCommon`] for this step.
     fn body(&self) -> StepBodyCommon<'doc>;

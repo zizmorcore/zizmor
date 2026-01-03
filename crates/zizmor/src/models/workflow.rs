@@ -207,21 +207,16 @@ pub(crate) struct NormalJob<'doc> {
     inner: &'doc job::NormalJob,
     /// The job's parent [`Workflow`].
     parent: &'doc Workflow,
-    /// An expanded matrix for this job, if it has one.
-    matrix: Option<Matrix<'doc>>,
 }
 
 impl<'doc> NormalJob<'doc> {
     pub(crate) fn new(id: &'doc str, inner: &'doc job::NormalJob, parent: &'doc Workflow) -> Self {
-        Self {
-            id,
-            inner,
-            parent,
-            matrix: inner
-                .strategy
-                .as_ref()
-                .and_then(|s| s.matrix.as_ref().map(Matrix::new)),
-        }
+        Self { id, inner, parent }
+    }
+
+    /// This job's matrix, if it has one.
+    pub(crate) fn matrix(&self) -> Option<Matrix<'doc>> {
+        Matrix::new(self)
     }
 
     /// An iterator of this job's constituent [`Step`]s.
@@ -291,11 +286,6 @@ impl<'doc> NormalJob<'doc> {
             self.steps()
                 .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location()))),
         )
-    }
-
-    /// Return this job's expanded matrix, if it has one.
-    pub(crate) fn matrix(&self) -> Option<&Matrix<'doc>> {
-        self.matrix.as_ref()
     }
 }
 
@@ -463,22 +453,19 @@ impl<'doc> Iterator for Jobs<'doc> {
 #[derive(Clone)]
 pub(crate) struct Matrix<'doc> {
     inner: &'doc LoE<job::Matrix>,
+    parent: NormalJob<'doc>,
     pub(crate) expanded_values: Vec<(String, String)>,
 }
 
-impl<'doc> std::ops::Deref for Matrix<'doc> {
-    type Target = &'doc LoE<job::Matrix>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl<'doc> Matrix<'doc> {
-    fn new(inner: &'doc LoE<job::Matrix>) -> Self {
-        Self {
-            inner,
-            expanded_values: Matrix::expand_values(inner),
+    fn new(parent: &NormalJob<'doc>) -> Option<Self> {
+        match parent.strategy.as_ref()?.matrix.as_ref() {
+            Some(matrix) => Some(Self {
+                inner: matrix,
+                parent: parent.clone(),
+                expanded_values: Matrix::expand_values(matrix),
+            }),
+            None => None,
         }
     }
 
@@ -606,6 +593,24 @@ impl<'doc> Matrix<'doc> {
     }
 }
 
+impl<'doc> std::ops::Deref for Matrix<'doc> {
+    type Target = &'doc LoE<job::Matrix>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<'doc> Locatable<'doc> for Matrix<'doc> {
+    /// This matrix's [`SymbolicLocation`].
+    fn location(&self) -> SymbolicLocation<'doc> {
+        self.parent
+            .location()
+            .with_keys(["strategy".into(), "matrix".into()])
+            .annotated("this matrix")
+    }
+}
+
 /// Represents a single step in a normal workflow job.
 ///
 /// This type implements [`std::ops::Deref`] for [`workflow::job::Step`], which
@@ -671,8 +676,8 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         Some(uses)
     }
 
-    fn matrix(&self) -> Option<&Matrix<'doc>> {
-        self.job().matrix.as_ref()
+    fn matrix(&self) -> Option<Matrix<'doc>> {
+        self.job().matrix()
     }
 
     fn body(&self) -> StepBodyCommon<'doc> {
@@ -825,11 +830,13 @@ impl<'doc> Iterator for Steps<'doc> {
 #[cfg(test)]
 mod tests {
     use github_actions_expressions::context::Context;
-    use github_actions_models::workflow::job::Strategy;
 
-    use crate::models::{
-        inputs::{Capability, HasInputs as _},
-        workflow::{Matrix, Workflow},
+    use crate::{
+        models::{
+            inputs::{Capability, HasInputs as _},
+            workflow::{Matrix, NormalJob, Workflow},
+        },
+        registry::input::InputKey,
     };
 
     #[test]
@@ -882,19 +889,41 @@ jobs:
 
     #[test]
     fn test_matrix_expanded_values() -> anyhow::Result<()> {
-        let strategy_yaml = r#"
-        matrix:
-          os: [ubuntu-latest, windows-latest, macos-latest]
-          node: [12, 14, 16]
-          nested:
-            - { a: 1, b: 2 }
-            - { a: 3, b: 4 }
+        let workflow_yaml = r#"
+name: test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [12, 14, 16]
+        nested:
+          - { a: 1, b: 2 }
+          - { a: 3, b: 4 }
+    steps:
+      - run: true
         "#;
 
-        let strategy = serde_yaml::from_str::<Strategy>(strategy_yaml)?;
-        assert!(strategy.matrix.is_some());
+        let workflow = Workflow::from_string(
+            workflow_yaml.into(),
+            InputKey::local("fakegroup".into(), "test.yml", None),
+        )
+        .unwrap();
 
-        let matrix = Matrix::new(strategy.matrix.as_ref().unwrap());
+        let job = {
+            let github_actions_models::workflow::Job::NormalJob(job) =
+                workflow.jobs.get("test").unwrap()
+            else {
+                panic!("Expected a normal job");
+            };
+
+            NormalJob::new("test", job, &workflow)
+        };
+
+        let matrix = Matrix::new(&job).unwrap();
+
         insta::assert_debug_snapshot!(matrix.expanded_values, @r#"
         [
             (
@@ -945,22 +974,42 @@ jobs:
 
     #[test]
     fn test_direct_matrix_expands_to_static_values() -> anyhow::Result<()> {
-        let strategy_yaml = r#"
-        matrix:
-          trivially-static: [a, b, c, d]
-          trivially-dynamic: [a, '${{ github.ref }}', c, d]
-          nested-static:
-            - { a: 1, b: 2 }
-            - { a: 3, b: 4 }
-          nested-dynamic:
-            - { a: 1, b: '${{ github.ref }}' }
-            - { a: 3, b: 4 }
+        let workflow_yaml = r#"
+name: test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        trivially-static: [a, b, c, d]
+        trivially-dynamic: [a, '${{ github.ref }}', c, d]
+        nested-static:
+          - { a: 1, b: 2 }
+          - { a: 3, b: 4 }
+        nested-dynamic:
+          - { a: 1, b: '${{ github.ref }}' }
+          - { a: 3, b: 4 }
+    steps:
+      - run: true
         "#;
 
-        let strategy = serde_yaml::from_str::<Strategy>(strategy_yaml)?;
-        assert!(strategy.matrix.is_some());
+        let workflow = Workflow::from_string(
+            workflow_yaml.into(),
+            InputKey::local("fakegroup".into(), "test.yml", None),
+        )?;
 
-        let matrix = Matrix::new(strategy.matrix.as_ref().unwrap());
+        let job = {
+            let github_actions_models::workflow::Job::NormalJob(job) =
+                workflow.jobs.get("test").unwrap()
+            else {
+                panic!("Expected a normal job");
+            };
+
+            NormalJob::new("test", job, &workflow)
+        };
+
+        let matrix = Matrix::new(&job).unwrap();
 
         assert!(matrix.expands_to_static_values(&Context::parse("matrix.trivially-static")?));
         assert!(!matrix.expands_to_static_values(&Context::parse("matrix.trivially-dynamic")?));
@@ -976,14 +1025,34 @@ jobs:
 
     #[test]
     fn test_indirect_matrix_expands_to_static_values() -> anyhow::Result<()> {
-        let strategy_yaml = r#"
-        matrix: ${{ dynamic }}
+        let workflow_yaml = r#"
+name: test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ dynamic }}
+    steps:
+      - run: true
         "#;
 
-        let strategy = serde_yaml::from_str::<Strategy>(strategy_yaml)?;
-        assert!(strategy.matrix.is_some());
+        let workflow = Workflow::from_string(
+            workflow_yaml.into(),
+            InputKey::local("fakegroup".into(), "test.yml", None),
+        )?;
 
-        let matrix = Matrix::new(strategy.matrix.as_ref().unwrap());
+        let job = {
+            let github_actions_models::workflow::Job::NormalJob(job) =
+                workflow.jobs.get("test").unwrap()
+            else {
+                panic!("Expected a normal job");
+            };
+
+            NormalJob::new("test", job, &workflow)
+        };
+
+        let matrix = Matrix::new(&job).unwrap();
         assert!(matrix.expanded_values.is_empty());
 
         assert!(!matrix.expands_to_static_values(&Context::parse("matrix.nonexistent")?));
