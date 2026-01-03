@@ -14,6 +14,9 @@ of `zizmor`.
 * The [excessive-permissions] audit is now aware of the `artifact-metadata`
   and `models` permissions (#1461)
 
+* The [cache-poisoning] audit is now aware of the @ramsey/composer-install
+  action (#1489)
+
 ### Changes ⚠️
 
 * The default policy for the [unpinned-uses] audit has changed from allowing
@@ -38,6 +41,10 @@ of `zizmor`.
 
 * The [dependabot-cooldown] audit no longer flags missing cooldowns on
   ecosystems that don't (yet) support cooldowns, such as `opentofu` (#1480)
+
+* Fixed a false positive in the [cache-poisoning] audit where `zizmor` would
+  treat empty strings (e.g. `cache: ''`) as enabling rather than disabling
+  caching (#1482)
 
 ### Miscellaneous 🛠
 

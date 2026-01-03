@@ -94,7 +94,7 @@ pub(crate) enum ControlFieldType {
     /// The behavior is controlled by a "free" string field.
     ///
     /// This is effectively a "presence" check, i.e. is satisfied if
-    /// the field is present, regardless of its value.
+    /// the field is present and nonempty, regardless of its value.
     FreeString,
     /// The behavior is controlled by a "fixed" string field, i.e. only applies
     /// when the field matches one of the given values.
@@ -335,10 +335,22 @@ impl ControlExpr {
                         },
                         // We expect a "free" string control, i.e. any value.
                         // Evaluate just the toggle.
-                        ControlFieldType::FreeString => match toggle {
-                            Toggle::OptIn => ControlEvaluation::Satisfied,
-                            Toggle::OptOut => ControlEvaluation::NotSatisfied,
-                        },
+                        ControlFieldType::FreeString => {
+                            match field_value.is_empty() {
+                                true => match toggle {
+                                    Toggle::OptIn => ControlEvaluation::NotSatisfied,
+                                    Toggle::OptOut => ControlEvaluation::Satisfied,
+                                },
+                                false => match toggle {
+                                    Toggle::OptIn => ControlEvaluation::Satisfied,
+                                    Toggle::OptOut => ControlEvaluation::NotSatisfied,
+                                },
+                            }
+                            // match toggle {
+                            //     Toggle::OptIn => ControlEvaluation::Satisfied,
+                            //     Toggle::OptOut => ControlEvaluation::NotSatisfied,
+                            // }
+                        }
                         // We expect a "fixed" string control, i.e. one of a set of values.
                         ControlFieldType::Exact(items) => {
                             if items.contains(&field_value.to_string().as_str()) {
@@ -385,15 +397,48 @@ pub(crate) enum Usage {
 mod tests {
     use std::str::FromStr;
 
+    use github_actions_models::common::EnvValue;
+    use indexmap::IndexMap;
+
     use super::ActionCoordinate;
     use crate::{
         models::{
-            coordinate::{ControlExpr, ControlFieldType, Toggle, Usage},
+            coordinate::{ControlEvaluation, ControlExpr, ControlFieldType, Toggle, Usage},
             uses::RepositoryUsesPattern,
             workflow::{Job, Workflow},
         },
         registry::input::InputKey,
     };
+
+    /// Test evaluation for a `FreeString` control, specifically that empty
+    /// strings are treated as "not set."
+    #[test]
+    fn test_freestring_control() {
+        let optin_control =
+            ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::FreeString, false);
+        let optout_control =
+            ControlExpr::single(Toggle::OptOut, "set-me", ControlFieldType::FreeString, true);
+
+        let with_enabled = IndexMap::from([("set-me".into(), EnvValue::String("anything".into()))]);
+        let with_disabled = IndexMap::from([("set-me".into(), EnvValue::String("".into()))]);
+
+        assert!(matches!(
+            optin_control.eval(&with_enabled),
+            ControlEvaluation::Satisfied
+        ));
+        assert!(matches!(
+            optin_control.eval(&with_disabled),
+            ControlEvaluation::NotSatisfied
+        ));
+        assert!(matches!(
+            optout_control.eval(&with_enabled),
+            ControlEvaluation::NotSatisfied
+        ));
+        assert!(matches!(
+            optout_control.eval(&with_disabled),
+            ControlEvaluation::Satisfied
+        ));
+    }
 
     #[test]
     fn test_usage() {
