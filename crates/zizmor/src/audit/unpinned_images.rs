@@ -18,13 +18,13 @@ pub(crate) struct UnpinnedImages;
 impl UnpinnedImages {
     fn build_finding<'doc>(
         &self,
-        location: SymbolicLocation<'doc>,
+        location: &SymbolicLocation<'doc>,
         annotation: &str,
         confidence: Confidence,
         persona: Persona,
         job: &super::NormalJob<'doc>,
     ) -> Result<Finding<'doc>, AuditError> {
-        let mut annotated_location = location;
+        let mut annotated_location = location.clone();
         annotated_location = annotated_location.annotated(annotation);
         Self::finding()
             .severity(Severity::High)
@@ -89,7 +89,7 @@ impl Audit for UnpinnedImages {
                         // TODO: Be more precise in some of these cases.
                         _ => {
                             findings.push(self.build_finding(
-                                location,
+                                &location,
                                 "container image may be unpinned",
                                 Confidence::Low,
                                 Persona::Regular,
@@ -107,26 +107,51 @@ impl Audit for UnpinnedImages {
                         continue;
                     };
 
-                    if matrix.expands_to_static_values(&context) {
-                        // If we can statically expand the matrix values for this context,
-                        // we do so to determine pinning.
-                        // TODO: Actually implement this.
-                        findings.push(self.build_finding(
-                            location,
-                            "container image may be unpinned",
-                            Confidence::Low,
-                            Persona::Regular,
-                            job,
-                        )?);
-                    } else {
-                        // Otherwise, we have to assume the worst and say it's unpinned.
-                        findings.push(self.build_finding(
-                            location,
-                            "container image may be unpinned",
-                            Confidence::Low,
-                            Persona::Regular,
-                            job,
-                        )?);
+                    for expansion in matrix
+                        .expansions()
+                        .filter(|e| context.matches(e.path.as_str()))
+                    {
+                        if !expansion.is_static() {
+                            findings.push(self.build_finding(
+                                &location,
+                                "container image may be unpinned",
+                                Confidence::Low,
+                                Persona::Regular,
+                                job,
+                            )?);
+                            break;
+                        } else {
+                            // Try and parse the expanded value as an image reference.
+                            let image = DockerUses::parse(&expansion.value);
+                            match (image.tag(), image.hash()) {
+                                // Image is pinned by hash.
+                                (_, Some(_)) => continue,
+                                // Docker image is pinned to "latest".
+                                (Some("latest"), None) => findings.push(self.build_finding(
+                                    &location,
+                                    "container image is pinned to latest",
+                                    Confidence::High,
+                                    Persona::Regular,
+                                    job,
+                                )?),
+                                // Docker image is pined to some other tag.
+                                (Some(_), None) => findings.push(self.build_finding(
+                                    &location,
+                                    "container image is not pinned to a SHA256 hash",
+                                    Confidence::High,
+                                    Persona::Pedantic,
+                                    job,
+                                )?),
+                                // Image is unpinned.
+                                (None, None) => findings.push(self.build_finding(
+                                    &location,
+                                    "container image is unpinned",
+                                    Confidence::High,
+                                    Persona::Regular,
+                                    job,
+                                )?),
+                            }
+                        }
                     }
                 }
                 LoE::Literal(image) => match image.hash() {
@@ -134,7 +159,7 @@ impl Audit for UnpinnedImages {
                     None => match image.tag() {
                         Some("latest") => {
                             findings.push(self.build_finding(
-                                location,
+                                &location,
                                 "container image is pinned to latest",
                                 Confidence::High,
                                 Persona::Regular,
@@ -143,7 +168,7 @@ impl Audit for UnpinnedImages {
                         }
                         None => {
                             findings.push(self.build_finding(
-                                location,
+                                &location,
                                 "container image is unpinned",
                                 Confidence::High,
                                 Persona::Regular,
@@ -152,7 +177,7 @@ impl Audit for UnpinnedImages {
                         }
                         Some(_) => {
                             findings.push(self.build_finding(
-                                location,
+                                &location,
                                 "container image is not pinned to a SHA256 hash",
                                 Confidence::High,
                                 Persona::Pedantic,

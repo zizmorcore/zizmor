@@ -217,7 +217,7 @@ impl Uses {
         if uses.starts_with("./") {
             Ok(Self::Local(LocalUses::new(uses)))
         } else if let Some(image) = uses.strip_prefix("docker://") {
-            DockerUses::parse(image).map(Self::Docker)
+            Ok(Self::Docker(DockerUses::parse(image)))
         } else {
             RepositoryUses::parse(uses).map(Self::Repository)
         }
@@ -372,7 +372,7 @@ impl<'a> DockerUsesInner<'a> {
         registry == "localhost" || registry.contains('.') || registry.contains(':')
     }
 
-    fn from_str(uses: &'a str) -> Result<Self, UsesError> {
+    fn from_str(uses: &'a str) -> Self {
         let (registry, image) = match uses.split_once('/') {
             Some((registry, image)) if Self::is_registry(registry) => (Some(registry), image),
             _ => (None, uses),
@@ -390,12 +390,12 @@ impl<'a> DockerUsesInner<'a> {
                 Some(&hash[1..])
             };
 
-            Ok(DockerUsesInner {
+            DockerUsesInner {
                 registry,
                 image,
                 tag: None,
                 hash,
-            })
+            }
         } else {
             let (image, tag) = match image.split_once(':') {
                 Some((image, "")) => (image, None),
@@ -403,12 +403,12 @@ impl<'a> DockerUsesInner<'a> {
                 _ => (image, None),
             };
 
-            Ok(DockerUsesInner {
+            DockerUsesInner {
                 registry,
                 image,
                 tag,
                 hash: None,
-            })
+            }
         }
     }
 }
@@ -427,11 +427,8 @@ self_cell!(
 
 impl DockerUses {
     /// Parse a `uses: docker://some-image` clause.
-    pub fn parse(uses: impl Into<String>) -> Result<Self, UsesError> {
-        DockerUses::try_new(uses.into(), |s| {
-            let inner = DockerUsesInner::from_str(s)?;
-            Ok(inner)
-        })
+    pub fn parse(uses: impl Into<String>) -> Self {
+        DockerUses::new(uses.into(), |s| DockerUsesInner::from_str(s))
     }
 
     /// Get the raw uses clause. This does not include the `docker://` prefix.
@@ -466,7 +463,7 @@ impl<'de> Deserialize<'de> for DockerUses {
         D: Deserializer<'de>,
     {
         let uses = <String>::deserialize(deserializer)?;
-        DockerUses::parse(uses).map_err(custom_error::<D>)
+        Ok(DockerUses::parse(uses))
     }
 }
 
