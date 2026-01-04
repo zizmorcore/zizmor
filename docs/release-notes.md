@@ -17,6 +17,9 @@ of `zizmor`.
 * The [cache-poisoning] audit is now aware of the @ramsey/composer-install
   action (#1489)
 
+* The [unpinned-images] audit is now significantly more precise in the presence
+  of matrix references, e.g. `image: ${{ matrix.image }}` (#1482)
+
 ### Changes ⚠️
 
 * The default policy for the [unpinned-uses] audit has changed from allowing
