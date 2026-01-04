@@ -808,6 +808,14 @@
         - lmstudio-ai/venvstacks#51
 
 
+-   ![](https://github.com/louislam.png?size=40){ width="40" loading=lazy align=left } louislam
+
+    ---
+
+    ??? example "Examples"
+        - louislam/uptime-kuma#6575
+
+
 -   ![](https://github.com/maplibre.png?size=40){ width="40" loading=lazy align=left } maplibre
 
     ---
