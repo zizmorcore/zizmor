@@ -90,7 +90,7 @@ impl Audit for UnpinnedImages {
                         // TODO: Be more precise in some of these cases.
                         _ => {
                             findings.push(self.build_finding(
-                                &location,
+                                location,
                                 "container image may be unpinned",
                                 Confidence::Low,
                                 Persona::Regular,
@@ -190,7 +190,7 @@ impl Audit for UnpinnedImages {
                     None => match image.tag() {
                         Some("latest") => {
                             findings.push(self.build_finding(
-                                &location,
+                                location,
                                 "container image is pinned to latest",
                                 Confidence::High,
                                 Persona::Regular,
@@ -199,7 +199,7 @@ impl Audit for UnpinnedImages {
                         }
                         None => {
                             findings.push(self.build_finding(
-                                &location,
+                                location,
                                 "container image is unpinned",
                                 Confidence::High,
                                 Persona::Regular,
@@ -208,7 +208,7 @@ impl Audit for UnpinnedImages {
                         }
                         Some(_) => {
                             findings.push(self.build_finding(
-                                &location,
+                                location,
                                 "container image is not pinned to a SHA256 hash",
                                 Confidence::High,
                                 Persona::Pedantic,
