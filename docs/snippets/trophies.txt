@@ -169,6 +169,7 @@ kata-containers/kata-containers#11475
 kubecolor/kubecolor#273
 libssh2/libssh2#1609
 lmstudio-ai/venvstacks#51
+louislam/uptime-kuma#6575
 maplibre/martin#2440
 matplotlib/matplotlib#29251
 marcusvolz/strava_py#53
