@@ -64,7 +64,8 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_matrix_in_image() -> anyhow::Result<()> {
+fn test_matrix_in_image_pedantic() -> anyhow::Result<()> {
+    // pedantic: shows unhashed findings
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("unpinned-images/matrix-in-image.yml"))
@@ -103,13 +104,13 @@ fn test_matrix_in_image() -> anyhow::Result<()> {
       --> @@INPUT@@:20:7
        |
     20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
     ...
     23 |       matrix:
        |       ------ this matrix
     ...
-    36 |             image: debian:12
-       |             ---------------- this expansion of matrix.image
+    37 |             image: ubuntu
+       |             ------------- this expansion of matrix.image
        |
        = note: audit confidence → High
 
@@ -117,13 +118,42 @@ fn test_matrix_in_image() -> anyhow::Result<()> {
       --> @@INPUT@@:20:7
        |
     20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
     ...
     23 |       matrix:
        |       ------ this matrix
     ...
-    40 |             image: debian:11
-       |             ---------------- this expansion of matrix.image
+    42 |             image: ubuntu:latest
+       |             -------------------- this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    4 findings: 0 informational, 0 low, 0 medium, 4 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_matrix_in_image_regular() -> anyhow::Result<()> {
+    // regular persona: suppresses unhashed findings
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-images/matrix-in-image.yml"))
+            .run()?,
+        @r"
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    37 |             image: ubuntu
+       |             ------------- this expansion of matrix.image
        |
        = note: audit confidence → High
 
@@ -131,101 +161,17 @@ fn test_matrix_in_image() -> anyhow::Result<()> {
       --> @@INPUT@@:20:7
        |
     20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
     ...
     23 |       matrix:
        |       ------ this matrix
     ...
-    44 |             image: quay.io/centos/centos:stream9
-       |             ------------------------------------ this expansion of matrix.image
+    42 |             image: ubuntu:latest
+       |             -------------------- this expansion of matrix.image
        |
        = note: audit confidence → High
 
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:20:7
-       |
-    20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
-    ...
-    23 |       matrix:
-       |       ------ this matrix
-    ...
-    48 |             image: arm64v8/ubuntu:24.04
-       |             --------------------------- this expansion of matrix.image
-       |
-       = note: audit confidence → High
-
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:20:7
-       |
-    20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
-    ...
-    23 |       matrix:
-       |       ------ this matrix
-    ...
-    52 |             image: arm64v8/ubuntu:22.04
-       |             --------------------------- this expansion of matrix.image
-       |
-       = note: audit confidence → High
-
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:20:7
-       |
-    20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
-    ...
-    23 |       matrix:
-       |       ------ this matrix
-    ...
-    56 |             image: arm64v8/ubuntu:20.04
-       |             --------------------------- this expansion of matrix.image
-       |
-       = note: audit confidence → High
-
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:20:7
-       |
-    20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
-    ...
-    23 |       matrix:
-       |       ------ this matrix
-    ...
-    60 |             image: arm64v8/debian:12
-       |             ------------------------ this expansion of matrix.image
-       |
-       = note: audit confidence → High
-
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:20:7
-       |
-    20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
-    ...
-    23 |       matrix:
-       |       ------ this matrix
-    ...
-    64 |             image: arm64v8/debian:11
-       |             ------------------------ this expansion of matrix.image
-       |
-       = note: audit confidence → High
-
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:20:7
-       |
-    20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
-    ...
-    23 |       matrix:
-       |       ------ this matrix
-    ...
-    68 |             image: quay.io/centos/centos:stream9
-       |             ------------------------------------ this expansion of matrix.image
-       |
-       = note: audit confidence → High
-
-    11 findings: 0 informational, 0 low, 0 medium, 11 high
+    4 findings (2 suppressed): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 

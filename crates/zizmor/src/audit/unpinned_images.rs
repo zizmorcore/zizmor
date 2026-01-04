@@ -147,7 +147,11 @@ impl Audit for UnpinnedImages {
                                                 .primary()
                                                 .annotated("container image is pinned to latest"),
                                         )
-                                        .add_location(expansion.location())
+                                        .add_location(matrix.location().key_only())
+                                        .add_location(expansion.location().annotated(format!(
+                                            "this expansion of {path}",
+                                            path = expansion.path
+                                        )))
                                         .build(job)?,
                                 ),
                                 // Docker image is pined to some other tag.
@@ -178,7 +182,11 @@ impl Audit for UnpinnedImages {
                                                 .primary()
                                                 .annotated("container image is unpinned"),
                                         )
-                                        .add_location(expansion.location())
+                                        .add_location(matrix.location().key_only())
+                                        .add_location(expansion.location().annotated(format!(
+                                            "this expansion of {path}",
+                                            path = expansion.path
+                                        )))
                                         .build(job)?,
                                 ),
                             }

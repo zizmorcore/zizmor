@@ -1,4 +1,4 @@
-# minimized from https://raw.githubusercontent.com/openai/codex/13c42a077c88a0d04ae7680a9891d2daf4558577/.github/workflows/shell-tool-mcp.yml
+# derived from https://raw.githubusercontent.com/openai/codex/13c42a077c88a0d04ae7680a9891d2daf4558577/.github/workflows/shell-tool-mcp.yml
 
 name: matrix-in-image
 
@@ -31,41 +31,15 @@ jobs:
             variant: ubuntu-22.04
             image: ubuntu:22.04
           - runner: ubuntu-24.04
-            target: x86_64-unknown-linux-musl
-            variant: debian-12
-            image: debian:12
-          - runner: ubuntu-24.04
-            target: x86_64-unknown-linux-musl
-            variant: debian-11
-            image: debian:11
-          - runner: ubuntu-24.04
-            target: x86_64-unknown-linux-musl
-            variant: centos-9
-            image: quay.io/centos/centos:stream9
-          - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
             variant: ubuntu-24.04
-            image: arm64v8/ubuntu:24.04
-          - runner: ubuntu-24.04-arm
+             # NOT OK: no pin
+            image: ubuntu
+          - runner: ubuntu-24.04
             target: aarch64-unknown-linux-musl
-            variant: ubuntu-22.04
-            image: arm64v8/ubuntu:22.04
-          - runner: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-musl
-            variant: ubuntu-20.04
-            image: arm64v8/ubuntu:20.04
-          - runner: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-musl
-            variant: debian-12
-            image: arm64v8/debian:12
-          - runner: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-musl
-            variant: debian-11
-            image: arm64v8/debian:11
-          - runner: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-musl
-            variant: centos-9
-            image: quay.io/centos/centos:stream9
+            variant: ubuntu-24.04
+            # NOT OK: pinned to latest
+            image: ubuntu:latest
     steps:
       - name: Noop
         shell: bash
