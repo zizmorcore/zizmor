@@ -46,6 +46,9 @@ of `zizmor`.
   treat empty strings (e.g. `cache: ''`) as enabling rather than disabling
   caching (#1482)
 
+* Fixed two gaps in the [use-trusted-publishing] audit's detection of
+  common `yarn` publishing commands (#1495)
+
 ### Miscellaneous 🛠
 
 * zizmor's configuration now has an official JSON schema that will

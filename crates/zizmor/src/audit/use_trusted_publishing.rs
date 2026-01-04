@@ -255,11 +255,17 @@ impl UseTrustedPublishing {
                 args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
             "yarn" => {
-                // TODO: Figure out `yarn run ... publish` patterns.
-                // TODO: Figure out `yarn ... publish` patterns for lerna/npm workspaces.
-
-                // Looking for `yarn ... npm publish` without `--dry-run` or `-n`.
-                args.any(|arg| arg == "npm") && args.all(|arg| arg != "--dry-run" && arg != "-n")
+                // Looking for `yarn ... publish` for Yarn v1,
+                // and `yarn ... npm ... publish` without `--dry-run` or `-n` for Yarn v2+.
+                match args.find(|arg| *arg == "publish" || *arg == "npm") {
+                    Some("publish") => true,
+                    Some("npm") => {
+                        // `yarn ... npm ... publish` without `--dry-run` or `-n`.
+                        args.any(|arg| arg == "publish")
+                            && args.all(|arg| arg != "--dry-run" && arg != "-n")
+                    }
+                    _ => false,
+                }
             }
             "pnpm" => {
                 // TODO: Figure out `pnpm run ... publish` patterns.
@@ -523,7 +529,9 @@ mod tests {
             (&["npm", "publish"][..], true),
             (&["npm", "run", "publish"][..], true),
             (&["npm", "publish", "--dry-run"][..], false),
+            (&["yarn", "npm"][..], false),
             (&["yarn", "npm", "publish"][..], true),
+            (&["yarn", "publish"][..], true),
             (&["yarn", "npm", "publish", "--dry-run"][..], false),
             (&["pnpm", "publish"][..], true),
             (&["pnpm", "publish", "--dry-run"][..], false),
