@@ -10,6 +10,40 @@ use crate::{
     utils::extract_fenced_expressions,
 };
 
+/// Represents a concrete expansion of a matrix.
+///
+/// For example, given a matrix like:
+///
+/// ```yaml
+/// strategy:
+///   matrix:
+///     os: [ubuntu-latest, windows-latest]
+///     node: [12, 14]
+/// ```
+///
+/// an expansion could represent the path `matrix.os` with the value `ubuntu-latest`.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Expansion {
+    /// The expanded path within the matrix.
+    // TODO: This should be a Context.
+    pub(crate) path: String,
+    /// The expanded value at the given path.
+    // TODO: This should be a 'doc ExpansionValue.
+    pub(crate) value: String,
+    // TODO: SymbolicLocation
+}
+
+impl Expansion {
+    fn new(path: String, value: String) -> Self {
+        Self { path, value }
+    }
+
+    /// Checks whether this expansion's value is static (i.e., contains no expressions).
+    pub(crate) fn is_static(&self) -> bool {
+        extract_fenced_expressions(&self.value).is_empty()
+    }
+}
+
 /// Represents an execution Matrix within a Job.
 ///
 /// This type implements [`std::ops::Deref`] for [`job::NormalJob::strategy`], providing
@@ -18,7 +52,7 @@ use crate::{
 pub(crate) struct Matrix<'doc> {
     inner: &'doc LoE<job::Matrix>,
     parent: NormalJob<'doc>,
-    pub(crate) expanded_values: Vec<(String, String)>,
+    expansions: Vec<Expansion>,
 }
 
 impl<'doc> Matrix<'doc> {
@@ -29,8 +63,17 @@ impl<'doc> Matrix<'doc> {
         Some(Self {
             inner: matrix,
             parent: parent.clone(),
-            expanded_values: Matrix::expand_values(matrix),
+            expansions: Matrix::expand_values(matrix),
         })
+    }
+
+    // TODO: expansions() -> Expansions
+    // where Expansions impl Iterator<Item = Expansion>
+    // where Expansion provides access to the expanded path and value, plus
+    // location and staticness.
+
+    pub(crate) fn expansions(&self) -> impl Iterator<Item = &Expansion> {
+        self.expansions.iter()
     }
 
     /// Checks whether some expanded path leads to an expression
@@ -41,14 +84,9 @@ impl<'doc> Matrix<'doc> {
             return false;
         }
 
-        let expands_to_expression = self.expanded_values.iter().any(|(path, expansion)| {
-            // Each expanded value in the matrix might be an expression, or contain
-            // one or more expressions (e.g. `foo-${{ bar }}-${{ baz }}`). So we
-            // need to check for *any* expression in the expanded value,
-            // not just that it starts and ends with the expression delimiters.
-            let expansion_contains_expression = !extract_fenced_expressions(expansion).is_empty();
-            context.matches(path.as_str()) && expansion_contains_expression
-        });
+        let expands_to_expression = self
+            .expansions()
+            .any(|expansion| context.matches(expansion.path.as_str()) && !expansion.is_static());
 
         !expands_to_expression
     }
@@ -59,7 +97,7 @@ impl<'doc> Matrix<'doc> {
     /// the second component is the string representation for the expanded value
     /// (e.g. ubuntu-latest)
     ///
-    fn expand_values(inner: &LoE<job::Matrix>) -> Vec<(String, String)> {
+    fn expand_values(inner: &LoE<job::Matrix>) -> Vec<Expansion> {
         match inner {
             LoE::Expr(_) => vec![],
             LoE::Literal(matrix) => {
@@ -95,9 +133,7 @@ impl<'doc> Matrix<'doc> {
         }
     }
 
-    fn expand_explicit_rows(
-        include: &IndexMap<String, serde_yaml::Value>,
-    ) -> Vec<(String, String)> {
+    fn expand_explicit_rows(include: &IndexMap<String, serde_yaml::Value>) -> Vec<Expansion> {
         let normalized = include
             .iter()
             .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
@@ -108,7 +144,7 @@ impl<'doc> Matrix<'doc> {
 
     fn expand_dimensions(
         dimensions: &IndexMap<String, LoE<Vec<serde_yaml::Value>>>,
-    ) -> Vec<(String, String)> {
+    ) -> Vec<Expansion> {
         let normalized = dimensions
             .iter()
             .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
@@ -117,7 +153,7 @@ impl<'doc> Matrix<'doc> {
         Matrix::expand(normalized)
     }
 
-    fn expand(values: IndexMap<String, serde_json::Value>) -> Vec<(String, String)> {
+    fn expand(values: IndexMap<String, serde_json::Value>) -> Vec<Expansion> {
         values
             .iter()
             .flat_map(|(key, value)| Matrix::walk_path(value, format!("matrix.{key}")))
@@ -126,14 +162,18 @@ impl<'doc> Matrix<'doc> {
 
     // Walks recursively a serde_json::Value tree, expanding it into a Vec<(String, String)>
     // according to the inner value of each node
-    fn walk_path(tree: &serde_json::Value, current_path: String) -> Vec<(String, String)> {
+    fn walk_path(tree: &serde_json::Value, current_path: String) -> Vec<Expansion> {
         match tree {
             serde_json::Value::Null => vec![],
 
             // In the case of scalars, we just convert the value to a string
-            serde_json::Value::Bool(inner) => vec![(current_path, inner.to_string())],
-            serde_json::Value::Number(inner) => vec![(current_path, inner.to_string())],
-            serde_json::Value::String(inner) => vec![(current_path, inner.to_string())],
+            serde_json::Value::Bool(inner) => vec![Expansion::new(current_path, inner.to_string())],
+            serde_json::Value::Number(inner) => {
+                vec![Expansion::new(current_path, inner.to_string())]
+            }
+            serde_json::Value::String(inner) => {
+                vec![Expansion::new(current_path, inner.to_string())]
+            }
 
             // In the case of an array, we recursively create on expansion pair for each item
             serde_json::Value::Array(inner) => inner
@@ -221,48 +261,48 @@ jobs:
 
         let matrix = Matrix::new(&job).unwrap();
 
-        insta::assert_debug_snapshot!(matrix.expanded_values, @r#"
+        insta::assert_debug_snapshot!(matrix.expansions().collect::<Vec<_>>(), @r#"
         [
-            (
-                "matrix.os",
-                "ubuntu-latest",
-            ),
-            (
-                "matrix.os",
-                "windows-latest",
-            ),
-            (
-                "matrix.os",
-                "macos-latest",
-            ),
-            (
-                "matrix.node",
-                "12",
-            ),
-            (
-                "matrix.node",
-                "14",
-            ),
-            (
-                "matrix.node",
-                "16",
-            ),
-            (
-                "matrix.nested.a",
-                "1",
-            ),
-            (
-                "matrix.nested.b",
-                "2",
-            ),
-            (
-                "matrix.nested.a",
-                "3",
-            ),
-            (
-                "matrix.nested.b",
-                "4",
-            ),
+            Expansion {
+                path: "matrix.os",
+                value: "ubuntu-latest",
+            },
+            Expansion {
+                path: "matrix.os",
+                value: "windows-latest",
+            },
+            Expansion {
+                path: "matrix.os",
+                value: "macos-latest",
+            },
+            Expansion {
+                path: "matrix.node",
+                value: "12",
+            },
+            Expansion {
+                path: "matrix.node",
+                value: "14",
+            },
+            Expansion {
+                path: "matrix.node",
+                value: "16",
+            },
+            Expansion {
+                path: "matrix.nested.a",
+                value: "1",
+            },
+            Expansion {
+                path: "matrix.nested.b",
+                value: "2",
+            },
+            Expansion {
+                path: "matrix.nested.a",
+                value: "3",
+            },
+            Expansion {
+                path: "matrix.nested.b",
+                value: "4",
+            },
         ]
         "#);
 
@@ -350,7 +390,7 @@ jobs:
         };
 
         let matrix = Matrix::new(&job).unwrap();
-        assert!(matrix.expanded_values.is_empty());
+        assert!(matrix.expansions.is_empty());
 
         assert!(!matrix.expands_to_static_values(&Context::parse("matrix.nonexistent")?));
 

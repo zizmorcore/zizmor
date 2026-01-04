@@ -666,14 +666,9 @@ impl<'doc> Iterator for Steps<'doc> {
 
 #[cfg(test)]
 mod tests {
-    use github_actions_expressions::context::Context;
-
-    use crate::{
-        models::{
-            inputs::{Capability, HasInputs as _},
-            workflow::{Matrix, NormalJob, Workflow},
-        },
-        registry::input::InputKey,
+    use crate::models::{
+        inputs::{Capability, HasInputs as _},
+        workflow::Workflow,
     };
 
     #[test]
