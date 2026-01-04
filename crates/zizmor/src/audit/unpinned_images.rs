@@ -19,7 +19,7 @@ impl UnpinnedImages {
     fn build_finding<'doc>(
         &self,
         location: &SymbolicLocation<'doc>,
-        annotation: &str,
+        annotation: &'static str,
         confidence: Confidence,
         persona: Persona,
         job: &super::NormalJob<'doc>,

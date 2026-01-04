@@ -69,7 +69,7 @@ impl Dependabot {
     pub(crate) fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
             key: &self.key,
-            annotation: "this config".to_string(),
+            annotation: "this config".into(),
             link: None,
             route: Default::default(),
             feature_kind: SymbolicFeature::Normal,

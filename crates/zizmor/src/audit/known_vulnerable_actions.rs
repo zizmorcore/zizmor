@@ -247,8 +247,8 @@ impl KnownVulnerableActions {
                     step.location()
                         .primary()
                         .with_keys(["uses".into()])
-                        .annotated(&id)
-                        .with_url(format!("https://github.com/advisories/{id}")),
+                        .with_url(format!("https://github.com/advisories/{id}", id = &id))
+                        .annotated(id),
                 );
 
             // Add fix if available.

@@ -97,7 +97,7 @@ impl Action {
     pub(crate) fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
             key: &self.key,
-            annotation: "this action".to_string(),
+            annotation: "this action".into(),
             link: None,
             route: Default::default(),
             feature_kind: SymbolicFeature::Normal,

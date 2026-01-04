@@ -191,7 +191,7 @@ impl Workflow {
     pub fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
             key: &self.key,
-            annotation: "this workflow".to_string(),
+            annotation: "this workflow".into(),
             link: None,
             route: Default::default(),
             feature_kind: SymbolicFeature::Normal,

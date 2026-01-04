@@ -26,7 +26,7 @@ audit_meta!(
 );
 
 impl Obfuscation {
-    fn obfuscated_repo_uses(&self, uses: &RepositoryUses) -> Vec<&str> {
+    fn obfuscated_repo_uses(&self, uses: &RepositoryUses) -> Vec<&'static str> {
         let mut annotations = vec![];
 
         // Users can put all kinds of nonsense in `uses:` clauses, which
@@ -151,7 +151,7 @@ impl Obfuscation {
     fn obfuscated_exprs<'src>(
         &self,
         expr: &SpannedExpr<'src>,
-    ) -> Vec<(&str, Origin<'src>, Persona)> {
+    ) -> Vec<(&'static str, Origin<'src>, Persona)> {
         let mut annotations = vec![];
 
         // Check for some common expression obfuscation patterns.

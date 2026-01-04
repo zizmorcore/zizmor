@@ -170,7 +170,7 @@ fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec
                 )
                 .message(
                     Message::builder()
-                        .text(&location.symbolic.annotation)
+                        .text(location.symbolic.annotation.as_ref())
                         .build(),
                 )
                 .build()
