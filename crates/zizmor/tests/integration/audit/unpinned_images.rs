@@ -68,17 +68,164 @@ fn test_matrix_in_image() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("unpinned-images/matrix-in-image.yml"))
+            .args(["--persona=pedantic"])
             .run()?,
         @r"
     error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:16:7
+      --> @@INPUT@@:20:7
        |
-    16 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    28 |             image: ubuntu:24.04
+       |             ------------------- this expansion of matrix.image
        |
-       = note: audit confidence → Low
+       = note: audit confidence → High
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    32 |             image: ubuntu:22.04
+       |             ------------------- this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    36 |             image: debian:12
+       |             ---------------- this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    40 |             image: debian:11
+       |             ---------------- this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    44 |             image: quay.io/centos/centos:stream9
+       |             ------------------------------------ this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    48 |             image: arm64v8/ubuntu:24.04
+       |             --------------------------- this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    52 |             image: arm64v8/ubuntu:22.04
+       |             --------------------------- this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    56 |             image: arm64v8/ubuntu:20.04
+       |             --------------------------- this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    60 |             image: arm64v8/debian:12
+       |             ------------------------ this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    64 |             image: arm64v8/debian:11
+       |             ------------------------ this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:7
+       |
+    20 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    ...
+    23 |       matrix:
+       |       ------ this matrix
+    ...
+    68 |             image: quay.io/centos/centos:stream9
+       |             ------------------------------------ this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    11 findings: 0 informational, 0 low, 0 medium, 11 high
     "
     );
 

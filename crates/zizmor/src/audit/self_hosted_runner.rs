@@ -118,7 +118,7 @@ impl Audit for SelfHostedRunner {
                         continue;
                     };
 
-                    let self_hosted = matrix.expansions().any(|expansion| {
+                    let self_hosted = matrix.expansions().iter().any(|expansion| {
                         exp.as_bare() == expansion.path && expansion.value.contains("self-hosted")
                     });
 

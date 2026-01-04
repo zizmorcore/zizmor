@@ -78,7 +78,8 @@ impl Audit for UnpinnedImages {
             }
         }
 
-        for (image, location) in image_refs_with_locations {
+        // TODO: Clean this mess up.
+        for (image, ref location) in image_refs_with_locations {
             match image {
                 LoE::Expr(expr) => {
                     let context = match Expr::parse(expr.as_bare()).map(|e| e.inner) {
@@ -109,16 +110,24 @@ impl Audit for UnpinnedImages {
 
                     for expansion in matrix
                         .expansions()
+                        .iter()
                         .filter(|e| context.matches(e.path.as_str()))
                     {
                         if !expansion.is_static() {
-                            findings.push(self.build_finding(
-                                &location,
-                                "container image may be unpinned",
-                                Confidence::Low,
-                                Persona::Regular,
-                                job,
-                            )?);
+                            findings.push(
+                                Self::finding()
+                                    .severity(Severity::High)
+                                    .confidence(Confidence::Low)
+                                    .persona(Persona::Regular)
+                                    .add_location(
+                                        location
+                                            .clone()
+                                            .primary()
+                                            .annotated("container image may be unpinned"),
+                                    )
+                                    .add_location(expansion.location())
+                                    .build(job)?,
+                            );
                             break;
                         } else {
                             // Try and parse the expanded value as an image reference.
@@ -127,29 +136,51 @@ impl Audit for UnpinnedImages {
                                 // Image is pinned by hash.
                                 (_, Some(_)) => continue,
                                 // Docker image is pinned to "latest".
-                                (Some("latest"), None) => findings.push(self.build_finding(
-                                    &location,
-                                    "container image is pinned to latest",
-                                    Confidence::High,
-                                    Persona::Regular,
-                                    job,
-                                )?),
+                                (Some("latest"), None) => findings.push(
+                                    Self::finding()
+                                        .severity(Severity::High)
+                                        .confidence(Confidence::High)
+                                        .persona(Persona::Regular)
+                                        .add_location(
+                                            location
+                                                .clone()
+                                                .primary()
+                                                .annotated("container image is pinned to latest"),
+                                        )
+                                        .add_location(expansion.location())
+                                        .build(job)?,
+                                ),
                                 // Docker image is pined to some other tag.
-                                (Some(_), None) => findings.push(self.build_finding(
-                                    &location,
-                                    "container image is not pinned to a SHA256 hash",
-                                    Confidence::High,
-                                    Persona::Pedantic,
-                                    job,
-                                )?),
+                                (Some(_), None) => findings.push(
+                                    Self::finding()
+                                        .severity(Severity::High)
+                                        .confidence(Confidence::High)
+                                        .persona(Persona::Pedantic)
+                                        .add_location(location.clone().primary().annotated(
+                                            "container image is not pinned to a SHA256 hash",
+                                        ))
+                                        .add_location(matrix.location().key_only())
+                                        .add_location(expansion.location().annotated(format!(
+                                            "this expansion of {path}",
+                                            path = expansion.path
+                                        )))
+                                        .build(job)?,
+                                ),
                                 // Image is unpinned.
-                                (None, None) => findings.push(self.build_finding(
-                                    &location,
-                                    "container image is unpinned",
-                                    Confidence::High,
-                                    Persona::Regular,
-                                    job,
-                                )?),
+                                (None, None) => findings.push(
+                                    Self::finding()
+                                        .severity(Severity::High)
+                                        .confidence(Confidence::High)
+                                        .persona(Persona::Regular)
+                                        .add_location(
+                                            location
+                                                .clone()
+                                                .primary()
+                                                .annotated("container image is unpinned"),
+                                        )
+                                        .add_location(expansion.location())
+                                        .build(job)?,
+                                ),
                             }
                         }
                     }

@@ -22,25 +22,197 @@ use crate::{
 /// ```
 ///
 /// an expansion could represent the path `matrix.os` with the value `ubuntu-latest`.
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Expansion {
+#[derive(Clone, Debug)]
+pub(crate) struct Expansion<'doc> {
     /// The expanded path within the matrix.
     // TODO: This should be a Context.
     pub(crate) path: String,
     /// The expanded value at the given path.
     // TODO: This should be a 'doc ExpansionValue.
     pub(crate) value: String,
-    // TODO: SymbolicLocation
+    /// The expansion's origin location in the document.
+    location: SymbolicLocation<'doc>,
 }
 
-impl Expansion {
-    fn new(path: String, value: String) -> Self {
-        Self { path, value }
+impl PartialEq for Expansion<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path && self.value == other.value
+    }
+}
+
+impl<'doc> Locatable<'doc> for Expansion<'doc> {
+    fn location(&self) -> SymbolicLocation<'doc> {
+        self.location.clone()
+    }
+}
+
+impl<'doc> Expansion<'doc> {
+    fn new(path: String, value: String, location: SymbolicLocation<'doc>) -> Self {
+        Self {
+            path,
+            value,
+            location,
+        }
     }
 
     /// Checks whether this expansion's value is static (i.e., contains no expressions).
     pub(crate) fn is_static(&self) -> bool {
         extract_fenced_expressions(&self.value).is_empty()
+    }
+}
+
+pub(crate) struct Expansions<'doc>(Vec<Expansion<'doc>>);
+
+impl<'doc> Expansions<'doc> {
+    pub(crate) fn new(matrix: &Matrix<'doc>) -> Self {
+        Self::expand_values(matrix)
+    }
+
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &Expansion<'doc>> {
+        self.0.iter()
+    }
+
+    /// Expands the current Matrix into all possible values
+    /// By default, the return is a pair (String, String), in which
+    /// the first component is the expanded path (e.g. 'matrix.os') and
+    /// the second component is the string representation for the expanded value
+    /// (e.g. ubuntu-latest)
+    ///
+    fn expand_values(matrix: &Matrix<'doc>) -> Self {
+        match matrix.inner {
+            LoE::Expr(_) => Self(vec![]),
+            LoE::Literal(inner) => {
+                let LoE::Literal(dimensions) = &inner.dimensions else {
+                    return Self(vec![]);
+                };
+
+                let mut expansions = Self::expand_dimensions(dimensions, matrix.location());
+
+                // BUG: we should handle LoE::Expr as an indicator of an indirect matrix.
+                if let LoE::Literal(includes) = &inner.include {
+                    let additional_expansions = includes
+                        .iter()
+                        .enumerate()
+                        .flat_map(|(idx, include)| {
+                            Self::expand_explicit_rows(
+                                include,
+                                matrix.location().with_keys(["include".into(), idx.into()]),
+                            )
+                        })
+                        .collect::<Vec<_>>();
+
+                    expansions.extend(additional_expansions);
+                };
+
+                // BUG: excludes should be processed before includes, since that's what GitHub does.
+                // BUG: we should handle LoE::Expr as an indicator of an indirect matrix.
+                let LoE::Literal(excludes) = &inner.exclude else {
+                    return Self(expansions);
+                };
+
+                let to_exclude = excludes
+                    .iter()
+                    .flat_map(|exclude| {
+                        Self::expand_explicit_rows(
+                            exclude,
+                            matrix.location().with_keys(["exclude".into()]),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
+                Self(
+                    expansions
+                        .into_iter()
+                        .filter(|expanded| !to_exclude.contains(expanded))
+                        .collect(),
+                )
+            }
+        }
+    }
+
+    fn expand_explicit_rows(
+        include: &IndexMap<String, serde_yaml::Value>,
+        base: SymbolicLocation<'doc>,
+    ) -> Vec<Expansion<'doc>> {
+        let normalized = include
+            .iter()
+            .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
+            .collect::<IndexMap<_, _>>();
+
+        Self::expand(normalized, base)
+    }
+
+    fn expand_dimensions(
+        dimensions: &IndexMap<String, LoE<Vec<serde_yaml::Value>>>,
+        base: SymbolicLocation<'doc>,
+    ) -> Vec<Expansion<'doc>> {
+        let normalized = dimensions
+            .iter()
+            .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
+            .collect::<IndexMap<_, _>>();
+
+        Self::expand(normalized, base)
+    }
+
+    fn expand(
+        values: IndexMap<String, serde_json::Value>,
+        base: SymbolicLocation<'doc>,
+    ) -> Vec<Expansion<'doc>> {
+        values
+            .into_iter()
+            .flat_map(|(key, value)| {
+                Self::walk_path(
+                    value,
+                    format!("matrix.{key}"),
+                    base.with_keys([key.into()]).annotated("this expansion"),
+                )
+            })
+            .collect()
+    }
+
+    // Walks recursively a serde_json::Value tree, expanding it into a Vec<(String, String)>
+    // according to the inner value of each node
+    fn walk_path(
+        tree: serde_json::Value,
+        current_path: String,
+        base: SymbolicLocation<'doc>,
+    ) -> Vec<Expansion<'doc>> {
+        match tree {
+            serde_json::Value::Null => vec![],
+
+            // In the case of scalars, we just convert the value to a string
+            serde_json::Value::Bool(inner) => {
+                vec![Expansion::new(current_path, inner.to_string(), base)]
+            }
+            serde_json::Value::Number(inner) => {
+                vec![Expansion::new(current_path, inner.to_string(), base)]
+            }
+            serde_json::Value::String(inner) => {
+                vec![Expansion::new(current_path, inner.to_string(), base)]
+            }
+
+            // In the case of an array, we recursively create on expansion pair for each item
+            serde_json::Value::Array(inner) => inner
+                .into_iter()
+                .enumerate()
+                .flat_map(|(idx, value)| {
+                    Self::walk_path(value, current_path.clone(), base.with_keys([idx.into()]))
+                })
+                .collect(),
+
+            // In the case of an object, we recursively create on expansion pair for each
+            // value in the key/value set, using the key to form the expanded path using
+            // the dot notation
+            serde_json::Value::Object(inner) => inner
+                .into_iter()
+                .flat_map(|(key, value)| {
+                    let mut new_path = current_path.clone();
+                    new_path.push('.');
+                    new_path.push_str(&key);
+                    Self::walk_path(value, new_path, base.with_keys([key.into()]))
+                })
+                .collect(),
+        }
     }
 }
 
@@ -52,7 +224,7 @@ impl Expansion {
 pub(crate) struct Matrix<'doc> {
     inner: &'doc LoE<job::Matrix>,
     parent: NormalJob<'doc>,
-    expansions: Vec<Expansion>,
+    // expansions: Vec<Expansion<'doc>>,
 }
 
 impl<'doc> Matrix<'doc> {
@@ -63,17 +235,12 @@ impl<'doc> Matrix<'doc> {
         Some(Self {
             inner: matrix,
             parent: parent.clone(),
-            expansions: Matrix::expand_values(matrix),
+            // expansions: Matrix::expand_values(matrix),
         })
     }
 
-    // TODO: expansions() -> Expansions
-    // where Expansions impl Iterator<Item = Expansion>
-    // where Expansion provides access to the expanded path and value, plus
-    // location and staticness.
-
-    pub(crate) fn expansions(&self) -> impl Iterator<Item = &Expansion> {
-        self.expansions.iter()
+    pub(crate) fn expansions(&self) -> Expansions<'doc> {
+        Expansions::new(self)
     }
 
     /// Checks whether some expanded path leads to an expression
@@ -86,114 +253,10 @@ impl<'doc> Matrix<'doc> {
 
         let expands_to_expression = self
             .expansions()
+            .iter()
             .any(|expansion| context.matches(expansion.path.as_str()) && !expansion.is_static());
 
         !expands_to_expression
-    }
-
-    /// Expands the current Matrix into all possible values
-    /// By default, the return is a pair (String, String), in which
-    /// the first component is the expanded path (e.g. 'matrix.os') and
-    /// the second component is the string representation for the expanded value
-    /// (e.g. ubuntu-latest)
-    ///
-    fn expand_values(inner: &LoE<job::Matrix>) -> Vec<Expansion> {
-        match inner {
-            LoE::Expr(_) => vec![],
-            LoE::Literal(matrix) => {
-                let LoE::Literal(dimensions) = &matrix.dimensions else {
-                    return vec![];
-                };
-
-                let mut expansions = Matrix::expand_dimensions(dimensions);
-
-                if let LoE::Literal(includes) = &matrix.include {
-                    let additional_expansions = includes
-                        .iter()
-                        .flat_map(Matrix::expand_explicit_rows)
-                        .collect::<Vec<_>>();
-
-                    expansions.extend(additional_expansions);
-                };
-
-                let LoE::Literal(excludes) = &matrix.exclude else {
-                    return expansions;
-                };
-
-                let to_exclude = excludes
-                    .iter()
-                    .flat_map(Matrix::expand_explicit_rows)
-                    .collect::<Vec<_>>();
-
-                expansions
-                    .into_iter()
-                    .filter(|expanded| !to_exclude.contains(expanded))
-                    .collect()
-            }
-        }
-    }
-
-    fn expand_explicit_rows(include: &IndexMap<String, serde_yaml::Value>) -> Vec<Expansion> {
-        let normalized = include
-            .iter()
-            .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
-            .collect::<IndexMap<_, _>>();
-
-        Matrix::expand(normalized)
-    }
-
-    fn expand_dimensions(
-        dimensions: &IndexMap<String, LoE<Vec<serde_yaml::Value>>>,
-    ) -> Vec<Expansion> {
-        let normalized = dimensions
-            .iter()
-            .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
-            .collect::<IndexMap<_, _>>();
-
-        Matrix::expand(normalized)
-    }
-
-    fn expand(values: IndexMap<String, serde_json::Value>) -> Vec<Expansion> {
-        values
-            .iter()
-            .flat_map(|(key, value)| Matrix::walk_path(value, format!("matrix.{key}")))
-            .collect()
-    }
-
-    // Walks recursively a serde_json::Value tree, expanding it into a Vec<(String, String)>
-    // according to the inner value of each node
-    fn walk_path(tree: &serde_json::Value, current_path: String) -> Vec<Expansion> {
-        match tree {
-            serde_json::Value::Null => vec![],
-
-            // In the case of scalars, we just convert the value to a string
-            serde_json::Value::Bool(inner) => vec![Expansion::new(current_path, inner.to_string())],
-            serde_json::Value::Number(inner) => {
-                vec![Expansion::new(current_path, inner.to_string())]
-            }
-            serde_json::Value::String(inner) => {
-                vec![Expansion::new(current_path, inner.to_string())]
-            }
-
-            // In the case of an array, we recursively create on expansion pair for each item
-            serde_json::Value::Array(inner) => inner
-                .iter()
-                .flat_map(|value| Matrix::walk_path(value, current_path.clone()))
-                .collect(),
-
-            // In the case of an object, we recursively create on expansion pair for each
-            // value in the key/value set, using the key to form the expanded path using
-            // the dot notation
-            serde_json::Value::Object(inner) => inner
-                .iter()
-                .flat_map(|(key, value)| {
-                    let mut new_path = current_path.clone();
-                    new_path.push('.');
-                    new_path.push_str(key);
-                    Matrix::walk_path(value, new_path)
-                })
-                .collect(),
-        }
     }
 }
 
@@ -220,7 +283,10 @@ mod tests {
     use github_actions_expressions::context::Context;
 
     use crate::{
-        models::workflow::{NormalJob, Workflow, matrix::Matrix},
+        models::{
+            AsDocument,
+            workflow::{NormalJob, Workflow, matrix::Matrix},
+        },
         registry::input::InputKey,
     };
 
@@ -239,6 +305,12 @@ jobs:
         nested:
           - { a: 1, b: 2 }
           - { a: 3, b: 4 }
+        include:
+          - os: ubuntu-latest
+            node: 18
+            nested:
+              a: 5
+              b: 6
     steps:
       - run: true
         "#;
@@ -261,50 +333,619 @@ jobs:
 
         let matrix = Matrix::new(&job).unwrap();
 
-        insta::assert_debug_snapshot!(matrix.expansions().collect::<Vec<_>>(), @r#"
+        insta::assert_debug_snapshot!(matrix.expansions().iter().collect::<Vec<_>>(), @r#"
         [
             Expansion {
                 path: "matrix.os",
                 value: "ubuntu-latest",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "os",
+                            ),
+                            Index(
+                                0,
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
             Expansion {
                 path: "matrix.os",
                 value: "windows-latest",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "os",
+                            ),
+                            Index(
+                                1,
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
             Expansion {
                 path: "matrix.os",
                 value: "macos-latest",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "os",
+                            ),
+                            Index(
+                                2,
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
             Expansion {
                 path: "matrix.node",
                 value: "12",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "node",
+                            ),
+                            Index(
+                                0,
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
             Expansion {
                 path: "matrix.node",
                 value: "14",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "node",
+                            ),
+                            Index(
+                                1,
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
             Expansion {
                 path: "matrix.node",
                 value: "16",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "node",
+                            ),
+                            Index(
+                                2,
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
             Expansion {
                 path: "matrix.nested.a",
                 value: "1",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "nested",
+                            ),
+                            Index(
+                                0,
+                            ),
+                            Key(
+                                "a",
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
             Expansion {
                 path: "matrix.nested.b",
                 value: "2",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "nested",
+                            ),
+                            Index(
+                                0,
+                            ),
+                            Key(
+                                "b",
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
             Expansion {
                 path: "matrix.nested.a",
                 value: "3",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "nested",
+                            ),
+                            Index(
+                                1,
+                            ),
+                            Key(
+                                "a",
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
             Expansion {
                 path: "matrix.nested.b",
                 value: "4",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "nested",
+                            ),
+                            Index(
+                                1,
+                            ),
+                            Key(
+                                "b",
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
+            },
+            Expansion {
+                path: "matrix.os",
+                value: "ubuntu-latest",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "include",
+                            ),
+                            Index(
+                                0,
+                            ),
+                            Key(
+                                "os",
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
+            },
+            Expansion {
+                path: "matrix.node",
+                value: "18",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "include",
+                            ),
+                            Index(
+                                0,
+                            ),
+                            Key(
+                                "node",
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
+            },
+            Expansion {
+                path: "matrix.nested.a",
+                value: "5",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "include",
+                            ),
+                            Index(
+                                0,
+                            ),
+                            Key(
+                                "nested",
+                            ),
+                            Key(
+                                "a",
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
+            },
+            Expansion {
+                path: "matrix.nested.b",
+                value: "6",
+                location: SymbolicLocation {
+                    key: Local(
+                        LocalKey {
+                            group: Group(
+                                "fakegroup",
+                            ),
+                            prefix: None,
+                            given_path: "test.yml",
+                        },
+                    ),
+                    annotation: "this expansion",
+                    link: None,
+                    route: Route {
+                        route: [
+                            Key(
+                                "jobs",
+                            ),
+                            Key(
+                                "test",
+                            ),
+                            Key(
+                                "strategy",
+                            ),
+                            Key(
+                                "matrix",
+                            ),
+                            Key(
+                                "include",
+                            ),
+                            Index(
+                                0,
+                            ),
+                            Key(
+                                "nested",
+                            ),
+                            Key(
+                                "b",
+                            ),
+                        ],
+                    },
+                    feature_kind: Normal,
+                    kind: Related,
+                },
             },
         ]
         "#);
+
+        // Ensure that we can concretize every expansion's location without error.
+        for expansion in matrix.expansions().0 {
+            expansion.location.concretize(workflow.as_document())?;
+        }
 
         Ok(())
     }
@@ -390,7 +1031,7 @@ jobs:
         };
 
         let matrix = Matrix::new(&job).unwrap();
-        assert!(matrix.expansions.is_empty());
+        assert!(matrix.expansions().0.is_empty());
 
         assert!(!matrix.expands_to_static_values(&Context::parse("matrix.nonexistent")?));
 
