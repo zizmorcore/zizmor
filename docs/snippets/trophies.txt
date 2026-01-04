@@ -101,6 +101,7 @@ GenericMappingTools/pygmt#3861
 git-lfs/git-lfs#5930
 gitbutlerapp/gitbutler#5946
 github-aws-runners/terraform-aws-github-runner#4808
+GitoxideLabs/gitoxide#2337
 grafana/agent#7148
 grafana/beyla#1868
 grafana/carbon-relay-ng#601
