@@ -7,7 +7,6 @@ use github_actions_expressions::context;
 use github_actions_models::{
     action,
     common::{self, expr::LoE},
-    workflow::job::Strategy,
 };
 use terminal_link::Link;
 
@@ -17,6 +16,7 @@ use crate::{
     models::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
+        workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
     utils::{self, ACTION_VALIDATOR, from_str_with_validation},
@@ -97,7 +97,7 @@ impl Action {
     pub(crate) fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
             key: &self.key,
-            annotation: "this action".to_string(),
+            annotation: "this action".into(),
             link: None,
             route: Default::default(),
             feature_kind: SymbolicFeature::Normal,
@@ -209,7 +209,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         Some(uses)
     }
 
-    fn strategy(&self) -> Option<&Strategy> {
+    fn matrix(&self) -> Option<Matrix<'doc>> {
         None
     }
 

@@ -1,5 +1,6 @@
 //! Symbolic and concrete locations.
 
+use std::borrow::Cow;
 use std::ops::Range;
 
 use crate::registry::input::InputKey;
@@ -51,7 +52,7 @@ pub(crate) struct SymbolicLocation<'doc> {
     pub(crate) key: &'doc InputKey,
 
     /// An annotation for this location.
-    pub(crate) annotation: String,
+    pub(crate) annotation: Cow<'doc, str>,
 
     /// An OSC 8 rendered link for the location's annotation, if applicable.
     ///
@@ -99,7 +100,10 @@ impl<'doc> SymbolicLocation<'doc> {
     }
 
     /// Adds a human-readable annotation to the current `SymbolicLocation`.
-    pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> SymbolicLocation<'doc> {
+    pub(crate) fn annotated(
+        mut self,
+        annotation: impl Into<Cow<'doc, str>>,
+    ) -> SymbolicLocation<'doc> {
         self.annotation = annotation.into();
         self
     }

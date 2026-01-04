@@ -3,19 +3,18 @@
 //! These models enrich the models under [`github_actions_models::workflow`],
 //! providing higher-level APIs for zizmor to use.
 
-use std::collections::HashMap;
-
-use github_actions_expressions::context::{self, Context};
+use github_actions_expressions::context::{self};
 use github_actions_models::{
     common::{self, expr::LoE},
     workflow::{
         self, Trigger,
         event::{BareEvent, OptionalBody},
-        job::{self, RunsOn, StepBody, Strategy},
+        job::{self, RunsOn, StepBody},
     },
 };
-use indexmap::IndexMap;
 use terminal_link::Link;
+
+pub(crate) mod matrix;
 
 use crate::{
     InputKey,
@@ -23,9 +22,10 @@ use crate::{
     models::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
+        workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
-    utils::{self, WORKFLOW_VALIDATOR, extract_fenced_expressions, from_str_with_validation},
+    utils::{self, WORKFLOW_VALIDATOR, from_str_with_validation},
 };
 
 /// Represents an entire GitHub Actions workflow.
@@ -191,7 +191,7 @@ impl Workflow {
     pub fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
             key: &self.key,
-            annotation: "this workflow".to_string(),
+            annotation: "this workflow".into(),
             link: None,
             route: Default::default(),
             feature_kind: SymbolicFeature::Normal,
@@ -214,6 +214,11 @@ pub(crate) struct NormalJob<'doc> {
 impl<'doc> NormalJob<'doc> {
     pub(crate) fn new(id: &'doc str, inner: &'doc job::NormalJob, parent: &'doc Workflow) -> Self {
         Self { id, inner, parent }
+    }
+
+    /// This job's matrix, if it has one.
+    pub(crate) fn matrix(&self) -> Option<Matrix<'doc>> {
+        Matrix::new(self)
     }
 
     /// An iterator of this job's constituent [`Step`]s.
@@ -443,166 +448,6 @@ impl<'doc> Iterator for Jobs<'doc> {
     }
 }
 
-/// Represents an execution Matrix within a Job.
-///
-/// This type implements [`std::ops::Deref`] for [`job::NormalJob::strategy`], providing
-/// access to the underlying data model.
-#[derive(Clone)]
-pub(crate) struct Matrix<'doc> {
-    inner: &'doc LoE<job::Matrix>,
-    pub(crate) expanded_values: Vec<(String, String)>,
-}
-
-impl<'doc> std::ops::Deref for Matrix<'doc> {
-    type Target = &'doc LoE<job::Matrix>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl<'doc> TryFrom<&'doc NormalJob<'doc>> for Matrix<'doc> {
-    type Error = anyhow::Error;
-
-    fn try_from(job: &'doc NormalJob<'doc>) -> Result<Self, Self::Error> {
-        let Some(Strategy {
-            matrix: Some(inner),
-            ..
-        }) = &job.strategy
-        else {
-            anyhow::bail!("job does not define a strategy or interior matrix")
-        };
-
-        Ok(Matrix::new(inner))
-    }
-}
-
-impl<'doc> Matrix<'doc> {
-    pub(crate) fn new(inner: &'doc LoE<job::Matrix>) -> Self {
-        Self {
-            inner,
-            expanded_values: Matrix::expand_values(inner),
-        }
-    }
-
-    /// Checks whether some expanded path leads to an expression
-    pub(crate) fn expands_to_static_values(&self, context: &Context) -> bool {
-        let expands_to_expression = self.expanded_values.iter().any(|(path, expansion)| {
-            // Each expanded value in the matrix might be an expression, or contain
-            // one or more expressions (e.g. `foo-${{ bar }}-${{ baz }}`). So we
-            // need to check for *any* expression in the expanded value,
-            // not just that it starts and ends with the expression delimiters.
-            let expansion_contains_expression = !extract_fenced_expressions(expansion).is_empty();
-            context.matches(path.as_str()) && expansion_contains_expression
-        });
-
-        !expands_to_expression
-    }
-
-    /// Expands the current Matrix into all possible values
-    /// By default, the return is a pair (String, String), in which
-    /// the first component is the expanded path (e.g. 'matrix.os') and
-    /// the second component is the string representation for the expanded value
-    /// (e.g. ubuntu-latest)
-    ///
-    fn expand_values(inner: &LoE<job::Matrix>) -> Vec<(String, String)> {
-        match inner {
-            LoE::Expr(_) => vec![],
-            LoE::Literal(matrix) => {
-                let LoE::Literal(dimensions) = &matrix.dimensions else {
-                    return vec![];
-                };
-
-                let mut expansions = Matrix::expand_dimensions(dimensions);
-
-                if let LoE::Literal(includes) = &matrix.include {
-                    let additional_expansions = includes
-                        .iter()
-                        .flat_map(Matrix::expand_explicit_rows)
-                        .collect::<Vec<_>>();
-
-                    expansions.extend(additional_expansions);
-                };
-
-                let LoE::Literal(excludes) = &matrix.exclude else {
-                    return expansions;
-                };
-
-                let to_exclude = excludes
-                    .iter()
-                    .flat_map(Matrix::expand_explicit_rows)
-                    .collect::<Vec<_>>();
-
-                expansions
-                    .into_iter()
-                    .filter(|expanded| !to_exclude.contains(expanded))
-                    .collect()
-            }
-        }
-    }
-
-    fn expand_explicit_rows(
-        include: &IndexMap<String, serde_yaml::Value>,
-    ) -> Vec<(String, String)> {
-        let normalized = include
-            .iter()
-            .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
-            .collect::<HashMap<_, _>>();
-
-        Matrix::expand(normalized)
-    }
-
-    fn expand_dimensions(
-        dimensions: &IndexMap<String, LoE<Vec<serde_yaml::Value>>>,
-    ) -> Vec<(String, String)> {
-        let normalized = dimensions
-            .iter()
-            .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
-            .collect::<HashMap<_, _>>();
-
-        Matrix::expand(normalized)
-    }
-
-    fn expand(values: HashMap<String, serde_json::Value>) -> Vec<(String, String)> {
-        values
-            .iter()
-            .flat_map(|(key, value)| Matrix::walk_path(value, format!("matrix.{key}")))
-            .collect()
-    }
-
-    // Walks recursively a serde_json::Value tree, expanding it into a Vec<(String, String)>
-    // according to the inner value of each node
-    fn walk_path(tree: &serde_json::Value, current_path: String) -> Vec<(String, String)> {
-        match tree {
-            serde_json::Value::Null => vec![],
-
-            // In the case of scalars, we just convert the value to a string
-            serde_json::Value::Bool(inner) => vec![(current_path, inner.to_string())],
-            serde_json::Value::Number(inner) => vec![(current_path, inner.to_string())],
-            serde_json::Value::String(inner) => vec![(current_path, inner.to_string())],
-
-            // In the case of an array, we recursively create on expansion pair for each item
-            serde_json::Value::Array(inner) => inner
-                .iter()
-                .flat_map(|value| Matrix::walk_path(value, current_path.clone()))
-                .collect(),
-
-            // In the case of an object, we recursively create on expansion pair for each
-            // value in the key/value set, using the key to form the expanded path using
-            // the dot notation
-            serde_json::Value::Object(inner) => inner
-                .iter()
-                .flat_map(|(key, value)| {
-                    let mut new_path = current_path.clone();
-                    new_path.push('.');
-                    new_path.push_str(key);
-                    Matrix::walk_path(value, new_path)
-                })
-                .collect(),
-        }
-    }
-}
-
 /// Represents a single step in a normal workflow job.
 ///
 /// This type implements [`std::ops::Deref`] for [`workflow::job::Step`], which
@@ -668,8 +513,8 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         Some(uses)
     }
 
-    fn strategy(&self) -> Option<&Strategy> {
-        self.job().strategy.as_ref()
+    fn matrix(&self) -> Option<Matrix<'doc>> {
+        self.job().matrix()
     }
 
     fn body(&self) -> StepBodyCommon<'doc> {

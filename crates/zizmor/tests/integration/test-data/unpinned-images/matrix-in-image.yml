@@ -1,0 +1,46 @@
+# derived from https://raw.githubusercontent.com/openai/codex/13c42a077c88a0d04ae7680a9891d2daf4558577/.github/workflows/shell-tool-mcp.yml
+
+name: matrix-in-image
+
+on:
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  matrix-in-image:
+    name: matrix-in-image
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            variant: ubuntu-24.04
+            image: ubuntu:24.04
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            variant: ubuntu-22.04
+            image: ubuntu:22.04
+          - runner: ubuntu-24.04
+            target: aarch64-unknown-linux-musl
+            variant: ubuntu-24.04
+             # NOT OK: no pin
+            image: ubuntu
+          - runner: ubuntu-24.04
+            target: aarch64-unknown-linux-musl
+            variant: ubuntu-24.04
+            # NOT OK: pinned to latest
+            image: ubuntu:latest
+    steps:
+      - name: Noop
+        shell: bash
+        run: true

@@ -14,6 +14,7 @@
 #![forbid(unsafe_code)]
 
 use std::{
+    borrow::Cow,
     collections::HashMap,
     ops::{Deref, RangeBounds},
 };
@@ -149,7 +150,7 @@ impl<'a> From<Vec<Component<'a>>> for Route<'a> {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum Component<'a> {
     /// A YAML key.
-    Key(&'a str),
+    Key(Cow<'a, str>),
 
     /// An index into a YAML array.
     Index(usize),
@@ -163,7 +164,13 @@ impl From<usize> for Component<'_> {
 
 impl<'a> From<&'a str> for Component<'a> {
     fn from(key: &'a str) -> Self {
-        Component::Key(key)
+        Component::Key(key.into())
+    }
+}
+
+impl From<String> for Component<'_> {
+    fn from(key: String) -> Self {
+        Component::Key(key.into())
     }
 }
 
@@ -1019,7 +1026,7 @@ mod tests {
         let route = route!("foo", "bar", "baz");
         assert_eq!(
             route.parent().unwrap().route,
-            [Component::Key("foo"), Component::Key("bar")]
+            [Component::Key("foo".into()), Component::Key("bar".into())]
         );
 
         let route = route!("foo");
@@ -1071,11 +1078,11 @@ baz: quux
         assert_eq!(
             route.route,
             [
-                Component::Key("foo"),
-                Component::Key("bar"),
+                Component::Key("foo".into()),
+                Component::Key("bar".into()),
                 Component::Index(1),
                 Component::Index(123),
-                Component::Key("lol"),
+                Component::Key("lol".into()),
             ]
         )
     }
@@ -1096,10 +1103,10 @@ baz:
         let doc = Document::new(doc).unwrap();
         let route = Route {
             route: vec![
-                Component::Key("baz"),
-                Component::Key("sub"),
-                Component::Key("keys"),
-                Component::Key("abc"),
+                Component::Key("baz".into()),
+                Component::Key("sub".into()),
+                Component::Key("keys".into()),
+                Component::Key("abc".into()),
                 Component::Index(2),
                 Component::Index(3),
             ],
@@ -1144,7 +1151,7 @@ bar: # outside
 
         // Querying the root gives us all comments underneath it.
         let route = Route {
-            route: vec![Component::Key("root")],
+            route: vec![Component::Key("root".into())],
         };
         let feature = doc.query_pretty(&route).unwrap();
         assert_eq!(
@@ -1159,8 +1166,8 @@ bar: # outside
         // even though it's above it on the AST.
         let route = Route {
             route: vec![
-                Component::Key("root"),
-                Component::Key("e"),
+                Component::Key("root".into()),
+                Component::Key("e".into()),
                 Component::Index(1),
             ],
         };
@@ -1223,85 +1230,85 @@ nested:
 
         for (route, expected_kind) in &[
             (
-                vec![Component::Key("block-mapping")],
+                vec![Component::Key("block-mapping".into())],
                 FeatureKind::BlockMapping,
             ),
             (
-                vec![Component::Key("block-mapping-quoted")],
+                vec![Component::Key("block-mapping-quoted".into())],
                 FeatureKind::BlockMapping,
             ),
             (
-                vec![Component::Key("block-sequence")],
+                vec![Component::Key("block-sequence".into())],
                 FeatureKind::BlockSequence,
             ),
             (
-                vec![Component::Key("block-sequence-quoted")],
+                vec![Component::Key("block-sequence-quoted".into())],
                 FeatureKind::BlockSequence,
             ),
             (
-                vec![Component::Key("flow-mapping")],
+                vec![Component::Key("flow-mapping".into())],
                 FeatureKind::FlowMapping,
             ),
             (
-                vec![Component::Key("flow-sequence")],
+                vec![Component::Key("flow-sequence".into())],
                 FeatureKind::FlowSequence,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(0)],
+                vec![Component::Key("scalars".into()), Component::Index(0)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(1)],
+                vec![Component::Key("scalars".into()), Component::Index(1)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(2)],
+                vec![Component::Key("scalars".into()), Component::Index(2)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(3)],
+                vec![Component::Key("scalars".into()), Component::Index(3)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(4)],
+                vec![Component::Key("scalars".into()), Component::Index(4)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(5)],
+                vec![Component::Key("scalars".into()), Component::Index(5)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(6)],
+                vec![Component::Key("scalars".into()), Component::Index(6)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(7)],
+                vec![Component::Key("scalars".into()), Component::Index(7)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(8)],
+                vec![Component::Key("scalars".into()), Component::Index(8)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(9)],
+                vec![Component::Key("scalars".into()), Component::Index(9)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(10)],
+                vec![Component::Key("scalars".into()), Component::Index(10)],
                 FeatureKind::Scalar,
             ),
             (
                 vec![
-                    Component::Key("nested"),
-                    Component::Key("foo"),
+                    Component::Key("nested".into()),
+                    Component::Key("foo".into()),
                     Component::Index(2),
                 ],
                 FeatureKind::FlowMapping,
             ),
             (
                 vec![
-                    Component::Key("nested"),
-                    Component::Key("foo"),
+                    Component::Key("nested".into()),
+                    Component::Key("foo".into()),
                     Component::Index(3),
                 ],
                 FeatureKind::FlowMapping,
