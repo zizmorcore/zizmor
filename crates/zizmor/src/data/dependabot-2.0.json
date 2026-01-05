@@ -1068,7 +1068,16 @@
       },
       "allOf": [
         {
-          "required": ["package-ecosystem", "schedule"]
+          "$comment": "Schedule is required UNLESS multi-ecosystem-group is specified",
+          "if": {
+            "required": ["multi-ecosystem-group"]
+          },
+          "then": {
+            "required": ["package-ecosystem"]
+          },
+          "else": {
+            "required": ["package-ecosystem", "schedule"]
+          }
         },
         {
           "oneOf": [
