@@ -42,17 +42,17 @@ fst = "0.4.7"
 futures = "0.3"
 http = "1.4.0"
 http-cache-reqwest = { version = "1.0.0-alpha.2", features = ["manager-moka"] }
-human-panic = "2.0.4"
+human-panic = "2.0.5"
 ignore = "0.4.25"
 indexmap = { version = "2.12.1", features = ["serde"] }
 indicatif = "0.18"
 insta = "1.45.0"
-jsonschema = "0.37.4"
+jsonschema = "0.38.1"
 line-index = "0.1.2"
 memchr = "2.7.6"
 owo-colors = "4.2.3"
 regex = "1.12.1"
-reqwest = { version = "0.12.25", default-features = false }
+reqwest = { version = "0.12.28", default-features = false }
 reqwest-middleware = "0.4.2"
 self_cell = "1"
 schemars = "1.2"
