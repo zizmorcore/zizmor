@@ -1,0 +1,30 @@
+# Repro case for unpinned reusable workflow references
+# This workflow uses a reusable workflow with a branch ref (@trunk) which should
+# be flagged as unpinned, but currently isn't detected.
+
+name: Reusable workflow unpinned
+
+on:
+  pull_request:
+    branches:
+      - '**'
+  push:
+    branches:
+      - develop
+      - trunk
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    permissions:
+      security-events: write # Upload SARIF results
+      actions: read # Required by reusable workflow
+      contents: read # Read repository contents
+    # This external reusable workflow is pinned to a branch (trunk), not a hash
+    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-workflow-lint.yml@trunk

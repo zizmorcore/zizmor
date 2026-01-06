@@ -592,3 +592,25 @@ fn test_invalid_policy_syntax_6() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_reusable_workflow_unpinned() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-uses/reusable-workflow-unpinned.yml"))
+            .run()?,
+        @r"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:30:11
+       |
+    30 |     uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-workflow-lint.yml@trunk
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
