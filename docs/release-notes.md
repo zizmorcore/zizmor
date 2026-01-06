@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.20.0
+
 ### Enhancements 🌱
 
 * The [excessive-permissions] audit is now aware of the `artifact-metadata`
@@ -54,8 +56,8 @@ of `zizmor`.
 
 ### Miscellaneous 🛠
 
-* zizmor's configuration now has an official JSON schema that will
-  be available via [SchemaStore](https://www.schemastore.org) soon!
+* zizmor's configuration now has an official JSON schema that is available
+  via [SchemaStore](https://www.schemastore.org)!
 
     Many thanks to @kiwamizamurai for implementing this improvement!
 
