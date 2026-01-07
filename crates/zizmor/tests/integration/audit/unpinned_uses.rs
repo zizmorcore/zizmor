@@ -601,14 +601,22 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
             .run()?,
         @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:30:11
+      --> @@INPUT@@:17:11
        |
-    30 |     uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-workflow-lint.yml@trunk
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    17 |     uses: owner/repo/.github/workflows/reusable.yml@main
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:21:11
+       |
+    21 |     uses: owner/repo/.github/workflows/reusable.yml@v1
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    2 findings: 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
