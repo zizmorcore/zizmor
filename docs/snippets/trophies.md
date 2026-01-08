@@ -495,6 +495,14 @@
         - freemocap/freemocap#659
 
 
+-   ![](https://github.com/freqtrade.png?size=40){ width="40" loading=lazy align=left } freqtrade
+
+    ---
+
+    ??? example "Examples"
+        - freqtrade/freqtrade@5efad94d3de54d7c33731a40113f7218d46dd801
+
+
 -   ![](https://github.com/gaphor.png?size=40){ width="40" loading=lazy align=left } gaphor
 
     ---
