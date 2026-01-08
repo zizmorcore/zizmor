@@ -8,7 +8,9 @@ use crate::finding::location::{Locatable, SymbolicLocation};
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::uses::RepositoryUsesPattern;
 use crate::models::workflow::ReusableWorkflowCallJob;
-use crate::models::{AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step};
+use crate::models::{
+    AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
+};
 
 pub(crate) struct UnpinnedUses;
 
