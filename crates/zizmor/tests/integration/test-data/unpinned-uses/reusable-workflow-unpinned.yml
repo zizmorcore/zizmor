@@ -1,0 +1,25 @@
+# Test case for unpinned reusable workflow references at the job level.
+# Local workflows should be exempt, remote workflows should be flagged.
+
+name: Reusable workflow unpinned
+
+on: push
+
+permissions: {}
+
+jobs:
+  # OK: local reusable workflows are exempt (like local actions)
+  local-workflow:
+    uses: ./.github/workflows/local.yml
+
+  # NOT OK: remote reusable workflow pinned to a branch
+  remote-branch-pinned:
+    uses: owner/repo/.github/workflows/reusable.yml@main
+
+  # NOT OK: remote reusable workflow pinned to a tag
+  remote-tag-pinned:
+    uses: owner/repo/.github/workflows/reusable.yml@v1
+
+  # OK: remote reusable workflow pinned to a hash
+  remote-hash-pinned:
+    uses: owner/repo/.github/workflows/reusable.yml@abcdef1234567890abcdef1234567890abcdef12

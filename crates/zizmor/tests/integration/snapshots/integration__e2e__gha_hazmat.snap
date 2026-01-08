@@ -829,6 +829,38 @@ warning[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → Medium
 
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/secrets-inherit.yml:16:11
+   |
+16 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/secrets-inherit.yml:21:11
+   |
+21 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/secrets-inherit.yml:27:11
+   |
+27 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
+error[unpinned-uses]: unpinned action reference
+  --> .github/workflows/secrets-inherit.yml:31:11
+   |
+31 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+
 warning[secrets-inherit]: secrets unconditionally inherited by called workflow
   --> .github/workflows/secrets-inherit.yml:16:11
    |
@@ -1065,4 +1097,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-206 findings (111 suppressed): 7 informational, 0 low, 29 medium, 59 high
+210 findings (111 suppressed): 7 informational, 0 low, 29 medium, 63 high

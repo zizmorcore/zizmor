@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* The [unpinned-uses] audit now flags reusable workflows that are unpinned,
+  in addition to actions (#1509)
+
+    Many thanks to @johnbillion for implementing this fix!
+
 ## 1.20.0
 
 ### Enhancements 🌱

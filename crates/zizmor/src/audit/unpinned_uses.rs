@@ -4,9 +4,13 @@ use subfeature::Subfeature;
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
 use crate::config::{Config, UsesPolicy};
+use crate::finding::location::{Locatable, SymbolicLocation};
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::uses::RepositoryUsesPattern;
-use crate::models::{StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step};
+use crate::models::workflow::ReusableWorkflowCallJob;
+use crate::models::{
+    AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
+};
 
 pub(crate) struct UnpinnedUses;
 
@@ -88,35 +92,46 @@ impl UnpinnedUses {
         }
     }
 
+    fn process_uses<'a, 'doc>(
+        &self,
+        uses: &'doc Uses,
+        location: SymbolicLocation<'doc>,
+        document: &'a impl AsDocument<'a, 'doc>,
+        config: &Config,
+    ) -> Result<Option<Finding<'doc>>, AuditError> {
+        let Some((annotation, severity, persona)) = self.evaluate_pinning(uses, config) else {
+            return Ok(None);
+        };
+
+        Ok(Some(
+            Self::finding()
+                .confidence(Confidence::High)
+                .severity(severity)
+                .persona(persona)
+                .add_location(
+                    location
+                        .primary()
+                        .with_keys(["uses".into()])
+                        .subfeature(Subfeature::new(0, uses.raw()))
+                        .annotated(annotation),
+                )
+                .build(document)?,
+        ))
+    }
+
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
         config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        let mut findings = vec![];
-
         let Some(uses) = step.uses() else {
-            return Ok(findings);
+            return Ok(vec![]);
         };
 
-        if let Some((annotation, severity, persona)) = self.evaluate_pinning(uses, config) {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::High)
-                    .severity(severity)
-                    .persona(persona)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .with_keys(["uses".into()])
-                            .subfeature(Subfeature::new(0, uses.raw()))
-                            .annotated(annotation),
-                    )
-                    .build(step)?,
-            );
-        };
-
-        Ok(findings)
+        Ok(self
+            .process_uses(uses, step.location(), step, config)?
+            .into_iter()
+            .collect())
     }
 }
 
@@ -143,5 +158,16 @@ impl Audit for UnpinnedUses {
         config: &Config,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step, config)
+    }
+
+    async fn audit_reusable_job<'doc>(
+        &self,
+        job: &ReusableWorkflowCallJob<'doc>,
+        config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        Ok(self
+            .process_uses(&job.uses, job.location(), job, config)?
+            .into_iter()
+            .collect())
     }
 }
