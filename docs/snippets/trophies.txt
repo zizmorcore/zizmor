@@ -338,6 +338,7 @@ torchbox/wagtailmedia#252
 tornadoweb/tornado#3438
 tornadoweb/tornado#3463
 trailofbits/fickling#144
+trailofbits/fickling#177
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
