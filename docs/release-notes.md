@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* zizmor now uses exit code `3` to signal an audit that has failed because
+  no input files were collected. See the [exit code] documentation
+  for details (#1515)
+
 ### Bug Fixes 🐛
 
 * The [unpinned-uses] audit now flags reusable workflows that are unpinned,
