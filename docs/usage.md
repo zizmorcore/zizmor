@@ -430,12 +430,18 @@ you invoke it and what happens during the run. In general:
 | 0    | Successful audit; no findings to report (or SARIF mode enabled). |
 | 1    | Error during audit; consult output. |
 | 2    | Argument parsing failure; consult output. |
+| 3    | No inputs were collected. |
 | 11   | One or more findings found; highest finding is "informational" level. |
 | 12   | One or more findings found; highest finding is "low" level. |
 | 13   | One or more findings found; highest finding is "medium" level. |
 | 14   | One or more findings found; highest finding is "high" level. |
 
 All other exit codes are currently reserved.
+
+!!! note
+
+    Exit code `3` is available in `v1.21.0` and later. Versions before this
+    do not assign any special meaning to exit code `3`.
 
 !!! warning "Removal"
 
