@@ -1062,13 +1062,20 @@ async fn main() -> ExitCode {
                 _ => None,
             };
 
+            let exit = if matches!(err, Error::Collection(CollectionError::NoInputs)) {
+                ExitCode::from(3)
+            } else {
+                ExitCode::FAILURE
+            };
+
             let mut err = anyhow!(err);
             if let Some(report) = report {
                 err = err.context(report);
             }
 
             eprintln!("{err:?}");
-            ExitCode::FAILURE
+
+            exit
         }
     }
 }
