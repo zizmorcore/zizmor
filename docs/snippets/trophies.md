@@ -60,6 +60,7 @@
         - apache/lucene#15216
         - apache/opennlp#736
         - apache/sedona#1976
+        - apache/sedona#2582
 
 
 -   ![](https://github.com/artichoke.png?size=40){ width="40" loading=lazy align=left } artichoke

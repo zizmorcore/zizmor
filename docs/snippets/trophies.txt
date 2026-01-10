@@ -18,6 +18,7 @@ apache/iceberg-rust#1123
 apache/lucene#15216
 apache/opennlp#736
 apache/sedona#1976
+apache/sedona#2582
 artichoke/artichoke#2825
 artichoke/boba#265
 artichoke/project-infrastructure#683
@@ -337,6 +338,7 @@ torchbox/wagtailmedia#252
 tornadoweb/tornado#3438
 tornadoweb/tornado#3463
 trailofbits/fickling#144
+trailofbits/fickling#177
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
