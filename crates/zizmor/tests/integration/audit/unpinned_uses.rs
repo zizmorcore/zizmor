@@ -404,7 +404,7 @@ fn test_empty_config() -> Result<()> {
 fn test_invalid_wrong_policy_object() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-wrong-policy-object.yml"
             ))
@@ -432,7 +432,7 @@ fn test_invalid_wrong_policy_object() -> Result<()> {
 fn test_invalid_policy_syntax_1() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-1.yml"
             ))
@@ -460,7 +460,7 @@ fn test_invalid_policy_syntax_1() -> Result<()> {
 fn test_invalid_policy_syntax_2() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-2.yml"
             ))
@@ -488,7 +488,7 @@ fn test_invalid_policy_syntax_2() -> Result<()> {
 fn test_invalid_policy_syntax_3() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-3.yml"
             ))
@@ -516,7 +516,7 @@ fn test_invalid_policy_syntax_3() -> Result<()> {
 fn test_invalid_policy_syntax_4() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-4.yml"
             ))
@@ -544,7 +544,7 @@ fn test_invalid_policy_syntax_4() -> Result<()> {
 fn test_invalid_policy_syntax_5() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-5.yml"
             ))
@@ -572,7 +572,7 @@ fn test_invalid_policy_syntax_5() -> Result<()> {
 fn test_invalid_policy_syntax_6() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-6.yml"
             ))

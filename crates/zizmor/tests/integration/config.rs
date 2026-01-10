@@ -282,7 +282,7 @@ fn test_invalid_configs() -> anyhow::Result<()> {
     // Top-level config schema is invalid.
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test(
                 "config-scenarios/zizmor.invalid-schema-1.yml"

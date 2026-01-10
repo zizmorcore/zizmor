@@ -80,7 +80,7 @@ fn test_config_not_number() -> anyhow::Result<()> {
     // dependabot-cooldown audit config is invalid.
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-not-number.yml"))
             .output(OutputMode::Stderr)
@@ -107,7 +107,7 @@ fn test_config_not_number() -> anyhow::Result<()> {
 fn test_invalid_config_zero_days() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-zero-days.yml"))
             .output(OutputMode::Stderr)
@@ -134,7 +134,7 @@ fn test_invalid_config_zero_days() -> anyhow::Result<()> {
 fn test_invalid_config_negative_days() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-negative-days.yml"))
             .output(OutputMode::Stderr)

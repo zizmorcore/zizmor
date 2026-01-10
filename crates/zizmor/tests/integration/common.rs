@@ -47,7 +47,7 @@ pub struct Zizmor {
     config: Option<String>,
     no_config: bool,
     output: OutputMode,
-    expects_failure: bool,
+    expects_failure: Option<i32>,
     show_audit_urls: bool,
 }
 
@@ -71,7 +71,7 @@ impl Zizmor {
             config: None,
             no_config: false,
             output: OutputMode::Stdout,
-            expects_failure: false,
+            expects_failure: None,
             show_audit_urls: false,
         }
     }
@@ -126,11 +126,9 @@ impl Zizmor {
         self
     }
 
-    pub fn expects_failure(mut self, flag: bool) -> Self {
-        if flag {
-            self = self.output(OutputMode::Both);
-        }
-        self.expects_failure = flag;
+    pub fn expects_failure(mut self, code: i32) -> Self {
+        self = self.output(OutputMode::Both);
+        self.expects_failure = Some(code);
         self
     }
 
@@ -236,9 +234,26 @@ impl Zizmor {
             // There are other nonzero exit codes that don't indicate failure;
             // these do. 1/2 are general errors, 3 is a collection error, 101 is Rust's panic exit code.
             let is_failure = matches!(exit_code, 1 | 2 | 3 | 101);
-            if is_failure != self.expects_failure {
-                anyhow::bail!("zizmor exited with unexpected code {exit_code}: {raw}");
+            match self.expects_failure {
+                Some(expected_code) if is_failure => {
+                    if exit_code != expected_code {
+                        anyhow::bail!(
+                            "zizmor exited with unexpected code {exit_code} (expected {expected_code}): {raw}"
+                        );
+                    }
+                }
+                Some(expected_code) if !is_failure => {
+                    anyhow::bail!("zizmor exited successfully but failure was expected: {raw}")
+                }
+                None if is_failure => {
+                    anyhow::bail!("zizmor unexpectedly exited with code {exit_code}: {raw}")
+                }
+                _ => {}
             }
+
+            // if is_failure != self.expects_failure {
+            //     anyhow::bail!("zizmor exited with unexpected code {exit_code}: {raw}");
+            // }
         }
 
         let config_placeholder = "@@CONFIG@@";

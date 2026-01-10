@@ -177,7 +177,7 @@ fn test_allow_some_refs() -> Result<()> {
 fn test_config_invalid_pattern() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test(
                 "forbidden-uses/configs/invalid-pattern.yml"
@@ -206,7 +206,7 @@ fn test_config_invalid_pattern() -> Result<()> {
 fn test_config_invalid_variant() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test(
                 "forbidden-uses/configs/invalid-variant.yml"

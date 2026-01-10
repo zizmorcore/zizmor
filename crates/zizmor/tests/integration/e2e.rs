@@ -214,7 +214,7 @@ fn issue_612_repro() -> Result<()> {
 fn invalid_config_file() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .config(if cfg!(windows) { "NUL" } else { "/dev/null" })
             .input(input_under_test("e2e-menagerie"))
             .run()?,
@@ -252,7 +252,7 @@ fn invalid_inputs() -> Result<()> {
     ] {
         insta::assert_snapshot!(
             zizmor()
-                .expects_failure(true)
+                .expects_failure(1)
                 .input(input_under_test(&format!("invalid/{workflow_tc}.yml")))
                 .args(["--strict-collection"])
                 .run()?
@@ -261,7 +261,7 @@ fn invalid_inputs() -> Result<()> {
 
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(3)
             .input(input_under_test("invalid/empty/"))
             .args(["--strict-collection"])
             .run()?,
@@ -289,7 +289,7 @@ fn invalid_inputs() -> Result<()> {
 fn test_issue_1394() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .input(input_under_test(
                 "invalid/issue-1395-repro-duplicate-mapping-keys.yml"
             ))
@@ -309,7 +309,7 @@ fn test_issue_1394() -> Result<()> {
     // Without --strict-collection, we get a warning and then a collection failure error.
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(3)
             .input(input_under_test(
                 "invalid/issue-1395-repro-duplicate-mapping-keys.yml"
             ))
@@ -336,7 +336,7 @@ fn invalid_input_not_strict() -> Result<()> {
     for tc in ["invalid-workflow", "invalid-action-1/action"] {
         insta::assert_snapshot!(
             zizmor()
-                .expects_failure(true)
+                .expects_failure(3)
                 .input(input_under_test(&format!("invalid/{tc}.yml")))
                 .run()?
         );
@@ -369,7 +369,7 @@ fn issue_1116_strict_collection_remote_input() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .offline(false)
-            .expects_failure(true)
+            .expects_failure(1)
             .output(OutputMode::Stderr)
             .args(["--strict-collection"])
             .input("woodruffw-experiments/zizmor-issue-1116@f41c414")
@@ -439,7 +439,6 @@ fn issue_1065() -> Result<()> {
 fn warn_on_min_severity_unknown() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(false)
             .output(OutputMode::Stderr)
             .setenv("RUST_LOG", "warn")
             .args(["--min-severity=unknown"])
@@ -461,7 +460,6 @@ fn warn_on_min_severity_unknown() -> Result<()> {
 fn warn_on_min_confidence_unknown() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(false)
             .output(OutputMode::Stderr)
             .setenv("RUST_LOG", "warn")
             .args(["--min-confidence=unknown"])
@@ -485,7 +483,6 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
 fn issue_1207() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(false)
             .output(OutputMode::Both)
             .working_dir(input_under_test("e2e-menagerie/dummy-action-1"))
             // Input doesn't matter, as long as it's relative without a leading
@@ -506,7 +503,7 @@ fn issue_1207() -> Result<()> {
 fn issue_1286() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .output(OutputMode::Both)
             .offline(false)
             .input(input_under_test("issue-1286.yml"))
@@ -536,7 +533,7 @@ fn issue_1286() -> Result<()> {
 fn issue_1300() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .output(OutputMode::Both)
             .offline(false)
             .args(["--collect=workflows"])
@@ -586,7 +583,6 @@ fn issue_1341() -> Result<()> {
 fn issue_1356_lsp_mode_starts() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(false)
             .output(OutputMode::Stdout)
             .stdin("{}") // Not a valid LSP message, but all we're testing is startup.
             .args(["--lsp"])
@@ -606,7 +602,7 @@ fn test_cant_retrieve_offline() -> Result<()> {
     // Fails because --offline prevents network access.
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .offline(true)
             .args(["pypa/sampleproject"])
             .run()?,
@@ -631,7 +627,7 @@ fn test_cant_retrieve_no_gh_token() -> Result<()> {
     // Fails because GH_TOKEN is not set.
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .offline(false)
             .gh_token(false)
             .args(["pypa/sampleproject"])
