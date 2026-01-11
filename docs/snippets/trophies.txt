@@ -326,6 +326,7 @@ slackapi/python-slack-events-api#110
 stravalib/stravalib#645
 stravalib/stravalib#648
 stravalib/stravalib#649
+strawberry-graphql/strawberry#4097
 super-linter/super-linter#7241
 Swatinem/rust-cache#262
 TecharoHQ/anubis#188

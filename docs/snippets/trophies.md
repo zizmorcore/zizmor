@@ -1532,6 +1532,14 @@
         - stravalib/stravalib#649
 
 
+-   ![](https://github.com/strawberry-graphql.png?size=40){ width="40" loading=lazy align=left } strawberry-graphql
+
+    ---
+
+    ??? example "Examples"
+        - strawberry-graphql/strawberry#4097
+
+
 -   ![](https://github.com/super-linter.png?size=40){ width="40" loading=lazy align=left } super-linter
 
     ---
@@ -1612,6 +1620,7 @@
 
     ??? example "Examples"
         - trailofbits/fickling#144
+        - trailofbits/fickling#177
 
 
 -   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser
