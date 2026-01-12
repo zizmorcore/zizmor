@@ -195,36 +195,34 @@ impl Obfuscation {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        match step.body() {
-            crate::models::StepBodyCommon::Uses {
-                uses: Uses::Repository(uses),
-                ..
-            } => {
-                let obfuscated_annotations = self.obfuscated_repo_uses(uses);
-                if !obfuscated_annotations.is_empty() {
-                    let mut finding_builder = Self::finding()
-                        .confidence(Confidence::High)
-                        .severity(Severity::Low);
+        if let crate::models::StepBodyCommon::Uses {
+            uses: Uses::Repository(uses),
+            ..
+        } = step.body()
+        {
+            let obfuscated_annotations = self.obfuscated_repo_uses(uses);
+            if !obfuscated_annotations.is_empty() {
+                let mut finding_builder = Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(Severity::Low);
 
-                    // Add all annotations as locations
-                    for annotation in &obfuscated_annotations {
-                        finding_builder = finding_builder.add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(["uses".into()])
-                                .annotated(*annotation),
-                        );
-                    }
-
-                    // Try to create a fix for the obfuscated uses path
-                    if let Some(fix) = self.create_uses_fix(uses, step) {
-                        finding_builder = finding_builder.fix(fix);
-                    }
-
-                    findings.push(finding_builder.build(step).map_err(Self::err)?);
+                // Add all annotations as locations
+                for annotation in &obfuscated_annotations {
+                    finding_builder = finding_builder.add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(["uses".into()])
+                            .annotated(*annotation),
+                    );
                 }
+
+                // Try to create a fix for the obfuscated uses path
+                if let Some(fix) = self.create_uses_fix(uses, step) {
+                    finding_builder = finding_builder.fix(fix);
+                }
+
+                findings.push(finding_builder.build(step).map_err(Self::err)?);
             }
-            _ => {}
         }
 
         Ok(findings)
