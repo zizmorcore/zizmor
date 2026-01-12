@@ -994,6 +994,72 @@ injection via [template injection].
 If the vulnerability is applicable to your use: upgrade to a fixed version of
 the action if one is available, or remove the action's usage entirely.
 
+## `misfeature`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | N/A   | v1.21.0        | ✅             | ✅                 | ❌  |
+
+Checks for usages of GitHub Actions features that are considered "misfeatures."
+
+Misfeatures include:
+
+* Use of the `pip-install` input on @actions/setup-python. This input injects
+  dependencies directly into a global (user or system-level) environment,
+  
+    !!! note
+  
+        See actions/setup-python#1201 for additional context.
+
+* Use of the Windows CMD shell, i.e. `#!yaml shell: cmd` and similar.
+  The CMD shell has no formal grammar, making it difficult to accurately
+  analyze. Moreover, it has not been the default shell on Windows runners
+  since 2019.
+
+    !!! note
+  
+        Prior to `v1.21.1`, this check was performed by the [`obfuscation`](#obfuscation) audit.
+
+* Use of non-"well-known" shells, i.e. shells other than those
+  [documented by GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell).
+  These shells may not be available on all runners, and are generally
+  impossible to analyze with any confidence.
+
+### Remediation
+
+Address the misfeature by removing or replacing its usage.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="misfeature.yml" hl_lines="8"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Setup Python
+                uses: actions/setup-python@v6
+                with:
+                  pip-install: '.[dev]'
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="misfeature.yml" hl_lines="9-11"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Setup Python
+                uses: actions/setup-python@v6
+              
+              - name: Install package
+                run: |
+                  python -m venv .env
+                  ./.env/bin/pip install .[dev]
+        ```
+
 ## `obfuscation`
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
@@ -1012,9 +1078,11 @@ This audit detects a variety of obfuscated usages, including:
 * Obfuscated GitHub expressions, including no-op patterns like
   `fromJSON(toJSON(...))` and calls to `format(...)` where all
   arguments are literal values.
-* Use of the Windows CMD shell, i.e. `#!yaml shell: cmd` and similar.
-  The CMD shell has no formal grammar, making it impossible to accurately
-  analyze for security issues.
+
+!!! note
+
+    Prior to `v1.21.1`, this audit also detected uses of the Windows CMD shell.
+    This check has been moved to the [`misfeature`](#misfeature) audit.
 
 ### Remediation
 
