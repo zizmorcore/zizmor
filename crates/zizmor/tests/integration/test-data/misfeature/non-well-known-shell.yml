@@ -1,0 +1,24 @@
+name: non-well-known-shell
+
+on:
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  some-job:
+    name: non-well-known-shell
+    runs-on: ubuntu-latest
+    steps:
+      - name: cursed
+        shell: tcc -run {0}
+        run: |
+          #include <stdio.h>
+          int main() {
+            printf("Hello, world!\n");
+            return 0;
+          }

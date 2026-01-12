@@ -11,7 +11,7 @@ use crate::{
         location::{Feature, Location, Routable},
     },
     models::{StepCommon, action::CompositeStep, workflow::Step},
-    utils::{self, parse_fenced_expressions_from_input},
+    utils::parse_fenced_expressions_from_input,
 };
 use subfeature::Subfeature;
 
@@ -222,30 +222,6 @@ impl Obfuscation {
                     }
 
                     findings.push(finding_builder.build(step).map_err(Self::err)?);
-                }
-            }
-            crate::models::StepBodyCommon::Run { .. } => {
-                if let Some(("cmd" | "cmd.exe", shell_loc)) = step
-                    .shell()
-                    .map(|(shell, loc)| (utils::normalize_shell(shell), loc))
-                {
-                    // `shell: cmd` is basically impossible to analyze: it has no formal
-                    // grammar and has several line continuation mechanisms that stymie
-                    // naive matching. It also hasn't been the default shell on Windows
-                    // runners since 2019.
-                    findings.push(
-                        Self::finding()
-                            .confidence(Confidence::High)
-                            .severity(Severity::Low)
-                            .add_location(
-                                step.location_with_grip()
-                                    .annotated("Windows CMD shell limits analysis"),
-                            )
-                            .add_location(shell_loc.primary())
-                            .tip("use 'shell: pwsh' or 'shell: bash' for improved analysis")
-                            .build(step)
-                            .map_err(Self::err)?,
-                    );
                 }
             }
             _ => {}

@@ -104,7 +104,8 @@ define_audit_rules! {
     ref_version_mismatch,
     dependabot_execution,
     concurrency_limits,
-    archived_uses;
+    archived_uses,
+    misfeature;
 
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,

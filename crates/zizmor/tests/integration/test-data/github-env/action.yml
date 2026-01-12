@@ -19,7 +19,7 @@ runs:
     - name: true-positive-3
       run: |
         echo LIBRARY=%LIBRARY% >> %GITHUB_ENV%
-      shell: cmd # zizmor: ignore[obfuscation]
+      shell: cmd # zizmor: ignore[misfeature]
 
     - name: true-negative-4
       # No finding because foo=bar is wholly static.
