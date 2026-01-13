@@ -52,7 +52,7 @@ impl Misfeature {
                                     .annotated("installs packages in a brittle manner"),
                             )
                             .tip("always use a virtual environment to manage Python packages")
-                            .severity(Severity::Medium)
+                            .severity(Severity::Low)
                             .confidence(Confidence::High)
                             .build(step)?,
                     )

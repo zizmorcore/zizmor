@@ -1006,10 +1006,13 @@ Misfeatures include:
 
 * Use of the `pip-install` input on @actions/setup-python. This input injects
   dependencies directly into a global (user or system-level) environment,
+  which is both difficult to audit and is likely to cause broken
+  resolutions.
   
     !!! note
   
-        See actions/setup-python#1201 for additional context.
+        See actions/setup-python#1201 and [PEP 668](https://peps.python.org/pep-0668/)
+        for additional context.
 
 * Use of the Windows CMD shell, i.e. `#!yaml shell: cmd` and similar.
   The CMD shell has no formal grammar, making it difficult to accurately
@@ -1018,7 +1021,7 @@ Misfeatures include:
 
     !!! note
   
-        Prior to `v1.21.1`, this check was performed by the [`obfuscation`](#obfuscation) audit.
+        Prior to `v1.21.0`, this check was performed by the [`obfuscation`](#obfuscation) audit.
 
 * Use of non-"well-known" shells, i.e. shells other than those
   [documented by GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell).

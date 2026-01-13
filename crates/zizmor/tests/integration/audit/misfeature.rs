@@ -7,7 +7,7 @@ fn test_setup_python_pip_install() -> anyhow::Result<()> {
             .input(input_under_test("misfeature/setup-python-pip-install.yml"))
             .run()?,
         @r"
-    warning[misfeature]: usage of GitHub Actions misfeatures
+    help[misfeature]: usage of GitHub Actions misfeatures
       --> @@INPUT@@:14:11
        |
     12 |       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
@@ -19,7 +19,7 @@ fn test_setup_python_pip_install() -> anyhow::Result<()> {
        = note: audit confidence → High
        = tip: always use a virtual environment to manage Python packages
 
-    3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    3 findings (2 suppressed): 0 informational, 1 low, 0 medium, 0 high
     "
     );
 
