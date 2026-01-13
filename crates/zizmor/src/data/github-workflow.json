@@ -963,7 +963,6 @@
           }
         }
       ],
-      "required": ["description"],
       "additionalProperties": false
     }
   },
