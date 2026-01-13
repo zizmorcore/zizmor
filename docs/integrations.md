@@ -280,6 +280,13 @@ This will run `zizmor` on every commit.
     `zizmor-pre-commit` also works with [`prek`](https://github.com/j178/prek),
     a rewrite of `pre-commit` in Rust.
 
+### `hk`
+
+`zizmor` is integrated into the [`hk` git hook manager](https://github.com/jdx/hk).
+
+See [`hk` - Built-in Linters - `zizmor`](https://hk.jdx.dev/gen/builtins.html#zizmor)
+for more information.
+
 ## Linter frameworks
 
 !!! important
