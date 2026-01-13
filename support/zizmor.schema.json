@@ -179,6 +179,9 @@
         "known-vulnerable-actions": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "misfeature": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "obfuscation": {
           "$ref": "#/definitions/BaseRuleConfig"
         },

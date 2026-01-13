@@ -9,11 +9,22 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [misfeature] detects usage of GitHub Actions features that
+  are considered "misfeatures." (#1517)
+
 ### Enhancements 🌱
 
 * zizmor now uses exit code `3` to signal an audit that has failed because
   no input files were collected. See the [exit code] documentation
   for details (#1515)
+
+### Changes ⚠️
+
+* The [obfuscation] audit no longer flags `#!yaml shell: cmd`. That check has
+  been moved to the new [misfeature] audit. Users may need to update their
+  ignore comments and/or configuration (#1517)
 
 ### Bug Fixes 🐛
 
@@ -1419,5 +1430,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [concurrency-limits]: ./audits.md#concurrency-limits
 [archived-uses]: ./audits.md#archived-uses
 [impostor-commit]: ./audits.md#impostor-commit
+[misfeature]: ./audits.md#misfeature
 
 [exit code]: ./usage.md#exit-codes
