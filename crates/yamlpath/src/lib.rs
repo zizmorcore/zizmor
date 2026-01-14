@@ -260,6 +260,11 @@ impl Feature<'_> {
             kind => unreachable!("unexpected feature kind: {kind}"),
         }
     }
+
+    /// Returns whether this feature spans multiple lines.
+    pub fn is_multiline(&self) -> bool {
+        self.location.point_span.0.0 != self.location.point_span.1.0
+    }
 }
 
 impl RangeBounds<usize> for &Feature<'_> {

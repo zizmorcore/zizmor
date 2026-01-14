@@ -1,27 +1,91 @@
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
+use yamlpatch::{Op, Patch};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
 use crate::config::{Config, UsesPolicy};
-use crate::finding::location::{Locatable, SymbolicLocation};
-use crate::finding::{Confidence, Finding, Persona, Severity};
-use crate::models::uses::RepositoryUsesPattern;
+use crate::finding::location::{Locatable, Routable};
+use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
+use crate::github;
+use crate::models::uses::{RepositoryUsesExt, RepositoryUsesPattern};
 use crate::models::workflow::ReusableWorkflowCallJob;
 use crate::models::{
     AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
 };
 
-pub(crate) struct UnpinnedUses;
+pub(crate) struct UnpinnedUses {
+    client: Option<github::Client>,
+}
 
 audit_meta!(UnpinnedUses, "unpinned-uses", "unpinned action reference");
 
 impl UnpinnedUses {
-    pub fn evaluate_pinning(
+    async fn attempt_fix<'a, 'doc>(
         &self,
+        parent: &impl Locatable<'doc>,
         uses: &Uses,
+    ) -> Option<Fix<'doc>> {
+        // We need to be online to attempt fixes for this audit.
+        let client = self.client.as_ref()?;
+
+        // We can only fix repository uses for now.
+        let Uses::Repository(uses) = uses else {
+            return None;
+        };
+
+        // There's nothing to fix if the ref is already a commit SHA.
+        if uses.ref_is_commit() {
+            return None;
+        }
+
+        let commit = match client
+            .commit_for_ref(uses.owner(), uses.repo(), uses.git_ref())
+            .await
+        {
+            Ok(Some(commit)) => commit,
+            Ok(None) => {
+                tracing::warn!("no commit matching {uses}");
+                return None;
+            }
+            Err(e) => {
+                // TODO: hard-fail here instead?
+                tracing::warn!(
+                    "failed to look up commit for {uses}: {e}",
+                    uses = uses.raw()
+                );
+                return None;
+            }
+        };
+
+        // For the fix itself, we need to situate two patches:
+        // 1. `uses: foo/bar@ref` -> `uses: foo/bar@hashhashhash`
+        // 2. A `# <ref>` comment following the `uses:` clause.
+        Some(Fix {
+            title: format!("pin {slug}@{ref} to {commit}", slug = uses.slug(), ref = uses.git_ref()),
+            key: parent.location().key,
+            disposition: Default::default(),
+            patches: vec![
+                Patch {
+                    route: parent.route().with_key("uses"),
+                    operation: Op::Replace(format!("{slug}@{commit}", slug = uses.slug()).into()),
+                },
+                Patch {
+                    route: parent.route().with_key("uses"),
+                    operation: Op::EmplaceComment {
+                        new: format!("# {ref}", ref = uses.git_ref()).into(),
+                    },
+                },
+            ],
+        })
+    }
+
+    async fn evaluate_pinning<'doc>(
+        &self,
+        parent: &impl Locatable<'doc>,
+        uses: &'doc Uses,
         config: &Config,
-    ) -> Option<(String, Severity, Persona)> {
+    ) -> Option<(String, Severity, Persona, Option<Fix<'doc>>)> {
         match uses {
             // Don't evaluate pinning for local `uses:`, since unpinned references
             // are fully controlled by the repository anyways.
@@ -39,12 +103,14 @@ impl UnpinnedUses {
                         "image is not pinned to a tag, branch, or hash ref".into(),
                         Severity::Medium,
                         Persona::default(),
+                        None,
                     ))
                 } else if uses.unhashed() {
                     Some((
                         "action is not pinned to a hash".into(),
                         Severity::Low,
                         Persona::Pedantic,
+                        None,
                     ))
                 } else {
                     None
@@ -81,45 +147,55 @@ impl UnpinnedUses {
                         ),
                         Severity::High,
                         Persona::default(),
+                        self.attempt_fix(parent, uses).await,
                     )),
                     UsesPolicy::HashPin => uses.unhashed().then_some((
                         format!("action is not pinned to a hash (required by {pat_desc} policy)"),
                         Severity::High,
                         Persona::default(),
+                        self.attempt_fix(parent, uses).await,
                     )),
                 }
             }
         }
     }
 
-    fn process_uses<'a, 'doc>(
+    async fn process_uses<'a, 'doc, S>(
         &self,
         uses: &'doc Uses,
-        location: SymbolicLocation<'doc>,
-        document: &'a impl AsDocument<'a, 'doc>,
+        parent: &'a S,
         config: &Config,
-    ) -> Result<Option<Finding<'doc>>, AuditError> {
-        let Some((annotation, severity, persona)) = self.evaluate_pinning(uses, config) else {
+    ) -> Result<Option<Finding<'doc>>, AuditError>
+    where
+        S: Locatable<'doc> + AsDocument<'a, 'doc>,
+    {
+        let Some((annotation, severity, persona, fix)) =
+            self.evaluate_pinning(parent, uses, config).await
+        else {
             return Ok(None);
         };
 
-        Ok(Some(
-            Self::finding()
-                .confidence(Confidence::High)
-                .severity(severity)
-                .persona(persona)
-                .add_location(
-                    location
-                        .primary()
-                        .with_keys(["uses".into()])
-                        .subfeature(Subfeature::new(0, uses.raw()))
-                        .annotated(annotation),
-                )
-                .build(document)?,
-        ))
+        let mut builder = Self::finding()
+            .confidence(Confidence::High)
+            .severity(severity)
+            .persona(persona)
+            .add_location(
+                parent
+                    .location()
+                    .primary()
+                    .with_keys(["uses".into()])
+                    .subfeature(Subfeature::new(0, uses.raw()))
+                    .annotated(annotation),
+            );
+
+        if let Some(fix) = fix {
+            builder = builder.fix(fix);
+        }
+
+        Ok(Some(builder.build(parent)?))
     }
 
-    fn process_step<'doc>(
+    async fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
         config: &Config,
@@ -129,7 +205,8 @@ impl UnpinnedUses {
         };
 
         Ok(self
-            .process_uses(uses, step.location(), step, config)?
+            .process_uses(uses, step, config)
+            .await?
             .into_iter()
             .collect())
     }
@@ -137,11 +214,13 @@ impl UnpinnedUses {
 
 #[async_trait::async_trait]
 impl Audit for UnpinnedUses {
-    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
-        Ok(Self)
+        Ok(Self {
+            client: state.gh_client.clone(),
+        })
     }
 
     async fn audit_step<'doc>(
@@ -149,7 +228,7 @@ impl Audit for UnpinnedUses {
         step: &Step<'doc>,
         config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step, config)
+        self.process_step(step, config).await
     }
 
     async fn audit_composite_step<'a>(
@@ -157,7 +236,7 @@ impl Audit for UnpinnedUses {
         step: &CompositeStep<'a>,
         config: &Config,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
-        self.process_step(step, config)
+        self.process_step(step, config).await
     }
 
     async fn audit_reusable_job<'doc>(
@@ -166,7 +245,8 @@ impl Audit for UnpinnedUses {
         config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(self
-            .process_uses(&job.uses, job.location(), job, config)?
+            .process_uses(&job.uses, job, config)
+            .await?
             .into_iter()
             .collect())
     }

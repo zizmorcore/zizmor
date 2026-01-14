@@ -151,6 +151,11 @@ pub enum Op<'doc> {
     /// comment is permitted. Features that don't have an associated comment
     /// are ignored, while features with multiple comments will be rejected.
     ReplaceComment { new: Cow<'doc, str> },
+    /// Emplace a comment at the given path.
+    ///
+    /// This is like `ReplaceComment`, but will insert a new comment
+    /// if none exists.
+    EmplaceComment { new: Cow<'doc, str> },
     /// Replace the value at the given path
     Replace(serde_yaml::Value),
     /// Add a new key-value pair at the given path.
@@ -276,6 +281,62 @@ fn apply_single_patch(
             result.replace_range(comment_feature, new);
 
             result
+        }
+        Op::EmplaceComment { new } => {
+            // FIXME: We should gracefully handle empty features here,
+            // since `foo:` -> `foo: # comment` is a reasonable operation.
+            let feature = route_to_feature_exact(&patch.route, document)?.ok_or_else(|| {
+                Error::InvalidOperation(format!(
+                    "no existing feature at {route:?}",
+                    route = patch.route
+                ))
+            })?;
+
+            // FIXME: We can't emplace comments on non-block multi-line
+            // scalars with the technique below, since the comment
+            // would end up inside the scalar. We just exclude these for now.
+            if matches!(
+                Style::from_feature(&feature, document),
+                Style::SingleQuoted | Style::DoubleQuoted
+            ) && feature.is_multiline()
+            {
+                return Err(Error::InvalidOperation(format!(
+                    "cannot emplace comment on non-block multi-line scalar at {route:?}",
+                    route = patch.route
+                )));
+            }
+
+            let comment_features = document.feature_comments(&feature);
+            match comment_features.len() {
+                0 => {
+                    // No existing comment; emplace a new one.
+                    // The 'right' emplacement location is subjective;
+                    // we capriciously choose to emplace the new comment at the end
+                    // of the first line of the feature.
+                    let line_range = line_span(document, feature.location.byte_span.0);
+                    let insert_pos = line_range.end - 1;
+
+                    let mut result = content.to_string();
+                    result.replace_range(insert_pos..insert_pos, &format!(" {new}"));
+
+                    result
+                }
+                1 => {
+                    return apply_single_patch(
+                        document,
+                        &Patch {
+                            route: patch.route.clone(),
+                            operation: Op::ReplaceComment { new: new.clone() },
+                        },
+                    );
+                }
+                _ => {
+                    return Err(Error::InvalidOperation(format!(
+                        "multiple comments found at {route:?}",
+                        route = patch.route
+                    )));
+                }
+            }
         }
         Op::Replace(value) => {
             let feature = route_to_feature_pretty(&patch.route, document)?;
