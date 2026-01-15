@@ -20,6 +20,8 @@ of `zizmor`.
   no input files were collected. See the [exit code] documentation
   for details (#1515)
 
+* The [unpinned-uses] audit now supports auto-fixes for many findings (#1525)
+
 ### Changes ⚠️
 
 * The [obfuscation] audit no longer flags `#!yaml shell: cmd`. That check has
