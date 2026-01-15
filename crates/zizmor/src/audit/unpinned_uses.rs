@@ -251,3 +251,218 @@ impl Audit for UnpinnedUses {
             .collect())
     }
 }
+
+#[cfg(feature = "gh-token-tests")]
+#[cfg(test)]
+mod tests {
+    use crate::audit::unpinned_uses::UnpinnedUses;
+    use crate::audit::{Audit as _, AuditCore as _};
+    use crate::config::Config;
+    use crate::github;
+    use crate::{
+        models::{AsDocument, workflow::Workflow},
+        registry::input::InputKey,
+    };
+
+    #[tokio::test]
+    async fn test_fix() {
+        let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with ref-pin
+        uses: actions/checkout@v6.0.1
+"#;
+
+        let key = InputKey::local("fakegroup".into(), "test_unpinned_uses.yml", None::<&str>);
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = UnpinnedUses::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(UnpinnedUses::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @r"
+
+        name: Test
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout with ref-pin
+                uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        ");
+    }
+
+    #[tokio::test]
+    async fn test_fix_overwrites_comment() {
+        let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout with ref-pin
+          uses: actions/checkout@v6.0.1 # old comment
+"#;
+
+        let key = InputKey::local(
+            "fakegroup".into(),
+            "test_unpinned_uses_overwrites_comment.yml",
+            None::<&str>,
+        );
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = UnpinnedUses::new(&state).unwrap();
+        let input = workflow.into();
+        let findings = audit
+            .audit(UnpinnedUses::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @r"
+
+        name: Test
+        on: push
+        permissions: {}
+        jobs:
+            test:
+                runs-on: ubuntu-latest
+                steps:
+                - name: Checkout with ref-pin
+                  uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        ");
+    }
+
+    #[tokio::test]
+    async fn test_fix_bizarre_formatting() {
+        let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        uses: actions/checkout@v6.0.1
+"#;
+
+        let key = InputKey::local("fakegroup".into(), "test_unpinned_uses.yml", None::<&str>);
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = UnpinnedUses::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(UnpinnedUses::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @r"
+
+        name: Test
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              -
+                uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        ");
+    }
+
+    #[tokio::test]
+    async fn test_no_fix_for_already_pinned() {
+        let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout with commit pin
+          uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+"#;
+
+        let key = InputKey::local(
+            "fakegroup".into(),
+            "test_no_fix_for_already_pinned.yml",
+            None::<&str>,
+        );
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = UnpinnedUses::new(&state).unwrap();
+        let input = workflow.into();
+        let findings = audit
+            .audit(UnpinnedUses::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        assert!(findings.is_empty());
+    }
+}
