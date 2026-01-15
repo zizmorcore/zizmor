@@ -1607,7 +1607,7 @@ by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
 
 | Type             | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |------------------|------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ❌                | ✅           |
+| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ✅                | ✅           |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
@@ -1740,8 +1740,11 @@ regardless of definition order.
 
 !!! tip
 
-    There are several third-party tools that can automatically hash-pin
-    your workflows and actions for you:
+    You can use `zizmor`'s [fix mode](./usage.md#auto-fixing-results) to
+    automatically hash-pin your workflows and actions.
+  
+    Alternatively, there are several third-party tools that can automatically
+    hash-pin your workflows and actions for you:
 
     - :simple-go: @suzuki-shunsuke/pinact: supports updating and hash-pinning
       workflows, actions, and arbitrary inputs.
@@ -1751,6 +1754,11 @@ regardless of definition order.
       workflow definitions.
 
         See also stacklok/frizbee#184 for current usage caveats.
+
+!!! tip
+
+    Once your workflows and actions are hash-pinned, consider using
+    [Dependabot] or [Renovate] to keep them up-to-date automatically.
 
 For repository actions (like @actions/checkout): add a branch, tag, or SHA
 reference.
@@ -2123,6 +2131,9 @@ once it's configured:
     See: [Trusted publishing for nuget.org]
 </div>
 
+[Dependabot]: https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/keeping-your-actions-up-to-date-with-dependabot
+
+[Renovate]: https://docs.renovatebot.com/modules/manager/github-actions/
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/

@@ -395,7 +395,7 @@ foo:
     ");
 }
 
-/// `Operation::ReplaceComment` should fdo nothing if there is no comment
+/// `Operation::ReplaceComment` should do nothing if there is no comment
 /// at the given route, and should not affect the YAML value.
 #[test]
 fn test_replace_comment_noop() {
@@ -449,6 +449,309 @@ foo:
     let result = apply_yaml_patches(&document, &operations);
 
     assert!(result.is_err());
+}
+
+/// `Operation::EmplaceComment` should add a comment at the given route.
+#[test]
+fn test_emplace_comment() {
+    let original = r#"
+foo:
+    bar: baz
+    abc: def
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo", "bar"),
+        operation: Op::EmplaceComment {
+            new: "# New comment".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo:
+        bar: baz # New comment
+        abc: def
+
+    --- END PATCH ---
+    ");
+}
+
+/// `Operation::EmplaceComment` should overwrite an existing comment
+/// at the given route.
+#[test]
+fn test_emplace_comment_overwrites_existing_comment() {
+    let original = r#"
+foo:
+    bar: baz # Existing comment
+    abc: def
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo", "bar"),
+        operation: Op::EmplaceComment {
+            new: "# New comment".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo:
+        bar: baz # New comment
+        abc: def
+
+    --- END PATCH ---
+    ");
+}
+
+/// `Operation::EmplaceComment` should fail if there are multiple comments
+/// at the given route, as it's unclear which one to overwrite.
+#[test]
+fn test_emplace_comment_fails_on_too_many_comments() {
+    let original = r#"
+foo:
+    bar: baz # First comment
+    abc: def # Second comment
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::EmplaceComment {
+            new: "# This won't work".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations);
+
+    assert!(result.is_err());
+}
+
+/// `Operation::EmplaceComment` should panic if the feature at the given route
+/// is empty (i.e., has no value).
+///
+/// This is a backstop test; at some point this should be supported.
+#[test]
+#[should_panic = "no existing feature"]
+fn test_emplace_comment_on_empty_feature() {
+    let empty = r#"
+foo:
+"#;
+
+    let document = yamlpath::Document::new(empty).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::EmplaceComment {
+            new: "# Empty value".into(),
+        },
+    }];
+
+    let _result = apply_yaml_patches(&document, &operations).unwrap();
+}
+
+/// `Operation::EmplaceComment` should work on an empty object.
+#[test]
+fn test_emplace_comment_on_empty_object() {
+    let original = r#"
+foo: {}
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::EmplaceComment {
+            new: "# Empty object".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo: {} # Empty object
+
+    --- END PATCH ---
+    ");
+}
+
+/// `Operation::EmplaceComment` should work on an empty list.
+#[test]
+fn test_emplace_comment_on_empty_list() {
+    let original = r#"
+foo: []
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::EmplaceComment {
+            new: "# Empty list".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo: [] # Empty list
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_emplace_comment_on_block_string() {
+    let original = r#"
+foo: |
+  abc
+  def
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::EmplaceComment {
+            new: "# Multiline string".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo: | # Multiline string
+      abc
+      def
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_emplace_comment_on_sq_string() {
+    let original = r#"
+foo: 'abc'
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::EmplaceComment {
+            new: "# Single-quoted string".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo: 'abc' # Single-quoted string
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_emplace_comment_on_dq_string() {
+    let original = r#"
+foo: "abc"
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::EmplaceComment {
+            new: "# Double-quoted string".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r#"
+    --- PATCH ---
+
+    foo: "abc" # Double-quoted string
+
+    --- END PATCH ---
+    "#);
+}
+
+/// `Operation::EmplaceComment` should panic when trying to emplace
+/// a comment on a non-block multi-line scalar.
+///
+/// This is a backstop test; at some point this should be supported.
+#[test]
+#[should_panic = "cannot emplace comment on non-block multi-line scalar"]
+fn test_emplace_comment_on_multiline_string() {
+    let original = r#"
+foo: '
+    abc
+    def'
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo"),
+        operation: Op::EmplaceComment {
+            new: "# Multiline string".into(),
+        },
+    }];
+
+    let _result = apply_yaml_patches(&document, &operations).unwrap();
+}
+
+#[test]
+fn test_emplace_comment_on_list_element() {
+    let original = r#"
+foo: [
+    abc,
+    def
+]
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo", 0),
+        operation: Op::EmplaceComment {
+            new: "# First element".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo: [
+        abc, # First element
+        def
+    ]
+
+    --- END PATCH ---
+    ");
 }
 
 #[test]

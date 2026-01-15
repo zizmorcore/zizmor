@@ -30,6 +30,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/build.yml:61:15
@@ -38,6 +39,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/build.yml:98:15
@@ -46,6 +48,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:101:15
@@ -54,6 +57,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:107:15
@@ -62,6 +66,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:117:15
@@ -70,6 +75,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:281:13
@@ -78,6 +84,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:287:13
@@ -86,6 +93,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:302:13
@@ -94,6 +102,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:313:13
@@ -102,6 +111,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:343:13
@@ -110,6 +120,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:357:13
@@ -118,6 +129,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:368:13
@@ -126,6 +138,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:382:13
@@ -134,6 +147,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:416:13
@@ -142,6 +156,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:442:13
@@ -150,6 +165,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:462:13
@@ -158,6 +174,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:468:13
@@ -166,6 +183,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:477:13
@@ -174,6 +192,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:487:13
@@ -182,6 +201,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:498:13
@@ -190,6 +210,7 @@ error[unpinned-uses]: unpinned action reference
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:534:15
@@ -198,6 +219,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:540:15
@@ -206,6 +228,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:583:15
@@ -214,6 +237,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:588:15
@@ -222,6 +246,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:596:15
@@ -230,6 +255,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:602:15
@@ -238,6 +264,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 help[obfuscation]: obfuscated usage of GitHub Actions features
    --> .github/workflows/build.yml:184:22
@@ -255,6 +282,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/jit.yml:37:15
@@ -263,6 +291,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/jit.yml:91:15
@@ -271,6 +300,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/jit.yml:94:15
@@ -279,6 +309,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/jit.yml:146:15
@@ -287,6 +318,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/jit.yml:149:15
@@ -295,6 +327,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/lint.yml:22:15
@@ -303,6 +336,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/lint.yml:25:15
@@ -311,6 +345,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/lint.yml:28:15
@@ -319,6 +354,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/mypy.yml:53:15
@@ -327,6 +363,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/mypy.yml:56:15
@@ -335,6 +372,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/new-bugs-announce-notifier.yml:16:15
@@ -343,6 +381,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/new-bugs-announce-notifier.yml:21:15
@@ -351,6 +390,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/project-updater.yml:26:15
@@ -359,6 +399,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/require-pr-label.yml:19:15
@@ -367,6 +408,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/require-pr-label.yml:38:15
@@ -375,6 +417,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/require-pr-label.yml:47:15
@@ -383,6 +426,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/require-pr-label.yml:58:15
@@ -391,6 +435,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-context.yml:53:13
@@ -399,6 +444,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-context.yml:60:13
@@ -407,6 +453,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-docs.yml:30:13
@@ -415,6 +462,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-docs.yml:55:13
@@ -423,6 +471,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-docs.yml:85:13
@@ -431,6 +480,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-docs.yml:88:13
@@ -439,6 +489,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-macos.yml:34:13
@@ -447,6 +498,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-macos.yml:40:13
@@ -455,6 +507,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-tsan.yml:24:13
@@ -463,6 +516,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-tsan.yml:30:13
@@ -471,6 +525,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-tsan.yml:60:13
@@ -479,6 +534,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-tsan.yml:85:13
@@ -487,6 +543,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-ubuntu.yml:37:13
@@ -495,6 +552,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-ubuntu.yml:57:13
@@ -503,6 +561,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-ubuntu.yml:68:13
@@ -511,6 +570,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-ubuntu.yml:83:13
@@ -519,6 +579,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-wasi.yml:25:13
@@ -527,6 +588,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-wasi.yml:30:13
@@ -535,6 +597,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-wasi.yml:35:13
@@ -543,6 +606,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-wasi.yml:46:13
@@ -551,6 +615,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-wasi.yml:53:13
@@ -559,6 +624,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-wasi.yml:59:13
@@ -567,6 +633,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-wasi.yml:71:13
@@ -575,6 +642,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-windows-msi.yml:26:13
@@ -583,6 +651,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/reusable-windows.yml:33:13
@@ -591,6 +660,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/stale.yml:17:13
@@ -599,6 +669,7 @@ error[unpinned-uses]: unpinned action reference
    |             ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/tail-call.yml:73:15
@@ -607,6 +678,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/tail-call.yml:76:15
@@ -615,6 +687,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/verify-ensurepip-wheels.yml:28:15
@@ -623,6 +696,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/verify-ensurepip-wheels.yml:31:15
@@ -631,5 +705,6 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 156 findings (1 ignored, 79 suppressed): 0 informational, 1 low, 0 medium, 75 high

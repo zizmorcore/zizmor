@@ -20,6 +20,7 @@ fn test_ref_version_mismatch() -> Result<()> {
        |               ^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
+       = note: this finding has an auto-fix
 
     warning[ref-version-mismatch]: detects commit SHAs that don't match their version comment tags
       --> @@INPUT@@:22:77
@@ -32,7 +33,7 @@ fn test_ref_version_mismatch() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    3 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 1 high
+    3 findings (1 suppressed, 2 fixable): 0 informational, 0 low, 1 medium, 1 high
     "
     );
 

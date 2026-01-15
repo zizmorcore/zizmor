@@ -17,6 +17,10 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-onlin
  INFO audit: zizmor: 🌈 completed .github/workflows/pull-request-target.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/pypi-manual-credential.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/ref-confusion.yml
+ WARN audit:audit{input=Workflow(https://github.com/woodruffw/gha-hazmat/blob/83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61/.github/workflows/secrets-inherit.yml)}: zizmor::audit::unpinned_uses: failed to look up commit for octo-org/example-repo/.github/workflows/called-workflow.yml@main: couldn't list branches for octo-org/example-repo
+ WARN audit:audit{input=Workflow(https://github.com/woodruffw/gha-hazmat/blob/83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61/.github/workflows/secrets-inherit.yml)}: zizmor::audit::unpinned_uses: failed to look up commit for octo-org/example-repo/.github/workflows/called-workflow.yml@main: couldn't list branches for octo-org/example-repo
+ WARN audit:audit{input=Workflow(https://github.com/woodruffw/gha-hazmat/blob/83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61/.github/workflows/secrets-inherit.yml)}: zizmor::audit::unpinned_uses: failed to look up commit for octo-org/example-repo/.github/workflows/called-workflow.yml@main: couldn't list branches for octo-org/example-repo
+ WARN audit:audit{input=Workflow(https://github.com/woodruffw/gha-hazmat/blob/83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61/.github/workflows/secrets-inherit.yml)}: zizmor::audit::unpinned_uses: failed to look up commit for octo-org/example-repo/.github/workflows/called-workflow.yml@main: couldn't list branches for octo-org/example-repo
  INFO audit: zizmor: 🌈 completed .github/workflows/secrets-inherit.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/self-hosted.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/template-injection.yml
@@ -152,6 +156,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:39:15
@@ -160,6 +165,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:52:15
@@ -168,6 +174,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:64:15
@@ -176,6 +183,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:78:15
@@ -184,6 +192,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:81:15
@@ -192,6 +201,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   --> .github/workflows/bot-conditions.yml:11:1
@@ -540,6 +550,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/known-vulnerable-actions.yml:25:15
@@ -548,6 +559,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/known-vulnerable-actions.yml:28:15
@@ -556,6 +568,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 warning[overprovisioned-secrets]: excessively provisioned secrets
   --> .github/workflows/overprovisioned-secrets.yml:21:18
@@ -607,6 +620,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pull-request-target.yml:35:15
@@ -615,6 +629,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> .github/workflows/pypi-manual-credential.yml:27:9
@@ -678,6 +693,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:27:15
@@ -686,6 +702,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:33:15
@@ -694,6 +711,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:39:15
@@ -702,6 +720,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:45:15
@@ -710,6 +729,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:51:15
@@ -718,6 +738,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:58:15
@@ -726,6 +747,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:66:15
@@ -734,6 +756,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:73:15
@@ -742,6 +765,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:81:15
@@ -750,6 +774,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/ref-confusion.yml:26:15
@@ -758,6 +783,7 @@ error[unpinned-uses]: unpinned action reference
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/secrets-inherit.yml:12:1
@@ -947,6 +973,7 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
+    = note: this finding has an auto-fix
 
 error[unpinned-images]: unpinned image references
   --> .github/workflows/unpinned-images.yml:23:7
