@@ -76,7 +76,7 @@ tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "0.0.3" }
 # Exact version since the upstream performed a breaking change outside of semver.
 # See: https://github.com/zizmorcore/zizmor/pull/1427
 tree-sitter-powershell = "=0.25.10"
-yamlpath = { path = "crates/yamlpath", version = "0.32.0" }
+yamlpath = { path = "crates/yamlpath", version = "0.33.0" }
 yamlpatch = { path = "crates/yamlpatch", version = "0.9.0" }
 tree-sitter-yaml = "0.7.2"
 tikv-jemallocator = "0.6"
