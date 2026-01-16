@@ -31,7 +31,7 @@ fn test_non_well_known_shell() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("misfeature/non-well-known-shell.yml"))
-            .args(["--persona=pedantic"])
+            .args(["--persona=auditor"])
             .run()?,
         @r"
     help[misfeature]: usage of GitHub Actions misfeatures
