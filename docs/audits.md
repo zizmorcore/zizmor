@@ -1028,6 +1028,11 @@ Misfeatures include:
   These shells may not be available on all runners, and are generally
   impossible to analyze with any confidence.
 
+    !!! note
+
+        These findings are only shown when running with the "auditor"
+        [persona](./usage.md#using-personas), as they can be very noisy.
+
 ### Remediation
 
 Address the misfeature by removing or replacing its usage.

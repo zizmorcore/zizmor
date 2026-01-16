@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Changes ⚠️
+
+* The [misfeature] audit now only shows non-"well known" `#!/yaml shell:`
+  findings when running with the "auditor" persona
+
 ## 1.21.0
 
 ### New Features 🌈
