@@ -249,6 +249,7 @@ pubgrub-rs/pubgrub#389
 pyca/service-identity#75
 pydata/pydata-sphinx-theme#2077
 pylast/pylast#465
+pypa/packaging#1035
 pypa/packaging.python.org#1765
 pypa/pip-audit#851
 pypi/stdlib-list#138
