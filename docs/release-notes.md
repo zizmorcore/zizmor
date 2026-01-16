@@ -12,7 +12,7 @@ of `zizmor`.
 ### Changes ⚠️
 
 * The [misfeature] audit now only shows non-"well known" `#!/yaml shell:`
-  findings when running with the "auditor" persona
+  findings when running with the "auditor" persona (#1532)
 
 ## 1.21.0
 
