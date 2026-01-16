@@ -83,13 +83,15 @@ impl Misfeature {
                                 .build(step)?,
                         );
                     }
-                    // Flag any other non-well-known shell with a pedantic finding.
+                    // Flag any other non-well-known shell with an auditor finding.
+                    // NOTE: This was originally pedantic, but it can be very noisy for
+                    // users who intentioanlly use custom shells.
                     Some((_, shell_loc)) => {
                         findings.push(
                             Self::finding()
                                 .confidence(Confidence::High)
                                 .severity(Severity::Low)
-                                .persona(Persona::Pedantic)
+                                .persona(Persona::Auditor)
                                 .add_location(
                                     step.location().with_keys(["run".into()]).key_only().annotated("uses a non-well-known shell")
                                 )
