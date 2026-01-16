@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.21.0
+
 ### New Features 🌈
 
 * **New audit**: [misfeature] detects usage of GitHub Actions features that
