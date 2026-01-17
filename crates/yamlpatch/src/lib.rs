@@ -314,10 +314,16 @@ fn apply_single_patch(
                     // we capriciously choose to emplace the new comment at the end
                     // of the first line of the feature.
                     let line_range = line_span(document, feature.location.byte_span.0);
-                    let insert_pos = line_range.end - 1;
+                    let mut insert_pos = line_range.end;
+                    if let Some(b'\n') = document.source().as_bytes().get(insert_pos - 1) {
+                        insert_pos = insert_pos - 1;
+                    }
+                    if let Some(b'\r') = document.source().as_bytes().get(insert_pos - 1) {
+                        insert_pos = insert_pos - 1;
+                    }
 
                     let mut result = content.to_string();
-                    result.replace_range(insert_pos..insert_pos, &format!(" {new}"));
+                    result.insert_str(insert_pos, &format!(" {new}"));
 
                     result
                 }
