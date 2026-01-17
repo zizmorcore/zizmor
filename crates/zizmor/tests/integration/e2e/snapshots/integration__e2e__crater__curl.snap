@@ -1,0 +1,24 @@
+---
+source: crates/zizmor/tests/integration/e2e/crater.rs
+expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"curl/curl@6c8956c1cbf5cffcd2fd4571cf277e2eec280578\").run()?"
+---
+🌈 zizmor v@@VERSION@@
+ INFO collect_inputs: zizmor::registry::input: collected 17 inputs from curl/curl
+ INFO audit: zizmor: 🌈 completed .github/dependabot.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/appveyor-status.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/checkdocs.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/checksrc.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/checkurls.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/codeql.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/configure-vs-cmake.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/curl-for-win.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/distcheck.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/fuzz.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/http3-linux.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/label.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/linux-old.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/linux.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/macos.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/non-native.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/windows.yml
+No findings to report. Good job! (2 ignored, 44 suppressed)
