@@ -37,6 +37,8 @@
     ---
 
     ??? example "Examples"
+        - anchore/sbom-action#564
+        - anchore/scan-action#573
         - anchore/vunnel#832
 
 
