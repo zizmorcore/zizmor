@@ -14,6 +14,11 @@ of `zizmor`.
 * The [misfeature] audit now only shows non-"well known" `#!/yaml shell:`
   findings when running with the "auditor" persona (#1532)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where inputs containing CRLF line endings were not patched
+  correctly by the [unpinned-uses] audit (#1536)
+
 ## 1.21.0
 
 ### New Features 🌈
