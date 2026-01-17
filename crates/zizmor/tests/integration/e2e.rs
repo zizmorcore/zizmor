@@ -6,6 +6,7 @@ use crate::common::{OutputMode, input_under_test, zizmor};
 
 mod anchors;
 mod collect;
+mod crater;
 mod json_v1;
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]

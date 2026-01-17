@@ -25,6 +25,8 @@ schema = ["dep:schemars"]
 gh-token-tests = []
 # Test-only: enable all online audits.
 online-tests = ["gh-token-tests"]
+# Test-only: enable 'crater' tests.
+crater-tests = ["online-tests"]
 # Test-only: enable tests that require `unbuffer` for TTY behavior.
 tty-tests = []
 
