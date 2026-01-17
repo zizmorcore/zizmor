@@ -730,10 +730,17 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         app.persona = Persona::Pedantic;
     }
 
+    // Respect GITHUB_TOKEN in addition to GH_TOKEN.
+    if app.gh_token.is_none()
+        && let Ok(token) = env::var("GITHUB_TOKEN")
+    {
+        app.gh_token = GitHubToken::new(&token).ok();
+    }
+
     // Unset the GitHub token if we're in offline mode.
     // We do this manually instead of with clap's `conflicts_with` because
     // we want to support explicitly enabling offline mode while still
-    // having `GH_TOKEN` present in the environment.
+    // having `GH_TOKEN` or `GITHUB_TOKEN` present in the environment.
     if app.offline {
         app.gh_token = None;
     }
@@ -1017,8 +1024,9 @@ async fn main() -> ExitCode {
                             group = group.elements([Level::HELP
                                 .message("remove --offline to audit remote repositories")]);
                         } else if app.gh_token.is_none() {
-                            group = group.elements([Level::HELP
-                                .message("set a GitHub token with --gh-token or GH_TOKEN")]);
+                            group = group.elements([Level::HELP.message(
+                                "set a GitHub token with --gh-token, GH_TOKEN, or GITHUB_TOKEN",
+                            )]);
                         }
 
                         let renderer = Renderer::styled();
