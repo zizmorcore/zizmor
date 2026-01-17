@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.22.0
+
 ### Changes ⚠️
 
 * The [misfeature] audit now only shows non-"well known" `#!/yaml shell:`
