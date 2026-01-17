@@ -755,6 +755,36 @@ foo: [
 }
 
 #[test]
+fn test_emplace_comment_crlf() {
+    let original = r#"
+foo:
+  bar: abc
+"#;
+
+    let document = yamlpath::Document::new(original.replace("\n", "\r\n")).unwrap();
+
+    assert!(document.source().contains("\r\n"));
+
+    let operations = vec![Patch {
+        route: route!("foo", "bar"),
+        operation: Op::EmplaceComment {
+            new: "# same line".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    foo:
+      bar: abc # same line
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
 fn test_replace_empty_block_value() {
     let original = r#"
 foo:

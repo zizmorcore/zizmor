@@ -49,6 +49,7 @@ human review.
 - **MergeInto**: Merge values into existing mappings
 - **Append**: Append items to block sequences
 - **ReplaceComment**: Replace comments associated with features
+- **EmplaceComment**: Insert or update comments associated with features
 - **RewriteFragment**: Rewrite portions of string values (useful for templating)
 
 Each operation preserves the document's formatting and structure (as best-effort).

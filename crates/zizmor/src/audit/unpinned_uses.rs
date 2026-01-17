@@ -317,6 +317,60 @@ jobs:
     }
 
     #[tokio::test]
+    async fn test_fix_crlf() {
+        let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with ref-pin
+        uses: actions/checkout@v6.0.1
+"#;
+
+        let workflow_content = workflow_content.replace("\n", "\r\n");
+
+        let key = InputKey::local("fakegroup".into(), "test_unpinned_uses.yml", None::<&str>);
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = UnpinnedUses::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(UnpinnedUses::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @r"
+
+        name: Test
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout with ref-pin
+                uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        ");
+    }
+
+    #[tokio::test]
     async fn test_fix_overwrites_comment() {
         let workflow_content = r#"
 name: Test
