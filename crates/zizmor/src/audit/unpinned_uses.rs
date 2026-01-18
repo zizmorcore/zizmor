@@ -1,6 +1,5 @@
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
-use tracing::warn;
 use yamlpatch::{Op, Patch};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
@@ -118,7 +117,6 @@ impl UnpinnedUses {
                 }
             }
             Uses::Repository(repo_uses) => {
-                warn!("{repo_uses:?}");
                 let (pattern, policy) = config.unpinned_uses_policies.get_policy(repo_uses);
 
                 let pat_desc = match pattern {
