@@ -146,6 +146,31 @@ fn test_issue_659_repro() -> Result<()> {
     Ok(())
 }
 
+/// Reproduction case for #1543:
+/// `uses:` clauses that use block-style YAML strings should be handled
+/// correctly and shouldn't cause crashes in subfeature extraction.
+#[test]
+fn test_issue_1543_repro() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-uses/issue-1543-repro.yml"))
+            .run()?,
+        @r"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:18:11
+       |
+    18 |           actions/checkout@v4
+       |           ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
 /// Default policies (no explicit config).
 #[test]
 fn test_default_config() -> Result<()> {
