@@ -38,7 +38,7 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor 🌈
-        uses: zizmorcore/zizmor-action@3aa7e2f1ad15075829ef5158ee06938ae12e1769 # v0.4.0
+        uses: zizmorcore/zizmor-action@135698455da5c3b3e55f73f4419e481ab68cdd95 # v0.4.1
 ```
 
 See the action's [`inputs` documentation][inputs-documentation] for
