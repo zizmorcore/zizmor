@@ -12,6 +12,8 @@ actions/setup-elixir
 actions/setup-haskell
 actions/setup-ruby
 actions/upload-release-asset
+actionstoolbox/gem-build-and-release-action
+allanchain/poetry-cache-action
 andrewmcodes-archive/rubocop-linter-action
 artichoke/setup-rust
 aslafy-z/conventional-pr-title-action
@@ -36,6 +38,7 @@ crazy-max/ghaction-docker-buildx
 decathlon/pull-request-labeler-action
 delaguardo/setup-graalvm
 dulvui/godot-android-export
+elstudio/actions-settings
 expo/expo-preview-action
 fabasoad/setup-zizmor-action
 facebook/pysa-action
@@ -44,6 +47,7 @@ google/mirror-branch-action
 google/skywater-pdk-actions
 gradle/gradle-build-action
 grafana/k6-action
+hashicorp/terraform-cdk-action
 helaili/github-graphql-action
 helaili/jekyll-action
 ilshidur/action-slack
@@ -53,9 +57,11 @@ jakejarvis/firebase-deploy-action
 jakejarvis/hugo-build-action
 jakejarvis/lighthouse-action
 jakejarvis/s3-sync-action
+jimmygchen/runner-fallback-action
 justinribeiro/lighthouse-action
 kanadgupta/glitch-sync
 kxxt/chatgpt-action
+lapras-inc/resume-sync-action
 machine-learning-apps/wandb-action
 mansagroup/gcs-cache-action
 marvinpinto/action-automatic-releases
@@ -63,9 +69,12 @@ marvinpinto/actions
 maxheld83/ghpages
 micnncim/action-lgtm-reaction
 mikepenz/gradle-dependency-submission
+niklasmerz/github-deployment-action
 orf/cargo-bloat-action
 paambaati/codeclimate-action
+philips-software/docker-ci-scripts
 primer/figma-action
+reasonsoftware/action-pylint
 repo-sync/pull-request
 repo-sync/repo-sync
 sagebind/docker-swarm-deploy-action
