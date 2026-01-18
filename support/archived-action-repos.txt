@@ -13,6 +13,8 @@ actions/setup-haskell
 
 
 # community actions
+ActionsToolbox/gem-build-and-release-action
+
 actions-rs/cargo
 actions-rs/grcov
 actions-rs/audit-check
@@ -21,6 +23,8 @@ actions-rs/tarpaulin
 actions-rs/clippy-check
 actions-rs/install
 actions-rs/components-nightly
+
+AllanChain/poetry-cache-action
 
 andrewmcodes-archive/rubocop-linter-action
 
@@ -56,6 +60,8 @@ DeLaGuardo/setup-graalvm
 
 dulvui/godot-android-export
 
+elstudio/actions-settings
+
 expo/expo-preview-action
 
 fabasoad/setup-zizmor-action
@@ -71,6 +77,8 @@ gradle/gradle-build-action
 
 grafana/k6-action
 
+hashicorp/terraform-cdk-action
+
 helaili/github-graphql-action
 helaili/jekyll-action
 
@@ -83,11 +91,15 @@ jakejarvis/hugo-build-action
 jakejarvis/lighthouse-action
 jakejarvis/s3-sync-action
 
+jimmygchen/runner-fallback-action
+
 justinribeiro/lighthouse-action
 
 kanadgupta/glitch-sync
 
 kxxt/chatgpt-action
+
+lapras-inc/resume-sync-action
 
 machine-learning-apps/wandb-action
 
@@ -102,11 +114,17 @@ micnncim/action-lgtm-reaction
 
 mikepenz/gradle-dependency-submission
 
+NiklasMerz/github-deployment-action
+
 orf/cargo-bloat-action
 
 paambaati/codeclimate-action
 
+philips-software/docker-ci-scripts
+
 primer/figma-action
+
+ReasonSoftware/action-pylint
 
 repo-sync/pull-request
 repo-sync/repo-sync
