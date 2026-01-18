@@ -71,7 +71,10 @@ impl<'a> Fragment<'a> {
             #[allow(clippy::unwrap_used)]
             static WHITESPACE: LazyLock<regex::Regex> =
                 LazyLock::new(|| regex::Regex::new(r"\s+").unwrap());
-            let regex = WHITESPACE.replace_all(&escaped, "\\s+");
+            let regex = format!(
+                "(?sm)\\s*{exp}",
+                exp = WHITESPACE.replace_all(&escaped, "\\s+")
+            );
 
             Fragment::Regex(
                 regex::bytes::Regex::new(&regex)

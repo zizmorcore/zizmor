@@ -1,6 +1,9 @@
 //! Shared models and utilities.
 
-use std::fmt::{self, Display};
+use std::{
+    borrow::Cow,
+    fmt::{self, Display},
+};
 
 use indexmap::IndexMap;
 use self_cell::self_cell;
@@ -211,8 +214,9 @@ pub enum Uses {
 
 impl Uses {
     /// Parse a `uses:` clause into its appropriate variant.
-    pub fn parse(uses: impl Into<String>) -> Result<Self, UsesError> {
+    pub fn parse<'a>(uses: impl Into<Cow<'a, str>>) -> Result<Self, UsesError> {
         let uses = uses.into();
+        let uses = uses.trim();
 
         if uses.starts_with("./") {
             Ok(Self::Local(LocalUses::new(uses)))
@@ -241,8 +245,8 @@ pub struct LocalUses {
 }
 
 impl LocalUses {
-    fn new(path: String) -> Self {
-        LocalUses { path }
+    fn new(path: impl Into<String>) -> Self {
+        LocalUses { path: path.into() }
     }
 }
 
@@ -262,6 +266,9 @@ struct RepositoryUsesInner<'a> {
 
 impl<'a> RepositoryUsesInner<'a> {
     fn from_str(uses: &'a str) -> Result<Self, UsesError> {
+        // NOTE: Empirically, GitHub Actions strips whitespace from the start and end of `uses:` clauses.
+        let uses = uses.trim();
+
         // NOTE: Both git refs and paths can contain `@`, but in practice
         // GHA refuses to run a `uses:` clause with more than one `@` in it.
         let (path, git_ref) = match uses.rsplit_once('@') {
@@ -373,6 +380,9 @@ impl<'a> DockerUsesInner<'a> {
     }
 
     fn from_str(uses: &'a str) -> Self {
+        // NOTE: Empirically, GitHub Actions strips whitespace from the start and end of `uses:` clauses.
+        let uses = uses.trim();
+
         let (registry, image) = match uses.split_once('/') {
             Some((registry, image)) if Self::is_registry(registry) => (Some(registry), image),
             _ => (None, uses),
@@ -462,7 +472,7 @@ impl<'de> Deserialize<'de> for DockerUses {
     where
         D: Deserializer<'de>,
     {
-        let uses = <String>::deserialize(deserializer)?;
+        let uses = <Cow<'de, str>>::deserialize(deserializer)?;
         Ok(DockerUses::parse(uses))
     }
 }
@@ -486,7 +496,7 @@ pub(crate) fn step_uses<'de, D>(de: D) -> Result<Uses, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let uses = <String>::deserialize(de)?;
+    let uses = <Cow<'de, str>>::deserialize(de)?;
     Uses::parse(uses).map_err(custom_error::<D>)
 }
 
@@ -883,6 +893,55 @@ mod tests {
             @r#"
         UsesError(
             "owner/repo slug is too short: checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3",
+        )
+        "#
+        );
+
+        // Valid: leading/trailing whitespace.
+        insta::assert_debug_snapshot!(
+            Uses::parse("\nactions/checkout@v4  \n").unwrap(),
+            @r#"
+        Repository(
+            RepositoryUses {
+                owner: "actions/checkout@v4",
+                dependent: RepositoryUsesInner {
+                    owner: "actions",
+                    repo: "checkout",
+                    slug: "actions/checkout",
+                    subpath: None,
+                    git_ref: "v4",
+                },
+            },
+        )
+        "#,
+        );
+
+        insta::assert_debug_snapshot!(
+            Uses::parse("\ndocker://alpine:3.8  \n").unwrap(),
+            @r#"
+        Docker(
+            DockerUses {
+                owner: "alpine:3.8",
+                dependent: DockerUsesInner {
+                    registry: None,
+                    image: "alpine",
+                    tag: Some(
+                        "3.8",
+                    ),
+                    hash: None,
+                },
+            },
+        )
+        "#
+        );
+
+        insta::assert_debug_snapshot!(
+            Uses::parse("\n./.github/workflows/example.yml  \n").unwrap(),
+            @r#"
+        Local(
+            LocalUses {
+                path: "./.github/workflows/example.yml",
+            },
         )
         "#
         );
