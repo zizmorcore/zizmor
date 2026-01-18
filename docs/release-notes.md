@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would crash on `uses:` clauses containing
+  non-significant whitespace while performing the [unpinned-uses] audit
+  (#1544)
+
 ## 1.22.0
 
 ### Changes ⚠️
