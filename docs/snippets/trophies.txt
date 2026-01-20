@@ -219,6 +219,7 @@ NLnetLabs/nsd#413
 NLnetLabs/unbound#1204
 numpy/numpy#27931
 numpy/numpy.org#797
+octobox/octobox#4377
 onnx/onnx#6661
 onnx/onnx#6662
 onnx/onnx#7363
@@ -317,6 +318,8 @@ sigstore/model-transparency#369
 sigstore/sigstore-rs#424
 sigstore/sigstore-rs#519
 simpeg/simpeg#1592
+Skyscanner/backpack#4124
+Skyscanner/backpack-android#2561
 Skyscanner/turbolift#202
 slackapi/python-slack-hooks#58
 slackapi/bolt-python#1303

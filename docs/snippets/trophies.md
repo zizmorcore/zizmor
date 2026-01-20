@@ -1026,6 +1026,14 @@
         - numpy/numpy.org#797
 
 
+-   ![](https://github.com/octobox.png?size=40){ width="40" loading=lazy align=left } octobox
+
+    ---
+
+    ??? example "Examples"
+        - octobox/octobox#4377
+
+
 -   ![](https://github.com/onnx.png?size=40){ width="40" loading=lazy align=left } onnx
 
     ---
@@ -1514,6 +1522,8 @@
     ---
 
     ??? example "Examples"
+        - Skyscanner/backpack#4124
+        - Skyscanner/backpack-android#2561
         - Skyscanner/turbolift#202
 
 
