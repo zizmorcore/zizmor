@@ -57,8 +57,8 @@ jsonschema.workspace = true
 line-index.workspace = true
 owo-colors.workspace = true
 regex.workspace = true
-reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls", "rustls-tls-native-roots"] }
-reqwest-middleware.workspace = true
+reqwest = { workspace = true, features = ["json", "query", "rustls"] }
+reqwest-middleware = { workspace = true, features = ["query"] }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde-sarif.workspace = true
