@@ -1339,4 +1339,40 @@ foo: &foo-anchor
         assert_eq!(anchor_map["foo-anchor"].kind(), "block_mapping");
         assert_eq!(anchor_map["bar-anchor"].kind(), "block_mapping");
     }
+
+    #[test]
+    fn test_sequence_alias_not_flattened() {
+        // Backstop test for #1551
+        let doc = r#"
+defaults: &defaults
+  - a
+  - b
+  - c
+list:
+  - *defaults
+  - d
+  - e
+        "#;
+
+        let doc = Document::new(doc).unwrap();
+
+        for (route, expected_kind, expected_value) in [
+            (
+                route!("list", 0),
+                FeatureKind::BlockSequence,
+                "- a\n  - b\n  - c",
+            ),
+            (route!("list", 1), FeatureKind::Scalar, "d"),
+            (route!("list", 2), FeatureKind::Scalar, "e"),
+        ] {
+            let feature = doc.query_exact(&route).unwrap().unwrap();
+            assert_eq!(feature.kind(), expected_kind);
+            assert_eq!(doc.extract(&feature).trim(), expected_value);
+        }
+
+        assert!(matches!(
+            doc.query_exact(&route!("list", 3)),
+            Err(QueryError::ExhaustedList(3, 3))
+        ));
+    }
 }
