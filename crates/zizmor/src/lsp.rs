@@ -12,6 +12,7 @@ use crate::config::Config;
 use crate::finding::location::Point;
 use crate::finding::{Persona, Severity};
 use crate::models::action::Action;
+use crate::models::dependabot::Dependabot;
 use crate::models::workflow::Workflow;
 use crate::registry::input::{InputGroup, InputRegistry};
 use crate::registry::{FindingRegistry, input::InputKey};
@@ -57,6 +58,7 @@ impl LanguageServer for Backend {
 
     async fn initialized(&self, _: ls_types::InitializedParams) {
         let selectors = vec![
+            // Auditable inputs.
             ls_types::DocumentFilter {
                 language: Some("yaml".into()),
                 scheme: None,
@@ -71,6 +73,17 @@ impl LanguageServer for Backend {
                 language: Some("yaml".into()),
                 scheme: None,
                 pattern: Some("**/.github/dependabot.{yml,yaml}".into()),
+            },
+            // Config files.
+            ls_types::DocumentFilter {
+                language: Some("yaml".into()),
+                scheme: None,
+                pattern: Some("**/zizmor.yml".into()),
+            },
+            ls_types::DocumentFilter {
+                language: Some("yaml".into()),
+                scheme: None,
+                pattern: Some("**/.github/zizmor.yml".into()),
             },
         ];
 
@@ -183,6 +196,11 @@ impl Backend {
         let path = Utf8Path::new(params.uri.path().as_str());
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
             AuditInput::from(Action::from_string(
+                params.text,
+                InputKey::local("lsp".into(), path, None),
+            )?)
+        } else if matches!(path.file_name(), Some("dependabot.yml")) {
+            AuditInput::from(Dependabot::from_string(
                 params.text,
                 InputKey::local("lsp".into(), path, None),
             )?)
