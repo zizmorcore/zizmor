@@ -981,22 +981,10 @@ impl Document {
             // `flow_node` looks like `- a`
             // `flow_pair` looks like `[a: b]`
             //
-            // From here, we need to peek inside each and see if it's
-            // an alias. If it is, we expand the alias; otherwise, we
-            // just keep the child as-is.
-            if child.named_child(0).map(|c| c.kind()) == Some("alias") {
-                let alias_name = &child
-                    .utf8_text(self.source().as_bytes())
-                    .expect("impossible: alias name should be UTF-8 by construction")[1..];
-                let anchor_map = self.tree.borrow_dependent();
-                let aliased_node = anchor_map
-                    .get(alias_name)
-                    .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?;
-
-                children.extend(self.flatten_sequence(aliased_node)?);
-            } else {
-                children.push(child);
-            }
+            // Aliases are drop-in replacements for their anchored values,
+            // so we just keep the child as-is. The alias will be resolved
+            // during descent when we navigate into it.
+            children.push(child);
         }
 
         Ok(children)
@@ -1350,5 +1338,41 @@ foo: &foo-anchor
         assert_eq!(anchor_map.len(), 2);
         assert_eq!(anchor_map["foo-anchor"].kind(), "block_mapping");
         assert_eq!(anchor_map["bar-anchor"].kind(), "block_mapping");
+    }
+
+    #[test]
+    fn test_sequence_alias_not_flattened() {
+        // Backstop test for #1551
+        let doc = r#"
+defaults: &defaults
+  - a
+  - b
+  - c
+list:
+  - *defaults
+  - d
+  - e
+        "#;
+
+        let doc = Document::new(doc).unwrap();
+
+        for (route, expected_kind, expected_value) in [
+            (
+                route!("list", 0),
+                FeatureKind::BlockSequence,
+                "- a\n  - b\n  - c",
+            ),
+            (route!("list", 1), FeatureKind::Scalar, "d"),
+            (route!("list", 2), FeatureKind::Scalar, "e"),
+        ] {
+            let feature = doc.query_exact(&route).unwrap().unwrap();
+            assert_eq!(feature.kind(), expected_kind);
+            assert_eq!(doc.extract(&feature).trim(), expected_value);
+        }
+
+        assert!(matches!(
+            doc.query_exact(&route!("list", 3)),
+            Err(QueryError::ExhaustedList(3, 3))
+        ));
     }
 }
