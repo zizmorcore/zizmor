@@ -981,22 +981,10 @@ impl Document {
             // `flow_node` looks like `- a`
             // `flow_pair` looks like `[a: b]`
             //
-            // From here, we need to peek inside each and see if it's
-            // an alias. If it is, we expand the alias; otherwise, we
-            // just keep the child as-is.
-            if child.named_child(0).map(|c| c.kind()) == Some("alias") {
-                let alias_name = &child
-                    .utf8_text(self.source().as_bytes())
-                    .expect("impossible: alias name should be UTF-8 by construction")[1..];
-                let anchor_map = self.tree.borrow_dependent();
-                let aliased_node = anchor_map
-                    .get(alias_name)
-                    .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?;
-
-                children.extend(self.flatten_sequence(aliased_node)?);
-            } else {
-                children.push(child);
-            }
+            // Aliases are drop-in replacements for their anchored values,
+            // so we just keep the child as-is. The alias will be resolved
+            // during descent when we navigate into it.
+            children.push(child);
         }
 
         Ok(children)

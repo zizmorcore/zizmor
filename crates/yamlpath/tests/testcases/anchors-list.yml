@@ -33,38 +33,47 @@ testcase:
   nested-top-flow: [*outer, d]
 
 queries:
-  - query: [merge-before, 0]
+  - query: [merge-before, 0, 0]
     mode: exact
     expected: "a"
 
-  - query: [merge-after, 2]
+  - query: [merge-after, 2, 1]
     mode: exact
-    expected: "a"
+    expected: "b"
 
-  - query: [merge-multi, 5]
+  - query: [merge-multi, 1, 2]
     mode: exact
     expected: "c"
 
-  - query: [nested-top, 0]
+
+  - query: [nested-top, 0, 0, 0]
     mode: exact
     expected: "a"
+
+  - query: [nested-top, 0, 0, 1]
+    mode: exact
+    expected: "b"
+
+  - query: [nested-top, 0, 1]
+    mode: exact
+    expected: "c"
 
   - query: [nested-top, 1]
     mode: exact
-    expected: "b"
+    expected: "d"
 
-  - query: [nested-top, 2]
-    mode: exact
-    expected: "c"
-
-  - query: [nested-top-flow, 0]
+  - query: [nested-top-flow, 0, 0, 0]
     mode: exact
     expected: "a"
 
-  - query: [nested-top-flow, 1]
+  - query: [nested-top-flow, 0, 0, 1]
     mode: exact
     expected: "b"
 
-  - query: [nested-top-flow, 2]
+  - query: [nested-top-flow, 0, 1]
     mode: exact
     expected: "c"
+
+  - query: [nested-top-flow, 1]
+    mode: exact
+    expected: "d"
