@@ -2,5 +2,5 @@ rules:
   unpinned-uses:
     config:
       policies:
-        # Invalid: * must be alone in repo position
-        "foo/b*r": "any"
+        # Invalid: multiple wildcards in a single segment
+        "foo/b*r*": "any"
