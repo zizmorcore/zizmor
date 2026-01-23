@@ -1,8 +1,9 @@
 //! zizmor's language server.
 
 use std::str::FromStr;
+use tokio::sync::RwLock;
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use thiserror::Error;
 use tower_lsp_server::ls_types::{self, TextDocumentSyncKind};
 use tower_lsp_server::{Client, LanguageServer, LspService, Server};
@@ -12,6 +13,7 @@ use crate::config::Config;
 use crate::finding::location::Point;
 use crate::finding::{Persona, Severity};
 use crate::models::action::Action;
+use crate::models::dependabot::Dependabot;
 use crate::models::workflow::Workflow;
 use crate::registry::input::{InputGroup, InputRegistry};
 use crate::registry::{FindingRegistry, input::InputKey};
@@ -34,13 +36,59 @@ struct LspDocumentCommon {
 struct Backend {
     audit_registry: AuditRegistry,
     client: Client,
+    /// Currently opened workspace directories.
+    /// These directories are used to discover configuration files that
+    /// apply to audits.
+    workspace_dirs: RwLock<Vec<Utf8PathBuf>>,
 }
 
 impl LanguageServer for Backend {
     async fn initialize(
         &self,
-        _: ls_types::InitializeParams,
+        params: ls_types::InitializeParams,
     ) -> tower_lsp_server::jsonrpc::Result<ls_types::InitializeResult> {
+        if let Some(workspaces) = params.workspace_folders {
+            for workspace in workspaces {
+                let path = workspace.uri.path();
+                if path.is_empty() {
+                    self.client
+                        .log_message(
+                            ls_types::MessageType::WARNING,
+                            format!(
+                                "skipping workspace folder with empty path: {:?}",
+                                workspace.uri
+                            ),
+                        )
+                        .await;
+                    continue;
+                }
+
+                let path = Utf8PathBuf::from_str(path.as_str()).map_err(|_| {
+                    // TODO: Log warning instead of erroring here?
+                    tower_lsp_server::jsonrpc::Error::invalid_params(format!(
+                        "workspace folder path is not valid UTF-8: {:?}",
+                        workspace.uri
+                    ))
+                })?;
+
+                // TODO: Can this actually happen?
+                if !path.is_dir() {
+                    self.client
+                        .log_message(
+                            ls_types::MessageType::WARNING,
+                            format!(
+                                "skipping workspace folder that is not a directory: {}",
+                                path
+                            ),
+                        )
+                        .await;
+                    continue;
+                }
+
+                self.workspace_dirs.write().await.push(path);
+            }
+        }
+
         Ok(ls_types::InitializeResult {
             server_info: Some(ls_types::ServerInfo {
                 name: "zizmor (LSP)".into(),
@@ -57,6 +105,7 @@ impl LanguageServer for Backend {
 
     async fn initialized(&self, _: ls_types::InitializedParams) {
         let selectors = vec![
+            // Auditable inputs.
             ls_types::DocumentFilter {
                 language: Some("yaml".into()),
                 scheme: None,
@@ -72,6 +121,20 @@ impl LanguageServer for Backend {
                 scheme: None,
                 pattern: Some("**/.github/dependabot.{yml,yaml}".into()),
             },
+            // Config files.
+            // TODO: Right now these are disabled, but at some point we might want to independently
+            // monitor these and only reload the configuration when they change.
+            //
+            // ls_types::DocumentFilter {
+            //     language: Some("yaml".into()),
+            //     scheme: None,
+            //     pattern: Some("**/zizmor.yml".into()),
+            // },
+            // ls_types::DocumentFilter {
+            //     language: Some("yaml".into()),
+            //     scheme: None,
+            //     pattern: Some("**/.github/zizmor.yml".into()),
+            // },
         ];
 
         // Register our capabilities with the client.
@@ -132,6 +195,16 @@ impl LanguageServer for Backend {
         self.client
             .log_message(ls_types::MessageType::INFO, "server initialized!")
             .await;
+
+        self.client
+            .log_message(
+                ls_types::MessageType::INFO,
+                format!(
+                    "server workspace_dirs: {:?}",
+                    self.workspace_dirs.read().await.as_slice()
+                ),
+            )
+            .await;
     }
 
     async fn shutdown(&self) -> tower_lsp_server::jsonrpc::Result<()> {
@@ -141,7 +214,7 @@ impl LanguageServer for Backend {
 
     async fn did_open(&self, params: ls_types::DidOpenTextDocumentParams) {
         tracing::debug!("did_open: {:?}", params);
-        self.audit(LspDocumentCommon {
+        self.perform(LspDocumentCommon {
             uri: params.text_document.uri,
             text: params.text_document.text,
             version: Some(params.text_document.version),
@@ -156,7 +229,7 @@ impl LanguageServer for Backend {
             return;
         };
 
-        self.audit(LspDocumentCommon {
+        self.perform(LspDocumentCommon {
             uri: params.text_document.uri,
             text: change.text,
             version: Some(params.text_document.version),
@@ -167,7 +240,7 @@ impl LanguageServer for Backend {
     async fn did_save(&self, params: ls_types::DidSaveTextDocumentParams) {
         tracing::debug!("did_save: {:?}", params);
         if let Some(text) = params.text {
-            self.audit(LspDocumentCommon {
+            self.perform(LspDocumentCommon {
                 uri: params.text_document.uri,
                 text,
                 version: None,
@@ -186,6 +259,11 @@ impl Backend {
                 params.text,
                 InputKey::local("lsp".into(), path, None),
             )?)
+        } else if matches!(path.file_name(), Some("dependabot.yml")) {
+            AuditInput::from(Dependabot::from_string(
+                params.text,
+                InputKey::local("lsp".into(), path, None),
+            )?)
         } else if matches!(path.extension(), Some("yml" | "yaml")) {
             AuditInput::from(Workflow::from_string(
                 params.text,
@@ -195,7 +273,40 @@ impl Backend {
             anyhow::bail!("asked to audit unexpected file: {path}");
         };
 
-        let mut group = InputGroup::new(Config::default());
+        // Try to find a configuration file for this audit.
+        // The approach below is probably wrong: we scan each workspace directory
+        // in order and use the first configuration we find. Instead, we should
+        // probably find the configuration file that is in the "closest"
+        // workspace to the file being audited.
+        let config = {
+            let mut config = Config::default();
+            let workspace_dirs = self.workspace_dirs.read().await;
+
+            for dir in workspace_dirs.as_slice() {
+                match Config::discover_local(dir.as_path()).await {
+                    Ok(Some(cfg)) => {
+                        config = cfg;
+                        break;
+                    }
+                    Ok(None) => continue,
+                    Err(e) => {
+                        self.client
+                            .log_message(
+                                ls_types::MessageType::WARNING,
+                                format!(
+                                    "failed to load configuration from workspace dir {}: {e}",
+                                    dir.as_str()
+                                ),
+                            )
+                            .await;
+                    }
+                }
+            }
+
+            config
+        };
+
+        let mut group = InputGroup::new(config);
         group.register_input(input)?;
         let mut input_registry = InputRegistry::new();
         input_registry.groups.insert("lsp".into(), group);
@@ -245,7 +356,8 @@ impl Backend {
         Ok(())
     }
 
-    async fn audit(&self, params: LspDocumentCommon) {
+    /// Perform an event, as driven by the LSP client.
+    async fn perform(&self, params: LspDocumentCommon) {
         if let Err(e) = self.audit_inner(params).await {
             self.client
                 .log_message(ls_types::MessageType::ERROR, format!("audit failed: {e}"))
@@ -285,6 +397,7 @@ pub(crate) async fn run() -> Result<(), Error> {
     let (service, socket) = LspService::new(|client| Backend {
         audit_registry: audits,
         client,
+        workspace_dirs: RwLock::new(vec![]),
     });
 
     Server::new(stdin, stdout, socket).serve(service).await;
