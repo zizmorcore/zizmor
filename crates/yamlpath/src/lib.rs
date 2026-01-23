@@ -732,6 +732,15 @@ impl Document {
                     .get(&alias_name[1..])
                     .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?
             }
+            // Our focus node might have an anchor prefix (e.g. `[&x v, *x]`),
+            // in which case we skip to the non-anchor sibling.
+            Some(child) if child.kind_id() == self.anchor_id => {
+                let mut cursor = focus_node.walk();
+                focus_node
+                    .named_children(&mut cursor)
+                    .find(|n| n.kind_id() != self.anchor_id)
+                    .unwrap_or(focus_node)
+            }
             _ => focus_node,
         };
 
@@ -911,25 +920,35 @@ impl Document {
             // we need to manually unquote them.
             //
             // NOTE: text unwraps are infallible, since our document is UTF-8.
-            let key_value = match key.named_child(0) {
-                Some(scalar) => {
-                    let key_value = scalar
-                        .utf8_text(self.source().as_bytes())
-                        .expect("impossible: value for key should be UTF-8 by construction");
+            //
+            // NOTE: The key might have an anchor prefix (e.g. `{ &v foo: bar }`),
+            // so we need to skip any anchor nodes to find the actual scalar.
+            let key_value = {
+                let mut cursor = key.walk();
+                let scalar = key
+                    .named_children(&mut cursor)
+                    .find(|n| n.kind_id() != self.anchor_id);
 
-                    match scalar.kind() {
-                        "single_quote_scalar" | "double_quote_scalar" => {
-                            let mut chars = key_value.chars();
-                            chars.next();
-                            chars.next_back();
-                            chars.as_str()
+                match scalar {
+                    Some(scalar) => {
+                        let key_value = scalar
+                            .utf8_text(self.source().as_bytes())
+                            .expect("impossible: value for key should be UTF-8 by construction");
+
+                        match scalar.kind() {
+                            "single_quote_scalar" | "double_quote_scalar" => {
+                                let mut chars = key_value.chars();
+                                chars.next();
+                                chars.next_back();
+                                chars.as_str()
+                            }
+                            _ => key_value,
                         }
-                        _ => key_value,
                     }
+                    None => key
+                        .utf8_text(self.source().as_bytes())
+                        .expect("impossible: key should be UTF-8 by construction"),
                 }
-                None => key
-                    .utf8_text(self.source().as_bytes())
-                    .expect("impossible: key should be UTF-8 by construction"),
             };
 
             if key_value == expected {
@@ -1374,5 +1393,89 @@ list:
             doc.query_exact(&route!("list", 3)),
             Err(QueryError::ExhaustedList(3, 3))
         ));
+    }
+
+    #[test]
+    fn test_inline_anchor_alias_patterns() {
+        let test_cases: Vec<(&str, Vec<(Route, &str)>)> = vec![
+            // Basic flow sequence cases
+            (
+                "foo: [&x v, *x]",
+                vec![(route!("foo", 0), "v"), (route!("foo", 1), "v")],
+            ),
+            (
+                "foo: [a, &x v, *x]",
+                vec![
+                    (route!("foo", 0), "a"),
+                    (route!("foo", 1), "v"),
+                    (route!("foo", 2), "v"),
+                ],
+            ),
+            (
+                "foo: [&a 1, &b 2, *a, *b]",
+                vec![
+                    (route!("foo", 0), "1"),
+                    (route!("foo", 1), "2"),
+                    (route!("foo", 2), "1"),
+                    (route!("foo", 3), "2"),
+                ],
+            ),
+            // Flow mapping cases
+            (
+                "top: { &a foo: &b bar, nested: *a, other: *b }",
+                vec![
+                    (route!("top", "foo"), "bar"),
+                    (route!("top", "nested"), "foo"),
+                    (route!("top", "other"), "bar"),
+                ],
+            ),
+            (
+                "top: { &a k1: v1, &b k2: v2, ref1: *a, ref2: *b }",
+                vec![
+                    (route!("top", "k1"), "v1"),
+                    (route!("top", "k2"), "v2"),
+                    (route!("top", "ref1"), "k1"),
+                    (route!("top", "ref2"), "k2"),
+                ],
+            ),
+            // Anchor on complex values
+            (
+                "top: { seq: &x [a, b], ref: *x }",
+                vec![
+                    (route!("top", "seq", 0), "a"),
+                    (route!("top", "ref", 1), "b"),
+                ],
+            ),
+            (
+                "top: { map: &x {a: 1}, ref: *x }",
+                vec![
+                    (route!("top", "map", "a"), "1"),
+                    (route!("top", "ref", "a"), "1"),
+                ],
+            ),
+            // Quoted keys with anchors (alias returns the quoted form)
+            (
+                r#"top: { &x "foo": bar, nested: *x }"#,
+                vec![
+                    (route!("top", "foo"), "bar"),
+                    (route!("top", "nested"), "\"foo\""),
+                ],
+            ),
+            (
+                "top: { &x 'foo': bar, nested: *x }",
+                vec![
+                    (route!("top", "foo"), "bar"),
+                    (route!("top", "nested"), "'foo'"),
+                ],
+            ),
+        ];
+
+        for (yaml, queries) in test_cases {
+            let doc = Document::new(yaml).unwrap();
+            for (route, expected) in queries {
+                let feature = doc.query_exact(&route).unwrap().unwrap();
+                assert_eq!(doc.extract(&feature), expected, "YAML: {}", yaml);
+            }
+        }
     }
 }
