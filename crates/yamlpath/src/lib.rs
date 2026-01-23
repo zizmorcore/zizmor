@@ -920,7 +920,6 @@ impl Document {
             // we need to manually unquote them.
             //
             // NOTE: text unwraps are infallible, since our document is UTF-8.
-            //
             // NOTE: The key might have an anchor prefix (e.g. `{ &v foo: bar }`),
             // so we need to skip any anchor nodes to find the actual scalar.
             let key_value = {
