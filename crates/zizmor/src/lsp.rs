@@ -1,7 +1,7 @@
 //! zizmor's language server.
 
 use std::str::FromStr;
-use std::sync::RwLock;
+use tokio::sync::RwLock;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use thiserror::Error;
@@ -85,10 +85,7 @@ impl LanguageServer for Backend {
                     continue;
                 }
 
-                self.workspace_dirs
-                    .write()
-                    .expect("workspace_dirs lock is poisoned")
-                    .push(path);
+                self.workspace_dirs.write().await.push(path);
             }
         }
 
@@ -204,10 +201,7 @@ impl LanguageServer for Backend {
                 ls_types::MessageType::INFO,
                 format!(
                     "server workspace_dirs: {:?}",
-                    self.workspace_dirs
-                        .read()
-                        .expect("workspace_dirs lock is poisoned")
-                        .as_slice()
+                    self.workspace_dirs.read().await.as_slice()
                 ),
             )
             .await;
@@ -279,7 +273,40 @@ impl Backend {
             anyhow::bail!("asked to audit unexpected file: {path}");
         };
 
-        let mut group = InputGroup::new(Config::default());
+        // Try to find a configuration file for this audit.
+        // The approach below is probably wrong: we scan each workspace directory
+        // in order and use the first configuration we find. Instead, we should
+        // probably find the configuration file that is "closest" to the input
+        // being audited.
+        let config = {
+            let mut config = Config::default();
+            let workspace_dirs = self.workspace_dirs.read().await;
+
+            for dir in workspace_dirs.as_slice() {
+                match Config::discover_local(dir.as_path()).await {
+                    Ok(Some(cfg)) => {
+                        config = cfg;
+                        break;
+                    }
+                    Ok(None) => continue,
+                    Err(e) => {
+                        self.client
+                            .log_message(
+                                ls_types::MessageType::WARNING,
+                                format!(
+                                    "failed to load configuration from workspace dir {}: {e}",
+                                    dir.as_str()
+                                ),
+                            )
+                            .await;
+                    }
+                }
+            }
+
+            config
+        };
+
+        let mut group = InputGroup::new(config);
         group.register_input(input)?;
         let mut input_registry = InputRegistry::new();
         input_registry.groups.insert("lsp".into(), group);
