@@ -25,6 +25,9 @@ of `zizmor`.
 
     Many thanks to @DarkaMaul for implementing this fix!
 
+* Fixed a bug in `yamlpath` where anchor prefixes in sequences and mapping
+  where not stripped during path queries (#1562)
+
 ## 1.22.0
 
 ### Changes ⚠️
