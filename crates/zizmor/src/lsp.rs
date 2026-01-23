@@ -276,8 +276,8 @@ impl Backend {
         // Try to find a configuration file for this audit.
         // The approach below is probably wrong: we scan each workspace directory
         // in order and use the first configuration we find. Instead, we should
-        // probably find the configuration file that is "closest" to the input
-        // being audited.
+        // probably find the configuration file that is in the "closest"
+        // workspace to the file being audited.
         let config = {
             let mut config = Config::default();
             let workspace_dirs = self.workspace_dirs.read().await;
