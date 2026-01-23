@@ -20,6 +20,11 @@ of `zizmor`.
   non-significant whitespace while performing the [unpinned-uses] audit
   (#1544)
 
+* Fixed a bug in `yamlpath` where sequences containing anchors were splatted
+  instead of being properly nested (#1557)
+
+    Many thanks to @DarkaMaul for implementing this fix!
+
 ## 1.22.0
 
 ### Changes ⚠️
