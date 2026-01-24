@@ -631,6 +631,10 @@ to keep in mind:
   the original format of the input files, including exact indentation
   and comments. However, this is ultimately a heuristic, and
   some patches may not match the file's exact style.
+* **Online access**: some fixes may require online access, even if their
+  parent audit doesn't. For example, [unpinned-uses](./audits.md#unpinned-uses)
+  doesn't require online access to _detect_ unpinned uses, but it does
+  require online access to fetch the latest commit SHA for pinning.
 
 ## Filtering results
 
