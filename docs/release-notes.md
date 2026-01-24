@@ -15,8 +15,7 @@ of `zizmor`.
   configuration files relative to workspace roots (#1555)
 
 * `zizmor` now reads the `GITHUB_TOKEN` environment variable as an
-  alias/equivalent for `GH_TOKEN`
-
+  alias/equivalent for `GH_TOKEN` (#1566)
 
 ### Bug Fixes 🐛
 
