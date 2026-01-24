@@ -91,9 +91,13 @@ struct App {
     #[arg(short, long, env = "ZIZMOR_OFFLINE")]
     offline: bool,
 
-    /// The GitHub API token to use.
-    #[arg(long, env, value_parser = GitHubToken::new)]
+    /// The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN]
+    #[arg(long, env, hide_env = true, value_parser = GitHubToken::new)]
     gh_token: Option<GitHubToken>,
+
+    /// This is an alias for `--gh-token` / `GH_TOKEN`.
+    #[arg(long, env, hide = true, value_parser = GitHubToken::new, conflicts_with = "gh_token")]
+    github_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
     #[arg(long, env = "GH_HOST", default_value_t)]
@@ -728,6 +732,11 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     // `--pedantic` is a shortcut for `--persona=pedantic`.
     if app.pedantic {
         app.persona = Persona::Pedantic;
+    }
+
+    // Merge `--github-token` into `--gh-token`, if present.
+    if let Some(token) = app.github_token.take() {
+        app.gh_token = Some(token);
     }
 
     // Unset the GitHub token if we're in offline mode.
