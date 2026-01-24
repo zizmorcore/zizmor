@@ -150,7 +150,7 @@ GitHub Actions setup:
     ```yaml title="zizmor.yml"
     name: GitHub Actions Security Analysis with zizmor 🌈
 
-    on:Use with
+    on:
       push:
         branches: ["main"]
       pull_request:
