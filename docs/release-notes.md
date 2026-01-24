@@ -14,6 +14,9 @@ of `zizmor`.
 * `zizmor`'s LSP mode is now configuration-aware, and will load
   configuration files relative to workspace roots (#1555)
 
+* `zizmor` now reads the `GITHUB_TOKEN` environment variable as an
+  alias/equivalent for `GH_TOKEN` (#1566)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would crash on `uses:` clauses containing

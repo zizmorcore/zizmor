@@ -4,6 +4,8 @@
 mod acceptance;
 /// Audit-specific tests.
 mod audit;
+/// Basic CLI tests.
+mod cli;
 /// Helpers.
 mod common;
 /// Configuration discovery tests.

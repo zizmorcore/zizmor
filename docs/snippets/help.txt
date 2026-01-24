@@ -15,7 +15,7 @@ Options:
   -o, --offline
           Perform only offline operations [env: ZIZMOR_OFFLINE=]
       --gh-token <GH_TOKEN>
-          The GitHub API token to use [env: GH_TOKEN=]
+          The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN]
       --gh-hostname <GH_HOSTNAME>
           The GitHub Server Hostname. Defaults to github.com [env: GH_HOST=] [default: github.com]
       --no-online-audits
