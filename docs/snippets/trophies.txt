@@ -98,6 +98,8 @@ freeCodeCamp/devdocs#2386
 freedomofpress/securedrop-workstation#1222
 freemocap/freemocap#659
 freqtrade/freqtrade@5efad94d3de54d7c33731a40113f7218d46dd801
+freqtrade/technical@63037a14d72be329dd35d4dced122705333af133
+freqtrade/technical@5fcb81bb1fcf269702de1634e59bb0ba87953ef2
 gaphor/gaphor#3658
 gechr/WhichSpace@e32d710e7e17102dd6eecd522aa1b511b961fcf3
 getsops/sops#1704
