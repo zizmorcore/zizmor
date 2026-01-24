@@ -504,6 +504,8 @@
 
     ??? example "Examples"
         - freqtrade/freqtrade@5efad94d3de54d7c33731a40113f7218d46dd801
+        - freqtrade/technical@63037a14d72be329dd35d4dced122705333af133
+        - freqtrade/technical@5fcb81bb1fcf269702de1634e59bb0ba87953ef2
 
 
 -   ![](https://github.com/gaphor.png?size=40){ width="40" loading=lazy align=left } gaphor
