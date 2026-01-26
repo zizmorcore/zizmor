@@ -1,6 +1,6 @@
 //! Extension traits for the `Uses` APIs.
 
-use std::{cmp::Ordering, str::FromStr, sync::LazyLock};
+use std::{cmp::Ordering, cmp::Reverse, str::FromStr, sync::LazyLock};
 
 use github_actions_models::common::{RepositoryUses, Uses};
 use regex::Regex;
@@ -144,12 +144,13 @@ impl Segment {
     /// Lower values are more specific.
     /// Exact matches are more specific than globs.
     /// For globs, longer prefix+suffix means more specific.
-    fn specificity(&self) -> (u8, usize) {
+    fn specificity(&self) -> (u8, Reverse<usize>) {
         match self {
             // Exact is most specific (0), with no length consideration
-            Segment::Exact(_) => (0, 0),
-            // Glob is less specific (1), but longer literals are more specific (inverted)
-            Segment::Glob { prefix, suffix } => (1, usize::MAX - (prefix.len() + suffix.len())),
+            Segment::Exact(_) => (0, Reverse(0)),
+            // Glob is less specific (1), but longer literals are more specific
+            // Using Reverse so that longer lengths sort first (more specific)
+            Segment::Glob { prefix, suffix } => (1, Reverse(prefix.len() + suffix.len())),
         }
     }
 }
@@ -271,21 +272,18 @@ impl RepositoryUsesPattern {
 
     /// Returns a tuple used for ordering patterns by specificity.
     /// Lower values are more specific and should come first when sorted.
-    fn specificity(&self) -> (u8, Segment, Option<Segment>) {
-        // Create a dummy segment for comparison purposes
-        let no_segment = Segment::Exact(String::new());
-
+    fn specificity(&self) -> (u8, Option<Segment>, Option<Segment>) {
         match self {
             RepositoryUsesPattern::ExactWithRef { repo, subpath, .. } => {
-                (0, repo.clone(), subpath.clone())
+                (0, Some(repo.clone()), subpath.clone())
             }
             RepositoryUsesPattern::ExactPath { repo, subpath, .. } => {
-                (1, repo.clone(), Some(subpath.clone()))
+                (1, Some(repo.clone()), Some(subpath.clone()))
             }
-            RepositoryUsesPattern::ExactRepo { repo, .. } => (2, repo.clone(), None),
-            RepositoryUsesPattern::InRepo { repo, .. } => (3, repo.clone(), None),
-            RepositoryUsesPattern::InOwner(_) => (4, no_segment.clone(), None),
-            RepositoryUsesPattern::Any => (5, no_segment, None),
+            RepositoryUsesPattern::ExactRepo { repo, .. } => (2, Some(repo.clone()), None),
+            RepositoryUsesPattern::InRepo { repo, .. } => (3, Some(repo.clone()), None),
+            RepositoryUsesPattern::InOwner(_) => (4, None, None),
+            RepositoryUsesPattern::Any => (5, None, None),
         }
     }
 }
@@ -320,11 +318,9 @@ impl FromStr for RepositoryUsesPattern {
         let subpath_str = caps.get(3).map(|m| m.as_str());
         let git_ref = caps.get(4).map(|m| m.as_str());
 
-        // Parse repo segment (handles validation of multiple wildcards)
         let repo_parsed = ParsedSegment::parse(repo_str)
             .ok_or_else(|| anyhow::anyhow!("invalid pattern: {s}"))?;
 
-        // Parse subpath segment if present
         let subpath_parsed = subpath_str
             .map(|sp| {
                 ParsedSegment::parse(sp).ok_or_else(|| anyhow::anyhow!("invalid pattern: {s}"))
@@ -333,9 +329,7 @@ impl FromStr for RepositoryUsesPattern {
 
         // Build the appropriate pattern variant
         match (&repo_parsed, &subpath_parsed, git_ref) {
-            // ================================================================
-            // owner/* - matches any repo under owner
-            // ================================================================
+            // owner/* matches any repo under owner
             (ParsedSegment::Star, None, None) => Ok(RepositoryUsesPattern::InOwner(owner.into())),
 
             // owner/*@ref is invalid (can't have ref with repo star)
@@ -344,9 +338,6 @@ impl FromStr for RepositoryUsesPattern {
             // owner/*/... is invalid (can't have subpath after repo star)
             (ParsedSegment::Star, Some(_), _) => Err(anyhow::anyhow!("invalid pattern: {s}")),
 
-            // ================================================================
-            // Patterns without subpath
-            // ================================================================
             // owner/repo or owner/repo-* (no subpath, no ref)
             (ParsedSegment::Segment(repo), None, None) => Ok(RepositoryUsesPattern::ExactRepo {
                 owner: owner.into(),
@@ -363,9 +354,6 @@ impl FromStr for RepositoryUsesPattern {
                 })
             }
 
-            // ================================================================
-            // Patterns with subpath = *
-            // ================================================================
             // owner/repo/* or owner/repo-*/* (any subpath)
             (ParsedSegment::Segment(repo), Some(ParsedSegment::Star), None) => {
                 Ok(RepositoryUsesPattern::InRepo {
@@ -377,9 +365,6 @@ impl FromStr for RepositoryUsesPattern {
             // owner/repo/*@ref is invalid (can't combine subpath star with ref)
             (_, Some(ParsedSegment::Star), Some(_)) => Err(anyhow::anyhow!("invalid pattern: {s}")),
 
-            // ================================================================
-            // Patterns with exact or glob subpath
-            // ================================================================
             // owner/repo/subpath or owner/repo-*/subpath or owner/repo/subpath-*
             (ParsedSegment::Segment(repo), Some(ParsedSegment::Segment(subpath)), None) => {
                 Ok(RepositoryUsesPattern::ExactPath {
@@ -748,9 +733,6 @@ mod tests {
             ("owner/repo/subpath@*", None),
             ("owner/*@*", None),
             ("*@*", None),
-            // ================================================================
-            // NEW: Glob patterns
-            // ================================================================
             // Repo globs
             (
                 "owner/foo-*",
@@ -1014,9 +996,6 @@ mod tests {
             ("actions/checkout@v3", "actions/checkout@v3", true),
             ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
             ("actions/checkout/foo@v1", "actions/checkout/foo@v3", false),
-            // ================================================================
-            // NEW: Glob pattern matching
-            // ================================================================
             // Repo globs - basic matching
             ("org/foo-bar@v1", "org/foo-*", true),
             ("org/foo-baz@v1", "org/foo-*", true),
