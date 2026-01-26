@@ -149,7 +149,6 @@ impl Segment {
             // Exact is most specific (0), with no length consideration
             Segment::Exact(_) => (0, Reverse(0)),
             // Wildcard is less specific (1), but longer literals are more specific
-            // Using Reverse so that longer lengths sort first (more specific)
             Segment::Wildcard { prefix, suffix } => (1, Reverse(prefix.len() + suffix.len())),
         }
     }
@@ -327,7 +326,6 @@ impl FromStr for RepositoryUsesPattern {
             })
             .transpose()?;
 
-        // Build the appropriate pattern variant
         match (&repo_parsed, &subpath_parsed, git_ref) {
             // owner/* matches any repo under owner
             (ParsedSegment::Star, None, None) => Ok(RepositoryUsesPattern::InOwner(owner.into())),
@@ -722,7 +720,6 @@ mod tests {
             ),
             // Invalid: no wildcards allowed when refs are present (subpath star only).
             ("owner/repo/*@v1", None),
-            // Note: owner/repo/*/subpath@v1 is now VALID - it's a subpath wildcard matching "*" + "/subpath"
             ("owner/*/subpath@v1", None), // Invalid: can't have subpath after repo star
             ("*/*/subpath@v1", None),     // Invalid: owner can't be wildcard
             // Ref also cannot be a wildcard.
