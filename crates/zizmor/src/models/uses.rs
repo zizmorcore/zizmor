@@ -16,19 +16,19 @@ static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         ^                           # start of line
         ([\w-]+)                    # (1) owner (no wildcards allowed)
         /                           # /
-        (                           # (2) repo: exact, glob, or *
+        (                           # (2) repo: exact, wildcard, or *
           [\w\.-]+                  # exact repo name (no wildcards)
           |                         # OR
-          [\w\.-]*\*[\w\.-]*        # glob pattern with single * (e.g., foo-*, *-bar)
+          [\w\.-]*\*[\w\.-]*        # wildcard pattern with single * (e.g., foo-*, *-bar)
           |                         # OR
           \*                        # just * (matches any repo)
         )
         (?:                         # non-capturing group for optional subpath
           /                         # /
-          (                         # (3) subpath: exact, glob, or *
+          (                         # (3) subpath: exact, wildcard, or *
             [[[:graph:]]&&[^@\*]]+  # exact subpath (no wildcards)
             |                       # OR
-            [[[:graph:]]&&[^@\*]]*\*[[[:graph:]]&&[^@\*]]*  # glob pattern with single *
+            [[[:graph:]]&&[^@\*]]*\*[[[:graph:]]&&[^@\*]]*  # wildcard pattern with single *
             |                       # OR
             \*                      # just * (matches any subpath)
           )                         # end of (3) subpath
@@ -43,15 +43,15 @@ static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-/// A segment that can be either an exact match or a glob pattern.
+/// A segment that can be either an exact match or a wildcard pattern.
 ///
 /// This is used for repo and subpath matching in [`RepositoryUsesPattern`].
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) enum Segment {
     /// An exact literal match (e.g., "checkout", "foo/bar")
     Exact(String),
-    /// A glob pattern with a single `*` (e.g., "foo-*", "*-bar")
-    Glob {
+    /// A wildcard pattern with a single `*` (e.g., "foo-*", "*-bar")
+    Wildcard {
         /// The literal text before the `*`
         prefix: String,
         /// The literal text after the `*`
@@ -63,13 +63,13 @@ pub(crate) enum Segment {
 ///
 /// This is used during pattern parsing to distinguish between:
 /// - `Star`: the full wildcard `*` (used for `owner/*` or `owner/repo/*`)
-/// - `Segment`: an exact match or glob pattern
+/// - `Segment`: an exact match or wildcard pattern
 /// - Parse failure (multiple wildcards)
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ParsedSegment {
     /// Just `*` - matches anything in this position
     Star,
-    /// A concrete segment (exact or glob)
+    /// A concrete segment (exact or wildcard)
     Segment(Segment),
 }
 
@@ -77,7 +77,7 @@ impl ParsedSegment {
     /// Parse a string into a ParsedSegment.
     ///
     /// - `*` alone becomes `Star`
-    /// - A string with exactly one `*` becomes a `Glob` segment
+    /// - A string with exactly one `*` becomes a `Wildcard` segment
     /// - A string with no `*` becomes an `Exact` segment
     /// - Multiple `*` characters returns `None` (invalid)
     pub(crate) fn parse(s: &str) -> Option<Self> {
@@ -88,7 +88,7 @@ impl ParsedSegment {
             1 if s == "*" => Some(ParsedSegment::Star),
             1 => {
                 let (prefix, suffix) = s.split_once('*')?;
-                Some(ParsedSegment::Segment(Segment::Glob {
+                Some(ParsedSegment::Segment(Segment::Wildcard {
                     prefix: prefix.to_string(),
                     suffix: suffix.to_string(),
                 }))
@@ -103,7 +103,7 @@ impl Segment {
     pub(crate) fn matches(&self, value: &str) -> bool {
         match self {
             Segment::Exact(s) => s == value,
-            Segment::Glob { prefix, suffix } => {
+            Segment::Wildcard { prefix, suffix } => {
                 if value.len() < prefix.len() + suffix.len() {
                     return false;
                 }
@@ -116,7 +116,7 @@ impl Segment {
     pub(crate) fn matches_ignore_ascii_case(&self, value: &str) -> bool {
         match self {
             Segment::Exact(s) => s.eq_ignore_ascii_case(value),
-            Segment::Glob { prefix, suffix } => {
+            Segment::Wildcard { prefix, suffix } => {
                 if value.len() < prefix.len() + suffix.len() {
                     return false;
                 }
@@ -142,15 +142,15 @@ impl Segment {
 
     /// Returns the "specificity" of this segment for ordering purposes.
     /// Lower values are more specific.
-    /// Exact matches are more specific than globs.
-    /// For globs, longer prefix+suffix means more specific.
+    /// Exact matches are more specific than wildcards.
+    /// For wildcards, longer prefix+suffix means more specific.
     fn specificity(&self) -> (u8, Reverse<usize>) {
         match self {
             // Exact is most specific (0), with no length consideration
             Segment::Exact(_) => (0, Reverse(0)),
-            // Glob is less specific (1), but longer literals are more specific
+            // Wildcard is less specific (1), but longer literals are more specific
             // Using Reverse so that longer lengths sort first (more specific)
-            Segment::Glob { prefix, suffix } => (1, Reverse(prefix.len() + suffix.len())),
+            Segment::Wildcard { prefix, suffix } => (1, Reverse(prefix.len() + suffix.len())),
         }
     }
 }
@@ -171,7 +171,7 @@ impl std::fmt::Display for Segment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Segment::Exact(s) => write!(f, "{s}"),
-            Segment::Glob { prefix, suffix } => write!(f, "{prefix}*{suffix}"),
+            Segment::Wildcard { prefix, suffix } => write!(f, "{prefix}*{suffix}"),
         }
     }
 }
@@ -189,7 +189,7 @@ impl std::fmt::Display for Segment {
 /// 6. `Any` - matches * (everything)
 ///
 /// Within variants that have `Segment` fields, patterns with exact segments
-/// are more specific than patterns with glob segments.
+/// are more specific than patterns with wildcard segments.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(
     feature = "schema",
@@ -197,24 +197,24 @@ impl std::fmt::Display for Segment {
     schemars(with = "String")
 )]
 pub(crate) enum RepositoryUsesPattern {
-    /// Matches `owner/repo/subpath@ref` where repo and subpath can be exact or globs.
+    /// Matches `owner/repo/subpath@ref` where repo and subpath can be exact or wildcards.
     ExactWithRef {
         owner: String,
         repo: Segment,
         subpath: Option<Segment>,
         git_ref: String,
     },
-    /// Matches `owner/repo/subpath` where repo and subpath can be exact or globs.
+    /// Matches `owner/repo/subpath` where repo and subpath can be exact or wildcards.
     /// Any ref is matched.
     ExactPath {
         owner: String,
         repo: Segment,
         subpath: Segment,
     },
-    /// Matches `owner/repo` (no subpath allowed) where repo can be exact or a glob.
+    /// Matches `owner/repo` (no subpath allowed) where repo can be exact or a wildcard.
     /// Any ref is matched.
     ExactRepo { owner: String, repo: Segment },
-    /// Matches `owner/repo/*` where repo can be exact or a glob.
+    /// Matches `owner/repo/*` where repo can be exact or a wildcard.
     /// Any subpath (including none) is matched. Any ref is matched.
     InRepo { owner: String, repo: Segment },
     /// Matches `owner/*` (i.e. any repo under the given owner).
@@ -530,24 +530,24 @@ mod tests {
         // Star (full wildcard)
         assert_eq!(ParsedSegment::parse("*"), Some(ParsedSegment::Star));
 
-        // Glob segments
+        // Wildcard segments
         assert_eq!(
             ParsedSegment::parse("foo-*"),
-            Some(ParsedSegment::Segment(Segment::Glob {
+            Some(ParsedSegment::Segment(Segment::Wildcard {
                 prefix: "foo-".into(),
                 suffix: "".into()
             }))
         );
         assert_eq!(
             ParsedSegment::parse("*-bar"),
-            Some(ParsedSegment::Segment(Segment::Glob {
+            Some(ParsedSegment::Segment(Segment::Wildcard {
                 prefix: "".into(),
                 suffix: "-bar".into()
             }))
         );
         assert_eq!(
             ParsedSegment::parse("foo-*-bar"),
-            Some(ParsedSegment::Segment(Segment::Glob {
+            Some(ParsedSegment::Segment(Segment::Wildcard {
                 prefix: "foo-".into(),
                 suffix: "-bar".into()
             }))
@@ -571,51 +571,51 @@ mod tests {
         assert!(exact.matches_ignore_ascii_case("CHECKOUT"));
         assert!(exact.matches_ignore_ascii_case("Checkout"));
 
-        // Glob matching - prefix
-        let prefix_glob = Segment::Glob {
+        // Wildcard matching - prefix
+        let prefix_wildcard = Segment::Wildcard {
             prefix: "foo-".into(),
             suffix: "".into(),
         };
-        assert!(prefix_glob.matches("foo-bar"));
-        assert!(prefix_glob.matches("foo-"));
-        assert!(prefix_glob.matches("foo-baz-qux"));
-        assert!(!prefix_glob.matches("bar-foo"));
-        assert!(!prefix_glob.matches("foo"));
+        assert!(prefix_wildcard.matches("foo-bar"));
+        assert!(prefix_wildcard.matches("foo-"));
+        assert!(prefix_wildcard.matches("foo-baz-qux"));
+        assert!(!prefix_wildcard.matches("bar-foo"));
+        assert!(!prefix_wildcard.matches("foo"));
 
-        // Glob matching - suffix
-        let suffix_glob = Segment::Glob {
+        // Wildcard matching - suffix
+        let suffix_wildcard = Segment::Wildcard {
             prefix: "".into(),
             suffix: "-bar".into(),
         };
-        assert!(suffix_glob.matches("foo-bar"));
-        assert!(suffix_glob.matches("-bar"));
-        assert!(suffix_glob.matches("baz-qux-bar"));
-        assert!(!suffix_glob.matches("bar-foo"));
-        assert!(!suffix_glob.matches("bar"));
+        assert!(suffix_wildcard.matches("foo-bar"));
+        assert!(suffix_wildcard.matches("-bar"));
+        assert!(suffix_wildcard.matches("baz-qux-bar"));
+        assert!(!suffix_wildcard.matches("bar-foo"));
+        assert!(!suffix_wildcard.matches("bar"));
 
-        // Glob matching - case insensitive
-        assert!(prefix_glob.matches_ignore_ascii_case("FOO-bar"));
-        assert!(prefix_glob.matches_ignore_ascii_case("Foo-BAZ"));
+        // Wildcard matching - case insensitive
+        assert!(prefix_wildcard.matches_ignore_ascii_case("FOO-bar"));
+        assert!(prefix_wildcard.matches_ignore_ascii_case("Foo-BAZ"));
     }
 
     #[test]
     fn test_segment_ordering() {
         let exact = Segment::Exact("checkout".into());
-        let short_glob = Segment::Glob {
+        let short_wildcard = Segment::Wildcard {
             prefix: "foo-".into(),
             suffix: "".into(),
         };
-        let long_glob = Segment::Glob {
+        let long_wildcard = Segment::Wildcard {
             prefix: "foo-bar-".into(),
             suffix: "-baz".into(),
         };
 
-        // Exact is more specific than any glob
-        assert!(exact < short_glob);
-        assert!(exact < long_glob);
+        // Exact is more specific than any wildcard
+        assert!(exact < short_wildcard);
+        assert!(exact < long_wildcard);
 
-        // Longer globs are more specific than shorter globs
-        assert!(long_glob < short_glob);
+        // Longer wildcards are more specific than shorter wildcards
+        assert!(long_wildcard < short_wildcard);
     }
 
     #[test]
@@ -722,8 +722,7 @@ mod tests {
             ),
             // Invalid: no wildcards allowed when refs are present (subpath star only).
             ("owner/repo/*@v1", None),
-            // Note: owner/repo/*/subpath@v1 is now VALID - it's a subpath glob matching "*" + "/subpath"
-            // See the glob patterns section below for the expected parse result.
+            // Note: owner/repo/*/subpath@v1 is now VALID - it's a subpath wildcard matching "*" + "/subpath"
             ("owner/*/subpath@v1", None), // Invalid: can't have subpath after repo star
             ("*/*/subpath@v1", None),     // Invalid: owner can't be wildcard
             // Ref also cannot be a wildcard.
@@ -733,12 +732,12 @@ mod tests {
             ("owner/repo/subpath@*", None),
             ("owner/*@*", None),
             ("*@*", None),
-            // Repo globs
+            // Repo wildcards
             (
                 "owner/foo-*",
                 Some(RepositoryUsesPattern::ExactRepo {
                     owner: "owner".into(),
-                    repo: Segment::Glob {
+                    repo: Segment::Wildcard {
                         prefix: "foo-".into(),
                         suffix: "".into(),
                     },
@@ -748,18 +747,18 @@ mod tests {
                 "owner/*-bar",
                 Some(RepositoryUsesPattern::ExactRepo {
                     owner: "owner".into(),
-                    repo: Segment::Glob {
+                    repo: Segment::Wildcard {
                         prefix: "".into(),
                         suffix: "-bar".into(),
                     },
                 }),
             ),
-            // Glob with both prefix and suffix (single * with text on both sides)
+            // Wildcard with both prefix and suffix (single * with text on both sides)
             (
                 "owner/foo-*-bar",
                 Some(RepositoryUsesPattern::ExactRepo {
                     owner: "owner".into(),
-                    repo: Segment::Glob {
+                    repo: Segment::Wildcard {
                         prefix: "foo-".into(),
                         suffix: "-bar".into(),
                     },
@@ -769,7 +768,7 @@ mod tests {
                 "owner/foo-*/*",
                 Some(RepositoryUsesPattern::InRepo {
                     owner: "owner".into(),
-                    repo: Segment::Glob {
+                    repo: Segment::Wildcard {
                         prefix: "foo-".into(),
                         suffix: "".into(),
                     },
@@ -779,7 +778,7 @@ mod tests {
                 "owner/foo-*/subpath",
                 Some(RepositoryUsesPattern::ExactPath {
                     owner: "owner".into(),
-                    repo: Segment::Glob {
+                    repo: Segment::Wildcard {
                         prefix: "foo-".into(),
                         suffix: "".into(),
                     },
@@ -790,7 +789,7 @@ mod tests {
                 "owner/foo-*/subpath@v1",
                 Some(RepositoryUsesPattern::ExactWithRef {
                     owner: "owner".into(),
-                    repo: Segment::Glob {
+                    repo: Segment::Wildcard {
                         prefix: "foo-".into(),
                         suffix: "".into(),
                     },
@@ -802,7 +801,7 @@ mod tests {
                 "owner/foo-*@v1",
                 Some(RepositoryUsesPattern::ExactWithRef {
                     owner: "owner".into(),
-                    repo: Segment::Glob {
+                    repo: Segment::Wildcard {
                         prefix: "foo-".into(),
                         suffix: "".into(),
                     },
@@ -810,13 +809,13 @@ mod tests {
                     git_ref: "v1".into(),
                 }),
             ),
-            // Subpath globs
+            // Subpath wildcards
             (
                 "owner/repo/sub-*",
                 Some(RepositoryUsesPattern::ExactPath {
                     owner: "owner".into(),
                     repo: Segment::Exact("repo".into()),
-                    subpath: Segment::Glob {
+                    subpath: Segment::Wildcard {
                         prefix: "sub-".into(),
                         suffix: "".into(),
                     },
@@ -827,36 +826,36 @@ mod tests {
                 Some(RepositoryUsesPattern::ExactWithRef {
                     owner: "owner".into(),
                     repo: Segment::Exact("repo".into()),
-                    subpath: Some(Segment::Glob {
+                    subpath: Some(Segment::Wildcard {
                         prefix: "sub-".into(),
                         suffix: "".into(),
                     }),
                     git_ref: "v1".into(),
                 }),
             ),
-            // Subpath glob with suffix (matches */subpath pattern)
+            // Subpath wildcard with suffix (matches */subpath pattern)
             (
                 "owner/repo/*/subpath@v1",
                 Some(RepositoryUsesPattern::ExactWithRef {
                     owner: "owner".into(),
                     repo: Segment::Exact("repo".into()),
-                    subpath: Some(Segment::Glob {
+                    subpath: Some(Segment::Wildcard {
                         prefix: "".into(),
                         suffix: "/subpath".into(),
                     }),
                     git_ref: "v1".into(),
                 }),
             ),
-            // Combined repo and subpath globs
+            // Combined repo and subpath wildcards
             (
                 "owner/foo-*/sub-*",
                 Some(RepositoryUsesPattern::ExactPath {
                     owner: "owner".into(),
-                    repo: Segment::Glob {
+                    repo: Segment::Wildcard {
                         prefix: "foo-".into(),
                         suffix: "".into(),
                     },
-                    subpath: Segment::Glob {
+                    subpath: Segment::Wildcard {
                         prefix: "sub-".into(),
                         suffix: "".into(),
                     },
@@ -898,11 +897,11 @@ mod tests {
     }
 
     #[test]
-    fn test_repositoryusespattern_ord_with_globs() {
+    fn test_repositoryusespattern_ord_with_wildcards() {
         let mut patterns = vec![
             RepositoryUsesPattern::ExactRepo {
                 owner: "owner".into(),
-                repo: Segment::Glob {
+                repo: Segment::Wildcard {
                     prefix: "foo-".into(),
                     suffix: "".into(),
                 },
@@ -919,7 +918,7 @@ mod tests {
 
         patterns.sort();
 
-        // Exact repo should come before glob repo
+        // Exact repo should come before wildcard repo
         // InRepo should come after both ExactRepo variants
         assert_eq!(
             patterns,
@@ -930,7 +929,7 @@ mod tests {
                 },
                 RepositoryUsesPattern::ExactRepo {
                     owner: "owner".into(),
-                    repo: Segment::Glob {
+                    repo: Segment::Wildcard {
                         prefix: "foo-".into(),
                         suffix: "".into(),
                     },
@@ -996,49 +995,49 @@ mod tests {
             ("actions/checkout@v3", "actions/checkout@v3", true),
             ("actions/checkout/foo@v3", "actions/checkout/foo@v3", true),
             ("actions/checkout/foo@v1", "actions/checkout/foo@v3", false),
-            // Repo globs - basic matching
+            // Repo wildcards - basic matching
             ("org/foo-bar@v1", "org/foo-*", true),
             ("org/foo-baz@v1", "org/foo-*", true),
             ("org/foo-@v1", "org/foo-*", true), // edge case: just prefix
             ("org/bar-foo@v1", "org/foo-*", false), // doesn't start with prefix
             ("org/foo@v1", "org/foo-*", false), // missing hyphen
-            // Repo globs - suffix matching
+            // Repo wildcards - suffix matching
             ("org/bar-action@v1", "org/*-action", true),
             ("org/foo-action@v1", "org/*-action", true),
             ("org/action-bar@v1", "org/*-action", false),
-            // Repo globs - prefix AND suffix matching (single * with text on both sides)
+            // Repo wildcards - prefix AND suffix matching (single * with text on both sides)
             ("org/foo-something-bar@v1", "org/foo-*-bar", true),
             ("org/foo--bar@v1", "org/foo-*-bar", true), // empty middle is valid (matches "")
             ("org/foo-x-bar@v1", "org/foo-*-bar", true),
             ("org/foo-bar@v1", "org/foo-*-bar", false), // too short: prefix+suffix overlap
             ("org/foo-something-baz@v1", "org/foo-*-bar", false), // wrong suffix
             ("org/baz-something-bar@v1", "org/foo-*-bar", false), // wrong prefix
-            // Repo globs - case insensitivity (repo matching)
+            // Repo wildcards - case insensitivity (repo matching)
             ("org/FOO-BAR@v1", "org/foo-*", true),
             ("ORG/foo-bar@v1", "org/foo-*", true),
-            // Repo globs - no subpath allowed for ExactRepo variant
+            // Repo wildcards - no subpath allowed for ExactRepo variant
             ("org/foo-bar@v1", "org/foo-*", true),
             ("org/foo-bar/subpath@v1", "org/foo-*", false), // Has subpath, pattern doesn't allow
-            // Repo globs with InRepo (/*) - allows subpaths
+            // Repo wildcards with InRepo (/*) - allows subpaths
             ("org/foo-bar@v1", "org/foo-*/*", true),
             ("org/foo-bar/subpath@v1", "org/foo-*/*", true),
             ("org/foo-bar/deep/path@v1", "org/foo-*/*", true),
-            // Repo globs with specific subpath
+            // Repo wildcards with specific subpath
             ("org/foo-bar/init@v1", "org/foo-*/init", true),
             ("org/foo-baz/init@v1", "org/foo-*/init", true),
             ("org/foo-bar/other@v1", "org/foo-*/init", false),
-            // Repo globs with ref
+            // Repo wildcards with ref
             ("org/foo-bar@v1", "org/foo-*@v1", true),
             ("org/foo-bar@v2", "org/foo-*@v1", false),
             ("org/foo-bar/sub@v1", "org/foo-*/sub@v1", true),
-            // Subpath globs
+            // Subpath wildcards
             ("org/repo/sub-foo@v1", "org/repo/sub-*", true),
             ("org/repo/sub-bar@v1", "org/repo/sub-*", true),
             ("org/repo/other@v1", "org/repo/sub-*", false),
-            // Subpath globs - case sensitivity (subpath is case-sensitive)
+            // Subpath wildcards - case sensitivity (subpath is case-sensitive)
             ("org/repo/sub-foo@v1", "org/repo/sub-*", true),
             ("org/repo/SUB-foo@v1", "org/repo/sub-*", false), // case mismatch
-            // Combined repo and subpath globs
+            // Combined repo and subpath wildcards
             ("org/foo-bar/sub-baz@v1", "org/foo-*/sub-*", true),
             ("org/foo-qux/sub-quux@v1", "org/foo-*/sub-*", true),
             ("org/bar-foo/sub-baz@v1", "org/foo-*/sub-*", false), // repo doesn't match
@@ -1062,7 +1061,7 @@ mod tests {
 
     #[test]
     fn test_repositoryusespattern_display() {
-        // Test that Display roundtrips correctly for glob patterns
+        // Test that Display roundtrips correctly for wildcard patterns
         let patterns = [
             "owner/foo-*",
             "owner/*-bar",
