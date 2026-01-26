@@ -236,8 +236,6 @@ impl Feature<'_> {
 
     /// Return this feature's [`FeatureKind`].
     pub fn kind(&self) -> FeatureKind {
-        // TODO: Use node kind IDs instead of string matching.
-
         // Our feature's underlying node is often a
         // `block_node` or `flow_node`, which is a container
         // for the real kind of node we're interested in.
@@ -404,24 +402,6 @@ impl Deref for Tree {
 pub struct Document {
     tree: Tree,
     line_index: LineIndex,
-    document_id: u16,
-    block_node_id: u16,
-    flow_node_id: u16,
-    // A "block" sequence, i.e. a YAML-style array (`- foo\n-bar`)
-    block_sequence_id: u16,
-    // A "flow" sequence, i.e. a JSON-style array (`[foo, bar]`)
-    flow_sequence_id: u16,
-    // A "block" mapping, i.e. a YAML-style map (`foo: bar`)
-    block_mapping_id: u16,
-    // A "flow" mapping, i.e. a JSON-style map (`{foo: bar}`)
-    flow_mapping_id: u16,
-    block_mapping_pair_id: u16,
-    flow_pair_id: u16,
-    block_sequence_item_id: u16,
-    comment_id: u16,
-    anchor_id: u16,
-    alias_id: u16,
-    block_scalar_id: u16,
 }
 
 impl Document {
@@ -452,20 +432,6 @@ impl Document {
         Ok(Self {
             tree: Tree::build(source_tree)?,
             line_index,
-            document_id: language.id_for_node_kind("document", true),
-            block_node_id: language.id_for_node_kind("block_node", true),
-            flow_node_id: language.id_for_node_kind("flow_node", true),
-            block_sequence_id: language.id_for_node_kind("block_sequence", true),
-            flow_sequence_id: language.id_for_node_kind("flow_sequence", true),
-            block_mapping_id: language.id_for_node_kind("block_mapping", true),
-            flow_mapping_id: language.id_for_node_kind("flow_mapping", true),
-            block_mapping_pair_id: language.id_for_node_kind("block_mapping_pair", true),
-            flow_pair_id: language.id_for_node_kind("flow_pair", true),
-            block_sequence_item_id: language.id_for_node_kind("block_sequence_item", true),
-            comment_id: language.id_for_node_kind("comment", true),
-            anchor_id: language.id_for_node_kind("anchor", true),
-            alias_id: language.id_for_node_kind("alias", true),
-            block_scalar_id: language.id_for_node_kind("block_scalar", true),
         })
     }
 
@@ -499,7 +465,7 @@ impl Document {
         let root = self.tree.root_node();
 
         match root.named_descendant_for_byte_range(start, end) {
-            Some(child) => child.kind_id() == self.comment_id,
+            Some(child) => child.kind() == "comment",
             None => false,
         }
     }
@@ -542,7 +508,7 @@ impl Document {
     pub fn query_exact(&self, route: &Route) -> Result<Option<Feature<'_>>, QueryError> {
         let node = self.query_node(route, QueryMode::Exact)?;
 
-        if node.kind_id() == self.block_mapping_pair_id || node.kind_id() == self.flow_pair_id {
+        if matches!(node.kind(), "block_mapping_pair" | "flow_pair") {
             // If the route matches a mapping pair, we return None,
             // since this indicates an absent value.
             Ok(None)
@@ -640,7 +606,6 @@ impl Document {
 
         fn trawl<'tree>(
             node: &Node<'tree>,
-            comment_id: u16,
             start_line: usize,
             end_line: usize,
         ) -> Vec<Feature<'tree>> {
@@ -657,7 +622,7 @@ impl Document {
             comments.extend(
                 node.named_children(&mut cur)
                     .filter(|c| {
-                        c.kind_id() == comment_id
+                        c.kind() == "comment"
                             && c.start_position().row >= start_line
                             && c.end_position().row <= end_line
                     })
@@ -665,18 +630,13 @@ impl Document {
             );
 
             for child in node.children(&mut cur) {
-                comments.extend(trawl(&child, comment_id, start_line, end_line));
+                comments.extend(trawl(&child, start_line, end_line));
             }
 
             comments
         }
 
-        trawl(
-            &self.tree.root_node(),
-            self.comment_id,
-            start_line,
-            end_line,
-        )
+        trawl(&self.tree.root_node(), start_line, end_line)
     }
 
     /// Returns whether this document contains any YAML anchors.
@@ -695,7 +655,7 @@ impl Document {
         let mut cur = stream.walk();
         let document = stream
             .named_children(&mut cur)
-            .find(|c| c.kind_id() == self.document_id)
+            .find(|c| c.kind() == "document")
             .ok_or_else(|| QueryError::MissingChild(stream.kind().into(), "document".into()))?;
 
         // The document might have a directives section, which we need to
@@ -704,7 +664,7 @@ impl Document {
         // the top-level document value is expressed.
         let top_node = document
             .named_children(&mut cur)
-            .find(|c| c.kind_id() == self.block_node_id || c.kind_id() == self.flow_node_id)
+            .find(|c| matches!(c.kind(), "block_node" | "flow_node"))
             .ok_or_else(|| QueryError::Other("document has no block_node or flow_node".into()))?;
 
         Ok(top_node)
@@ -723,7 +683,7 @@ impl Document {
         // do one last leap to get our "real" final focus node.
         // TODO(ww): What about nested aliases?
         focus_node = match focus_node.child(0) {
-            Some(child) if child.kind_id() == self.alias_id => {
+            Some(child) if child.kind() == "alias" => {
                 let alias_name = child
                     .utf8_text(self.source().as_bytes())
                     .expect("impossible: alias name should be UTF-8 by construction");
@@ -734,11 +694,11 @@ impl Document {
             }
             // Our focus node might have an anchor prefix (e.g. `[&x v, *x]`),
             // in which case we skip to the non-anchor sibling.
-            Some(child) if child.kind_id() == self.anchor_id => {
+            Some(child) if child.kind() == "anchor" => {
                 let mut cursor = focus_node.walk();
                 focus_node
                     .named_children(&mut cursor)
-                    .find(|n| n.kind_id() != self.anchor_id)
+                    .find(|n| n.kind() != "anchor")
                     .unwrap_or(focus_node)
             }
             _ => focus_node,
@@ -754,8 +714,7 @@ impl Document {
                 // NOTE: We might already be on the block/flow pair if we terminated
                 // with an absent value, in which case we don't need to do this cleanup.
                 if matches!(route.route.last(), Some(Component::Key(_)))
-                    && focus_node.kind_id() != self.block_mapping_pair_id
-                    && focus_node.kind_id() != self.flow_pair_id
+                    && !matches!(focus_node.kind(), "block_mapping_pair" | "flow_pair")
                 {
                     focus_node.parent().expect("missing parent of focus node")
                 } else {
@@ -767,13 +726,12 @@ impl Document {
                 // the parent block/flow pair node that contains the key,
                 // and isolate on the key child instead.
 
-                let parent_node = if focus_node.kind_id() == self.block_mapping_pair_id
-                    || focus_node.kind_id() == self.flow_pair_id
+                let parent_node = if matches!(focus_node.kind(), "block_mapping_pair" | "flow_pair")
                 {
                     // If we're already on block/flow pair, then we're already
                     // the key's parent.
                     focus_node
-                } else if focus_node.kind_id() == self.block_scalar_id {
+                } else if focus_node.kind() == "block_scalar" {
                     // We might be on the internal `block_scalar` node, if
                     // we got here via an alias. We need to go up two levels
                     // to get to the mapping pair.
@@ -788,7 +746,7 @@ impl Document {
                     focus_node.parent().expect("missing parent of focus node")
                 };
 
-                if parent_node.kind_id() == self.flow_mapping_id {
+                if parent_node.kind() == "flow_mapping" {
                     // Handle the annoying `foo: { key }` case, where our "parent"
                     // is actually a `flow_mapping` instead of a proper block/flow pair.
                     // To handle this, we get the first `flow_node` child of the
@@ -796,7 +754,7 @@ impl Document {
                     let mut cur = parent_node.walk();
                     parent_node
                         .named_children(&mut cur)
-                        .find(|n| n.kind_id() == self.flow_node_id)
+                        .find(|n| n.kind() == "flow_node")
                         .ok_or_else(|| {
                             QueryError::MissingChildField(parent_node.kind().into(), "flow_node")
                         })?
@@ -819,7 +777,7 @@ impl Document {
         // with an absent value, in which case we don't need to do this cleanup.
         if matches!(mode, QueryMode::Pretty)
             && matches!(route.route.last(), Some(Component::Key(_)))
-            && focus_node.kind_id() != self.block_mapping_pair_id
+            && focus_node.kind() != "block_mapping_pair"
         {
             focus_node = focus_node.parent().expect("missing parent of focus node")
         }
@@ -857,7 +815,7 @@ impl Document {
         let mut child = {
             let mut cursor = node.walk();
             node.named_children(&mut cursor)
-                .find(|n| n.kind_id() != self.anchor_id)
+                .find(|n| n.kind() != "anchor")
                 .ok_or_else(|| {
                     QueryError::Other(format!(
                         "node of kind {} has no non-anchor child",
@@ -868,7 +826,7 @@ impl Document {
 
         // We might be on an alias node, in which case we need to
         // jump to the alias's target via the anchor map.
-        if child.kind_id() == self.alias_id {
+        if child.kind() == "alias" {
             let alias_name = node
                 .utf8_text(self.source().as_bytes())
                 .expect("impossible: alias name should be UTF-8 by construction");
@@ -881,14 +839,12 @@ impl Document {
 
         // We expect the child to be a sequence or mapping of either
         // flow or block type.
-        if child.kind_id() == self.block_mapping_id || child.kind_id() == self.flow_mapping_id {
+        if matches!(child.kind(), "block_mapping" | "flow_mapping") {
             match component {
                 Component::Key(key) => self.descend_mapping(&child, key),
                 Component::Index(idx) => Err(QueryError::ExpectedList(*idx)),
             }
-        } else if child.kind_id() == self.block_sequence_id
-            || child.kind_id() == self.flow_sequence_id
-        {
+        } else if matches!(child.kind(), "block_sequence" | "flow_sequence") {
             match component {
                 Component::Index(idx) => self.descend_sequence(&child, *idx),
                 Component::Key(key) => Err(QueryError::ExpectedMapping(key.to_string())),
@@ -901,16 +857,16 @@ impl Document {
     fn descend_mapping<'b>(&self, node: &Node<'b>, expected: &str) -> Result<Node<'b>, QueryError> {
         let mut cur = node.walk();
         for child in node.named_children(&mut cur) {
-            let key = match child.kind_id() {
+            let key = match child.kind() {
                 // If we're on a `flow_pair` or `block_mapping_pair`, we
                 // need to get the `key` child.
-                id if id == self.flow_pair_id || id == self.block_mapping_pair_id => child
+                "flow_pair" | "block_mapping_pair" => child
                     .child_by_field_name("key")
                     .ok_or_else(|| QueryError::MissingChildField(child.kind().into(), "key"))?,
                 // NOTE: Annoying edge case: if we have a flow mapping
                 // like `{ foo }`, then `foo` is a `flow_node` instead
                 // of a `flow_pair`.
-                id if id == self.flow_node_id => child,
+                "flow_node" => child,
                 _ => continue,
             };
 
@@ -926,7 +882,7 @@ impl Document {
                 let mut cursor = key.walk();
                 let scalar = key
                     .named_children(&mut cursor)
-                    .find(|n| n.kind_id() != self.anchor_id);
+                    .find(|n| n.kind() != "anchor");
 
                 match scalar {
                     Some(scalar) => {
@@ -974,20 +930,21 @@ impl Document {
 
         let mut cur = node.walk();
         for child in node.named_children(&mut cur).filter(|child| {
-            child.kind_id() == self.block_sequence_item_id
-                || child.kind_id() == self.flow_node_id
-                || child.kind_id() == self.flow_pair_id
+            matches!(
+                child.kind(),
+                "block_sequence_item" | "flow_node" | "flow_pair"
+            )
         }) {
             let mut child = child;
 
             // If we have a `block_sequence_item`, we need to get its
             // inner `block_node`/`flow_node`, which might be interceded
             // by comments.
-            if child.kind_id() == self.block_sequence_item_id {
+            if child.kind() == "block_sequence_item" {
                 let mut cur = child.walk();
                 child = child
                     .named_children(&mut cur)
-                    .find(|c| c.kind_id() == self.block_node_id || c.kind_id() == self.flow_node_id)
+                    .find(|c| matches!(c.kind(), "block_node" | "flow_node"))
                     .ok_or_else(|| {
                         QueryError::MissingChild(child.kind().into(), "block_sequence_item".into())
                     })?;
@@ -1014,7 +971,7 @@ impl Document {
             return Err(QueryError::ExhaustedList(idx, children.len()));
         };
 
-        if child.kind_id() == self.flow_pair_id {
+        if child.kind() == "flow_pair" {
             // Similarly, if our index happens to be a `flow_pair`, we need to
             // get the `value` child to get the next `flow_node`.
             // The `value` might not be present (e.g. `{foo: }`), in which case
