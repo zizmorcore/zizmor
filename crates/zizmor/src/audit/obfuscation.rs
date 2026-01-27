@@ -335,14 +335,15 @@ mod tests {
     /// Helper function to apply a fix and return the result for snapshot testing
     async fn apply_fix_for_snapshot(workflow_content: &str, _audit_name: &str) -> String {
         let key = InputKey::local("dummy".into(), "test.yml", None::<&str>);
-        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+        let workflow =
+            AuditInput::from(Workflow::from_string(workflow_content.to_string(), key).unwrap());
         let audit_state = AuditState {
             no_online_audits: false,
             gh_client: None,
         };
         let audit = Obfuscation::new(&audit_state).unwrap();
         let findings = audit
-            .audit_workflow(&workflow, &Default::default())
+            .audit(Obfuscation::ident(), &workflow, &Default::default())
             .await
             .unwrap();
 
@@ -365,6 +366,36 @@ mod tests {
         let fixed_document = fix.apply(document).unwrap();
 
         fixed_document.source().to_string()
+    }
+
+    #[tokio::test]
+    async fn test_obfuscation_fix_static_evaluation() {
+        let workflow_content = r#"
+name: Test Workflow
+on: push
+
+permissions: {}
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # ... because release-please scans historical commits to build releases, so we need all the history.
+          persist-credentials: false
+      - id: release
+        uses: ./vendor/github.com/googleapis/release-please-action
+        with:
+          config-file: "tools/releasing/config.release-please.json"
+          manifest-file: "tools/releasing/manifest.release-please.json"
+          target-branch: "${{ inputs.rp_target_branch }}"
+    outputs:
+      iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
+"#;
+
+        let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
+        insta::assert_snapshot!(result, @r"");
     }
 
     #[tokio::test]
