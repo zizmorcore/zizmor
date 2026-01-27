@@ -17,7 +17,7 @@ of `zizmor`.
 * `zizmor` now reads the `GITHUB_TOKEN` environment variable as an
   alias/equivalent for `GH_TOKEN` (#1566)
 
-* `zizmor` now supports workflows reusing anchor names (#1575)
+* `zizmor` now supports inputs that contain duplicated anchor names (#1575)
 
 ### Bug Fixes 🐛
 
