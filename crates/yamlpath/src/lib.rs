@@ -15,7 +15,7 @@
 
 use std::{
     borrow::Cow,
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     ops::{Deref, RangeBounds},
 };
 
@@ -56,11 +56,6 @@ pub enum QueryError {
     /// the given field name.
     #[error("syntax node `{0}` is missing child field `{1}`")]
     MissingChildField(String, &'static str),
-    /// The input contains a duplicate YAML anchor.
-    /// This is valid YAML, but we intentionally forbid it for now
-    /// for simplicity's sake.
-    #[error("input contains duplicate YAML anchor: `{0}`")]
-    DuplicateAnchor(String),
     /// Any other route error that doesn't fit cleanly above.
     #[error("route error: {0}")]
     Other(String),
@@ -322,7 +317,7 @@ impl Deref for SourceTree {
     }
 }
 
-type AnchorMap<'tree> = HashMap<&'tree str, Node<'tree>>;
+type AnchorMap<'tree> = HashMap<&'tree str, BTreeMap<usize, Node<'tree>>>;
 
 self_cell::self_cell!(
     /// A wrapper for a [`SourceTree`] that also contains a computed
@@ -338,7 +333,7 @@ self_cell::self_cell!(
 impl Tree {
     fn build(inner: SourceTree) -> Result<Self, QueryError> {
         Tree::try_new(SourceTree::clone(&inner), |tree| {
-            let mut anchor_map = HashMap::new();
+            let mut anchor_map: AnchorMap = HashMap::new();
 
             for anchor in TreeIter::new(tree).filter(|n| n.kind() == "anchor") {
                 // NOTE(ww): We could poke into the `anchor_name` child
@@ -346,11 +341,6 @@ impl Tree {
                 let anchor_name = &anchor
                     .utf8_text(tree.source.as_bytes())
                     .expect("impossible: anchor name should be UTF-8 by construction")[1..];
-
-                // Only insert if the anchor name is unique.
-                if anchor_map.contains_key(anchor_name) {
-                    return Err(QueryError::DuplicateAnchor(anchor_name[1..].to_string()));
-                }
 
                 // NOTE(ww): We insert the anchor's next non-comment
                 // sibling as the anchor's target. This makes things
@@ -369,7 +359,12 @@ impl Tree {
                         QueryError::UnexpectedNode("anchor has no non-comment sibling".into())
                     })?;
 
-                anchor_map.insert(anchor_name, sibling);
+                // Store anchor with its position; duplicates are allowed and
+                // resolved by position when aliases are encountered.
+                anchor_map
+                    .entry(anchor_name)
+                    .or_default()
+                    .insert(anchor.start_byte(), sibling);
             }
 
             Ok(anchor_map)
@@ -445,6 +440,18 @@ impl Document {
     /// loaded from.
     pub fn source(&self) -> &str {
         &self.tree.borrow_owner().source
+    }
+
+    /// Resolve an anchor by name, returning the target node that was active
+    /// at the given position. For duplicate anchors, this returns the most
+    /// recent definition that appears before `position`.
+    fn resolve_anchor(&self, name: &str, position: usize) -> Option<Node<'_>> {
+        self.tree
+            .borrow_dependent()
+            .get(name)?
+            .range(..position)
+            .next_back()
+            .map(|(_, node)| *node)
     }
 
     /// Returns a [`Feature`] for the topmost semantic object in this document.
@@ -687,9 +694,7 @@ impl Document {
                 let alias_name = child
                     .utf8_text(self.source().as_bytes())
                     .expect("impossible: alias name should be UTF-8 by construction");
-                let anchor_map = self.tree.borrow_dependent();
-                *anchor_map
-                    .get(&alias_name[1..])
+                self.resolve_anchor(&alias_name[1..], child.start_byte())
                     .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?
             }
             // Our focus node might have an anchor prefix (e.g. `[&x v, *x]`),
@@ -830,10 +835,9 @@ impl Document {
             let alias_name = node
                 .utf8_text(self.source().as_bytes())
                 .expect("impossible: alias name should be UTF-8 by construction");
-            let anchor_map = self.tree.borrow_dependent();
 
-            child = *anchor_map
-                .get(&alias_name[1..])
+            child = self
+                .resolve_anchor(&alias_name[1..], node.start_byte())
                 .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?;
         }
 
@@ -1289,14 +1293,37 @@ nested:
     }
 
     #[test]
-    fn test_reject_duplicate_anchors() {
-        let anchors = r#"
-foo: &dup-anchor bar
-baz: &dup-anchor quux
-        "#;
+    fn test_duplicate_anchors() {
+        let test_cases: Vec<(&str, Vec<(Route, &str)>)> = vec![
+            // Same anchor name defined twice, alias resolves based on document position
+            (
+                "first: &x value1\nsecond: &x value2\nref: *x",
+                vec![(route!("ref"), "value2")],
+            ),
+            // Alias before redefinition sees old value, alias after sees new value
+            (
+                "a1: &x old_x\nref_x: *x\na2: &x new_x\nref_x2: *x",
+                vec![(route!("ref_x"), "old_x"), (route!("ref_x2"), "new_x")],
+            ),
+            // Inline flow sequence with duplicate anchor
+            (
+                "foo: [&x x, *x, &x y, *x]",
+                vec![
+                    (route!("foo", 0), "x"),
+                    (route!("foo", 1), "x"),
+                    (route!("foo", 2), "y"),
+                    (route!("foo", 3), "y"),
+                ],
+            ),
+        ];
 
-        let result = Document::new(anchors);
-        assert!(matches!(result, Err(QueryError::DuplicateAnchor(_))));
+        for (yaml, queries) in test_cases {
+            let doc = Document::new(yaml).unwrap();
+            for (route, expected) in queries {
+                let feature = doc.query_exact(&route).unwrap().unwrap();
+                assert_eq!(doc.extract(&feature), expected, "YAML: {}", yaml);
+            }
+        }
     }
 
     #[test]
@@ -1311,8 +1338,17 @@ foo: &foo-anchor
         let anchor_map = doc.tree.borrow_dependent();
 
         assert_eq!(anchor_map.len(), 2);
-        assert_eq!(anchor_map["foo-anchor"].kind(), "block_mapping");
-        assert_eq!(anchor_map["bar-anchor"].kind(), "block_mapping");
+        // Each anchor name maps to a BTreeMap of positions -> nodes
+        assert_eq!(anchor_map["foo-anchor"].len(), 1);
+        assert_eq!(anchor_map["bar-anchor"].len(), 1);
+        assert_eq!(
+            anchor_map["foo-anchor"].values().next().unwrap().kind(),
+            "block_mapping"
+        );
+        assert_eq!(
+            anchor_map["bar-anchor"].values().next().unwrap().kind(),
+            "block_mapping"
+        );
     }
 
     #[test]
