@@ -1400,16 +1400,16 @@ fn test_merge_into_with_unicode() {
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     insta::assert_snapshot!(result.source(), @r#"
-        steps:
-          - shell: bash
-            run: |
-              echo "✓ Done"
-            env:
-              TEST_VAR: new_value
+    steps:
+      - shell: bash
+        run: |
+          echo "✓ Done"
+        env:
+          TEST_VAR: new_value
 
-          - shell: bash
-            run: echo ok
-        "#);
+      - shell: bash
+        run: echo ok
+    "#);
 }
 
 #[test]
