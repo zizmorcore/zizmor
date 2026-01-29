@@ -1574,12 +1574,13 @@ jobs:
             |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 // Should find template injection for github.event.comment.body
                 assert!(!findings.is_empty(), "Expected at least one finding");
-                
+
                 // Should have at least one finding with a fix
-                let finding = findings.iter()
+                let finding = findings
+                    .iter()
                     .find(|f| !f.fixes.is_empty())
                     .expect("Should find at least one finding with fixes");
-                
+
                 let fixed_content = apply_fix_by_title_for_snapshot(
                     workflow.as_document(),
                     finding,

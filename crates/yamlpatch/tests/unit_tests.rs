@@ -1390,8 +1390,8 @@ fn test_merge_into_with_unicode() {
         operation: Op::MergeInto {
             key: "env".to_string(),
             updates: indexmap::IndexMap::from_iter([(
-              "TEST_VAR".to_string(),
-              serde_yaml::Value::String("new_value".to_string()),
+                "TEST_VAR".to_string(),
+                serde_yaml::Value::String("new_value".to_string()),
             )]),
         },
     }];
