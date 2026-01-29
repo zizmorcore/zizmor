@@ -1403,7 +1403,8 @@ fn test_merge_into_unicode_byte_offset() {
         steps:
           - shell: bash
             run: |
-              echo "✓ ${{ github.event.comment.body }}"    env:
+              echo "✓ ${{ github.event.comment.body }}"
+            env:
               GITHUB_EVENT_COMMENT_BODY: ${{ github.event.comment.body }}
 
           - shell: bash
