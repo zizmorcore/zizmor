@@ -1375,12 +1375,12 @@ fn test_merge_into_prevents_duplicate_keys() {
 }
 
 #[test]
-fn test_merge_into_unicode_byte_offset() {
+fn test_merge_into_with_unicode() {
     // Test MergeInto with Unicode characters that are multiple bytes
     let original = r#"steps:
   - shell: bash
     run: |
-      echo "✓ ${{ github.event.comment.body }}"
+      echo "✓ Done"
 
   - shell: bash
     run: echo ok"#;
@@ -1390,8 +1390,8 @@ fn test_merge_into_unicode_byte_offset() {
         operation: Op::MergeInto {
             key: "env".to_string(),
             updates: indexmap::IndexMap::from_iter([(
-                "GITHUB_EVENT_COMMENT_BODY".to_string(),
-                serde_yaml::Value::String("${{ github.event.comment.body }}".to_string()),
+              "TEST_VAR".to_string(),
+              serde_yaml::Value::String("new_value".to_string()),
             )]),
         },
     }];
@@ -1403,9 +1403,9 @@ fn test_merge_into_unicode_byte_offset() {
         steps:
           - shell: bash
             run: |
-              echo "✓ ${{ github.event.comment.body }}"
+              echo "✓ Done"
             env:
-              GITHUB_EVENT_COMMENT_BODY: ${{ github.event.comment.body }}
+              TEST_VAR: new_value
 
           - shell: bash
             run: echo ok
