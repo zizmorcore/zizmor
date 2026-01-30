@@ -1,18 +1,33 @@
 //! Functionality for registering and managing the lifecycles of
 //! audits.
 
+use std::collections::HashSet;
+use std::ops::Range;
 use std::process::ExitCode;
 
 use indexmap::IndexMap;
 
 use crate::{
     audit::{self, Audit, AuditLoadError},
-    finding::{Confidence, Finding, Persona, Severity},
+    finding::{Confidence, Determinations, Finding, Persona, Severity},
     registry::input::{InputKey, InputRegistry},
     state::AuditState,
 };
 
 pub(crate) mod input;
+
+/// A hash-based key for deduplicating findings.
+///
+/// We deduplicate based on (audit_ident, input_key, offset_span, determinations)
+/// to handle YAML anchors, which cause the same content to appear at multiple
+/// symbolic routes but with the same concrete byte location.
+#[derive(Hash, Eq, PartialEq, Clone)]
+struct FindingKey {
+    audit_ident: &'static str,
+    input_key: InputKey,
+    offset_span: Range<usize>,
+    determinations: Determinations,
+}
 
 pub(crate) struct AuditRegistry {
     pub(crate) audits: IndexMap<&'static str, Box<dyn Audit + Send + Sync>>,
@@ -117,6 +132,8 @@ pub(crate) struct FindingRegistry<'a> {
     ignored: Vec<Finding<'a>>,
     findings: Vec<Finding<'a>>,
     highest_seen_severity: Option<Severity>,
+    // Tracks seen findings to avoid duplicates from YAML anchors.
+    seen_findings: HashSet<FindingKey>,
 }
 
 impl<'a> FindingRegistry<'a> {
@@ -135,6 +152,7 @@ impl<'a> FindingRegistry<'a> {
             ignored: Default::default(),
             findings: Default::default(),
             highest_seen_severity: None,
+            seen_findings: Default::default(),
         }
     }
 
@@ -144,6 +162,27 @@ impl<'a> FindingRegistry<'a> {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
         for finding in results {
+            // Check for duplicate findings from YAML anchors.
+            // We deduplicate based on (audit_ident, input_key, concrete_location, determinations) to handle
+            // cases where the same finding is reported for both anchor definitions
+            // and alias usages. YAML anchors cause the same content to appear at
+            // multiple symbolic routes but with the same concrete byte location.
+            // We include determinations in the key to avoid deduplicating findings
+            // that have the same location but different severity/confidence/persona.
+            let primary_loc = finding.primary_location();
+            let concrete_loc = &primary_loc.concrete.location;
+            let dedup_key = FindingKey {
+                audit_ident: finding.ident,
+                input_key: primary_loc.symbolic.key.clone(),
+                offset_span: concrete_loc.offset_span.clone(),
+                determinations: finding.determinations,
+            };
+
+            if !self.seen_findings.insert(dedup_key) {
+                // This is a duplicate finding, skip it
+                continue;
+            }
+
             if self.persona > finding.determinations.persona {
                 self.suppressed.push(finding);
             } else if finding.ignored
