@@ -65,30 +65,30 @@ jobs:
 
       - name: 10-not-ok
         # NOT OK: evaluates to true because of stringification
-        if: true && ${{ false }}
+        if: true && ${{ false }} # zizmor: ignore[obfuscation]
         run: echo not ok
 
       - name: 11-not-ok
         # NOT OK: evaluates to true because of stringification
-        if: ${{ false }} && true
+        if: ${{ false }} && true # zizmor: ignore[obfuscation]
         run: echo not ok
 
       - name: 12-not-ok
         # NOT OK: evaluates to true because of stringification
-        if: ${{ false }} lol
+        if: ${{ false }} lol # zizmor: ignore[obfuscation]
         run: echo not ok
 
       - name: 13-not-ok
         # NOT OK: evaluates to true because of stringification
-        if: lol ${{ false }}
+        if: lol ${{ false }} # zizmor: ignore[obfuscation]
         run: echo not ok
 
       - name: 14-not-ok
         # NOT OK: evaluates to true because of stringification
-        if: "${{ false }} "
+        if: "${{ false }} " # zizmor: ignore[obfuscation]
         run: echo not ok
 
       - name: 15-not-ok
         # NOT OK: evaluates to true because of stringification
-        if: " ${{ false }}"
+        if: " ${{ false }}" # zizmor: ignore[obfuscation]
         run: echo not ok

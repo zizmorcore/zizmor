@@ -12,6 +12,22 @@ testcase:
       steps:
         - run: echo "Same environment variables here"
 
+    # Duplicate anchor: redefine env_vars for job3
+    job3:
+      env: &env_vars
+        NODE_ENV: staging
+        DATABASE_URL: ${{ secrets.STAGING_DB }}
+      steps:
+        - run: echo "Staging environment"
+
+    job4:
+      matrix: [&ver v1, *ver, &ver v2, *ver]
+
+      env: *env_vars # Should resolve to job3's env (staging)
+      steps:
+        - run: echo "Also staging"
+
+
 queries:
   - query: [jobs, job2, env, DATABASE_URL]
     mode: exact
@@ -20,3 +36,34 @@ queries:
   - query: [jobs, job2, env, DATABASE_URL]
     mode: key-only
     expected: "        DATABASE_URL"
+
+  # job2 uses the first env_vars definition (production)
+  - query: [jobs, job2, env, NODE_ENV]
+    mode: exact
+    expected: "production"
+
+  # job4 uses the second env_vars definition (staging)
+  - query: [jobs, job4, env, NODE_ENV]
+    mode: exact
+    expected: "staging"
+
+  - query: [jobs, job4, env, DATABASE_URL]
+    mode: exact
+    expected: "${{ secrets.STAGING_DB }}"
+
+  # Inline flow sequence with duplicate anchors
+  - query: [jobs, job4, matrix, 0]
+    mode: exact
+    expected: "v1"
+
+  - query: [jobs, job4, matrix, 1]
+    mode: exact
+    expected: "v1"
+
+  - query: [jobs, job4, matrix, 2]
+    mode: exact
+    expected: "v2"
+
+  - query: [jobs, job4, matrix, 3]
+    mode: exact
+    expected: "v2"

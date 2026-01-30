@@ -4,7 +4,7 @@ use std::fs::{self, File};
 use std::path::Path;
 use std::{env, io};
 
-use fst::MapBuilder;
+use fst::{MapBuilder, SetBuilder};
 
 fn do_context_capabilities() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -55,7 +55,29 @@ fn do_codeql_injection_sinks() {
     fs::copy(source, target).unwrap();
 }
 
+fn do_archived_action_repos() {
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let source = Path::new(&manifest_dir).join("data/archived-repos.txt");
+    let target = Path::new(&env::var("OUT_DIR").unwrap()).join("archived-repos.fst");
+
+    print!(
+        "cargo::rerun-if-changed={source}",
+        source = source.display()
+    );
+
+    let out = io::BufWriter::new(File::create(target).unwrap());
+    let mut build = SetBuilder::new(out).unwrap();
+
+    let contents = fs::read_to_string(source).unwrap();
+    for line in contents.lines() {
+        build.insert(line).unwrap();
+    }
+
+    build.finish().unwrap();
+}
+
 fn main() {
     do_context_capabilities();
     do_codeql_injection_sinks();
+    do_archived_action_repos();
 }

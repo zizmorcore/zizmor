@@ -4,9 +4,9 @@ on: [push]
 
 # Mixed documentation - some permissions have comments, others don't
 permissions:
-  contents: write  # Needed to create releases
+  contents: write # zizmor: ignore[excessive-permissions] Needed to create releases
   packages: read
-  issues: write    # Needed to update issue comments
+  issues: write # zizmor: ignore[excessive-permissions] Needed to update issue comments
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     # Job with partial documentation
     permissions:
-      contents: read   # Needed to read repo contents
+      contents: read # Needed to read repo contents
       actions: write
-      packages: write  # Needed to publish packages
+      packages: write # Needed to publish packages
     steps:
       - uses: actions/checkout@v4
         with:

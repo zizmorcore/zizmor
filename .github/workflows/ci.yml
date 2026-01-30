@@ -5,6 +5,11 @@ on:
     branches:
       - main
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
 
 permissions: {}
 
@@ -17,14 +22,14 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Format
         run: cargo fmt --check
 
-      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Lint
         run: cargo clippy -- --deny warnings
@@ -33,13 +38,13 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
-      - uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
+      - uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
 
       - name: Test dependencies
         run: |
@@ -49,7 +54,7 @@ jobs:
           sudo apt install -y expect
 
       - name: Test
-        run: cargo test --features online-tests,tty-tests
+        run: cargo test --features crater-tests,tty-tests,schema
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -62,19 +67,46 @@ jobs:
     name: Test site build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
+      - uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
 
       - name: Test site
         run: make site
 
+  test-schema:
+    name: Test schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Verify schema covers all audits
+        run: |
+          REGISTRY_COUNT=$(grep -c "register_audit!" crates/zizmor/src/registry.rs)
+          SCHEMA_COUNT=$(jq '.definitions.RulesConfig.properties | length' support/zizmor.schema.json)
+          if [ "$REGISTRY_COUNT" -ne "$SCHEMA_COUNT" ]; then
+            echo "Error: registry.rs has $REGISTRY_COUNT audits but schema has $SCHEMA_COUNT"
+            echo "Update config/schema.rs and regenerate the schema:"
+            echo "  make generate-schema"
+            exit 1
+          fi
+          echo "Schema covers all $REGISTRY_COUNT audits"
+
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+
+      - name: Verify committed schema is up-to-date
+        run: |
+          make generate-schema
+          git diff --exit-code
+
   all-tests-pass:
     name: All tests pass
     if: always()
-    needs: [lint, test, test-site]
+    needs: [lint, test, test-site, test-schema]
     runs-on: ubuntu-latest
 
     steps:

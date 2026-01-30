@@ -60,6 +60,56 @@ Add a `name:` field to your workflow or action.
           - run: echo "Hello!"
     ```
 
+## `archived-uses`
+
+| Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action | [archived-uses.yml] | v1.19.0        | ✅             | ❌                 | ❌           |
+
+[archived-uses.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/archived-uses.yml
+
+
+Detects `#!yaml uses:` clauses that reference [archived repositories].
+
+[archived repositories]: https://docs.github.com/en/repositories/archiving-a-github-repository/archiving-repositories
+
+Archival on GitHub makes a repository read-only, and indicates that the
+repository is no longer maintained. Using actions or reusable workflows from archived
+represents a supply chain risk:
+
+- Unmaintained repositories are more likely to accumulate indirect vulnerabilties,
+  including in any dependencies that have been vendored into JavaScript actions
+  (or that are used indirectly through transitive dependencies that have gone
+  stale).
+
+- Any vulnerabilities discovered in the action or reusable workflow *itself*
+  are unlikely to be fixed, since the repository is read-only.
+  
+Consequently, users are encouraged to avoid dependening on archived repositories
+for actions or reusable workflows.
+
+### Remediation
+
+Depending on the archived repository's functionality, you may be able to:
+
+- _Remove_ the action/reusable workflow entirely. Actions @actions-rs/cargo,
+  for example, can be replaced by directly invoking the correct `#!bash cargo ...`
+  command in a `#!yaml run:` step.
+  
+- _Replace_ the archived action/reusable workflow with a maintained alternative.
+  For example, @actions/setup-ruby can be replaced with @ruby/setup-ruby.
+  
+!!! tip
+
+    Many archived actions are thin wrappers around GitHub's REST and GraphQL
+    APIs. In most cases, you can replace these actions with usage of the
+    [`gh` CLI](https://cli.github.com/), which is pre-installed on GitHub-hosted
+    runners.
+    
+    For more information, see [Using GitHub CLI in workflows].
+    
+    [Using GitHub CLI in workflows]: https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-github-cli
+
 ## `artipacked`
 
 | Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
@@ -71,15 +121,24 @@ Add a `name:` field to your workflow or action.
 Detects local filesystem `git` credential storage on GitHub Actions, as well as
 potential avenues for unintentional persistence of credentials in artifacts.
 
-By default, using @actions/checkout causes a credential to be persisted
-in the checked-out repo's `.git/config`, so that subsequent `git` operations
-can be authenticated.
+By default, using @actions/checkout causes a credential to be persisted on disk.
+Versions below v6.0.0 store the credential directly in the checked-out repo's
+`.git/config`, while v6.0.0 and later store it under `$RUNNER_TEMP`.
 
-Subsequent steps may accidentally publicly persist `.git/config`, e.g. by
+Subsequent steps may accidentally publicly persist the credential, e.g. by
 including it in a publicly accessible artifact via @actions/upload-artifact.
 
-However, even without this, persisting the credential in the `.git/config`
-is non-ideal unless actually needed.
+However, even without this, persisting the credential on disk is non-ideal
+unless actually needed.
+
+!!! note "Behavior change"
+
+    Starting with zizmor v1.17.0, this audit produces lower-severity findings
+    when v6.0.0 or higher of @actions/checkout is used. This reflects a
+    change in v6.0.0's credential persistence behavior towards a more
+    misuse-resistant location.
+    
+    See orgs/community?179107 for additional information.
 
 Other resources:
 
@@ -377,12 +436,16 @@ Some general pointers:
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Dependabot  | [dependabot-cooldown/]       | v1.15.0       | ✅             | ✅                 | ❌  |
+| Dependabot  | [dependabot-cooldown/]       | v1.15.0       | ✅             | ✅                 | ✅  |
 
 [dependabot-cooldown/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-cooldown/
 
 Detects missing or insufficient `cooldown` settings in Dependabot configuration
 files.
+
+!!! note
+    Some package ecosystems do not support cooldown configuration in Dependabot.
+    This audit will not produce findings for those ecosystems.
 
 By default, Dependabot does not perform any "cooldown" on dependency updates.
 In other words, a regularly scheduled Dependabot run may perform an update on a
@@ -405,13 +468,23 @@ enable them.
 Other resources:
 
 * [Dependabot options reference - `cooldown`](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#cooldown-)
+* [We should all be using Dependency cooldowns](https://blog.yossarian.net/2025/11/21/We-should-all-be-using-dependency-cooldowns)
+
+### Configuration
+
+#### `rules.dependabot-cooldown.config.days`
+
+Type: number
+
+The `rules.dependabot-cooldown.config.days` setting controls the minimum acceptable
+`default-days` value for Dependabot's `cooldown` setting. Settings beneath this
+value will produce findings.
+
+The default value is `7`.
 
 ### Remediation
 
-In general, you should enable `cooldown` for all updaters. The audit currently
-enforces the following minimums:
-
-* `default-days`: must be at least `4`.
+In general, you should enable `cooldown` for all updaters.
 
 !!! example
 
@@ -450,7 +523,7 @@ enforces the following minimums:
 Detects usages of `insecure-external-code-execution` in Dependabot configuration
 files.
 
-By default, Dependabot does not execution code from dependency manifests
+By default, Dependabot does not execute code from dependency manifests
 during updates. However, users can opt in to this behavior by setting
 `#!yaml insecure-external-code-execution: allow` in their Dependabot
 configuration.
@@ -921,6 +994,80 @@ injection via [template injection].
 If the vulnerability is applicable to your use: upgrade to a fixed version of
 the action if one is available, or remove the action's usage entirely.
 
+## `misfeature`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | N/A   | v1.21.0        | ✅             | ✅                 | ❌  |
+
+Checks for usages of GitHub Actions features that are considered "misfeatures."
+
+Misfeatures include:
+
+* Use of the `pip-install` input on @actions/setup-python. This input injects
+  dependencies directly into a global (user or system-level) environment,
+  which is both difficult to audit and is likely to cause broken
+  resolutions.
+  
+    !!! note
+  
+        See actions/setup-python#1201 and [PEP 668](https://peps.python.org/pep-0668/)
+        for additional context.
+
+* Use of the Windows CMD shell, i.e. `#!yaml shell: cmd` and similar.
+  The CMD shell has no formal grammar, making it difficult to accurately
+  analyze. Moreover, it has not been the default shell on Windows runners
+  since 2019.
+
+    !!! note
+  
+        Prior to `v1.21.0`, this check was performed by the [`obfuscation`](#obfuscation) audit.
+
+* Use of non-"well-known" shells, i.e. shells other than those
+  [documented by GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrunshell).
+  These shells may not be available on all runners, and are generally
+  impossible to analyze with any confidence.
+
+    !!! note
+
+        These findings are only shown when running with the "auditor"
+        [persona](./usage.md#using-personas), as they can be very noisy.
+
+### Remediation
+
+Address the misfeature by removing or replacing its usage.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="misfeature.yml" hl_lines="8"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Setup Python
+                uses: actions/setup-python@v6
+                with:
+                  pip-install: '.[dev]'
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="misfeature.yml" hl_lines="9-11"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Setup Python
+                uses: actions/setup-python@v6
+              
+              - name: Install package
+                run: |
+                  python -m venv .env
+                  ./.env/bin/pip install .[dev]
+        ```
+
 ## `obfuscation`
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
@@ -939,6 +1086,11 @@ This audit detects a variety of obfuscated usages, including:
 * Obfuscated GitHub expressions, including no-op patterns like
   `fromJSON(toJSON(...))` and calls to `format(...)` where all
   arguments are literal values.
+
+!!! note
+
+    Prior to `v1.21.1`, this audit also detected uses of the Windows CMD shell.
+    This check has been moved to the [`misfeature`](#misfeature) audit.
 
 ### Remediation
 
@@ -1460,7 +1612,7 @@ by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
 
 | Type             | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |------------------|------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ❌                | ✅           |
+| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ✅                | ✅           |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
@@ -1487,11 +1639,16 @@ If the upstream repository is trusted, then symbolic references are
 often suitable. However, if the upstream repository is not trusted, then
 actions should be pinned by SHA reference.
 
-By default, this audit applies the following policy:
+By default, this audit applies a blanket hash-pinning policy:
+all actions must be pinned by SHA reference.
 
-* Official GitHub actions namespaces can be pinned by branch or tag.
-  In other words, `actions/checkout@v4` is acceptable.
-* All other actions must be pinned by SHA reference.
+!!! note "Behavior change"
+
+    Starting with zizmor v1.20.0, the default policy for `unpinned-uses`
+    is to require hash-pinning on *all* actions, not just third-party ones.
+    The previous behavior (of allowing `actions/*` and similar to be ref-pinned)
+    is no longer the default but can be re-enabled via configuration;
+    see the configuration section below for details.
 
 This audit can be configured with a custom set of rules, e.g. to
 allow symbolic references for trusted repositories or entire namespaces
@@ -1588,8 +1745,11 @@ regardless of definition order.
 
 !!! tip
 
-    There are several third-party tools that can automatically hash-pin
-    your workflows and actions for you:
+    You can use `zizmor`'s [fix mode](./usage.md#auto-fixing-results) to
+    automatically hash-pin your workflows and actions.
+  
+    Alternatively, there are several third-party tools that can automatically
+    hash-pin your workflows and actions for you:
 
     - :simple-go: @suzuki-shunsuke/pinact: supports updating and hash-pinning
       workflows, actions, and arbitrary inputs.
@@ -1599,6 +1759,11 @@ regardless of definition order.
       workflow definitions.
 
         See also stacklok/frizbee#184 for current usage caveats.
+
+!!! tip
+
+    Once your workflows and actions are hash-pinned, consider using
+    [Dependabot] or [Renovate] to keep them up-to-date automatically.
 
 For repository actions (like @actions/checkout): add a branch, tag, or SHA
 reference.
@@ -1961,8 +2126,19 @@ once it's configured:
     ---
 
     See: [Trusted publishing for npm packages]
+    
+-   :simple-nuget:{.lg .middle} .NET (nuget.org)
+
+    ---
+    
+    Usage: @NuGet/login
+
+    See: [Trusted publishing for nuget.org]
 </div>
 
+[Dependabot]: https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/keeping-your-actions-up-to-date-with-dependabot
+
+[Renovate]: https://docs.renovatebot.com/modules/manager/github-actions/
 
 [ArtiPACKED: Hacking Giants Through a Race Condition in GitHub Actions Artifacts]: https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
 [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
@@ -1975,6 +2151,7 @@ once it's configured:
 [Trusted Publishing - crates.io]: https://crates.io/docs/trusted-publishing
 [Automated publishing of packages to pub.dev]: https://dart.dev/tools/pub/automated-publishing
 [Trusted publishing for npm packages]: https://docs.npmjs.com/trusted-publishers
+[Trusted publishing for nuget.org]: https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing
 [Trusted publishing: a new benchmark for packaging security]: https://blog.trailofbits.com/2023/05/23/trusted-publishing-a-new-benchmark-for-packaging-security/
 [Trusted Publishers for All Package Repositories]: https://repos.openssf.org/trusted-publishers-for-all-package-repositories.html
 [were deprecated by GitHub]: https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/

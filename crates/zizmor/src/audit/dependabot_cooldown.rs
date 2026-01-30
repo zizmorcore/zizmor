@@ -2,6 +2,7 @@ use crate::{
     audit::{Audit, AuditError, audit_meta},
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
 };
+use github_actions_models::dependabot::v2::PackageEcosystem;
 use yamlpatch::{Op, Patch};
 
 audit_meta!(
@@ -11,6 +12,11 @@ audit_meta!(
 );
 
 pub(crate) struct DependabotCooldown;
+
+/// Checks if the given Dependabot package ecosystem supports cooldown configuration.
+fn supports_cooldown(ecosystem: &PackageEcosystem) -> bool {
+    !matches!(ecosystem, PackageEcosystem::Opentofu)
+}
 
 impl DependabotCooldown {
     /// Creates a fix that adds default-days to an existing cooldown block
@@ -85,11 +91,16 @@ impl Audit for DependabotCooldown {
     async fn audit_dependabot<'doc>(
         &self,
         dependabot: &'doc crate::models::dependabot::Dependabot,
-        _config: &crate::config::Config,
+        config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         for update in dependabot.updates() {
+            // Skip ecosystems that don't support cooldown
+            if !supports_cooldown(&update.package_ecosystem) {
+                continue;
+            }
+
             match &update.cooldown {
                 // TODO(ww): Should we have opinions about the other
                 // cooldown settings?
@@ -111,32 +122,31 @@ impl Audit for DependabotCooldown {
                             .fix(Self::create_add_default_days_fix(update))
                             .build(dependabot)?,
                     ),
-                    // We currently (arbitrarily) consider cooldowns under 4 days
-                    // to be insufficient. The rationale here is that under 4 days
-                    // can overlap with inopportune times like long weekends.
-                    //
-                    // TODO(ww): This should probably be configurable.
-                    Some(default_days) if default_days < 4 => findings.push(
-                        Self::finding()
-                            .add_location(
-                                update
-                                    .location()
-                                    .with_keys(["cooldown".into(), "default-days".into()])
-                                    .primary()
-                                    .annotated("insufficient default-days configured"),
-                            )
-                            .confidence(Confidence::Medium)
-                            .severity(Severity::Low)
-                            .fix(Self::create_increase_default_days_fix(update))
-                            .build(dependabot)?,
-                    ),
+                    Some(default_days)
+                        if default_days < config.dependabot_cooldown_config.days.get() as u64 =>
+                    {
+                        findings.push(
+                            Self::finding()
+                                .add_location(
+                                    update
+                                        .location()
+                                        .with_keys(["cooldown".into(), "default-days".into()])
+                                        .primary()
+                                        .annotated(format!("insufficient default-days configured (less than {days})", days = config.dependabot_cooldown_config.days)),
+                                )
+                                .confidence(Confidence::Medium)
+                                .severity(Severity::Low)
+                                .fix(Self::create_increase_default_days_fix(update))
+                                .build(dependabot)?,
+                        )
+                    }
                     Some(_) => {}
                 },
                 None => findings.push(
                     Self::finding()
                         .add_location(
                             update
-                                .location_with_name()
+                                .location_with_grip()
                                 .primary()
                                 .annotated("missing cooldown configuration"),
                         )
@@ -203,6 +213,7 @@ updates:
                 let fix = &finding.fixes[0];
                 let fixed_document = fix.apply(dependabot.as_document()).unwrap();
                 insta::assert_snapshot!(fixed_document.source(), @r"
+
                 version: 2
 
                 updates:
@@ -244,6 +255,7 @@ updates:
                 let fix = &finding.fixes[0];
                 let fixed_document = fix.apply(dependabot.as_document()).unwrap();
                 insta::assert_snapshot!(fixed_document.source(), @r"
+
                 version: 2
 
                 updates:
@@ -285,6 +297,7 @@ updates:
                 let fix = &finding.fixes[0];
                 let fixed_document = fix.apply(dependabot.as_document()).unwrap();
                 insta::assert_snapshot!(fixed_document.source(), @r"
+
                 version: 2
 
                 updates:
@@ -336,6 +349,7 @@ updates:
                 }
 
                 insta::assert_snapshot!(document.source(), @r"
+
                 version: 2
 
                 updates:
@@ -380,6 +394,7 @@ updates:
 
                 // Verify the document remains unchanged
                 insta::assert_snapshot!(dependabot.as_document().source(), @r"
+
                 version: 2
 
                 updates:
@@ -390,6 +405,33 @@ updates:
                     schedule:
                       interval: daily
                 ");
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn test_opentofu_no_cooldown_no_findings() {
+        let dependabot_content = r#"
+version: 2
+enable-beta-ecosystems: true
+
+updates:
+  - package-ecosystem: opentofu
+    directory: /
+    schedule:
+      interval: daily
+"#;
+
+        test_dependabot_audit!(
+            DependabotCooldown,
+            "test_opentofu_no_cooldown.yml",
+            dependabot_content,
+            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                assert_eq!(
+                    findings.len(),
+                    0,
+                    "Expected no findings for OpenTofu without cooldown"
+                );
             }
         );
     }

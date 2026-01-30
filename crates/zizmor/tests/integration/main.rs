@@ -2,6 +2,10 @@
 
 /// Basic acceptance tests.
 mod acceptance;
+/// Audit-specific tests.
+mod audit;
+/// Basic CLI tests.
+mod cli;
 /// Helpers.
 mod common;
 /// Configuration discovery tests.
@@ -9,5 +13,3 @@ mod config;
 /// "Big picture" end-to-end tests, i.e. tests that typically exercise
 /// more than one audit or complex CLI functionality.
 mod e2e;
-/// General snapshot tests, including repro cases for specific audits.
-mod snapshot;

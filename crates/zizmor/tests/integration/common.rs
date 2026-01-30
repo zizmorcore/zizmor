@@ -39,30 +39,46 @@ pub enum OutputMode {
 
 pub struct Zizmor {
     cmd: Command,
+    stdin: Option<String>,
     unbuffer: bool,
     offline: bool,
+    gh_token: bool,
     inputs: Vec<String>,
     config: Option<String>,
     no_config: bool,
     output: OutputMode,
-    expects_failure: bool,
+    expects_failure: Option<i32>,
+    show_audit_urls: bool,
 }
 
 impl Zizmor {
     /// Create a new zizmor runner.
     pub fn new() -> Self {
-        let cmd = Command::new(cargo::cargo_bin!());
+        let mut cmd = Command::new(cargo::cargo_bin!());
+
+        // Our child `zizmor` process starts with a clean environment, to
+        // ensure we explicitly test interactions with things like `CI`
+        // and `GH_TOKEN`.
+        cmd.env_clear();
 
         Self {
             cmd,
+            stdin: None,
             unbuffer: false,
             offline: true,
+            gh_token: true,
             inputs: vec![],
             config: None,
             no_config: false,
             output: OutputMode::Stdout,
-            expects_failure: false,
+            expects_failure: None,
+            show_audit_urls: false,
         }
+    }
+
+    pub fn stdin(mut self, input: impl Into<String>) -> Self {
+        self.stdin = Some(input.into());
+        self
     }
 
     pub fn args<'a>(mut self, args: impl IntoIterator<Item = &'a str>) -> Self {
@@ -72,11 +88,6 @@ impl Zizmor {
 
     pub fn setenv(mut self, key: &str, value: &str) -> Self {
         self.cmd.env(key, value);
-        self
-    }
-
-    pub fn unsetenv(mut self, key: &str) -> Self {
-        self.cmd.env_remove(key);
         self
     }
 
@@ -105,16 +116,24 @@ impl Zizmor {
         self
     }
 
+    pub fn gh_token(mut self, flag: bool) -> Self {
+        self.gh_token = flag;
+        self
+    }
+
     pub fn output(mut self, output: OutputMode) -> Self {
         self.output = output;
         self
     }
 
-    pub fn expects_failure(mut self, flag: bool) -> Self {
-        if flag {
-            self = self.output(OutputMode::Both);
-        }
-        self.expects_failure = flag;
+    pub fn expects_failure(mut self, code: i32) -> Self {
+        self = self.output(OutputMode::Both);
+        self.expects_failure = Some(code);
+        self
+    }
+
+    pub fn show_audit_urls(mut self, flag: bool) -> Self {
+        self.show_audit_urls = flag;
         self
     }
 
@@ -124,12 +143,21 @@ impl Zizmor {
     }
 
     pub fn run(mut self) -> Result<String> {
+        if let Some(stdin) = &self.stdin {
+            self.cmd.write_stdin(stdin.as_bytes());
+        }
+
         if self.offline {
             self.cmd.arg("--offline");
         } else {
             // If we're running in online mode, we pre-assert the
             // presence of GH_TOKEN to make configuration failures more obvious.
-            std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
+            let token =
+                std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
+
+            if self.gh_token {
+                self.cmd.env("GH_TOKEN", token);
+            }
         }
 
         if self.no_config && self.config.is_some() {
@@ -152,6 +180,12 @@ impl Zizmor {
             // simulates a TTY.
             // See: https://github.com/emersonford/tracing-indicatif/issues/24
             self.cmd.arg("--no-progress");
+        }
+
+        if self.show_audit_urls {
+            self.cmd.arg("--show-audit-urls=always");
+        } else {
+            self.cmd.arg("--show-audit-urls=never");
         }
 
         for input in &self.inputs {
@@ -198,11 +232,28 @@ impl Zizmor {
 
         if let Some(exit_code) = output.status.code() {
             // There are other nonzero exit codes that don't indicate failure;
-            // these do. 1/2 are general errors, 101 is Rust's panic exit code.
-            let is_failure = matches!(exit_code, 1 | 2 | 101);
-            if is_failure != self.expects_failure {
-                anyhow::bail!("zizmor exited with unexpected code {exit_code}: {raw}");
+            // these do. 1/2 are general errors, 3 is a collection error, 101 is Rust's panic exit code.
+            let is_failure = matches!(exit_code, 1 | 2 | 3 | 101);
+            match self.expects_failure {
+                Some(expected_code) if is_failure => {
+                    if exit_code != expected_code {
+                        anyhow::bail!(
+                            "zizmor exited with unexpected code {exit_code} (expected {expected_code}): {raw}"
+                        );
+                    }
+                }
+                Some(expected_code) if !is_failure => {
+                    anyhow::bail!("zizmor exited successfully but failure was expected: {raw}")
+                }
+                None if is_failure => {
+                    anyhow::bail!("zizmor unexpectedly exited with code {exit_code}: {raw}")
+                }
+                _ => {}
             }
+
+            // if is_failure != self.expects_failure {
+            //     anyhow::bail!("zizmor exited with unexpected code {exit_code}: {raw}");
+            // }
         }
 
         let config_placeholder = "@@CONFIG@@";

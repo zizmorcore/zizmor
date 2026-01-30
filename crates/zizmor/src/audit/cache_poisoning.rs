@@ -9,7 +9,7 @@ use crate::finding::location::{Locatable as _, Routable};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
 use crate::models::StepCommon;
 use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
-use crate::models::workflow::{JobExt as _, NormalJob, Step, Steps};
+use crate::models::workflow::{JobCommon as _, NormalJob, Step, Steps};
 use crate::state::AuditState;
 
 use indexmap::IndexMap;
@@ -52,7 +52,13 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-node".parse().unwrap(),
             control: ControlExpr::any([
-                ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::FreeString, false),
+                ControlExpr::single(
+                    Toggle::OptIn,
+                    "cache",
+                    // https://github.com/actions/setup-node/blob/65d868f8d4/src/cache-utils.ts#L101-L111
+                    ControlFieldType::Exact(&["npm", "yarn", "pnpm"]),
+                    false,
+                ),
                 // NOTE: Added with `setup-node@v5`.
                 ControlExpr::single(
                     Toggle::OptIn,
@@ -198,6 +204,16 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         ActionCoordinate::Configurable {
             uses_pattern: "jdx/mise-action".parse().unwrap(),
             control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
+        },
+        // https://github.com/ramsey/composer-install/blob/v3/action.yml
+        ActionCoordinate::Configurable {
+            uses_pattern: "ramsey/composer-install".parse().unwrap(),
+            control: ControlExpr::Single {
+                toggle: Toggle::OptOut,
+                field_name: "ignore-cache",
+                field_type: ControlFieldType::Exact(&["yes", "true", "1"]),
+                satisfied_by_default: true,
+            },
         },
     ]
 });
@@ -396,14 +412,36 @@ impl CachePoisoning {
         &self,
         step: &Step<'doc>,
         scenario: &PublishingArtifactsScenario<'doc>,
-    ) -> Option<Finding<'doc>> {
-        let (coord, cache_usage) = self.evaluate_cache_usage(step)?;
+    ) -> Result<Option<Finding<'doc>>, AuditError> {
+        let Some((coord, cache_usage)) = self.evaluate_cache_usage(step) else {
+            return Ok(None);
+        };
 
-        let (yaml_key, annotation) = match cache_usage {
-            Usage::Always => ("uses", "caching always restored here"),
-            Usage::DefaultActionBehaviour => ("uses", "cache enabled by default here"),
-            Usage::DirectOptIn => ("with", "opt-in for caching here"),
-            Usage::ConditionalOptIn => ("with", "opt-in for caching might happen here"),
+        let locations = match cache_usage {
+            Usage::ConditionalOptIn => vec![
+                step.location().primary().with_keys(["uses".into()]),
+                step.location()
+                    .with_keys(["with".into()])
+                    .annotated("may enable caching here"),
+            ],
+            Usage::DirectOptIn => vec![
+                step.location().primary().with_keys(["uses".into()]),
+                step.location()
+                    .with_keys(["with".into()])
+                    .annotated("enables caching explicitly here"),
+            ],
+            Usage::DefaultActionBehaviour => vec![
+                step.location()
+                    .primary()
+                    .with_keys(["uses".into()])
+                    .annotated("enables caching by default"),
+            ],
+            Usage::Always => vec![
+                step.location()
+                    .primary()
+                    .with_keys(["uses".into()])
+                    .annotated("always restores from cache"),
+            ],
         };
 
         let mut finding_builder = match scenario {
@@ -415,12 +453,6 @@ impl CachePoisoning {
                         .location()
                         .with_keys(["on".into()])
                         .annotated("generally used when publishing artifacts generated at runtime"),
-                )
-                .add_location(
-                    step.location()
-                        .primary()
-                        .with_keys([yaml_key.into()])
-                        .annotated(annotation),
                 ),
             PublishingArtifactsScenario::UsingWellKnowPublisherAction(publisher) => Self::finding()
                 .confidence(Confidence::Low)
@@ -430,21 +462,19 @@ impl CachePoisoning {
                         .location()
                         .with_keys(["uses".into()])
                         .annotated("runtime artifacts usually published here"),
-                )
-                .add_location(
-                    step.location()
-                        .primary()
-                        .with_keys([yaml_key.into()])
-                        .annotated(annotation),
                 ),
         };
+
+        for location in locations {
+            finding_builder = finding_builder.add_location(location);
+        }
 
         // Add fix if available
         if let Some(fix) = self.create_cache_disable_fix(coord, step) {
             finding_builder = finding_builder.fix(fix);
         }
 
-        finding_builder.build(step.workflow()).ok()
+        Ok(Some(finding_builder.build(step)?))
     }
 }
 
@@ -471,7 +501,7 @@ impl Audit for CachePoisoning {
         };
 
         for step in job.steps() {
-            if let Some(finding) = self.uses_cache_aware_step(&step, &scenario) {
+            if let Some(finding) = self.uses_cache_aware_step(&step, &scenario)? {
                 findings.push(finding);
             }
         }
@@ -555,6 +585,7 @@ jobs:
             |findings: Vec<Finding>| {
                 let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
                 insta::assert_snapshot!(fixed_content, @r"
+
                 name: Test Workflow
                 on: release
 
@@ -599,6 +630,7 @@ jobs:
             |findings: Vec<Finding>| {
                 let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
                 insta::assert_snapshot!(fixed_content, @r"
+
                 name: Test Workflow
                 on: release
 

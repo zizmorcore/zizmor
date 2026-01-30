@@ -6,6 +6,7 @@ use crate::common::{OutputMode, input_under_test, zizmor};
 
 mod anchors;
 mod collect;
+mod crater;
 mod json_v1;
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
@@ -83,12 +84,20 @@ fn menagerie() -> Result<()> {
 
 #[test]
 fn color_control_basic() -> Result<()> {
-    // No terminal, so no color by default.
+    // No terminal and not CI, so no color by default.
     let no_color_default_output = zizmor()
         .output(OutputMode::Both)
         .input(input_under_test("e2e-menagerie"))
         .run()?;
     assert!(!no_color_default_output.contains("\x1b["));
+
+    // No terminal but CI, so color by default.
+    let color_default_ci_output = zizmor()
+        .setenv("CI", "true")
+        .output(OutputMode::Both)
+        .input(input_under_test("e2e-menagerie"))
+        .run()?;
+    assert!(color_default_ci_output.contains("\x1b["));
 
     // Force color via --color=always.
     let forced_color_via_arg_output = zizmor()
@@ -206,10 +215,23 @@ fn issue_612_repro() -> Result<()> {
 fn invalid_config_file() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .config(if cfg!(windows) { "NUL" } else { "/dev/null" })
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: configuration error in @@CONFIG@@
+      |
+      = help: check your configuration file for syntax errors
+      = help: see: https://docs.zizmor.sh/configuration/
+
+    Caused by:
+        0: configuration error in @@CONFIG@@
+        1: invalid configuration syntax
+        2: missing field `rules`
+    "
     );
 
     Ok(())
@@ -231,12 +253,81 @@ fn invalid_inputs() -> Result<()> {
     ] {
         insta::assert_snapshot!(
             zizmor()
-                .expects_failure(true)
+                .expects_failure(1)
                 .input(input_under_test(&format!("invalid/{workflow_tc}.yml")))
                 .args(["--strict-collection"])
                 .run()?
         );
     }
+
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(3)
+            .input(input_under_test("invalid/empty/"))
+            .args(["--strict-collection"])
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+
+    Caused by:
+        no inputs collected
+    "
+    );
+
+    Ok(())
+}
+
+/// Reproduction test for #1395.
+///
+/// Ensures that we produce a useful error message when the user gives us an
+/// invalid YAML input (specifically, one with duplicate mapping keys).
+#[test]
+fn test_issue_1394() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(1)
+            .input(input_under_test(
+                "invalid/issue-1395-repro-duplicate-mapping-keys.yml"
+            ))
+            .args(["--strict-collection"])
+            .run()?,
+        @r#"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    failed to load file://@@INPUT@@ as workflow
+
+    Caused by:
+        0: invalid YAML syntax: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+        1: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+    "#
+    );
+
+    // Without --strict-collection, we get a warning and then a collection failure error.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(3)
+            .input(input_under_test(
+                "invalid/issue-1395-repro-duplicate-mapping-keys.yml"
+            ))
+            .run()?,
+        @r#"
+    🌈 zizmor v@@VERSION@@
+     WARN collect_inputs: zizmor::registry::input: failed to parse input: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+    fatal: no audit was performed
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+
+    Caused by:
+        no inputs collected
+    "#
+    );
 
     Ok(())
 }
@@ -246,7 +337,7 @@ fn invalid_input_not_strict() -> Result<()> {
     for tc in ["invalid-workflow", "invalid-action-1/action"] {
         insta::assert_snapshot!(
             zizmor()
-                .expects_failure(true)
+                .expects_failure(3)
                 .input(input_under_test(&format!("invalid/{tc}.yml")))
                 .run()?
         );
@@ -279,7 +370,7 @@ fn issue_1116_strict_collection_remote_input() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .offline(false)
-            .expects_failure(true)
+            .expects_failure(1)
             .output(OutputMode::Stderr)
             .args(["--strict-collection"])
             .input("woodruffw-experiments/zizmor-issue-1116@f41c414")
@@ -308,7 +399,36 @@ fn issue_1065() -> Result<()> {
         zizmor()
             .output(OutputMode::Both)
             .input(input_under_test("issue-1065.yml"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     INFO audit: zizmor: 🌈 completed @@INPUT@@
+    warning[excessive-permissions]: overly broad permissions
+      --> @@INPUT@@:12:3
+       |
+    12 | /   issue-1065:
+    13 | |     runs-on: ubuntu-latest
+    14 | |     steps:
+    15 | |       - name: Comment PR
+    ...  |
+    24 | |             Please review the changes and provide any feedback. Thanks! 🚀
+       | |                                                                          ^
+       | |                                                                          |
+       | |__________________________________________________________________________this job
+       |                                                                            default permissions used due to no permissions: block
+       |
+       = note: audit confidence → Medium
+
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:16:15
+       |
+    16 |         uses: thollander/actions-comment-pull-request@v3
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    5 findings (3 suppressed): 0 informational, 0 low, 1 medium, 1 high
+    "
     );
 
     Ok(())
@@ -320,12 +440,16 @@ fn issue_1065() -> Result<()> {
 fn warn_on_min_severity_unknown() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(false)
             .output(OutputMode::Stderr)
             .setenv("RUST_LOG", "warn")
             .args(["--min-severity=unknown"])
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN zizmor: `unknown` is a deprecated minimum severity that has no effect
+     WARN zizmor: future versions of zizmor will reject this value
+    "
     );
 
     Ok(())
@@ -337,12 +461,16 @@ fn warn_on_min_severity_unknown() -> Result<()> {
 fn warn_on_min_confidence_unknown() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(false)
             .output(OutputMode::Stderr)
             .setenv("RUST_LOG", "warn")
             .args(["--min-confidence=unknown"])
             .input(input_under_test("e2e-menagerie"))
-            .run()?
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN zizmor: `unknown` is a deprecated minimum confidence that has no effect
+     WARN zizmor: future versions of zizmor will reject this value
+    "
     );
     Ok(())
 }
@@ -356,7 +484,6 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
 fn issue_1207() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(false)
             .output(OutputMode::Both)
             .working_dir(input_under_test("e2e-menagerie/dummy-action-1"))
             // Input doesn't matter, as long as it's relative without a leading
@@ -377,7 +504,7 @@ fn issue_1207() -> Result<()> {
 fn issue_1286() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .output(OutputMode::Both)
             .offline(false)
             .input(input_under_test("issue-1286.yml"))
@@ -385,10 +512,10 @@ fn issue_1286() -> Result<()> {
         @r"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
-    ref-confusion failed on file://@@INPUT@@
+    'ref-confusion' audit failed on file://@@INPUT@@
 
     Caused by:
-        0: error in ref-confusion
+        0: error in 'ref-confusion' audit
         1: couldn't list branches for woodruffw-experiments/this-does-not-exist
         2: can't access woodruffw-experiments/this-does-not-exist: missing or you have no access
     ",
@@ -407,7 +534,7 @@ fn issue_1286() -> Result<()> {
 fn issue_1300() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(1)
             .output(OutputMode::Both)
             .offline(false)
             .args(["--collect=workflows"])
@@ -445,6 +572,121 @@ fn issue_1341() -> Result<()> {
             ))
             .run()?,
     );
+
+    Ok(())
+}
+
+/// Regression test for #1356.
+///
+/// Ensures that zizmor's LSP mode (`--lsp`) starts up correctly, i.e.
+/// doesn't crash on launch.
+#[test]
+fn issue_1356_lsp_mode_starts() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Stdout)
+            .stdin("{}") // Not a valid LSP message, but all we're testing is startup.
+            .args(["--lsp"])
+            .run()?,
+        @r#"
+    Content-Length: 75
+
+    {"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error"},"id":null}
+    "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_cant_retrieve_offline() -> Result<()> {
+    // Fails because --offline prevents network access.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(1)
+            .offline(true)
+            .args(["pypa/sampleproject"])
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: can't fetch remote repository: pypa/sampleproject
+      |
+      = help: remove --offline to audit remote repositories
+
+    Caused by:
+        can't fetch remote repository: pypa/sampleproject
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_cant_retrieve_no_gh_token() -> Result<()> {
+    // Fails because GH_TOKEN is not set.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(1)
+            .offline(false)
+            .gh_token(false)
+            .args(["pypa/sampleproject"])
+            .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: can't fetch remote repository: pypa/sampleproject
+      |
+      = help: set a GitHub token with --gh-token or GH_TOKEN
+
+    Caused by:
+        can't fetch remote repository: pypa/sampleproject
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_github_output() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .input(input_under_test("several-vulnerabilities.yml"))
+            .args(["--persona=auditor", "--format=github"])
+            .run()?,
+        @r"
+    ::error file=@@INPUT@@,line=5,title=excessive-permissions::several-vulnerabilities.yml:5: overly broad permissions: uses write-all permissions
+    ::error file=@@INPUT@@,line=11,title=excessive-permissions::several-vulnerabilities.yml:11: overly broad permissions: uses write-all permissions
+    ::error file=@@INPUT@@,line=2,title=dangerous-triggers::several-vulnerabilities.yml:2: use of fundamentally insecure workflow trigger: pull_request_target is almost always used insecurely
+    ::warning file=@@INPUT@@,line=16,title=template-injection::several-vulnerabilities.yml:16: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=16,title=template-injection::several-vulnerabilities.yml:16: code injection via template expansion: may expand into attacker-controllable code
+    ::warning file=@@INPUT@@,line=1,title=concurrency-limits::several-vulnerabilities.yml:1: insufficient job-level concurrency limits: missing concurrency setting
+    "
+    );
+
+    Ok(())
+}
+
+/// Ensures that the `--show-audit-urls` flag works as expected.
+#[test]
+fn test_show_urls() -> Result<()> {
+    let with_urls = zizmor()
+        .offline(true)
+        .show_audit_urls(true)
+        .input(input_under_test("several-vulnerabilities.yml"))
+        .run()?;
+
+    assert!(with_urls.contains("audit documentation → "));
+
+    let without_urls = zizmor()
+        .offline(true)
+        .show_audit_urls(false)
+        .input(input_under_test("several-vulnerabilities.yml"))
+        .run()?;
+
+    assert!(!without_urls.contains("audit documentation → "));
 
     Ok(())
 }

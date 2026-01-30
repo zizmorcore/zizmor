@@ -7,6 +7,7 @@ use anstream::{eprintln, print, println};
 use owo_colors::OwoColorize;
 
 use crate::{
+    RenderLinks, ShowAuditUrls,
     finding::{
         Finding, Severity,
         location::{Location, LocationKind},
@@ -43,6 +44,7 @@ impl From<&Severity> for Level<'_> {
 pub(crate) fn finding_snippets<'doc>(
     registry: &'doc InputRegistry,
     finding: &'doc Finding<'doc>,
+    render_links_mode: &RenderLinks,
 ) -> Vec<Snippet<'doc, Annotation<'doc>>> {
     // Our finding might span multiple workflows, so we need to group locations
     // by their enclosing workflow to generate each snippet correctly.
@@ -67,15 +69,20 @@ pub(crate) fn finding_snippets<'doc>(
     for (input_key, locations) in locations_by_workflow {
         let input = registry.get_input(input_key);
 
+        let path = match render_links_mode {
+            RenderLinks::Always => input.link().unwrap_or(input_key.presentation_path()),
+            RenderLinks::Never => input_key.presentation_path(),
+        };
+
         snippets.push(
             Snippet::source(input.as_document().source())
                 .fold(true)
                 .line_start(1)
-                .path(input.link().unwrap_or(input_key.presentation_path()))
+                .path(path)
                 .annotations(locations.iter().map(|loc| {
-                    let annotation = match loc.symbolic.link {
-                        Some(ref link) => link,
-                        None => &loc.symbolic.annotation,
+                    let annotation = match (loc.symbolic.link.as_deref(), render_links_mode) {
+                        (Some(link), RenderLinks::Always) => link,
+                        _ => &loc.symbolic.annotation,
                     };
 
                     AnnotationKind::from(loc.symbolic.kind)
@@ -94,10 +101,12 @@ pub(crate) fn finding_snippets<'doc>(
 pub(crate) fn render_findings(
     registry: &InputRegistry,
     findings: &FindingRegistry,
+    show_urls_mode: &ShowAuditUrls,
+    render_links_mode: &RenderLinks,
     naches_mode: bool,
 ) {
     for finding in findings.findings() {
-        render_finding(registry, finding);
+        render_finding(registry, finding, show_urls_mode, render_links_mode);
         println!();
     }
 
@@ -190,11 +199,19 @@ pub(crate) fn render_findings(
     }
 }
 
-fn render_finding(registry: &InputRegistry, finding: &Finding) {
-    let title = Level::from(&finding.determinations.severity)
+fn render_finding(
+    registry: &InputRegistry,
+    finding: &Finding,
+    show_urls_mode: &ShowAuditUrls,
+    render_links_mode: &RenderLinks,
+) {
+    let mut title = Level::from(&finding.determinations.severity)
         .primary_title(finding.desc)
-        .id(finding.ident)
-        .id_url(finding.url);
+        .id(finding.ident);
+
+    if matches!(render_links_mode, RenderLinks::Always) {
+        title = title.id_url(finding.url);
+    }
 
     let confidence = format!(
         "audit confidence → {:?}",
@@ -202,11 +219,22 @@ fn render_finding(registry: &InputRegistry, finding: &Finding) {
     );
 
     let mut group = Group::with_title(title)
-        .elements(finding_snippets(registry, finding))
+        .elements(finding_snippets(registry, finding, render_links_mode))
         .element(Level::NOTE.message(confidence));
+
+    if let Some(tip) = &finding.tip {
+        group = group.element(Level::HELP.with_name("tip").message(tip));
+    }
 
     if !finding.fixes.is_empty() {
         group = group.element(Level::NOTE.message("this finding has an auto-fix"));
+    }
+
+    if matches!(show_urls_mode, ShowAuditUrls::Always) {
+        group = group.element(Level::HELP.message(format!(
+            "audit documentation → {url}",
+            url = finding.url.green()
+        )))
     }
 
     // TODO: Evaluate alternative decor styles.

@@ -18,6 +18,7 @@ use crate::{
 };
 
 pub(crate) mod anonymous_definition;
+pub(crate) mod archived_uses;
 pub(crate) mod artipacked;
 pub(crate) mod bot_conditions;
 pub(crate) mod cache_poisoning;
@@ -32,6 +33,7 @@ pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod insecure_commands;
 pub(crate) mod known_vulnerable_actions;
+pub(crate) mod misfeature;
 pub(crate) mod obfuscation;
 pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
@@ -185,17 +187,12 @@ pub(crate) enum AuditLoadError {
     /// be skipped, rather than failing the entire run.
     #[error("{0}")]
     Skip(anyhow::Error),
-    /// The audit's initialization failed in a way that suggests that the
-    /// entire run should be aborted.
-    #[error("{0}")]
-    Fail(anyhow::Error),
 }
 
 #[derive(Error, Debug)]
-#[error("error in {ident}")]
+#[error("error in '{ident}' audit")]
 pub(crate) struct AuditError {
     ident: &'static str,
-    #[source]
     source: anyhow::Error,
 }
 

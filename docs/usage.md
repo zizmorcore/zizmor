@@ -125,10 +125,10 @@ zizmor --strict-collection example/example
 environment:
 
 - If `ZIZMOR_OFFLINE` is set, then `zizmor` runs in offline mode.
-- If `GH_TOKEN` is set, then `zizmor` runs in online mode with audits.
+- If `GH_TOKEN` or `GITHUB_TOKEN` is set, then `zizmor` runs in online mode with audits.
     - Additionally `ZIZMOR_NO_ONLINE_AUDITS` is set, then `zizmor` runs
       online sans audits.
-- If neither `ZIZMOR_OFFLINE` nor `GH_TOKEN` are set, then `zizmor` runs
+- If neither `ZIZMOR_OFFLINE` nor `GH_TOKEN`/`GITHUB_TOKEN` are set, then `zizmor` runs
   in offline mode.
 
 Or, as a flowchart:
@@ -136,7 +136,7 @@ Or, as a flowchart:
 ```mermaid
 flowchart TD
   B{ZIZMOR_OFFLINE set?} -- Yes --> C[Offline mode]
-  B -- No --> D{GH_TOKEN set?}
+  B -- No --> D{GH_TOKEN/GITHUB_TOKEN set?}
   D -- No --> C
   D -- Yes --> E{ZIZMOR_NO_ONLINE_AUDITS set?}
   E -- Yes --> F[Online sans audits mode]
@@ -146,7 +146,7 @@ flowchart TD
 Each operating mode can also be made explicit through command-line flags:
 
 ```bash
-# force offline, even if a GH_TOKEN is present
+# force offline, even if GH_TOKEN/GITHUB_TOKEN is present
 # this disables all online actions, including repository fetches
 zizmor --offline workflow.yml
 
@@ -206,16 +206,15 @@ By default, `zizmor` produces `cargo`-style diagnostic output.
 
 ```console
 error[template-injection]: code injection via template expansion
-  --> ./tests/integration/test-data/template-injection/pr-425-backstop/action.yml:28:7
+  --> ./tests/integration/test-data/template-injection/pr-425-backstop/action.yml:31:56
    |
-28 |     - name: case4
-   |       ^^^^^^^^^^^ this step
-29 |       uses: azure/powershell
+29 |       uses: azure/powershell@whatever
+   |       ------------------------------- action accepts arbitrary code
 30 |       with:
 31 |         inlineScript: Get-AzVM -ResourceGroupName "${{ inputs.expandme }}"
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ inputs.expandme may expand into attacker-controllable code
+   |         ------------ via this input                    ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 ```
 
 This output will be colorized by default when sent to a supporting terminal and
@@ -223,6 +222,36 @@ uncolorized by default when piped to another program. Users can also explicitly
 disable output colorization by setting `NO_COLOR=1` in their environment.
 
 This format can also be explicitly selected with `--format=plain`.
+
+#### Audit documentation links
+
+By default, `zizmor` includes links to relevant documentation pages
+for each finding in its plain output format. These links are provided via
+[OSC 8](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda)
+hyperlinks, which are supported by many modern terminal emulators.
+
+For example, in the output above, `template-injection` within
+`error[template-injection]: ...` is a clickable link that takes you to
+the [template-injection](./audits#template-injection) audit documentation.
+
+In addition to these OSC 8 links, `zizmor` also includes the full URL
+as part of each finding _if_ it detects a non-terminal output _or_
+a CI environment (e.g. GitHub Actions).
+
+To make this behavior explicir, users can supply the `--show-audit-urls`
+option:
+
+```bash
+# always show audit documentation URLs, even if output is to a terminal
+zizmor --show-audit-urls=always ...
+
+# never show audit documentation URLs
+zizmor --show-audit-urls=never ... 
+```
+
+!!! note
+
+    `--show-audit-urls=...` is available in `v1.19.0` and later.
 
 #### Color customization
 
@@ -401,12 +430,18 @@ you invoke it and what happens during the run. In general:
 | 0    | Successful audit; no findings to report (or SARIF mode enabled). |
 | 1    | Error during audit; consult output. |
 | 2    | Argument parsing failure; consult output. |
+| 3    | No inputs were collected. |
 | 11   | One or more findings found; highest finding is "informational" level. |
 | 12   | One or more findings found; highest finding is "low" level. |
 | 13   | One or more findings found; highest finding is "medium" level. |
 | 14   | One or more findings found; highest finding is "high" level. |
 
 All other exit codes are currently reserved.
+
+!!! note
+
+    Exit code `3` is available in `v1.21.0` and later. Versions before this
+    do not assign any special meaning to exit code `3`.
 
 !!! warning "Removal"
 
@@ -596,6 +631,10 @@ to keep in mind:
   the original format of the input files, including exact indentation
   and comments. However, this is ultimately a heuristic, and
   some patches may not match the file's exact style.
+* **Online access**: some fixes may require online access, even if their
+  parent audit doesn't. For example, [unpinned-uses](./audits.md#unpinned-uses)
+  doesn't require online access to _detect_ unpinned uses, but it does
+  require online access to fetch the latest commit SHA for pinning.
 
 ## Filtering results
 

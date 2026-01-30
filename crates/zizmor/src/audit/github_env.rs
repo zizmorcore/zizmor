@@ -13,7 +13,7 @@ use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::StepCommon;
-use crate::models::{workflow::JobExt as _, workflow::Step};
+use crate::models::{workflow::JobCommon as _, workflow::Step};
 use crate::state::AuditState;
 use crate::utils;
 use crate::utils::once::static_regex;
@@ -88,20 +88,22 @@ const PWSH_REDIRECT_QUERY: &str = r#"
 
 const PWSH_PIPELINE_QUERY: &str = r#"
 (pipeline
-  (command
-    command_name: (command_name) @cmd
-    command_elements: (command_elements
-      (_)*
-      (array_literal_expression
-        (unary_expression [
-          (string_literal
-            (expandable_string_literal (variable) @destination))
-          (variable) @destination
-        ])
-      )
-      (_)*))
-  (#match? @cmd "(?i)out-file|add-content|set-content|tee-object")
-  (#match? @destination "(?i)ENV:GITHUB_ENV|ENV:GITHUB_PATH")
+  (pipeline_chain
+    (command
+        command_name: (command_name) @cmd
+        command_elements: (command_elements
+        (_)*
+        (array_literal_expression
+            (unary_expression [
+            (string_literal
+                (expandable_string_literal (variable) @destination))
+            (variable) @destination
+            ])
+        )
+        (_)*))
+    (#match? @cmd "(?i)out-file|add-content|set-content|tee-object")
+    (#match? @destination "(?i)ENV:GITHUB_ENV|ENV:GITHUB_PATH")
+  )
 ) @span
 "#;
 
@@ -177,6 +179,10 @@ impl GitHubEnv {
             .bash_redirect_query
             .capture_index_for_name("args")
             .expect("internal error: missing capture index for 'args'");
+        let destination = self
+            .bash_redirect_query
+            .capture_index_for_name("destination")
+            .expect("internal error: missing capture index for 'destination'");
 
         let mut matching_spans = vec![];
 
@@ -207,7 +213,7 @@ impl GitHubEnv {
                     let cap = mat
                         .captures
                         .iter()
-                        .find(|cap| cap.index == self.bash_redirect_query.destination_idx)
+                        .find(|cap| cap.index == destination)
                         .expect("internal error: expected capture for destination");
                     cap.node
                         .utf8_text(script_body.as_bytes())
@@ -223,6 +229,9 @@ impl GitHubEnv {
         ];
 
         for query in queries {
+            let destination = query.capture_index_for_name("destination").expect(
+                "internal error: missing capture index for 'destination' in bash pipeline query",
+            );
             let matches = self.query(query, &mut cursor, &tree, script_body);
 
             matches.for_each(|mat| {
@@ -236,7 +245,7 @@ impl GitHubEnv {
                     let cap = mat
                         .captures
                         .iter()
-                        .find(|cap| cap.index == query.destination_idx)
+                        .find(|cap| cap.index == destination)
                         .expect("internal error: expected capture for destination");
                     cap.node
                         .utf8_text(script_body.as_bytes())
@@ -283,6 +292,9 @@ impl GitHubEnv {
         let mut matching_spans = vec![];
 
         for query in queries {
+            let destination = query
+                .capture_index_for_name("destination")
+                .expect("internal error: missing capture index for 'destination' in pwsh query");
             let matches = self.query(query, &mut cursor, &tree, script_body);
             matches.for_each(|mat| {
                 let span = mat
@@ -295,7 +307,7 @@ impl GitHubEnv {
                     let cap = mat
                         .captures
                         .iter()
-                        .find(|cap| cap.index == query.destination_idx)
+                        .find(|cap| cap.index == destination)
                         .expect("internal error: no matching capture");
                     cap.node
                         .utf8_text(script_body.as_bytes())
@@ -382,7 +394,7 @@ impl Audit for GitHubEnv {
         }
 
         if let StepBody::Run { run, .. } = &step.deref().body {
-            let shell = step.shell().unwrap_or_else(|| {
+            let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
                 tracing::warn!(
                     "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}; assuming bash",
                     workflow = step.workflow().key.presentation_path(),
@@ -409,7 +421,7 @@ impl Audit for GitHubEnv {
                                 .with_keys(["run".into()])
                                 .annotated(format!("write to {dest} may allow code execution")),
                         )
-                        .build(step.workflow())?,
+                        .build(step)?,
                 )
             }
         }
@@ -428,7 +440,7 @@ impl Audit for GitHubEnv {
             return Ok(findings);
         };
 
-        let shell = step.shell().unwrap_or_else(|| {
+        let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
             tracing::warn!(
                 "github-env: couldn't determine shell type for {action} step {stepno}; assuming bash",
                 action = step.action().key.presentation_path(),
@@ -453,7 +465,7 @@ impl Audit for GitHubEnv {
                             .with_keys(["run".into()])
                             .annotated(format!("write to {dest} may allow code execution")),
                     )
-                    .build(step.action())?,
+                    .build(step)?,
             )
         }
 

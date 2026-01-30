@@ -1,0 +1,7 @@
+# zizmor.yml config file with an invalid schema for the 'forbidden-uses' rule.
+
+rules:
+  forbidden-uses:
+    config:
+      mystery-variant:
+        - "actions/*"

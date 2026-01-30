@@ -13,7 +13,11 @@
 #![allow(clippy::redundant_field_names)]
 #![forbid(unsafe_code)]
 
-use std::{collections::HashMap, ops::Deref};
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, HashMap},
+    ops::{Deref, RangeBounds},
+};
 
 use line_index::LineIndex;
 use serde::Serialize;
@@ -52,11 +56,6 @@ pub enum QueryError {
     /// the given field name.
     #[error("syntax node `{0}` is missing child field `{1}`")]
     MissingChildField(String, &'static str),
-    /// The input contains a duplicate YAML anchor.
-    /// This is valid YAML, but we intentionally forbid it for now
-    /// for simplicity's sake.
-    #[error("input contains duplicate YAML anchor: `{0}`")]
-    DuplicateAnchor(String),
     /// Any other route error that doesn't fit cleanly above.
     #[error("route error: {0}")]
     Other(String),
@@ -146,7 +145,7 @@ impl<'a> From<Vec<Component<'a>>> for Route<'a> {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum Component<'a> {
     /// A YAML key.
-    Key(&'a str),
+    Key(Cow<'a, str>),
 
     /// An index into a YAML array.
     Index(usize),
@@ -160,7 +159,13 @@ impl From<usize> for Component<'_> {
 
 impl<'a> From<&'a str> for Component<'a> {
     fn from(key: &'a str) -> Self {
-        Component::Key(key)
+        Component::Key(key.into())
+    }
+}
+
+impl From<String> for Component<'_> {
+    fn from(key: String) -> Self {
+        Component::Key(key.into())
     }
 }
 
@@ -250,6 +255,21 @@ impl Feature<'_> {
             kind => unreachable!("unexpected feature kind: {kind}"),
         }
     }
+
+    /// Returns whether this feature spans multiple lines.
+    pub fn is_multiline(&self) -> bool {
+        self.location.point_span.0.0 != self.location.point_span.1.0
+    }
+}
+
+impl RangeBounds<usize> for &Feature<'_> {
+    fn start_bound(&self) -> std::ops::Bound<&usize> {
+        std::ops::Bound::Included(&self.location.byte_span.0)
+    }
+
+    fn end_bound(&self) -> std::ops::Bound<&usize> {
+        std::ops::Bound::Excluded(&self.location.byte_span.1)
+    }
 }
 
 impl<'tree> From<Node<'tree>> for Feature<'tree> {
@@ -299,7 +319,7 @@ impl Deref for SourceTree {
     }
 }
 
-type AnchorMap<'tree> = HashMap<&'tree str, Node<'tree>>;
+type AnchorMap<'tree> = HashMap<&'tree str, BTreeMap<usize, Node<'tree>>>;
 
 self_cell::self_cell!(
     /// A wrapper for a [`SourceTree`] that also contains a computed
@@ -315,7 +335,7 @@ self_cell::self_cell!(
 impl Tree {
     fn build(inner: SourceTree) -> Result<Self, QueryError> {
         Tree::try_new(SourceTree::clone(&inner), |tree| {
-            let mut anchor_map = HashMap::new();
+            let mut anchor_map: AnchorMap = HashMap::new();
 
             for anchor in TreeIter::new(tree).filter(|n| n.kind() == "anchor") {
                 // NOTE(ww): We could poke into the `anchor_name` child
@@ -323,11 +343,6 @@ impl Tree {
                 let anchor_name = &anchor
                     .utf8_text(tree.source.as_bytes())
                     .expect("impossible: anchor name should be UTF-8 by construction")[1..];
-
-                // Only insert if the anchor name is unique.
-                if anchor_map.contains_key(anchor_name) {
-                    return Err(QueryError::DuplicateAnchor(anchor_name[1..].to_string()));
-                }
 
                 // NOTE(ww): We insert the anchor's next non-comment
                 // sibling as the anchor's target. This makes things
@@ -346,7 +361,12 @@ impl Tree {
                         QueryError::UnexpectedNode("anchor has no non-comment sibling".into())
                     })?;
 
-                anchor_map.insert(anchor_name, sibling);
+                // Store anchor with its position; duplicates are allowed and
+                // resolved by position when aliases are encountered.
+                anchor_map
+                    .entry(anchor_name)
+                    .or_default()
+                    .insert(anchor.start_byte(), sibling);
             }
 
             Ok(anchor_map)
@@ -454,6 +474,18 @@ impl Document {
     /// loaded from.
     pub fn source(&self) -> &str {
         &self.tree.borrow_owner().source
+    }
+
+    /// Resolve an anchor by name, returning the target node that was active
+    /// at the given position. For duplicate anchors, this returns the most
+    /// recent definition that appears before `position`.
+    fn resolve_anchor(&self, name: &str, position: usize) -> Option<Node<'_>> {
+        self.tree
+            .borrow_dependent()
+            .get(name)?
+            .range(..position)
+            .next_back()
+            .map(|(_, node)| *node)
     }
 
     /// Returns a [`Feature`] for the topmost semantic object in this document.
@@ -702,10 +734,17 @@ impl Document {
                 let alias_name = child
                     .utf8_text(self.source().as_bytes())
                     .expect("impossible: alias name should be UTF-8 by construction");
-                let anchor_map = self.tree.borrow_dependent();
-                *anchor_map
-                    .get(&alias_name[1..])
+                self.resolve_anchor(&alias_name[1..], child.start_byte())
                     .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?
+            }
+            // Our focus node might have an anchor prefix (e.g. `[&x v, *x]`),
+            // in which case we skip to the non-anchor sibling.
+            Some(child) if child.kind_id() == self.anchor_id => {
+                let mut cursor = focus_node.walk();
+                focus_node
+                    .named_children(&mut cursor)
+                    .find(|n| n.kind_id() != self.anchor_id)
+                    .unwrap_or(focus_node)
             }
             _ => focus_node,
         };
@@ -838,10 +877,9 @@ impl Document {
             let alias_name = node
                 .utf8_text(self.source().as_bytes())
                 .expect("impossible: alias name should be UTF-8 by construction");
-            let anchor_map = self.tree.borrow_dependent();
 
-            child = *anchor_map
-                .get(&alias_name[1..])
+            child = self
+                .resolve_anchor(&alias_name[1..], node.start_byte())
                 .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?;
         }
 
@@ -886,25 +924,34 @@ impl Document {
             // we need to manually unquote them.
             //
             // NOTE: text unwraps are infallible, since our document is UTF-8.
-            let key_value = match key.named_child(0) {
-                Some(scalar) => {
-                    let key_value = scalar
-                        .utf8_text(self.source().as_bytes())
-                        .expect("impossible: value for key should be UTF-8 by construction");
+            // NOTE: The key might have an anchor prefix (e.g. `{ &v foo: bar }`),
+            // so we need to skip any anchor nodes to find the actual scalar.
+            let key_value = {
+                let mut cursor = key.walk();
+                let scalar = key
+                    .named_children(&mut cursor)
+                    .find(|n| n.kind_id() != self.anchor_id);
 
-                    match scalar.kind() {
-                        "single_quote_scalar" | "double_quote_scalar" => {
-                            let mut chars = key_value.chars();
-                            chars.next();
-                            chars.next_back();
-                            chars.as_str()
+                match scalar {
+                    Some(scalar) => {
+                        let key_value = scalar
+                            .utf8_text(self.source().as_bytes())
+                            .expect("impossible: value for key should be UTF-8 by construction");
+
+                        match scalar.kind() {
+                            "single_quote_scalar" | "double_quote_scalar" => {
+                                let mut chars = key_value.chars();
+                                chars.next();
+                                chars.next_back();
+                                chars.as_str()
+                            }
+                            _ => key_value,
                         }
-                        _ => key_value,
                     }
+                    None => key
+                        .utf8_text(self.source().as_bytes())
+                        .expect("impossible: key should be UTF-8 by construction"),
                 }
-                None => key
-                    .utf8_text(self.source().as_bytes())
-                    .expect("impossible: key should be UTF-8 by construction"),
             };
 
             if key_value == expected {
@@ -956,22 +1003,10 @@ impl Document {
             // `flow_node` looks like `- a`
             // `flow_pair` looks like `[a: b]`
             //
-            // From here, we need to peek inside each and see if it's
-            // an alias. If it is, we expand the alias; otherwise, we
-            // just keep the child as-is.
-            if child.named_child(0).map(|c| c.kind()) == Some("alias") {
-                let alias_name = &child
-                    .utf8_text(self.source().as_bytes())
-                    .expect("impossible: alias name should be UTF-8 by construction")[1..];
-                let anchor_map = self.tree.borrow_dependent();
-                let aliased_node = anchor_map
-                    .get(alias_name)
-                    .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?;
-
-                children.extend(self.flatten_sequence(aliased_node)?);
-            } else {
-                children.push(child);
-            }
+            // Aliases are drop-in replacements for their anchored values,
+            // so we just keep the child as-is. The alias will be resolved
+            // during descent when we navigate into it.
+            children.push(child);
         }
 
         Ok(children)
@@ -1006,7 +1041,7 @@ mod tests {
         let route = route!("foo", "bar", "baz");
         assert_eq!(
             route.parent().unwrap().route,
-            [Component::Key("foo"), Component::Key("bar")]
+            [Component::Key("foo".into()), Component::Key("bar".into())]
         );
 
         let route = route!("foo");
@@ -1058,11 +1093,11 @@ baz: quux
         assert_eq!(
             route.route,
             [
-                Component::Key("foo"),
-                Component::Key("bar"),
+                Component::Key("foo".into()),
+                Component::Key("bar".into()),
                 Component::Index(1),
                 Component::Index(123),
-                Component::Key("lol"),
+                Component::Key("lol".into()),
             ]
         )
     }
@@ -1083,10 +1118,10 @@ baz:
         let doc = Document::new(doc).unwrap();
         let route = Route {
             route: vec![
-                Component::Key("baz"),
-                Component::Key("sub"),
-                Component::Key("keys"),
-                Component::Key("abc"),
+                Component::Key("baz".into()),
+                Component::Key("sub".into()),
+                Component::Key("keys".into()),
+                Component::Key("abc".into()),
                 Component::Index(2),
                 Component::Index(3),
             ],
@@ -1131,7 +1166,7 @@ bar: # outside
 
         // Querying the root gives us all comments underneath it.
         let route = Route {
-            route: vec![Component::Key("root")],
+            route: vec![Component::Key("root".into())],
         };
         let feature = doc.query_pretty(&route).unwrap();
         assert_eq!(
@@ -1146,8 +1181,8 @@ bar: # outside
         // even though it's above it on the AST.
         let route = Route {
             route: vec![
-                Component::Key("root"),
-                Component::Key("e"),
+                Component::Key("root".into()),
+                Component::Key("e".into()),
                 Component::Index(1),
             ],
         };
@@ -1210,85 +1245,85 @@ nested:
 
         for (route, expected_kind) in &[
             (
-                vec![Component::Key("block-mapping")],
+                vec![Component::Key("block-mapping".into())],
                 FeatureKind::BlockMapping,
             ),
             (
-                vec![Component::Key("block-mapping-quoted")],
+                vec![Component::Key("block-mapping-quoted".into())],
                 FeatureKind::BlockMapping,
             ),
             (
-                vec![Component::Key("block-sequence")],
+                vec![Component::Key("block-sequence".into())],
                 FeatureKind::BlockSequence,
             ),
             (
-                vec![Component::Key("block-sequence-quoted")],
+                vec![Component::Key("block-sequence-quoted".into())],
                 FeatureKind::BlockSequence,
             ),
             (
-                vec![Component::Key("flow-mapping")],
+                vec![Component::Key("flow-mapping".into())],
                 FeatureKind::FlowMapping,
             ),
             (
-                vec![Component::Key("flow-sequence")],
+                vec![Component::Key("flow-sequence".into())],
                 FeatureKind::FlowSequence,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(0)],
+                vec![Component::Key("scalars".into()), Component::Index(0)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(1)],
+                vec![Component::Key("scalars".into()), Component::Index(1)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(2)],
+                vec![Component::Key("scalars".into()), Component::Index(2)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(3)],
+                vec![Component::Key("scalars".into()), Component::Index(3)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(4)],
+                vec![Component::Key("scalars".into()), Component::Index(4)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(5)],
+                vec![Component::Key("scalars".into()), Component::Index(5)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(6)],
+                vec![Component::Key("scalars".into()), Component::Index(6)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(7)],
+                vec![Component::Key("scalars".into()), Component::Index(7)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(8)],
+                vec![Component::Key("scalars".into()), Component::Index(8)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(9)],
+                vec![Component::Key("scalars".into()), Component::Index(9)],
                 FeatureKind::Scalar,
             ),
             (
-                vec![Component::Key("scalars"), Component::Index(10)],
+                vec![Component::Key("scalars".into()), Component::Index(10)],
                 FeatureKind::Scalar,
             ),
             (
                 vec![
-                    Component::Key("nested"),
-                    Component::Key("foo"),
+                    Component::Key("nested".into()),
+                    Component::Key("foo".into()),
                     Component::Index(2),
                 ],
                 FeatureKind::FlowMapping,
             ),
             (
                 vec![
-                    Component::Key("nested"),
-                    Component::Key("foo"),
+                    Component::Key("nested".into()),
+                    Component::Key("foo".into()),
                     Component::Index(3),
                 ],
                 FeatureKind::FlowMapping,
@@ -1301,14 +1336,37 @@ nested:
     }
 
     #[test]
-    fn test_reject_duplicate_anchors() {
-        let anchors = r#"
-foo: &dup-anchor bar
-baz: &dup-anchor quux
-        "#;
+    fn test_duplicate_anchors() {
+        let test_cases: Vec<(&str, Vec<(Route, &str)>)> = vec![
+            // Same anchor name defined twice, alias resolves based on document position
+            (
+                "first: &x value1\nsecond: &x value2\nref: *x",
+                vec![(route!("ref"), "value2")],
+            ),
+            // Alias before redefinition sees old value, alias after sees new value
+            (
+                "a1: &x old_x\nref_x: *x\na2: &x new_x\nref_x2: *x",
+                vec![(route!("ref_x"), "old_x"), (route!("ref_x2"), "new_x")],
+            ),
+            // Inline flow sequence with duplicate anchor
+            (
+                "foo: [&x x, *x, &x y, *x]",
+                vec![
+                    (route!("foo", 0), "x"),
+                    (route!("foo", 1), "x"),
+                    (route!("foo", 2), "y"),
+                    (route!("foo", 3), "y"),
+                ],
+            ),
+        ];
 
-        let result = Document::new(anchors);
-        assert!(matches!(result, Err(QueryError::DuplicateAnchor(_))));
+        for (yaml, queries) in test_cases {
+            let doc = Document::new(yaml).unwrap();
+            for (route, expected) in queries {
+                let feature = doc.query_exact(&route).unwrap().unwrap();
+                assert_eq!(doc.extract(&feature), expected, "YAML: {}", yaml);
+            }
+        }
     }
 
     #[test]
@@ -1323,7 +1381,136 @@ foo: &foo-anchor
         let anchor_map = doc.tree.borrow_dependent();
 
         assert_eq!(anchor_map.len(), 2);
-        assert_eq!(anchor_map["foo-anchor"].kind(), "block_mapping");
-        assert_eq!(anchor_map["bar-anchor"].kind(), "block_mapping");
+        // Each anchor name maps to a BTreeMap of positions -> nodes
+        assert_eq!(anchor_map["foo-anchor"].len(), 1);
+        assert_eq!(anchor_map["bar-anchor"].len(), 1);
+        assert_eq!(
+            anchor_map["foo-anchor"].values().next().unwrap().kind(),
+            "block_mapping"
+        );
+        assert_eq!(
+            anchor_map["bar-anchor"].values().next().unwrap().kind(),
+            "block_mapping"
+        );
+    }
+
+    #[test]
+    fn test_sequence_alias_not_flattened() {
+        // Backstop test for #1551
+        let doc = r#"
+defaults: &defaults
+  - a
+  - b
+  - c
+list:
+  - *defaults
+  - d
+  - e
+        "#;
+
+        let doc = Document::new(doc).unwrap();
+
+        for (route, expected_kind, expected_value) in [
+            (
+                route!("list", 0),
+                FeatureKind::BlockSequence,
+                "- a\n  - b\n  - c",
+            ),
+            (route!("list", 1), FeatureKind::Scalar, "d"),
+            (route!("list", 2), FeatureKind::Scalar, "e"),
+        ] {
+            let feature = doc.query_exact(&route).unwrap().unwrap();
+            assert_eq!(feature.kind(), expected_kind);
+            assert_eq!(doc.extract(&feature).trim(), expected_value);
+        }
+
+        assert!(matches!(
+            doc.query_exact(&route!("list", 3)),
+            Err(QueryError::ExhaustedList(3, 3))
+        ));
+    }
+
+    #[test]
+    fn test_inline_anchor_alias_patterns() {
+        let test_cases: Vec<(&str, Vec<(Route, &str)>)> = vec![
+            // Basic flow sequence cases
+            (
+                "foo: [&x v, *x]",
+                vec![(route!("foo", 0), "v"), (route!("foo", 1), "v")],
+            ),
+            (
+                "foo: [a, &x v, *x]",
+                vec![
+                    (route!("foo", 0), "a"),
+                    (route!("foo", 1), "v"),
+                    (route!("foo", 2), "v"),
+                ],
+            ),
+            (
+                "foo: [&a 1, &b 2, *a, *b]",
+                vec![
+                    (route!("foo", 0), "1"),
+                    (route!("foo", 1), "2"),
+                    (route!("foo", 2), "1"),
+                    (route!("foo", 3), "2"),
+                ],
+            ),
+            // Flow mapping cases
+            (
+                "top: { &a foo: &b bar, nested: *a, other: *b }",
+                vec![
+                    (route!("top", "foo"), "bar"),
+                    (route!("top", "nested"), "foo"),
+                    (route!("top", "other"), "bar"),
+                ],
+            ),
+            (
+                "top: { &a k1: v1, &b k2: v2, ref1: *a, ref2: *b }",
+                vec![
+                    (route!("top", "k1"), "v1"),
+                    (route!("top", "k2"), "v2"),
+                    (route!("top", "ref1"), "k1"),
+                    (route!("top", "ref2"), "k2"),
+                ],
+            ),
+            // Anchor on complex values
+            (
+                "top: { seq: &x [a, b], ref: *x }",
+                vec![
+                    (route!("top", "seq", 0), "a"),
+                    (route!("top", "ref", 1), "b"),
+                ],
+            ),
+            (
+                "top: { map: &x {a: 1}, ref: *x }",
+                vec![
+                    (route!("top", "map", "a"), "1"),
+                    (route!("top", "ref", "a"), "1"),
+                ],
+            ),
+            // Quoted keys with anchors (alias returns the quoted form)
+            (
+                r#"top: { &x "foo": bar, nested: *x }"#,
+                vec![
+                    (route!("top", "foo"), "bar"),
+                    (route!("top", "nested"), "\"foo\""),
+                ],
+            ),
+            (
+                "top: { &x 'foo': bar, nested: *x }",
+                vec![
+                    (route!("top", "foo"), "bar"),
+                    (route!("top", "nested"), "'foo'"),
+                ],
+            ),
+        ];
+
+        for (yaml, queries) in test_cases {
+            let doc = Document::new(yaml).unwrap();
+            for (route, expected) in queries {
+                let feature = doc.query_exact(&route).unwrap().unwrap();
+                assert_eq!(doc.extract(&feature), expected, "YAML: {}", yaml);
+            }
+        }
     }
 }

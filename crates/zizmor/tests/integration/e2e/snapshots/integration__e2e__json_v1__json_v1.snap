@@ -1,6 +1,5 @@
 ---
 source: crates/zizmor/tests/integration/e2e/json_v1.rs
-assertion_line: 17
 expression: output
 ---
 [
@@ -237,7 +236,7 @@ expression: output
     "url": "https://docs.zizmor.sh/audits/#unpinned-uses",
     "determinations": {
       "confidence": "High",
-      "severity": "Medium",
+      "severity": "High",
       "persona": "Regular"
     },
     "locations": [
@@ -249,7 +248,7 @@ expression: output
               "given_path": "@@INPUT@@"
             }
           },
-          "annotation": "action is not pinned to a tag, branch, or hash ref",
+          "annotation": "action is not pinned to a hash (required by blanket policy)",
           "route": {
             "route": [
               {
@@ -262,32 +261,39 @@ expression: output
                 "Key": "steps"
               },
               {
-                "Index": 1
+                "Index": 0
               },
               {
                 "Key": "uses"
               }
             ]
           },
-          "feature_kind": "Normal",
+          "feature_kind": {
+            "Subfeature": {
+              "after": 0,
+              "fragment": {
+                "Raw": "actions/checkout@v3"
+              }
+            }
+          },
           "kind": "Primary"
         },
         "concrete": {
           "location": {
             "start_point": {
-              "row": 20,
-              "column": 8
+              "row": 15,
+              "column": 14
             },
             "end_point": {
-              "row": 20,
-              "column": 29
+              "row": 15,
+              "column": 33
             },
             "offset_span": {
-              "start": 406,
-              "end": 427
+              "start": 301,
+              "end": 320
             }
           },
-          "feature": "uses: docker://ubuntu",
+          "feature": "actions/checkout@v3",
           "comments": []
         }
       }
@@ -312,7 +318,77 @@ expression: output
               "given_path": "@@INPUT@@"
             }
           },
-          "annotation": "action is not pinned to a tag, branch, or hash ref",
+          "annotation": "image is not pinned to a tag, branch, or hash ref",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "unpinned-0"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 1
+              },
+              {
+                "Key": "uses"
+              }
+            ]
+          },
+          "feature_kind": {
+            "Subfeature": {
+              "after": 0,
+              "fragment": {
+                "Raw": "ubuntu"
+              }
+            }
+          },
+          "kind": "Primary"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 20,
+              "column": 23
+            },
+            "end_point": {
+              "row": 20,
+              "column": 29
+            },
+            "offset_span": {
+              "start": 421,
+              "end": 427
+            }
+          },
+          "feature": "docker://ubuntu",
+          "comments": []
+        }
+      }
+    ],
+    "ignored": false
+  },
+  {
+    "ident": "unpinned-uses",
+    "desc": "unpinned action reference",
+    "url": "https://docs.zizmor.sh/audits/#unpinned-uses",
+    "determinations": {
+      "confidence": "High",
+      "severity": "Medium",
+      "persona": "Regular"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "prefix": null,
+              "given_path": "@@INPUT@@"
+            }
+          },
+          "annotation": "image is not pinned to a tag, branch, or hash ref",
           "route": {
             "route": [
               {
@@ -332,25 +408,32 @@ expression: output
               }
             ]
           },
-          "feature_kind": "Normal",
+          "feature_kind": {
+            "Subfeature": {
+              "after": 0,
+              "fragment": {
+                "Raw": "ghcr.io/pypa/gh-action-pypi-publish"
+              }
+            }
+          },
           "kind": "Primary"
         },
         "concrete": {
           "location": {
             "start_point": {
               "row": 26,
-              "column": 8
+              "column": 23
             },
             "end_point": {
               "row": 26,
               "column": 58
             },
             "offset_span": {
-              "start": 531,
+              "start": 546,
               "end": 581
             }
           },
-          "feature": "uses: docker://ghcr.io/pypa/gh-action-pypi-publish",
+          "feature": "docker://ghcr.io/pypa/gh-action-pypi-publish",
           "comments": []
         }
       }

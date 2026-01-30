@@ -26,14 +26,14 @@ audit_meta!(
 );
 
 impl Obfuscation {
-    fn obfuscated_repo_uses(&self, uses: &RepositoryUses) -> Vec<&str> {
+    fn obfuscated_repo_uses(&self, uses: &RepositoryUses) -> Vec<&'static str> {
         let mut annotations = vec![];
 
         // Users can put all kinds of nonsense in `uses:` clauses, which
         // GitHub happily interprets but otherwise gums up pattern matching
         // in audits like unpinned-uses, forbidden-uses, and cache-poisoning.
         // We check for some of these forms of nonsense here and report them.
-        if let Some(subpath) = uses.subpath.as_deref() {
+        if let Some(subpath) = uses.subpath() {
             for component in subpath.split('/') {
                 match component {
                     // . and .. are valid in uses subpaths, but are impossible to
@@ -60,7 +60,7 @@ impl Obfuscation {
 
     /// Normalizes a uses path by removing unnecessary components like empty slashes, `.`, and `..`.
     fn normalize_uses_path(&self, uses: &RepositoryUses) -> Option<String> {
-        let subpath = uses.subpath.as_deref()?;
+        let subpath = uses.subpath()?;
 
         let mut components = Vec::new();
         for component in subpath.split('/') {
@@ -83,14 +83,19 @@ impl Obfuscation {
 
         // If all components were removed, the subpath should be empty
         if components.is_empty() {
-            Some(format!("{}/{}@{}", uses.owner, uses.repo, uses.git_ref))
+            Some(format!(
+                "{}/{}@{}",
+                uses.owner(),
+                uses.repo(),
+                uses.git_ref()
+            ))
         } else {
             Some(format!(
                 "{}/{}/{}@{}",
-                uses.owner,
-                uses.repo,
+                uses.owner(),
+                uses.repo(),
                 components.join("/"),
-                uses.git_ref
+                uses.git_ref()
             ))
         }
     }
@@ -146,7 +151,7 @@ impl Obfuscation {
     fn obfuscated_exprs<'src>(
         &self,
         expr: &SpannedExpr<'src>,
-    ) -> Vec<(&str, Origin<'src>, Persona)> {
+    ) -> Vec<(&'static str, Origin<'src>, Persona)> {
         let mut annotations = vec![];
 
         // Check for some common expression obfuscation patterns.
@@ -190,7 +195,11 @@ impl Obfuscation {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        if let Some(Uses::Repository(uses)) = step.uses() {
+        if let crate::models::StepBodyCommon::Uses {
+            uses: Uses::Repository(uses),
+            ..
+        } = step.body()
+        {
             let obfuscated_annotations = self.obfuscated_repo_uses(uses);
             if !obfuscated_annotations.is_empty() {
                 let mut finding_builder = Self::finding()
@@ -372,7 +381,8 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result, @r"
+
         name: Test Workflow
         on: push
 
@@ -381,7 +391,7 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - uses: actions/checkout@v4
-        "#);
+        ");
     }
 
     #[tokio::test]
@@ -398,7 +408,8 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result, @r"
+
         name: Test Workflow
         on: push
 
@@ -407,7 +418,7 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - uses: github/codeql-action/init@v2
-        "#);
+        ");
     }
 
     #[tokio::test]
@@ -424,7 +435,8 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r#"
+        insta::assert_snapshot!(result, @r"
+
         name: Test Workflow
         on: push
 
@@ -433,6 +445,6 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - uses: actions/cache/save@v4
-        "#);
+        ");
     }
 }

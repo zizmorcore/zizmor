@@ -13,11 +13,11 @@ jobs:
     steps:
       # TRUE POSITIVE: package-manager-cache enabled by default
       - name: true-positive-default
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
 
       # TRUE POSITIVE: enable-cache explicitly set to true
       - name: true-positive-explicit
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           package-manager-cache: true
 
@@ -27,7 +27,7 @@ jobs:
     steps:
       # TRUE NEGATIVE: package-manager-cache explicitly set to false
       - name: true-negative
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           package-manager-cache: false
 

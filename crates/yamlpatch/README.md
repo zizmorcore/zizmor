@@ -41,16 +41,18 @@ human review.
 
 ## Operations
 
-`yamlpatch` supports several types of patch operations:
+`yamlpatch` supports the following patch operations:
 
 - **Replace**: Replace a value at a specific path
 - **Add**: Add new key-value pairs to mappings
 - **Remove**: Remove keys or elements
 - **MergeInto**: Merge values into existing mappings
+- **Append**: Append items to block sequences
+- **ReplaceComment**: Replace comments associated with features
+- **EmplaceComment**: Insert or update comments associated with features
 - **RewriteFragment**: Rewrite portions of string values (useful for templating)
 
-Each operation is designed to work with the existing document structure
-and formatting, making minimal changes while achieving the desired result.
+Each operation preserves the document's formatting and structure (as best-effort).
 
 ## License
 

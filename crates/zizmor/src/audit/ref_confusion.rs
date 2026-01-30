@@ -43,12 +43,12 @@ impl RefConfusion {
         // TODO: use a tokio JoinSet here?
         let branches_match = self
             .client
-            .has_branch(&uses.owner, &uses.repo, sym_ref)
+            .has_branch(uses.owner(), uses.repo(), sym_ref)
             .await
             .map_err(Self::err)?;
         let tags_match = self
             .client
-            .has_tag(&uses.owner, &uses.repo, sym_ref)
+            .has_tag(uses.owner(), uses.repo(), sym_ref)
             .await
             .map_err(Self::err)?;
 
@@ -158,7 +158,7 @@ impl Audit for RefConfusion {
                             .with_keys(["uses".into()])
                             .annotated(REF_CONFUSION_ANNOTATION),
                     )
-                    .build(step.action())
+                    .build(step)
                     .map_err(Self::err)?,
             );
         }

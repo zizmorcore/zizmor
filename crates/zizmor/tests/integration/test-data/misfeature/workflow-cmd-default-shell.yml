@@ -1,0 +1,17 @@
+name: workflow-cmd-default-shell
+
+on:
+  pull_request:
+
+permissions: {}
+
+defaults:
+  run:
+    shell: cmd
+
+jobs:
+  some-job:
+    runs-on: windows-latest
+    steps:
+      - name: say hi
+        run: echo hi

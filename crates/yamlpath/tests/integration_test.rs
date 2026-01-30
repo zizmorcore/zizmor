@@ -38,12 +38,12 @@ struct Testcase {
 
 impl<'a> From<&'a TestcaseQuery> for Route<'a> {
     fn from(query: &'a TestcaseQuery) -> Self {
-        let mut components = vec![Component::Key("testcase")];
+        let mut components = vec![Component::Key("testcase".into())];
 
         for component in &query.query {
             match component {
                 QueryComponent::Index(idx) => components.push(Component::Index(*idx)),
-                QueryComponent::Key(key) => components.push(Component::Key(key)),
+                QueryComponent::Key(key) => components.push(Component::Key(key.into())),
             }
         }
 

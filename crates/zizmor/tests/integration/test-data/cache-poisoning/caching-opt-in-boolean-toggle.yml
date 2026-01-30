@@ -21,6 +21,6 @@ jobs:
           cache: true
 
       - name: Publish on NuGet
-        run: |
+        run: | # zizmor: ignore[use-trusted-publishing]
           dotnet build
           dotnet nuget push My.Tool.1.0.0.nupkg --api-key ${{ secrets.NUGET_PUBLISH_KEY }} --source https://api.nuget.org/v3/index.json

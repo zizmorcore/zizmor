@@ -1,8 +1,0 @@
-# zizmor.yml config file with an invalid schema
-
-rules:
-  forbidden-uses:
-    config:
-      allow:
-        # invalid repository uses pattern
-        - "*/*"

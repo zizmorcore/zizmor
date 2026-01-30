@@ -349,6 +349,8 @@ pub enum AllowDeny {
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum PackageEcosystem {
+    /// `bazel`
+    Bazel,
     /// `bun`
     Bun,
     /// `bundler`
@@ -369,6 +371,8 @@ pub enum PackageEcosystem {
     DotnetSdk,
     /// `helm`
     Helm,
+    /// `julia`
+    Julia,
     /// `elm`
     Elm,
     /// `gitsubmodule`
@@ -387,6 +391,8 @@ pub enum PackageEcosystem {
     Npm,
     /// `nuget`
     Nuget,
+    /// `opentofu`
+    Opentofu,
     /// `pip`
     Pip,
     /// `pub`

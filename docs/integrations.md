@@ -28,17 +28,17 @@ jobs:
     name: Run zizmor 🌈
     runs-on: ubuntu-latest
     permissions:
-      security-events: write
-      contents: read # only needed for private repos
-      actions: read # only needed for private repos
+      security-events: write # Required for upload-sarif (used by zizmor-action) to upload SARIF files.
+      contents: read         # Only needed for private repos. Needed to clone the repo.
+      actions: read          # Only needed for private repos. Needed for upload-sarif to read workflow run info.
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
 
       - name: Run zizmor 🌈
-        uses: zizmorcore/zizmor-action@e673c3917a1aef3c65c972347ed84ccd013ecda4 # v0.2.0
+        uses: zizmorcore/zizmor-action@135698455da5c3b3e55f73f4419e481ab68cdd95 # v0.4.1
 ```
 
 See the action's [`inputs` documentation][inputs-documentation] for
@@ -89,17 +89,17 @@ GitHub Actions setup:
         name: zizmor latest via PyPI
         runs-on: ubuntu-latest
         permissions:
-          security-events: write # needed for SARIF uploads
-          contents: read # only needed for private repos
-          actions: read # only needed for private repos
+          security-events: write # Required for upload-sarif (used by zizmor-action) to upload SARIF files.
+          contents: read         # Only needed for private repos. Needed to clone the repo.
+          actions: read          # Only needed for private repos. Needed for upload-sarif to read workflow run info.
         steps:
           - name: Checkout repository
-            uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+            uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
             with:
               persist-credentials: false
 
           - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
+            uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
 
           - name: Run zizmor 🌈
             run: uvx zizmor --format=sarif . > results.sarif # (2)!
@@ -107,7 +107,7 @@ GitHub Actions setup:
               GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
 
           - name: Upload SARIF file
-            uses: github/codeql-action/upload-sarif@4e94bd11f71e507f7f87df81788dff88d1dacbfb # v4.31.0
+            uses: github/codeql-action/upload-sarif@cdefb33c0f6224e58673d9004f47f7cb3e328b89 # v4.31.10
             with:
               sarif_file: results.sarif
               category: zizmor
@@ -125,7 +125,7 @@ GitHub Actions setup:
     !!! important
 
         When using `--format=sarif`, `zizmor` does not use its
-        [exit codes](usage.md/#exit-codes) to signal the presence of findings. As a result,
+        [exit codes](usage.md#exit-codes) to signal the presence of findings. As a result,
         `zizmor` will always exit with code `0` even if findings are present,
         **unless** an internal error occurs during the audit.
 
@@ -150,7 +150,7 @@ GitHub Actions setup:
     ```yaml title="zizmor.yml"
     name: GitHub Actions Security Analysis with zizmor 🌈
 
-    on:Use with
+    on:
       push:
         branches: ["main"]
       pull_request:
@@ -161,14 +161,13 @@ GitHub Actions setup:
         name: zizmor latest via PyPI
         runs-on: ubuntu-latest
         permissions:
-          contents: read # only needed for private repos
-          actions: read # only needed for private repos
+          contents: read # Only needed for private repos. Needed to clone the repo.
         steps:
           - name: Checkout repository
-            uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+            uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
           - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
+            uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
 
           - name: Run zizmor 🌈
             run: uvx zizmor --format=github . # (2)!
@@ -249,14 +248,16 @@ zizmor --lsp
 In this mode, `zizmor` takes no other arguments and will communicate
 with the editor over `stdin` and `stdout`. No other transports are supported.
 
-## `pre-commit`
+## VCS integrations
 
+### `pre-commit`
+  
 `zizmor` can be used with the [`pre-commit`](https://pre-commit.com/) framework.
 To do so, add the following to your `.pre-commit-config.yaml` `#!yaml repos:` section:
 
 ```yaml
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
-  rev: v1.16.3 # (1)!
+  rev: v1.22.0 # (1)!
   hooks:
   - id: zizmor
 ```
@@ -273,6 +274,32 @@ This will run `zizmor` on every commit.
 
     See [`pre-commit`](https://pre-commit.com/) documentation for more
     information on how to configure `pre-commit`.
+
+!!! tip
+  
+    `zizmor-pre-commit` also works with [`prek`](https://github.com/j178/prek),
+    a rewrite of `pre-commit` in Rust.
+
+### `hk`
+
+`zizmor` is integrated into the [`hk` git hook manager](https://github.com/jdx/hk).
+
+See [`hk` - Built-in Linters - `zizmor`](https://hk.jdx.dev/gen/builtins.html#zizmor)
+for more information.
+
+## Linter frameworks
+
+!!! important
+
+    These are third-party integrations; please report any issues
+    you encounter to the appropriate upstream project.
+
+### super-linter
+
+You can use `zizmor` with @super-linter/super-linter.
+
+Refer to the [super-linter documentation](https://github.com/super-linter/super-linter)
+for additional details.
 
 ## Tab completion { #integration-tab-completion }
 

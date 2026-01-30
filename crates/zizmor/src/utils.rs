@@ -1,19 +1,12 @@
 //! Helper routines.
 
-use anyhow::{Context as _, Error, anyhow};
+use anyhow::{Error, anyhow};
 use camino::Utf8Path;
 use github_actions_expressions::context::{Context, ContextPattern};
 use github_actions_models::common::{Env, expr::LoE};
-use jsonschema::{
-    BasicOutput::{Invalid, Valid},
-    Validator,
-    output::{ErrorDescription, OutputUnit},
-    validator_for,
-};
-use std::{
-    collections::VecDeque,
-    ops::{Deref, Range},
-};
+use jsonschema::ErrorEntry;
+use jsonschema::{Validator, validator_for};
+use std::ops::{Deref, Range};
 use std::{fmt::Write, sync::LazyLock};
 
 use crate::{audit::AuditInput, models::AsDocument, registry::input::CollectionError};
@@ -43,6 +36,12 @@ pub(crate) static DEPENDABOT_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
     )
     .expect("internal error: failed to load dependabot schema")
 });
+
+pub(crate) static BASH: LazyLock<tree_sitter::Language> =
+    LazyLock::new(|| tree_sitter_bash::LANGUAGE.into());
+
+pub(crate) static PWSH: LazyLock<tree_sitter::Language> =
+    LazyLock::new(|| tree_sitter_powershell::LANGUAGE.into());
 
 macro_rules! pat {
     ($pat:expr) => {
@@ -304,11 +303,11 @@ pub(crate) static DEFAULT_ENVIRONMENT_VARIABLES: &[(
     ),
 ];
 
-fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Error {
+fn parse_validation_errors(errors: Vec<ErrorEntry<'_>>) -> Error {
     let mut message = String::new();
 
     for error in errors {
-        let description = error.error_description().to_string();
+        let description = error.error.to_string();
         // HACK: error descriptions are sometimes a long rats' nest
         // of JSON objects. We should render this in a palatable way
         // but doing so is nontrivial, so we just skip them for now.
@@ -316,7 +315,7 @@ fn parse_validation_errors(errors: VecDeque<OutputUnit<ErrorDescription>>) -> Er
         // the error for an unmatched "oneOf", so these errors are
         // typically less useful anyways.
         if !description.starts_with("{") {
-            let location = error.instance_location().as_str();
+            let location = error.instance_location.as_str();
             if location.is_empty() {
                 writeln!(message, "{description}").expect("I/O on a String failed");
             } else {
@@ -350,10 +349,16 @@ where
             // to distinguish between syntax and semantic errors,
             // but serde-yaml doesn't give us an API to do that.
             // To approximate it, we re-parse the input as a
-            // `Value` and use that as an oracle -- a successful
+            // `serde_yaml::Mapping`, then convert that `serde_yaml::Mapping`
+            // into a `serde_json::Value` and use it as an oracle -- a successful
             // re-parse indicates that the input is valid YAML and
             // that our error is semantic, while a failed re-parse
             // indicates a syntax error.
+            //
+            // We need to round-trip through a `serde_yaml::Mapping` to ensure that
+            // all of YAML's validity rules are preserved -- directly deserializing
+            // into a `serde_json::Value` would miss some YAML-specific checks,
+            // like duplicate keys within mappings. See #1395 for an example of this.
             //
             // We do this in a nested fashion to avoid re-parsing
             // the input twice if we can help it, and because the
@@ -363,21 +368,26 @@ where
             // See: https://github.com/dtolnay/serde-yaml/issues/170
             // See: https://github.com/dtolnay/serde-yaml/issues/395
 
-            match serde_yaml::from_str(contents) {
+            match serde_yaml::from_str::<serde_yaml::Mapping>(contents) {
                 // We know we have valid YAML, so one of two things happened here:
                 // 1. The input is semantically valid, but we have a bug in
                 //    `github-actions-models`.
                 // 2. The input is semantically invalid, and the user
                 //    needs to fix it.
                 // We the JSON schema `validator` to separate these.
-                Ok(raw_value) => match validator.apply(&raw_value).basic() {
-                    Valid(_) => Err(e)
-                        .context("this suggests a bug in zizmor; please report it!")
-                        .map_err(CollectionError::Model),
-                    Invalid(errors) => {
+                Ok(raw_value) => {
+                    let evaluation = validator.evaluate(
+                        &serde_json::to_value(&raw_value)
+                            .map_err(|e| CollectionError::Syntax(e.into()))?,
+                    );
+
+                    if evaluation.flag().valid {
+                        Err(e.into())
+                    } else {
+                        let errors = evaluation.iter_errors().collect::<Vec<_>>();
                         Err(CollectionError::Schema(parse_validation_errors(errors)))
                     }
-                },
+                }
                 // Syntax error.
                 Err(e) => Err(CollectionError::Syntax(e.into())),
             }
@@ -628,7 +638,6 @@ pub(crate) fn normalize_shell(shell: &str) -> &str {
 pub(crate) struct SpannedQuery {
     inner: tree_sitter::Query,
     pub(crate) span_idx: u32,
-    pub(crate) destination_idx: u32,
 }
 
 impl Deref for SpannedQuery {
@@ -639,20 +648,32 @@ impl Deref for SpannedQuery {
     }
 }
 
+pub(crate) fn bash_parser() -> tree_sitter::Parser {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&BASH)
+        .expect("internal error: failed to set bash language");
+    parser
+}
+
+pub(crate) fn pwsh_parser() -> tree_sitter::Parser {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&PWSH)
+        .expect("internal error: failed to set powershell language");
+    parser
+}
+
 impl SpannedQuery {
     pub(crate) fn new(query: &'static str, language: &tree_sitter::Language) -> Self {
         let query = tree_sitter::Query::new(language, query).expect("malformed query");
         let span_idx = query
             .capture_index_for_name("span")
             .expect("internal error: missing @span capture");
-        let destination_idx = query
-            .capture_index_for_name("destination")
-            .expect("internal error: missing @destination capture");
 
         Self {
             inner: query,
             span_idx,
-            destination_idx,
         }
     }
 }
@@ -687,6 +708,13 @@ pub(crate) mod once {
     pub(crate) use once;
     pub(crate) use static_regex;
     pub(crate) use warn_once;
+}
+
+/// Returns whether we are running in a CI environment.
+pub(crate) fn is_ci() -> bool {
+    static IS_CI: LazyLock<bool> = LazyLock::new(|| std::env::var_os("CI").is_some());
+
+    *IS_CI
 }
 
 #[cfg(test)]

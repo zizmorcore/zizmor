@@ -7,6 +7,7 @@
 
 use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
@@ -51,7 +52,7 @@ impl ImpostorCommit {
         Ok(
             match self
                 .client
-                .compare_commits(&uses.owner, &uses.repo, base_ref, head_ref)
+                .compare_commits(uses.owner(), uses.repo(), base_ref, head_ref)
                 .await
                 .map_err(Self::err)?
             {
@@ -76,13 +77,13 @@ impl ImpostorCommit {
             return Ok(false);
         };
 
-        // Fast path: almost all commit refs will be at the tip of
+        // Fastest path: almost all commit refs will be at the tip of
         // the branch or tag's history, so check those first.
         // Check tags before branches, since in practice version tags
         // are more commonly pinned.
         let tags = self
             .client
-            .list_tags(&uses.owner, &uses.repo)
+            .list_tags(uses.owner(), uses.repo())
             .await
             .map_err(Self::err)?;
 
@@ -94,7 +95,7 @@ impl ImpostorCommit {
 
         let branches = self
             .client
-            .list_branches(&uses.owner, &uses.repo)
+            .list_branches(uses.owner(), uses.repo())
             .await
             .map_err(Self::err)?;
 
@@ -104,6 +105,21 @@ impl ImpostorCommit {
             }
         }
 
+        // Fast path: attempt to use GitHub's undocumented `branch_commits`
+        // API to see if the commit is present in any branch/tag.
+        // There are no stabilitiy guarantees for this API, so we fall back
+        // to the slow(er) paths if it fails.
+        match self
+            .client
+            .branch_commits(uses.owner(), uses.repo(), head_ref)
+            .await
+        {
+            Ok(branch_commits) => return Ok(branch_commits.is_empty()),
+            Err(e) => tracing::warn!("fast path impostor check failed for {uses}: {e}"),
+        }
+
+        // Slow path: use GitHub's comparison API to check each branch and tag's
+        // history for presence of the commit.
         for branch in &branches {
             if self
                 .named_ref_contains_commit(uses, &format!("refs/heads/{}", &branch.name), head_ref)
@@ -131,7 +147,7 @@ impl ImpostorCommit {
     async fn get_highest_tag(&self, uses: &RepositoryUses) -> Result<Option<String>, AuditError> {
         let tags = self
             .client
-            .list_tags(&uses.owner, &uses.repo)
+            .list_tags(uses.owner(), uses.repo())
             .await
             .map_err(Self::err)?;
 
@@ -186,16 +202,16 @@ impl ImpostorCommit {
             Ok(None) => {
                 tracing::warn!(
                     "No tags found for {}/{}, cannot create fix",
-                    uses.owner,
-                    uses.repo
+                    uses.owner(),
+                    uses.repo()
                 );
                 return None;
             }
             Err(e) => {
                 tracing::error!(
                     "Failed to get latest tag for {}/{}: {}",
-                    uses.owner,
-                    uses.repo,
+                    uses.owner(),
+                    uses.repo(),
                     e
                 );
                 return None;
@@ -203,8 +219,8 @@ impl ImpostorCommit {
         };
 
         // Build the new uses string with the latest tag
-        let mut uses_slug = format!("{}/{}", uses.owner, uses.repo);
-        if let Some(subpath) = &uses.subpath {
+        let mut uses_slug = format!("{}/{}", uses.owner(), uses.repo());
+        if let Some(subpath) = &uses.subpath() {
             uses_slug.push_str(&format!("/{subpath}"));
         }
         let fixed_uses = format!("{uses_slug}@{latest_tag}");
@@ -256,8 +272,13 @@ impl Audit for ImpostorCommit {
                             let mut finding_builder = Self::finding()
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
+                                .add_location(step.location_with_grip())
                                 .add_location(
-                                    step.location().primary().annotated(IMPOSTOR_ANNOTATION),
+                                    step.location()
+                                        .with_keys(["uses".into()])
+                                        .subfeature(Subfeature::new(0, uses.raw()))
+                                        .primary()
+                                        .annotated(IMPOSTOR_ANNOTATION),
                                 );
 
                             if let Some(fix) = self.create_impostor_fix(uses, &step).await {
@@ -279,8 +300,14 @@ impl Audit for ImpostorCommit {
                         let mut finding_builder = Self::finding()
                             .severity(Severity::High)
                             .confidence(Confidence::High)
+                            .add_location(reusable.location_with_grip())
                             .add_location(
-                                reusable.location().primary().annotated(IMPOSTOR_ANNOTATION),
+                                reusable
+                                    .location()
+                                    .with_keys(["uses".into()])
+                                    .subfeature(Subfeature::new(0, uses.raw()))
+                                    .primary()
+                                    .annotated(IMPOSTOR_ANNOTATION),
                             );
 
                         if let Some(fix) = self.create_reusable_fix(uses, &reusable).await {
@@ -310,13 +337,20 @@ impl Audit for ImpostorCommit {
             let mut finding_builder = Self::finding()
                 .severity(Severity::High)
                 .confidence(Confidence::High)
-                .add_location(step.location().primary().annotated(IMPOSTOR_ANNOTATION));
+                .add_location(step.location_with_grip())
+                .add_location(
+                    step.location()
+                        .with_keys(["uses".into()])
+                        .subfeature(Subfeature::new(0, uses.raw()))
+                        .primary()
+                        .annotated(IMPOSTOR_ANNOTATION),
+                );
 
             if let Some(fix) = self.create_impostor_fix(uses, step).await {
                 finding_builder = finding_builder.fix(fix);
             }
 
-            findings.push(finding_builder.build(step.action()).map_err(Self::err)?);
+            findings.push(finding_builder.build(step).map_err(Self::err)?);
         }
 
         Ok(findings)
@@ -381,6 +415,7 @@ jobs:
             // Apply the fix and snapshot test the result
             let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
             assert_snapshot!(new_doc.source(), @r"
+
             name: Test Impostor Commit Fix
             on: push
             jobs:

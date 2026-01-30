@@ -19,18 +19,18 @@ jobs:
       pull-requests: write # for 'Leave comment' step
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Run zizmor
         run: |
           cargo run -- --format sarif . > results.sarif
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
+        uses: github/codeql-action/upload-sarif@cdefb33c0f6224e58673d9004f47f7cb3e328b89 # v4.31.10
         with:
           sarif_file: results.sarif
           category: zizmor-test-sarif-presentation
@@ -52,11 +52,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Run zizmor
         run: |
@@ -66,4 +66,28 @@ jobs:
             -- \
             --no-exit-codes \
             --format github \
+            crates/zizmor/tests/integration/test-data/several-vulnerabilities.yml
+
+  test-plain-presentation:
+    name: Test plain text presentation
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'test-plain-presentation')
+    permissions: {}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+
+      - name: Run zizmor
+        run: |
+          # Normally we'd want a workflow to fail if the audit fails,
+          # but we're only testing presentation here.
+          cargo run \
+            -- \
+            --no-exit-codes \
+            --format plain \
             crates/zizmor/tests/integration/test-data/several-vulnerabilities.yml

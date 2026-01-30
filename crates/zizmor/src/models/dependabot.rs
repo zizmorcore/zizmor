@@ -69,7 +69,7 @@ impl Dependabot {
     pub(crate) fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
             key: &self.key,
-            annotation: "this config".to_string(),
+            annotation: "this config".into(),
             link: None,
             route: Default::default(),
             feature_kind: SymbolicFeature::Normal,
@@ -131,7 +131,7 @@ impl<'doc> Locatable<'doc> for Update<'doc> {
             .annotated("this update rule")
     }
 
-    fn location_with_name(&self) -> SymbolicLocation<'doc> {
+    fn location_with_grip(&self) -> SymbolicLocation<'doc> {
         self.location()
             .with_keys(["package-ecosystem".into()])
             .annotated("this ecosystem")

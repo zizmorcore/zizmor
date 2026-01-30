@@ -1,10 +1,10 @@
 use github_actions_models::workflow::job::Secrets;
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, location::Locatable as _},
-    models::workflow::JobExt as _,
 };
 
 pub(crate) struct SecretsInherit;
@@ -38,6 +38,7 @@ impl Audit for SecretsInherit {
                         job.location()
                             .primary()
                             .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, job.uses.raw()))
                             .annotated("this reusable workflow"),
                     )
                     .add_location(
@@ -47,7 +48,7 @@ impl Audit for SecretsInherit {
                     )
                     .confidence(Confidence::High)
                     .severity(crate::finding::Severity::Medium)
-                    .build(job.parent())?,
+                    .build(job)?,
             );
         }
 

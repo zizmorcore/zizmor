@@ -10,20 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # trailing slash
-      - uses: actions/checkout/@v4
+      - uses: actions/checkout/@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       # many trailing slashes
-      - uses: actions/checkout////@v4
+      - uses: actions/checkout////@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       # pointless use of .
-      - uses: github/codeql-action/./init@v2
-      - uses: actions/checkout/.@v4
+      - uses: github/codeql-action/./init@b8d3b6e8af63cde30bdc382c0bc28114f4346c88 # v2.28.1
+      - uses: actions/checkout/.@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       # pointless use of ..
-      - uses: actions/cache/save/../save@v4
+      - uses: actions/cache/save/../save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
 
       # broken use of .. (no auto-fix)
-      - uses: actions/cache/../../save@v4
+      - uses: actions/cache/../../save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
 
   obfuscated-exprs:
     name: obfuscated-exprs

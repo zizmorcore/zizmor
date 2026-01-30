@@ -1,0 +1,15 @@
+# reproducer for https://github.com/zizmorcore/zizmor/issues/1395
+
+name: issue-1395
+on: workflow_dispatch
+jobs:
+  demo:
+    name: Demonstration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Duplicate env block breaks Zizmor
+        env:
+          FOO: foo
+        run: echo ...
+        env:
+          BAR: bar

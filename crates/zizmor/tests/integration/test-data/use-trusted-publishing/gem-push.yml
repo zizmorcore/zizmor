@@ -1,0 +1,22 @@
+on: [push]
+
+name: use-trusted-publishing
+
+jobs:
+  publish-1:
+    name: publish-1
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: vulnerable-1
+        run: gem push foo-0.1.0.gem
+
+      - name: vulnerable-2
+        run: bundle exec gem push foo-0.1.0.gem
+
+      # multiline bash commands are detected
+      - name: vulnerable-3
+        run: |
+          gem \
+            push \
+            foo-0.1.0.gem

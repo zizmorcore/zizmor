@@ -4,11 +4,11 @@ all:
 
 .PHONY: site
 site:
-	uv run --only-group docs mkdocs build
+	uv run --only-group docs zensical build --clean
 
 .PHONY: site-live
 site-live:
-	uv run --only-group docs mkdocs serve
+	uv run --only-group docs zensical serve
 
 .PHONY: snippets
 snippets: trophies sponsors
@@ -42,6 +42,10 @@ codeql-injection-sinks: crates/zizmor/data/codeql-injection-sinks.json
 crates/zizmor/data/codeql-injection-sinks.json: support/codeql-injection-sinks.py
 	$< > $@
 
+.PHONY: archived-repos
+archived-repos:
+	support/archived-repos.py
+
 .PHONY: pinact
 pinact:
 	pinact run --update --verify
@@ -49,4 +53,8 @@ pinact:
 
 .PHONY: bench
 bench:
-	uv run bench/benchmark.py --offline
+	uv run --only-group=bench pytest bench/ --codspeed
+
+.PHONY: generate-schema
+generate-schema:
+	cargo run --features schema -- --generate-schema > support/zizmor.schema.json

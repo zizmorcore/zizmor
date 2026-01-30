@@ -1,0 +1,38 @@
+on: [push]
+
+name: use-trusted-publishing
+
+jobs:
+  nuget-push:
+    name: nuget-push
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: vulnerable-1
+        run: nuget push foo.nupkg
+
+      - name: vulnerable-2
+        run: nuget.exe push foo.nupkg
+
+      - name: vulnerable-3
+        run: dotnet nuget push foo.nupkg
+
+  true-negatives:
+    name: true-negatives
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - name: NuGet Login
+        uses: NuGet/login@d22cc5f58ff5b88bf9bd452535b4335137e24544
+        with:
+          user: my-nuget-username
+
+      - name: Push package
+        run: |
+          dotnet nuget push mypkg.nupkg \
+            --api-key "${NUGET_API_KEY}" \
+            --source https://www.nuget.org/api/v2/package
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}

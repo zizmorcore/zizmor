@@ -9,7 +9,7 @@ description: zizmor's configuration file and configurable behaviors.
     Configuration support was added in `v0.2.0`.
 
 `zizmor` supports a small amount of configuration via [YAML] config files,
-typically named `zizmor.yml`.
+typically named `zizmor.yml` or `zizmor.yaml`.
 
 [YAML]: https://learnxinyminutes.com/docs/yaml/
 
@@ -41,9 +41,25 @@ typically named `zizmor.yml`.
     * File inputs (e.g. `zizmor path/to/workflow.yml`): `zizmor` performs
       directory discovery starting in the directory containing the given file.
 
-    * Directory inputs (e.g. `zizmor .`): `zizmor` looks for a `zizmor.yml` or
-      `.github/zizmor.yml` in the given directory or any parent, up to the
-      filesystem root or the first `.git` directory.
+    * Directory inputs (e.g. `zizmor .`): `zizmor` looks for a `zizmor.yml`
+      or `zizmor.yaml` file in the given directory, the `.github` child directory,
+      or any parent, up to the filesystem root or the first `.git` directory.
+      
+        !!! example
+        
+            Given an invocation like `zizmor ./repo/`, `zizmor` will attempt
+            to discover configuration files in the following order:
+            
+            1. `./repo/.github/zizmor.yml`
+            2. `./repo/.github/zizmor.yaml`
+            3. `./repo/zizmor.yml`
+            4. `./repo/zizmor.yaml`
+            5. `./repo/../.github/zizmor.yml`
+            6. `./repo/../.github/zizmor.yaml`
+            7. ...and so on, until the filesystem root or a `.git/` directory is found.
+            
+            
+            
 
         !!! note
 
@@ -82,7 +98,7 @@ Disables the audit entirely if `true`.
     alternatives:
 
     1. Ignoring specific findings via [`rules.<id>.ignore`](#rulesidignore).
-    1. Changing your [persona](./usage.md/#using-personas) to a less sensitive
+    1. Changing your [persona](./usage.md#using-personas) to a less sensitive
        one. For example, consider removing `--persona=pedantic`
        or `--persona=auditor` if you're using one of those.
 
@@ -128,7 +144,7 @@ entire file or entire line.
 !!! important
 
     Composite action findings cannot be ignored via `zizmor.yml` currently,
-    They can be ignored inline [with comments](./usage.md/#ignoring-results).
+    They can be ignored inline [with comments](./usage.md#ignoring-results).
 
 For example, here is a configuration file with two different audit ignore
 rule groups:

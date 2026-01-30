@@ -5,7 +5,7 @@ use serde::Deserialize;
 use serde_yaml::Value;
 
 use crate::common::expr::{BoE, LoE};
-use crate::common::{Env, If, Permissions, Uses, custom_error};
+use crate::common::{DockerUses, Env, If, Permissions, Uses, custom_error};
 
 use super::{Concurrency, Defaults};
 
@@ -162,7 +162,7 @@ pub struct Matrix {
 pub enum Container {
     Name(String),
     Container {
-        image: String,
+        image: LoE<DockerUses>,
         credentials: Option<DockerCredentials>,
         #[serde(default)]
         env: LoE<Env>,

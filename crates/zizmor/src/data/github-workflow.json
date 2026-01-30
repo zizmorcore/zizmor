@@ -351,6 +351,34 @@
         }
       ]
     },
+    "snapshot": {
+      "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idsnapshot",
+      "description": "You can use `jobs.<job_id>.snapshot` to generate a custom image.\nAdd the snapshot keyword to the job, using either the string syntax or mapping syntax as shown in https://docs.github.com/en/actions/how-tos/manage-runners/larger-runners/use-custom-images#generating-a-custom-image.\nEach job that includes the snapshot keyword creates a separate image. To generate only one image or image version, include all workflow steps in a single job. Each successful run of a job that includes the snapshot keyword creates a new version of that image.\nFor more information, see https://docs.github.com/en/actions/how-tos/manage-runners/larger-runners/use-custom-images.",
+      "oneOf": [
+        {
+          "$comment": "https://docs.github.com/en/actions/how-tos/manage-runners/larger-runners/use-custom-images#string-syntax",
+          "type": "string",
+          "description": "You can use the string syntax with `snapshot` to define the image name. This method creates a new image or adds a new version to an existing image with the same name. You cannot specify a version number using this syntax."
+        },
+        {
+          "$comment": "https://docs.github.com/en/actions/how-tos/manage-runners/larger-runners/use-custom-images#mapping-syntax",
+          "type": "object",
+          "additionalProperties": false,
+          "description": "You can use the mapping syntax with `snapshot` to define both the `image-name` and the optional `version`. When you specify a major version, the minor versioning automatically increments if that major version already exists. Patch versions are not supported.",
+          "properties": {
+            "image-name": {
+              "type": "string"
+            },
+            "version": {
+              "$comment": "https://docs.github.com/en/actions/how-tos/manage-runners/larger-runners/use-custom-images#specifying-a-version-in-your-workflow",
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+|\\*)?$"
+            }
+          },
+          "required": ["image-name"]
+        }
+      ]
+    },
     "step": {
       "type": "object",
       "additionalProperties": false,
@@ -622,6 +650,9 @@
         },
         "needs": {
           "$ref": "#/definitions/jobNeeds"
+        },
+        "snapshot": {
+          "$ref": "#/definitions/snapshot"
         },
         "permissions": {
           "$ref": "#/definitions/permissions"
@@ -932,7 +963,6 @@
           }
         }
       ],
-      "required": ["description"],
       "additionalProperties": false
     }
   },

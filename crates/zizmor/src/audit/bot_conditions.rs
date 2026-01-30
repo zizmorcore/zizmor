@@ -15,7 +15,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
-    models::workflow::{JobExt, Workflow},
+    models::workflow::{JobCommon, Workflow},
     utils::{self, ExtractedExpr},
 };
 use subfeature::Subfeature;
@@ -81,7 +81,7 @@ impl Audit for BotConditions {
         if let Some(If::Expr(expr)) = &job.r#if {
             conds.push((
                 expr,
-                job.location_with_name(),
+                job.location_with_grip(),
                 job.location().with_keys(["if".into()]),
             ));
         }
@@ -91,7 +91,7 @@ impl Audit for BotConditions {
             if let Some(If::Expr(expr)) = &step.r#if {
                 conds.push((
                     expr,
-                    step.location_with_name(),
+                    step.location_with_grip(),
                     step.location().with_keys(["if".into()]),
                 ));
             }
@@ -538,6 +538,7 @@ jobs:
                 }
 
                 insta::assert_snapshot!(document.source(), @r#"
+
                 name: Test Workflow
                 on:
                   pull_request_target:
@@ -588,6 +589,7 @@ jobs:
                     }
                 }
                 insta::assert_snapshot!(document.source(), @r#"
+
                 name: Test Workflow
                 on:
                   pull_request_target:
@@ -641,6 +643,7 @@ jobs:
 
                 // Verify it suggests comment.user.login for issue_comment events
                 insta::assert_snapshot!(document.source(), @r#"
+
                 name: Test Issue Comment
                 on: issue_comment
 
@@ -690,6 +693,7 @@ jobs:
 
                 // Verify it suggests review.user.login for pull_request_review events
                 insta::assert_snapshot!(document.source(), @r#"
+
                 name: Test PR Review
                 on: pull_request_review
 
@@ -739,6 +743,7 @@ jobs:
 
                 // Verify it suggests issue.user.login for issues events
                 insta::assert_snapshot!(document.source(), @r#"
+
                 name: Test Issues
                 on: issues
 
@@ -788,6 +793,7 @@ jobs:
 
                 // Verify it suggests release.author.login for release events
                 insta::assert_snapshot!(document.source(), @r#"
+
                 name: Test Release
                 on: release
 
@@ -836,6 +842,7 @@ jobs:
                 }
 
                 insta::assert_snapshot!(document.source(), @r#"
+
                 name: Test Create
                 on: create
 
@@ -885,6 +892,7 @@ jobs:
                 }
 
                 insta::assert_snapshot!(document.source(), @r#"
+
                 name: Test Workflow
                 on:
                   pull_request_target:

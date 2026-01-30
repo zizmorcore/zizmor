@@ -7,6 +7,10 @@
 # IDEs / Editors
 .idea
 .DS_STORE
+.zed/
 
 # pending snapshots
 .*.pending-snap
+
+# benchmarks
+.codspeed/

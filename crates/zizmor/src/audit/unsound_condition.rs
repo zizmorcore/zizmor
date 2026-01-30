@@ -6,7 +6,7 @@ use crate::{
         Confidence, Fix, FixDisposition, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
-    models::{AsDocument, workflow::JobExt},
+    models::AsDocument,
     utils,
 };
 use yamlpatch::{Op, Patch};
@@ -158,7 +158,7 @@ impl Audit for UnsoundCondition {
         job: &crate::models::workflow::NormalJob<'doc>,
         _config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
-        self.process_conditions(job.parent(), job.conditions())
+        self.process_conditions(job, job.conditions())
     }
 
     async fn audit_reusable_job<'doc>(
@@ -167,7 +167,7 @@ impl Audit for UnsoundCondition {
         _config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let conds = job.r#if.iter().map(|cond| (cond, job.location()));
-        self.process_conditions(job.parent(), conds)
+        self.process_conditions(job, conds)
     }
 
     async fn audit_action<'doc>(
@@ -244,6 +244,7 @@ jobs:
 
                 let fixed_document = apply_fix_for_snapshot(workflow.as_document(), findings);
                 insta::assert_snapshot!(fixed_document.source(), @r#"
+
                 name: Test
                 on: push
                 jobs:
@@ -283,6 +284,7 @@ jobs:
 
                 let fixed_document = apply_fix_for_snapshot(workflow.as_document(), findings);
                 insta::assert_snapshot!(fixed_document.source(), @r#"
+
                 name: Test
                 on: push
                 jobs:
@@ -323,6 +325,7 @@ jobs:
 
                 let fixed_document = apply_fix_for_snapshot(workflow.as_document(), findings);
                 insta::assert_snapshot!(fixed_document.source(), @r#"
+
                 name: Test
                 on: push
                 jobs:
@@ -367,6 +370,7 @@ jobs:
 
                 let fixed_document = apply_fix_for_snapshot(workflow.as_document(), findings);
                 insta::assert_snapshot!(fixed_document.source(), @r#"
+
                 name: Test
                 on: push
                 jobs:
@@ -406,7 +410,8 @@ jobs:
                 assert_eq!(findings.len(), 1);
 
                 let fixed_document = apply_fix_for_snapshot(workflow.as_document(), findings);
-                insta::assert_snapshot!(fixed_document.source(), @r#"
+                insta::assert_snapshot!(fixed_document.source(), @r"
+
                 name: Test
                 on: push
                 jobs:
@@ -414,7 +419,7 @@ jobs:
                     if: |-
                       ${{ github.event_name == 'pull_request' }}
                     uses: ./.github/workflows/reusable.yml
-                "#);
+                ");
             }
         );
     }
@@ -463,6 +468,7 @@ jobs:
                 }
 
                 insta::assert_snapshot!(document.source(), @r#"
+
                 name: Test
                 on: push
                 jobs:

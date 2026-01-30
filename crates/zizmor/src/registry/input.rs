@@ -34,7 +34,7 @@ pub(crate) enum CollectionError {
     /// The input couldn't be converted into the expected model.
     /// This typically indicates a bug in `github-actions-models`.
     #[error("couldn't turn input into a an appropriate model")]
-    Model(#[source] anyhow::Error),
+    Model(#[from] serde_yaml::Error),
 
     /// The input couldn't be loaded into an internal yamlpath document.
     /// This typically indicates a bug in `yamlpath`.

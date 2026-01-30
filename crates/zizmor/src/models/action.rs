@@ -7,7 +7,6 @@ use github_actions_expressions::context;
 use github_actions_models::{
     action,
     common::{self, expr::LoE},
-    workflow::job::Strategy,
 };
 use terminal_link::Link;
 
@@ -17,6 +16,7 @@ use crate::{
     models::{
         AsDocument, StepBodyCommon, StepCommon,
         inputs::{Capability, HasInputs},
+        workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
     utils::{self, ACTION_VALIDATOR, from_str_with_validation},
@@ -97,7 +97,7 @@ impl Action {
     pub(crate) fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
             key: &self.key,
-            annotation: "this action".to_string(),
+            annotation: "this action".into(),
             link: None,
             route: Default::default(),
             feature_kind: SymbolicFeature::Normal,
@@ -175,10 +175,13 @@ impl<'doc> Locatable<'doc> for CompositeStep<'doc> {
         ])
     }
 
-    fn location_with_name(&self) -> SymbolicLocation<'doc> {
-        match self.inner.name {
-            Some(_) => self.location().with_keys(["name".into()]),
-            None => self.location(),
+    fn location_with_grip(&self) -> SymbolicLocation<'doc> {
+        if self.inner.name.is_some() {
+            self.location().with_keys(["name".into()])
+        } else if self.inner.id.is_some() {
+            self.location().with_keys(["id".into()])
+        } else {
+            self.location()
         }
     }
 }
@@ -198,7 +201,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         utils::env_is_static(ctx, &[&self.env])
     }
 
-    fn uses(&self) -> Option<&common::Uses> {
+    fn uses(&self) -> Option<&'doc common::Uses> {
         let action::StepBody::Uses { uses, .. } = &self.inner.body else {
             return None;
         };
@@ -206,7 +209,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         Some(uses)
     }
 
-    fn strategy(&self) -> Option<&Strategy> {
+    fn matrix(&self) -> Option<Matrix<'doc>> {
         None
     }
 
@@ -229,14 +232,19 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         self.action().as_document()
     }
 
-    fn shell(&self) -> Option<&str> {
+    fn shell(&self) -> Option<(&str, SymbolicLocation<'doc>)> {
         // For composite action steps, shell is always explicitly specified in the YAML.
         if let action::StepBody::Run {
             shell: LoE::Literal(shell),
             ..
         } = &self.inner.body
         {
-            Some(shell)
+            Some((
+                shell,
+                self.location()
+                    .with_keys(["shell".into()])
+                    .annotated("shell defined here"),
+            ))
         } else {
             None
         }

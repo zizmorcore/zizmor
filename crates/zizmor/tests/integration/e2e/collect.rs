@@ -9,7 +9,7 @@ use crate::common::{input_under_test, zizmor};
 fn test_fails_incompatible_modes() -> Result<()> {
     assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(2)
             .args(["--collect=workflows,actions-only"])
             .input(input_under_test("neutral.yml"))
             .run()?,
@@ -25,7 +25,7 @@ fn test_fails_incompatible_modes() -> Result<()> {
 
     assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(2)
             .args(["--collect=actions,workflows-only"])
             .input(input_under_test("neutral.yml"))
             .run()?,
@@ -41,7 +41,7 @@ fn test_fails_incompatible_modes() -> Result<()> {
 
     assert_snapshot!(
         zizmor()
-            .expects_failure(true)
+            .expects_failure(2)
             .args(["--collect=actions-only,workflows-only"])
             .input(input_under_test("neutral.yml"))
             .run()?,

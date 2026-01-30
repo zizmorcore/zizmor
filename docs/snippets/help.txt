@@ -15,7 +15,7 @@ Options:
   -o, --offline
           Perform only offline operations [env: ZIZMOR_OFFLINE=]
       --gh-token <GH_TOKEN>
-          The GitHub API token to use [env: GH_TOKEN=]
+          The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN]
       --gh-hostname <GH_HOSTNAME>
           The GitHub Server Hostname. Defaults to github.com [env: GH_HOST=] [default: github.com]
       --no-online-audits
@@ -28,6 +28,10 @@ Options:
           Don't show progress bars, even if the terminal supports them
       --format <FORMAT>
           The output format to emit. By default, cargo-style diagnostics will be emitted [default: plain] [possible values: plain, json, json-v1, sarif, github]
+      --render-links <RENDER_LINKS>
+          Whether to render OSC 8 links in the output [env: ZIZMOR_RENDER_LINKS=] [default: auto] [possible values: auto, always, never]
+      --show-audit-urls <SHOW_AUDIT_URLS>
+          Whether to render audit URLs in the output, separately from any URLs embedded in OSC 8 links [env: ZIZMOR_SHOW_AUDIT_URLS=] [default: auto] [possible values: auto, always, never]
       --color <MODE>
           Control the use of color in output [possible values: auto, always, never]
   -c, --config <CONFIG>

@@ -1,0 +1,38 @@
+on: release
+
+name: ramsey-composer-install
+
+permissions: {}
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    steps:
+      # NOT OK: caching enabled by default
+      - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
+
+      - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
+        with:
+          # NOT OK: caching explicitly enabled
+          ignore-cache: false
+
+      - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
+        with:
+          # OK: caching explicitly disabled
+          ignore-cache: true
+
+      - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
+        with:
+          # OK: caching explicitly disabled
+          ignore-cache: yes
+
+      - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
+        with:
+          # OK: caching explicitly disabled
+          ignore-cache: "yes"
+
+      - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
+        with:
+          # OK: caching explicitly disabled
+          ignore-cache: 1

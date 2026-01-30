@@ -1,6 +1,6 @@
 [package]
 name = "yamlpatch"
-version = "0.5.0"
+version = "0.11.0"
 description = "Comment and format-preserving YAML patch operations"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/yamlpatch"
 keywords = ["yaml", "patch"]

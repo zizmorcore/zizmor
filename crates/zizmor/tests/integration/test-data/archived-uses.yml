@@ -1,0 +1,24 @@
+name: archived-uses
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  archived-uses:
+    name: archived-uses
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup ruby
+        uses: actions/setup-ruby@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
+
+      - name: SETUP RUBY BUT LOUDLY
+        uses: ACTIONS/SETUP-RUBY@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3
+
+  archived-uses-reusable:
+    name: archived-uses-reusable
+    uses: actions/setup-ruby/.github/workflows/notreal.yml@e932e7af67fc4a8fc77bd86b744acd4e42fe3543 # v1.1.3

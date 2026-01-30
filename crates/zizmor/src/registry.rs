@@ -10,7 +10,6 @@ use crate::{
     finding::{Confidence, Finding, Persona, Severity},
     registry::input::{InputKey, InputRegistry},
     state::AuditState,
-    tips,
 };
 
 pub(crate) mod input;
@@ -40,12 +39,6 @@ impl AuditRegistry {
                     Ok(audit) => registry.register_audit(base::ident(), Box::new(audit)),
                     Err(AuditLoadError::Skip(e)) => {
                         tracing::debug!("skipping {audit}: {e}", audit = base::ident())
-                    }
-                    Err(AuditLoadError::Fail(e)) => {
-                        return Err(anyhow::anyhow!(tips(
-                            format!("failed to load audit: {audit}", audit = base::ident()),
-                            &[format!("{e:#}"), format!("see: {url}", url = base::url())]
-                        )));
                     }
                 }
             }};
@@ -81,6 +74,8 @@ impl AuditRegistry {
         register_audit!(audit::dependabot_execution::DependabotExecution);
         register_audit!(audit::dependabot_cooldown::DependabotCooldown);
         register_audit!(audit::concurrency_limits::ConcurrencyLimits);
+        register_audit!(audit::archived_uses::ArchivedUses);
+        register_audit!(audit::misfeature::Misfeature);
 
         Ok(registry)
     }

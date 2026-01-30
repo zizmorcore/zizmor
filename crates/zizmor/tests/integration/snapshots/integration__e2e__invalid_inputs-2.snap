@@ -8,5 +8,5 @@ failed to load file://@@INPUT@@ as workflow
 
 Caused by:
     0: input does not match expected validation schema
-    1: on.workflow_call.inputs.input: "type" is a required property
-       Additional properties are not allowed ('boom' was unexpected)
+    1: Additional properties are not allowed ('boom' was unexpected)
+       on.workflow_call.inputs.input: "type" is a required property

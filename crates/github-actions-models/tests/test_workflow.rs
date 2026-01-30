@@ -1,4 +1,4 @@
-use std::{env, path::Path, str::FromStr};
+use std::{env, path::Path};
 
 use github_actions_models::{
     common::{
@@ -56,13 +56,13 @@ fn test_pip_audit_ci() {
     let StepBody::Uses { uses, with } = &test_job.steps[0].body else {
         panic!("expected uses step");
     };
-    assert_eq!(uses, &Uses::from_str("actions/checkout@v4.1.1").unwrap());
+    assert_eq!(uses, &Uses::parse("actions/checkout@v4.1.1").unwrap());
     assert!(with.is_empty());
 
     let StepBody::Uses { uses, with } = &test_job.steps[1].body else {
         panic!("expected uses step");
     };
-    assert_eq!(uses, &Uses::from_str("actions/setup-python@v5").unwrap());
+    assert_eq!(uses, &Uses::parse("actions/setup-python@v5").unwrap());
     assert_eq!(with["python-version"].to_string(), "${{ matrix.python }}");
     assert_eq!(with["cache"].to_string(), "pip");
     assert_eq!(with["cache-dependency-path"].to_string(), "pyproject.toml");

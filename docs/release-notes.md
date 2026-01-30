@@ -11,8 +11,215 @@ of `zizmor`.
 
 ### Enhancements 🌱
 
+* `zizmor`'s LSP mode is now configuration-aware, and will load
+  configuration files relative to workspace roots (#1555)
+
+* `zizmor` now reads the `GITHUB_TOKEN` environment variable as an
+  alias/equivalent for `GH_TOKEN` (#1566)
+
+* `zizmor` now supports inputs that contain duplicated anchor names (#1575)
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would crash on `uses:` clauses containing
+  non-significant whitespace while performing the [unpinned-uses] audit
+  (#1544)
+
+* Fixed a bug in `yamlpath` where sequences containing anchors were splatted
+  instead of being properly nested (#1557)
+
+    Many thanks to @DarkaMaul for implementing this fix!
+
+* Fixed a bug in `yamlpath` where anchor prefixes in sequences and mapping
+  were not stripped during path queries (#1562)
+
+## 1.22.0
+
+### Changes ⚠️
+
+* The [misfeature] audit now only shows non-"well known" `#!yaml shell:`
+  findings when running with the "auditor" persona (#1532)
+
+### Bug Fixes 🐛
+
+* Fixed a bug where inputs containing CRLF line endings were not patched
+  correctly by the [unpinned-uses] audit (#1536)
+
+## 1.21.0
+
+### New Features 🌈
+
+* **New audit**: [misfeature] detects usage of GitHub Actions features that
+  are considered "misfeatures." (#1517)
+
+### Enhancements 🌱
+
+* zizmor now uses exit code `3` to signal an audit that has failed because
+  no input files were collected. See the [exit code] documentation
+  for details (#1515)
+
+* The [unpinned-uses] audit now supports auto-fixes for many findings (#1525)
+
+### Changes ⚠️
+
+* The [obfuscation] audit no longer flags `#!yaml shell: cmd`. That check has
+  been moved to the new [misfeature] audit. Users may need to update their
+  ignore comments and/or configuration (#1517)
+
+### Bug Fixes 🐛
+
+* The [unpinned-uses] audit now flags reusable workflows that are unpinned,
+  in addition to actions (#1509)
+
+    Many thanks to @johnbillion for implementing this fix!
+
+## 1.20.0
+
+### Enhancements 🌱
+
+* The [excessive-permissions] audit is now aware of the `artifact-metadata`
+  and `models` permissions (#1461)
+
+* The [cache-poisoning] audit is now aware of the @ramsey/composer-install
+  action (#1489)
+
+* The [unpinned-images] audit is now significantly more precise in the presence
+  of matrix references, e.g. `image: ${{ matrix.image }}` (#1482)
+
+### Changes ⚠️
+
+* The default policy for the [unpinned-uses] audit has changed from allowing
+  ref-pinning for first-party actions (those under `actions/*` and similar)
+  to requiring hash-pinning. This makes the default policy more strict,
+  as well as more consistent across the actions ecosystem.
+
+    Users who with to retain the old (permissive policy) for first-party
+    actions may configure it explicitly in their `zizmor.yml`:
+  
+    ```yaml title="zizmor.yml"
+    rules:
+      unpinned-uses:
+        config:
+          policies:
+            actions/*: ref-pin
+            github/*: ref-pin
+            dependabot/*: ref-pin
+    ```
+
+### Bug Fixes 🐛
+
+* The [dependabot-cooldown] audit no longer flags missing cooldowns on
+  ecosystems that don't (yet) support cooldowns, such as `opentofu` (#1480)
+
+* Fixed a false positive in the [cache-poisoning] audit where `zizmor` would
+  treat empty strings (e.g. `cache: ''`) as enabling rather than disabling
+  caching (#1482)
+
+* Fixed two gaps in the [use-trusted-publishing] audit's detection of
+  common `yarn` publishing commands (#1495)
+
+### Miscellaneous 🛠
+
+* zizmor's configuration now has an official JSON schema that is available
+  via [SchemaStore](https://www.schemastore.org)!
+
+    Many thanks to @kiwamizamurai for implementing this improvement!
+
+## 1.19.0
+
+### New Features 🌈
+
+* **New audit**: [archived-uses] detects usages of archived repositories in
+  `#!yaml uses:` clauses (#1411)
+
+### Enhancements 🌱
+
+* The [use-trusted-publishing] audit now detects additional publishing command
+  patterns, including common "wrapped" patterns like `bundle exec gem publish`
+  (#1394)
+  
+* zizmor now produces better error messages on a handful of error cases involving
+  invalid input files. Specifically, a subset of syntax and schema errors now
+  produce more detailed and actionable error messages (#1396)
+  
+* The [use-trusted-publishing] audit now detects additional publishing command
+  patterns, including `uv run ...`, `uvx ...`, and `poetry publish`
+  (#1402)
+  
+* zizmor now produces more useful and less ambiguous spans for many findings,
+  particularly those from the [anonymous-definition] audit (#1416)
+  
+* zizmor now discovers configuration files named `zizmor.yaml`, in addition
+  to `zizmor.yml` (#1431)
+  
+* zizmor now produces a more useful error message when input collection
+  yields no inputs (#1439)
+
+* The `--render-links` flag now allows users to control `zizmor`'s OSC 8 terminal
+  link rendering behavior. This is particularly useful in environments that
+  advertise themselves as terminals but fail to correctly render or ignore
+  OSC 8 links (#1454)
+ 
+### Performance Improvements 🚄
+
+* The [impostor-commit] audit is now significantly faster on true positives,
+  making true positive detection virtually as fast as true negative detection.
+  In practice, true positive runs are over 100 times faster than before
+  (#1429)
+
+### Bug Fixes 🐛
+
+* Fixed a bug where the [obfuscation] audit would crash if it encountered
+  a CMD shell that was defined outside of the current step block (i.e. 
+  as a job or workflow default) (#1418)
+  
+* Fixed a bug where the `opentofu` ecosystem was not recognized in
+  Dependabot configuration files (#1452)
+
+* `--color=always` no longer implies `--render-links=always`, as some
+  environments (like GitHub Actions) support ANSI color codes but fail
+  to handle OSC escapes gracefully (#1454)
+
+## 1.18.0
+
+### Enhancements 🌱
+
+* The [use-trusted-publishing] audit now detects NuGet publishing commands
+  (#1369)
+  
+* The [dependabot-cooldown] audit now flags cooldown periods of less than 7
+  days by default (#1375)
+  
+* The [dependabot-cooldown] audit can now be configured with a custom
+  minimum cooldown period via `rules.dependabot-cooldown.config.days`
+  (#1377)
+  
+* `zizmor` now produces slightly more useful error messages when the user supplies
+  an invalid configuration for the [forbidden-uses] audit (#1381)
+
+### Bug Fixes 🐛
+
+* Fixed additional edge cases where auto-fixed would fail to preserve
+  a document's final newline (#1372)
+
+## 1.17.0
+
+### Enhancements 🌱
+
 * `zizmor` now produces a more useful error message when asked to
   collect only workflows from a remote input that contains no workflows (#1324)
+  
+* `zizmor` now produces more precise severities on @actions/checkout versions
+  that have more misuse-resistant credentials persistence behavior (#1353)
+  
+    Many thanks to @ManuelLerchnerQC for proposing and implementing this improvement!
+
+* The [use-trusted-publishing] audit now correctly detecting more "dry-run"
+  patterns, making it significantly more accurate (#1357)
+
+* The [obfuscation] audit now detects usages of `#!yaml shell: cmd` and similar,
+  as the Windows CMD shell lacks a formal grammar and limits analysis of `#!yaml run:` blocks
+  in other audits (#1361)
 
 ### Performance Improvements 🚄
 
@@ -1109,7 +1316,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 
 ### What's Changed
 * fix(cli): remove '0 ignored' from another place by @woodruffw in #157
-* perf: speed up impostor-commit's fast path by @woodruffw in #158
+* perf: speed up [impostor-commit]'s fast path by @woodruffw in #158
 * fix(cli): fixup error printing by @woodruffw in #159
 
 ## v0.3.1
@@ -1261,5 +1468,8 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [dependabot-execution]: ./audits.md#dependabot-execution
 [dependabot-cooldown]: ./audits.md#dependabot-cooldown
 [concurrency-limits]: ./audits.md#concurrency-limits
+[archived-uses]: ./audits.md#archived-uses
+[impostor-commit]: ./audits.md#impostor-commit
+[misfeature]: ./audits.md#misfeature
 
 [exit code]: ./usage.md#exit-codes

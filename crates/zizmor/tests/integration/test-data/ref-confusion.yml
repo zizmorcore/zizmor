@@ -8,4 +8,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # NOT OK: `confusable` is both a tag and a branch
-      - uses: woodruffw/gha-hazmat/ref-confusion@confusable
+      - uses: woodruffw/gha-hazmat/ref-confusion@confusable # zizmor: ignore[unpinned-uses]

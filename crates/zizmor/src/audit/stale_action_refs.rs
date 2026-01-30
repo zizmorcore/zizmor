@@ -2,6 +2,7 @@
 
 use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
@@ -29,7 +30,7 @@ impl StaleActionRefs {
         let tag = match &uses.commit_ref() {
             Some(commit_ref) => self
                 .client
-                .longest_tag_for_commit(&uses.owner, &uses.repo, commit_ref)
+                .longest_tag_for_commit(uses.owner(), uses.repo(), commit_ref)
                 .await
                 .map_err(Self::err)?,
             None => return Ok(false),
@@ -53,7 +54,12 @@ impl StaleActionRefs {
                     .confidence(Confidence::High)
                     .severity(Severity::Low)
                     .persona(Persona::Pedantic)
-                    .add_location(step.location().primary().with_keys(["uses".into()]))
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.raw())),
+                    )
                     .build(step)?,
             );
         }

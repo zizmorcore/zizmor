@@ -2,6 +2,7 @@
 
 use std::{
     collections::HashSet,
+    env,
     io::{Write, stdout},
     process::ExitCode,
 };
@@ -29,6 +30,7 @@ use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 use crate::{
+    audit::AuditError,
     config::{Config, ConfigError, ConfigErrorInner},
     github::Client,
     models::AsDocument,
@@ -89,9 +91,13 @@ struct App {
     #[arg(short, long, env = "ZIZMOR_OFFLINE")]
     offline: bool,
 
-    /// The GitHub API token to use.
-    #[arg(long, env, value_parser = GitHubToken::new)]
+    /// The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN]
+    #[arg(long, env, hide_env = true, value_parser = GitHubToken::new)]
     gh_token: Option<GitHubToken>,
+
+    /// This is an alias for `--gh-token` / `GH_TOKEN`.
+    #[arg(long, env, hide = true, value_parser = GitHubToken::new, conflicts_with = "gh_token")]
+    github_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
     #[arg(long, env = "GH_HOST", default_value_t)]
@@ -115,6 +121,22 @@ struct App {
     /// The output format to emit. By default, cargo-style diagnostics will be emitted.
     #[arg(long, value_enum, default_value_t)]
     format: OutputFormat,
+
+    /// Whether to render OSC 8 links in the output.
+    ///
+    /// This affects links under audit IDs, as well as any links
+    /// produced by audit rules.
+    ///
+    /// Only affects `--format=plain` (the default).
+    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_RENDER_LINKS")]
+    render_links: CliRenderLinks,
+
+    /// Whether to render audit URLs in the output, separately from any URLs
+    /// embedded in OSC 8 links.
+    ///
+    /// Only affects `--format=plain` (the default).
+    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_SHOW_AUDIT_URLS")]
+    show_audit_urls: CliShowAuditUrls,
 
     /// Control the use of color in output.
     #[arg(long, value_enum, value_name = "MODE")]
@@ -190,6 +212,11 @@ struct App {
     /// Emit thank-you messages for zizmor's sponsors.
     #[arg(long, exclusive = true)]
     thanks: bool,
+
+    /// Generate JSON Schema for zizmor.yml configuration files.
+    #[cfg(feature = "schema")]
+    #[arg(long, exclusive = true)]
+    generate_schema: bool,
 
     /// The inputs to audit.
     ///
@@ -314,6 +341,79 @@ pub(crate) enum OutputFormat {
     Sarif,
     /// GitHub Actions workflow command-formatted output.
     Github,
+}
+
+#[derive(Debug, Default, Copy, Clone, ValueEnum)]
+pub(crate) enum CliRenderLinks {
+    /// Render OSC 8 links in output if support is detected.
+    #[default]
+    Auto,
+    /// Always render OSC 8 links in output.
+    Always,
+    /// Never render OSC 8 links in output.
+    Never,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum RenderLinks {
+    Always,
+    Never,
+}
+
+impl From<CliRenderLinks> for RenderLinks {
+    fn from(value: CliRenderLinks) -> Self {
+        match value {
+            CliRenderLinks::Auto => {
+                // We render links if stdout is a terminal. This is assumed
+                // to preclude CI environments and log files.
+                //
+                // TODO: Switch this to the support-hyperlinks crate?
+                // See: https://github.com/zkat/supports-hyperlinks/pull/8
+                if stdout().is_terminal() {
+                    RenderLinks::Always
+                } else {
+                    RenderLinks::Never
+                }
+            }
+            CliRenderLinks::Always => RenderLinks::Always,
+            CliRenderLinks::Never => RenderLinks::Never,
+        }
+    }
+}
+
+#[derive(Debug, Default, Copy, Clone, ValueEnum)]
+pub(crate) enum CliShowAuditUrls {
+    /// Render audit URLs in output automatically based on output format and runtime context.
+    ///
+    /// For example, URLs will be shown if a CI runtime is detected.
+    #[default]
+    Auto,
+    /// Always render audit URLs in output.
+    Always,
+    /// Never render audit URLs in output.
+    Never,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum ShowAuditUrls {
+    Always,
+    Never,
+}
+
+impl From<CliShowAuditUrls> for ShowAuditUrls {
+    fn from(value: CliShowAuditUrls) -> Self {
+        match value {
+            CliShowAuditUrls::Auto => {
+                if utils::is_ci() || !stdout().is_terminal() {
+                    ShowAuditUrls::Always
+                } else {
+                    ShowAuditUrls::Never
+                }
+            }
+            CliShowAuditUrls::Always => ShowAuditUrls::Always,
+            CliShowAuditUrls::Never => ShowAuditUrls::Never,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
@@ -494,18 +594,6 @@ pub(crate) enum FixMode {
     All,
 }
 
-pub(crate) fn tips(err: impl AsRef<str>, tips: &[impl AsRef<str>]) -> String {
-    // NOTE: We use secondary_title here because primary_title doesn't
-    // allow ANSI colors, and some of our errors contain colorized text.
-    let report = vec![
-        Group::with_title(Level::ERROR.secondary_title(err.as_ref()))
-            .elements(tips.iter().map(|tip| Level::HELP.message(tip.as_ref()))),
-    ];
-
-    let renderer = Renderer::styled();
-    renderer.render(&report).to_string()
-}
-
 /// State used when collecting input groups.
 pub(crate) struct CollectionOptions {
     pub(crate) mode_set: CollectionModeSet,
@@ -563,10 +651,10 @@ enum Error {
     #[error("failed to load audit rules")]
     AuditLoad(#[source] anyhow::Error),
     /// An error while running an audit.
-    #[error("{ident} failed on {input}")]
+    #[error("'{ident}' audit failed on {input}")]
     Audit {
         ident: &'static str,
-        source: anyhow::Error,
+        source: AuditError,
         input: String,
     },
     /// An error while rendering output.
@@ -580,7 +668,7 @@ enum Error {
 async fn run(app: &mut App) -> Result<ExitCode, Error> {
     #[cfg(feature = "lsp")]
     if app.lsp.lsp {
-        lsp::run()?;
+        lsp::run().await?;
         return Ok(ExitCode::SUCCESS);
     }
 
@@ -590,6 +678,12 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             let link = Link::new(name, url);
             println!("🌈 {link}")
         }
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    #[cfg(feature = "schema")]
+    if app.generate_schema {
+        println!("{}", config::schema::generate_schema());
         return Ok(ExitCode::SUCCESS);
     }
 
@@ -609,6 +703,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
                 ColorMode::Never
             } else if std::env::var("FORCE_COLOR").is_ok()
                 || std::env::var("CLICOLOR_FORCE").is_ok()
+                || utils::is_ci()
             {
                 ColorMode::Always
             } else {
@@ -637,6 +732,11 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     // `--pedantic` is a shortcut for `--persona=pedantic`.
     if app.pedantic {
         app.persona = Persona::Pedantic;
+    }
+
+    // Merge `--github-token` into `--gh-token`, if present.
+    if let Some(token) = app.github_token.take() {
+        app.gh_token = Some(token);
     }
 
     // Unset the GitHub token if we're in offline mode.
@@ -763,7 +863,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             while let Some(findings) = completion_stream.next().await {
                 let findings = findings.map_err(|err| Error::Audit {
                     ident: err.ident(),
-                    source: err.into(),
+                    source: err,
                     input: input.key().to_string(),
                 })?;
 
@@ -780,7 +880,13 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     }
 
     match app.format {
-        OutputFormat::Plain => output::plain::render_findings(&registry, &results, app.naches),
+        OutputFormat::Plain => output::plain::render_findings(
+            &registry,
+            &results,
+            &app.show_audit_urls.into(),
+            &app.render_links.into(),
+            app.naches,
+        ),
         OutputFormat::Json | OutputFormat::JsonV1 => {
             output::json::v1::output(stdout(), results.findings()).map_err(Error::Output)?
         }
@@ -823,7 +929,7 @@ async fn main() -> ExitCode {
     // which is then typically inaccessible from an already failed
     // CI job. In those cases, it's better to dump directly to stderr,
     // since that'll typically be captured by console logging.
-    if std::env::var_os("CI").is_some() {
+    if utils::is_ci() {
         std::panic::set_hook(Box::new(|info| {
             let trace = std::backtrace::Backtrace::force_capture();
             eprintln!("FATAL: zizmor crashed. This is a bug that should be reported.");
@@ -883,6 +989,16 @@ async fn main() -> ExitCode {
                     Some(report)
                 }
                 Error::Collection(err) => match err.inner() {
+                    CollectionError::NoInputs => {
+                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                            .element(Level::HELP.message("collection yielded no auditable inputs"))
+                            .element(Level::HELP.message("inputs must contain at least one valid workflow, action, or Dependabot config"));
+
+                        let renderer = Renderer::styled();
+                        let report = renderer.render(&[group]);
+
+                        Some(report)
+                    }
                     CollectionError::DuplicateInput(..) => {
                         let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
                             .element(Level::HELP.message(format!(
@@ -919,7 +1035,8 @@ async fn main() -> ExitCode {
 
                         Some(report)
                     }
-                    CollectionError::Yamlpath(..) => {
+                    // These errors only happen if something is wrong with zizmor itself.
+                    CollectionError::Yamlpath(..) | CollectionError::Model(..) => {
                         let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
                             Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
                             Level::HELP.message(
@@ -954,13 +1071,20 @@ async fn main() -> ExitCode {
                 _ => None,
             };
 
+            let exit = if matches!(err, Error::Collection(CollectionError::NoInputs)) {
+                ExitCode::from(3)
+            } else {
+                ExitCode::FAILURE
+            };
+
             let mut err = anyhow!(err);
             if let Some(report) = report {
                 err = err.context(report);
             }
 
             eprintln!("{err:?}");
-            ExitCode::FAILURE
+
+            exit
         }
     }
 }

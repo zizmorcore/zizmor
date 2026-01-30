@@ -1,5 +1,6 @@
 //! Symbolic and concrete locations.
 
+use std::borrow::Cow;
 use std::ops::Range;
 
 use crate::registry::input::InputKey;
@@ -51,7 +52,7 @@ pub(crate) struct SymbolicLocation<'doc> {
     pub(crate) key: &'doc InputKey,
 
     /// An annotation for this location.
-    pub(crate) annotation: String,
+    pub(crate) annotation: Cow<'doc, str>,
 
     /// An OSC 8 rendered link for the location's annotation, if applicable.
     ///
@@ -99,7 +100,10 @@ impl<'doc> SymbolicLocation<'doc> {
     }
 
     /// Adds a human-readable annotation to the current `SymbolicLocation`.
-    pub(crate) fn annotated(mut self, annotation: impl Into<String>) -> SymbolicLocation<'doc> {
+    pub(crate) fn annotated(
+        mut self,
+        annotation: impl Into<Cow<'doc, str>>,
+    ) -> SymbolicLocation<'doc> {
         self.annotation = annotation.into();
         self
     }
@@ -208,12 +212,12 @@ pub(crate) trait Locatable<'doc> {
     fn location(&self) -> SymbolicLocation<'doc>;
 
     /// Returns an "enriched" symbolic location of this model,
-    /// when the model is of a type that has a name. Otherwise,
-    /// returns the same symbolic location as `location()`.
+    /// when the model has one or more "grip" fields that are
+    /// visually useful to key off of (like a `name` or `id` field).
     ///
     /// For example, a GitHub Actions workflow step has an optional name,
     /// which is included in this symbolic location if present.
-    fn location_with_name(&self) -> SymbolicLocation<'doc> {
+    fn location_with_grip(&self) -> SymbolicLocation<'doc> {
         self.location()
     }
 }
