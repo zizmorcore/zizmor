@@ -33,6 +33,11 @@ of `zizmor`.
 * Fixed a bug in `yamlpath` where anchor prefixes in sequences and mapping
   were not stripped during path queries (#1562)
 
+* Fixed a bug where "merge into" autofixes would produce incorrect patches
+  in the presence of multi-byte Unicode characters (#1581)
+
+    Many thanks to @ManuelLerchnerQC for implementing this fix!
+
 ## 1.22.0
 
 ### Changes ⚠️
