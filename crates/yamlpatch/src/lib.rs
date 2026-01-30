@@ -866,7 +866,7 @@ fn handle_block_mapping_addition(
     // Check if we need to add a newline before the entry
     // If the content at insertion point already ends with a newline, don't add another
     let needs_leading_newline = if insertion_point > 0 {
-        doc.source().chars().nth(insertion_point - 1) != Some('\n')
+        doc.source().as_bytes().get(insertion_point - 1) != Some(&b'\n')
     } else {
         true
     };

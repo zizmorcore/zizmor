@@ -1550,4 +1550,64 @@ jobs:
             }
         );
     }
+
+    #[tokio::test]
+    async fn test_template_injection_unicode_in_script() {
+        let workflow_content = r#"
+name: Repro issue #1580
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  repro:
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash
+        run: |
+          echo "✓ ${{ github.event.comment.body }}"
+
+      - shell: bash
+        run: echo ok
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_unicode_in_script.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                // Should find template injection for github.event.comment.body
+                assert!(!findings.is_empty(), "Expected at least one finding");
+
+                // Should have at least one finding with a fix
+                let finding = findings
+                    .iter()
+                    .find(|f| !f.fixes.is_empty())
+                    .expect("Should find at least one finding with fixes");
+
+                let fixed_content = apply_fix_by_title_for_snapshot(
+                    workflow.as_document(),
+                    finding,
+                    "replace expression with environment variable",
+                );
+                insta::assert_snapshot!(fixed_content.source(), @r#"
+                name: Repro issue #1580
+                on:
+                  issue_comment:
+                    types: [created]
+                jobs:
+                  repro:
+                    runs-on: ubuntu-latest
+                    steps:
+                      - shell: bash
+                        run: |
+                          echo "✓ ${GITHUB_EVENT_COMMENT_BODY}"
+                        env:
+                          GITHUB_EVENT_COMMENT_BODY: ${{ github.event.comment.body }}
+
+                      - shell: bash
+                        run: echo ok
+                "#);
+            }
+        );
+    }
 }

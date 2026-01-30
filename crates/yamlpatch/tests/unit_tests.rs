@@ -1817,6 +1817,44 @@ fn test_merge_into_prevents_duplicate_keys() {
 }
 
 #[test]
+fn test_merge_into_with_unicode() {
+    // Test MergeInto with Unicode characters that are multiple bytes
+    let original = r#"steps:
+  - shell: bash
+    run: |
+      echo "✓ Done"
+
+  - shell: bash
+    run: echo ok"#;
+
+    let operations = vec![Patch {
+        route: route!("steps", 0),
+        operation: Op::MergeInto {
+            key: "env".to_string(),
+            updates: indexmap::IndexMap::from_iter([(
+                "TEST_VAR".to_string(),
+                serde_yaml::Value::String("new_value".to_string()),
+            )]),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+    steps:
+      - shell: bash
+        run: |
+          echo "✓ Done"
+        env:
+          TEST_VAR: new_value
+
+      - shell: bash
+        run: echo ok
+    "#);
+}
+
+#[test]
 fn test_debug_indentation_issue() {
     let original = r#"jobs:
   build:
