@@ -19,6 +19,9 @@ of `zizmor`.
 
 * `zizmor` now supports inputs that contain duplicated anchor names (#1575)
 
+* `zizmor` now flags missing cooldowns on `opentofu` ecosystem definitions
+  in Dependabot (again) (#1586)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would crash on `uses:` clauses containing
