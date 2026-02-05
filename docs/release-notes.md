@@ -41,6 +41,9 @@ of `zizmor`.
 
     Many thanks to @ManuelLerchnerQC for implementing this fix!
 
+* Fixed a bug where the [template-injection] audit would produce
+  duplicated pedantic-only findings (#1589)
+
 ## 1.22.0
 
 ### Changes ⚠️
