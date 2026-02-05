@@ -48,7 +48,7 @@ archived-repos:
 
 .PHONY: pinact
 pinact:
-	pinact run --update --verify
+	pinact run --update --verify --config=.github/pinact.yml
 
 
 .PHONY: bench
