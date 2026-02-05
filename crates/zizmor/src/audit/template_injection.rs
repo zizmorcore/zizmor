@@ -363,24 +363,13 @@ impl TemplateInjection {
         Confidence,
         Persona,
     )> {
-        let mut bad_expressions = vec![];
+        let mut all_bad_expressions = vec![];
         for (expr, expr_span) in extract_fenced_expressions(script) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_raw());
                 continue;
             };
-
-            // Emit a blanket pedantic finding for the extracted expression
-            // since any expression in a code context is a code smell,
-            // even if unexploitable.
-            bad_expressions.push((
-                Subfeature::new(expr_span.start, &parsed),
-                // Intentionally not providing a fix here.
-                None,
-                Severity::Low,
-                Confidence::High,
-                Persona::Pedantic,
-            ));
+            let mut bad_expressions = vec![];
 
             for (context, origin) in parsed.dataflow_contexts() {
                 // Try and turn our context into a pattern for
@@ -545,9 +534,27 @@ impl TemplateInjection {
                     }
                 }
             }
+
+            // If we didn't find anything noteworthy inside the extracted expression
+            // (i.e., no injectable contexts with relevant dataflows), then
+            // we emit a blanket pedantic finding for the extracted expression itself.
+            // We do this because any expression in a code context is a code smell,
+            // even if unexploitable.
+            if bad_expressions.is_empty() {
+                bad_expressions.push((
+                    Subfeature::new(expr_span.start, &parsed),
+                    // Intentionally not providing a fix here.
+                    None,
+                    Severity::Low,
+                    Confidence::High,
+                    Persona::Pedantic,
+                ));
+            }
+
+            all_bad_expressions.extend(bad_expressions);
         }
 
-        bad_expressions
+        all_bad_expressions
     }
 
     fn process_step<'doc>(

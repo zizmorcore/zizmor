@@ -195,7 +195,7 @@ fn test_obfuscation() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    39 findings (1 ignored, 18 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
+    38 findings (1 ignored, 17 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
     "
     );
 
