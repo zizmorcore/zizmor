@@ -360,6 +360,7 @@ wagtail/wagtail-localize#843
 wntrblm/nox#925
 WordPress/gutenberg#69126
 WordPress/wordpress-develop#8007
+wgsl-analyzer/wgsl-analyzer#844
 yt-dlp/yt-dlp#15324
 yt-dlp/yt-dlp#15387
 zama-ai/tfhe-rs#2292
@@ -368,3 +369,4 @@ zcash/librustzcash#1679
 ZcashFoundation/zebra#9110
 zkonduit/ezkl#907
 zkonduit/ezkl#906
+zulip/docker-zulip#568

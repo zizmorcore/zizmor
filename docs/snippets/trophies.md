@@ -1710,6 +1710,14 @@
         - wagtail/wagtail-localize#843
 
 
+-   ![](https://github.com/wgsl-analyzer.png?size=40){ width="40" loading=lazy align=left } wgsl-analyzer
+
+    ---
+
+    ??? example "Examples"
+        - wgsl-analyzer/wgsl-analyzer#844
+
+
 -   ![](https://github.com/wntrblm.png?size=40){ width="40" loading=lazy align=left } wntrblm
 
     ---
@@ -1768,4 +1776,12 @@
     ??? example "Examples"
         - zkonduit/ezkl#907
         - zkonduit/ezkl#906
+
+
+-   ![](https://github.com/zulip.png?size=40){ width="40" loading=lazy align=left } zulip
+
+    ---
+
+    ??? example "Examples"
+        - zulip/docker-zulip#568
 
