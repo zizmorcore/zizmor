@@ -634,7 +634,8 @@ to keep in mind:
 * **Online access**: some fixes may require online access, even if their
   parent audit doesn't. For example, [unpinned-uses](./audits.md#unpinned-uses)
   doesn't require online access to _detect_ unpinned uses, but it does
-  require online access to fetch the latest commit SHA for pinning.
+  require online access (and a GitHub token) to fetch the latest commit
+  SHA for pinning.
 
 ## Filtering results
 
