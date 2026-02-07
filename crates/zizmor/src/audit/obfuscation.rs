@@ -124,15 +124,12 @@ impl Obfuscation {
         &self,
         expr: &SpannedExpr<'doc>,
         input: &'doc crate::audit::AuditInput,
-        expr_span: std::ops::Range<usize>,
-        origin: Origin<'doc>,
+        after: usize,
+        raw: &'doc str,
     ) -> Option<Fix<'doc>> {
         let evaluated = expr
             .consteval()
             .map(|evaluation| evaluation.sema().to_string())?;
-
-        // Calculate the absolute position in the input
-        let after = expr_span.start + origin.span.start;
 
         Some(Fix {
             title: "replace with evaluated constant".into(),
@@ -141,7 +138,7 @@ impl Obfuscation {
             patches: vec![Patch {
                 route: input.location().route,
                 operation: Op::RewriteFragment {
-                    from: Subfeature::new(after, origin.raw),
+                    from: Subfeature::new(after, raw),
                     to: evaluated.into(),
                 },
             }],
@@ -274,13 +271,21 @@ impl Audit for Obfuscation {
 
                 // Check if we can create a fix for constant-reducible expressions
                 if parsed.constant_reducible() {
+                    // If the entire expression is constant reducible we need to replace the whole thing,
+                    // including its fencing, to avoid leaving behind a semantically different fenced expression.
+                    // For example, `${{ 'foo' }}` is equivalent to `foo`, but if we only replaced the inner
+                    // expression we'd end up with `${{ foo }}`, which is not.
+
                     // Get the main expression's origin from the first annotation
-                    if let Some((_, main_origin, _)) = obfuscated_annotations.first()
+                    // TODO: Remove this check?
+                    if let Some((_, _, _)) = obfuscated_annotations.first()
                         && let Some(fix) = self.create_expression_fix(
                             &parsed,
                             input,
-                            expr_span.clone(),
-                            *main_origin,
+                            // NOTE: `expr_span.start` points to the `$` in `${{ ... }}`, so start
+                            // immediately before that to include the entire fenced expression in the fix.
+                            expr_span.start,
+                            expr.as_raw(),
                         )
                     {
                         finding_builder = finding_builder.fix(fix);
@@ -291,8 +296,8 @@ impl Audit for Obfuscation {
                         if let Some(fix) = self.create_expression_fix(
                             subexpr,
                             input,
-                            expr_span.clone(),
-                            subexpr.origin,
+                            expr_span.start + subexpr.origin.span.start,
+                            subexpr.origin.raw,
                         ) {
                             finding_builder = finding_builder.fix(fix);
                             break; // Only apply one fix at a time to avoid conflicts
@@ -370,8 +375,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_obfuscation_fix_static_evaluation() {
-        let workflow_content = r#"
-name: Test Workflow
+        let workflow_content = r#"name: Test Workflow
 on: push
 
 permissions: {}
@@ -395,7 +399,30 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r"");
+        insta::assert_snapshot!(result, @r#"
+
+        name: Test Workflow
+        on: push
+
+        permissions: {}
+
+        jobs:
+          release-please:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                  fetch-depth: 0 # ... because release-please scans historical commits to build releases, so we need all the history.
+                  persist-credentials: false
+              - id: release
+                uses: ./vendor/github.com/googleapis/release-please-action
+                with:
+                  config-file: "tools/releasing/config.release-please.json"
+                  manifest-file: "tools/releasing/manifest.release-please.json"
+                  target-branch: "${{ inputs.rp_target_branch }}"
+            outputs:
+              iac/terraform/attribution.tfm--release_created: steps.release.outputs.iac/terraform/attribution.tfm--release_created
+        "#);
     }
 
     #[tokio::test]
