@@ -874,6 +874,63 @@ jobs:
         Ok(())
     }
 
+    /// Tests that our spans are correct when we extract fenced expressions from an input,
+    /// even when the input contains leading newlines.
+    #[test]
+    fn test_extract_fenced_expressions_from_input_spans() -> Result<()> {
+        let workflow_content = r#"
+name: Test Workflow
+on: push
+
+permissions: {}
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # ... because release-please scans historical commits to build releases, so we need all the history.
+          persist-credentials: false
+      - id: release
+        uses: ./vendor/github.com/googleapis/release-please-action
+        with:
+          config-file: "tools/releasing/config.release-please.json"
+          manifest-file: "tools/releasing/manifest.release-please.json"
+          target-branch: "${{ inputs.rp_target_branch }}"
+    outputs:
+      iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
+"#;
+
+        let workflow = Workflow::from_string(
+            workflow_content.into(),
+            InputKey::local("fakegroup".into(), "fake", None),
+        )?;
+        let exprs = parse_fenced_expressions_from_input(&workflow.into())
+            .into_iter()
+            .map(|(e, span)| (e.as_raw().to_string(), span))
+            .collect::<Vec<_>>();
+
+        assert_eq!(exprs.len(), 2);
+        assert_eq!(exprs[0].0, "${{ inputs.rp_target_branch }}");
+        assert_eq!(exprs[0].1, 635..665);
+        assert_eq!(
+            &workflow_content[exprs[0].1.clone()],
+            "${{ inputs.rp_target_branch }}"
+        );
+        assert_eq!(
+            exprs[1].0,
+            "${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}"
+        );
+        assert_eq!(exprs[1].1, 734..811);
+        assert_eq!(
+            &workflow_content[exprs[1].1.clone()],
+            "${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}"
+        );
+
+        Ok(())
+    }
+
     #[test]
     fn test_normalize_shell() {
         for (actual, expected) in &[

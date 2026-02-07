@@ -373,7 +373,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_obfuscation_fix_static_evaluation() {
-        let workflow_content = r#"name: Test Workflow
+        let workflow_content = r#"
+name: Test Workflow
 on: push
 
 permissions: {}
