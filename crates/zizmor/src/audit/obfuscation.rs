@@ -269,25 +269,15 @@ impl Audit for Obfuscation {
                             ));
                 }
 
-                // Check if we can create a fix for constant-reducible expressions
-                if parsed.constant_reducible() {
+                if parsed.constant_reducible()
+                    && let Some(fix) =
+                        self.create_expression_fix(&parsed, input, expr_span.start, expr.as_raw())
+                {
                     // If the entire expression is constant reducible we need to replace the whole thing,
                     // including its fencing, to avoid leaving behind a semantically different fenced expression.
                     // For example, `${{ 'foo' }}` is equivalent to `foo`, but if we only replaced the inner
                     // expression we'd end up with `${{ foo }}`, which is not.
-
-                    // Get the main expression's origin from the first annotation
-                    // TODO: Remove this check?
-                    if let Some((_, _, _)) = obfuscated_annotations.first()
-                        && let Some(fix) = self.create_expression_fix(
-                            &parsed,
-                            input,
-                            expr_span.start,
-                            expr.as_raw(),
-                        )
-                    {
-                        finding_builder = finding_builder.fix(fix);
-                    }
+                    finding_builder = finding_builder.fix(fix);
                 } else {
                     // Check for constant-reducible subexpressions
                     for subexpr in parsed.constant_reducible_subexprs() {
