@@ -393,7 +393,7 @@ jobs:
           - run: |
               echo "foo: ${FOO}"
               echo "bar: ${BAR}"
-
+            
 
     --- END PATCH ---
     "#);
@@ -866,7 +866,7 @@ fn test_replace_empty_flow_value() {
     --- PATCH ---
 
         foo: { bar: abc }
-
+        
 
     --- END PATCH ---
     ");
@@ -891,7 +891,7 @@ fn test_replace_empty_flow_value_no_colon() {
     --- PATCH ---
 
             foo: { bar: abc }
-
+            
 
     --- END PATCH ---
     ");
