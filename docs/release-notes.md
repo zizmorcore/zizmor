@@ -44,6 +44,12 @@ of `zizmor`.
 * Fixed a bug where the [template-injection] audit would produce
   duplicated pedantic-only findings (#1589)
 
+* Fixed a bug where the [obfuscation] audit would produce incorrect
+  autofixes for a subset of constant-reducible expressions (#1597)
+
+* Fixed a bug where the [obfuscation] audit would fail to apply fixes
+  to a subset of inputs with leading whitespace (#1597)
+
 ## 1.22.0
 
 ### Changes ⚠️
