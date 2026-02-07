@@ -282,8 +282,6 @@ impl Audit for Obfuscation {
                         && let Some(fix) = self.create_expression_fix(
                             &parsed,
                             input,
-                            // NOTE: `expr_span.start` points to the `$` in `${{ ... }}`, so start
-                            // immediately before that to include the entire fenced expression in the fix.
                             expr_span.start,
                             expr.as_raw(),
                         )
