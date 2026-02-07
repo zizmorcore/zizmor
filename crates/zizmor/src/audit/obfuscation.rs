@@ -371,6 +371,9 @@ mod tests {
         fixed_document.source().to_string()
     }
 
+    /// Test that we correctly replace `${{ 'foo' }}` with `foo` instead of `${{ foo }}`.
+    ///
+    /// Reproducer for #1578; see: <https://github.com/zizmorcore/zizmor/issues/1578>.
     #[tokio::test]
     async fn test_obfuscation_fix_static_evaluation() {
         let workflow_content = r#"
