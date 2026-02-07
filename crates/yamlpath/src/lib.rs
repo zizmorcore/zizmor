@@ -1153,6 +1153,13 @@ mod tests {
     use crate::{Component, Document, FeatureKind, QueryError, Route};
 
     #[test]
+    fn test_document_preserves_leading_trailing_whitespace() {
+        let source = "\n\n   foo: bar   \n   baz: quux   \n\n";
+        let doc = Document::new(source).unwrap();
+        assert_eq!(doc.source(), source);
+    }
+
+    #[test]
     fn test_query_parent() {
         let route = route!("foo", "bar", "baz");
         assert_eq!(
