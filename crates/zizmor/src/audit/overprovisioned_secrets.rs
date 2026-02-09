@@ -8,7 +8,7 @@ use crate::{
         Confidence, Severity,
         location::{Feature, Location},
     },
-    utils::parse_fenced_expressions_from_input,
+    utils::parse_fenced_expressions_from_routable,
 };
 
 use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
@@ -37,7 +37,7 @@ impl Audit for OverprovisionedSecrets {
     ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        for (expr, span) in parse_fenced_expressions_from_input(input) {
+        for (expr, span) in parse_fenced_expressions_from_routable(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;

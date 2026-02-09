@@ -11,7 +11,7 @@ use crate::{
         location::{Feature, Location, Routable},
     },
     models::{StepCommon, action::CompositeStep, workflow::Step},
-    utils::parse_fenced_expressions_from_input,
+    utils::parse_fenced_expressions_from_routable,
 };
 use subfeature::Subfeature;
 
@@ -242,7 +242,7 @@ impl Audit for Obfuscation {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        for (expr, expr_span) in parse_fenced_expressions_from_input(input) {
+        for (expr, expr_span) in parse_fenced_expressions_from_routable(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
