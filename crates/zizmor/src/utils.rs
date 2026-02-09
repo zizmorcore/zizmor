@@ -570,7 +570,7 @@ pub(crate) fn parse_fenced_expressions_from_routable<
     let bias = feature.location.byte_span.0;
     let mut offset = 0;
 
-    while let Some((expr, span)) = extract_fenced_expression(&content, offset) {
+    while let Some((expr, span)) = extract_fenced_expression(content, offset) {
         // Ignore expressions that are inside comments.
         if doc.offset_inside_comment(span.start + bias) {
             // Don't jump the entire span, since we might have an
