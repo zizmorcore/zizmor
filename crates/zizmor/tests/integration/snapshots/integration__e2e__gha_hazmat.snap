@@ -345,6 +345,17 @@ error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache pois
    = note: audit confidence → Low
    = note: this finding has an auto-fix
 
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/cache-poisoning.yml:58:40
+   |
+44 |   vulnerable-2:
+   |   ------------ this job
+...
+58 |         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
 error[excessive-permissions]: overly broad permissions
   --> .github/workflows/excessive-permissions.yml:19:3
    |
@@ -456,6 +467,17 @@ error[unpinned-images]: unpinned image references
    |
 39 |         image: fake.example.com/yetanotherexample
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/hardcoded-credentials.yml:43:25
+   |
+23 |   test:
+   |   ---- this job
+...
+43 |           password: ${{ secrets.SOME_SECRET }}
+   |                         ^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
    |
    = note: audit confidence → High
 
@@ -583,6 +605,50 @@ warning[overprovisioned-secrets]: excessively provisioned secrets
    |
 31 |           secrets_json: ${{ toJSON(secrets) }}
    |                         ^^^^^^^^^^^^^^^^^^^^^^ injects the entire secrets context into the runner
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/overprovisioned-secrets.yml:21:43
+   |
+15 |   test:
+   |   ---- this job
+...
+21 |           stuff: ${{ format('{0}', toJSON(secrets)) }}
+   |                                           ^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/overprovisioned-secrets.yml:23:27
+   |
+15 |   test:
+   |   ---- this job
+...
+23 |           otherstuff: ${{ secrets.otherstuff }}
+   |                           ^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/overprovisioned-secrets.yml:25:33
+   |
+15 |   test:
+   |   ---- this job
+...
+25 |           morestuff: ${{ toJSON(secrets.morestuff) }}
+   |                                 ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/overprovisioned-secrets.yml:31:36
+   |
+15 |   test:
+   |   ---- this job
+...
+31 |           secrets_json: ${{ toJSON(secrets) }}
+   |                                    ^^^^^^^ secret is accessed outside of a dedicated environment
    |
    = note: audit confidence → High
 
@@ -775,6 +841,72 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/pypi-manual-credential.yml:29:25
+   |
+16 |   publish:
+   |   ------- this job
+...
+29 |           password: ${{ secrets.PYPI_TOKEN }}
+   |                         ^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/pypi-manual-credential.yml:54:25
+   |
+16 |   publish:
+   |   ------- this job
+...
+54 |           password: ${{ secrets.NON_PYPI_TOKEN }}
+   |                         ^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/pypi-manual-credential.yml:61:25
+   |
+16 |   publish:
+   |   ------- this job
+...
+61 |           password: ${{ secrets.PYPI_TOKEN }}
+   |                         ^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/pypi-manual-credential.yml:69:25
+   |
+16 |   publish:
+   |   ------- this job
+...
+69 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/pypi-manual-credential.yml:76:25
+   |
+16 |   publish:
+   |   ------- this job
+...
+76 |           password: ${{ secrets.PYPI_TOKEN }}
+   |                         ^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/pypi-manual-credential.yml:84:25
+   |
+16 |   publish:
+   |   ------- this job
+...
+84 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/ref-confusion.yml:26:15
@@ -1056,6 +1188,28 @@ warning[unredacted-secrets]: leaked secret values
    |
    = note: audit confidence → High
 
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/unredacted-secrets.yml:20:31
+   |
+14 |   test:
+   |   ---- this job
+...
+20 |           stuff: ${{ fromJSON(secrets.password) }}
+   |                               ^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/unredacted-secrets.yml:23:36
+   |
+14 |   test:
+   |   ---- this job
+...
+23 |           otherstuff: ${{ fromJson(secrets.otherstuff).field }}
+   |                                    ^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
 error[unsound-contains]: unsound contains condition
   --> .github/workflows/unsound-contains.yml:26:9
    |
@@ -1124,4 +1278,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-203 findings (104 suppressed): 7 informational, 0 low, 29 medium, 63 high
+217 findings (104 suppressed): 7 informational, 0 low, 43 medium, 63 high
