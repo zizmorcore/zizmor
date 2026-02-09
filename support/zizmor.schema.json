@@ -197,6 +197,9 @@
         "secrets-inherit": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "secrets-outside-env": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "self-hosted-runner": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
