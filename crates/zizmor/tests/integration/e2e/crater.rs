@@ -32,3 +32,17 @@ fn libssh2() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[cfg_attr(not(feature = "crater-tests"), ignore)]
+#[test]
+fn warehouse() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(OutputMode::Both)
+            .args(["--persona=pedantic"])
+            .input("pypi/warehouse@9ed30d191788fcfa9c5be56bcce9b743e758903e")
+            .run()?
+    );
+    Ok(())
+}
