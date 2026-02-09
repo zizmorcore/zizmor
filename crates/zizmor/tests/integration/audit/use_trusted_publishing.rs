@@ -9,89 +9,89 @@ fn test_use_trusted_publishing() -> Result<()> {
             .run()?,
         @r"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:18:9
+      --> @@INPUT@@:19:9
        |
-    18 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+    19 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    19 |         with:
-    20 |           password: ${{ secrets.PYPI_TOKEN }}
+    20 |         with:
+    21 |           password: ${{ secrets.PYPI_TOKEN }}
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:25:9
+      --> @@INPUT@@:26:9
        |
-    25 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+    26 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    26 |         with:
-    27 |           password: ${{ secrets.PYPI_TOKEN }}
+    27 |         with:
+    28 |           password: ${{ secrets.PYPI_TOKEN }}
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:33:9
+      --> @@INPUT@@:34:9
        |
-    33 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+    34 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    34 |         with:
-    35 |           password: ${{ secrets.PYPI_TOKEN }}
+    35 |         with:
+    36 |           password: ${{ secrets.PYPI_TOKEN }}
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:51:9
+      --> @@INPUT@@:52:9
        |
-    51 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+    52 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    52 |         with:
-    53 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
+    53 |         with:
+    54 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:58:9
+      --> @@INPUT@@:59:9
        |
-    58 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
+    59 |         uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    59 |         with:
-    60 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
+    60 |         with:
+    61 |           password: ${{ secrets.TEST_PYPI_TOKEN }}
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:65:9
+      --> @@INPUT@@:66:9
        |
-    65 |         uses: rubygems/release-gem@v1 # zizmor: ignore[unpinned-uses]
+    66 |         uses: rubygems/release-gem@v1 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    66 |         with:
-    67 |           setup-trusted-publisher: false
+    67 |         with:
+    68 |           setup-trusted-publisher: false
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:82:9
+      --> @@INPUT@@:83:9
        |
-    82 |         uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
+    83 |         uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    83 |         with:
-    84 |           api-token: ${{ secrets.RUBYGEMS_API_TOKEN }}
+    84 |         with:
+    85 |           api-token: ${{ secrets.RUBYGEMS_API_TOKEN }}
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:95:9
+      --> @@INPUT@@:96:9
        |
-    95 |         uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
+    96 |         uses: rubygems/configure-rubygems-credentials@v1 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    96 |         with:
-    97 |           api-token: ${{ secrets.RUBYGEMS_API_TOKEN }}
+    97 |         with:
+    98 |           api-token: ${{ secrets.RUBYGEMS_API_TOKEN }}
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
@@ -138,9 +138,9 @@ fn test_cargo_publish() -> Result<()> {
             .run()?,
         @r"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:12:14
+      --> @@INPUT@@:13:14
        |
-    12 |         run: cargo publish
+    13 |         run: cargo publish
        |         ---  ^^^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -148,9 +148,9 @@ fn test_cargo_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:17:14
+      --> @@INPUT@@:18:14
        |
-    17 |         run: cargo +nightly publish
+    18 |         run: cargo +nightly publish
        |         ---  ^^^^^^^^^^^^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -158,22 +158,22 @@ fn test_cargo_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:24:11
+      --> @@INPUT@@:25:11
        |
-    23 |           run: |
+    24 |           run: |
        |           --- this step
-    24 | /           cargo \
-    25 | |             publish \
-    26 | |             --allow-dirty \
-    27 | |             --no-verify
+    25 | /           cargo \
+    26 | |             publish \
+    27 | |             --allow-dirty \
+    28 | |             --no-verify
        | |_______________________^ this command
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:49:14
+      --> @@INPUT@@:50:14
        |
-    49 |         run: cargo publish
+    50 |         run: cargo publish
        |         ---  ^^^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -181,9 +181,9 @@ fn test_cargo_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:54:14
+      --> @@INPUT@@:55:14
        |
-    54 |         run: cargo +nightly publish
+    55 |         run: cargo +nightly publish
        |         ---  ^^^^^^^^^^^^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -191,19 +191,41 @@ fn test_cargo_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:61:11
+      --> @@INPUT@@:62:11
        |
-    60 |           run: |
+    61 |           run: |
        |           --- this step
-    61 | /           cargo `
-    62 | |             publish `
-    63 | |             --allow-dirty `
-    64 | |             --no-verify
+    62 | /           cargo `
+    63 | |             publish `
+    64 | |             --allow-dirty `
+    65 | |             --no-verify
        | |_______________________^ this command
        |
        = note: audit confidence → High
 
-    9 findings (3 suppressed): 6 informational, 0 low, 0 medium, 0 high
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:52:37
+       |
+    44 |   publish-2:
+       |   --------- this job
+    ...
+    52 |           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+       |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:57:37
+       |
+    44 |   publish-2:
+       |   --------- this job
+    ...
+    57 |           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+       |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    11 findings (3 suppressed): 6 informational, 0 low, 2 medium, 0 high
     "
     );
 
@@ -218,20 +240,20 @@ fn test_npm_publish() -> Result<()> {
             .run()?,
         @r"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:14:9
+      --> @@INPUT@@:15:9
        |
-    14 |         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+    15 |         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
     ...
-    18 |           always-auth: true
+    19 |           always-auth: true
        |           ^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:20:14
+      --> @@INPUT@@:21:14
        |
-    20 |         run: npm publish
+    21 |         run: npm publish
        |         ---  ^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -239,20 +261,20 @@ fn test_npm_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:26:9
+      --> @@INPUT@@:27:9
        |
-    26 |         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+    27 |         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
     ...
-    30 |           always-auth: true
+    31 |           always-auth: true
        |           ^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:32:14
+      --> @@INPUT@@:33:14
        |
-    32 |         run: npm publish
+    33 |         run: npm publish
        |         ---  ^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -260,9 +282,9 @@ fn test_npm_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:43:14
+      --> @@INPUT@@:44:14
        |
-    43 |         run: npm publish
+    44 |         run: npm publish
        |         ---  ^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -270,9 +292,9 @@ fn test_npm_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:49:14
+      --> @@INPUT@@:50:14
        |
-    49 |         run: npm publish --access public
+    50 |         run: npm publish --access public
        |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -280,20 +302,20 @@ fn test_npm_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:57:11
+      --> @@INPUT@@:58:11
        |
-    55 |         run: |
+    56 |         run: |
        |         --- this step
-    56 |           npm config set registry https://registry.npmjs.org
-    57 |           npm publish --access public
+    57 |           npm config set registry https://registry.npmjs.org
+    58 |           npm publish --access public
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
        |
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:63:14
+      --> @@INPUT@@:64:14
        |
-    63 |         run: yarn npm publish
+    64 |         run: yarn npm publish
        |         ---  ^^^^^^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -301,9 +323,9 @@ fn test_npm_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:69:14
+      --> @@INPUT@@:70:14
        |
-    69 |         run: yarn npm publish --access public
+    70 |         run: yarn npm publish --access public
        |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -311,9 +333,9 @@ fn test_npm_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:75:14
+      --> @@INPUT@@:76:14
        |
-    75 |         run: pnpm publish
+    76 |         run: pnpm publish
        |         ---  ^^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -321,9 +343,9 @@ fn test_npm_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-      --> @@INPUT@@:81:14
+      --> @@INPUT@@:82:14
        |
-    81 |         run: pnpm publish --access public
+    82 |         run: pnpm publish --access public
        |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
        |         |
        |         this step
@@ -331,17 +353,116 @@ fn test_npm_publish() -> Result<()> {
        = note: audit confidence → High
 
     info[use-trusted-publishing]: prefer trusted publishing for authentication
-       --> @@INPUT@@:129:9
+       --> @@INPUT@@:130:9
         |
-    129 |         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
+    130 |         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
         |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
     ...
-    132 |           always-auth: true
+    133 |           always-auth: true
         |           ^^^^^^^^^^^^^^^^^ uses a manually-configured credential instead of Trusted Publishing
         |
         = note: audit confidence → High
 
-    22 findings (6 ignored, 4 suppressed): 12 informational, 0 low, 0 medium, 0 high
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:46:26
+       |
+    37 |   npm-direct-commands:
+       |   ------------------- this job
+    ...
+    46 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:52:26
+       |
+    37 |   npm-direct-commands:
+       |   ------------------- this job
+    ...
+    52 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:60:26
+       |
+    37 |   npm-direct-commands:
+       |   ------------------- this job
+    ...
+    60 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:66:36
+       |
+    37 |   npm-direct-commands:
+       |   ------------------- this job
+    ...
+    66 |           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+       |                                    ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:72:36
+       |
+    37 |   npm-direct-commands:
+       |   ------------------- this job
+    ...
+    72 |           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+       |                                    ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:78:26
+       |
+    37 |   npm-direct-commands:
+       |   ------------------- this job
+    ...
+    78 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:84:26
+       |
+    37 |   npm-direct-commands:
+       |   ------------------- this job
+    ...
+    84 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+       --> @@INPUT@@:126:32
+        |
+     87 |   npm-trusted-publishing:
+        |   ---------------------- this job
+    ...
+    126 |           NODE_AUTH_TOKEN: ${{ secrets.CUSTOM_NPM_TOKEN }}
+        |                                ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+        |
+        = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+       --> @@INPUT@@:137:32
+        |
+     87 |   npm-trusted-publishing:
+        |   ---------------------- this job
+    ...
+    137 |           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        |                                ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+        |
+        = note: audit confidence → High
+
+    31 findings (6 ignored, 4 suppressed): 12 informational, 0 low, 9 medium, 0 high
     "
     );
 

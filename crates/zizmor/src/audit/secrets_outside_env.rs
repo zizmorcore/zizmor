@@ -5,7 +5,7 @@ use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
     config::Config,
     finding::{
-        Finding, Persona,
+        Confidence, Finding, Persona, Severity,
         location::{Feature, Locatable, Location},
     },
     models::workflow::NormalJob,
@@ -72,7 +72,9 @@ impl Audit for SecretsOutsideEnvironment {
 
                 findings.push(
                     Self::finding()
-                        .persona(Persona::Pedantic)
+                        .persona(Persona::Regular)
+                        .severity(Severity::Medium)
+                        .confidence(Confidence::High)
                         .add_location(job.location().key_only())
                         .add_raw_location(Location::new(
                             job.location()

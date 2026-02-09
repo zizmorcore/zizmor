@@ -8,6 +8,7 @@ jobs:
   publish:
     name: publish
     runs-on: ubuntu-latest
+    environment: nuget
     steps:
       - name: Project Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
