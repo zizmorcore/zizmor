@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [secrets-outside-env] detects usage of the `secrets` context
+  in jobs that don't have a corresponding `environment` (#1599)
+
 ### Enhancements 🌱
 
 * `zizmor`'s LSP mode is now configuration-aware, and will load
@@ -1488,5 +1493,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [archived-uses]: ./audits.md#archived-uses
 [impostor-commit]: ./audits.md#impostor-commit
 [misfeature]: ./audits.md#misfeature
+[secrets-outside-env]: ./audits.md#secrets-outside-env
 
 [exit code]: ./usage.md#exit-codes
