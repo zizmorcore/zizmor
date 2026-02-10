@@ -22,6 +22,7 @@ mod overprovisioned_secrets;
 mod ref_confusion;
 mod ref_version_mismatch;
 mod secrets_inherit;
+mod secrets_outside_env;
 mod self_hosted_runner;
 mod stale_action_refs;
 mod template_injection;
