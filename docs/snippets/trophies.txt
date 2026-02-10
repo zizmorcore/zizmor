@@ -193,6 +193,7 @@ maxmind/mmdbwriter#104
 maxmind/GeoIP2-node#1387
 MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
+microsoft/azurelinux#15733
 microsoft/component-detection#1532
 microsoft/linux-package-repositories#208
 microsoft/vscode-python#25047
@@ -338,6 +339,7 @@ stravalib/stravalib#649
 strawberry-graphql/strawberry#4097
 super-linter/super-linter#7241
 Swatinem/rust-cache#262
+target/data-validator#223
 TecharoHQ/anubis#188
 termcolor/termcolor#89
 termux/termux-packages#22519
