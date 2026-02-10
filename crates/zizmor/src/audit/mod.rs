@@ -6,7 +6,10 @@ use yamlpath::Document;
 
 use crate::{
     config::Config,
-    finding::{Finding, FindingBuilder, location::SymbolicLocation},
+    finding::{
+        Finding, FindingBuilder,
+        location::{Routable, SymbolicLocation},
+    },
     models::{
         AsDocument,
         action::{Action, CompositeStep},
@@ -39,6 +42,7 @@ pub(crate) mod overprovisioned_secrets;
 pub(crate) mod ref_confusion;
 pub(crate) mod ref_version_mismatch;
 pub(crate) mod secrets_inherit;
+pub(crate) mod secrets_outside_env;
 pub(crate) mod self_hosted_runner;
 pub(crate) mod stale_action_refs;
 pub(crate) mod template_injection;
@@ -89,6 +93,16 @@ impl<'a> AsDocument<'a, 'a> for AuditInput {
             AuditInput::Workflow(workflow) => workflow.as_document(),
             AuditInput::Action(action) => action.as_document(),
             AuditInput::Dependabot(dependabot) => dependabot.as_document(),
+        }
+    }
+}
+
+impl<'a> Routable<'a, 'a> for AuditInput {
+    fn route(&'a self) -> yamlpath::Route<'a> {
+        match self {
+            AuditInput::Workflow(workflow) => workflow.location().route,
+            AuditInput::Action(action) => action.location().route,
+            AuditInput::Dependabot(dependabot) => dependabot.location().route,
         }
     }
 }

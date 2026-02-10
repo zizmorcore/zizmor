@@ -1304,6 +1304,65 @@ that explicitly forwards each secret actually needed by the reusable workflow.
               me-too: ${{ secrets.me-too }}
         ```
 
+## `secrets-outside-env`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [secrets-outside-env.yml]   | v1.23.0      | ✅             | ❌                 | ❌  |
+
+[secrets-outside-env.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/secrets-outside-env.yml
+
+Detects usage of the `secrets` context in jobs without a dedicated environment.
+
+GitHub Actions allows secrets to be configured at the organization, repository,
+or environment level. The first two of these expose the configured secrets
+to an entire repository (or repositories), while the last one allows secrets to be
+scoped to specific conditions *within* a repository, as defined by the
+environment's [protection rules].
+
+[protection rules]: https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments#creating-an-environment
+
+Consequently, configuring secrets at the environment level ensures that they're
+only exposed to jobs that meet the environment's protection rules, mitigating
+the risk of secrets being exposed to untrusted code or compromised workflows.
+
+### Remediation
+
+In general, secrets should be configured at the environment level, and only
+the job or jobs that need a secret should use the corresponding environment.
+
+!!! important
+
+    You **must** move your secrets into the environment's secrets (and remove
+    them from the repo/org-wide secrets) in order for this to be effective.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="secrets-outside-env.yml" hl_lines="7"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: ./deploy.sh
+                env:
+                  API_KEY: ${{ secrets.API_KEY }}
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="secrets-outside-env.yml" hl_lines="4 8"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            environment: production
+            steps:
+              - run: ./deploy.sh
+                env:
+                  API_KEY: ${{ secrets.API_KEY }}
+        ```
+
 ## `self-hosted-runner`
 
 | Type     | Examples            | Introduced in | Works offline  | Auto-fixes available | Configurable |

@@ -9,7 +9,8 @@ use jsonschema::{Validator, validator_for};
 use std::ops::{Deref, Range};
 use std::{fmt::Write, sync::LazyLock};
 
-use crate::{audit::AuditInput, models::AsDocument, registry::input::CollectionError};
+use crate::finding::location::Routable;
+use crate::{models::AsDocument, registry::input::CollectionError};
 
 pub(crate) static ZIZMOR_AGENT: &str = concat!("zizmor/", env!("CARGO_PKG_VERSION"));
 
@@ -537,24 +538,41 @@ pub(crate) fn extract_fenced_expressions(text: &str) -> Vec<(ExtractedExpr<'_>, 
     exprs
 }
 
-/// Like [`extract_fenced_expressions`], but over an entire audit input (e.g. workflow
-/// or action definition).
+/// Like [`extract_fenced_expressions`], but over an "routable," i.e.
+/// a document feature that has an associated route within the document
+/// (which could be the entire document, like a workflow, or a fragment of it).
 ///
 /// Unlike [`extract_fenced_expressions`], this function performs some semantic
 /// filtering over the raw input. For example, it skip ignore expressions
 /// that are inside comments.
-pub(crate) fn parse_fenced_expressions_from_input(
-    input: &AuditInput,
-) -> Vec<(ExtractedExpr<'_>, Range<usize>)> {
-    let text = input.as_document().source();
+///
+/// The span associated with each extracted expression is absolute,
+/// i.e. relative to the start of the document, not the start of the feature.
+pub(crate) fn parse_fenced_expressions_from_routable<
+    'a,
+    'doc,
+    R: AsDocument<'a, 'doc> + Routable<'a, 'doc>,
+>(
+    input: &'a R,
+) -> Vec<(ExtractedExpr<'doc>, Range<usize>)> {
     let doc = input.as_document();
 
+    let (content, feature) = {
+        // NOTE: expect here because a failure in feature extraction here indicates a
+        // significant internal error, not something the user can recover from.
+        let feature = doc
+            .query_pretty(&input.route())
+            .expect("invalid route when extracting fenced expressions");
+        (doc.extract(&feature), feature)
+    };
+
     let mut exprs = vec![];
+    let bias = feature.location.byte_span.0;
     let mut offset = 0;
 
-    while let Some((expr, span)) = extract_fenced_expression(text, offset) {
+    while let Some((expr, span)) = extract_fenced_expression(content, offset) {
         // Ignore expressions that are inside comments.
-        if doc.offset_inside_comment(span.start) {
+        if doc.offset_inside_comment(span.start + bias) {
             // Don't jump the entire span, since we might have an
             // actual expression accidentally captured within it.
             // Instead, just resume searching from the next character.
@@ -562,9 +580,9 @@ pub(crate) fn parse_fenced_expressions_from_input(
             continue;
         }
 
-        exprs.push((expr, (span.start..span.end)));
+        exprs.push((expr, (span.start + bias..span.end + bias)));
 
-        if span.end >= text.len() {
+        if span.end >= feature.location.byte_span.1 {
             break;
         } else {
             offset = span.end;
@@ -723,11 +741,12 @@ mod tests {
     use github_actions_expressions::Expr;
 
     use crate::{
+        audit::AuditInput,
         models::{action::Action, workflow::Workflow},
         registry::input::InputKey,
         utils::{
             env_is_static, extract_fenced_expression, extract_fenced_expressions, normalize_shell,
-            parse_fenced_expressions_from_input,
+            parse_fenced_expressions_from_routable,
         },
     };
 
@@ -808,7 +827,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_fenced_expressions_from_input() -> Result<()> {
+    fn test_extract_fenced_expressions_from_routable() -> Result<()> {
         // Repro cases for #569; ensures we handle broken expressions that
         // are commented out. Observe that the commented expression isn't
         // terminated correctly, so the naive parse continues to the next
@@ -827,13 +846,12 @@ runs:
       shell: bash
 "#;
 
-        let action = Action::from_string(
+        let action = AuditInput::from(Action::from_string(
             action.into(),
             InputKey::local("fakegroup".into(), "fake", None),
-        )?;
-        let action = action.into();
+        )?);
 
-        let exprs = parse_fenced_expressions_from_input(&action);
+        let exprs = parse_fenced_expressions_from_routable(&action);
         assert_eq!(exprs.len(), 1);
         assert_eq!(exprs[0].0.as_raw().to_string(), "${{ '' }}");
 
@@ -859,12 +877,12 @@ jobs:
       - run: echo hello from ${{ github.actor }}
 "#;
 
-        let workflow = Workflow::from_string(
+        let workflow = AuditInput::from(Workflow::from_string(
             workflow.into(),
             InputKey::local("fakegroup".into(), "fake", None),
-        )?;
+        )?);
 
-        let exprs = parse_fenced_expressions_from_input(&workflow.into())
+        let exprs = parse_fenced_expressions_from_routable(&workflow)
             .into_iter()
             .map(|(e, _)| e.as_raw().to_string())
             .collect::<Vec<_>>();
@@ -877,7 +895,7 @@ jobs:
     /// Tests that our spans are correct when we extract fenced expressions from an input,
     /// even when the input contains leading newlines.
     #[test]
-    fn test_extract_fenced_expressions_from_input_spans() -> Result<()> {
+    fn test_extract_fenced_expressions_from_routable_spans() -> Result<()> {
         let workflow_content = r#"
 name: Test Workflow
 on: push
@@ -902,11 +920,11 @@ jobs:
       iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
 "#;
 
-        let workflow = Workflow::from_string(
+        let workflow = AuditInput::from(Workflow::from_string(
             workflow_content.into(),
             InputKey::local("fakegroup".into(), "fake", None),
-        )?;
-        let exprs = parse_fenced_expressions_from_input(&workflow.into())
+        )?);
+        let exprs = parse_fenced_expressions_from_routable(&workflow)
             .into_iter()
             .map(|(e, span)| (e.as_raw().to_string(), span))
             .collect::<Vec<_>>();

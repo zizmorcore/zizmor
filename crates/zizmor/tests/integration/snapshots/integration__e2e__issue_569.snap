@@ -392,6 +392,17 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/new-bugs-announce-notifier.yml:23:32
+   |
+12 |   notify-new-bugs-announce:
+   |   ------------------------ this job
+...
+23 |           MAILGUN_API_KEY: ${{ secrets.MAILGUN_PYTHON_ORG_MAILGUN_KEY }}
+   |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/project-updater.yml:26:15
    |
@@ -400,6 +411,17 @@ error[unpinned-uses]: unpinned action reference
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/project-updater.yml:29:29
+   |
+13 |   add-to-project:
+   |   -------------- this job
+...
+29 |           github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/require-pr-label.yml:19:15
@@ -707,4 +729,4 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
-156 findings (1 ignored, 79 suppressed): 0 informational, 1 low, 0 medium, 75 high
+158 findings (1 ignored, 79 suppressed): 0 informational, 1 low, 2 medium, 75 high

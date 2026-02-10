@@ -8,17 +8,17 @@ fn test_normal_persona() -> anyhow::Result<()> {
             .run()?,
         @r"
     warning[unredacted-secrets]: leaked secret values
-      --> @@INPUT@@:17:18
+      --> @@INPUT@@:18:18
        |
-    17 |           stuff: ${{ fromJSON(secrets.password) }}
+    18 |           stuff: ${{ fromJSON(secrets.password) }}
        |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ bypasses secret redaction
        |
        = note: audit confidence → High
 
     warning[unredacted-secrets]: leaked secret values
-      --> @@INPUT@@:20:23
+      --> @@INPUT@@:21:23
        |
-    20 |           otherstuff: ${{ fromJson(secrets.otherstuff).field }}
+    21 |           otherstuff: ${{ fromJson(secrets.otherstuff).field }}
        |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ bypasses secret redaction
        |
        = note: audit confidence → High

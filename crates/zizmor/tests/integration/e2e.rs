@@ -408,21 +408,21 @@ fn issue_1065() -> Result<()> {
        |
     12 | /   issue-1065:
     13 | |     runs-on: ubuntu-latest
-    14 | |     steps:
-    15 | |       - name: Comment PR
+    14 | |     environment: foobar
+    15 | |     steps:
     ...  |
-    24 | |             Please review the changes and provide any feedback. Thanks! 🚀
-       | |                                                                          ^
-       | |                                                                          |
-       | |__________________________________________________________________________this job
-       |                                                                            default permissions used due to no permissions: block
+    25 | |             Please review the changes and provide any feedback. Thanks! 🚀
+       | |                                                                           ^
+       | |                                                                           |
+       | |___________________________________________________________________________this job
+       |                                                                             default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:16:15
+      --> @@INPUT@@:17:15
        |
-    16 |         uses: thollander/actions-comment-pull-request@v3
+    17 |         uses: thollander/actions-comment-pull-request@v3
        |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High

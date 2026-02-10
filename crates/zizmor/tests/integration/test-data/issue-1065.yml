@@ -11,6 +11,7 @@ on:
 jobs:
   issue-1065:
     runs-on: ubuntu-latest
+    environment: foobar
     steps:
       - name: Comment PR
         uses: thollander/actions-comment-pull-request@v3

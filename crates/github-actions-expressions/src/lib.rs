@@ -82,6 +82,45 @@ impl<'a> SpannedExpr<'a> {
         Self { origin, inner }
     }
 
+    /// Returns the contexts in this expression, along with their origins.
+    ///
+    /// This includes all contexts in the expression, even those that don't directly flow into
+    /// the evaluation. For example, `${{ foo.bar == 'abc' }}` returns `foo.bar` since it's a
+    /// context in the expression, even though it flows into a boolean evaluation rather than
+    /// directly into the output.
+    ///
+    /// For dataflow contexts, see [`SpannedExpr::dataflow_contexts`].
+    pub fn contexts(&self) -> Vec<(&Context<'a>, &Origin<'a>)> {
+        let mut contexts = vec![];
+
+        match self.deref() {
+            Expr::Index(expr) => contexts.extend(expr.contexts()),
+            Expr::Call(Call { func: _, args }) => {
+                for arg in args {
+                    contexts.extend(arg.contexts());
+                }
+            }
+            Expr::Context(ctx) => {
+                // Record the context itself.
+                contexts.push((ctx, &self.origin));
+
+                // The context's parts can also contain independent contexts,
+                // e.g. computed indices like `bar.baz` in `foo[bar.baz]`.
+                ctx.parts
+                    .iter()
+                    .for_each(|part| contexts.extend(part.contexts()));
+            }
+            Expr::BinOp { lhs, op: _, rhs } => {
+                contexts.extend(lhs.contexts());
+                contexts.extend(rhs.contexts());
+            }
+            Expr::UnOp { op: _, expr } => contexts.extend(expr.contexts()),
+            _ => (),
+        }
+
+        contexts
+    }
+
     /// Returns the contexts in this expression that directly flow into the
     /// expression's evaluation.
     ///
@@ -1523,6 +1562,32 @@ mod tests {
             let expr = Expr::parse(expr)?;
             assert_eq!(!expr.constant_reducible_subexprs().is_empty(), *reducible);
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_expr_contexts() -> Result<()> {
+        // A single context.
+        let expr = Expr::parse("foo.bar.baz[1].qux")?;
+        assert_eq!(
+            expr.contexts().iter().map(|t| t.1.raw).collect::<Vec<_>>(),
+            ["foo.bar.baz[1].qux",]
+        );
+
+        // Multiple contexts.
+        let expr = Expr::parse("foo.bar[1].baz || abc.def")?;
+        assert_eq!(
+            expr.contexts().iter().map(|t| t.1.raw).collect::<Vec<_>>(),
+            ["foo.bar[1].baz", "abc.def",]
+        );
+
+        // Two contexts, one as part of a computed index.
+        let expr = Expr::parse("foo.bar[abc.def]")?;
+        assert_eq!(
+            expr.contexts().iter().map(|t| t.1.raw).collect::<Vec<_>>(),
+            ["foo.bar[abc.def]", "abc.def",]
+        );
+
         Ok(())
     }
 

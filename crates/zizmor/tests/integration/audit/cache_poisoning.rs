@@ -24,12 +24,12 @@ fn test_caching_enabled_by_default() -> anyhow::Result<()> {
             .run()?,
         @r"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-      --> @@INPUT@@:19:9
+      --> @@INPUT@@:21:9
        |
      1 | on: release
        | ----------- generally used when publishing artifacts generated at runtime
     ...
-    19 |         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+    21 |         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
        |
        = note: audit confidence → Low
@@ -52,16 +52,16 @@ fn test_caching_opt_in_boolean_toggle() -> anyhow::Result<()> {
             .run()?,
         @r#"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-      --> @@INPUT@@:18:9
+      --> @@INPUT@@:19:9
        |
      1 |   on: release
        |   ----------- generally used when publishing artifacts generated at runtime
     ...
-    18 |           uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25
+    19 |           uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    19 | /         with:
-    20 | |           dotnet-version: "5.0.x"
-    21 | |           cache: true
+    20 | /         with:
+    21 | |           dotnet-version: "5.0.x"
+    22 | |           cache: true
        | |_____________________- enables caching explicitly here
        |
        = note: audit confidence → Low
@@ -84,16 +84,16 @@ fn test_caching_opt_in_expression() -> anyhow::Result<()> {
             .run()?,
         @r#"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-      --> @@INPUT@@:18:9
+      --> @@INPUT@@:19:9
        |
      1 |   on: release
        |   ----------- generally used when publishing artifacts generated at runtime
     ...
-    18 |           uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a
+    19 |           uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    19 | /         with:
-    20 | |           python-version: "3.12"
-    21 | |           enable-cache: ${{ github.ref == 'refs/heads/main' }}
+    20 | /         with:
+    21 | |           python-version: "3.12"
+    22 | |           enable-cache: ${{ github.ref == 'refs/heads/main' }}
        | |______________________________________________________________- may enable caching here
        |
        = note: audit confidence → Low
@@ -170,7 +170,7 @@ fn test_workflow_tag_trigger() -> anyhow::Result<()> {
             .run()?,
         @r#"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-      --> @@INPUT@@:21:9
+      --> @@INPUT@@:23:9
        |
      1 | / on:
      2 | |   push:
@@ -178,7 +178,7 @@ fn test_workflow_tag_trigger() -> anyhow::Result<()> {
      4 | |       - "**"
        | |____________- generally used when publishing artifacts generated at runtime
     ...
-    21 |           uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+    23 |           uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
        |
        = note: audit confidence → Low
@@ -232,12 +232,12 @@ fn test_publisher_step() -> anyhow::Result<()> {
             .run()?,
         @r"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-      --> @@INPUT@@:21:9
+      --> @@INPUT@@:23:9
        |
-    21 |         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+    23 |         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
     ...
-    28 |         uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974
+    30 |         uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974
        |         -------------------------------------------------------------------------- runtime artifacts usually published here
        |
        = note: audit confidence → Low
@@ -332,7 +332,7 @@ fn test_caching_not_configurable() -> anyhow::Result<()> {
             .run()?,
         @r#"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-      --> @@INPUT@@:21:9
+      --> @@INPUT@@:23:9
        |
      1 | / on:
      2 | |   push:
@@ -340,7 +340,7 @@ fn test_caching_not_configurable() -> anyhow::Result<()> {
      4 | |       - "**"
        | |____________- generally used when publishing artifacts generated at runtime
     ...
-    21 |           uses: Mozilla-Actions/sccache-action@054db53350805f83040bf3e6e9b8cf5a139aa7c9
+    23 |           uses: Mozilla-Actions/sccache-action@054db53350805f83040bf3e6e9b8cf5a139aa7c9
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always restores from cache
        |
        = note: audit confidence → Low
@@ -362,7 +362,7 @@ fn test_workflow_release_branch_trigger() -> anyhow::Result<()> {
             .run()?,
         @r#"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-      --> @@INPUT@@:21:9
+      --> @@INPUT@@:22:9
        |
      1 | / on:
      2 | |   push:
@@ -370,7 +370,7 @@ fn test_workflow_release_branch_trigger() -> anyhow::Result<()> {
      4 | |       - "release-v2.0.0"
        | |________________________- generally used when publishing artifacts generated at runtime
     ...
-    21 |           uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+    22 |           uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
        |
        = note: audit confidence → Low

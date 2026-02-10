@@ -9,6 +9,8 @@ jobs:
     name: publish-crate
     runs-on: ubuntu-24.04
 
+    environment: crates.io
+
     steps:
       - name: Project Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683

@@ -1,0 +1,374 @@
+---
+source: crates/zizmor/tests/integration/e2e/crater.rs
+expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"pypi/warehouse@9ed30d191788fcfa9c5be56bcce9b743e758903e\").run()?"
+---
+🌈 zizmor v@@VERSION@@
+ INFO collect_inputs: zizmor::registry::input: collected 8 inputs from pypi/warehouse
+ INFO audit: zizmor: 🌈 completed .github/dependabot.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/ci.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/codeql-analysis.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/combine-prs.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/dev-env-test.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/node-ci.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/not-this-repo.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/zizmor.yml
+warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+ --> .github/dependabot.yml:4:3
+  |
+4 | - package-ecosystem: pip
+  |   ^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+  |
+  = note: audit confidence → High
+  = note: this finding has an auto-fix
+
+warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+  --> .github/dependabot.yml:29:3
+   |
+29 | - package-ecosystem: github-actions
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+  --> .github/dependabot.yml:33:3
+   |
+33 | - package-ecosystem: docker
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/ci.yml:101:18
+    |
+101 |         run: ${{ matrix.command }}
+    |         ---      ^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         |
+    |         this run block
+    |
+    = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/ci.yml:22:7
+   |
+22 |       id-token: write
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/ci.yml:68:7
+   |
+68 |       id-token: write
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+   --> .github/workflows/ci.yml:111:7
+    |
+111 |       id-token: write
+    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/ci.yml:64:7
+   |
+64 |       image: registry.depot.dev/rltf7cln5v:${{ needs.build.outputs.buildId }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/ci.yml:71:9
+   |
+71 |         image: ${{ (matrix.name == 'Tests') && 'postgres:17.5' || '' }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+   |
+   = note: audit confidence → Low
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/ci.yml:80:9
+   |
+80 |         image: ${{ (matrix.name == 'Tests') && 'redis:7.0' || '' }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+   |
+   = note: audit confidence → Low
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/ci.yml:84:9
+   |
+84 |         image: ${{ (matrix.name == 'Tests') && 'stripe/stripe-mock:v0.162.0' || '' }}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+   |
+   = note: audit confidence → Low
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:109:7
+    |
+109 |       image: registry.depot.dev/rltf7cln5v:${{ needs.build.outputs.buildId }}
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:114:9
+    |
+114 |         image: postgres:17.5
+    |         ^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    |
+    = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/ci.yml:16:3
+   |
+16 |   build:
+   |   ^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/codeql-analysis.yml:12:1
+   |
+12 | / name: "CodeQL"
+13 | |
+14 | | on:
+15 | |   push:
+...  |
+85 | |       with:
+86 | |         category: "/language:${{matrix.language}}"
+   | |___________________________________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/codeql-analysis.yml:28:7
+   |
+28 |       actions: read
+   |       ^^^^^^^^^^^^^ needs an explanatory comment
+29 |       contents: read
+30 |       security-events: write
+   |       ^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/codeql-analysis.yml:12:1
+   |
+12 | / name: "CodeQL"
+13 | |
+14 | | on:
+15 | |   push:
+...  |
+85 | |       with:
+86 | |         category: "/language:${{matrix.language}}"
+   | |___________________________________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/combine-prs.yml:3:1
+   |
+ 3 | / name: 'Combine PRs'
+ 4 | |
+ 5 | | # Controls when the action will run - in this case triggered manually
+ 6 | | on:
+...  |
+40 | |           github_token: ${{ steps.generate_token.outputs.BOT_TOKEN }}
+41 | |           ignore_label: ${{ github.event.inputs.ignoreLabel || 'blocked' }}
+   | |____________________________________________________________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/combine-prs.yml:20:7
+   |
+20 |       contents: write
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+21 |       pull-requests: write
+   |       ^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+22 |       checks: read
+   |       ^^^^^^^^^^^^ needs an explanatory comment
+23 |       actions: write
+   |       ^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/combine-prs.yml:17:3
+   |
+17 |   combine-prs:
+   |   ^^^^^^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/combine-prs.yml:3:1
+   |
+ 3 | / name: 'Combine PRs'
+ 4 | |
+ 5 | | # Controls when the action will run - in this case triggered manually
+ 6 | | on:
+...  |
+40 | |           github_token: ${{ steps.generate_token.outputs.BOT_TOKEN }}
+41 | |           ignore_label: ${{ github.event.inputs.ignoreLabel || 'blocked' }}
+   | |____________________________________________________________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/combine-prs.yml:32:23
+   |
+17 |   combine-prs:
+   |   ----------- this job
+...
+32 |           app_id: ${{ secrets.COMBINE_PRS_APP_ID }}
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/combine-prs.yml:33:28
+   |
+17 |   combine-prs:
+   |   ----------- this job
+...
+33 |           private_key: ${{ secrets.COMBINE_PRS_PRIVATE_KEY }}
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/dev-env-test.yml:1:1
+   |
+ 1 | / name: Development Environment
+ 2 | |
+ 3 | | on:
+ 4 | |   schedule:
+...  |
+21 | |       - run: make initdb
+22 | |       - run: make tests
+   | |________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+info[anonymous-definition]: workflow or action definition without a name
+ --> .github/workflows/dev-env-test.yml:9:3
+  |
+9 |   build:
+  |   ^^^^^ this job
+  |
+  = note: audit confidence → High
+  = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/dev-env-test.yml:1:1
+   |
+ 1 | / name: Development Environment
+ 2 | |
+ 3 | | on:
+ 4 | |   schedule:
+...  |
+21 | |       - run: make initdb
+22 | |       - run: make tests
+   | |________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/node-ci.yml:40:18
+   |
+40 |         run: ${{ matrix.command }}
+   |         ---      ^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |         |
+   |         this run block
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/not-this-repo.yml:1:1
+   |
+ 1 | / name: Add comment & close
+ 2 | | on:
+ 3 | |   issues:
+ 4 | |     types:
+...  |
+23 | |             You should report this issue to the tracker for the project in question instead.
+   | |_____________________________________________________________________________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/not-this-repo.yml:11:7
+   |
+11 |       issues: write
+   |       ^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+ --> .github/workflows/not-this-repo.yml:7:3
+  |
+7 |   add-comment:
+  |   ^^^^^^^^^^^ this job
+  |
+  = note: audit confidence → High
+  = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/not-this-repo.yml:1:1
+   |
+ 1 | / name: Add comment & close
+ 2 | | on:
+ 3 | |   issues:
+ 4 | |     types:
+...  |
+23 | |             You should report this issue to the tracker for the project in question instead.
+   | |_____________________________________________________________________________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/zizmor.yml:2:1
+   |
+ 2 | / name: GitHub Actions Security Analysis with Zizmor
+ 3 | |
+ 4 | | on:
+ 5 | |   push:
+...  |
+36 | |           # Used to differentiate multiple results for one commit
+37 | |           category: zizmor
+   | |___________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/zizmor.yml:17:7
+   |
+17 |       security-events: write
+   |       ^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+...
+20 |       actions: read
+   |       ^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/zizmor.yml:2:1
+   |
+ 2 | / name: GitHub Actions Security Analysis with Zizmor
+ 3 | |
+ 4 | | on:
+ 5 | |   push:
+...  |
+36 | |           # Used to differentiate multiple results for one commit
+37 | |           category: zizmor
+   | |___________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+34 findings: 4 informational, 14 low, 10 medium, 6 high

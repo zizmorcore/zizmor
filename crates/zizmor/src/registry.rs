@@ -76,6 +76,7 @@ impl AuditRegistry {
         register_audit!(audit::concurrency_limits::ConcurrencyLimits);
         register_audit!(audit::archived_uses::ArchivedUses);
         register_audit!(audit::misfeature::Misfeature);
+        register_audit!(audit::secrets_outside_env::SecretsOutsideEnvironment);
 
         Ok(registry)
     }
