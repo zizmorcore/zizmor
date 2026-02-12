@@ -1,0 +1,11 @@
+---
+source: crates/zizmor/tests/integration/cli.rs
+expression: "zizmor().stdin(\"{[invalid\").no_config(true).expects_failure(1).args([\"--strict-collection\",\n\"-\"]).run()?"
+---
+🌈 zizmor v@@VERSION@@
+fatal: no audit was performed
+failed to load file://<stdin> as workflow
+
+Caused by:
+    0: invalid YAML syntax: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
+    1: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
