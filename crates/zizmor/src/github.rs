@@ -3,7 +3,15 @@
 //! The [`Client`] type uses a mixture of GitHub's REST API and
 //! direct Git access, depending on the operation being performed.
 
-use std::{collections::HashSet, fmt::Display, io::Read, ops::Deref, str::FromStr, sync::Arc};
+use std::{
+    collections::HashSet,
+    fmt::Display,
+    io::Read,
+    ops::Deref,
+    str::FromStr,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
@@ -278,7 +286,22 @@ impl reqwest_middleware::Middleware for RateLimitMiddleware {
                     .headers()
                     .get("x-ratelimit-reset")
                     .and_then(|v| v.to_str().ok())
-                    .map(|v| format!("epoch {v}"))
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .map(|ts| {
+                        let now = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .map(|d| d.as_secs())
+                            .unwrap_or(0);
+                        let wait_mins = ts.saturating_sub(now) / 60;
+                        if wait_mins == 0 {
+                            "less than a minute".to_string()
+                        } else {
+                            format!(
+                                "~{wait_mins} minute{}",
+                                if wait_mins == 1 { "" } else { "s" }
+                            )
+                        }
+                    })
                     .unwrap_or_else(|| "unknown".into());
 
                 return Err(reqwest_middleware::Error::Middleware(
@@ -1005,7 +1028,9 @@ pub(crate) struct File {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::{GitHubHost, GitHubToken};
+    use std::sync::Arc;
+
+    use crate::github::{ClientError, GitHubHost, GitHubToken};
 
     #[test]
     fn test_github_host() {
@@ -1038,5 +1063,56 @@ mod tests {
         for token in ["", " ", "\r", "\n", "\t", "     "] {
             assert!(GitHubToken::new(token).is_err());
         }
+    }
+
+    #[test]
+    fn test_is_rate_limited_direct() {
+        let err = ClientError::RateLimited {
+            reset: "~5 minutes".into(),
+        };
+        assert!(err.is_rate_limited());
+    }
+
+    #[test]
+    fn test_is_rate_limited_through_middleware() {
+        let inner = ClientError::RateLimited {
+            reset: "~5 minutes".into(),
+        };
+        let err = ClientError::Middleware(reqwest_middleware::Error::Middleware(inner.into()));
+        assert!(err.is_rate_limited());
+    }
+
+    #[test]
+    fn test_is_rate_limited_through_list_tags() {
+        let inner = ClientError::Middleware(reqwest_middleware::Error::Middleware(
+            ClientError::RateLimited {
+                reset: "unknown".into(),
+            }
+            .into(),
+        ));
+        let err = ClientError::ListTags {
+            source: Box::new(inner),
+            owner: "actions".into(),
+            repo: "checkout".into(),
+        };
+        assert!(err.is_rate_limited());
+    }
+
+    #[test]
+    fn test_is_rate_limited_through_inner() {
+        let inner = ClientError::RateLimited {
+            reset: "~1 minute".into(),
+        };
+        let err = ClientError::Inner(Arc::new(inner));
+        assert!(err.is_rate_limited());
+    }
+
+    #[test]
+    fn test_is_rate_limited_false_for_other_errors() {
+        let err = ClientError::RepoMissingOrPrivate {
+            owner: "foo".into(),
+            repo: "bar".into(),
+        };
+        assert!(!err.is_rate_limited());
     }
 }
