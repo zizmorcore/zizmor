@@ -601,7 +601,7 @@ see the [`permissions` reference in the workflow syntax docs][workflow-permissio
 for the full list of available scopes and how defaults are calculated.
 
 [workflow-permissions]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defining-access-for-the-github_token-scopes-1
-[org-permissions]: https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-organization-settings/disabling-or-limiting-github-actions-for-your-organization#setting-the-permissions-of-the-github_token-for-your-organization
+[org-permissions]: https://docs.github.com/en/organizations/managing-organization-settings/disabling-or-limiting-github-actions-for-your-organization#setting-the-permissions-of-the-github_token-for-your-organization
 
 ### Remediation
 
