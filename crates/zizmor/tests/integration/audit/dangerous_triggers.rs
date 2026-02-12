@@ -65,6 +65,19 @@ fn test_multiple_dangerous() -> Result<()> {
 }
 
 #[test]
+fn test_issue_comment_bare_list() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dangerous-triggers/issue-comment-bare-list.yml",
+            ))
+            .run()?,
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_safe() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
