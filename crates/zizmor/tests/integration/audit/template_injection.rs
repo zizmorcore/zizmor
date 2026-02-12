@@ -21,7 +21,21 @@ fn test_template_injection_static_matrix() -> Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:14:3
+       |
+    14 | /   ok-ish:
+    15 | |     name: ok-ish
+    16 | |     runs-on: ubuntu-latest
+    ...  |
+    24 | |         run: |
+    25 | |           echo "issue created: ${{ matrix.frob }}"
+       | |___________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 2 low, 0 medium, 0 high
     "#
     );
 
@@ -49,7 +63,21 @@ fn test_template_injection_dynamic_matrix() -> Result<()> {
        = note: audit confidence → Medium
        = note: this finding has an auto-fix
 
-    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:14:3
+       |
+    14 | /   not-ok:
+    15 | |     name: not-ok
+    16 | |     runs-on: ubuntu-latest
+    ...  |
+    25 | |         run: |
+    26 | |           echo "doing a thing: ${{ matrix.dynamic }}"
+       | |______________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings (1 fixable): 0 informational, 1 low, 1 medium, 0 high
     "#
     );
 
@@ -62,7 +90,7 @@ fn test_issue_22_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-22-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (6 suppressed)"
+        @"No findings to report. Good job! (7 suppressed)"
     );
 
     Ok(())
@@ -74,7 +102,7 @@ fn test_pr_317_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/pr-317-repro.yml"))
             .run()?,
-        @r"
+        @"
     warning[template-injection]: code injection via template expansion
       --> @@INPUT@@:28:20
        |
@@ -86,7 +114,7 @@ fn test_pr_317_repro() -> Result<()> {
        = note: audit confidence → Medium
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    3 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -99,7 +127,7 @@ fn test_static_env() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/static-env.yml"))
             .run()?,
-        @r"
+        @"
     help[template-injection]: code injection via template expansion
       --> @@INPUT@@:43:20
        |
@@ -133,7 +161,7 @@ fn test_static_env() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    7 findings (4 suppressed, 3 fixable): 0 informational, 3 low, 0 medium, 0 high
+    8 findings (5 suppressed, 3 fixable): 0 informational, 3 low, 0 medium, 0 high
     "
     );
 
@@ -157,7 +185,7 @@ fn test_issue_339_repro() -> Result<()> {
        |
        = note: audit confidence → Low
 
-    2 findings (1 suppressed): 1 informational, 0 low, 0 medium, 0 high
+    3 findings (2 suppressed): 1 informational, 0 low, 0 medium, 0 high
     "#
     );
 
@@ -173,7 +201,7 @@ fn test_issue_418_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-418-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (3 suppressed)"
     );
 
     Ok(())
@@ -259,7 +287,7 @@ fn test_false_positive_menagerie() -> Result<()> {
                 "template-injection/false-positive-menagerie.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (7 suppressed)"
+        @"No findings to report. Good job! (8 suppressed)"
     );
 
     Ok(())
@@ -271,7 +299,7 @@ fn test_issue_749_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-749-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (3 suppressed)"
     );
 
     Ok(())
@@ -283,7 +311,7 @@ fn test_codeql_sinks() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/codeql-sinks.yml"))
             .run()?,
-        @r"
+        @"
     error[template-injection]: code injection via template expansion
       --> @@INPUT@@:17:20
        |
@@ -297,7 +325,7 @@ fn test_codeql_sinks() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -324,7 +352,7 @@ fn test_pwsh_script() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -490,7 +518,21 @@ fn test_multiline_expression_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    3 findings: 2 informational, 1 low, 0 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:11:3
+       |
+    11 | /   inject-me:
+    12 | |     name: inject-me
+    13 | |     runs-on: ubuntu-latest
+    ...  |
+    30 | |           echo "CC=clang" >> "$GITHUB_ENV"
+    31 | |           echo "CXX=clang++" >> "$GITHUB_ENV"
+       | |______________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    4 findings: 2 informational, 2 low, 0 medium, 0 high
     "#
     );
 

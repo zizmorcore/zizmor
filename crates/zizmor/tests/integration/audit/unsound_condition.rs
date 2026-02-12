@@ -87,7 +87,7 @@ fn test_normal_persona() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    16 findings (6 ignored, 1 suppressed, 3 fixable): 0 informational, 0 low, 0 medium, 9 high
+    17 findings (6 ignored, 2 suppressed, 3 fixable): 0 informational, 0 low, 0 medium, 9 high
     "#
     );
 

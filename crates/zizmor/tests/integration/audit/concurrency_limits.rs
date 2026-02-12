@@ -10,7 +10,23 @@ fn test_cancel_false() -> anyhow::Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @"No findings to report. Good job!"
+        @"
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:10:3
+       |
+    10 | /   job:
+    11 | |     name: some-job
+    12 | |     runs-on: ubuntu-latest
+    13 | |     steps:
+    14 | |     - name: 1-ok
+    15 | |       run: echo ok
+       | |___________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
     );
 
     Ok(())
@@ -25,7 +41,7 @@ fn test_missing() -> anyhow::Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     help[concurrency-limits]: insufficient job-level concurrency limits
       --> @@INPUT@@:1:1
        |
@@ -39,7 +55,21 @@ fn test_missing() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:6:3
+       |
+     6 | /   job:
+     7 | |     name: some-job
+     8 | |     runs-on: ubuntu-latest
+     9 | |     steps:
+    10 | |     - name: 1-ok
+    11 | |       run: echo ok
+       | |___________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 2 low, 0 medium, 0 high
     "
     );
     Ok(())
@@ -54,7 +84,7 @@ fn test_no_cancel() -> anyhow::Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     help[concurrency-limits]: insufficient job-level concurrency limits
      --> @@INPUT@@:5:1
       |
@@ -63,7 +93,21 @@ fn test_no_cancel() -> anyhow::Result<()> {
       |
       = note: audit confidence → High
 
-    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:8:3
+       |
+     8 | /   job:
+     9 | |     name: some-job
+    10 | |     runs-on: ubuntu-latest
+    11 | |     steps:
+    12 | |     - name: 1-ok
+    13 | |       run: echo ok
+       | |___________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 2 low, 0 medium, 0 high
     "
     );
 
@@ -79,7 +123,7 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     help[concurrency-limits]: insufficient job-level concurrency limits
      --> @@INPUT@@:9:5
       |
@@ -101,7 +145,36 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings: 0 informational, 2 low, 0 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:6:3
+       |
+     6 | /   job1:
+     7 | |     name: job-1
+     8 | |     runs-on: ubuntu-latest
+     9 | |     concurrency: group
+    10 | |     steps:
+    11 | |     - name: 1-ok
+    12 | |       run: echo ok
+       | |__________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   job2:
+    14 | |     name: job-2
+    15 | |     runs-on: ubuntu-latest
+    16 | |     steps:
+    17 | |     - name: 2-ok
+    18 | |       run: echo ok
+       | |___________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    4 findings: 0 informational, 4 low, 0 medium, 0 high
     "
     );
 

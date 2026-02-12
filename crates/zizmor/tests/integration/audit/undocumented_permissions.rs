@@ -9,7 +9,7 @@ fn test_undocumented_permissions_pedantic() -> Result<()> {
             .input(input_under_test("undocumented-permissions.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @r#"
     help[undocumented-permissions]: permissions without explanatory comments
      --> @@INPUT@@:8:3
       |
@@ -50,8 +50,83 @@ fn test_undocumented_permissions_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    5 findings (1 ignored): 0 informational, 4 low, 0 medium, 0 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:15:3
+       |
+    15 | /   test-job-1:
+    16 | |     name: Test Job 1
+    17 | |     runs-on: ubuntu-latest
+    18 | |     # This job's permissions block has a comment explaining why
+    ...  |
+    25 | |           persist-credentials: false
+    26 | |       - run: echo "Test"
+       | |________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:28:3
+       |
+    28 | /   test-job-2:
+    29 | |     name: Test Job 2
+    30 | |     runs-on: ubuntu-latest
+    31 | |     # Missing individual permission comments
+    ...  |
+    39 | |           persist-credentials: false
+    40 | |       - run: echo "Test"
+       | |________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:42:3
+       |
+    42 | /   test-job-3:
+    43 | |     name: Test Job 3 - Empty Comments
+    44 | |     runs-on: ubuntu-latest
+    45 | |     # Permissions have empty comments
+    ...  |
+    53 | |           persist-credentials: false
+    54 | |       - run: echo "Test"
+       | |________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:56:3
+       |
+    56 | /   test-job-4:
+    57 | |     name: Test Job 4 - Mixed Documentation
+    58 | |     runs-on: ubuntu-latest
+    59 | |     permissions:
+    ...  |
+    66 | |           persist-credentials: false
+    67 | |       - run: echo "Test"
+       | |________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:69:3
+       |
+    69 | /   test-job-5:
+    70 | |     name: Test Job 5 - read contents
+    71 | |     runs-on: ubuntu-latest
+    72 | |     # Only one `contents: read` permission, no comment needed
+    ...  |
+    78 | |           persist-credentials: false
+    79 | |       - run: echo "Test"
+       | |_________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    10 findings (1 ignored): 0 informational, 9 low, 0 medium, 0 high
+    "#
     );
 
     Ok(())
@@ -64,7 +139,7 @@ fn test_undocumented_permissions_default() -> Result<()> {
         zizmor()
             .input(input_under_test("undocumented-permissions.yml"))
             .run()?,
-        @"No findings to report. Good job! (5 suppressed)"
+        @"No findings to report. Good job! (10 suppressed)"
     );
 
     Ok(())
@@ -78,7 +153,7 @@ fn test_documented_permissions_pedantic() -> Result<()> {
             .input(input_under_test("undocumented-permissions/documented.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @r#"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:23:15
        |
@@ -103,8 +178,53 @@ fn test_documented_permissions_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    4 findings (1 ignored): 0 informational, 0 low, 0 medium, 3 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:15:3
+       |
+    15 | /   test-job-1:
+    16 | |     name: Test Job 1
+    17 | |     runs-on: ubuntu-latest
+    18 | |     # Override workflow permissions for this specific job
+    ...  |
+    25 | |           persist-credentials: false
+    26 | |       - run: echo "Test"
+       | |________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:28:3
+       |
+    28 | /   test-job-2:
+    29 | |     name: Test Job 2
+    30 | |     runs-on: ubuntu-latest
+    31 | |     # Specific permissions documented for admin operations
+    ...  |
+    39 | |           persist-credentials: false
+    40 | |       - run: echo "Test"
+       | |________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:42:3
+       |
+    42 | /   test-job-3:
+    43 | |     name: Test Job 3
+    44 | |     runs-on: ubuntu-latest
+    45 | |     # Specific permissions documented for analysis job
+    ...  |
+    52 | |           persist-credentials: false
+    53 | |       - run: echo "Test"
+       | |_________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    7 findings (1 ignored): 0 informational, 3 low, 0 medium, 3 high
+    "#
     );
 
     Ok(())
@@ -120,7 +240,7 @@ fn test_contents_read_only_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @r#"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:21:15
        |
@@ -129,8 +249,23 @@ fn test_contents_read_only_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 0 medium, 1 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:14:3
+       |
+    14 | /   test-job:
+    15 | |     name: Test Job
+    16 | |     runs-on: ubuntu-latest
+    17 | |     # This should also NOT trigger the rule
+    ...  |
+    23 | |           persist-credentials: false
+    24 | |       - run: echo "Test"
+       | |________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 1 low, 0 medium, 1 high
+    "#
     );
 
     Ok(())
@@ -146,7 +281,7 @@ fn test_empty_permissions_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @r#"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:19:15
        |
@@ -155,8 +290,23 @@ fn test_empty_permissions_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 0 medium, 1 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   test-job:
+    14 | |     name: Test Job
+    15 | |     runs-on: ubuntu-latest
+    16 | |     # This should also NOT trigger the rule
+    ...  |
+    21 | |           persist-credentials: false
+    22 | |       - run: echo "Test"
+       | |________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 1 low, 0 medium, 1 high
+    "#
     );
 
     Ok(())
@@ -172,7 +322,7 @@ fn test_contents_read_with_other_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @r#"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:8:3
       |
@@ -197,8 +347,23 @@ fn test_contents_read_with_other_pedantic() -> Result<()> {
       |
       = note: audit confidence → High
 
-    3 findings: 0 informational, 1 low, 0 medium, 2 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:15:3
+       |
+    15 | /   test-job:
+    16 | |     name: Test Job
+    17 | |     runs-on: ubuntu-latest
+    18 | |     steps:
+    ...  |
+    21 | |           persist-credentials: false
+    22 | |       - run: echo "Test"
+       | |_________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    4 findings: 0 informational, 2 low, 0 medium, 2 high
+    "#
     );
 
     Ok(())
@@ -214,7 +379,7 @@ fn test_partially_documented_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @r#"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:25:15
        |
@@ -257,8 +422,38 @@ fn test_partially_documented_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    7 findings (2 ignored): 0 informational, 3 low, 0 medium, 2 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:16:3
+       |
+    16 | /   test-job-1:
+    17 | |     name: Test Job 1
+    18 | |     runs-on: ubuntu-latest
+    19 | |     # Job with partial documentation
+    ...  |
+    27 | |           persist-credentials: false
+    28 | |       - run: echo "Test"
+       | |________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:30:3
+       |
+    30 | /   test-job-2:
+    31 | |     name: Test Job 2
+    32 | |     runs-on: ubuntu-latest
+    33 | |     # Job with no documentation at all
+    ...  |
+    40 | |           persist-credentials: false
+    41 | |       - run: echo "Test"
+       | |_________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    9 findings (2 ignored): 0 informational, 5 low, 0 medium, 2 high
+    "#
     );
 
     Ok(())

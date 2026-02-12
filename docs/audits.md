@@ -1068,6 +1068,49 @@ Address the misfeature by removing or replacing its usage.
                   ./.env/bin/pip install .[dev]
         ```
 
+## `missing-timeout`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | N/A                    | v1.23.0       | ✅             | ❌                 | ❌  |
+
+Detects jobs that do not set a `timeout-minutes` property.
+
+The default GitHub Actions job timeout is 360 minutes (6 hours). Without an
+explicit timeout, hung jobs (e.g. from a stuck package manager, an infinite loop,
+or a stalled compiler) can silently consume runner minutes.
+
+!!! note
+
+    This is a `--pedantic` only audit, due to a lack of direct security impact.
+
+### Remediation
+
+Add a `timeout-minutes` property to each job. Choose a value that is generous
+enough for normal runs but short enough to catch hangs early.
+
+=== "Before :warning:"
+
+    ```yaml title="missing-timeout.yml" hl_lines="4"
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+        # no timeout-minutes — defaults to 360 minutes
+        steps:
+          - run: make build
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="missing-timeout.yml" hl_lines="4"
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        steps:
+          - run: make build
+    ```
+
 ## `obfuscation`
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |

@@ -9,7 +9,7 @@ fn test_issue_336_repro() -> Result<()> {
                 "excessive-permissions/issue-336-repro.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
@@ -24,7 +24,7 @@ fn test_issue_336_repro_pedantic() -> Result<()> {
             ))
             .args(["--pedantic"])
             .run()?,
-        @r"
+        @"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:6:3
       |
@@ -33,7 +33,22 @@ fn test_issue_336_repro_pedantic() -> Result<()> {
       |
       = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   single:
+    14 | |     name: single
+    15 | |     runs-on: ubuntu-latest
+    16 | |     steps:
+    17 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    18 | |         with:
+    19 | |           persist-credentials: false
+       | |_____________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 1 low, 0 medium, 1 high
     "
     );
 
@@ -49,7 +64,7 @@ fn test_workflow_default_perms_pedantic() -> Result<()> {
             ))
             .args(["--pedantic"])
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:5:1
        |
@@ -80,7 +95,22 @@ fn test_workflow_default_perms_pedantic() -> Result<()> {
        |
        = note: audit confidence → Medium
 
-    2 findings: 0 informational, 0 low, 2 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:14:3
+       |
+    14 | /   single:
+    15 | |     name: single
+    16 | |     runs-on: ubuntu-latest
+    17 | |     steps:
+    18 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    19 | |         with:
+    20 | |           persist-credentials: false
+       | |_____________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    3 findings: 0 informational, 1 low, 2 medium, 0 high
     "
     );
 
@@ -95,7 +125,7 @@ fn test_workflow_read_all() -> Result<()> {
                 "excessive-permissions/workflow-read-all.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:5:1
       |
@@ -104,7 +134,7 @@ fn test_workflow_read_all() -> Result<()> {
       |
       = note: audit confidence → High
 
-    3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    5 findings (4 suppressed): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -119,7 +149,7 @@ fn test_workflow_write_all() -> Result<()> {
                 "excessive-permissions/workflow-write-all.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:5:1
       |
@@ -128,7 +158,7 @@ fn test_workflow_write_all() -> Result<()> {
       |
       = note: audit confidence → High
 
-    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    5 findings (4 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -143,7 +173,7 @@ fn test_workflow_empty_perms() -> Result<()> {
                 "excessive-permissions/workflow-empty-perms.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (4 suppressed)"
     );
 
     Ok(())
@@ -157,7 +187,7 @@ fn test_jobs_broaden_permissions() -> Result<()> {
                 "excessive-permissions/jobs-broaden-permissions.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:11:5
        |
@@ -188,7 +218,7 @@ fn test_jobs_broaden_permissions() -> Result<()> {
        |
        = note: audit confidence → High
 
-    4 findings (2 suppressed): 0 informational, 0 low, 1 medium, 1 high
+    6 findings (4 suppressed): 0 informational, 0 low, 1 medium, 1 high
     "
     );
 
@@ -203,7 +233,7 @@ fn test_workflow_write_explicit() -> Result<()> {
                 "excessive-permissions/workflow-write-explicit.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:7:3
       |
@@ -228,7 +258,7 @@ fn test_workflow_write_explicit() -> Result<()> {
       |
       = note: audit confidence → High
 
-    7 findings (4 suppressed): 0 informational, 0 low, 1 medium, 2 high
+    9 findings (6 suppressed): 0 informational, 0 low, 1 medium, 2 high
     "
     );
 
@@ -243,7 +273,7 @@ fn test_workflow_default_perms_all_jobs_explicit() -> Result<()> {
                 "excessive-permissions/workflow-default-perms-all-jobs-explicit.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (5 suppressed)"
+        @"No findings to report. Good job! (7 suppressed)"
     );
 
     Ok(())
@@ -257,7 +287,7 @@ fn test_issue_472_repro() -> Result<()> {
                 "excessive-permissions/issue-472-repro.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:20:3
        |
@@ -274,7 +304,7 @@ fn test_issue_472_repro() -> Result<()> {
        |
        = note: audit confidence → Medium
 
-    4 findings (3 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    5 findings (4 suppressed): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -319,7 +349,7 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
                 "excessive-permissions/reusable-workflow-other-triggers.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:1:1
        |
@@ -366,7 +396,7 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
        |
        = note: audit confidence → Medium
 
-    4 findings (1 suppressed): 0 informational, 0 low, 3 medium, 0 high
+    5 findings (2 suppressed): 0 informational, 0 low, 3 medium, 0 high
     "
     );
 

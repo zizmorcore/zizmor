@@ -7,7 +7,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .input(input_under_test("unpinned-images.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-images]: unpinned image references
       --> @@INPUT@@:23:7
        |
@@ -56,7 +56,127 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    6 findings: 0 informational, 0 low, 0 medium, 6 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:19:3
+       |
+    19 | /   unpinned-container-image:
+    20 | |     name: unpinned-container-image
+    21 | |     runs-on: ubuntu-latest
+    22 | |     container:
+    23 | |       image: fake.example.com/example
+    24 | |     steps:
+    25 | |       - run: echo 'vulnerable!'
+       | |_______________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:27:3
+       |
+    27 | /   unpinned-service-container-image:
+    28 | |     name: unpinned-service-container-image
+    29 | |     runs-on: ubuntu-latest
+    30 | |     services:
+    ...  |
+    33 | |     steps:
+    34 | |       - run: echo 'vulnerable!'
+       | |_______________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:36:3
+       |
+    36 | /   unpinned-container-image-latest:
+    37 | |     name: unpinned-container-image-latest
+    38 | |     runs-on: ubuntu-latest
+    39 | |     container:
+    40 | |       image: fake.example.com/example:latest
+    41 | |     steps:
+    42 | |       - run: echo 'vulnerable!'
+       | |_______________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:44:3
+       |
+    44 | /   unpinned-service-container-image-latest:
+    45 | |     name: unpinned-service-container-image-latest
+    46 | |     runs-on: ubuntu-latest
+    47 | |     services:
+    ...  |
+    50 | |     steps:
+    51 | |       - run: echo 'vulnerable!'
+       | |_______________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:53:3
+       |
+    53 | /   tag-pinned-container-image:
+    54 | |     name: tag-pinned-container-image
+    55 | |     runs-on: ubuntu-latest
+    56 | |     container:
+    57 | |       image: fake.example.com/example:0.0.348
+    58 | |     steps:
+    59 | |       - run: echo 'not vulnerable!'
+       | |___________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:61:3
+       |
+    61 | /   tag-pinned-service-container-image:
+    62 | |     name: tag-pinned-service-container-image
+    63 | |     runs-on: ubuntu-latest
+    64 | |     services:
+    ...  |
+    67 | |     steps:
+    68 | |       - run: echo 'not vulnerable!'
+       | |___________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:70:3
+       |
+    70 | /   hash-pinned-container-image:
+    71 | |     name: hash-pinned-container-image
+    72 | |     runs-on: ubuntu-latest
+    73 | |     container:
+    74 | |       image: fake.example.com/example@sha256:bfadbbcb25fd75c30c295843f1a861414f46c080f0f1d0c5cd93843c88edabcf
+    75 | |     steps:
+    76 | |       - run: echo 'not vulnerable!'
+       | |___________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:78:3
+       |
+    78 | /   hash-pinned-service-container-image:
+    79 | |     name: hash-pinned-service-container-image
+    80 | |     runs-on: ubuntu-latest
+    81 | |     services:
+    ...  |
+    84 | |     steps:
+    85 | |       - run: echo 'not vulnerable!'
+       | |____________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    14 findings: 0 informational, 8 low, 0 medium, 6 high
     "
     );
 

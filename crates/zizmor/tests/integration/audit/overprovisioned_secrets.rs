@@ -6,7 +6,7 @@ fn overprovisioned_secrets() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("overprovisioned-secrets.yml"))
             .run()?,
-        @r"
+        @"
     warning[overprovisioned-secrets]: excessively provisioned secrets
       --> @@INPUT@@:16:18
        |
@@ -23,7 +23,7 @@ fn overprovisioned_secrets() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    4 findings (1 ignored, 1 suppressed): 0 informational, 0 low, 2 medium, 0 high
+    5 findings (1 ignored, 2 suppressed): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 
