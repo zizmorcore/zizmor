@@ -1,0 +1,18 @@
+---
+source: crates/zizmor/tests/integration/audit/stale_runner.rs
+expression: "zizmor().input(input_under_test(\"stale-runner/stale-runner-matrix.yml\")).run()?"
+---
+warning[stale-runner]: uses a stale or removed GitHub Actions runner
+  --> @@INPUT@@:10:5
+   |
+10 |       runs-on: ${{ matrix.os }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^ expression may expand to a stale runner
+11 |
+12 | /     strategy:
+13 | |       matrix:
+14 | |         os: [ubuntu-22.04, ubuntu-24.04]
+   | |________________________________________- runner 'ubuntu-22.04' is deprecated
+   |
+   = note: audit confidence → High
+
+3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high

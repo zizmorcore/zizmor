@@ -62,7 +62,25 @@ fn test_issue_22_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-22-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (6 suppressed)"
+        @"
+    warning[stale-runner]: uses a stale or removed GitHub Actions runner
+      --> @@INPUT@@:14:5
+       |
+    14 |       runs-on: ${{ matrix.runner }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expression may expand to a stale runner
+    15 | /     strategy:
+    16 | |       fail-fast: false
+    17 | |       matrix:
+    18 | |         target:
+    ...  |
+    37 | |             # Should not be flagged in the template injection audit
+    38 | |             runner: ${{ github.repository_owner == 'python' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}
+       | |__________________________________________________________________________________________________________- runner 'macos-14' is deprecated
+       |
+       = note: audit confidence → High
+
+    7 findings (6 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    "
     );
 
     Ok(())

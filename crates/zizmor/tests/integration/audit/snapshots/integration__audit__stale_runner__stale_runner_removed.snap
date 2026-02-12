@@ -1,0 +1,29 @@
+---
+source: crates/zizmor/tests/integration/audit/stale_runner.rs
+expression: "zizmor().input(input_under_test(\"stale-runner/stale-runner-removed.yml\")).run()?"
+---
+error[stale-runner]: uses a stale or removed GitHub Actions runner
+  --> @@INPUT@@:10:5
+   |
+10 |     runs-on: ubuntu-20.04
+   |     ^^^^^^^^^^^^^^^^^^^^^ runner 'ubuntu-20.04' has been removed by GitHub
+   |
+   = note: audit confidence → High
+
+error[stale-runner]: uses a stale or removed GitHub Actions runner
+  --> @@INPUT@@:15:5
+   |
+15 |     runs-on: macos-12
+   |     ^^^^^^^^^^^^^^^^^ runner 'macos-12' has been removed by GitHub
+   |
+   = note: audit confidence → High
+
+error[stale-runner]: uses a stale or removed GitHub Actions runner
+  --> @@INPUT@@:20:5
+   |
+20 |     runs-on: windows-2019
+   |     ^^^^^^^^^^^^^^^^^^^^^ runner 'windows-2019' has been removed by GitHub
+   |
+   = note: audit confidence → High
+
+9 findings (6 suppressed): 0 informational, 0 low, 0 medium, 3 high

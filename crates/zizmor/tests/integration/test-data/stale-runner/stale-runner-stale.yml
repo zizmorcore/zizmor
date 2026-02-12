@@ -1,0 +1,17 @@
+on:
+  push:
+
+name: stale-runner-stale
+
+permissions: {}
+
+jobs:
+  deprecated-ubuntu:
+    runs-on: ubuntu-22.04
+    steps:
+      - run: echo "deprecated"
+
+  deprecated-windows:
+    runs-on: windows-2022
+    steps:
+      - run: echo "deprecated"

@@ -1,0 +1,21 @@
+---
+source: crates/zizmor/tests/integration/audit/stale_runner.rs
+expression: "zizmor().input(input_under_test(\"stale-runner/stale-runner-stale.yml\")).run()?"
+---
+warning[stale-runner]: uses a stale or removed GitHub Actions runner
+  --> @@INPUT@@:10:5
+   |
+10 |     runs-on: ubuntu-22.04
+   |     ^^^^^^^^^^^^^^^^^^^^^ runner 'ubuntu-22.04' is deprecated
+   |
+   = note: audit confidence → High
+
+warning[stale-runner]: uses a stale or removed GitHub Actions runner
+  --> @@INPUT@@:15:5
+   |
+15 |     runs-on: windows-2022
+   |     ^^^^^^^^^^^^^^^^^^^^^ runner 'windows-2022' is deprecated
+   |
+   = note: audit confidence → High
+
+6 findings (4 suppressed): 0 informational, 0 low, 2 medium, 0 high

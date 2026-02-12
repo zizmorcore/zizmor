@@ -1,0 +1,27 @@
+on:
+  push:
+
+name: stale-runner-current
+
+permissions: {}
+
+jobs:
+  current-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "current"
+
+  current-ubuntu-explicit:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "current"
+
+  current-macos:
+    runs-on: macos-latest
+    steps:
+      - run: echo "current"
+
+  current-windows:
+    runs-on: windows-latest
+    steps:
+      - run: echo "current"

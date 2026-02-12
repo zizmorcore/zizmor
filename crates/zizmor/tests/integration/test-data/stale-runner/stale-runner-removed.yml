@@ -1,0 +1,22 @@
+on:
+  push:
+
+name: stale-runner-removed
+
+permissions: {}
+
+jobs:
+  old-ubuntu:
+    runs-on: ubuntu-20.04
+    steps:
+      - run: echo "stale"
+
+  old-macos:
+    runs-on: macos-12
+    steps:
+      - run: echo "stale"
+
+  old-windows:
+    runs-on: windows-2019
+    steps:
+      - run: echo "stale"

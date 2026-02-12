@@ -77,6 +77,7 @@ impl AuditRegistry {
         register_audit!(audit::archived_uses::ArchivedUses);
         register_audit!(audit::misfeature::Misfeature);
         register_audit!(audit::secrets_outside_env::SecretsOutsideEnvironment);
+        register_audit!(audit::stale_runner::StaleRunner);
 
         Ok(registry)
     }

@@ -1,0 +1,17 @@
+on:
+  push:
+
+name: stale-runner-matrix
+
+permissions: {}
+
+jobs:
+  matrix-test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+
+    steps:
+      - run: echo "matrix"
