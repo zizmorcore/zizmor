@@ -42,6 +42,19 @@ fn test_has_timeout() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_expr_timeout() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("missing-timeout/expr-timeout.yml"))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_reusable() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
