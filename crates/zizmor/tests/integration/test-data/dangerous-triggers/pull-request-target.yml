@@ -1,0 +1,11 @@
+on: pull_request_target
+
+name: pull-request-target
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "building"
