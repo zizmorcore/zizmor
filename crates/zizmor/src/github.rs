@@ -346,10 +346,9 @@ impl Client {
                             // NOTE(ww): In the context of the retry classifier,
                             // "success" means "don't retry".
                             Some(status) => {
-                                if status.is_server_error()
-                                    || status == StatusCode::TOO_MANY_REQUESTS
-                                    || status == StatusCode::REQUEST_TIMEOUT
-                                {
+                                if status == StatusCode::FORBIDDEN {
+                                    req_rep.success()
+                                } else if status.is_client_error() || status.is_server_error() {
                                     req_rep.retryable()
                                 } else {
                                     req_rep.success()
