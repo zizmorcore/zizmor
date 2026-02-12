@@ -959,51 +959,80 @@ async fn main() -> ExitCode {
                 fatal = "fatal".red().bold()
             );
 
-            let report = match &err {
-                // NOTE(ww): Slightly annoying that we have two different config error
-                // wrapper states, but oh well.
-                Error::GlobalConfig(err) | Error::Collection(CollectionError::Config(err)) => {
-                    let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
+            let is_rate_limited = match &err {
+                Error::Client(ce) => ce.is_rate_limited(),
+                Error::Collection(ce) => matches!(
+                    ce.inner(),
+                    CollectionError::Client(inner) if inner.is_rate_limited()
+                ),
+                _ => false,
+            };
 
-                    match err.source {
-                        ConfigErrorInner::Syntax(_) => {
-                            group = group.elements([
-                                Level::HELP
-                                    .message("check your configuration file for syntax errors"),
-                                Level::HELP.message("see: https://docs.zizmor.sh/configuration/"),
-                            ]);
+            let report = if is_rate_limited {
+                let group =
+                    Group::with_title(Level::ERROR.primary_title("GitHub API rate limit exceeded"))
+                        .element(Level::HELP.message(
+                            "you've exceeded the GitHub API rate limit; wait and try again",
+                        ))
+                        .element(Level::HELP.message(
+                            "ensure GH_TOKEN is set to a valid token for higher rate limits",
+                        ))
+                        .element(Level::HELP.message(
+                            "use --offline to audit local files without GitHub API access",
+                        ));
+
+                let renderer = Renderer::styled();
+                Some(renderer.render(&[group]))
+            } else {
+                match &err {
+                    // NOTE(ww): Slightly annoying that we have two different config error
+                    // wrapper states, but oh well.
+                    Error::GlobalConfig(err) | Error::Collection(CollectionError::Config(err)) => {
+                        let mut group =
+                            Group::with_title(Level::ERROR.primary_title(err.to_string()));
+
+                        match err.source {
+                            ConfigErrorInner::Syntax(_) => {
+                                group = group.elements([
+                                    Level::HELP
+                                        .message("check your configuration file for syntax errors"),
+                                    Level::HELP
+                                        .message("see: https://docs.zizmor.sh/configuration/"),
+                                ]);
+                            }
+                            ConfigErrorInner::AuditSyntax(_, ident) => {
+                                group = group.elements([
+                                    Level::HELP.message(format!(
+                                        "check the configuration for the '{ident}' rule"
+                                    )),
+                                    Level::HELP.message(format!(
+                                        "see: https://docs.zizmor.sh/audits/#{ident}-configuration"
+                                    )),
+                                ]);
+                            }
+                            _ => {}
                         }
-                        ConfigErrorInner::AuditSyntax(_, ident) => {
-                            group = group.elements([
-                                Level::HELP.message(format!(
-                                    "check the configuration for the '{ident}' rule"
-                                )),
-                                Level::HELP.message(format!(
-                                    "see: https://docs.zizmor.sh/audits/#{ident}-configuration"
-                                )),
-                            ]);
-                        }
-                        _ => {}
-                    }
-
-                    let renderer = Renderer::styled();
-                    let report = renderer.render(&[group]);
-
-                    Some(report)
-                }
-                Error::Collection(err) => match err.inner() {
-                    CollectionError::NoInputs => {
-                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
-                            .element(Level::HELP.message("collection yielded no auditable inputs"))
-                            .element(Level::HELP.message("inputs must contain at least one valid workflow, action, or Dependabot config"));
 
                         let renderer = Renderer::styled();
                         let report = renderer.render(&[group]);
 
                         Some(report)
                     }
-                    CollectionError::DuplicateInput(..) => {
-                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                    Error::Collection(err) => match err.inner() {
+                        CollectionError::NoInputs => {
+                            let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                            .element(Level::HELP.message("collection yielded no auditable inputs"))
+                            .element(Level::HELP.message("inputs must contain at least one valid workflow, action, or Dependabot config"));
+
+                            let renderer = Renderer::styled();
+                            let report = renderer.render(&[group]);
+
+                            Some(report)
+                        }
+                        CollectionError::DuplicateInput(..) => {
+                            let group = Group::with_title(
+                                Level::ERROR.primary_title(err.to_string()),
+                            )
                             .element(Level::HELP.message(format!(
                                 "valid inputs are files, directories, or GitHub {slug} slugs",
                                 slug = "user/repo[@ref]".green()
@@ -1016,43 +1045,43 @@ async fn main() -> ExitCode {
                                 ex4 = "example/example@v1.2.3".green()
                             )));
 
-                        let renderer = Renderer::styled();
-                        let report = renderer.render(&[group]);
+                            let renderer = Renderer::styled();
+                            let report = renderer.render(&[group]);
 
-                        Some(report)
-                    }
-                    CollectionError::NoGitHubClient(..) => {
-                        let mut group =
-                            Group::with_title(Level::ERROR.primary_title(err.to_string()));
-
-                        if app.offline {
-                            group = group.elements([Level::HELP
-                                .message("remove --offline to audit remote repositories")]);
-                        } else if app.gh_token.is_none() {
-                            group = group.elements([Level::HELP
-                                .message("set a GitHub token with --gh-token or GH_TOKEN")]);
+                            Some(report)
                         }
+                        CollectionError::NoGitHubClient(..) => {
+                            let mut group =
+                                Group::with_title(Level::ERROR.primary_title(err.to_string()));
 
-                        let renderer = Renderer::styled();
-                        let report = renderer.render(&[group]);
+                            if app.offline {
+                                group = group.elements([Level::HELP
+                                    .message("remove --offline to audit remote repositories")]);
+                            } else if app.gh_token.is_none() {
+                                group = group.elements([Level::HELP
+                                    .message("set a GitHub token with --gh-token or GH_TOKEN")]);
+                            }
 
-                        Some(report)
-                    }
-                    // These errors only happen if something is wrong with zizmor itself.
-                    CollectionError::Yamlpath(..) | CollectionError::Model(..) => {
-                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
+                            let renderer = Renderer::styled();
+                            let report = renderer.render(&[group]);
+
+                            Some(report)
+                        }
+                        // These errors only happen if something is wrong with zizmor itself.
+                        CollectionError::Yamlpath(..) | CollectionError::Model(..) => {
+                            let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
                             Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
                             Level::HELP.message(
                                 "https://github.com/zizmorcore/zizmor/issues/new?template=bug-report.yml",
                             ),
                         ]);
-                        let renderer = Renderer::styled();
-                        let report = renderer.render(&[group]);
+                            let renderer = Renderer::styled();
+                            let report = renderer.render(&[group]);
 
-                        Some(report)
-                    }
-                    CollectionError::RemoteWithoutWorkflows(_, slug) => {
-                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                            Some(report)
+                        }
+                        CollectionError::RemoteWithoutWorkflows(_, slug) => {
+                            let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
                             .elements([
                                 Level::HELP.message(
                                     format!(
@@ -1064,14 +1093,15 @@ async fn main() -> ExitCode {
                                 )
                             ]);
 
-                        let renderer = Renderer::styled();
-                        let report = renderer.render(&[group]);
+                            let renderer = Renderer::styled();
+                            let report = renderer.render(&[group]);
 
-                        Some(report)
-                    }
+                            Some(report)
+                        }
+                        _ => None,
+                    },
                     _ => None,
-                },
-                _ => None,
+                }
             };
 
             let exit = if matches!(err, Error::Collection(CollectionError::NoInputs)) {

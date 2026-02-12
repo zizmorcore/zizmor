@@ -154,9 +154,32 @@ pub(crate) enum ClientError {
     /// An accessed repository is missing or private.
     #[error("can't access {owner}/{repo}: missing or you have no access")]
     RepoMissingOrPrivate { owner: String, repo: String },
+    /// The GitHub API rate limit has been exceeded.
+    #[error("GitHub API rate limit exceeded (resets at {reset})")]
+    RateLimited { reset: String },
     /// Any of the errors above, wrapped from concurrent contexts.
     #[error(transparent)]
     Inner(#[from] Arc<ClientError>),
+}
+
+impl ClientError {
+    /// Returns `true` if this error (or any error in the chain) is a
+    /// rate-limit error from the GitHub API.
+    pub(crate) fn is_rate_limited(&self) -> bool {
+        match self {
+            ClientError::RateLimited { .. } => true,
+            ClientError::Middleware(reqwest_middleware::Error::Middleware(anyhow_err)) => {
+                anyhow_err
+                    .downcast_ref::<ClientError>()
+                    .is_some_and(Self::is_rate_limited)
+            }
+            ClientError::ListBranches { source, .. } | ClientError::ListTags { source, .. } => {
+                source.is_rate_limited()
+            }
+            ClientError::Inner(inner) => inner.is_rate_limited(),
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -228,6 +251,46 @@ impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
     }
 }
 
+/// Middleware that detects GitHub API rate-limit responses (HTTP 403
+/// with `x-ratelimit-remaining: 0`) and converts them into a
+/// [`ClientError::RateLimited`] error with a human-readable reset time.
+struct RateLimitMiddleware;
+
+#[async_trait::async_trait]
+impl reqwest_middleware::Middleware for RateLimitMiddleware {
+    async fn handle(
+        &self,
+        req: reqwest::Request,
+        extensions: &mut http::Extensions,
+        next: reqwest_middleware::Next<'_>,
+    ) -> reqwest_middleware::Result<Response> {
+        let res = next.run(req, extensions).await?;
+
+        if res.status() == StatusCode::FORBIDDEN {
+            let is_rate_limited = res
+                .headers()
+                .get("x-ratelimit-remaining")
+                .and_then(|v| v.to_str().ok())
+                .is_some_and(|v| v == "0");
+
+            if is_rate_limited {
+                let reset = res
+                    .headers()
+                    .get("x-ratelimit-reset")
+                    .and_then(|v| v.to_str().ok())
+                    .map(|v| format!("epoch {v}"))
+                    .unwrap_or_else(|| "unknown".into());
+
+                return Err(reqwest_middleware::Error::Middleware(
+                    ClientError::RateLimited { reset }.into(),
+                ));
+            }
+        }
+
+        Ok(res)
+    }
+}
+
 #[derive(Clone)]
 struct RemoteHead {
     name: String,
@@ -283,7 +346,10 @@ impl Client {
                             // NOTE(ww): In the context of the retry classifier,
                             // "success" means "don't retry".
                             Some(status) => {
-                                if status.is_client_error() || status.is_server_error() {
+                                if status.is_server_error()
+                                    || status == StatusCode::TOO_MANY_REQUESTS
+                                    || status == StatusCode::REQUEST_TIMEOUT
+                                {
                                     req_rep.retryable()
                                 } else {
                                     req_rep.success()
@@ -340,6 +406,7 @@ impl Client {
                 }),
                 CacheType::Memory,
             ))
+            .with(RateLimitMiddleware)
             .build()
     }
 
