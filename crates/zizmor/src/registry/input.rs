@@ -572,6 +572,10 @@ impl InputGroup {
 
         let mut last_err = None;
         for kind in kinds {
+            // Always use strict=true here so that schema mismatches
+            // surface as errors, allowing the loop to try the next type.
+            // The user's actual strict setting is applied in the error
+            // handling below.
             match group.register(kind, contents.clone(), key.clone(), true) {
                 Ok(()) => return Ok(group),
                 Err(e) => {

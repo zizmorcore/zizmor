@@ -171,3 +171,42 @@ fn test_stdin_invalid_yaml_strict() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Test that empty stdin produces a collection error.
+#[test]
+fn test_stdin_empty() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .stdin("")
+            .no_config(true)
+            .expects_failure(3)
+            .args(["-"])
+            .run()?,
+    );
+
+    Ok(())
+}
+
+/// Test that SARIF output works with stdin input.
+#[test]
+fn test_stdin_sarif_output() -> anyhow::Result<()> {
+    let workflow = "\
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+";
+    let output = zizmor()
+        .stdin(workflow)
+        .no_config(true)
+        .args(["--format=sarif", "-"])
+        .run()?;
+
+    // Verify the output is valid JSON and contains <stdin> as the artifact.
+    assert!(output.contains("\"artifactLocation\""));
+    assert!(output.contains("<stdin>"));
+
+    Ok(())
+}
