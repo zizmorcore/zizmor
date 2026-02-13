@@ -710,10 +710,6 @@ This is not enabled by default; you must
       and action files. In other words, in *cannot* detect
       [impostor commits](#impostor-commit) or indirect usage of actions
       via manual `git clone` and local path usage.
-    * This audit's configuration operates on patterns, just like
-      [unpinned-uses](#unpinned-uses). That means that you can't (yet)
-      define *exact* matches. For example, you can't forbid `actions/checkout@v4`,
-      you have to forbid `actions/checkout`, which forbids all versions.
 
 ### Configuration { #forbidden-uses-configuration }
 
