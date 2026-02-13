@@ -106,7 +106,8 @@ define_audit_rules! {
     concurrency_limits,
     archived_uses,
     misfeature,
-    secrets_outside_env;
+    secrets_outside_env,
+    stale_runner;
 
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,

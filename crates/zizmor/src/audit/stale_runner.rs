@@ -91,26 +91,44 @@ impl Audit for StaleRunner {
 
             match &job.runs_on {
                 LoE::Literal(RunsOn::Target(labels)) => {
-                    let Some(label) = labels.first() else {
-                        continue;
-                    };
-
-                    if let Some(staleness) = runner_staleness(label) {
-                        results.push(
-                            Self::finding()
-                                .confidence(Confidence::High)
-                                .severity(severity_for(&staleness))
-                                .add_location(
-                                    job.location()
-                                        .primary()
-                                        .with_keys(["runs-on".into()])
-                                        .annotated(annotation_for(&staleness, label)),
-                                )
-                                .build(workflow)?,
-                        );
-                    } else if ExplicitExpr::from_curly(label).is_some() {
-                        // Expression in the first label position — we can't
-                        // resolve it statically, so flag with low confidence.
+                    for label in labels {
+                        if let Some(staleness) = runner_staleness(label) {
+                            results.push(
+                                Self::finding()
+                                    .confidence(Confidence::High)
+                                    .severity(severity_for(&staleness))
+                                    .add_location(
+                                        job.location()
+                                            .primary()
+                                            .with_keys(["runs-on".into()])
+                                            .annotated(annotation_for(&staleness, label)),
+                                    )
+                                    .build(workflow)?,
+                            );
+                        } else if ExplicitExpr::from_curly(label).is_some() {
+                            results.push(
+                                Self::finding()
+                                    .confidence(Confidence::Low)
+                                    .severity(Severity::Medium)
+                                    .add_location(
+                                        job.location()
+                                            .primary()
+                                            .with_keys(["runs-on".into()])
+                                            .annotated(
+                                                "expression may expand to a \
+                                                 stale runner",
+                                            ),
+                                    )
+                                    .build(workflow)?,
+                            );
+                        }
+                    }
+                }
+                LoE::Literal(RunsOn::Group { .. }) => {
+                    // Runner groups are user-managed; nothing to flag.
+                }
+                LoE::Expr(exp) => {
+                    let Some(matrix) = job.matrix() else {
                         results.push(
                             Self::finding()
                                 .confidence(Confidence::Low)
@@ -126,32 +144,24 @@ impl Audit for StaleRunner {
                                 )
                                 .build(workflow)?,
                         );
-                    }
-                }
-                LoE::Literal(RunsOn::Group { .. }) => {
-                    // Runner groups are user-managed; nothing to flag.
-                }
-                LoE::Expr(exp) => {
-                    let Some(matrix) = job.matrix() else {
                         continue;
                     };
 
-                    let stale_expansions = matrix
-                        .expansions()
-                        .iter()
-                        .filter(|e| exp.as_bare() == e.path)
-                        .filter_map(|e| runner_staleness(&e.value).map(|s| (s, e.value.clone())))
-                        .collect::<Vec<_>>();
-
-                    for (staleness, value) in &stale_expansions {
+                    for expansion in matrix.expansions().iter() {
+                        if exp.as_bare() != expansion.path {
+                            continue;
+                        }
+                        let Some(staleness) = runner_staleness(&expansion.value) else {
+                            continue;
+                        };
                         results.push(
                             Self::finding()
                                 .confidence(Confidence::High)
-                                .severity(severity_for(staleness))
+                                .severity(severity_for(&staleness))
                                 .add_location(
                                     job.location()
                                         .with_keys(["strategy".into()])
-                                        .annotated(annotation_for(staleness, value)),
+                                        .annotated(annotation_for(&staleness, &expansion.value)),
                                 )
                                 .add_location(
                                     job.location()

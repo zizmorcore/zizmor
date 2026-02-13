@@ -168,7 +168,17 @@ fn test_issue_283_repro() -> Result<()> {
             .input(input_under_test("self-hosted/issue-283-repro.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @"No findings to report. Good job!"
+        @"
+    warning[stale-runner]: uses a stale or removed GitHub Actions runner
+      --> @@INPUT@@:18:5
+       |
+    18 |     runs-on: ${{inputs.os}}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^ expression may expand to a stale runner
+       |
+       = note: audit confidence → Low
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    "
     );
 
     Ok(())
