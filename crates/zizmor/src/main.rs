@@ -967,6 +967,10 @@ async fn main() -> ExitCode {
                 Error::Collection(ce) => match ce.inner() {
                     CollectionError::Client(inner)
                     | CollectionError::RemoteWithoutWorkflows(inner, _) => inner.rate_limit_reset(),
+                    CollectionError::Config(config_err) => match &config_err.source {
+                        ConfigErrorInner::Client(inner) => inner.rate_limit_reset(),
+                        _ => None,
+                    },
                     _ => None,
                 },
                 Error::GlobalConfig(ce) => match &ce.source {

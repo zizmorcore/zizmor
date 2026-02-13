@@ -185,7 +185,13 @@ impl ClientError {
                 source.rate_limit_reset()
             }
             ClientError::Inner(inner) => inner.rate_limit_reset(),
-            _ => None,
+            ClientError::Request(_)
+            | ClientError::Middleware(_)
+            | ClientError::InvalidTokenHeader(_)
+            | ClientError::PktLint(_)
+            | ClientError::ListRefs(_)
+            | ClientError::FileTOCTOU { .. }
+            | ClientError::RepoMissingOrPrivate { .. } => None,
         }
     }
 }
@@ -307,12 +313,12 @@ impl reqwest_middleware::Middleware for RateLimitMiddleware {
             .get("x-ratelimit-reset")
             .and_then(|v| v.to_str().ok())
             .and_then(|v| v.parse::<u64>().ok())
-            .map(|ts| {
+            .and_then(|ts| {
                 let now = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .map(|d| d.as_secs())
-                    .unwrap_or(0);
-                format_reset_duration(ts, now)
+                    .ok()?;
+                Some(format_reset_duration(ts, now))
             })
             .unwrap_or_else(|| "unknown".into());
 
@@ -1188,5 +1194,31 @@ mod tests {
             super::format_reset_duration(500, 1000),
             "less than a minute".to_string()
         );
+    }
+
+    #[test]
+    fn test_format_reset_duration_boundary_59_seconds() {
+        assert_eq!(
+            super::format_reset_duration(1000, 941),
+            "less than a minute".to_string()
+        );
+    }
+
+    #[test]
+    fn test_format_reset_duration_equal_timestamps() {
+        assert_eq!(
+            super::format_reset_duration(1000, 1000),
+            "less than a minute".to_string()
+        );
+    }
+
+    #[test]
+    fn test_rate_limit_reset_through_nested_inner() {
+        let rate_limited = ClientError::RateLimited {
+            reset: "~2 minutes".into(),
+        };
+        let inner = ClientError::Inner(Arc::new(rate_limited));
+        let outer = ClientError::Inner(Arc::new(inner));
+        assert_eq!(outer.rate_limit_reset(), Some("~2 minutes"));
     }
 }
