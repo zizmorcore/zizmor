@@ -570,7 +570,7 @@ impl InputGroup {
             InputKind::Dependabot,
         ];
 
-        let mut last_err = None;
+        let mut first_err = None;
         for kind in kinds {
             // Always use strict=true here so that schema mismatches
             // surface as errors, allowing the loop to try the next type.
@@ -588,19 +588,22 @@ impl InputGroup {
                         tracing::warn!("stdin: {e}");
                         return Ok(group);
                     }
-                    last_err = Some(e);
+                    tracing::debug!("stdin: failed to parse as {kind}: {e}");
+                    if first_err.is_none() {
+                        first_err = Some(e);
+                    }
                 }
             }
         }
 
-        // All types failed. In strict mode, report the last error;
-        // in non-strict mode, return the empty group (NoInputs
-        // will be reported later).
+        // All types failed. In strict mode, report the first error
+        // (Workflow, the most common stdin use case) rather than the
+        // last, so users get relevant diagnostics.
         if options.strict {
-            return Err(last_err.expect("at least one kind was tried"));
+            return Err(first_err.expect("at least one kind was tried"));
         }
 
-        if let Some(e) = last_err {
+        if let Some(e) = first_err {
             tracing::warn!("stdin: could not parse as any known input type: {e}");
         }
 
