@@ -50,6 +50,14 @@
         - ansible/ansible-documentation#3188
 
 
+-   ![](https://github.com/anthropics.png?size=40){ width="40" loading=lazy align=left } anthropics
+
+    ---
+
+    ??? example "Examples"
+        - anthropics/claude-code-action#729
+
+
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
 
     ---

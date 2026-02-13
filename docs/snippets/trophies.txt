@@ -13,6 +13,7 @@ anchore/sbom-action#564
 anchore/scan-action#573
 anchore/vunnel#832
 ansible/ansible-documentation#3188
+anthropics/claude-code-action#729
 apache/airflow#45408
 apache/airflow#47258
 apache/airflow#50749
