@@ -55,6 +55,24 @@ impl Audit for DangerousTriggers {
                     .build(workflow)?,
             );
         }
+        if workflow.has_issue_comment() {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::Medium)
+                    .severity(Severity::Medium)
+                    .add_location(
+                        workflow
+                            .location()
+                            .primary()
+                            .with_keys(["on".into()])
+                            .annotated(
+                                "issue_comment runs in the base repository context \
+                                 with access to secrets",
+                            ),
+                    )
+                    .build(workflow)?,
+            );
+        }
 
         Ok(findings)
     }

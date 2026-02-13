@@ -1,0 +1,15 @@
+---
+source: crates/zizmor/tests/integration/audit/dangerous_triggers.rs
+expression: "zizmor().input(input_under_test(\"dangerous-triggers/issue-comment-events.yml\",)).run()?"
+---
+warning[dangerous-triggers]: use of fundamentally insecure workflow trigger
+ --> @@INPUT@@:1:1
+  |
+1 | / on:
+2 | |   issue_comment:
+3 | |     types: [created]
+  | |____________________^ issue_comment runs in the base repository context with access to secrets
+  |
+  = note: audit confidence → Medium
+
+3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high

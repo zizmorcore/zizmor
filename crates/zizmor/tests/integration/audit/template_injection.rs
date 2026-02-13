@@ -173,7 +173,19 @@ fn test_issue_418_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-418-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"
+    warning[dangerous-triggers]: use of fundamentally insecure workflow trigger
+     --> @@INPUT@@:5:1
+      |
+    5 | / on:
+    6 | |   issue_comment:
+    7 | |     types: [created]
+      | |____________________^ issue_comment runs in the base repository context with access to secrets
+      |
+      = note: audit confidence → Medium
+
+    3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    "
     );
 
     Ok(())
