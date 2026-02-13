@@ -210,3 +210,35 @@ jobs:
 
     Ok(())
 }
+
+/// Test that valid YAML matching no known schema produces a collection error.
+#[test]
+fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
+    let unknown = "foo: bar\nbaz: 42\n";
+    insta::assert_snapshot!(
+        zizmor()
+            .stdin(unknown)
+            .no_config(true)
+            .expects_failure(3)
+            .args(["-"])
+            .run()?,
+    );
+
+    Ok(())
+}
+
+/// Test that valid YAML matching no known schema fails in strict mode.
+#[test]
+fn test_stdin_valid_yaml_unknown_schema_strict() -> anyhow::Result<()> {
+    let unknown = "foo: bar\nbaz: 42\n";
+    insta::assert_snapshot!(
+        zizmor()
+            .stdin(unknown)
+            .no_config(true)
+            .expects_failure(1)
+            .args(["--strict-collection", "-"])
+            .run()?,
+    );
+
+    Ok(())
+}

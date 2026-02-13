@@ -1,0 +1,13 @@
+---
+source: crates/zizmor/tests/integration/cli.rs
+expression: "zizmor().stdin(unknown).no_config(true).expects_failure(1).args([\"--strict-collection\",\n\"-\"]).run()?"
+---
+🌈 zizmor v@@VERSION@@
+fatal: no audit was performed
+failed to load file://<stdin> as workflow
+
+Caused by:
+    0: input does not match expected validation schema
+    1: "on" is a required property
+       "jobs" is a required property
+       Additional properties are not allowed ('baz', 'foo' were unexpected)
