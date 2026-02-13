@@ -206,6 +206,9 @@
         "stale-action-refs": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "superfluous-actions": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "template-injection": {
           "$ref": "#/definitions/BaseRuleConfig"
         },

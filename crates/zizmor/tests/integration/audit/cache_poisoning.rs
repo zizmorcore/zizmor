@@ -237,13 +237,13 @@ fn test_publisher_step() -> anyhow::Result<()> {
     23 |         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
     ...
-    30 |         uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974
+    30 |         uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974 # zizmor: ignore[superfluous-actions]
        |         -------------------------------------------------------------------------- runtime artifacts usually published here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (1 ignored, 1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
