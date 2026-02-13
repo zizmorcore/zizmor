@@ -593,9 +593,15 @@ or set broad workflow-level permissions without realizing that
 all jobs inherit those permissions.
 
 Furthermore, users often don't realize that the
-[*default* `GITHUB_TOKEN` permissions can be very broad](https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token),
-meaning that workflows that don't configure any permissions at all can *still*
-provide excessive credentials to their individual jobs.
+*default* `GITHUB_TOKEN` permissions can be very broad, meaning that
+workflows that don't configure any permissions at all can *still* provide
+excessive credentials to their individual jobs. The default permissions
+depend on [organization-][org-permissions] and repository-level settings;
+see the [`permissions` reference in the workflow syntax docs][workflow-permissions]
+for the full list of available scopes and how defaults are calculated.
+
+[workflow-permissions]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defining-access-for-the-github_token-scopes-1
+[org-permissions]: https://docs.github.com/en/organizations/managing-organization-settings/disabling-or-limiting-github-actions-for-your-organization#setting-the-permissions-of-the-github_token-for-your-organization
 
 ### Remediation
 
