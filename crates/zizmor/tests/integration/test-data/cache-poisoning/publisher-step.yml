@@ -27,7 +27,7 @@ jobs:
         run: cargo xtasks darwin-build
 
       - name: Publish draft release on Github
-        uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974
+        uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974 # zizmor: ignore[superfluous-actions]
         with:
           name: ${{ steps.build.outputs.version }}
           tag_name: ${{ steps.build.outputs.version }}
