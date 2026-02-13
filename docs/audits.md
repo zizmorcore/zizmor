@@ -764,22 +764,6 @@ for details.
             - github/codeql-action/*
     ```
 
-!!! example
-
-    The following configuration would allow only specific versions of actions,
-    rejecting any other versions. This is useful for maintaining a vetted
-    allowlist of exact action versions:
-
-    ```yaml title="zizmor.yml"
-    rules:
-      forbidden-uses:
-        config:
-          allow:
-            - actions/checkout@v4
-            - actions/setup-python@v5
-            - github/codeql-action/init@v3
-    ```
-
 ### Remediation
 
 Either remove the offending `#!yaml uses:` clause or, if intended, add it to
