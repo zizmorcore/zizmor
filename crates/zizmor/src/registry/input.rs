@@ -2,6 +2,7 @@
 
 use std::{
     collections::{BTreeMap, btree_map},
+    io::Read as _,
     path::PathBuf,
     str::FromStr as _,
 };
@@ -549,11 +550,75 @@ impl InputGroup {
         Ok(group)
     }
 
+    async fn collect_from_stdin(options: &CollectionOptions) -> Result<Self, CollectionError> {
+        let mut contents = String::new();
+        std::io::stdin()
+            .read_to_string(&mut contents)
+            .map_err(CollectionError::Io)?;
+
+        // No local config discovery for stdin; use global config or defaults.
+        let config = Config::discover(options, || async { Ok(None) }).await?;
+
+        let mut group = Self::new(config);
+        let key = InputKey::local(Group::from("-"), "<stdin>", None);
+
+        // Try to infer the input type by attempting to parse as each kind.
+        // Workflow is tried first since it's the most common use case.
+        let kinds = [
+            InputKind::Workflow,
+            InputKind::Action,
+            InputKind::Dependabot,
+        ];
+
+        let mut first_err = None;
+        for kind in kinds {
+            // Always use strict=true here so that schema mismatches
+            // surface as errors, allowing the loop to try the next type.
+            // The user's actual strict setting is applied in the error
+            // handling below.
+            match group.register(kind, contents.clone(), key.clone(), true) {
+                Ok(()) => return Ok(group),
+                Err(e) => {
+                    // Syntax errors mean the YAML itself is invalid;
+                    // no point trying other types.
+                    if matches!(e.inner(), CollectionError::Syntax(_)) {
+                        if options.strict {
+                            return Err(e);
+                        }
+                        tracing::warn!("stdin: {e}");
+                        return Ok(group);
+                    }
+                    tracing::debug!("stdin: failed to parse as {kind}: {e}");
+                    if first_err.is_none() {
+                        first_err = Some(e);
+                    }
+                }
+            }
+        }
+
+        // All types failed. In strict mode, report the first error
+        // (Workflow, the most common stdin use case) rather than the
+        // last, so users get relevant diagnostics.
+        if options.strict {
+            return Err(first_err.expect("at least one kind was tried"));
+        }
+
+        if let Some(e) = first_err {
+            tracing::warn!("stdin: could not parse as any known input type: {e}");
+        }
+
+        Ok(group)
+    }
+
     pub(crate) async fn collect(
         request: &str,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
+        if request == "-" {
+            return Self::collect_from_stdin(options).await;
+        }
+
         let path = Utf8Path::new(request);
 
         if path.is_file() {
