@@ -6,7 +6,7 @@ fn test_setup_python_pip_install() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("misfeature/setup-python-pip-install.yml"))
             .run()?,
-        @r"
+        @"
     help[misfeature]: usage of GitHub Actions misfeatures
       --> @@INPUT@@:14:11
        |
@@ -19,7 +19,7 @@ fn test_setup_python_pip_install() -> anyhow::Result<()> {
        = note: audit confidence → High
        = tip: always use a virtual environment to manage Python packages
 
-    3 findings (2 suppressed): 0 informational, 1 low, 0 medium, 0 high
+    4 findings (3 suppressed): 0 informational, 1 low, 0 medium, 0 high
     "
     );
 
@@ -33,7 +33,7 @@ fn test_non_well_known_shell() -> anyhow::Result<()> {
             .input(input_under_test("misfeature/non-well-known-shell.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     help[misfeature]: usage of GitHub Actions misfeatures
       --> @@INPUT@@:18:9
        |
@@ -45,7 +45,22 @@ fn test_non_well_known_shell() -> anyhow::Result<()> {
        = note: audit confidence → High
        = tip: use a shell that's well-known to GitHub Actions, like 'bash' or 'pwsh'
 
-    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   some-job:
+    14 | |     name: non-well-known-shell
+    15 | |     runs-on: ubuntu-latest
+    16 | |     steps:
+    ...  |
+    23 | |             return 0;
+    24 | |           }
+       | |____________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 2 low, 0 medium, 0 high
     "
     );
 
@@ -63,7 +78,7 @@ fn test_issue_1414_repro() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("misfeature/issue-1414-repro.yml"))
             .run()?,
-        @r"
+        @"
     help[misfeature]: usage of GitHub Actions misfeatures
       --> @@INPUT@@:13:9
        |
@@ -76,7 +91,7 @@ fn test_issue_1414_repro() -> anyhow::Result<()> {
        = note: audit confidence → High
        = tip: use 'shell: pwsh' or 'shell: bash' for improved analysis
 
-    3 findings (2 suppressed): 0 informational, 1 low, 0 medium, 0 high
+    4 findings (3 suppressed): 0 informational, 1 low, 0 medium, 0 high
     "
     );
 
@@ -85,7 +100,7 @@ fn test_issue_1414_repro() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("misfeature/workflow-cmd-default-shell.yml"))
             .run()?,
-        @r"
+        @"
     help[misfeature]: usage of GitHub Actions misfeatures
       --> @@INPUT@@:10:5
        |
@@ -98,7 +113,7 @@ fn test_issue_1414_repro() -> anyhow::Result<()> {
        = note: audit confidence → High
        = tip: use 'shell: pwsh' or 'shell: bash' for improved analysis
 
-    3 findings (2 suppressed): 0 informational, 1 low, 0 medium, 0 high
+    4 findings (3 suppressed): 0 informational, 1 low, 0 medium, 0 high
     "
     );
 
