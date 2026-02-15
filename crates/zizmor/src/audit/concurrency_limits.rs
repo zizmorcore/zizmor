@@ -74,7 +74,7 @@ impl Audit for ConcurrencyLimits {
                                 workflow
                                     .location_with_grip()
                                     .primary()
-                                    .annotated("workflow is missing a concurrency key"),
+                                    .annotated("workflow is missing a `concurrency` key"),
                             )
                             .add_location(workflow.location().hidden())
                             .build(workflow)?,
@@ -114,7 +114,7 @@ impl Audit for ConcurrencyLimits {
                                             workflow
                                                 .location()
                                                 .primary()
-                                                .annotated("missing a concurrency key"),
+                                                .annotated("missing a `concurrency` key"),
                                         )
                                         .build(workflow)?,
                                 );

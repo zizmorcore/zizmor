@@ -35,7 +35,7 @@ fn test_missing() -> anyhow::Result<()> {
     ...  |
     10 | |     - name: 1-ok
     11 | |       run: echo ok
-       | |___________________^ missing a concurrency key
+       | |___________________^ missing a `concurrency` key
        |
        = note: audit confidence → High
 
@@ -97,7 +97,7 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
     ...  |
     17 | |     - name: 2-ok
     18 | |       run: echo ok
-       | |___________________^ missing a concurrency key
+       | |___________________^ missing a `concurrency` key
        |
        = note: audit confidence → High
 
@@ -138,7 +138,7 @@ fn test_issue_1619() -> anyhow::Result<()> {
      --> @@INPUT@@:5:1
       |
     5 | name: issue-1619-repro
-      | ^^^^^^^^^^^^^^^^^^^^^^ workflow is missing a concurrency key
+      | ^^^^^^^^^^^^^^^^^^^^^^ workflow is missing a `concurrency` key
       |
       = note: audit confidence → High
 
