@@ -11,4 +11,15 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=
  INFO audit: zizmor: 🌈 completed .github/workflows/cifuzz.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/codeql.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/openssh_server.yml
-No findings to report. Good job! (2 ignored, 10 suppressed)
+warning[ref-version-mismatch]: detects commit SHAs that don't match their version comment tags
+   --> .github/workflows/ci.yml:658:87
+    |
+658 |       - uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6
+    |         ---------------------------------------------------------------------------   ^^ points to commit 711d29f3da23
+    |         |
+    |         is pointed to by tag v6.0
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+13 findings (2 ignored, 10 suppressed): 0 informational, 0 low, 1 medium, 0 high
