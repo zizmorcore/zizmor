@@ -163,7 +163,7 @@ impl Workflow {
         }
     }
 
-    /// Whether this workflow is triggered by workflow_call.
+    /// Whether this workflow is triggered by `workflow_call`, i.e. whether it's reusable or not.
     pub(crate) fn has_workflow_call(&self) -> bool {
         match &self.on {
             Trigger::BareEvent(event) => *event == BareEvent::WorkflowCall,
@@ -179,6 +179,12 @@ impl Workflow {
             Trigger::BareEvents(events) => events.len() == 1,
             Trigger::Events(events) => events.count() == 1,
         }
+    }
+
+    /// Whether this workflow is *only* a reusable workflow, i.e. it's triggered by a
+    /// `workflow_call` event and nothing else.
+    pub(crate) fn is_reusable_only(&self) -> bool {
+        self.has_workflow_call() && self.has_single_trigger()
     }
 
     /// Returns this workflow's [`SymbolicLocation`].
