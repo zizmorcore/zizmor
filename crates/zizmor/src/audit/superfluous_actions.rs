@@ -6,7 +6,7 @@ use subfeature::Subfeature;
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
     config::Config,
-    finding::{Confidence, Finding, Severity},
+    finding::{Confidence, Finding, Persona, Severity},
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesPattern, workflow::Step},
     state::AuditState,
 };
@@ -46,38 +46,48 @@ impl Audit for SuperfluousActions {
 }
 
 #[allow(clippy::unwrap_used)]
-static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str)>> = LazyLock::new(|| {
-    vec![
-        (
-            "ncipollo/release-action".parse().unwrap(),
-            "use `gh release` in a script step",
-        ),
-        (
-            "softprops/action-gh-release".parse().unwrap(),
-            "use `gh release` in a script step",
-        ),
-        (
-            "elgohr/Github-Release-Action".parse().unwrap(),
-            "use `gh release` in a script step",
-        ),
-        (
-            "peter-evans/create-pull-request".parse().unwrap(),
-            "use `gh pr create` in a script step",
-        ),
-        (
-            "peter-evans/create-or-update-comment".parse().unwrap(),
-            "use `gh pr comment` or `gh issue comment` in a script step",
-        ),
-        (
-            "addnab/docker-run-action".parse().unwrap(),
-            "use `docker run` in a script step, or use a container step",
-        ),
-        (
-            "dtolnay/rust-toolchain".parse().unwrap(),
-            "use `rustup` and/or `cargo` in a script step",
-        ),
-    ]
-});
+static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona)>> =
+    LazyLock::new(|| {
+        vec![
+            (
+                "ncipollo/release-action".parse().unwrap(),
+                "use `gh release` in a script step",
+                Persona::Regular,
+            ),
+            (
+                "softprops/action-gh-release".parse().unwrap(),
+                "use `gh release` in a script step",
+                Persona::Regular,
+            ),
+            (
+                "elgohr/Github-Release-Action".parse().unwrap(),
+                "use `gh release` in a script step",
+                Persona::Regular,
+            ),
+            (
+                "peter-evans/create-pull-request".parse().unwrap(),
+                "use `gh pr create` in a script step",
+                // NOTE(ww): Currently pedantic because creating a PR
+                // with just `gh` and `git` is pretty cumbersome.
+                Persona::Pedantic,
+            ),
+            (
+                "peter-evans/create-or-update-comment".parse().unwrap(),
+                "use `gh pr comment` or `gh issue comment` in a script step",
+                Persona::Regular,
+            ),
+            (
+                "addnab/docker-run-action".parse().unwrap(),
+                "use `docker run` in a script step, or use a container step",
+                Persona::Regular,
+            ),
+            (
+                "dtolnay/rust-toolchain".parse().unwrap(),
+                "use `rustup` and/or `cargo` in a script step",
+                Persona::Regular,
+            ),
+        ]
+    });
 
 impl SuperfluousActions {
     async fn process_step<'doc>(
@@ -89,12 +99,13 @@ impl SuperfluousActions {
         };
 
         let mut findings = vec![];
-        for (pattern, recommendation) in SUPERFLUOUS_ACTIONS.iter() {
+        for (pattern, recommendation, persona) in SUPERFLUOUS_ACTIONS.iter() {
             if pattern.matches(uses) {
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
                         .severity(Severity::Low)
+                        .persona(*persona)
                         .add_location(step.location_with_grip())
                         .add_location(
                             step.location()
