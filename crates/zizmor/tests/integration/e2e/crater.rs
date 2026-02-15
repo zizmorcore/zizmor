@@ -46,3 +46,17 @@ fn warehouse() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[cfg_attr(not(feature = "crater-tests"), ignore)]
+#[test]
+fn pyca_cryptography() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(OutputMode::Both)
+            .args(["--persona=pedantic"])
+            .input("pyca/cryptography@43eb178ee3aae8d0060221118437b03c23570a41")
+            .run()?
+    );
+    Ok(())
+}

@@ -1,0 +1,19 @@
+on: pull_request
+
+name: superfluous-actions
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  superfluous-actions:
+    name: superfluous-actions
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@086dfa4efe372cfb6b375460a56e26a62a873d2e # 1.93.1
+
+      - name: update comment
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0

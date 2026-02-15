@@ -14,6 +14,9 @@ of `zizmor`.
 * **New audit**: [secrets-outside-env] detects usage of the `secrets` context
   in jobs that don't have a corresponding `environment` (#1599)
 
+* **New audit**: [superfluous-actions] detects usage of actions that perform
+  operations already provided by GitHub's own runner images (#1618)
+
 ### Enhancements 🌱
 
 * `zizmor`'s LSP mode is now configuration-aware, and will load

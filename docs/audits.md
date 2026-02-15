@@ -1443,6 +1443,58 @@ tell which changes of the subsequent release the pinned commit includes.
 Change the `#!yaml uses:` clause to pin the action using a SHA reference
 which points to a Git tag.
 
+## `superfluous-actions`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | N/A            | v1.23.0        | ✅             | ❌                | ❌  |  
+
+
+Detects actions that are known to be "superfluous," i.e. perform an operation already provided by GitHub's own runner images.
+
+Usage of these actions is not *itself* a security concern. However, many superfluous
+actions have significant runtime dependencies that unnecessarily increase the attack surface
+and/or supply chain risk of a workflow.
+
+### Remediation
+
+Remove the superfluous action and replace it with the equivalent pre-installed runner tool.
+
+The following table lists some common superfluous actions and their recommended replacements:
+
+| Action | Recommended replacement |
+|--------|-------------------------|
+| @ncipollo/release-action | `gh release create` |
+| @softprops/action-gh-release | `gh release create` |
+| @elgohr/Github-Release-Action | `gh release create` |
+| @peter-evans/create-pull-request | `gh pr create` |
+| @peter-evans/create-or-update-comment | `gh pr comment` or `gh issue comment` |
+| @addnab/docker-run-action | `docker run` |
+| @dtolnay/rust-toolchain | `rustup` |
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="superfluous.yml" hl_lines="6"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Install Rust v1.93.1
+                uses: dtolnay/rust-toolchain@086dfa4efe372cfb6b375460a56e26a62a873d2e # 1.93.1
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="superfluous.yml" hl_lines="6"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Install Rust v1.93.1
+                run: rustup toolchain install 1.93.1
+        ```
 
 ## `template-injection`
 
