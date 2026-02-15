@@ -58,6 +58,9 @@ of `zizmor`.
 * Fixed a bug where the [obfuscation] audit would fail to apply fixes
   to a subset of inputs with leading whitespace (#1597)
 
+* Fixed a bug where the [concurrency-limits] audit would incorrectly flag
+  reusable-only workflows as needing a `#!yaml concurrency:` key (#1620)
+
 ## 1.22.0
 
 ### Changes ⚠️
