@@ -1450,8 +1450,7 @@ which points to a Git tag.
 | Workflow, Action  | N/A            | v1.23.0        | ✅             | ❌                | ❌  |  
 
 
-Detects actions that are known to be "superfluous," i.e. perform an operation already
-provided by GitHub's own runner images.
+Detects actions that are known to be "superfluous," i.e. perform an operation already provided by GitHub's own runner images.
 
 Usage of these actions is not *itself* a security concern. However, many superfluous
 actions have significant runtime dependencies that unnecessarily increase the attack surface
