@@ -74,7 +74,7 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str)>> = LazyL
         ),
         (
             "dtolnay/rust-toolchain".parse().unwrap(),
-            "use `rustup` and `cargo` in a script step",
+            "use `rustup` and/or `cargo` in a script step",
         ),
     ]
 });
