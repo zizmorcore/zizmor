@@ -274,7 +274,7 @@ fn test_issue_472_repro() -> Result<()> {
        |
        = note: audit confidence → Medium
 
-    4 findings (3 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 

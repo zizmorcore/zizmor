@@ -29,6 +29,17 @@ impl Audit for ConcurrencyLimits {
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
+
+        if workflow.is_reusable_only() {
+            // If a workflow is reusable-only, then we expect its calling workflow
+            // to manage its concurrency settings. Attempting to manage concurrency
+            // in the called workflow results in weird bugs like deadlocks and
+            // premature cancellations.
+            // See: <https://github.com/zizmorcore/zizmor/issues/1511>
+            // See: <https://github.com/orgs/community/discussions/30708>
+            return Ok(findings);
+        }
+
         match &workflow.concurrency {
             Some(Concurrency::Bare(_)) => {
                 findings.push(

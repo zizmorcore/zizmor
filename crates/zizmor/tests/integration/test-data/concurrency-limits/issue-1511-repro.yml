@@ -1,0 +1,16 @@
+# Repro case for #1511: we should not flag a reusable-only workflow
+# as missing a concurrency key, since concurrency for reusable workflows
+# should be managed by their calling workflow.
+# See: <https://github.com/zizmorcore/zizmor/issues/1511>
+
+name: Issue 1511 Repro
+on: workflow_call
+permissions: {}
+
+jobs:
+  job:
+    name: some-job
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1-ok
+        run: echo ok
