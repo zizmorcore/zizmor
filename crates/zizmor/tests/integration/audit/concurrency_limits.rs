@@ -107,3 +107,19 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Bug #1511: reusable-only workflows were being incorrectly flagged as needing concurrency limits.
+#[test]
+fn test_issue_1511() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/issue-1511-repro.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
