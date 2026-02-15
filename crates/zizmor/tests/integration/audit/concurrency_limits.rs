@@ -35,7 +35,7 @@ fn test_missing() -> anyhow::Result<()> {
     ...  |
     10 | |     - name: 1-ok
     11 | |       run: echo ok
-       | |___________________^ missing concurrency setting
+       | |___________________^ missing a concurrency key
        |
        = note: audit confidence → High
 
@@ -97,7 +97,7 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
     ...  |
     17 | |     - name: 2-ok
     18 | |       run: echo ok
-       | |___________________^ missing concurrency setting
+       | |___________________^ missing a concurrency key
        |
        = note: audit confidence → High
 
@@ -119,6 +119,31 @@ fn test_issue_1511() -> anyhow::Result<()> {
             .args(["--persona=pedantic"])
             .run()?,
         @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_issue_1619() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/issue-1619-repro.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r"
+    help[concurrency-limits]: insufficient job-level concurrency limits
+     --> @@INPUT@@:5:1
+      |
+    5 | name: issue-1619-repro
+      | ^^^^^^^^^^^^^^^^^^^^^^ workflow is missing a concurrency key
+      |
+      = note: audit confidence → High
+
+    2 findings (1 ignored): 0 informational, 1 low, 0 medium, 0 high
+    "
     );
 
     Ok(())

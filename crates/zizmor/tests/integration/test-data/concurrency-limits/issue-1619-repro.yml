@@ -1,0 +1,14 @@
+# Repro case for #1619: we should flag a workflow that is not reusable, but that
+# only has reusable jobs, as missing a concurrency key.
+# See: <https://github.com/zizmorcore/zizmor/issues/1619>
+
+name: issue-1619-repro
+on:
+  push:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  test:
+    uses: org/repo/.github/workflows/reusable-tests.yml@main # zizmor: ignore[unpinned-uses]

@@ -304,7 +304,7 @@ fn test_reusable_workflow_call() -> Result<()> {
        |
        = note: audit confidence → Medium
 
-    2 findings (1 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
